@@ -20,9 +20,9 @@ public class SignalRLibraryScanEventHandler : IDisposable
         _subscriptions.Add(eventBus.Subscribe<MediaRemovedEvent>(OnMediaRemoved));
     }
 
-    internal Task OnScanStarted(LibraryScanStartedEvent @event, CancellationToken ct)
+    internal async Task OnScanStarted(LibraryScanStartedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "LibraryScanStarted",
             "dashboardHub",
             new
@@ -34,12 +34,11 @@ public class SignalRLibraryScanEventHandler : IDisposable
         );
 
         Logger.Socket($"Library scan started: {@event.LibraryName}");
-        return Task.CompletedTask;
     }
 
-    internal Task OnScanCompleted(LibraryScanCompletedEvent @event, CancellationToken ct)
+    internal async Task OnScanCompleted(LibraryScanCompletedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "LibraryScanCompleted",
             "dashboardHub",
             new
@@ -55,12 +54,11 @@ public class SignalRLibraryScanEventHandler : IDisposable
         Logger.Socket(
             $"Library scan completed: {@event.LibraryName}, {@event.ItemsFound} items found"
         );
-        return Task.CompletedTask;
     }
 
-    internal Task OnMediaAdded(MediaAddedEvent @event, CancellationToken ct)
+    internal async Task OnMediaAdded(MediaAddedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "MediaAdded",
             "dashboardHub",
             new
@@ -72,13 +70,11 @@ public class SignalRLibraryScanEventHandler : IDisposable
                 @event.Timestamp,
             }
         );
-
-        return Task.CompletedTask;
     }
 
-    internal Task OnMediaRemoved(MediaRemovedEvent @event, CancellationToken ct)
+    internal async Task OnMediaRemoved(MediaRemovedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "MediaRemoved",
             "dashboardHub",
             new
@@ -90,8 +86,6 @@ public class SignalRLibraryScanEventHandler : IDisposable
                 @event.Timestamp,
             }
         );
-
-        return Task.CompletedTask;
     }
 
     public void Dispose()

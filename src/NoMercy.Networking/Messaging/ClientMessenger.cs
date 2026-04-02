@@ -4,7 +4,7 @@ namespace NoMercy.Networking.Messaging;
 
 public class ClientMessenger(ConnectedClients connectedClients) : IClientMessenger
 {
-    public bool SendToAll(string name, string endpoint, object? data = null)
+    public async Task SendToAll(string name, string endpoint, object? data = null)
     {
         foreach (
             (string _, Client client) in connectedClients.Clients.Where(client =>
@@ -14,16 +14,14 @@ public class ClientMessenger(ConnectedClients connectedClients) : IClientMesseng
             try
             {
                 if (data != null)
-                    client.Socket.SendAsync(name, data).Wait();
+                    await client.Socket.SendAsync(name, data);
                 else
-                    client.Socket.SendAsync(name).Wait();
+                    await client.Socket.SendAsync(name);
             }
             catch (Exception)
             {
-                return false;
+                return;
             }
-
-        return true;
     }
 
     public async Task SendTo(string name, string endpoint, Guid userId, object? data = null)

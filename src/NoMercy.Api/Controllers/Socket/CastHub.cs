@@ -4,6 +4,8 @@ using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
+using NoMercy.Database.Models.Users;
+using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
@@ -229,128 +231,178 @@ public class CastHub : ConnectionHub
         await ChromeCast.Disconnect();
     }
 
-    public void Play()
+    public async Task Play()
     {
-        _clientMessenger.SendToAll("Play", "castHub");
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("Play", "castHub", user.Id);
     }
 
-    public void Pause()
+    public async Task Pause()
     {
-        _clientMessenger.SendToAll("Pause", "castHub");
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("Pause", "castHub", user.Id);
     }
 
-    public void Time(TimeData time)
+    public async Task Time(TimeData time)
     {
-        _clientMessenger.SendToAll("Time", "castHub", time);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("Time", "castHub", user.Id, time);
     }
 
-    public void Ended()
+    public async Task Ended()
     {
-        _clientMessenger.SendToAll("Ended", "castHub");
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("Ended", "castHub", user.Id);
     }
 
-    public void Volume(int volume)
+    public async Task Volume(int volume)
     {
-        _clientMessenger.SendToAll("Volume", "castHub", volume);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("Volume", "castHub", user.Id, volume);
     }
 
-    public void Muted(bool muted)
+    public async Task Muted(bool muted)
     {
-        _clientMessenger.SendToAll("Muted", "castHub", muted);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("Muted", "castHub", user.Id, muted);
     }
 
-    public void Item(PlaylistItem item)
+    public async Task Item(PlaylistItem item)
     {
-        _clientMessenger.SendToAll("Item", "castHub", item);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("Item", "castHub", user.Id, item);
     }
 
-    public void Playlist(PlaylistItem[] item)
+    public async Task Playlist(PlaylistItem[] item)
     {
-        _clientMessenger.SendToAll("Playlist", "castHub", item);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("Playlist", "castHub", user.Id, item);
     }
 
-    public void SubtitleTracks(TextTrack[] subtitleTracks)
+    public async Task SubtitleTracks(TextTrack[] subtitleTracks)
     {
-        _clientMessenger.SendToAll("SubtitleTracks", "castHub", subtitleTracks);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SubtitleTracks", "castHub", user.Id, subtitleTracks);
     }
 
-    public void CurrentSubtitleTrack(TextTrack subtitleTrack)
+    public async Task CurrentSubtitleTrack(TextTrack subtitleTrack)
     {
-        _clientMessenger.SendToAll("CurrentSubtitleTrack", "castHub", subtitleTrack);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("CurrentSubtitleTrack", "castHub", user.Id, subtitleTrack);
     }
 
-    public void AudioTracks(AudioTrack[] audioTrack)
+    public async Task AudioTracks(AudioTrack[] audioTrack)
     {
-        _clientMessenger.SendToAll("AudioTracks", "castHub", audioTrack);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("AudioTracks", "castHub", user.Id, audioTrack);
     }
 
-    public void CurrentAudioTrack(AudioTrack audioTrack)
+    public async Task CurrentAudioTrack(AudioTrack audioTrack)
     {
-        _clientMessenger.SendToAll("CurrentAudioTrack", "castHub", audioTrack);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("CurrentAudioTrack", "castHub", user.Id, audioTrack);
     }
 
-    public void GetPlayerState()
+    public async Task GetPlayerState()
     {
-        _clientMessenger.SendToAll("GetPlayerState", "castHub");
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("GetPlayerState", "castHub", user.Id);
     }
 
-    public void PlayerState(CastPlayerState state)
+    public async Task PlayerState(CastPlayerState state)
     {
-        _clientMessenger.SendToAll("MusicPlayerState", "castHub", state);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("MusicPlayerState", "castHub", user.Id, state);
     }
 
-    public void SetAudioTrack(int audioTrack)
+    public async Task SetAudioTrack(int audioTrack)
     {
-        _clientMessenger.SendToAll("SetAudioTrack", "castHub", audioTrack);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetAudioTrack", "castHub", user.Id, audioTrack);
     }
 
-    public void SetSubtitleTrack(int subtitleTrack)
+    public async Task SetSubtitleTrack(int subtitleTrack)
     {
-        _clientMessenger.SendToAll("SetSubtitleTrack", "castHub", subtitleTrack);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetSubtitleTrack", "castHub", user.Id, subtitleTrack);
     }
 
-    public void SetPlaylistItem(int item)
+    public async Task SetPlaylistItem(int item)
     {
-        _clientMessenger.SendToAll("SetPlaylistItem", "castHub", item);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetPlaylistItem", "castHub", user.Id, item);
     }
 
-    public void SetVolume(int volume)
+    public async Task SetVolume(int volume)
     {
-        _clientMessenger.SendToAll("SetVolume", "castHub", volume);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetVolume", "castHub", user.Id, volume);
     }
 
-    public void SetMuted(bool muted)
+    public async Task SetMuted(bool muted)
     {
-        _clientMessenger.SendToAll("SetMuted", "castHub", muted);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetMuted", "castHub", user.Id, muted);
     }
 
-    public void SetSeek(int time)
+    public async Task SetSeek(int time)
     {
-        _clientMessenger.SendToAll("SetSeek", "castHub", time);
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetSeek", "castHub", user.Id, time);
     }
 
-    public void SetNext()
+    public async Task SetNext()
     {
-        _clientMessenger.SendToAll("SetNext", "castHub");
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetNext", "castHub", user.Id);
     }
 
-    public void SetPrevious()
+    public async Task SetPrevious()
     {
-        _clientMessenger.SendToAll("SetPrevious", "castHub");
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetPrevious", "castHub", user.Id);
     }
 
-    public void SetPlay()
+    public async Task SetPlay()
     {
-        _clientMessenger.SendToAll("SetPlay", "castHub");
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetPlay", "castHub", user.Id);
     }
 
-    public void SetPause()
+    public async Task SetPause()
     {
-        _clientMessenger.SendToAll("SetPause", "castHub");
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetPause", "castHub", user.Id);
     }
 
-    public void SetStop()
+    public async Task SetStop()
     {
-        _clientMessenger.SendToAll("SetStop", "castHub");
+        User? user = Context.User.User();
+        if (user is null) return;
+        await _clientMessenger.SendTo("SetStop", "castHub", user.Id);
     }
 }

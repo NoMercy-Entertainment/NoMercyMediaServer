@@ -566,24 +566,12 @@ public class MusicHub : ConnectionHub
             {
                 CurrentDevice.TryRemove(user.Id, out _);
 
-                playerState.DeviceId = null;
-                playerState.PlayState = false;
-                playerState.Actions = new()
-                {
-                    Disallows = new()
-                    {
-                        Previous = true,
-                        Next = true,
-                        Resuming = true,
-                        Pausing = true,
-                        Seeking = true,
-                        Stopping = true,
-                        Muting = true,
-                        TogglingShuffle = true,
-                        TogglingRepeatContext = true,
-                        TogglingRepeatTrack = true,
-                    },
-                };
+                // Clean up CommandLock and player state — no connections remain for this user
+                if (CommandLocks.TryRemove(user.Id, out SemaphoreSlim? removedLock))
+                    removedLock.Dispose();
+
+                _musicPlayerStateManager.RemoveState(user.Id);
+                playerState = null;
             }
             else if (stopPlayback)
             {

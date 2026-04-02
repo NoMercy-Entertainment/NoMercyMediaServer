@@ -236,15 +236,14 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
                 continue;
             }
 
-            string input = Path.Combine(
-                BasePath,
-                $"{subtitle.HlsPlaylistFilename}.{subtitle.Extension}"
-            );
             string orcFile = Path.Combine(BasePath, "subtitles", "temp.txt");
             string output = Path.Combine(BasePath, $"{subtitle.HlsPlaylistFilename}.vtt");
 
+            // OCR directly from the source file to get correct PTS timing.
+            // Extracting bitmap subtitles to .vob loses the .idx timing index,
+            // causing PTS offsets that desync the resulting WebVTT.
             string ocrCommand =
-                $" -i \"{input}\" -f lavfi -i color=black:s=hd720 -filter_complex \"[0:s:0]ocr=language={subtitle.Language},metadata=print:key=lavfi.ocr.text:file=temp.txt\" -an -f null -";
+                $" -i \"{Container.InputFile}\" -f lavfi -i color=black:s=hd720 -filter_complex \"[0:s:{subtitle.Index}]ocr=language={subtitle.Language},metadata=print:key=lavfi.ocr.text:file=temp.txt\" -an -f null -";
 
             if (EventBusProvider.IsConfigured)
                 _ = EventBusProvider.Current.PublishAsync(

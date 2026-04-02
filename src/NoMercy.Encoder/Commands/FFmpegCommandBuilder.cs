@@ -188,10 +188,10 @@ public class FFmpegCommandBuilder
         if (stream is { ConvertToSdr: true, IsHdr: true })
         {
             isHdr = stream.IsHdr;
-            return $"[v:0]crop={stream.CropValue},scale={stream.ScaleValue},zscale=tin=smpte2084:min=bt2020nc:pin=bt2020:rin=tv:t=smpte2084:m=bt2020nc:p=bt2020:r=tv,zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format={stream.PixelFormat}[v{index}_hls_0]";
+            return $"[v:0]crop={stream.CropValue},scale={stream.ScaleValue},setsar=1:1,zscale=tin=smpte2084:min=bt2020nc:pin=bt2020:rin=tv:t=smpte2084:m=bt2020nc:p=bt2020:r=tv,zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format={stream.PixelFormat}[v{index}_hls_0]";
         }
 
-        return $"[v:0]crop={stream.CropValue},scale={stream.ScaleValue},format={stream.PixelFormat}[v{index}_hls_0]";
+        return $"[v:0]crop={stream.CropValue},scale={stream.ScaleValue},setsar=1:1,format={stream.PixelFormat}[v{index}_hls_0]";
     }
 
     private string BuildImageFilter(BaseImage stream, int index, bool isHdr)

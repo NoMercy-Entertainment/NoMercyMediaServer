@@ -18,9 +18,9 @@ public class SignalRPlaybackEventHandler : IDisposable
         _subscriptions.Add(eventBus.Subscribe<PlaybackCompletedEvent>(OnPlaybackCompleted));
     }
 
-    internal Task OnPlaybackStarted(PlaybackStartedEvent @event, CancellationToken ct)
+    internal async Task OnPlaybackStarted(PlaybackStartedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "PlaybackStarted",
             "dashboardHub",
             new
@@ -37,13 +37,12 @@ public class SignalRPlaybackEventHandler : IDisposable
         Logger.Socket(
             $"Playback started: User={@event.UserId}, Media={@event.MediaId}, Type={@event.MediaType}"
         );
-        return Task.CompletedTask;
     }
 
-    internal Task OnPlaybackProgress(PlaybackProgressEvent @event, CancellationToken ct)
+    internal async Task OnPlaybackProgress(PlaybackProgressEvent @event, CancellationToken ct)
     {
         // Progress events are high-frequency; broadcast but don't log to avoid noise
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "PlaybackProgress",
             "dashboardHub",
             new
@@ -55,13 +54,11 @@ public class SignalRPlaybackEventHandler : IDisposable
                 @event.Duration,
             }
         );
-
-        return Task.CompletedTask;
     }
 
-    internal Task OnPlaybackCompleted(PlaybackCompletedEvent @event, CancellationToken ct)
+    internal async Task OnPlaybackCompleted(PlaybackCompletedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "PlaybackCompleted",
             "dashboardHub",
             new
@@ -77,7 +74,6 @@ public class SignalRPlaybackEventHandler : IDisposable
         Logger.Socket(
             $"Playback completed: User={@event.UserId}, Media={@event.MediaId}, Type={@event.MediaType}"
         );
-        return Task.CompletedTask;
     }
 
     public void Dispose()

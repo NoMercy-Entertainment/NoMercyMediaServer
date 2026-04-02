@@ -17,13 +17,12 @@ public class CastEventHandler : IDisposable
         );
     }
 
-    internal Task OnCastDeviceStatusChanged(
+    internal async Task OnCastDeviceStatusChanged(
         CastDeviceStatusChangedEvent @event,
         CancellationToken ct
     )
     {
-        _clientMessenger.SendToAll(@event.EventType, "castHub", @event.StatusData);
-        return Task.CompletedTask;
+        await _clientMessenger.SendToAll(@event.EventType, "castHub", @event.StatusData);
     }
 
     public void Dispose()

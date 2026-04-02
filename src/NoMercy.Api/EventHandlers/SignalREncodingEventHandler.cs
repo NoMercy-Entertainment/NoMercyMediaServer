@@ -23,9 +23,9 @@ public class SignalREncodingEventHandler : IDisposable
         );
     }
 
-    internal Task OnEncodingStarted(EncodingStartedEvent @event, CancellationToken ct)
+    internal async Task OnEncodingStarted(EncodingStartedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "EncodingStarted",
             "dashboardHub",
             new
@@ -39,12 +39,11 @@ public class SignalREncodingEventHandler : IDisposable
         );
 
         Logger.Socket($"Encoding started: Job={@event.JobId}, Profile={@event.ProfileName}");
-        return Task.CompletedTask;
     }
 
-    internal Task OnEncodingProgress(EncodingProgressEvent @event, CancellationToken ct)
+    internal async Task OnEncodingProgress(EncodingProgressEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "EncodingProgress",
             "dashboardHub",
             new
@@ -55,13 +54,11 @@ public class SignalREncodingEventHandler : IDisposable
                 Estimated = @event.Estimated?.TotalSeconds,
             }
         );
-
-        return Task.CompletedTask;
     }
 
-    internal Task OnEncodingCompleted(EncodingCompletedEvent @event, CancellationToken ct)
+    internal async Task OnEncodingCompleted(EncodingCompletedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "EncodingCompleted",
             "dashboardHub",
             new
@@ -74,12 +71,11 @@ public class SignalREncodingEventHandler : IDisposable
         );
 
         Logger.Socket($"Encoding completed: Job={@event.JobId}");
-        return Task.CompletedTask;
     }
 
-    internal Task OnEncodingFailed(EncodingFailedEvent @event, CancellationToken ct)
+    internal async Task OnEncodingFailed(EncodingFailedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "EncodingFailed",
             "dashboardHub",
             new
@@ -93,12 +89,11 @@ public class SignalREncodingEventHandler : IDisposable
         );
 
         Logger.Socket($"Encoding failed: Job={@event.JobId}, Error={@event.ErrorMessage}");
-        return Task.CompletedTask;
     }
 
-    internal Task OnEncodingStageChanged(EncodingStageChangedEvent @event, CancellationToken ct)
+    internal async Task OnEncodingStageChanged(EncodingStageChangedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "encoder-progress",
             "dashboardHub",
             new
@@ -116,17 +111,14 @@ public class SignalREncodingEventHandler : IDisposable
                 is_hdr = @event.IsHdr,
             }
         );
-
-        return Task.CompletedTask;
     }
 
-    internal Task OnEncoderProgressBroadcast(
+    internal async Task OnEncoderProgressBroadcast(
         EncoderProgressBroadcastEvent @event,
         CancellationToken ct
     )
     {
-        _clientMessenger.SendToAll("encoder-progress", "dashboardHub", @event.ProgressData);
-        return Task.CompletedTask;
+        await _clientMessenger.SendToAll("encoder-progress", "dashboardHub", @event.ProgressData);
     }
 
     public void Dispose()

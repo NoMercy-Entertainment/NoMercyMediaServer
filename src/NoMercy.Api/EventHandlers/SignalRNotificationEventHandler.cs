@@ -16,9 +16,9 @@ public class SignalRNotificationEventHandler : IDisposable
         _subscriptions.Add(eventBus.Subscribe<UserNotificationEvent>(OnUserNotification));
     }
 
-    internal Task OnUserNotification(UserNotificationEvent @event, CancellationToken ct)
+    internal async Task OnUserNotification(UserNotificationEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "Notify",
             @event.Hub,
             new NotifyDto
@@ -28,8 +28,6 @@ public class SignalRNotificationEventHandler : IDisposable
                 Type = @event.Type,
             }
         );
-
-        return Task.CompletedTask;
     }
 
     public void Dispose()

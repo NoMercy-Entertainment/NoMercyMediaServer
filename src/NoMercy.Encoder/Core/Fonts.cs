@@ -22,7 +22,10 @@ public static class Fonts
 
         string[] files = Directory.GetFiles(folder);
         if (files.Length == 0)
+        {
+            Directory.Delete(folder);
             return;
+        }
 
         List<Attachment> attachments = [];
         foreach (string file in files)

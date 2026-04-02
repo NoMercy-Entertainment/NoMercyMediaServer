@@ -16,15 +16,13 @@ public class SignalRLibraryRefreshEventHandler : IDisposable
         _subscriptions.Add(eventBus.Subscribe<LibraryRefreshEvent>(OnLibraryRefresh));
     }
 
-    internal Task OnLibraryRefresh(LibraryRefreshEvent @event, CancellationToken ct)
+    internal async Task OnLibraryRefresh(LibraryRefreshEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "RefreshLibrary",
             "videoHub",
             new RefreshLibraryDto { QueryKey = @event.QueryKey }
         );
-
-        return Task.CompletedTask;
     }
 
     public void Dispose()

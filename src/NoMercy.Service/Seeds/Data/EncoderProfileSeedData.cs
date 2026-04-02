@@ -22,6 +22,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 24000,
+                        Crf = 20,
                         Width = FrameSizes._4k.Width,
                         SegmentName = ":type:_:framesize:/:type:_:framesize:",
                         PlaylistName = ":type:_:framesize:/:type:_:framesize:",
@@ -38,6 +39,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 10656,
+                        Crf = 20,
                         Width = FrameSizes._1080p.Width,
                         SegmentName = ":type:_:framesize:/:type:_:framesize:",
                         PlaylistName = ":type:_:framesize:/:type:_:framesize:",
@@ -54,6 +56,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 20000,
+                        Crf = 20,
                         Width = FrameSizes._4k.Width,
                         SegmentName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         PlaylistName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
@@ -70,6 +73,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 8695,
+                        Crf = 20,
                         Width = FrameSizes._1080p.Width,
                         SegmentName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         PlaylistName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
@@ -130,6 +134,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 10656,
+                        Crf = 20,
                         Width = FrameSizes._1080p.Width,
 
                         SegmentName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
@@ -177,6 +182,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 8695,
+                        Crf = 22,
                         Width = FrameSizes._1080p.Width,
 
                         SegmentName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
@@ -230,6 +236,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 6956,
+                        Crf = 24,
                         Width = FrameSizes._1080p.Width,
 
                         SegmentName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
@@ -292,6 +299,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 4000,
+                        Crf = 23,
                         Width = 1280,
 
                         SegmentName = ":type:_:framesize:/:type:_:framesize:",
@@ -339,6 +347,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 8000,
+                        Crf = 22,
                         Width = FrameSizes._1080p.Width,
 
                         SegmentName = ":type:_:framesize:/:type:_:framesize:",
@@ -392,6 +401,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 18000,
+                        Crf = 19,
                         Width = FrameSizes._4k.Width,
 
                         SegmentName = ":type:_:framesize:/:type:_:framesize:",
@@ -446,6 +456,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 8000,
+                        Crf = 21,
                         Width = FrameSizes._1080p.Width,
 
                         SegmentName = ":filename:",
@@ -493,6 +504,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = VideoCodecs.H264.Value,
                         Bitrate = 18000,
+                        Crf = 18,
                         Width = FrameSizes._4k.Width,
 
                         SegmentName = ":filename:",

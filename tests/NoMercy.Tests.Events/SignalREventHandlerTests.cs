@@ -16,7 +16,7 @@ public class SignalREventHandlerTests
 
     private sealed class NoOpClientMessenger : IClientMessenger
     {
-        public bool SendToAll(string name, string endpoint, object? data = null) => true;
+        public Task SendToAll(string name, string endpoint, object? data = null) => Task.CompletedTask;
         public Task SendTo(string name, string endpoint, Guid userId, object? data = null) => Task.CompletedTask;
     }
 

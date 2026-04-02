@@ -38,7 +38,8 @@ public static class ResourceMonitor
             try
             {
                 Resource resourceData = Helpers.Monitoring.ResourceMonitor.Monitor();
-                _clientMessenger?.SendToAll("ResourceUpdate", "dashboardHub", resourceData);
+                if (_clientMessenger != null)
+                    await _clientMessenger.SendToAll("ResourceUpdate", "dashboardHub", resourceData);
 
                 // at least one second between broadcasts
                 int delay = 1000 - (int)(DateTime.Now - time).TotalMilliseconds;

@@ -18,9 +18,9 @@ public class UserPermissionsEventHandler : IDisposable
         );
     }
 
-    internal Task OnUserPermissionsChanged(UserPermissionsChangedEvent @event, CancellationToken ct)
+    internal async Task OnUserPermissionsChanged(UserPermissionsChangedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll(
+        await _clientMessenger.SendToAll(
             "RefreshPermissions",
             "dashboardHub",
             new { userId = @event.UserId, changedBy = @event.ChangedBy }
@@ -29,7 +29,6 @@ public class UserPermissionsEventHandler : IDisposable
         Logger.Socket(
             $"User permissions changed: UserId={@event.UserId}, ChangedBy={@event.ChangedBy}"
         );
-        return Task.CompletedTask;
     }
 
     public void Dispose()

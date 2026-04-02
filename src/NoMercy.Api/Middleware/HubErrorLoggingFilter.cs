@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Information;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Api.Middleware;
@@ -90,7 +91,11 @@ public class HubErrorLoggingFilter : IHubFilter
                 $"{user.Name}: [{hubName}] Available methods should match public Task methods in the hub class"
             );
 
-            throw new HubException($"Method '{methodName}' does not exist on hub '{hubName}'");
+            throw new HubException(
+                Config.IsDev
+                    ? $"Method '{methodName}' does not exist on hub '{hubName}'"
+                    : "An internal error occurred"
+            );
         }
         catch (ArgumentException argEx)
         {
@@ -115,7 +120,11 @@ public class HubErrorLoggingFilter : IHubFilter
                 Logger.Socket($"{user.Name}: [{hubName}.{methodName}] No arguments provided");
             }
 
-            throw new HubException($"Invalid arguments for method '{methodName}': {argEx.Message}");
+            throw new HubException(
+                Config.IsDev
+                    ? $"Invalid arguments for method '{methodName}': {argEx.Message}"
+                    : "An internal error occurred"
+            );
         }
         catch (Exception ex)
         {
@@ -138,7 +147,11 @@ public class HubErrorLoggingFilter : IHubFilter
                 Logger.Socket($"{user.Name}: [{hubName}.{methodName}] Arguments: {argsInfo}");
             }
 
-            throw new HubException($"An error occurred calling '{methodName}': {ex.Message}");
+            throw new HubException(
+                Config.IsDev
+                    ? $"An error occurred calling '{methodName}': {ex.Message}"
+                    : "An internal error occurred"
+            );
         }
     }
 }

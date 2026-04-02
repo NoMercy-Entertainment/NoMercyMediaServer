@@ -115,7 +115,7 @@ public class UserDataController(
 
     [HttpGet]
     [Route("watched")]
-    public async Task<IActionResult> Watched([FromBody] FavoriteRequest body)
+    public async Task<IActionResult> Watched([FromQuery] FavoriteRequest body)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -149,8 +149,6 @@ public class UserDataController(
         if (userData == null)
             return NotFoundResponse("Item not found");
 
-        await mediaContext.SaveChangesAsync();
-
         return Ok(
             new StatusResponseDto<string> { Status = "ok", Message = "Item marked as watched" }
         );
@@ -158,7 +156,7 @@ public class UserDataController(
 
     [HttpGet]
     [Route("favorites")]
-    public async Task<IActionResult> Favorites([FromBody] FavoriteRequest body)
+    public async Task<IActionResult> Favorites([FromQuery] FavoriteRequest body)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -191,8 +189,6 @@ public class UserDataController(
 
         if (userData is null)
             return NotFoundResponse("Item not found");
-
-        await mediaContext.SaveChangesAsync();
 
         return Ok(
             new StatusResponseDto<string> { Status = "ok", Message = "Item marked as favorite" }

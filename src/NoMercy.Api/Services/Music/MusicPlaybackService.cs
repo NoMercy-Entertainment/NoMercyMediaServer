@@ -20,7 +20,7 @@ public class MusicPlaybackService
     private readonly IEventBus? _eventBus;
     private readonly string[] _repeatStates = ["off", "one", "all"];
     private static int _playerStateEventId;
-    private static int PlayerStateEventId => ++_playerStateEventId;
+    private static int PlayerStateEventId => Interlocked.Increment(ref _playerStateEventId);
 
     public MusicPlaybackService(
         MusicPlayerStateManager stateManager,

@@ -27,6 +27,8 @@ public static class LogBroadcaster
 
     private static void OnLogEmitted(LogEntry entry)
     {
-        _clientMessenger?.SendToAll("NewLog", "dashboardHub", entry);
+        // Fire-and-forget: Logger.LogEmitted is a sync Action<> delegate and cannot be awaited.
+        // Log broadcasting is best-effort — a missed entry is not a failure.
+        _ = _clientMessenger?.SendToAll("NewLog", "dashboardHub", entry);
     }
 }
