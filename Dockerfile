@@ -72,7 +72,7 @@ EXPOSE 7626
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://127.0.0.1:7627/health || exit 1
+    CMD curl -fsk https://127.0.0.1:7626/health || curl -fs http://127.0.0.1:7626/health || exit 1
 
 # Entry point
 ENTRYPOINT ["dotnet", "NoMercyMediaServer.dll"]
