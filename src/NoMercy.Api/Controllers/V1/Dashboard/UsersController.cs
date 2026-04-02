@@ -19,7 +19,10 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/users", Order = 10)]
-public class UsersController(MediaContext mediaContext) : BaseController
+public class UsersController(
+    MediaContext mediaContext,
+    IDbContextFactory<MediaContext> contextFactory
+) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index()
@@ -110,8 +113,8 @@ public class UsersController(MediaContext mediaContext) : BaseController
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to delete a user");
 
-        await using MediaContext mediaContext = new();
-        User? user = await mediaContext
+        await using MediaContext deleteContext = await contextFactory.CreateDbContextAsync();
+        User? user = await deleteContext
             .Users.Include(user => user.LibraryUser)
             .FirstOrDefaultAsync(user => user.Id == id);
 
@@ -121,8 +124,8 @@ public class UsersController(MediaContext mediaContext) : BaseController
         if (user.Owner)
             return UnauthorizedResponse("The owner cannot be deleted");
 
-        mediaContext.Users.Remove(user);
-        await mediaContext.SaveChangesAsync();
+        deleteContext.Users.Remove(user);
+        await deleteContext.SaveChangesAsync();
 
         ClaimsPrincipleExtensions.RemoveUser(user);
 
@@ -158,8 +161,8 @@ public class UsersController(MediaContext mediaContext) : BaseController
                 "You do not have permission to update notification settings"
             );
 
-        await using MediaContext mediaContext = new();
-        User? user = await mediaContext
+        await using MediaContext notifContext = await contextFactory.CreateDbContextAsync();
+        User? user = await notifContext
             .Users.Where(user => user.Id.Equals(userId))
             .Include(user => user.LibraryUser)
             .Include(user => user.NotificationUser)
@@ -217,8 +220,8 @@ public class UsersController(MediaContext mediaContext) : BaseController
                 "You do not have permission to update your own permissions"
             );
 
-        await using MediaContext mediaContext = new();
-        User? user = await mediaContext
+        await using MediaContext permContext = await contextFactory.CreateDbContextAsync();
+        User? user = await permContext
             .Users.Include(user => user.LibraryUser)
             .FirstOrDefaultAsync(user => user.Id == id);
 
@@ -238,7 +241,7 @@ public class UsersController(MediaContext mediaContext) : BaseController
         foreach (Ulid libraryId in request.Libraries)
             user.LibraryUser.Add(new() { LibraryId = libraryId, UserId = userId });
 
-        await mediaContext.SaveChangesAsync();
+        await permContext.SaveChangesAsync();
 
         ClaimsPrincipleExtensions.UpdateUser(user);
 
@@ -259,8 +262,8 @@ public class UsersController(MediaContext mediaContext) : BaseController
                 "You do not have permission to update notification settings"
             );
 
-        await using MediaContext mediaContext = new();
-        User? user = await mediaContext
+        await using MediaContext userNotifContext = await contextFactory.CreateDbContextAsync();
+        User? user = await userNotifContext
             .Users.Where(user => user.Id.Equals(userId))
             .Include(user => user.LibraryUser)
             .Include(user => user.NotificationUser)

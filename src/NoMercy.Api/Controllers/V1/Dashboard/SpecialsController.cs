@@ -34,7 +34,7 @@ public class SpecialsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view specials");
 
-        await using MediaContext mediaContext = new();
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
         List<Special> specials = await mediaContext.Specials.AsNoTracking().ToListAsync();
 
         return Ok(
@@ -54,7 +54,7 @@ public class SpecialsController(
 
         try
         {
-            await using MediaContext mediaContext = new();
+            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
             int specials = await mediaContext.Specials.CountAsync();
 
             Special special = new() { Id = Ulid.NewUlid(), Title = $"special {specials}" };
@@ -119,7 +119,7 @@ public class SpecialsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update the special");
 
-        await using MediaContext mediaContext = new();
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
         Special? special = await mediaContext
             .Specials.Where(special => special.Id == id)
             .FirstOrDefaultAsync();
@@ -185,7 +185,7 @@ public class SpecialsController(
 
         try
         {
-            await using MediaContext mediaContext = new();
+            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
             Special? special = await mediaContext.Specials.FindAsync(keyValues: id);
 
             if (special is null)
@@ -216,7 +216,7 @@ public class SpecialsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to sort the specials");
 
-        await using MediaContext mediaContext = new();
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
         List<Special> specials = await mediaContext.Specials.AsTracking().ToListAsync();
 
         if (specials.Count == 0)
@@ -239,7 +239,7 @@ public class SpecialsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan all specials");
 
-        await using MediaContext mediaContext = new();
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
         List<Special> specialsList = await mediaContext.Specials.ToListAsync();
 
         if (specialsList.Count == 0)
@@ -363,7 +363,7 @@ public class SpecialsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view special items");
 
-        await using MediaContext ctx = new();
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
         List<SpecialItem> items = await ctx
             .SpecialItems.AsNoTracking()
             .Where(si => si.SpecialId == id)
@@ -433,7 +433,7 @@ public class SpecialsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update special items");
 
-        await using MediaContext ctx = new();
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
         Special? special = await ctx.Specials.Where(s => s.Id == id).FirstOrDefaultAsync();
 
         if (special is null)

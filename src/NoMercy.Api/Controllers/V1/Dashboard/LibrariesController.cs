@@ -66,7 +66,7 @@ public class LibrariesController(
 
         try
         {
-            await using MediaContext mediaContext = new();
+            await using MediaContext mediaContext = await mediaContextFactory.CreateDbContextAsync();
             int libraries = await mediaContext.Libraries.CountAsync();
 
             Library library = new()
@@ -338,8 +338,6 @@ public class LibrariesController(
         if (librariesList.Count == 0)
             return NotFoundResponse("No libraries found to rescan");
 
-        await using MediaContext mediaContext = new();
-
         foreach (Library library in librariesList)
         {
             foreach (LibraryMovie movie in library.LibraryMovies)
@@ -373,8 +371,6 @@ public class LibrariesController(
 
         if (library is null)
             return NotFoundResponse("Library not found");
-
-        await using MediaContext mediaContext = new();
 
         foreach (LibraryMovie movie in library.LibraryMovies)
         {

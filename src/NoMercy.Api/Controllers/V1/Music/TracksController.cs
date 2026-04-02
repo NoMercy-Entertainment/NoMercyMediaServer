@@ -44,12 +44,12 @@ public class TracksController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tracks");
 
-        List<ArtistTrackDto> tracks = [];
-
         string language = Language();
 
-        foreach (TrackUser track in _musicRepository.GetTracks(userId))
-            tracks.Add(new(track.Track, language));
+        List<TrackUser> rawTracks = await _musicRepository.GetTracks(userId);
+        List<ArtistTrackDto> tracks = rawTracks
+            .Select(track => new ArtistTrackDto(track.Track, language))
+            .ToList();
 
         if (tracks.Count == 0)
             return NotFoundResponse("Tracks not found");

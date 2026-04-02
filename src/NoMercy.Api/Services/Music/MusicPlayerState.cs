@@ -70,4 +70,20 @@ public class MusicPlayerState
 
     [JsonIgnore]
     public bool CrossfadeSignalSent { get; set; }
+
+    // Set to true by CrossfadeStartCommand; suppresses server auto-advance during the
+    // client's crossfade window.  Cleared by CrossfadeCompleteCommand or the safety timeout.
+    [JsonIgnore]
+    public bool IsCrossfading { get; set; }
+
+    // The UTC deadline by which CrossfadeComplete must arrive before the server forces advance.
+    // Equals DateTime.UtcNow + fadeDuration + CrossfadeSafetyMarginMs at the time CrossfadeStart
+    // is received.
+    [JsonIgnore]
+    public DateTime CrossfadeTimeout { get; set; }
+
+    // The DeviceId that sent CrossfadeStart.  Only that device may send CrossfadeComplete or
+    // cancel the suppression, preventing multi-device conflicts.
+    [JsonIgnore]
+    public string? CrossfadeDeviceId { get; set; }
 }

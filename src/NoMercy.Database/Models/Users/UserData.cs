@@ -22,7 +22,7 @@ public class UserData : Timestamps
     [JsonProperty("id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty("name")]
+    [JsonProperty("rating")]
     public int? Rating { get; set; }
 
     [JsonProperty("last_played_date")]

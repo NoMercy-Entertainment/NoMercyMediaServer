@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -185,108 +184,88 @@ public class MusicRepositoryTests : IDisposable
     #region Browsable Query Tests
 
     [Fact]
-    public void GetArtists_ReturnsIQueryable_ThatCanBePaginated()
+    public async Task GetArtists_ReturnsList_ThatCanBePaginated()
     {
-        IQueryable<Artist> query = _repository.GetArtists(SeedConstants.UserId, "A");
-
-        List<Artist> result = query.Take(1).ToList();
+        List<Artist> result = (await _repository.GetArtists(SeedConstants.UserId, "A")).Take(1).ToList();
 
         Assert.Single(result);
         Assert.Equal("Arctic Monkeys", result[0].Name);
     }
 
     [Fact]
-    public void GetArtists_ReturnsIQueryable_ThatCanBeFullyEnumerated()
+    public async Task GetArtists_ReturnsList_ThatCanBeFullyEnumerated()
     {
-        IQueryable<Artist> query = _repository.GetArtists(SeedConstants.UserId, "R");
-
-        List<Artist> result = query.ToList();
+        List<Artist> result = await _repository.GetArtists(SeedConstants.UserId, "R");
 
         Assert.Single(result);
         Assert.Equal("Radiohead", result[0].Name);
     }
 
     [Fact]
-    public void GetAlbums_ReturnsIQueryable_ThatCanBePaginated()
+    public async Task GetAlbums_ReturnsList_ThatCanBePaginated()
     {
-        IQueryable<Album> query = _repository.GetAlbums(SeedConstants.UserId, "A");
-
-        List<Album> result = query.Take(1).ToList();
+        List<Album> result = (await _repository.GetAlbums(SeedConstants.UserId, "A")).Take(1).ToList();
 
         Assert.Single(result);
         Assert.Equal("AM", result[0].Name);
     }
 
     [Fact]
-    public void GetTracks_ReturnsIQueryable_ForUserFavorites()
+    public async Task GetTracks_ReturnsList_ForUserFavorites()
     {
-        IQueryable<TrackUser> query = _repository.GetTracks(SeedConstants.UserId);
-
-        List<TrackUser> result = query.ToList();
+        List<TrackUser> result = await _repository.GetTracks(SeedConstants.UserId);
 
         Assert.Single(result);
         Assert.Equal(TrackId1, result[0].TrackId);
     }
 
     [Fact]
-    public async Task GetLatestAlbums_ReturnsIQueryable_ThatCanBePaginatedAsync()
+    public async Task GetLatestAlbums_ReturnsList_ThatCanBePaginated()
     {
-        List<Album> result = await _repository.GetLatestAlbums()
-            .Take(1)
-            .ToListAsync();
+        List<Album> result = (await _repository.GetLatestAlbums()).Take(1).ToList();
 
         Assert.Single(result);
     }
 
     [Fact]
-    public async Task GetLatestArtists_ReturnsIQueryable_ThatCanBePaginatedAsync()
+    public async Task GetLatestArtists_ReturnsList_ThatCanBePaginated()
     {
-        List<Artist> result = await _repository.GetLatestArtists()
-            .Take(1)
-            .ToListAsync();
+        List<Artist> result = (await _repository.GetLatestArtists()).Take(1).ToList();
 
         Assert.Single(result);
     }
 
     [Fact]
-    public async Task GetLatestGenres_ReturnsIQueryable_OrderedByTrackCount()
+    public async Task GetLatestGenres_ReturnsList_OrderedByTrackCount()
     {
-        List<MusicGenre> result = await _repository.GetLatestGenres()
-            .Take(10)
-            .ToListAsync();
+        List<MusicGenre> result = (await _repository.GetLatestGenres()).Take(10).ToList();
 
         Assert.Single(result);
         Assert.Equal("Rock", result[0].Name);
     }
 
     [Fact]
-    public async Task GetFavoriteArtists_ReturnsIQueryable_ThatCanBePaginated()
+    public async Task GetFavoriteArtists_ReturnsList_ThatCanBePaginated()
     {
-        List<ArtistUser> result = await _repository.GetFavoriteArtists(SeedConstants.UserId)
-            .Take(36)
-            .ToListAsync();
+        List<ArtistUser> result = (await _repository.GetFavoriteArtists(SeedConstants.UserId)).Take(36).ToList();
 
         Assert.Single(result);
         Assert.Equal(ArtistId1, result[0].ArtistId);
     }
 
     [Fact]
-    public async Task GetFavoriteAlbums_ReturnsIQueryable_ThatCanBePaginated()
+    public async Task GetFavoriteAlbums_ReturnsList_ThatCanBePaginated()
     {
-        List<AlbumUser> result = await _repository.GetFavoriteAlbums(SeedConstants.UserId)
-            .Take(36)
-            .ToListAsync();
+        List<AlbumUser> result = (await _repository.GetFavoriteAlbums(SeedConstants.UserId)).Take(36).ToList();
 
         Assert.Single(result);
         Assert.Equal(AlbumId1, result[0].AlbumId);
     }
 
     [Fact]
-    public void GetFavoriteTracks_ReturnsIQueryable_ForUserFavorites()
+    public async Task GetFavoriteTracks_ReturnsList_ForUserFavorites()
     {
-        IQueryable<TrackUser> query = _repository.GetFavoriteTracks(SeedConstants.UserId);
-
-        List<TrackUser> result = query.ToList();
+        List<TrackUser> result = await _repository.GetFavoriteTracks(SeedConstants.UserId);
 
         Assert.Single(result);
         Assert.Equal(TrackId1, result[0].TrackId);
@@ -358,13 +337,9 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task BrowsableQueries_DoNotThrowDisposedContextException()
     {
-        IQueryable<Artist> artistQuery = _repository.GetArtists(SeedConstants.UserId, "_");
-        IQueryable<Album> albumQuery = _repository.GetAlbums(SeedConstants.UserId, "_");
-        IQueryable<TrackUser> trackQuery = _repository.GetTracks(SeedConstants.UserId);
-
-        List<Artist> artists = await artistQuery.ToListAsync();
-        List<Album> albums = await albumQuery.ToListAsync();
-        List<TrackUser> tracks = await trackQuery.ToListAsync();
+        List<Artist> artists = await _repository.GetArtists(SeedConstants.UserId, "_");
+        List<Album> albums = await _repository.GetAlbums(SeedConstants.UserId, "_");
+        List<TrackUser> tracks = await _repository.GetTracks(SeedConstants.UserId);
 
         Assert.NotNull(artists);
         Assert.NotNull(albums);

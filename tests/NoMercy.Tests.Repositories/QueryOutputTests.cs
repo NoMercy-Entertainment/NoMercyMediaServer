@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models.Common;
 using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
@@ -162,14 +161,15 @@ public class QueryOutputTests : IDisposable
     #region GenreRepository
 
     [Fact]
-    public void GenreRepository_GetGenres_ToQueryString_ContainsExpectedClauses()
+    public async Task GenreRepository_GetGenres_GeneratesExpectedSql()
     {
         GenreRepository repository = new(_context);
+        _interceptor.Clear();
 
-        IQueryable<Genre> query = repository.GetGenres(SeedConstants.UserId, "en", 10, 0);
-        string sql = query.ToQueryString();
+        await repository.GetGenres(SeedConstants.UserId, "en", 10, 0);
 
-        Assert.NotEmpty(sql);
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
         Assert.Contains("Genres", sql);
         Assert.Contains("GenreMovie", sql);
         Assert.Contains("GenreTv", sql);

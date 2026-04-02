@@ -248,7 +248,7 @@ public class GenreRepository(MediaContext context)
         return (genreDetail, movies, tvShows);
     }
 
-    public IQueryable<Genre> GetGenres(Guid userId, string language, int take, int page)
+    public Task<List<Genre>> GetGenres(Guid userId, string language, int take, int page, CancellationToken ct = default)
     {
         return context
             .Genres.AsNoTracking()
@@ -273,7 +273,8 @@ public class GenreRepository(MediaContext context)
             )
             .OrderBy(genre => genre.Name)
             .Skip(page * take)
-            .Take(take);
+            .Take(take)
+            .ToListAsync(ct);
     }
 
     public async Task<List<GenreWithCountsDto>> GetGenresWithCountsAsync(

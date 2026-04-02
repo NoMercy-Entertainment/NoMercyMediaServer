@@ -118,7 +118,7 @@ public class UserDataJsonPropertyTests
 
     [Theory]
     [InlineData("Id", "id")]
-    [InlineData("Rating", "name")]
+    [InlineData("Rating", "rating")]
     [InlineData("LastPlayedDate", "last_played_date")]
     [InlineData("Audio", "audio")]
     [InlineData("Subtitle", "subtitle")]

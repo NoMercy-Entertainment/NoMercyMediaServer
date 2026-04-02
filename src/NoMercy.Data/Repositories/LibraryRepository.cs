@@ -184,7 +184,7 @@ public class LibraryRepository(MediaContext context)
             Expression<Func<Movie, object>>? orderByExpression,
             string? direction
         ) =>
-            context
+            mediaContext
                 .Movies.AsNoTracking()
                 .Where(movie => movie.Library.Id == libraryId)
                 .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))

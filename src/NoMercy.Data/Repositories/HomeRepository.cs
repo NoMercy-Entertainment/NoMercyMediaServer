@@ -390,7 +390,9 @@ public class HomeRepository
         CancellationToken ct = default
     )
     {
-        return await mediaContext
+        // Step 1: Fetch genre base data with translations — no client-side collections in projection
+        // (SQLite does not support APPLY, so .ToList() inside .Select() is forbidden)
+        List<Genre> genres = await mediaContext
             .Genres.AsNoTracking()
             .Where(genre =>
                 genre.GenreMovies.Any(g =>
@@ -400,26 +402,34 @@ public class HomeRepository
                     g.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
+            .Include(genre => genre.Translations.Where(t => t.Iso6391 == language))
+            .Include(genre =>
+                genre.GenreMovies.Where(gm => gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId) && gm.Movie.VideoFiles.Any())
+            )
+            .Include(genre =>
+                genre.GenreTvShows.Where(gt => gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId) && gt.Tv.Episodes.Any(e => e.VideoFiles.Any()))
+            )
             .OrderBy(genre => genre.Name)
             .Skip(page * take)
             .Take(take)
+            .ToListAsync(ct);
+
+        // Step 2: Project to DTO in memory — safe to call .ToList() on in-memory collections
+        return genres
             .Select(genre => new GenreHomeDto
             {
                 Id = genre.Id,
                 Name = genre.Name,
-                TranslatedName = genre
-                    .Translations.Where(t => t.Iso6391 == language)
-                    .Select(t => t.Name)
-                    .FirstOrDefault(),
-                MovieIds = genre
-                    .GenreMovies.Where(gm => gm.Movie.VideoFiles.Any())
+                TranslatedName = genre.Translations
+                    .FirstOrDefault()
+                    ?.Name,
+                MovieIds = genre.GenreMovies
                     .Select(gm => gm.MovieId)
                     .ToList(),
-                TvIds = genre
-                    .GenreTvShows.Where(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any()))
+                TvIds = genre.GenreTvShows
                     .Select(gt => gt.TvId)
                     .ToList(),
             })
-            .ToListAsync(ct);
+            .ToList();
     }
 }

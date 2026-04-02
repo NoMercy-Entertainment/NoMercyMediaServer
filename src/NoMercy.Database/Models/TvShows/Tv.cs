@@ -26,7 +26,7 @@ public class Tv : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("titleSort")]
     public string TitleSort { get; set; } = string.Empty;
 
-    [JsonProperty("airDate")]
+    [JsonProperty("have_episodes")]
     public int? HaveEpisodes { get; set; }
 
     [JsonProperty("folder")]

@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
@@ -61,7 +60,7 @@ public class GenreRepositoryTests : IDisposable
     public async Task GetGenres_ReturnsGenresForUser()
     {
         List<Genre> genres = await _repository.GetGenres(
-            SeedConstants.UserId, "en", 10, 0).ToListAsync();
+            SeedConstants.UserId, "en", 10, 0);
 
         Assert.Equal(2, genres.Count);
         Assert.Contains(genres, g => g.Name == "Action");
@@ -72,7 +71,7 @@ public class GenreRepositoryTests : IDisposable
     public async Task GetGenres_ReturnsEmpty_WhenUserHasNoAccess()
     {
         List<Genre> genres = await _repository.GetGenres(
-            SeedConstants.OtherUserId, "en", 10, 0).ToListAsync();
+            SeedConstants.OtherUserId, "en", 10, 0);
 
         Assert.Empty(genres);
     }
@@ -100,7 +99,7 @@ public class GenreRepositoryTests : IDisposable
     public async Task GetGenres_RespectsPageAndTake()
     {
         List<Genre> genres = await _repository.GetGenres(
-            SeedConstants.UserId, "en", 1, 0).ToListAsync();
+            SeedConstants.UserId, "en", 1, 0);
 
         Assert.Single(genres);
     }

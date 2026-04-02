@@ -43,6 +43,11 @@ public class MusicPlaybackService
     private const int BroadcastDebounceMs = 150;
     private const int MinPlayTimeForRecordMs = 10_000;
 
+    // Safety margin added on top of the client-reported fadeDuration when computing
+    // CrossfadeTimeout.  If CrossfadeComplete never arrives within that window the server
+    // forces auto-advance anyway (handles client disconnect / network loss mid-crossfade).
+    private const int CrossfadeSafetyMarginMs = 5000;
+
     private SemaphoreSlim GetStateLock(Guid userId)
     {
         return _stateLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
@@ -104,7 +109,21 @@ public class MusicPlaybackService
                     }
 
                     if (playerState.Time >= duration)
+                    {
+                        // If a client has taken ownership of the crossfade, suppress server
+                        // auto-advance and wait for CrossfadeComplete (or the safety timeout).
+                        if (playerState.IsCrossfading)
+                        {
+                            if (DateTime.UtcNow < playerState.CrossfadeTimeout)
+                                return; // Still within the allowed crossfade window — do nothing
+                            // Safety timeout expired: client never sent CrossfadeComplete.
+                            // Clear the crossfade flag and fall through to normal auto-advance.
+                            playerState.IsCrossfading = false;
+                            playerState.CrossfadeDeviceId = null;
+                        }
+
                         await HandleTrackCompletion(user, playerState);
+                    }
                 }
                 finally
                 {
@@ -123,6 +142,76 @@ public class MusicPlaybackService
     {
         if (_timers.TryRemove(userId, out Timer? timer))
             timer.Dispose();
+    }
+
+    /// <summary>
+    /// Called by the active client (via <see cref="NoMercy.Api.Hubs.MusicHub.CrossfadeStartCommand"/>)
+    /// when it begins the crossfade volume ramp.  Suppresses server auto-advance for this user
+    /// for <paramref name="fadeDurationMs"/> + <see cref="CrossfadeSafetyMarginMs"/> milliseconds.
+    /// Only the device matching <paramref name="deviceId"/> may later complete or override the
+    /// suppression; competing commands from other devices are ignored.
+    /// </summary>
+    public void StartCrossfade(Guid userId, string deviceId, int fadeDurationMs)
+    {
+        if (!_stateManager.TryGetValue(userId, out MusicPlayerState? state))
+            return;
+
+        state.IsCrossfading = true;
+        state.CrossfadeDeviceId = deviceId;
+        state.CrossfadeTimeout = DateTime.UtcNow.AddMilliseconds(
+            fadeDurationMs + CrossfadeSafetyMarginMs
+        );
+    }
+
+    /// <summary>
+    /// Called by the active client (via <see cref="NoMercy.Api.Hubs.MusicHub.CrossfadeCompleteCommand"/>)
+    /// once the crossfade has finished and the new track is fully playing.  Sets the server state
+    /// to the new track, resets time to zero, clears the crossfade suppression, and broadcasts
+    /// the updated state to all connected clients.
+    /// </summary>
+    public async Task CompleteCrossfade(User user, string deviceId, Guid newTrackId)
+    {
+        if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? state))
+            return;
+
+        // Only accept from the device that started the crossfade.
+        if (state.CrossfadeDeviceId != deviceId)
+            return;
+
+        // Locate the new track.  It must be at the head of the upcoming playlist.
+        PlaylistTrackDto? newTrack = state.Playlist.FirstOrDefault(t => t.Id == newTrackId);
+        if (newTrack is null)
+        {
+            // Track not found — clear the flag and let the server do its own advance on the
+            // next timer tick (Time is already >= Duration at this point).
+            state.IsCrossfading = false;
+            state.CrossfadeDeviceId = null;
+            return;
+        }
+
+        RemoveTimer(user.Id);
+
+        int currentIndex = state.Playlist.IndexOf(newTrack);
+
+        // Move the current item to the backlog.
+        if (state.CurrentItem != null)
+            state.Backlog.Add(state.CurrentItem);
+
+        // Move all tracks before newTrack to the backlog (they were skipped).
+        for (int i = 0; i < currentIndex; i++)
+            state.Backlog.Add(state.Playlist[i]);
+
+        state.Playlist.RemoveRange(0, currentIndex + 1);
+        state.CurrentItem = newTrack;
+        state.Time = 0;
+        state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
+        state.CrossfadeSignalSent = false;
+        state.IsCrossfading = false;
+        state.CrossfadeDeviceId = null;
+        state.PlayState = true;
+
+        await UpdatePlaybackState(user, state);
+        StartPlaybackTimer(user);
     }
 
     public void DebouncedUpdatePlaybackState(User user, MusicPlayerState state)

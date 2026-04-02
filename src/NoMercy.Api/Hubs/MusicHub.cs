@@ -419,6 +419,47 @@ public class MusicHub : ConnectionHub
         }
     }
 
+    /// <summary>
+    /// Called by the active client when it begins its crossfade volume ramp (typically 3 s
+    /// before the current track ends).  Suppresses the server's 100 ms auto-advance timer for
+    /// this user so the server does not race the client and interrupt the fade.
+    /// </summary>
+    /// <param name="fadeDurationMs">
+    /// How long the client's fade takes in milliseconds (e.g. 3000).  The server adds a 5 s
+    /// safety margin on top; if <c>CrossfadeCompleteCommand</c> never arrives within that window
+    /// the server force-advances anyway.
+    /// </param>
+    public Task CrossfadeStartCommand(int fadeDurationMs)
+    {
+        User? user = Context.User.User();
+        if (user is null)
+            return Task.CompletedTask;
+
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
+            return Task.CompletedTask;
+
+        _musicPlaybackService.StartCrossfade(user.Id, client.DeviceId, fadeDurationMs);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Called by the active client once its crossfade is complete and the new track is fully
+    /// playing.  The server advances state to <paramref name="newTrackId"/>, resets progress to
+    /// zero, and broadcasts the updated state to all connected clients.
+    /// </summary>
+    /// <param name="newTrackId">The <see cref="Guid"/> of the track that is now playing.</param>
+    public async Task CrossfadeCompleteCommand(Guid newTrackId)
+    {
+        User? user = Context.User.User();
+        if (user is null)
+            return;
+
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
+            return;
+
+        await _musicPlaybackService.CompleteCrossfade(user, client.DeviceId, newTrackId);
+    }
+
     public async Task ChangeDeviceCommand(string deviceId)
     {
         User? user = Context.User.User();

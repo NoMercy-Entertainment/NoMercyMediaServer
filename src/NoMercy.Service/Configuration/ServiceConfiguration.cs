@@ -506,6 +506,11 @@ public static class ServiceConfiguration
                 // Enable offline token validation via cached signing keys
                 options.TokenValidationParameters.ValidateIssuerSigningKey = true;
                 options.TokenValidationParameters.ValidIssuer = Config.AuthBaseUrl;
+
+                // Explicitly enforce audience validation. options.Audience already sets
+                // ValidAudience; this line makes the intent unambiguous and guards against
+                // future refactors that might inadvertently remove the Audience assignment.
+                options.TokenValidationParameters.ValidateAudience = true;
                 options.TokenValidationParameters.IssuerSigningKeyResolver = (
                     token,
                     securityToken,
