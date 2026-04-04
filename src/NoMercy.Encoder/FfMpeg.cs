@@ -441,10 +441,16 @@ public partial class FfMpeg : Classes
                     progressMatch.Groups[3].Value,
                     CultureInfo.InvariantCulture
                 );
-                int milliseconds =
-                    int.Parse(progressMatch.Groups[4].Value, CultureInfo.InvariantCulture) / 100;
+                // Group 4 captures the fractional-seconds digits from the FFmpeg
+                // -progress out_time field (e.g. "456789" from "00:01:23.456789").
+                // Those digits are microsecond-precision, so divide by 1000 to get
+                // milliseconds.  Integer division was previously dividing by 100,
+                // which inflated milliseconds by 10x and corrupted the TimeSpan.
+                double fractionalMs =
+                    double.Parse(progressMatch.Groups[4].Value, CultureInfo.InvariantCulture)
+                    / 1000.0;
 
-                currentTime = new(0, hours, minutes, seconds, milliseconds);
+                currentTime = new(0, hours, minutes, seconds, (int)fractionalMs);
                 progressPercentage =
                     currentTime.TotalMilliseconds / totalDuration.TotalMilliseconds * 100;
             }

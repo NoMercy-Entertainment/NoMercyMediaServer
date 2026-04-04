@@ -317,7 +317,7 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo AddOpts(string value)
     {
-        AddCustomArgument(value, null);
+        _extraParameters[value] = string.Empty;
         return this;
     }
 

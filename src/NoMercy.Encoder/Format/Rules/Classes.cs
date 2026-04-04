@@ -65,14 +65,22 @@ public class Classes
 
     internal string ScaleValue = "";
 
+    private ScaleArea? _scaleCache;
+
     public ScaleArea Scale
     {
         get
         {
+            if (_scaleCache is not null)
+                return _scaleCache;
+
             try
             {
                 if (string.IsNullOrEmpty(ScaleValue))
-                    return new() { W = 0, H = 0 };
+                {
+                    _scaleCache = new() { W = 0, H = 0 };
+                    return _scaleCache;
+                }
 
                 string[] scale = ScaleValue.Split(':');
                 int width = int.Parse(scale[0]);
@@ -85,7 +93,8 @@ public class Classes
                 if (height == -2 && AspectRatioValue > 0)
                     height = (int)(width * AspectRatioValue);
 
-                return new() { W = width, H = height };
+                _scaleCache = new() { W = width, H = height };
+                return _scaleCache;
             }
             catch (Exception e)
             {
@@ -94,7 +103,11 @@ public class Classes
                 throw;
             }
         }
-        set => ScaleValue = $"{value.W}:{value.H}";
+        set
+        {
+            ScaleValue = $"{value.W}:{value.H}";
+            _scaleCache = null;
+        }
     }
 
     public class VideoQualityDto

@@ -636,6 +636,105 @@ public static class EncoderProfileSeedData
                     },
                 ],
             },
+            // Archival Profiles (CRF, slow preset, not for streaming ladder)
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8K5T0D08F9J9577J04K"),
+                Name = "Archival HEVC (H.265)",
+                Container = VideoContainers.Mkv,
+                Param = "archival",
+                EncoderProfileFolder = [],
+                VideoProfiles =
+                [
+                    new()
+                    {
+                        Codec = VideoCodecs.H265.Value,
+                        Bitrate = 0,
+                        Crf = 20,
+                        Width = FrameSizes._4k.Width,
+
+                        SegmentName = ":filename:-archival-hevc",
+                        PlaylistName = ":filename:-archival-hevc",
+                        ColorSpace = ColorSpaces.Yuv420P,
+                        Preset = VideoPresets.Slow,
+                        Tune = VideoTunes.Hq,
+                        Profile = VideoProfiles.Main10,
+                        Level = "5.1",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = false,
+                    },
+                ],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Flac.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
+                SubtitleProfiles =
+                [
+                    new()
+                    {
+                        Codec = SubtitleCodecs.Ass.Value,
+                        PlaylistName = "subtitles/:filename:.:language:.:variant:",
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
+            },
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8L5T0D08F9J9577J04K"),
+                Name = "Archival AV1",
+                Container = VideoContainers.Mkv,
+                Param = "archival",
+                EncoderProfileFolder = [],
+                VideoProfiles =
+                [
+                    new()
+                    {
+                        Codec = VideoCodecs.Av1.Value,
+                        Bitrate = 0,
+                        Crf = 26,
+                        Width = FrameSizes._4k.Width,
+
+                        SegmentName = ":filename:-archival-av1",
+                        PlaylistName = ":filename:-archival-av1",
+                        ColorSpace = ColorSpaces.Yuv420P,
+                        Preset = VideoPresets.Slow,
+                        Tune = VideoTunes.Hq,
+                        Profile = VideoProfiles.Main10,
+                        Level = "5.1",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = false,
+                    },
+                ],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Flac.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
+                SubtitleProfiles =
+                [
+                    new()
+                    {
+                        Codec = SubtitleCodecs.Ass.Value,
+                        PlaylistName = "subtitles/:filename:.:language:.:variant:",
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
+            },
         ];
     }
 }
