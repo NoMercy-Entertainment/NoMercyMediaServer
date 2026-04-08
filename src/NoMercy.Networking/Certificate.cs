@@ -46,7 +46,10 @@ public static class Certificate
         return new()
         {
             SslProtocols = SslProtocols.Tls12,
-            ServerCertificate = CombinePublicAndPrivateCerts(),
+            // Use a selector callback instead of a static cert so that after
+            // RenewSslCertificate() writes new files to disk, the next TLS
+            // handshake automatically picks them up without a server restart.
+            ServerCertificateSelector = (_, _) => CombinePublicAndPrivateCerts(),
         };
     }
 

@@ -130,6 +130,24 @@ public class ServerProcessLauncher
         return !IsServerProcessRunning;
     }
 
+    public Task ForceKillServerAsync()
+    {
+        try
+        {
+            if (_serverProcess is { HasExited: false })
+            {
+                _serverProcess.Kill(entireProcessTree: true);
+                _serverProcess = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error("Force kill failed", ex);
+        }
+
+        return Task.CompletedTask;
+    }
+
     public async Task ApplyUpdateAsync()
     {
         string tempPath = AppFiles.ServerTempExePath;

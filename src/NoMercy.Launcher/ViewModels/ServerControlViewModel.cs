@@ -277,8 +277,9 @@ public class ServerControlViewModel : INotifyPropertyChanged
             bool exited = await _processLauncher.WaitForServerExitAsync(TimeSpan.FromSeconds(30));
             if (!exited)
             {
-                ActionStatus = "Server did not stop in time";
-                return;
+                ActionStatus = "Server did not stop gracefully — force killing...";
+                await _processLauncher.ForceKillServerAsync();
+                await Task.Delay(1000);
             }
 
             _serverConnection.IsConnected = false;
@@ -351,9 +352,10 @@ public class ServerControlViewModel : INotifyPropertyChanged
             bool exited = await _processLauncher.WaitForServerExitAsync(TimeSpan.FromSeconds(30));
             if (!exited)
             {
-                LauncherLog.Error("Server did not exit within 30 seconds");
-                ActionStatus = "Server did not stop in time";
-                return;
+                LauncherLog.Error("Server did not exit within 30 seconds — force killing");
+                ActionStatus = "Server did not stop gracefully — force killing...";
+                await _processLauncher.ForceKillServerAsync();
+                await Task.Delay(1000);
             }
 
             LauncherLog.Info("Server process exited");

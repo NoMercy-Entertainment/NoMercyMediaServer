@@ -140,6 +140,23 @@ public static class ApplicationConfiguration
         app.UseCors("AllowNoMercyOrigins");
         app.UseRouting();
 
+        // Serve Keycloak silent SSO check page — must be available before auth middleware.
+        // The web app's Keycloak adapter loads this in a hidden iframe for token refresh.
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.Value?.EndsWith("/silent-check-sso.html", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                context.Response.ContentType = "text/html; charset=utf-8";
+                context.Response.Headers.CacheControl = "no-store";
+                await context.Response.WriteAsync(
+                    "<html><body><script>parent.postMessage(location.href, location.origin)</script></body></html>"
+                );
+                return;
+            }
+
+            await next();
+        });
+
         app.UseMiddleware<SetupModeMiddleware>();
         app.UseMiddleware<LocalizationMiddleware>();
         app.UseMiddleware<TokenParamAuthMiddleware>();

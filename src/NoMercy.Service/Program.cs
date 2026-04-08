@@ -315,15 +315,22 @@ public static class Program
             return shouldRetry;
         }
 
-        // Wait for either setup completion or shutdown
-        Task shutdownTask = Task.Delay(Timeout.Infinite, _applicationShutdownCts!.Token);
-        Task setupCompleteTask = setupState.WaitForSetupCompleteAsync(
-            _applicationShutdownCts.Token
-        );
+        // Wait for either setup completion or shutdown.
+        // Use the host's ApplicationStopping token so that POST /manage/stop
+        // (which calls IHostApplicationLifetime.StopApplication()) also cancels
+        // this wait — not just Ctrl+C via _applicationShutdownCts.
+        CancellationToken hostStopping = httpHost.Services
+            .GetRequiredService<IHostApplicationLifetime>()
+            .ApplicationStopping;
+        using CancellationTokenSource linkedCts = CancellationTokenSource
+            .CreateLinkedTokenSource(_applicationShutdownCts!.Token, hostStopping);
+
+        Task shutdownTask = Task.Delay(Timeout.Infinite, linkedCts.Token);
+        Task setupCompleteTask = setupState.WaitForSetupCompleteAsync(linkedCts.Token);
 
         Task completedTask = await Task.WhenAny(setupCompleteTask, shutdownTask);
 
-        if (completedTask == shutdownTask || _applicationShutdownCts.IsCancellationRequested)
+        if (completedTask == shutdownTask || linkedCts.IsCancellationRequested)
         {
             await httpHost.StopAsync(TimeSpan.FromSeconds(10));
             await httpHost.DisposeAsync();
