@@ -424,6 +424,42 @@ public static class Auth
             OfflineJwksCache.CachePublicKey(data.PublicKey);
     }
 
+    public static void ScheduleBackgroundRefresh(CancellationToken cancellationToken = default)
+    {
+        _ = Task.Run(async () =>
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    DateTime expiry = _jwtSecurityToken?.ValidTo ?? DateTime.UtcNow;
+                    TimeSpan delay = expiry - DateTime.UtcNow - TimeSpan.FromSeconds(60);
+
+                    if (delay > TimeSpan.Zero)
+                        await Task.Delay(delay, cancellationToken);
+
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+
+                    Logger.Auth("Proactive token refresh", LogEventLevel.Verbose);
+                    await TokenByRefreshGrand();
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception e)
+                {
+                    Logger.Auth(
+                        $"Background token refresh failed: {e.Message} — retrying in 60s",
+                        LogEventLevel.Warning
+                    );
+                    await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
+                }
+            }
+        }, cancellationToken);
+    }
+
     private static async Task TokenByRefreshGrand()
     {
         if (

@@ -317,11 +317,13 @@ public static class Program
         // Use the host's ApplicationStopping token so that POST /manage/stop
         // (which calls IHostApplicationLifetime.StopApplication()) also cancels
         // this wait — not just Ctrl+C via _applicationShutdownCts.
-        CancellationToken hostStopping = httpHost.Services
-            .GetRequiredService<IHostApplicationLifetime>()
+        CancellationToken hostStopping = httpHost
+            .Services.GetRequiredService<IHostApplicationLifetime>()
             .ApplicationStopping;
-        using CancellationTokenSource linkedCts = CancellationTokenSource
-            .CreateLinkedTokenSource(_applicationShutdownCts!.Token, hostStopping);
+        using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            _applicationShutdownCts!.Token,
+            hostStopping
+        );
 
         Task shutdownTask = Task.Delay(Timeout.Infinite, linkedCts.Token);
         Task setupCompleteTask = setupState.WaitForSetupCompleteAsync(linkedCts.Token);

@@ -41,7 +41,7 @@ public class SetupServer
         _port = port ?? Config.InternalServerPort;
         _codeVerifier = Auth.GenerateCodeVerifier();
         _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
-        
+
         string stateParam = Auth.GenerateCodeVerifier();
         Auth.SetState(stateParam);
     }
@@ -201,11 +201,7 @@ public class SetupServer
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsync(
-                BuildCallbackHtml(
-                    "Authorization Failed",
-                    displayMessage,
-                    isError: true
-                )
+                BuildCallbackHtml("Authorization Failed", displayMessage, isError: true)
             );
             return;
         }
@@ -283,7 +279,7 @@ public class SetupServer
         {
             _codeVerifier = Auth.GenerateCodeVerifier();
             _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
-            
+
             string stateParam = Auth.GenerateCodeVerifier();
             Auth.SetState(stateParam);
         }

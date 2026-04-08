@@ -91,6 +91,8 @@ public class Start
                                 "No network and no cached tokens available"
                             );
                     }
+
+                    Auth.ScheduleBackgroundRefresh();
                 },
                 CanDefer: true,
                 Phase: 2,

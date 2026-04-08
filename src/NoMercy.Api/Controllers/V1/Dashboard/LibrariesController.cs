@@ -66,7 +66,8 @@ public class LibrariesController(
 
         try
         {
-            await using MediaContext mediaContext = await mediaContextFactory.CreateDbContextAsync();
+            await using MediaContext mediaContext =
+                await mediaContextFactory.CreateDbContextAsync();
             int libraries = await mediaContext.Libraries.CountAsync();
 
             Library library = new()

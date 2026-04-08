@@ -476,14 +476,13 @@ public static class ServiceConfiguration
                     policy.AddRequirements(
                         new AssertionRequirement(context =>
                         {
-                            User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(user =>
-                                user.Id
-                                == Guid.Parse(
-                                    context.User.FindFirstValue(ClaimTypes.NameIdentifier)
-                                        ?? string.Empty
-                                )
-                            );
+                            string? sub = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+                            if (!Guid.TryParse(sub, out Guid userId))
+                                return false;
 
+                            User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(u =>
+                                u.Id == userId
+                            );
                             Logger.App($"User: {user?.Name ?? "Unknown"}");
                             return user is not null;
                         })
@@ -500,7 +499,10 @@ public static class ServiceConfiguration
             .AddJwtBearer(options =>
             {
                 options.Authority = Config.AuthBaseUrl;
-                options.RequireHttpsMetadata = true;
+                options.RequireHttpsMetadata = Config.AuthBaseUrl.StartsWith(
+                    "https://",
+                    StringComparison.OrdinalIgnoreCase
+                );
                 options.Audience = Config.TokenClientId;
 
                 // Enable offline token validation via cached signing keys
@@ -518,13 +520,14 @@ public static class ServiceConfiguration
                     parameters
                 ) =>
                 {
-                    // When OIDC metadata fetch fails, the default key resolver returns nothing.
-                    // Fall back to cached public key for offline validation.
+                    // Use the OIDC-discovered keys first (fresh from Keycloak).
+                    // Add the cached key as a fallback for offline/key-rotation scenarios.
+                    List<SecurityKey> keys = parameters.IssuerSigningKeys?.ToList() ?? [];
                     RsaSecurityKey? cachedKey = OfflineJwksCache.CachedSigningKey;
-                    if (cachedKey is not null)
-                        return [cachedKey];
+                    if (cachedKey is not null && keys.All(k => k != cachedKey))
+                        keys.Add(cachedKey);
 
-                    return [];
+                    return keys;
                 };
 
                 options.Events = new()
@@ -537,6 +540,14 @@ public static class ServiceConfiguration
                         if (result.Length > 0 && !string.IsNullOrEmpty(result[0]))
                             context.Token = result[0];
 
+                        return Task.CompletedTask;
+                    },
+                    OnAuthenticationFailed = context =>
+                    {
+                        Logger.Auth(
+                            $"JWT authentication failed: {context.Exception.GetType().Name}: {context.Exception.Message}",
+                            Serilog.Events.LogEventLevel.Warning
+                        );
                         return Task.CompletedTask;
                     },
                 };
