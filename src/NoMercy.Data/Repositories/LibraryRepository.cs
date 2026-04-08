@@ -938,17 +938,7 @@ public class LibraryRepository(MediaContext context)
 
     public async Task DeleteLibraryAsync(Library library)
     {
-        // SQLite schema uses DeleteBehavior.Restrict globally, so we must disable FK enforcement
-        // temporarily to delete the library and all its dependent records atomically.
-        await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
-        try
-        {
-            await context.Libraries.Where(l => l.Id == library.Id).ExecuteDeleteAsync();
-        }
-        finally
-        {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
-        }
+        await context.Libraries.Where(l => l.Id == library.Id).ExecuteDeleteAsync();
     }
 
     public Task<int> AddEncoderProfileFolderAsync(EncoderProfileFolder encoderProfileFolder)

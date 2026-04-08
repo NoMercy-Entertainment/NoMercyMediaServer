@@ -471,7 +471,7 @@ public static class ServiceConfiguration
                 policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.AddAuthenticationSchemes(IdentityConstants.BearerScheme);
+                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
                     policy.RequireClaim("scope", "openid", "profile");
                     policy.AddRequirements(
                         new AssertionRequirement(context =>

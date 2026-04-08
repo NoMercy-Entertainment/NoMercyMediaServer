@@ -2,6 +2,11 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Database;
@@ -23,7 +28,7 @@ public class MediaContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         options.UseSqlite(
-            $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True; Default Timeout=30;",
+            $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True; Default Timeout=30;",
             o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
         );
 
@@ -32,7 +37,8 @@ public class MediaContext : DbContext
 
         options.AddInterceptors(
             new EntityBaseUpdatedAtInterceptor(),
-            new SqliteNormalizeSearchInterceptor()
+            new SqliteNormalizeSearchInterceptor(),
+            new SqliteConnectionInterceptor()
         );
     }
 
@@ -114,6 +120,78 @@ public class MediaContext : DbContext
                 .Entity(entityType.ClrType)
                 .ToTable(tb => tb.HasTrigger($"update_{tableName}_updated_at"));
         }
+
+        // Explicit cascade for direct entity → Library FKs. These use ConfigurationSource.Explicit
+        // so they cannot be reset by convention re-processing (the mutation loop above only sets
+        // ConventionSource and gets overridden when HasTrigger calls re-process those entities).
+        modelBuilder
+            .Entity<Movie>()
+            .HasOne(m => m.Library)
+            .WithMany()
+            .HasForeignKey(m => m.LibraryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<Tv>()
+            .HasOne(t => t.Library)
+            .WithMany()
+            .HasForeignKey(t => t.LibraryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<Collection>()
+            .HasOne(c => c.Library)
+            .WithMany()
+            .HasForeignKey(c => c.LibraryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<Album>()
+            .HasOne(a => a.Library)
+            .WithMany()
+            .HasForeignKey(a => a.LibraryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Content-ownership cascades: when a Movie/VideoFile is deleted, remove its owned records.
+        // Use the correct WithMany() collection navigation to match the convention-discovered
+        // relationship — otherwise EF Core creates a duplicate FK property (e.g. MovieId1).
+        modelBuilder
+            .Entity<GenreMovie>()
+            .HasOne(gm => gm.Movie)
+            .WithMany(m => m.GenreMovies)
+            .HasForeignKey(gm => gm.MovieId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<VideoFile>()
+            .HasOne(v => v.Movie)
+            .WithMany(m => m.VideoFiles)
+            .HasForeignKey(v => v.MovieId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<UserData>()
+            .HasOne(u => u.Movie)
+            .WithMany(m => m.UserData)
+            .HasForeignKey(u => u.MovieId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<UserData>()
+            .HasOne(u => u.VideoFile)
+            .WithMany(v => v.UserData)
+            .HasForeignKey(u => u.VideoFileId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Mutation loop for join table FKs — these are not covered by explicit fluent API above
+        // but need Cascade so deleting a Library also removes their join rows.
+        // This runs last so it doesn't conflict with the explicit configs above.
+        modelBuilder
+            .Model.GetEntityTypes()
+            .SelectMany(t => t.GetForeignKeys())
+            .Where(fk => fk.PrincipalEntityType.ClrType == typeof(Library))
+            .ToList()
+            .ForEach(fk => fk.DeleteBehavior = DeleteBehavior.Cascade);
 
         base.OnModelCreating(modelBuilder);
     }

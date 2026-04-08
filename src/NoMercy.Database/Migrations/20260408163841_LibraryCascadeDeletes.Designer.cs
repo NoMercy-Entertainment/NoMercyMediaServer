@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercy.Database;
 
@@ -10,9 +11,11 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations
 {
     [DbContext(typeof(MediaContext))]
-    partial class MediaContextModelSnapshot : ModelSnapshot
+    [Migration("20260408163841_LibraryCascadeDeletes")]
+    partial class LibraryCascadeDeletes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.3");
@@ -4134,7 +4137,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("VideoFiles")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Episode");
 
@@ -4167,7 +4170,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Library");
@@ -4260,7 +4263,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("GenreMovies")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Genre");
@@ -4311,7 +4314,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Library");
@@ -4434,7 +4437,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Media.Metadata", "Metadata")
@@ -4573,7 +4576,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Library");
 
@@ -4786,7 +4789,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Library");
                 });
@@ -5166,7 +5169,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Library");
@@ -5285,7 +5288,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("UserData")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Special", "Special")
                         .WithMany()
@@ -5311,7 +5314,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Media.VideoFile", "VideoFile")
                         .WithMany("UserData")
                         .HasForeignKey("VideoFileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Collection");

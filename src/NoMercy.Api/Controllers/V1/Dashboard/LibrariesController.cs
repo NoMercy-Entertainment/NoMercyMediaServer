@@ -282,8 +282,9 @@ public class LibrariesController(
                 }
             );
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            Logger.App(e);
             return InternalServerErrorResponse("Something went wrong deleting the library");
         }
     }
