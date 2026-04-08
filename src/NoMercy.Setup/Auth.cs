@@ -368,6 +368,12 @@ public static class Auth
         RefreshToken = data.RefreshToken;
         ExpiresIn = data.ExpiresIn;
         NotBefore = data.NotBeforePolicy;
+
+        if (!string.IsNullOrEmpty(data.AccessToken))
+        {
+            JwtSecurityTokenHandler tokenHandler = new();
+            _jwtSecurityToken = tokenHandler.ReadJwtToken(data.AccessToken);
+        }
     }
 
     internal static void SetTokensFromSetup(AuthResponse data)
@@ -447,6 +453,31 @@ public static class Auth
                 catch (OperationCanceledException)
                 {
                     break;
+                }
+                catch (Exception e) when (
+                    e.Message.Contains("400")
+                    || e.Message.Contains("401")
+                    || e.Message.Contains("Bad Request")
+                    || e.Message.Contains("invalid_grant")
+                    || e.Message.Contains("Auth keys not initialized")
+                )
+                {
+                    Logger.Auth(
+                        $"Refresh token rejected by Keycloak — escalating to device/browser grant",
+                        LogEventLevel.Warning
+                    );
+                    try
+                    {
+                        await TokenByBrowserOrDeviceGrant();
+                    }
+                    catch (Exception inner)
+                    {
+                        Logger.Auth(
+                            $"Re-authentication failed: {inner.Message} — manual /setup required",
+                            LogEventLevel.Error
+                        );
+                        await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
+                    }
                 }
                 catch (Exception e)
                 {
