@@ -8,21 +8,10 @@ public class TempServer
 {
     public static WebApplication Start()
     {
-        WebApplicationBuilder builder = WebApplication.CreateBuilder();
-
-        WebApplication app = builder.Build();
-        app.Urls.Add("http://0.0.0.0:" + Config.InternalServerPort);
-        app.Run(async context =>
-        {
-            string code = context.Request.Query["code"].ToString();
-
-            context.Response.Headers.Append("Content-Type", "text/html");
-            await context.Response.WriteAsync("<script>window.close();</script>");
-            await context.Response.CompleteAsync();
-
-            await Auth.TokenByAuthorizationCode(code);
-        });
-
-        return app;
+        throw new InvalidOperationException(
+            "TempServer is deprecated — the /sso-callback route is now handled by SetupModeMiddleware + SetupServer within the main Kestrel pipeline. "
+            + "This method previously attempted to bind to the same port as the main server, causing conflicts. "
+            + "Authentication now flows through the web UI exclusively."
+        );
     }
 }

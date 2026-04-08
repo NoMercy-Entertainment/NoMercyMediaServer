@@ -206,17 +206,15 @@ public static class Program
             {
                 try
                 {
-                    string internalIp = networkDiscovery?.InternalIp ?? "127.0.0.1";
-                    string setupUrl = $"http://{internalIp}:{Config.InternalServerPort}/setup";
+                    string setupUrl = $"http://localhost:{Config.InternalServerPort}/setup";
                     Logger.App($"Opening setup page in browser: {setupUrl}");
                     Auth.OpenBrowser(setupUrl);
                 }
                 catch (Exception ex)
                 {
                     Logger.App($"Could not open browser automatically: {ex.Message}");
-                    string internalIp2 = networkDiscovery?.InternalIp ?? "127.0.0.1";
                     Logger.App(
-                        $"Please open your browser and navigate to: http://{internalIp2}:{Config.InternalServerPort}/setup"
+                        $"Please open your browser and navigate to: http://localhost:{Config.InternalServerPort}/setup"
                     );
                 }
             }

@@ -41,6 +41,9 @@ public class SetupServer
         _port = port ?? Config.InternalServerPort;
         _codeVerifier = Auth.GenerateCodeVerifier();
         _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
+        
+        string stateParam = Auth.GenerateCodeVerifier();
+        Auth.SetState(stateParam);
     }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -165,6 +168,7 @@ public class SetupServer
             auth_base_url = Config.AuthBaseUrl.OrEmpty(),
             client_id = Config.TokenClientId.OrEmpty(),
             code_challenge = _codeChallenge,
+            state = Auth.GetState(),
         };
 
         await WriteJsonResponse(context.Response, response);
@@ -219,6 +223,18 @@ public class SetupServer
             return;
         }
 
+        string state = context.Request.Query["state"].ToString();
+        if (string.IsNullOrEmpty(state) || state != Auth.GetState())
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            context.Response.ContentType = "application/json";
+            await WriteJsonResponse(
+                context.Response,
+                new { status = "error", message = "Invalid state parameter" }
+            );
+            return;
+        }
+
         _state.TransitionTo(SetupPhase.Authenticating);
 
         string redirectUri = BuildRedirectUri(context.Request);
@@ -267,6 +283,9 @@ public class SetupServer
         {
             _codeVerifier = Auth.GenerateCodeVerifier();
             _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
+            
+            string stateParam = Auth.GenerateCodeVerifier();
+            Auth.SetState(stateParam);
         }
 
         context.Response.ContentType = "text/html; charset=utf-8";
@@ -356,9 +375,8 @@ public class SetupServer
 
     internal static string BuildRedirectUri(HttpRequest request)
     {
-        string scheme = request.Scheme;
-        string host = request.Host.ToString();
-        return $"{scheme}://{host}/sso-callback";
+        int port = request.Host.Port ?? Config.InternalServerPort;
+        return $"http://localhost:{port}/sso-callback";
     }
 
     private async Task HandleSetupStatus(HttpContext context)

@@ -25,8 +25,7 @@ public static class Auth
 
     private static JwtSecurityToken? _jwtSecurityToken;
     private static string? _codeVerifier;
-
-    private static WebApplication? TempServerInstance { get; set; }
+    private static string? _state;
 
     public static async Task Init()
     {
@@ -320,6 +319,9 @@ public static class Auth
         _codeVerifier = GenerateCodeVerifier();
         string codeChallenge = GenerateCodeChallenge(_codeVerifier);
 
+        string state = GenerateCodeVerifier();
+        _state = state;
+
         Dictionary<string, string> queryParams = new()
         {
             ["client_id"] = Config.TokenClientId,
@@ -328,6 +330,7 @@ public static class Auth
             ["scope"] = scope,
             ["code_challenge"] = codeChallenge,
             ["code_challenge_method"] = "S256",
+            ["state"] = state,
         };
 
         string queryString = string.Join(
@@ -340,9 +343,6 @@ public static class Auth
         string url = $"{baseUrl}?{queryString}";
         Logger.Setup($"Opening browser for authentication: {url}", LogEventLevel.Verbose);
 
-        TempServerInstance = TempServer.Start();
-        await TempServerInstance.StartAsync();
-
         OpenBrowser(url);
 
         await WaitForToken();
@@ -354,9 +354,6 @@ public static class Auth
         {
             await Task.Delay(1000);
         }
-
-        if (TempServerInstance != null)
-            await TempServerInstance.StopAsync();
     }
 
     private static void SetTokens(AuthResponse data)
@@ -542,6 +539,18 @@ public static class Auth
     {
         byte[] hash = SHA256.HashData(Encoding.ASCII.GetBytes(codeVerifier));
         return Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    }
+
+    public static string? GetState() => _state;
+
+    internal static void SetState(string state)
+    {
+        _state = state;
+    }
+
+    internal static void ClearState()
+    {
+        _state = null;
     }
 
     internal static List<KeyValuePair<string, string>> BuildAuthorizationCodeBody(
