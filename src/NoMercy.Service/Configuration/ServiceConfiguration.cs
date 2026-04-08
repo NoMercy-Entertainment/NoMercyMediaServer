@@ -544,8 +544,84 @@ public static class ServiceConfiguration
                     },
                     OnAuthenticationFailed = context =>
                     {
+                        HttpRequest req = context.Request;
+
+                        // Extract client identity from query string (sent by all hub connections)
+                        string clientName =
+                            req.Query["client_name"].FirstOrDefault()
+                            ?? req.Query["custom_name"].FirstOrDefault()
+                            ?? "unknown-client";
+                        string clientType = req.Query["client_type"].FirstOrDefault() ?? "unknown";
+                        string clientDevice = req.Query["client_device"].FirstOrDefault() ?? "";
+                        string clientOs = req.Query["client_os"].FirstOrDefault() ?? "";
+                        string remoteIp =
+                            context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+                        // Build a human-readable client description
+                        string client = !string.IsNullOrEmpty(clientDevice)
+                            ? $"\"{clientName}\" ({clientDevice}, {clientOs})"
+                            : $"\"{clientName}\" ({clientType})";
+
+                        // Extract the hub/endpoint name from the path
+                        string endpoint =
+                            req.Path.Value?.Split('/')
+                                .FirstOrDefault(s =>
+                                    s.EndsWith("Hub", StringComparison.OrdinalIgnoreCase)
+                                    || s == "negotiate"
+                                    || s.Length > 0
+                                )
+                            ?? req.Path.Value
+                            ?? "unknown";
+                        // Get just the hub name from the path e.g. /videoHub/negotiate → videoHub
+                        string[] segments = (req.Path.Value ?? "").Trim('/').Split('/');
+                        string hub = segments.Length > 0 ? segments[0] : "unknown";
+
+                        // Try to read token claims for expiry diagnostics
+                        string tokenAge = "";
+                        try
+                        {
+                            string? raw = req.Query["access_token"].FirstOrDefault()?.Split('&')[0];
+                            if (string.IsNullOrEmpty(raw))
+                            {
+                                // Check Authorization header
+                                string? authHeader = req.Headers.Authorization.FirstOrDefault();
+                                if (
+                                    authHeader?.StartsWith(
+                                        "Bearer ",
+                                        StringComparison.OrdinalIgnoreCase
+                                    ) == true
+                                )
+                                    raw = authHeader["Bearer ".Length..];
+                            }
+
+                            if (!string.IsNullOrEmpty(raw))
+                            {
+                                var handler =
+                                    new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                                var jwt = handler.ReadJwtToken(raw);
+                                TimeSpan expired = DateTime.UtcNow - jwt.ValidTo;
+                                tokenAge =
+                                    expired.TotalHours >= 1
+                                        ? $" (token expired {expired.TotalHours:F0}h ago)"
+                                        : $" (token expired {expired.TotalMinutes:F0}m ago)";
+                            }
+                        }
+                        catch
+                        { /* token unreadable — skip */
+                        }
+
+                        // Human-readable failure reason
+                        string reason = context.Exception switch
+                        {
+                            SecurityTokenExpiredException => $"Expired token{tokenAge}",
+                            SecurityTokenInvalidSignatureException => "Invalid token signature",
+                            SecurityTokenInvalidAudienceException => "Token audience mismatch",
+                            SecurityTokenInvalidIssuerException => "Token issuer mismatch",
+                            _ => $"{context.Exception.GetType().Name}: {context.Exception.Message}",
+                        };
+
                         Logger.Auth(
-                            $"JWT authentication failed: {context.Exception.GetType().Name}: {context.Exception.Message}",
+                            $"{reason} — {client} → {hub} from {remoteIp}",
                             Serilog.Events.LogEventLevel.Warning
                         );
                         return Task.CompletedTask;
