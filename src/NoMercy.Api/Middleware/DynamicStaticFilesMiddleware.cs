@@ -65,6 +65,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             || rootPath.Equals("index.html", StringComparison.OrdinalIgnoreCase)
             || rootPath.StartsWith("swagger", StringComparison.OrdinalIgnoreCase)
             || rootPath.Equals("images", StringComparison.OrdinalIgnoreCase)
+            || rootPath.Equals("manage", StringComparison.OrdinalIgnoreCase)
         )
         {
             await next(context);
@@ -96,9 +97,9 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         catch (Exception ex)
         {
             Logger.App(
-                $"DynamicStaticFilesMiddleware unhandled exception for path '{context.Request.Path}': {ex.Message}"
+                $"DynamicStaticFilesMiddleware unhandled exception for path '{context.Request.Path}': {ex}"
             );
-            await next(context);
+            throw;
         }
     }
 

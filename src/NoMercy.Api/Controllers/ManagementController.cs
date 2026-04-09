@@ -432,11 +432,19 @@ public class ManagementController(
 
         if (request.ServerName is not null)
         {
-            await mediaContext
-                .Configuration.Upsert(new() { Key = "serverName", Value = request.ServerName })
-                .On(e => e.Key)
-                .WhenMatched((_, n) => new() { Value = n.Value })
-                .RunAsync();
+            Configuration? existing = await mediaContext.Configuration
+                .FirstOrDefaultAsync(c => c.Key == "serverName");
+
+            if (existing is not null)
+            {
+                existing.Value = request.ServerName;
+            }
+            else
+            {
+                mediaContext.Configuration.Add(new() { Key = "serverName", Value = request.ServerName });
+            }
+
+            await mediaContext.SaveChangesAsync();
         }
 
         return Ok(new { status = "ok", message = "Configuration updated" });
