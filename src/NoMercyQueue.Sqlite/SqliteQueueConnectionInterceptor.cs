@@ -1,15 +1,9 @@
 using System.Data.Common;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace NoMercy.Database;
+namespace NoMercyQueue.Sqlite;
 
-/// <summary>
-/// Configures each SQLite connection for concurrent use:
-/// - WAL journal mode: allows concurrent readers alongside the writer
-/// - busy_timeout: retry for up to 30 s instead of immediately throwing SQLITE_BUSY
-/// - synchronous=NORMAL: safe with WAL and faster than FULL
-/// </summary>
-public class SqliteConnectionInterceptor : DbConnectionInterceptor
+internal class SqliteQueueConnectionInterceptor : DbConnectionInterceptor
 {
     public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
     {

@@ -12,6 +12,10 @@ public class QueueWorker(
     ILogger<QueueWorker>? logger = null
 )
 {
+    private const int MaxTransientRetries = 5;
+    private const int TransientRetryBaseMs = 3000;
+    private const int TransientRetryJitterMs = 2000;
+
     private long? _currentJobId;
     private bool _isRunning = true;
 
@@ -39,11 +43,7 @@ public class QueueWorker(
 
                     if (jobWithArguments is IShouldQueue classInstance)
                     {
-                        // GetAwaiter().GetResult() rather than .Wait() so that the
-                        // original exception propagates unwrapped (not wrapped in
-                        // AggregateException) — this keeps catch-block handling and
-                        // retry classification correct.
-                        classInstance.Handle().GetAwaiter().GetResult();
+                        ExecuteWithTransientRetry(classInstance, job);
 
                         queue.DeleteJob(job);
                         _currentJobId = null;
@@ -107,6 +107,63 @@ public class QueueWorker(
     protected virtual void OnWorkCompleted(EventArgs e)
     {
         WorkCompleted.Invoke(this, e);
+    }
+
+    /// <summary>
+    /// Executes a job with transparent retry for transient SQLite errors (SQLITE_BUSY /
+    /// "database is locked").  These retries do NOT consume the job's attempt count —
+    /// they exist to absorb short-lived write-lock contention that is normal under
+    /// concurrent queue workers sharing a single SQLite database.
+    /// </summary>
+    private void ExecuteWithTransientRetry(IShouldQueue job, QueueJobModel queueJob)
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try
+            {
+                // GetAwaiter().GetResult() rather than .Wait() so that the
+                // original exception propagates unwrapped (not wrapped in
+                // AggregateException) — this keeps catch-block handling and
+                // retry classification correct.
+                job.Handle().GetAwaiter().GetResult();
+                return;
+            }
+            catch (Exception ex) when (IsTransientSqliteError(ex) && attempt < MaxTransientRetries)
+            {
+                int delay = TransientRetryBaseMs + Random.Shared.Next(TransientRetryJitterMs);
+
+                logger?.LogWarning(
+                    "QueueWorker {Name} - {CurrentIndex}: Job {JobId} hit transient SQLite error (attempt {Attempt}/{Max}), retrying in {Delay}ms",
+                    name,
+                    CurrentIndex,
+                    queueJob.Id,
+                    attempt + 1,
+                    MaxTransientRetries,
+                    delay
+                );
+
+                Thread.Sleep(delay);
+            }
+        }
+    }
+
+    private static bool IsTransientSqliteError(Exception ex)
+    {
+        // Walk the exception chain looking for SQLite BUSY (error code 5).
+        // We check the type name instead of casting because this assembly
+        // does not reference Microsoft.Data.Sqlite directly.
+        for (Exception? current = ex; current != null; current = current.InnerException)
+        {
+            string typeName = current.GetType().Name;
+
+            if (typeName is "SqliteException" &&
+                current.Message.Contains("database is locked", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void Stop()

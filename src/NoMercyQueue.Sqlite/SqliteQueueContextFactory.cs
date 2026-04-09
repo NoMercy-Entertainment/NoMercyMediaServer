@@ -11,6 +11,7 @@ public static class SqliteQueueContextFactory
             .UseSqlite(
                 $"Data Source={databasePath}; Pooling=True; Cache=Shared; Foreign Keys=True;"
             )
+            .AddInterceptors(new SqliteQueueConnectionInterceptor())
             .Options;
 
         QueueDbContext dbContext = new(options);
