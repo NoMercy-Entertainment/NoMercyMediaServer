@@ -28,7 +28,7 @@ public class MediaContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         options.UseSqlite(
-            $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True; Default Timeout=30;",
+            $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True; Default Timeout=30;",
             o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
         );
 
