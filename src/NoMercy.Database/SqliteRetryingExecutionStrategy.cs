@@ -68,4 +68,79 @@ public class SqliteRetryingExecutionStrategy : ExecutionStrategy
 
         return false;
     }
+
+    /// <summary>
+    /// Checks whether an exception (or any in its chain) is a transient SQLite lock error.
+    /// Useful for callers outside EF Core's pipeline (FlexLabs.Upsert, raw SQL, SignalR hubs).
+    /// </summary>
+    public static bool IsTransientSqliteError(Exception exception)
+    {
+        for (Exception? current = exception; current != null; current = current.InnerException)
+        {
+            if (
+                current.GetType().Name == "SqliteException"
+                && current.Message.Contains("is locked", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Executes an async operation with retry on transient SQLite lock errors.
+    /// Use this to wrap calls that bypass the EF Core execution strategy
+    /// (e.g. FlexLabs.Upsert, ExecuteSqlRaw, SignalR hub methods).
+    /// </summary>
+    public static async Task ExecuteWithRetryAsync(
+        Func<Task> operation,
+        int maxRetries = DefaultMaxRetryCount,
+        CancellationToken cancellationToken = default
+    )
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try
+            {
+                await operation();
+                return;
+            }
+            catch (Exception ex) when (IsTransientSqliteError(ex) && attempt < maxRetries)
+            {
+                int delay = Math.Min(
+                    (int)(Math.Pow(2, attempt) * 1000 * (1.0 + Random.Shared.NextDouble() * 0.1)),
+                    (int)DefaultMaxDelay.TotalMilliseconds
+                );
+
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
+    }
+
+    /// <inheritdoc cref="ExecuteWithRetryAsync(Func{Task}, int, CancellationToken)"/>
+    public static async Task<T> ExecuteWithRetryAsync<T>(
+        Func<Task<T>> operation,
+        int maxRetries = DefaultMaxRetryCount,
+        CancellationToken cancellationToken = default
+    )
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try
+            {
+                return await operation();
+            }
+            catch (Exception ex) when (IsTransientSqliteError(ex) && attempt < maxRetries)
+            {
+                int delay = Math.Min(
+                    (int)(Math.Pow(2, attempt) * 1000 * (1.0 + Random.Shared.NextDouble() * 0.1)),
+                    (int)DefaultMaxDelay.TotalMilliseconds
+                );
+
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
+    }
 }

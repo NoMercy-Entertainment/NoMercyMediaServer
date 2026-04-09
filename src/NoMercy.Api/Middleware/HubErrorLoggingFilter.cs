@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
+using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
@@ -68,8 +69,12 @@ public class HubErrorLoggingFilter : IHubFilter
                 Logger.Socket($"{user.Name}: [{hubName}.{methodName}] Arguments: {args}");
             }
 
-            // Execute the hub method
-            object? result = await next(invocationContext);
+            // Execute the hub method with SQLite retry protection.
+            // FlexLabs.Upsert (used in VideoHub.SetTime etc.) calls ExecuteSqlRawAsync
+            // which bypasses the EF Core execution strategy's retry pipeline.
+            object? result = await SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(async () =>
+                await next(invocationContext)
+            );
 
             // Logger.Socket($"{user.Name}: [{hubName}.{methodName}] Successfully executed");
 
