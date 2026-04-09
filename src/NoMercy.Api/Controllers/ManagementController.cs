@@ -432,8 +432,9 @@ public class ManagementController(
 
         if (request.ServerName is not null)
         {
-            Configuration? existing = await mediaContext.Configuration
-                .FirstOrDefaultAsync(c => c.Key == "serverName");
+            Configuration? existing = await mediaContext.Configuration.FirstOrDefaultAsync(c =>
+                c.Key == "serverName"
+            );
 
             if (existing is not null)
             {
@@ -441,7 +442,9 @@ public class ManagementController(
             }
             else
             {
-                mediaContext.Configuration.Add(new() { Key = "serverName", Value = request.ServerName });
+                mediaContext.Configuration.Add(
+                    new() { Key = "serverName", Value = request.ServerName }
+                );
             }
 
             await mediaContext.SaveChangesAsync();

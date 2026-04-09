@@ -149,7 +149,9 @@ public class QueueWorker(
 
     private static bool IsTransientSqliteError(Exception ex)
     {
-        // Walk the exception chain looking for SQLite BUSY (error code 5).
+        // Walk the exception chain looking for SQLite lock contention:
+        //   Error 5  (SQLITE_BUSY)   → "database is locked"
+        //   Error 6  (SQLITE_LOCKED) → "database table is locked" (shared-cache contention)
         // We check the type name instead of casting because this assembly
         // does not reference Microsoft.Data.Sqlite directly.
         for (Exception? current = ex; current != null; current = current.InnerException)
@@ -157,7 +159,7 @@ public class QueueWorker(
             string typeName = current.GetType().Name;
 
             if (typeName is "SqliteException" &&
-                current.Message.Contains("database is locked", StringComparison.OrdinalIgnoreCase))
+                current.Message.Contains("is locked", StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
