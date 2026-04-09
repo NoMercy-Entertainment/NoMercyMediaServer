@@ -378,8 +378,12 @@ public static class ServiceConfiguration
         services.AddDbContext<MediaContext>(optionsAction =>
         {
             optionsAction.UseSqlite(
-                $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True;",
+                o =>
+                {
+                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    o.ExecutionStrategy(deps => new SqliteRetryingExecutionStrategy(deps));
+                }
             );
             optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
         });
@@ -388,8 +392,12 @@ public static class ServiceConfiguration
             optionsAction =>
             {
                 optionsAction.UseSqlite(
-                    $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
-                    o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                    $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True;",
+                    o =>
+                    {
+                        o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                        o.ExecutionStrategy(deps => new SqliteRetryingExecutionStrategy(deps));
+                    }
                 );
                 optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
             },

@@ -15,7 +15,7 @@ public class QueueContext : DbContext
         if (!options.IsConfigured)
         {
             options.UseSqlite(
-                $"Data Source={AppFiles.QueueDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;"
+                $"Data Source={AppFiles.QueueDatabase}; Pooling=True; Foreign Keys=True;"
             );
         }
     }

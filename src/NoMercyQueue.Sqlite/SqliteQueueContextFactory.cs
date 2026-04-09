@@ -9,7 +9,7 @@ public static class SqliteQueueContextFactory
     {
         DbContextOptions<QueueDbContext> options = new DbContextOptionsBuilder<QueueDbContext>()
             .UseSqlite(
-                $"Data Source={databasePath}; Pooling=True; Cache=Shared; Foreign Keys=True;"
+                $"Data Source={databasePath}; Pooling=True; Foreign Keys=True;"
             )
             .AddInterceptors(new SqliteQueueConnectionInterceptor())
             .Options;
