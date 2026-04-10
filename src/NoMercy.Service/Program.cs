@@ -158,10 +158,7 @@ public static class Program
         bool hasCert = Certificate.HasValidCertificate();
         bool needsSetupMode =
             !hasCert
-            || tokenState
-                is TokenState.Expired
-                    or TokenState.Missing
-                    or TokenState.Corrupt;
+            || tokenState is TokenState.Expired or TokenState.Missing or TokenState.Corrupt;
 
         WebApplication app = CreateWebApplication(options, forceHttp: needsSetupMode);
 
@@ -797,7 +794,10 @@ public static class Program
         await Task.CompletedTask;
     }
 
-    private static WebApplication CreateWebApplication(StartupOptions options, bool forceHttp = false)
+    private static WebApplication CreateWebApplication(
+        StartupOptions options,
+        bool forceHttp = false
+    )
     {
         List<IPAddress> localAddresses = [IPAddress.Any];
 
