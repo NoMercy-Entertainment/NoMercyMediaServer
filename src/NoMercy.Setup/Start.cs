@@ -94,7 +94,7 @@ public class Start
 
                     Auth.ScheduleBackgroundRefresh();
                 },
-                CanDefer: true,
+                CanDefer: false,
                 Phase: 2,
                 DependsOn: ["NetworkProbe"]
             ),
