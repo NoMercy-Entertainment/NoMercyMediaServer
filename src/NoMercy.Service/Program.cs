@@ -150,11 +150,22 @@ public static class Program
         await EnsurePortAvailable(Config.InternalServerPort);
 
         _applicationShutdownCts = new();
-        bool startedWithoutCert = !Certificate.HasValidCertificate();
-        WebApplication app = CreateWebApplication(options);
+
+        // Determine setup requirements BEFORE building the host so we can start
+        // in plain HTTP mode when auth or cert is missing — even if a stale cert
+        // file exists on disk.  The full HTTPS host is built after setup completes.
+        TokenState tokenState = await SetupState.ValidateTokenFile();
+        bool hasCert = Certificate.HasValidCertificate();
+        bool needsSetupMode =
+            !hasCert
+            || tokenState
+                is TokenState.Expired
+                    or TokenState.Missing
+                    or TokenState.Corrupt;
+
+        WebApplication app = CreateWebApplication(options, forceHttp: needsSetupMode);
 
         SetupState setupState = app.Services.GetRequiredService<SetupState>();
-        TokenState tokenState = await SetupState.ValidateTokenFile();
         SetupPhase initialPhase = setupState.DetermineInitialPhase(tokenState);
         Logger.App($"Token validation: {tokenState} → setup phase: {initialPhase}");
 
@@ -196,36 +207,13 @@ public static class Program
 
             Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
 
-            // Auto-open setup URL in browser if in setup mode and desktop environment
-            SetupState? setupState = app.Services.GetService<SetupState>();
-            if (
-                setupState?.IsSetupRequired == true
-                && !IsRunningAsService
-                && Auth.IsDesktopEnvironment()
-            )
-            {
-                try
-                {
-                    string setupUrl = $"http://localhost:{Config.InternalServerPort}/setup";
-                    Logger.App($"Opening setup page in browser: {setupUrl}");
-                    Auth.OpenBrowser(setupUrl);
-                }
-                catch (Exception ex)
-                {
-                    Logger.App($"Could not open browser automatically: {ex.Message}");
-                    Logger.App(
-                        $"Please open your browser and navigate to: http://localhost:{Config.InternalServerPort}/setup"
-                    );
-                }
-            }
-
             await Dev.Run();
         });
 
         bool shouldRetry;
-        if (startedWithoutCert)
+        if (needsSetupMode)
         {
-            Logger.App("Starting in HTTP mode — waiting for certificate acquisition...");
+            Logger.App("Starting in HTTP mode — waiting for setup completion...");
             shouldRetry = await RunWithHttpsRestart(app, options);
         }
         else
@@ -240,7 +228,7 @@ public static class Program
             Stopwatch retryStopWatch = new();
             retryStopWatch.Start();
 
-            WebApplication retryHost = CreateWebApplication(options);
+            WebApplication retryHost = CreateWebApplication(options, forceHttp: needsSetupMode);
             RegisterLifetimeEvents(retryHost, retryStopWatch);
 
             // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
@@ -262,7 +250,7 @@ public static class Program
                 }
             });
 
-            if (startedWithoutCert)
+            if (needsSetupMode)
             {
                 // Re-enter the setup/certificate flow so the server can complete
                 // first-boot setup rather than just running without HTTPS support.
@@ -311,6 +299,23 @@ public static class Program
             bool shouldRetry = await HandlePortInUse(Config.InternalServerPort, ex);
             await httpHost.DisposeAsync();
             return shouldRetry;
+        }
+
+        // HTTP server is up — open setup page immediately so the user doesn't have to wait
+        // for Phase 2-4 background tasks (Auth, Networking, etc.) before seeing the UI.
+        if (!IsRunningAsService && Auth.IsDesktopEnvironment() && setupState.IsSetupRequired)
+        {
+            string setupUrl = $"http://localhost:{Config.InternalServerPort}/setup";
+            Logger.App($"Opening setup page in browser: {setupUrl}");
+            try
+            {
+                Auth.OpenBrowser(setupUrl);
+            }
+            catch (Exception ex)
+            {
+                Logger.App($"Could not open browser automatically: {ex.Message}");
+                Logger.App($"Please open your browser and navigate to: {setupUrl}");
+            }
         }
 
         // Wait for either setup completion or shutdown.
@@ -792,12 +797,12 @@ public static class Program
         await Task.CompletedTask;
     }
 
-    private static WebApplication CreateWebApplication(StartupOptions options)
+    private static WebApplication CreateWebApplication(StartupOptions options, bool forceHttp = false)
     {
         List<IPAddress> localAddresses = [IPAddress.Any];
 
-        if (Software.IsWindows || Software.IsMac)
-            localAddresses.Add(IPAddress.IPv6Any);
+        // if (Software.IsWindows || Software.IsMac)
+        //     localAddresses.Add(IPAddress.IPv6Any);
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
 
@@ -830,7 +835,9 @@ public static class Program
         {
             Certificate.KestrelConfig(kestrelOptions);
 
-            // Main server endpoints — HTTPS when certificate is available, with HTTP/3 (QUIC) support
+            // Main server endpoints.
+            // forceHttp = true during setup/auth so we never need HTTPS to handle the
+            // OAuth callback and setup UI, even when a stale cert file is present.
             foreach (IPAddress address in localAddresses)
             {
                 kestrelOptions.Listen(
@@ -838,8 +845,15 @@ public static class Program
                     Config.InternalServerPort,
                     listenOptions =>
                     {
-                        listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
-                        Certificate.ConfigureHttpsListener(listenOptions);
+                        if (forceHttp)
+                        {
+                            listenOptions.Protocols = HttpProtocols.Http1;
+                        }
+                        else
+                        {
+                            listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
+                            Certificate.ConfigureHttpsListener(listenOptions);
+                        }
                     }
                 );
             }

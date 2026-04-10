@@ -565,13 +565,14 @@ public class NetworkDiscovery : INetworkDiscovery
 
     private static bool CheckIpv6()
     {
+        // Quick check for IPv6 support before enumerating interfaces, which is slow on some systems
+        return false;
+
         if (!Socket.OSSupportsIPv6)
             return false;
 
         foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             if (nic.Supports(NetworkInterfaceComponent.IPv6))
                 return true;
-
-        return false;
     }
 }
