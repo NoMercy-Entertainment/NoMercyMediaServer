@@ -28,20 +28,27 @@ public class SqliteConnectionInterceptor : DbConnectionInterceptor
 
     private static void ApplyPragmas(DbConnection connection)
     {
+        using DbCommand cmd = connection.CreateCommand();
+
+        // busy_timeout and synchronous are connection-level — always safe to set.
+        cmd.CommandText = """
+            PRAGMA busy_timeout=30000;
+            PRAGMA synchronous=NORMAL;
+            """;
+        cmd.ExecuteNonQuery();
+
+        // journal_mode=WAL writes to the database file — may fail on read-only
+        // or not-yet-initialized databases. DatabaseSeeder.Migrate() applies it
+        // explicitly after schema setup, so this is best-effort.
         try
         {
-            using DbCommand cmd = connection.CreateCommand();
-            cmd.CommandText = """
-                PRAGMA journal_mode=WAL;
-                PRAGMA busy_timeout=30000;
-                PRAGMA synchronous=NORMAL;
-                """;
-            cmd.ExecuteNonQuery();
+            using DbCommand walCmd = connection.CreateCommand();
+            walCmd.CommandText = "PRAGMA journal_mode=WAL;";
+            walCmd.ExecuteNonQuery();
         }
         catch (Microsoft.Data.Sqlite.SqliteException)
         {
-            // Best-effort: pragmas may fail on read-only or not-yet-initialized databases.
-            // DatabaseSeeder.Migrate() applies WAL mode explicitly after schema setup.
+            // Silently skip — WAL will be set after migration completes.
         }
     }
 }

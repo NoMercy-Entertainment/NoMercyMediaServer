@@ -31,7 +31,7 @@ public static class TrayIconFactory
 
         using (ILockedFramebuffer buffer = overlay.Lock())
         {
-            baseIcon.CopyPixels(buffer, AlphaFormat.Premul);
+            baseIcon.CopyPixels(buffer);
             DrawStatusDot(buffer, state);
         }
 

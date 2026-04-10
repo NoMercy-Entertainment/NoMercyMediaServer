@@ -30,10 +30,15 @@ public class MainViewModel : INotifyPropertyChanged
         StartupArgumentsViewModel = new();
         LogViewerViewModel = new(serverConnection);
 
-        ServerControlViewModel.PropertyChanged += (_, e) =>
+        ServerControlViewModel.PropertyChanged += async (_, e) =>
         {
             if (e.PropertyName == nameof(ServerControlViewModel.IsServerRunning))
+            {
                 SettingsViewModel.IsServerRunning = ServerControlViewModel.IsServerRunning;
+
+                if (ServerControlViewModel.IsServerRunning && !SettingsViewModel.ConfigLoaded)
+                    await SettingsViewModel.LoadConfigAsync();
+            }
         };
     }
 

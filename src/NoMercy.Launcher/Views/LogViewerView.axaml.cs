@@ -2,6 +2,7 @@ using System.Collections.Specialized;
 using System.Text;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using NoMercy.Launcher.Models;
@@ -75,7 +76,10 @@ public partial class LogViewerView : UserControl
 
                 if (topLevel?.Clipboard is not null)
                 {
-                    await topLevel.Clipboard.SetTextAsync(sb.ToString());
+                    await topLevel.Clipboard.SetValueAsync(
+                        Avalonia.Input.DataFormat.Text,
+                        sb.ToString()
+                    );
                     e.Handled = true;
                 }
             }

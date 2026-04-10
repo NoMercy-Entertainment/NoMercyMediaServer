@@ -22,7 +22,11 @@ public partial class MainWindow : Window
         await _viewModel.ServerControlViewModel.RefreshStatusAsync();
         _viewModel.ServerControlViewModel.StartPolling();
 
-        await _viewModel.SettingsViewModel.LoadConfigAsync();
+        // Settings and startup args are loaded reactively when IsServerRunning becomes true.
+        // Trigger an initial load if the server is already running.
+        if (_viewModel.ServerControlViewModel.IsServerRunning)
+            await _viewModel.SettingsViewModel.LoadConfigAsync();
+
         await _viewModel.StartupArgumentsViewModel.LoadAsync();
 
         if (_viewModel.LogViewerViewModel.AutoRefresh)
