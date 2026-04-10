@@ -28,6 +28,7 @@ public class SetupServer
 
     private string _codeVerifier;
     private string _codeChallenge;
+    private string _pkceState;
 
     // Terminal UI — created lazily when device code flow starts
     private SetupTerminalUi? _terminalUi;
@@ -40,6 +41,7 @@ public class SetupServer
         _port = port ?? Config.InternalServerPort;
         _codeVerifier = Auth.GenerateCodeVerifier();
         _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
+        _pkceState = Auth.GenerateCodeVerifier(); // Use same generator for state
     }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -164,7 +166,8 @@ public class SetupServer
             auth_base_url = Config.AuthBaseUrl.OrEmpty(),
             client_id = Config.TokenClientId.OrEmpty(),
             code_challenge = _codeChallenge,
-            state = _state,
+            state = _state, // setup state object
+            pkce_state = _pkceState, // actual PKCE state string
         };
 
         await WriteJsonResponse(context.Response, response);
@@ -215,8 +218,8 @@ public class SetupServer
             return;
         }
 
-        string state = context.Request.Query["state"].ToString();
-        if (string.IsNullOrEmpty(state) || state != _codeVerifier)
+        string stateParam = context.Request.Query["state"].ToString();
+        if (string.IsNullOrEmpty(stateParam) || stateParam != _pkceState)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "application/json";
@@ -271,7 +274,8 @@ public class SetupServer
         {
             _codeVerifier = Auth.GenerateCodeVerifier();
             _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
-            _state = new(); // Reset state for potential retry with new PKCE values
+            _pkceState = Auth.GenerateCodeVerifier();
+            _state = new(); // Reset setup state object for retry
         }
 
         context.Response.ContentType = "text/html; charset=utf-8";
