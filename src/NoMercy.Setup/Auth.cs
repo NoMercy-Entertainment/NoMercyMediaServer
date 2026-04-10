@@ -24,8 +24,8 @@ public static class Auth
     private static int? NotBefore { get; set; }
 
     private static JwtSecurityToken? _jwtSecurityToken;
-    private static string? _codeVerifier;
-    private static string? _state;
+
+    // PKCE fields for setup flow are now managed by SetupServer
 
     public static async Task Init()
     {
@@ -223,11 +223,89 @@ public static class Auth
 
         if (IsDesktopEnvironment())
         {
-            await TokenByBrowser();
+            await TokenByBrowserInteractive();
             return;
         }
 
         await TokenByDeviceGrant();
+    }
+
+    // Standalone PKCE browser flow for desktop/server (non-setup mode)
+    private static string? _pendingCodeVerifier;
+    private static string? _pendingState;
+    private static TaskCompletionSource<bool>? _pkceCompletionSource;
+
+    internal static async Task TokenByBrowserInteractive()
+    {
+        if (string.IsNullOrEmpty(Config.AuthBaseUrl) || string.IsNullOrEmpty(Config.TokenClientId))
+            throw new ArgumentException("Auth base URL or client ID is not initialized");
+
+        string codeVerifier = GenerateCodeVerifier();
+        string codeChallenge = GenerateCodeChallenge(codeVerifier);
+        string state = GenerateCodeVerifier();
+
+        _pendingCodeVerifier = codeVerifier;
+        _pendingState = state;
+        _pkceCompletionSource = new TaskCompletionSource<bool>();
+
+        string baseUrl = Config.AuthBaseUrl.TrimEnd('/') + "/protocol/openid-connect/auth";
+        string redirectUri = $"http://localhost:{Config.InternalServerPort}/sso-callback";
+        string scope = "openid offline_access email profile";
+
+        var queryParams = new Dictionary<string, string>
+        {
+            ["client_id"] = Config.TokenClientId,
+            ["redirect_uri"] = redirectUri,
+            ["response_type"] = "code",
+            ["scope"] = scope,
+            ["code_challenge"] = codeChallenge,
+            ["code_challenge_method"] = "S256",
+            ["state"] = state,
+        };
+
+        string queryString = string.Join(
+            "&",
+            queryParams.Select(kvp =>
+                $"{HttpUtility.UrlEncode(kvp.Key)}={HttpUtility.UrlEncode(kvp.Value)}"
+            )
+        );
+        string url = $"{baseUrl}?{queryString}";
+        Logger.Setup($"Opening browser for authentication: {url}", LogEventLevel.Verbose);
+        OpenBrowser(url);
+
+        // Wait for /sso-callback to complete
+        await _pkceCompletionSource.Task;
+    }
+
+    // Called by /sso-callback in non-setup mode
+    public static async Task<bool> TryCompletePkceFromCallback(
+        string code,
+        string state,
+        string redirectUri
+    )
+    {
+        if (_pendingCodeVerifier == null || _pendingState == null || _pkceCompletionSource == null)
+            return false;
+        if (state != _pendingState)
+            return false;
+        try
+        {
+            await TokenByAuthorizationCode(code, _pendingCodeVerifier, redirectUri);
+            _pkceCompletionSource.TrySetResult(true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Auth($"PKCE callback failed: {ex.Message}", LogEventLevel.Error);
+            _pkceCompletionSource.TrySetException(ex);
+            return false;
+        }
+        finally
+        {
+            _pendingCodeVerifier = null;
+            _pendingState = null;
+            _pkceCompletionSource = null;
+        }
     }
 
     private static async Task TokenByDeviceGrant()
@@ -307,7 +385,12 @@ public static class Auth
             throw new("Device authorization timed out");
     }
 
-    private static async Task TokenByBrowser()
+    // Called only by SetupServer, which manages PKCE state
+    internal static async Task TokenByBrowser(
+        string codeVerifier,
+        string codeChallenge,
+        string state
+    )
     {
         if (string.IsNullOrEmpty(Config.AuthBaseUrl) || string.IsNullOrEmpty(Config.TokenClientId))
             throw new ArgumentException("Auth base URL or client ID is not initialized");
@@ -315,12 +398,6 @@ public static class Auth
         string baseUrl = Config.AuthBaseUrl.TrimEnd('/') + "/protocol/openid-connect/auth";
         string redirectUri = $"http://localhost:{Config.InternalServerPort}/sso-callback";
         string scope = "openid offline_access email profile";
-
-        _codeVerifier = GenerateCodeVerifier();
-        string codeChallenge = GenerateCodeChallenge(_codeVerifier);
-
-        string state = GenerateCodeVerifier();
-        _state = state;
 
         Dictionary<string, string> queryParams = new()
         {
@@ -344,7 +421,7 @@ public static class Auth
         Logger.Setup($"Opening browser for authentication: {url}", LogEventLevel.Verbose);
 
         OpenBrowser(url);
-
+        // Wait for token to be set by callback
         await WaitForToken();
     }
 
@@ -432,63 +509,66 @@ public static class Auth
 
     public static void ScheduleBackgroundRefresh(CancellationToken cancellationToken = default)
     {
-        _ = Task.Run(async () =>
-        {
-            while (!cancellationToken.IsCancellationRequested)
+        _ = Task.Run(
+            async () =>
             {
-                try
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    DateTime expiry = _jwtSecurityToken?.ValidTo ?? DateTime.UtcNow;
-                    TimeSpan delay = expiry - DateTime.UtcNow - TimeSpan.FromSeconds(60);
-
-                    if (delay > TimeSpan.Zero)
-                        await Task.Delay(delay, cancellationToken);
-
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
-
-                    Logger.Auth("Proactive token refresh", LogEventLevel.Verbose);
-                    await TokenByRefreshGrand();
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception e) when (
-                    e.Message.Contains("400")
-                    || e.Message.Contains("401")
-                    || e.Message.Contains("Bad Request")
-                    || e.Message.Contains("invalid_grant")
-                    || e.Message.Contains("Auth keys not initialized")
-                )
-                {
-                    Logger.Auth(
-                        $"Refresh token rejected by Keycloak — escalating to device/browser grant",
-                        LogEventLevel.Warning
-                    );
                     try
                     {
-                        await TokenByBrowserOrDeviceGrant();
+                        DateTime expiry = _jwtSecurityToken?.ValidTo ?? DateTime.UtcNow;
+                        TimeSpan delay = expiry - DateTime.UtcNow - TimeSpan.FromSeconds(60);
+
+                        if (delay > TimeSpan.Zero)
+                            await Task.Delay(delay, cancellationToken);
+
+                        if (cancellationToken.IsCancellationRequested)
+                            break;
+
+                        Logger.Auth("Proactive token refresh", LogEventLevel.Verbose);
+                        await TokenByRefreshGrand();
                     }
-                    catch (Exception inner)
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception e)
+                        when (e.Message.Contains("400")
+                            || e.Message.Contains("401")
+                            || e.Message.Contains("Bad Request")
+                            || e.Message.Contains("invalid_grant")
+                            || e.Message.Contains("Auth keys not initialized")
+                        )
                     {
                         Logger.Auth(
-                            $"Re-authentication failed: {inner.Message} — manual /setup required",
-                            LogEventLevel.Error
+                            $"Refresh token rejected by Keycloak — escalating to device/browser grant",
+                            LogEventLevel.Warning
                         );
-                        await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
+                        try
+                        {
+                            await TokenByBrowserOrDeviceGrant();
+                        }
+                        catch (Exception inner)
+                        {
+                            Logger.Auth(
+                                $"Re-authentication failed: {inner.Message} — manual /setup required",
+                                LogEventLevel.Error
+                            );
+                            await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Auth(
+                            $"Background token refresh failed: {e.Message} — retrying in 60s",
+                            LogEventLevel.Warning
+                        );
+                        await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
                     }
                 }
-                catch (Exception e)
-                {
-                    Logger.Auth(
-                        $"Background token refresh failed: {e.Message} — retrying in 60s",
-                        LogEventLevel.Warning
-                    );
-                    await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
-                }
-            }
-        }, cancellationToken);
+            },
+            cancellationToken
+        );
     }
 
     private static async Task TokenByRefreshGrand()
@@ -521,16 +601,7 @@ public static class Auth
         SetTokens(data);
     }
 
-    public static async Task TokenByAuthorizationCode(string code)
-    {
-        if (string.IsNullOrEmpty(_codeVerifier))
-            throw new(
-                "PKCE code verifier is missing. Authorization must be initiated via TokenByBrowser first."
-            );
-
-        string redirectUri = $"http://localhost:{Config.InternalServerPort}/sso-callback";
-        await TokenByAuthorizationCode(code, _codeVerifier, redirectUri);
-    }
+    // Remove overload that used static _codeVerifier
 
     public static async Task TokenByAuthorizationCode(
         string code,
@@ -608,17 +679,7 @@ public static class Auth
         return Convert.ToBase64String(hash).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
-    public static string? GetState() => _state;
-
-    internal static void SetState(string state)
-    {
-        _state = state;
-    }
-
-    internal static void ClearState()
-    {
-        _state = null;
-    }
+    // State is now managed by SetupServer for setup PKCE
 
     internal static List<KeyValuePair<string, string>> BuildAuthorizationCodeBody(
         string clientId,

@@ -38,6 +38,7 @@
   <ItemGroup>
     <PackageReference Include="InfiniLore.InfiniFrame" />
     <PackageReference Include="InfiniLore.InfiniFrame.WebServer" />
+    <ProjectReference Include="..\NoMercy.Setup\NoMercy.Setup.csproj" />
     <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
   </ItemGroup>
 

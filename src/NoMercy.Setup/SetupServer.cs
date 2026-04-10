@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Newtonsoft.Json;
 using NoMercy.Networking;
-using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -21,7 +20,7 @@ namespace NoMercy.Setup;
 
 public class SetupServer
 {
-    private readonly SetupState _state;
+    private SetupState _state;
     private WebApplication? _host;
     private readonly int _port;
 
@@ -41,9 +40,6 @@ public class SetupServer
         _port = port ?? Config.InternalServerPort;
         _codeVerifier = Auth.GenerateCodeVerifier();
         _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
-
-        string stateParam = Auth.GenerateCodeVerifier();
-        Auth.SetState(stateParam);
     }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -168,13 +164,13 @@ public class SetupServer
             auth_base_url = Config.AuthBaseUrl.OrEmpty(),
             client_id = Config.TokenClientId.OrEmpty(),
             code_challenge = _codeChallenge,
-            state = Auth.GetState(),
+            state = _state,
         };
 
         await WriteJsonResponse(context.Response, response);
     }
 
-    internal async Task HandleSsoCallback(HttpContext context)
+    private async Task HandleSsoCallback(HttpContext context)
     {
         if (context.Request.Method != HttpMethods.Get)
         {
@@ -220,7 +216,7 @@ public class SetupServer
         }
 
         string state = context.Request.Query["state"].ToString();
-        if (string.IsNullOrEmpty(state) || state != Auth.GetState())
+        if (string.IsNullOrEmpty(state) || state != _codeVerifier)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "application/json";
@@ -228,6 +224,7 @@ public class SetupServer
                 context.Response,
                 new { status = "error", message = "Invalid state parameter" }
             );
+            _state.SetError("Invalid state parameter during PKCE callback.");
             return;
         }
 
@@ -235,11 +232,6 @@ public class SetupServer
 
         string redirectUri = BuildRedirectUri(context.Request);
         string codeVerifier = _codeVerifier;
-
-        // Exchange the authorization code for tokens synchronously so they are
-        // persisted before the response is sent.  This prevents token loss if
-        // the process is killed (e.g. port-conflict auto-kill) before the
-        // background task finishes.
         string responseTitle;
         string responseMessage;
         bool responseIsError;
@@ -268,20 +260,18 @@ public class SetupServer
                 $"Token exchange failed: {ex.GetType().Name} — {ex.Message}",
                 LogEventLevel.Error
             );
-            _state.SetError("Sign in failed. Please try again.");
+            _state.SetError($"Sign in failed: {ex.Message}");
             _state.TransitionTo(SetupPhase.Unauthenticated);
 
             responseTitle = "Authentication Failed";
-            responseMessage = "Sign in failed. Please try again.";
+            responseMessage = $"Sign in failed: {ex.Message}";
             responseIsError = true;
         }
         finally
         {
             _codeVerifier = Auth.GenerateCodeVerifier();
             _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
-
-            string stateParam = Auth.GenerateCodeVerifier();
-            Auth.SetState(stateParam);
+            _state = new(); // Reset state for potential retry with new PKCE values
         }
 
         context.Response.ContentType = "text/html; charset=utf-8";

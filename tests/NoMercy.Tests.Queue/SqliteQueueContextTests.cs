@@ -20,8 +20,27 @@ public class SqliteQueueContextTests : IDisposable
     public void Dispose()
     {
         _context.Dispose();
+        // Force GC and finalization to release any outstanding handles
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         if (File.Exists(_dbPath))
-            File.Delete(_dbPath);
+        {
+            const int maxAttempts = 30;
+            const int delayMs = 200;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    File.Delete(_dbPath);
+                    break;
+                }
+                catch (IOException) when (attempt < maxAttempts)
+                {
+                    Thread.Sleep(delayMs);
+                }
+            }
+        }
     }
 
     // =========================================================================

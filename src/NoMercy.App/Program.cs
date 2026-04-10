@@ -80,6 +80,66 @@ internal class Program
 
         application.UseAutoServerClose();
 
+        // Add /sso-callback handler for PKCE browser flow (non-setup mode)
+        application.WebApp.Use(
+            async (context, next) =>
+            {
+                if (
+                    context.Request.Path.Value?.Equals(
+                        "/sso-callback",
+                        StringComparison.OrdinalIgnoreCase
+                    ) == true
+                )
+                {
+                    string code = context.Request.Query["code"];
+                    string state = context.Request.Query["state"];
+                    string error = context.Request.Query["error"];
+                    string errorDescription = context.Request.Query["error_description"];
+                    string redirectUri =
+                        $"http://localhost:{context.Request.Host.Port ?? 7625}/sso-callback";
+
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        string msg = !string.IsNullOrEmpty(errorDescription)
+                            ? $"Authorization failed: {errorDescription}"
+                            : $"Authorization failed: {error}";
+                        await context.Response.WriteAsync(
+                            $"<html><body><h2>Authorization Failed</h2><p>{msg}</p></body></html>"
+                        );
+                        return;
+                    }
+
+                    if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+                    {
+                        await context.Response.WriteAsync(
+                            "<html><body><h2>Missing code or state</h2></body></html>"
+                        );
+                        return;
+                    }
+
+                    bool ok = await NoMercy.Setup.Auth.TryCompletePkceFromCallback(
+                        code,
+                        state,
+                        redirectUri
+                    );
+                    if (ok)
+                    {
+                        await context.Response.WriteAsync(
+                            "<html><body><h2>Authentication Successful</h2><p>You may close this tab.</p><script>try{window.close();}catch(e){}</script></body></html>"
+                        );
+                    }
+                    else
+                    {
+                        await context.Response.WriteAsync(
+                            "<html><body><h2>Authentication Failed</h2><p>Could not complete login. Please try again.</p></body></html>"
+                        );
+                    }
+                    return;
+                }
+                await next();
+            }
+        );
+
         // Use custom embedded static assets middleware with optimizations
         // (compression, caching, ETags) - replaces MapStaticAssets for embedded resources
         // Also injects the InfiniFrame.js script tag into HTML files at runtime

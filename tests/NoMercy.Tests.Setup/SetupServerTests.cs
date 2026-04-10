@@ -126,8 +126,10 @@ public class SetupServerTests : IAsyncLifetime
     [Fact]
     public async Task Setup_PostReturns405()
     {
-        using HttpResponseMessage response = await _client.PostAsync("/setup",
-            new StringContent(""));
+        using HttpResponseMessage response = await _client.PostAsync(
+            "/setup",
+            new StringContent("")
+        );
 
         Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
     }
@@ -192,8 +194,10 @@ public class SetupServerTests : IAsyncLifetime
     [Fact]
     public async Task SetupConfig_PostReturns405()
     {
-        using HttpResponseMessage response = await _client.PostAsync("/setup/config",
-            new StringContent(""));
+        using HttpResponseMessage response = await _client.PostAsync(
+            "/setup/config",
+            new StringContent("")
+        );
 
         Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
     }
@@ -234,8 +238,10 @@ public class SetupServerTests : IAsyncLifetime
     [Fact]
     public async Task SetupStatus_PostReturns405()
     {
-        using HttpResponseMessage response = await _client.PostAsync("/setup/status",
-            new StringContent(""));
+        using HttpResponseMessage response = await _client.PostAsync(
+            "/setup/status",
+            new StringContent("")
+        );
 
         Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
     }
@@ -249,11 +255,12 @@ public class SetupServerTests : IAsyncLifetime
         request.Headers.Accept.ParseAdd("text/event-stream");
 
         using HttpResponseMessage response = await _client.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead);
+            request,
+            HttpCompletionOption.ResponseHeadersRead
+        );
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("text/event-stream",
-            response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
     }
 
     [Fact]
@@ -263,7 +270,9 @@ public class SetupServerTests : IAsyncLifetime
         request.Headers.Accept.ParseAdd("text/event-stream");
 
         using HttpResponseMessage response = await _client.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead);
+            request,
+            HttpCompletionOption.ResponseHeadersRead
+        );
 
         using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
@@ -286,7 +295,9 @@ public class SetupServerTests : IAsyncLifetime
         request.Headers.Accept.ParseAdd("text/event-stream");
 
         using HttpResponseMessage response = await _client.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead);
+            request,
+            HttpCompletionOption.ResponseHeadersRead
+        );
 
         using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
@@ -316,8 +327,7 @@ public class SetupServerTests : IAsyncLifetime
         using HttpResponseMessage response = await _client.GetAsync("/setup/status");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("application/json",
-            response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
     }
 
     [Fact]
@@ -327,7 +337,9 @@ public class SetupServerTests : IAsyncLifetime
         request.Headers.Accept.ParseAdd("text/event-stream");
 
         using HttpResponseMessage response = await _client.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead);
+            request,
+            HttpCompletionOption.ResponseHeadersRead
+        );
 
         using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
@@ -356,7 +368,8 @@ public class SetupServerTests : IAsyncLifetime
     public async Task SetupQr_WithData_ReturnsPngImage()
     {
         using HttpResponseMessage response = await _client.GetAsync(
-            "/setup/qr?data=https://example.com");
+            "/setup/qr?data=https://example.com"
+        );
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);
@@ -383,7 +396,9 @@ public class SetupServerTests : IAsyncLifetime
     public async Task SetupQr_PostReturns405()
     {
         using HttpResponseMessage response = await _client.PostAsync(
-            "/setup/qr?data=test", new StringContent(""));
+            "/setup/qr?data=test",
+            new StringContent("")
+        );
 
         Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
     }
@@ -417,8 +432,10 @@ public class SetupServerTests : IAsyncLifetime
     [Fact]
     public async Task SsoCallback_PostReturns405()
     {
-        using HttpResponseMessage response = await _client.PostAsync("/sso-callback",
-            new StringContent(""));
+        using HttpResponseMessage response = await _client.PostAsync(
+            "/sso-callback",
+            new StringContent("")
+        );
 
         Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
     }
@@ -427,7 +444,8 @@ public class SetupServerTests : IAsyncLifetime
     public async Task SsoCallback_WithOAuthError_ReturnsErrorHtml()
     {
         using HttpResponseMessage response = await _client.GetAsync(
-            "/sso-callback?error=access_denied&error_description=User+denied+access");
+            "/sso-callback?error=access_denied&error_description=User+denied+access"
+        );
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -441,7 +459,8 @@ public class SetupServerTests : IAsyncLifetime
     public async Task SsoCallback_WithOAuthError_SetsStateError()
     {
         await _client.GetAsync(
-            "/sso-callback?error=access_denied&error_description=User+denied+access");
+            "/sso-callback?error=access_denied&error_description=User+denied+access"
+        );
 
         Assert.Equal("Authorization failed: User denied access", _state.ErrorMessage);
     }
@@ -450,7 +469,8 @@ public class SetupServerTests : IAsyncLifetime
     public async Task SsoCallback_WithOAuthErrorNoDescription_UsesErrorCode()
     {
         using HttpResponseMessage response = await _client.GetAsync(
-            "/sso-callback?error=server_error");
+            "/sso-callback?error=server_error"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.Contains("Authorization failed: server_error", body);
@@ -468,7 +488,8 @@ public class SetupServerTests : IAsyncLifetime
     public async Task SsoCallback_WithCode_ReturnsStyledHtml()
     {
         using HttpResponseMessage response = await _client.GetAsync(
-            "/sso-callback?code=test-auth-code");
+            "/sso-callback?code=test-auth-code"
+        );
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -483,7 +504,8 @@ public class SetupServerTests : IAsyncLifetime
     public async Task SsoCallback_WithOnlyError_IgnoresMissingCode()
     {
         using HttpResponseMessage response = await _client.GetAsync(
-            "/sso-callback?error=access_denied");
+            "/sso-callback?error=access_denied"
+        );
 
         // Should NOT return 400 for missing code — the error takes priority
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -631,7 +653,9 @@ public class SetupServerPkceTests : IAsyncLifetime
     [Fact]
     public async Task SsoCallback_WithCode_ReturnsHtmlResponse()
     {
-        using HttpResponseMessage response = await _client.GetAsync("/sso-callback?code=test-auth-code");
+        using HttpResponseMessage response = await _client.GetAsync(
+            "/sso-callback?code=test-auth-code"
+        );
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         string body = await response.Content.ReadAsStringAsync();
@@ -770,9 +794,10 @@ public class SetupServerQrCodeTests
     [Fact]
     public void GenerateQrCodePng_HandlesLongUrl()
     {
-        string longUrl = "https://auth.nomercy.tv/realms/NoMercyTV/protocol/openid-connect/auth?"
-                         + "client_id=nomercy-server&redirect_uri=http://192.168.1.100:7626/sso-callback"
-                         + "&response_type=code&scope=openid+offline_access+email+profile";
+        string longUrl =
+            "https://auth.nomercy.tv/realms/NoMercyTV/protocol/openid-connect/auth?"
+            + "client_id=nomercy-server&redirect_uri=http://192.168.1.100:7626/sso-callback"
+            + "&response_type=code&scope=openid+offline_access+email+profile";
 
         byte[] result = SetupServer.GenerateQrCodePng(longUrl);
 
@@ -788,7 +813,8 @@ public class SetupServerCallbackHtmlTests
     {
         string html = SetupServer.BuildCallbackHtml(
             "Authentication Received",
-            "Exchanging authorization code for tokens...");
+            "Exchanging authorization code for tokens..."
+        );
 
         Assert.Contains("Authentication Received", html);
         Assert.Contains("Exchanging authorization code for tokens...", html);
@@ -807,8 +833,7 @@ public class SetupServerCallbackHtmlTests
     [Fact]
     public void BuildCallbackHtml_Error_UsesErrorColor()
     {
-        string html = SetupServer.BuildCallbackHtml("Error", "Something went wrong",
-            isError: true);
+        string html = SetupServer.BuildCallbackHtml("Error", "Something went wrong", isError: true);
 
         Assert.Contains("#f08080", html);
     }
@@ -825,8 +850,7 @@ public class SetupServerCallbackHtmlTests
     [Fact]
     public void BuildCallbackHtml_Error_ContainsRedirectScript()
     {
-        string html = SetupServer.BuildCallbackHtml("Error", "Something went wrong",
-            isError: true);
+        string html = SetupServer.BuildCallbackHtml("Error", "Something went wrong", isError: true);
 
         Assert.Contains("window.location.href='/setup'", html);
         Assert.Contains("setTimeout", html);
@@ -847,7 +871,8 @@ public class SetupServerCallbackHtmlTests
     {
         string html = SetupServer.BuildCallbackHtml(
             "<script>alert('xss')</script>",
-            "Message with <b>html</b>");
+            "Message with <b>html</b>"
+        );
 
         Assert.DoesNotContain("<script>alert('xss')</script>", html);
         Assert.Contains("&lt;script&gt;", html);
