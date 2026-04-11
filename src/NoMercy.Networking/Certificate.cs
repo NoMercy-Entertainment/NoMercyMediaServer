@@ -32,7 +32,21 @@ public static class Certificate
             .FirstOrDefault();
 
         if (string.IsNullOrEmpty(certPem) || string.IsNullOrEmpty(keyPem))
-            return;
+        {
+            // Fallback: load from legacy PEM files (pre-DB-storage installs)
+#pragma warning disable CS0618
+            if (File.Exists(AppFiles.CertFile) && File.Exists(AppFiles.KeyFile))
+            {
+                certPem = File.ReadAllText(AppFiles.CertFile);
+                keyPem = File.ReadAllText(AppFiles.KeyFile);
+                Logger.Setup("Loading SSL certificate from legacy PEM files");
+            }
+            else
+            {
+                return;
+            }
+#pragma warning restore CS0618
+        }
 
         lock (_certLock)
         {
@@ -41,7 +55,7 @@ public static class Certificate
             _cachedCertificate = X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
         }
 
-        Logger.Setup("Loaded SSL certificate from database");
+        Logger.Setup("Loaded SSL certificate into memory cache");
     }
 
     private static void UpsertConfig(AppDbContext db, string key, string value)
@@ -65,9 +79,22 @@ public static class Certificate
                 return _cachedCertificate.NotAfter > DateTime.Now;
         }
 
-        // Fallback: check DB directly
-        using AppDbContext db = new();
-        return db.Configuration.Any(c => c.Key == "ssl_certificate");
+        // Check DB
+        try
+        {
+            using AppDbContext db = new();
+            if (db.Configuration.Any(c => c.Key == "ssl_certificate"))
+                return true;
+        }
+        catch
+        {
+            // DB not ready yet — fall through to file check
+        }
+
+        // Legacy fallback: cert files on disk (pre-DB-storage installs)
+#pragma warning disable CS0618
+        return File.Exists(AppFiles.CertFile) && File.Exists(AppFiles.KeyFile);
+#pragma warning restore CS0618
     }
 
     public static void KestrelConfig(KestrelServerOptions options)

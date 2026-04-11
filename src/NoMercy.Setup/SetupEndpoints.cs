@@ -720,7 +720,10 @@ public class SetupEndpoints
             return;
         }
 
-        string url = context.Request.Query["url"].ToString();
+        string url = context.Request.Query["data"].ToString();
+
+        if (string.IsNullOrEmpty(url))
+            url = context.Request.Query["url"].ToString();
 
         if (string.IsNullOrEmpty(url))
         {
@@ -822,6 +825,10 @@ public class SetupEndpoints
         // Don't transition to Authenticating here — that hides the login UI.
         // Transition only happens when the user completes auth (success path below).
 
+        // If auth already completed (e.g. via browser login while device poll runs), stop.
+        if (_state.IsAuthenticated || _state.CurrentPhase == SetupPhase.Complete)
+            return;
+
         List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildDeviceTokenBody(
             Config.TokenClientId,
             deviceData.DeviceCode
@@ -836,6 +843,10 @@ public class SetupEndpoints
         while (DateTime.Now < expiresAt)
         {
             await Task.Delay(deviceData.Interval * 1000);
+
+            // Stop polling if auth completed via another path (browser login, silent SSO)
+            if (_state.IsAuthenticated || _state.CurrentPhase == SetupPhase.Complete)
+                return;
 
             try
             {

@@ -36,8 +36,11 @@ public class BootOrchestrator
 
         if (authSucceeded)
         {
-            // Check registration
-            bool isRegistered = Register.IsRegistered;
+            // Check registration — if cert exists in DB, registration already happened
+            // (cert is issued during registration). This survives process restarts
+            // unlike the static Register.IsRegistered flag.
+            bool isRegistered =
+                Register.IsRegistered || Networking.Certificate.HasValidCertificate();
             _setupState.DetermineInitialPhase(hasValidToken: true, isRegistered: isRegistered);
 
             if (!isRegistered)

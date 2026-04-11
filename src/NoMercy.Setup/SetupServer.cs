@@ -346,8 +346,7 @@ public class SetupServer
                 + "</body></html>";
         }
 
-        // Success case: try to close the tab (works when opened as popup),
-        // otherwise show a static message since the server will restart for HTTPS
+        // Success case: redirect back to setup page to show progress
         return "<!DOCTYPE html><html><head>"
             + "<meta charset=\"UTF-8\">"
             + "<style>"
@@ -364,13 +363,9 @@ public class SetupServer
             + "<div class=\"card\">"
             + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
             + $"<p>{WebUtility.HtmlEncode(message)}</p>"
-            + "<p id=\"status\" style=\"margin-top:16px;color:#666;\">You can close this tab.</p>"
+            + "<p style=\"margin-top:16px;color:#666;\">Redirecting to setup...</p>"
             + "</div>"
-            + "<script>"
-            + "try{window.close();}catch(e){}"
-            + "document.getElementById('status').textContent="
-            + "'Server is restarting with HTTPS. You can close this tab.';"
-            + "</script>"
+            + "<script>setTimeout(function(){window.location.href='/setup';}, 1500);</script>"
             + "</body></html>";
     }
 
