@@ -1,7 +1,11 @@
 using System.Net;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
+using NoMercy.Database;
 using NoMercy.Setup;
 
 namespace NoMercy.Tests.Setup;
@@ -224,7 +228,9 @@ public class EndToEndSseFlowTests : IAsyncLifetime
         request.Headers.Accept.ParseAdd("text/event-stream");
 
         using HttpResponseMessage response = await _client.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead);
+            request,
+            HttpCompletionOption.ResponseHeadersRead
+        );
 
         using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
@@ -245,7 +251,7 @@ public class EndToEndSseFlowTests : IAsyncLifetime
             SetupPhase.Registering,
             SetupPhase.Registered,
             SetupPhase.CertificateAcquired,
-            SetupPhase.Complete
+            SetupPhase.Complete,
         ];
 
         foreach (SetupPhase phase in phases)
@@ -271,7 +277,9 @@ public class EndToEndSseFlowTests : IAsyncLifetime
         request.Headers.Accept.ParseAdd("text/event-stream");
 
         using HttpResponseMessage response = await _client.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead);
+            request,
+            HttpCompletionOption.ResponseHeadersRead
+        );
 
         using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
@@ -294,8 +302,7 @@ public class EndToEndSseFlowTests : IAsyncLifetime
         Assert.NotNull(errorLine);
         string errorJson = errorLine!.Substring("data: ".Length);
         dynamic? errorData = JsonConvert.DeserializeObject<dynamic>(errorJson);
-        Assert.Equal("Authentication failed: invalid credentials",
-            (string)errorData!.error);
+        Assert.Equal("Authentication failed: invalid credentials", (string)errorData!.error);
     }
 }
 
@@ -371,12 +378,31 @@ public class EndToEndHttpsRestartSignalTests
 /// </summary>
 public class EndToEndMiddlewareFlowTests
 {
+    private static SetupEndpoints CreateSetupEndpoints(SetupState state)
+    {
+        ServiceCollection services = new();
+        services.AddDataProtection().UseEphemeralDataProtectionProvider();
+        ServiceProvider provider = services.BuildServiceProvider();
+        TokenStore.Initialize(provider);
+
+        DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
+        optionsBuilder.UseSqlite("Data Source=:memory:");
+        AppDbContext dbContext = new(optionsBuilder.Options);
+        dbContext.Database.OpenConnection();
+        dbContext.Database.EnsureCreated();
+
+        AuthManager authManager = new(dbContext);
+        return new SetupEndpoints(state, authManager);
+    }
+
     private static SetupModeMiddleware CreateMiddleware(
-        SetupState state, RequestDelegate? next = null)
+        SetupState state,
+        RequestDelegate? next = null
+    )
     {
         next ??= _ => Task.CompletedTask;
-        SetupServer setupServer = new(state);
-        return new(next, state, setupServer);
+        SetupEndpoints setupEndpoints = CreateSetupEndpoints(state);
+        return new(next, state, setupEndpoints);
     }
 
     private static DefaultHttpContext CreateContext(string path)
@@ -392,11 +418,14 @@ public class EndToEndMiddlewareFlowTests
     {
         SetupState state = new();
         bool nextCalled = false;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            nextCalled = true;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            }
+        );
 
         // During setup: API routes are blocked
         DefaultHttpContext context1 = CreateContext("/api/v1/libraries");
@@ -431,11 +460,14 @@ public class EndToEndMiddlewareFlowTests
     {
         SetupState state = new();
         int healthCallCount = 0;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            healthCallCount++;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                healthCallCount++;
+                return Task.CompletedTask;
+            }
+        );
 
         // Health check during setup
         DefaultHttpContext context1 = CreateContext("/health");
@@ -443,7 +475,7 @@ public class EndToEndMiddlewareFlowTests
         Assert.Equal(1, healthCallCount);
 
         // Health check after setup
-        state.DetermineInitialPhase(TokenState.Valid);
+        state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
         DefaultHttpContext context2 = CreateContext("/health");
         await middleware.InvokeAsync(context2);
         Assert.Equal(2, healthCallCount);
@@ -451,41 +483,21 @@ public class EndToEndMiddlewareFlowTests
 }
 
 /// <summary>
-/// Tests the complete token validation → initial phase determination flow.
+/// Tests the initial phase determination flow with the bool-based API.
+/// (ValidateTokenFile was removed — AuthManager now owns token validation.)
 /// </summary>
-public class EndToEndTokenValidationFlowTests : IDisposable
+public class EndToEndTokenValidationFlowTests
 {
-    private readonly string _tempDir;
-
-    public EndToEndTokenValidationFlowTests()
-    {
-        _tempDir = Path.Combine(
-            Path.GetTempPath(),
-            "nomercy_e2e_test_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDir);
-    }
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
-    }
-
     [Fact]
-    public async Task MissingToken_EntersSetupMode_ThenCanComplete()
+    public void NoToken_EntersSetupMode_ThenCanComplete()
     {
-        // Step 1: Token doesn't exist → Missing
-        string tokenPath = Path.Combine(_tempDir, "token.json");
-        TokenState tokenState = await SetupState.ValidateTokenFile(tokenPath);
-        Assert.Equal(TokenState.Missing, tokenState);
-
-        // Step 2: SetupState determines initial phase
+        // No valid token → Unauthenticated
         SetupState state = new();
-        SetupPhase initialPhase = state.DetermineInitialPhase(tokenState);
+        SetupPhase initialPhase = state.DetermineInitialPhase(hasValidToken: false);
         Assert.Equal(SetupPhase.Unauthenticated, initialPhase);
         Assert.True(state.IsSetupRequired);
 
-        // Step 3: Setup flow can proceed
+        // Setup flow can proceed from Unauthenticated
         Assert.True(state.TransitionTo(SetupPhase.Authenticating));
         Assert.True(state.TransitionTo(SetupPhase.Authenticated));
         Assert.True(state.TransitionTo(SetupPhase.Registering));
@@ -496,25 +508,13 @@ public class EndToEndTokenValidationFlowTests : IDisposable
     }
 
     [Fact]
-    public async Task CorruptToken_EntersSetupMode()
-    {
-        string tokenPath = Path.Combine(_tempDir, "token.json");
-        await File.WriteAllTextAsync(tokenPath, "not valid json {{{");
-
-        TokenState tokenState = await SetupState.ValidateTokenFile(tokenPath);
-        Assert.Equal(TokenState.Corrupt, tokenState);
-
-        SetupState state = new();
-        SetupPhase initialPhase = state.DetermineInitialPhase(tokenState);
-        Assert.Equal(SetupPhase.Unauthenticated, initialPhase);
-        Assert.True(state.IsSetupRequired);
-    }
-
-    [Fact]
-    public async Task ValidToken_SkipsSetup()
+    public void ValidToken_SkipsSetup()
     {
         SetupState state = new();
-        SetupPhase initialPhase = state.DetermineInitialPhase(TokenState.Valid);
+        SetupPhase initialPhase = state.DetermineInitialPhase(
+            hasValidToken: true,
+            isRegistered: true
+        );
         Assert.Equal(SetupPhase.Complete, initialPhase);
         Assert.False(state.IsSetupRequired);
     }
@@ -617,7 +617,8 @@ public class EndToEndErrorRecoveryTests : IAsyncLifetime
     {
         // OAuth returns an error
         using HttpResponseMessage response = await _client.GetAsync(
-            "/sso-callback?error=access_denied&error_description=User+denied+access");
+            "/sso-callback?error=access_denied&error_description=User+denied+access"
+        );
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 

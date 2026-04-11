@@ -635,3 +635,6 @@ obj/
 
 src/**/bin/
 src/**/obj/
+
+# Temporary design/planning docs
+docs/superpowers/

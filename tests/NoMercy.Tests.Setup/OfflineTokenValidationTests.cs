@@ -40,8 +40,10 @@ public class OfflineTokenValidationTests : IDisposable
 
         OfflineJwksCache.CachePublicKey(publicKeyBase64);
 
-        Assert.True(File.Exists(_testAuthKeysFile),
-            "CachePublicKey should create the auth keys cache file");
+        Assert.True(
+            File.Exists(_testAuthKeysFile),
+            "CachePublicKey should create the auth keys cache file"
+        );
         Assert.NotNull(OfflineJwksCache.CachedSigningKey);
 
         string fileContent = File.ReadAllText(_testAuthKeysFile).Trim();
@@ -116,15 +118,14 @@ public class OfflineTokenValidationTests : IDisposable
         JwtSecurityTokenHandler handler = new();
         SecurityTokenDescriptor descriptor = new()
         {
-            Subject = new(
-            [
+            Subject = new([
                 new(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
-                new("scope", "openid profile")
+                new("scope", "openid profile"),
             ]),
             Expires = DateTime.UtcNow.AddHours(1),
             Issuer = "https://auth.nomercy.tv/realms/NoMercyTV/",
             Audience = "nomercy-server",
-            SigningCredentials = signingCredentials
+            SigningCredentials = signingCredentials,
         };
         string token = handler.WriteToken(handler.CreateToken(descriptor));
 
@@ -143,10 +144,14 @@ public class OfflineTokenValidationTests : IDisposable
             ValidIssuer = "https://auth.nomercy.tv/realms/NoMercyTV/",
             ValidAudience = "nomercy-server",
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(5)
+            ClockSkew = TimeSpan.FromMinutes(5),
         };
 
-        ClaimsPrincipal principal = handler.ValidateToken(token, validationParams, out SecurityToken validatedToken);
+        ClaimsPrincipal principal = handler.ValidateToken(
+            token,
+            validationParams,
+            out SecurityToken validatedToken
+        );
 
         Assert.NotNull(principal);
         Assert.NotNull(validatedToken);
@@ -167,19 +172,18 @@ public class OfflineTokenValidationTests : IDisposable
         JwtSecurityTokenHandler handler = new();
         SecurityTokenDescriptor descriptor = new()
         {
-            Subject = new(
-            [
-                new(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())
-            ]),
+            Subject = new([new(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())]),
             Expires = DateTime.UtcNow.AddHours(1),
             Issuer = "https://auth.nomercy.tv/realms/NoMercyTV/",
             Audience = "nomercy-server",
-            SigningCredentials = signingCredentials
+            SigningCredentials = signingCredentials,
         };
         string token = handler.WriteToken(handler.CreateToken(descriptor));
 
         // Cache key B (different from signing key A)
-        string differentKeyBase64 = Convert.ToBase64String(differentRsa.ExportSubjectPublicKeyInfo());
+        string differentKeyBase64 = Convert.ToBase64String(
+            differentRsa.ExportSubjectPublicKeyInfo()
+        );
         OfflineJwksCache.CachePublicKey(differentKeyBase64);
 
         RsaSecurityKey? cachedKey = OfflineJwksCache.CachedSigningKey;
@@ -191,12 +195,13 @@ public class OfflineTokenValidationTests : IDisposable
             IssuerSigningKey = cachedKey,
             ValidIssuer = "https://auth.nomercy.tv/realms/NoMercyTV/",
             ValidAudience = "nomercy-server",
-            ValidateLifetime = true
+            ValidateLifetime = true,
         };
 
         // Validation should fail — wrong key
         Assert.Throws<SecurityTokenSignatureKeyNotFoundException>(() =>
-            handler.ValidateToken(token, validationParams, out _));
+            handler.ValidateToken(token, validationParams, out _)
+        );
     }
 
     [Fact]
@@ -222,7 +227,7 @@ public class OfflineTokenValidationTests : IDisposable
             Expires = DateTime.UtcNow.AddHours(1),
             Issuer = "test-issuer",
             Audience = "test-audience",
-            SigningCredentials = new(signingKey, SecurityAlgorithms.RsaSha256)
+            SigningCredentials = new(signingKey, SecurityAlgorithms.RsaSha256),
         };
         string token = handler.WriteToken(handler.CreateToken(descriptor));
 
@@ -232,7 +237,7 @@ public class OfflineTokenValidationTests : IDisposable
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = OfflineJwksCache.CachedSigningKey,
             ValidIssuer = "test-issuer",
-            ValidAudience = "test-audience"
+            ValidAudience = "test-audience",
         };
 
         ClaimsPrincipal principal = handler.ValidateToken(token, validationParams, out _);
@@ -267,31 +272,12 @@ public class OfflineTokenValidationIntegrationTests
     [Fact]
     public void AuthKeysMethod_CachesPublicKey_WhenSourceHasCode()
     {
-        // Verify that Auth.AuthKeys() now calls OfflineJwksCache.CachePublicKey
-        // by inspecting source code — same pattern as other characterization tests
+        // Auth.cs was replaced by AuthManager.cs — verify OfflineJwksCache.LoadCachedPublicKey
+        // is still called during token initialization (AuthManager.InitializeAsync).
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "Auth.cs");
-            if (File.Exists(candidate))
-            {
-                string source = File.ReadAllText(candidate);
-                Assert.Contains("OfflineJwksCache.CachePublicKey", source);
-                return;
-            }
-            dir = Path.GetDirectoryName(dir)!;
-        }
-        Assert.Fail("Could not find src/NoMercy.Setup/Auth.cs");
-    }
-
-    [Fact]
-    public void InitWithFallback_LoadsCachedKeys()
-    {
-        // Verify that Auth.InitWithFallback() loads cached auth keys
-        string dir = AppContext.BaseDirectory;
-        while (dir != null!)
-        {
-            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "Auth.cs");
+            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "AuthManager.cs");
             if (File.Exists(candidate))
             {
                 string source = File.ReadAllText(candidate);
@@ -300,7 +286,27 @@ public class OfflineTokenValidationIntegrationTests
             }
             dir = Path.GetDirectoryName(dir)!;
         }
-        Assert.Fail("Could not find src/NoMercy.Setup/Auth.cs");
+        Assert.Fail("Could not find src/NoMercy.Setup/AuthManager.cs");
+    }
+
+    [Fact]
+    public void InitWithFallback_LoadsCachedKeys()
+    {
+        // Auth.cs was replaced by AuthManager.cs — verify OfflineJwksCache.LoadCachedPublicKey
+        // is called during token initialization in the new implementation.
+        string dir = AppContext.BaseDirectory;
+        while (dir != null!)
+        {
+            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "AuthManager.cs");
+            if (File.Exists(candidate))
+            {
+                string source = File.ReadAllText(candidate);
+                Assert.Contains("OfflineJwksCache.LoadCachedPublicKey", source);
+                return;
+            }
+            dir = Path.GetDirectoryName(dir)!;
+        }
+        Assert.Fail("Could not find src/NoMercy.Setup/AuthManager.cs");
     }
 
     [Fact]
@@ -310,7 +316,13 @@ public class OfflineTokenValidationIntegrationTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(dir, "src", "NoMercy.Service", "Configuration", "ServiceConfiguration.cs");
+            string candidate = Path.Combine(
+                dir,
+                "src",
+                "NoMercy.Service",
+                "Configuration",
+                "ServiceConfiguration.cs"
+            );
             if (File.Exists(candidate))
             {
                 string source = File.ReadAllText(candidate);

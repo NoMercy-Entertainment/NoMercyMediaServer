@@ -10,17 +10,21 @@ public class SetupModeMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly SetupState _setupState;
-    private readonly SetupServer _setupServer;
+    private readonly SetupEndpoints _setupEndpoints;
 
     private static readonly string[] SetupHandledRoutes = ["/setup", "/sso-callback"];
 
     private static readonly string[] PassthroughRoutes = ["/health", "/manage"];
 
-    public SetupModeMiddleware(RequestDelegate next, SetupState setupState, SetupServer setupServer)
+    public SetupModeMiddleware(
+        RequestDelegate next,
+        SetupState setupState,
+        SetupEndpoints setupEndpoints
+    )
     {
         _next = next;
         _setupState = setupState;
-        _setupServer = setupServer;
+        _setupEndpoints = setupEndpoints;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -34,17 +38,15 @@ public class SetupModeMiddleware
         string path = (context.Request.Path.Value?.TrimEnd('/')).OrEmpty();
         string pathLower = path.ToLowerInvariant();
 
-        // Routes handled directly by the setup server (no auth needed)
         foreach (string route in SetupHandledRoutes)
         {
             if (pathLower == route || pathLower.StartsWith(route + "/"))
             {
-                await _setupServer.HandleRequest(context);
+                await _setupEndpoints.HandleRequestAsync(context);
                 return;
             }
         }
 
-        // Routes that pass through to the normal pipeline
         foreach (string route in PassthroughRoutes)
         {
             if (pathLower == route || pathLower.StartsWith(route + "/"))
@@ -54,7 +56,6 @@ public class SetupModeMiddleware
             }
         }
 
-        // Everything else is blocked during setup
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
 

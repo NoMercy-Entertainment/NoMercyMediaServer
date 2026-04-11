@@ -62,9 +62,27 @@ public class X265 : BaseVideo
                     VideoPresets.P7,
                 ];
             }
-            else if (VideoCodecs.H265Amf.Value == VideoCodec.Value) { }
-            else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value) { }
-            else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value) { }
+            else if (VideoCodecs.H265Amf.Value == VideoCodec.Value)
+            {
+                return [VideoPresets.Speed, VideoPresets.Balanced, VideoPresets.Quality];
+            }
+            else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value)
+            {
+                return
+                [
+                    VideoPresets.VeryFast,
+                    VideoPresets.Faster,
+                    VideoPresets.Fast,
+                    VideoPresets.Medium,
+                    VideoPresets.Slow,
+                    VideoPresets.Slower,
+                    VideoPresets.VerySlow,
+                ];
+            }
+            else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value)
+            {
+                return [];
+            }
 
             return
             [
@@ -99,9 +117,18 @@ public class X265 : BaseVideo
                     VideoProfiles.High444,
                 ];
             }
-            else if (VideoCodecs.H265Amf.Value == VideoCodec.Value) { }
-            else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value) { }
-            else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value) { }
+            else if (VideoCodecs.H265Amf.Value == VideoCodec.Value)
+            {
+                return [VideoProfiles.Main, VideoProfiles.Main10];
+            }
+            else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value)
+            {
+                return [VideoProfiles.Main, VideoProfiles.Main10];
+            }
+            else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value)
+            {
+                return [VideoProfiles.Main, VideoProfiles.Main10];
+            }
 
             return
             [
@@ -177,9 +204,66 @@ public class X265 : BaseVideo
                     "6.2",
                 ];
             }
-            else if (VideoCodecs.H265Amf.Value == VideoCodec.Value) { }
-            else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value) { }
-            else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value) { }
+            else if (VideoCodecs.H265Amf.Value == VideoCodec.Value)
+            {
+                return
+                [
+                    "auto",
+                    "1",
+                    "2",
+                    "2.1",
+                    "3",
+                    "3.1",
+                    "4",
+                    "4.1",
+                    "5",
+                    "5.1",
+                    "5.2",
+                    "6.0",
+                    "6.1",
+                    "6.2",
+                ];
+            }
+            else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value)
+            {
+                return
+                [
+                    "auto",
+                    "1",
+                    "2",
+                    "2.1",
+                    "3",
+                    "3.1",
+                    "4",
+                    "4.1",
+                    "5",
+                    "5.1",
+                    "5.2",
+                    "6.0",
+                    "6.1",
+                    "6.2",
+                ];
+            }
+            else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value)
+            {
+                return
+                [
+                    "auto",
+                    "1",
+                    "2",
+                    "2.1",
+                    "3",
+                    "3.1",
+                    "4",
+                    "4.1",
+                    "5",
+                    "5.1",
+                    "5.2",
+                    "6.0",
+                    "6.1",
+                    "6.2",
+                ];
+            }
 
             return
             [

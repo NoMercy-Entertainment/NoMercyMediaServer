@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -95,6 +96,29 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
         }
+
+        // Initialize DataProtection + TokenStore before any AppDbContext access.
+        // AppDbContext uses TokenStore value converters on the Configuration table,
+        // so the protector must exist before EnsureCreated() or any query runs.
+        ServiceCollection tokenServices = new();
+        tokenServices
+            .AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(AppFiles.DataProtectionKeysDir))
+            .SetApplicationName("NoMercyMediaServer");
+        ServiceProvider tokenProvider = tokenServices.BuildServiceProvider();
+        TokenStore.Initialize(tokenProvider);
+
+        // Create app.db for AppDbContext (Configuration table, SecureValue columns).
+        string appDbPath = Path.Combine(AppFiles.DataPath, "app.db");
+        foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
+        {
+            string file = appDbPath + suffix;
+            if (File.Exists(file))
+                File.Delete(file);
+        }
+
+        using AppDbContext appContext = new();
+        appContext.Database.EnsureCreated();
 
         string mediaDbPath = Path.Combine(AppFiles.DataPath, "media.db");
         foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
@@ -465,8 +489,23 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
     {
         services.RemoveAll<SetupState>();
         SetupState completedState = new();
-        completedState.DetermineInitialPhase(TokenState.Valid);
+        completedState.DetermineInitialPhase(hasValidToken: true);
         services.AddSingleton(completedState);
+
+        // AuthManager is registered as a singleton that creates its own AppDbContext scope.
+        // In tests, app.db is already seeded — provide a standalone instance with its own
+        // AppDbContext so the real DI scope factory pattern doesn't run and hit a missing DB.
+        services.RemoveAll<AuthManager>();
+        services.RemoveAll<SetupEndpoints>();
+        services.RemoveAll<BootOrchestrator>();
+
+        AppDbContext testAppContext = new();
+        testAppContext.Database.EnsureCreated();
+
+        AuthManager testAuthManager = new(testAppContext);
+        services.AddSingleton(testAuthManager);
+        services.AddSingleton(new SetupEndpoints(completedState, testAuthManager));
+        services.AddSingleton(new BootOrchestrator(completedState, testAuthManager));
     }
 
     private static void ReplacePluginManager(IServiceCollection services)

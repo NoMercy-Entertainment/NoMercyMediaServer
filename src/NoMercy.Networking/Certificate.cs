@@ -4,18 +4,70 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Newtonsoft.Json;
+using NoMercy.Database;
+using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 using DnsHttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
 namespace NoMercy.Networking;
 
 public static class Certificate
 {
+    private static X509Certificate2? _cachedCertificate;
+    private static readonly object _certLock = new();
+
+    public static void LoadFromDb()
+    {
+        using AppDbContext db = new();
+        string? certPem = db
+            .Configuration.Where(c => c.Key == "ssl_certificate")
+            .Select(c => c.SecureValue)
+            .FirstOrDefault();
+        string? keyPem = db
+            .Configuration.Where(c => c.Key == "ssl_private_key")
+            .Select(c => c.SecureValue)
+            .FirstOrDefault();
+
+        if (string.IsNullOrEmpty(certPem) || string.IsNullOrEmpty(keyPem))
+            return;
+
+        lock (_certLock)
+        {
+            using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
+            byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
+            _cachedCertificate = X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
+        }
+
+        Logger.Setup("Loaded SSL certificate from database");
+    }
+
+    private static void UpsertConfig(AppDbContext db, string key, string value)
+    {
+        Configuration? existing = db.Configuration.FirstOrDefault(c => c.Key == key);
+        if (existing != null)
+        {
+            existing.SecureValue = value;
+        }
+        else
+        {
+            db.Configuration.Add(new Configuration { Key = key, SecureValue = value });
+        }
+    }
+
     public static bool HasValidCertificate()
     {
-        return File.Exists(AppFiles.CertFile) && File.Exists(AppFiles.KeyFile);
+        lock (_certLock)
+        {
+            if (_cachedCertificate is not null)
+                return _cachedCertificate.NotAfter > DateTime.Now;
+        }
+
+        // Fallback: check DB directly
+        using AppDbContext db = new();
+        return db.Configuration.Any(c => c.Key == "ssl_certificate");
     }
 
     public static void KestrelConfig(KestrelServerOptions options)
@@ -46,15 +98,21 @@ public static class Certificate
         return new()
         {
             SslProtocols = SslProtocols.Tls12,
-            // Use a selector callback instead of a static cert so that after
-            // RenewSslCertificate() writes new files to disk, the next TLS
-            // handshake automatically picks them up without a server restart.
-            ServerCertificateSelector = (_, _) => CombinePublicAndPrivateCerts(),
+            ServerCertificateSelector = (_, _) =>
+            {
+                lock (_certLock)
+                {
+                    return _cachedCertificate
+                        ?? throw new InvalidOperationException("No SSL certificate loaded");
+                }
+            },
         };
     }
 
+    // Kept as fallback — Task 17 will remove this once DB-only path is stable.
     private static X509Certificate2 CombinePublicAndPrivateCerts()
     {
+#pragma warning disable CS0618 // Obsolete
         if (!File.Exists(AppFiles.CertFile))
             throw new FileNotFoundException($"Certificate file not found: {AppFiles.CertFile}");
 
@@ -63,6 +121,7 @@ public static class Certificate
 
         string certPem = File.ReadAllText(AppFiles.CertFile);
         string keyPem = File.ReadAllText(AppFiles.KeyFile);
+#pragma warning restore CS0618
 
         using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
 
@@ -72,35 +131,25 @@ public static class Certificate
 
     private static bool ValidateSslCertificate()
     {
-        if (!File.Exists(AppFiles.CertFile))
-            return false;
-
-        try
+        lock (_certLock)
         {
-            X509Certificate2 certificate = CombinePublicAndPrivateCerts();
+            if (_cachedCertificate is null)
+                return false;
 
             // Don't call certificate.Verify() — it may trigger OCSP/CRL network calls
             // which fail when Cloudflare or the internet is down. Just check the expiry date.
-            if (certificate.NotAfter <= DateTime.Now)
+            if (_cachedCertificate.NotAfter <= DateTime.Now)
                 return false; // Actually expired
 
-            if (certificate.NotAfter < DateTime.Now.AddDays(30))
+            if (_cachedCertificate.NotAfter < DateTime.Now.AddDays(30))
             {
                 Logger.Certificate(
-                    $"SSL cert expires {certificate.NotAfter:yyyy-MM-dd} — will attempt renewal"
+                    $"SSL cert expires {_cachedCertificate.NotAfter:yyyy-MM-dd} — will attempt renewal"
                 );
                 return false; // Expiring soon — trigger renewal
             }
 
             return true;
-        }
-        catch (Exception e)
-        {
-            Logger.Certificate(
-                $"Failed to validate certificate: {e.Message}",
-                Serilog.Events.LogEventLevel.Warning
-            );
-            return false;
         }
     }
 
@@ -114,7 +163,7 @@ public static class Certificate
             return;
         }
 
-        bool hasExistingCert = File.Exists(AppFiles.CertFile);
+        bool hasExistingCert = HasValidCertificate();
 
         Logger.Certificate(
             !hasExistingCert ? "Generating SSL Certificate..." : "Renewing SSL Certificate..."
@@ -122,16 +171,21 @@ public static class Certificate
 
         try
         {
-            if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
-                throw new InvalidOperationException(
-                    "No access token available for certificate request — re-authentication required"
+            string? token = Globals.Globals.AccessToken;
+            if (string.IsNullOrEmpty(token))
+            {
+                Logger.Setup(
+                    "Skipping certificate renewal — no auth token available",
+                    LogEventLevel.Warning
                 );
+                return;
+            }
 
             using HttpClient client = DnsHttpClient.WithDns();
             client.BaseAddress = new(Config.ApiServerBaseUrl);
             client.Timeout = TimeSpan.FromMinutes(10);
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
+            client.DefaultRequestHeaders.Authorization = new("Bearer", token);
 
             string serverUrl = $"certificate?id={Info.DeviceId}";
             if (hasExistingCert)
@@ -167,11 +221,11 @@ public static class Certificate
         }
         catch (Exception ex) when (hasExistingCert)
         {
-            // Cert exists on disk but renewal failed (Cloudflare down, network issue, etc.)
+            // Cert exists in DB but renewal failed (Cloudflare down, network issue, etc.)
             // The existing cert is usable — don't block boot
             Logger.Certificate(
                 $"Certificate renewal failed: {ex.Message}. Using existing certificate.",
-                Serilog.Events.LogEventLevel.Warning
+                LogEventLevel.Warning
             );
         }
     }
@@ -212,6 +266,30 @@ public static class Certificate
                 $"Certificate API returned incomplete data (status: {data.Status ?? "unknown"})"
             );
 
+        string certPem = $"{data.Data.Certificate}\n{data.Data.IssuerCertificate}";
+        string keyPem = data.Data.PrivateKey;
+        string? caPem = string.IsNullOrEmpty(data.Data.CertificateAuthority)
+            ? null
+            : data.Data.CertificateAuthority;
+
+        // Write to DB
+        using AppDbContext db = new();
+        UpsertConfig(db, "ssl_certificate", certPem);
+        UpsertConfig(db, "ssl_private_key", keyPem);
+        if (!string.IsNullOrEmpty(caPem))
+            UpsertConfig(db, "ssl_ca", caPem);
+        await db.SaveChangesAsync();
+
+        // Update in-memory cache
+        lock (_certLock)
+        {
+            using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
+            byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
+            _cachedCertificate = X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
+        }
+
+        // Keep file writes alongside DB writes for backwards compat (Task 17 removes these)
+#pragma warning disable CS0618 // Obsolete
         if (File.Exists(AppFiles.KeyFile))
             File.Delete(AppFiles.KeyFile);
         if (File.Exists(AppFiles.CaFile))
@@ -219,12 +297,10 @@ public static class Certificate
         if (File.Exists(AppFiles.CertFile))
             File.Delete(AppFiles.CertFile);
 
-        await File.WriteAllTextAsync(AppFiles.KeyFile, data.Data.PrivateKey);
+        await File.WriteAllTextAsync(AppFiles.KeyFile, keyPem);
         await File.WriteAllTextAsync(AppFiles.CaFile, data.Data.CertificateAuthority);
-        await File.WriteAllTextAsync(
-            AppFiles.CertFile,
-            $"{data.Data.Certificate}\n{data.Data.IssuerCertificate}"
-        );
+        await File.WriteAllTextAsync(AppFiles.CertFile, certPem);
+#pragma warning restore CS0618
 
         Logger.Certificate(
             !hasExistingCert ? "SSL Certificate created" : "SSL Certificate renewed"

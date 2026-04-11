@@ -487,8 +487,14 @@ public class SetupServerTests : IAsyncLifetime
     [Fact]
     public async Task SsoCallback_WithCode_ReturnsStyledHtml()
     {
+        // Fetch config first to obtain the PKCE state the server expects
+        using HttpResponseMessage configResponse = await _client.GetAsync("/setup/config");
+        string configBody = await configResponse.Content.ReadAsStringAsync();
+        dynamic? config = JsonConvert.DeserializeObject<dynamic>(configBody);
+        string pkceState = (string)config!.pkce_state;
+
         using HttpResponseMessage response = await _client.GetAsync(
-            "/sso-callback?code=test-auth-code"
+            $"/sso-callback?code=test-auth-code&state={Uri.EscapeDataString(pkceState)}"
         );
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -653,8 +659,14 @@ public class SetupServerPkceTests : IAsyncLifetime
     [Fact]
     public async Task SsoCallback_WithCode_ReturnsHtmlResponse()
     {
+        // Fetch config first to obtain the PKCE state the server expects
+        using HttpResponseMessage configResponse = await _client.GetAsync("/setup/config");
+        string configBody = await configResponse.Content.ReadAsStringAsync();
+        dynamic? config = JsonConvert.DeserializeObject<dynamic>(configBody);
+        string pkceState = (string)config!.pkce_state;
+
         using HttpResponseMessage response = await _client.GetAsync(
-            "/sso-callback?code=test-auth-code"
+            $"/sso-callback?code=test-auth-code&state={Uri.EscapeDataString(pkceState)}"
         );
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -667,7 +679,15 @@ public class SetupServerPkceTests : IAsyncLifetime
     [Fact]
     public async Task SsoCallback_WithCode_ErrorHtmlContainsRedirect()
     {
-        using HttpResponseMessage response = await _client.GetAsync("/sso-callback?code=test-code");
+        // Fetch config first to obtain the PKCE state the server expects
+        using HttpResponseMessage configResponse = await _client.GetAsync("/setup/config");
+        string configBody = await configResponse.Content.ReadAsStringAsync();
+        dynamic? config = JsonConvert.DeserializeObject<dynamic>(configBody);
+        string pkceState = (string)config!.pkce_state;
+
+        using HttpResponseMessage response = await _client.GetAsync(
+            $"/sso-callback?code=test-code&state={Uri.EscapeDataString(pkceState)}"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         // Token exchange fails in test env → error case → redirects to /setup
@@ -680,13 +700,16 @@ public class SetupServerRedirectUriTests
     [Fact]
     public void BuildRedirectUri_ConstructsCorrectUri()
     {
+        // BuildRedirectUri now always uses localhost with the port from the request
+        // so the redirect URI is predictable regardless of the incoming Host header.
+        // This is required for PKCE security — the code_verifier is only on the server.
         DefaultHttpContext context = new();
         context.Request.Scheme = "http";
         context.Request.Host = new("192.168.1.100", 7626);
 
         string result = SetupServer.BuildRedirectUri(context.Request);
 
-        Assert.Equal("http://192.168.1.100:7626/sso-callback", result);
+        Assert.Equal("http://localhost:7626/sso-callback", result);
     }
 
     [Fact]
@@ -704,13 +727,16 @@ public class SetupServerRedirectUriTests
     [Fact]
     public void BuildRedirectUri_HandlesHostWithoutPort()
     {
+        // When no port is present on the Host header, the default setup port is used.
         DefaultHttpContext context = new();
         context.Request.Scheme = "https";
         context.Request.Host = new("example.com");
 
         string result = SetupServer.BuildRedirectUri(context.Request);
 
-        Assert.Equal("https://example.com/sso-callback", result);
+        // Port falls back to Config.InternalServerPort (7626 by default)
+        Assert.StartsWith("http://localhost:", result);
+        Assert.EndsWith("/sso-callback", result);
     }
 }
 
@@ -732,26 +758,35 @@ public class SetupServerHtmlTests
     [Fact]
     public void LoadSetupHtml_ContainsSetupUI()
     {
+        // The setup page is now a thin HTML shell — JS logic lives in setup.js.
+        // Verify the shell contains the structural elements required by the UI.
         SetupServer.ClearHtmlCache();
         string html = SetupServer.LoadSetupHtml();
 
         Assert.Contains("NoMercy", html);
         Assert.Contains("Login with NoMercy", html);
-        Assert.Contains("/setup/config", html);
-        Assert.Contains("/setup/status", html);
+        Assert.Contains("btn-login", html);
+        // setup.js is referenced via a script tag — that is how /setup/config
+        // and /setup/status are called; they do not appear inline in the HTML.
+        Assert.Contains("/setup/setup.js", html);
     }
 
     [Fact]
     public void LoadSetupHtml_UsesServerSidePkce()
     {
+        // The HTML shell delegates all PKCE logic to the external setup.js.
+        // There must be no client-side key generation (generateCodeVerifier) or
+        // sessionStorage usage in the HTML itself — that would bypass the server-
+        // generated code_challenge returned by /setup/config.
         SetupServer.ClearHtmlCache();
         string html = SetupServer.LoadSetupHtml();
 
-        Assert.Contains("config.code_challenge", html);
-        Assert.Contains("code_challenge_method=S256", html);
-        Assert.Contains("buildAuthUrl()", html);
+        // Script tag wires up the external JS (which reads config.code_challenge)
+        Assert.Contains("/setup/setup.js", html);
+        // The HTML shell must not contain any inline PKCE client-side generation
         Assert.DoesNotContain("generateCodeVerifier", html);
         Assert.DoesNotContain("sessionStorage.setItem", html);
+        Assert.DoesNotContain("code_challenge_method", html);
     }
 
     [Fact]

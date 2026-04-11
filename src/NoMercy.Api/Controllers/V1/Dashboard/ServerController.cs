@@ -45,6 +45,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 public class ServerController(
     IHostApplicationLifetime appLifetime,
     MediaContext context,
+    AppDbContext appContext,
     FileRepository fileRepository,
     JobDispatcher jobDispatcher,
     QueueRunner queueRunner,
@@ -302,7 +303,7 @@ public class ServerController(
     [NonAction]
     private string DeviceName()
     {
-        Configuration? device = context.Configuration.FirstOrDefault(device =>
+        Configuration? device = appContext.Configuration.FirstOrDefault(device =>
             device.Key == "serverName"
         );
         return device?.Value ?? Environment.MachineName;
@@ -346,7 +347,7 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update server information");
 
-        Configuration? configuration = await context
+        Configuration? configuration = await appContext
             .Configuration.AsTracking()
             .FirstOrDefaultAsync(configuration => configuration.Key == "serverName");
 
@@ -360,7 +361,7 @@ public class ServerController(
                     Value = request.Name,
                     ModifiedBy = userId,
                 };
-                await context.Configuration.AddAsync(configuration);
+                await appContext.Configuration.AddAsync(configuration);
             }
             else
             {
@@ -368,13 +369,20 @@ public class ServerController(
                 configuration.ModifiedBy = userId;
             }
 
-            await context.SaveChangesAsync();
+            await appContext.SaveChangesAsync();
 
             System.Net.Http.HttpClient client = httpClientFactory.CreateClient(
                 HttpClientNames.General
             );
             client.BaseAddress = new(Config.ApiServerBaseUrl);
-            client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
+
+            string? token = Globals.Globals.AccessToken;
+            if (string.IsNullOrEmpty(token))
+            {
+                return StatusCode(503, new { message = "Re-authentication in progress" });
+            }
+
+            client.DefaultRequestHeaders.Authorization = new("Bearer", token);
 
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Patch, "name")
             {

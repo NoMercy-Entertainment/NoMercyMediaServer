@@ -160,9 +160,10 @@ public class ChromeCast
 
         string externalAddress = (NetworkDiscovery?.ExternalAddress).OrEmpty();
 
+        string? token = Globals.Globals.AccessToken;
         CastCustomData customData = new()
         {
-            AccessToken = Globals.Globals.AccessToken,
+            AccessToken = token, // May be null — Chromecast receiver handles missing auth
             BasePath = externalAddress,
             Playlist = $"{externalAddress}/api/v1/{value}/watch",
             DeepLink = $"tv.nomercy.app://{value}/watch",

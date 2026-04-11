@@ -15,8 +15,8 @@ public static class UserSettings
 
         try
         {
-            using MediaContext mediaContext = new();
-            List<Configuration> configuration = mediaContext.Configuration.ToList();
+            using AppDbContext appContext = new();
+            List<Configuration> configuration = appContext.Configuration.ToList();
 
             foreach (Configuration config in configuration)
             {
@@ -24,14 +24,14 @@ public static class UserSettings
                 {
                     case "internalPort" when Config.InternalServerPort != int.Parse(config.Value):
                         config.Value = Config.InternalServerPort.ToString();
-                        mediaContext
+                        appContext
                             .Configuration.Upsert(new() { Key = config.Key, Value = config.Value })
                             .On(c => c.Key)
                             .Run();
                         break;
                     case "externalPort" when Config.ExternalServerPort != int.Parse(config.Value):
                         config.Value = Config.ExternalServerPort.ToString();
-                        mediaContext
+                        appContext
                             .Configuration.Upsert(new() { Key = config.Key, Value = config.Value })
                             .On(c => c.Key)
                             .Run();
@@ -50,7 +50,7 @@ public static class UserSettings
 
     public static void ApplySettings(Dictionary<string, string> settings, bool silent = false)
     {
-        using MediaContext mediaContext = new();
+        using AppDbContext appContext = new();
         foreach (KeyValuePair<string, string> setting in settings)
         {
             if (!silent)
@@ -63,7 +63,7 @@ public static class UserSettings
                     break;
                 case "internalPort" when Config.InternalServerPort != int.Parse(setting.Value):
                     Config.InternalServerPort = int.Parse(setting.Value);
-                    mediaContext
+                    appContext
                         .Configuration.Upsert(
                             new()
                             {
@@ -79,7 +79,7 @@ public static class UserSettings
                     break;
                 case "externalPort" when Config.ExternalServerPort != int.Parse(setting.Value):
                     Config.ExternalServerPort = int.Parse(setting.Value);
-                    mediaContext
+                    appContext
                         .Configuration.Upsert(
                             new()
                             {

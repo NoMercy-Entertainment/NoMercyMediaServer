@@ -21,7 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/configuration", Order = 10)]
-public class ConfigurationController(MediaContext mediaContext, QueueRunner queueRunner)
+public class ConfigurationController(MediaContext mediaContext, AppDbContext appContext, QueueRunner queueRunner)
     : BaseController
 {
     [HttpGet]
@@ -55,7 +55,7 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
     [NonAction]
     private string DeviceName()
     {
-        Configuration? device = mediaContext.Configuration.FirstOrDefault(device =>
+        Configuration? device = appContext.Configuration.FirstOrDefault(device =>
             device.Key == "serverName"
         );
         return device?.Value ?? Environment.MachineName;
@@ -81,7 +81,7 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
         if (request.InternalServerPort != 0)
         {
             Config.InternalServerPort = request.InternalServerPort;
-            await mediaContext
+            await appContext
                 .Configuration.Upsert(
                     new()
                     {
@@ -98,7 +98,7 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
         if (request.ExternalServerPort != 0)
         {
             Config.ExternalServerPort = request.ExternalServerPort;
-            await mediaContext
+            await appContext
                 .Configuration.Upsert(
                     new()
                     {
@@ -195,7 +195,7 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
         if (request.Swagger is not null)
         {
             Config.Swagger = (bool)request.Swagger;
-            await mediaContext
+            await appContext
                 .Configuration.Upsert(
                     new()
                     {
@@ -212,7 +212,7 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
         }
 
         if (request.ServerName is not null)
-            await mediaContext
+            await appContext
                 .Configuration.Upsert(
                     new()
                     {

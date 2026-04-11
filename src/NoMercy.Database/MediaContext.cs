@@ -208,7 +208,6 @@ public class MediaContext : DbContext
     public virtual DbSet<CollectionLibrary> CollectionLibrary { get; init; }
     public virtual DbSet<CollectionMovie> CollectionMovie { get; init; }
     public virtual DbSet<Collection> Collections { get; init; }
-    public virtual DbSet<Configuration> Configuration { get; init; }
     public virtual DbSet<Country> Countries { get; init; }
     public virtual DbSet<Creator> Creators { get; init; }
     public virtual DbSet<Crew> Crews { get; init; }

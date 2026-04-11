@@ -125,11 +125,15 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
 
             Logger.Register("Your IP address has changed, updating server information...");
 
+            string? token = Globals.Globals.AccessToken;
+            if (string.IsNullOrEmpty(token))
+            {
+                Logger.Setup("Skipping network change ping — no auth token", LogEventLevel.Verbose);
+                return;
+            }
+
             GenericHttpClient authClient = new(NmSystem.Information.Config.ApiServerBaseUrl);
-            authClient.SetDefaultHeaders(
-                NmSystem.Information.Config.UserAgent,
-                Globals.Globals.AccessToken
-            );
+            authClient.SetDefaultHeaders(NmSystem.Information.Config.UserAgent, token);
             string response = await authClient.SendAndReadAsync(
                 HttpMethod.Post,
                 "ping",

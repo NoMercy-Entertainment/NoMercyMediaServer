@@ -393,24 +393,35 @@ public class NetworkDiscovery : INetworkDiscovery
         Logger.Setup("Getting external IP address");
 
         // 1. Try API
-        try
+        string? apiToken = Globals.Globals.AccessToken;
+        if (string.IsNullOrEmpty(apiToken))
         {
-            GenericHttpClient apiClient = new(Config.ApiBaseUrl);
-            apiClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
-            using HttpResponseMessage response = await apiClient.SendAsync(HttpMethod.Get, "v1/ip");
-            if (response.IsSuccessStatusCode)
+            Logger.Setup("Skipping API external IP lookup — no auth token", LogEventLevel.Verbose);
+        }
+        else
+        {
+            try
             {
-                string ip = (await response.Content.ReadAsStringAsync()).Replace("\"", "");
-                if (!string.IsNullOrEmpty(ip))
+                GenericHttpClient apiClient = new(Config.ApiBaseUrl);
+                apiClient.SetDefaultHeaders(Config.UserAgent, apiToken);
+                using HttpResponseMessage response = await apiClient.SendAsync(
+                    HttpMethod.Get,
+                    "v1/ip"
+                );
+                if (response.IsSuccessStatusCode)
                 {
-                    CacheExternalIp(ip);
-                    return ip;
+                    string ip = (await response.Content.ReadAsStringAsync()).Replace("\"", "");
+                    if (!string.IsNullOrEmpty(ip))
+                    {
+                        CacheExternalIp(ip);
+                        return ip;
+                    }
                 }
             }
-        }
-        catch (Exception e)
-        {
-            Logger.Setup($"External IP API unavailable: {e.Message}", LogEventLevel.Warning);
+            catch (Exception e)
+            {
+                Logger.Setup($"External IP API unavailable: {e.Message}", LogEventLevel.Warning);
+            }
         }
 
         // 2. Try UPnP device

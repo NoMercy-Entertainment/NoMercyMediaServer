@@ -13,12 +13,36 @@ public class StartupTaskRunnerTests
 
         List<StartupTask> tasks =
         [
-            new("Phase2Task", () => { executionOrder.Add("Phase2Task"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 2),
-            new("Phase1Task", () => { executionOrder.Add("Phase1Task"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 1),
-            new("Phase3Task", () => { executionOrder.Add("Phase3Task"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 3),
+            new(
+                "Phase2Task",
+                () =>
+                {
+                    executionOrder.Add("Phase2Task");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 2
+            ),
+            new(
+                "Phase1Task",
+                () =>
+                {
+                    executionOrder.Add("Phase1Task");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 1
+            ),
+            new(
+                "Phase3Task",
+                () =>
+                {
+                    executionOrder.Add("Phase3Task");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 3
+            ),
         ];
 
         StartupTaskRunner runner = new(tasks);
@@ -37,12 +61,32 @@ public class StartupTaskRunnerTests
 
         List<StartupTask> tasks =
         [
-            new("Required", () => { executionOrder.Add("Required"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 1),
-            new("Deferrable", () => throw new InvalidOperationException("Network error"),
-                CanDefer: true, Phase: 2),
-            new("AfterDeferred", () => { executionOrder.Add("AfterDeferred"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 3),
+            new(
+                "Required",
+                () =>
+                {
+                    executionOrder.Add("Required");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 1
+            ),
+            new(
+                "Deferrable",
+                () => throw new InvalidOperationException("Network error"),
+                CanDefer: true,
+                Phase: 2
+            ),
+            new(
+                "AfterDeferred",
+                () =>
+                {
+                    executionOrder.Add("AfterDeferred");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 3
+            ),
         ];
 
         StartupTaskRunner runner = new(tasks);
@@ -59,8 +103,12 @@ public class StartupTaskRunnerTests
     {
         List<StartupTask> tasks =
         [
-            new("Required", () => throw new InvalidOperationException("Fatal error"),
-                CanDefer: false, Phase: 1),
+            new(
+                "Required",
+                () => throw new InvalidOperationException("Fatal error"),
+                CanDefer: false,
+                Phase: 1
+            ),
         ];
 
         StartupTaskRunner runner = new(tasks);
@@ -73,10 +121,19 @@ public class StartupTaskRunnerTests
     {
         List<StartupTask> tasks =
         [
-            new("Auth", () => throw new InvalidOperationException("No network"),
-                CanDefer: true, Phase: 1),
-            new("Register", () => Task.CompletedTask,
-                CanDefer: true, Phase: 2, DependsOn: ["Auth"]),
+            new(
+                "Auth",
+                () => throw new InvalidOperationException("No network"),
+                CanDefer: true,
+                Phase: 1
+            ),
+            new(
+                "Register",
+                () => Task.CompletedTask,
+                CanDefer: true,
+                Phase: 2,
+                DependsOn: ["Auth"]
+            ),
         ];
 
         StartupTaskRunner runner = new(tasks);
@@ -94,12 +151,38 @@ public class StartupTaskRunnerTests
 
         List<StartupTask> tasks =
         [
-            new("First", () => { executionOrder.Add("First"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 1),
-            new("Second", () => { executionOrder.Add("Second"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 1, DependsOn: ["First"]),
-            new("Third", () => { executionOrder.Add("Third"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 1, DependsOn: ["Second"]),
+            new(
+                "First",
+                () =>
+                {
+                    executionOrder.Add("First");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 1
+            ),
+            new(
+                "Second",
+                () =>
+                {
+                    executionOrder.Add("Second");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 1,
+                DependsOn: ["First"]
+            ),
+            new(
+                "Third",
+                () =>
+                {
+                    executionOrder.Add("Third");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 1,
+                DependsOn: ["Second"]
+            ),
         ];
 
         StartupTaskRunner runner = new(tasks);
@@ -115,8 +198,13 @@ public class StartupTaskRunnerTests
     {
         List<StartupTask> tasks =
         [
-            new("Task1", () => Task.CompletedTask, CanDefer: false, Phase: 1,
-                DependsOn: ["NonExistent"]),
+            new(
+                "Task1",
+                () => Task.CompletedTask,
+                CanDefer: false,
+                Phase: 1,
+                DependsOn: ["NonExistent"]
+            ),
         ];
 
         Assert.Throws<InvalidOperationException>(() => new StartupTaskRunner(tasks));
@@ -156,10 +244,19 @@ public class StartupTaskRunnerTests
     {
         List<StartupTask> tasks =
         [
-            new("Auth", () => throw new InvalidOperationException("Fail"),
-                CanDefer: true, Phase: 1),
-            new("Critical", () => Task.CompletedTask,
-                CanDefer: false, Phase: 2, DependsOn: ["Auth"]),
+            new(
+                "Auth",
+                () => throw new InvalidOperationException("Fail"),
+                CanDefer: true,
+                Phase: 1
+            ),
+            new(
+                "Critical",
+                () => Task.CompletedTask,
+                CanDefer: false,
+                Phase: 2,
+                DependsOn: ["Auth"]
+            ),
         ];
 
         StartupTaskRunner runner = new(tasks);
@@ -186,18 +283,71 @@ public class StartupTaskRunnerTests
 
         List<StartupTask> tasks =
         [
-            new("AppFolders", () => { executionOrder.Add("AppFolders"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 1),
-            new("ApiInfo", () => { executionOrder.Add("ApiInfo"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 1, DependsOn: ["AppFolders"]),
-            new("NetworkProbe", () => { executionOrder.Add("NetworkProbe"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 2, DependsOn: ["ApiInfo"]),
-            new("Auth", () => { executionOrder.Add("Auth"); return Task.CompletedTask; },
-                CanDefer: true, Phase: 2, DependsOn: ["NetworkProbe"]),
-            new("Networking", () => { executionOrder.Add("Networking"); return Task.CompletedTask; },
-                CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
-            new("Register", () => { executionOrder.Add("Register"); return Task.CompletedTask; },
-                CanDefer: true, Phase: 4, DependsOn: ["Auth", "Networking"]),
+            new(
+                "AppFolders",
+                () =>
+                {
+                    executionOrder.Add("AppFolders");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 1
+            ),
+            new(
+                "ApiInfo",
+                () =>
+                {
+                    executionOrder.Add("ApiInfo");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 1,
+                DependsOn: ["AppFolders"]
+            ),
+            new(
+                "NetworkProbe",
+                () =>
+                {
+                    executionOrder.Add("NetworkProbe");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 2,
+                DependsOn: ["ApiInfo"]
+            ),
+            new(
+                "Auth",
+                () =>
+                {
+                    executionOrder.Add("Auth");
+                    return Task.CompletedTask;
+                },
+                CanDefer: true,
+                Phase: 2,
+                DependsOn: ["NetworkProbe"]
+            ),
+            new(
+                "Networking",
+                () =>
+                {
+                    executionOrder.Add("Networking");
+                    return Task.CompletedTask;
+                },
+                CanDefer: true,
+                Phase: 3,
+                DependsOn: ["NetworkProbe"]
+            ),
+            new(
+                "Register",
+                () =>
+                {
+                    executionOrder.Add("Register");
+                    return Task.CompletedTask;
+                },
+                CanDefer: true,
+                Phase: 4,
+                DependsOn: ["Auth", "Networking"]
+            ),
         ];
 
         StartupTaskRunner runner = new(tasks);
@@ -218,20 +368,78 @@ public class StartupTaskRunnerTests
 
         List<StartupTask> tasks =
         [
-            new("AppFolders", () => { executionOrder.Add("AppFolders"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 1),
-            new("ApiInfo", () => { executionOrder.Add("ApiInfo"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 1, DependsOn: ["AppFolders"]),
-            new("NetworkProbe", () => { executionOrder.Add("NetworkProbe"); return Task.CompletedTask; },
-                CanDefer: false, Phase: 2, DependsOn: ["ApiInfo"]),
-            new("Auth", () => throw new InvalidOperationException("No network"),
-                CanDefer: true, Phase: 2, DependsOn: ["NetworkProbe"]),
-            new("CallerTask_0", () => { executionOrder.Add("CallerTask_0"); return Task.CompletedTask; },
-                CanDefer: true, Phase: 3, DependsOn: ["Auth"]),
-            new("Register", () => { executionOrder.Add("Register"); return Task.CompletedTask; },
-                CanDefer: true, Phase: 4, DependsOn: ["Auth", "Networking"]),
-            new("Networking", () => { executionOrder.Add("Networking"); return Task.CompletedTask; },
-                CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
+            new(
+                "AppFolders",
+                () =>
+                {
+                    executionOrder.Add("AppFolders");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 1
+            ),
+            new(
+                "ApiInfo",
+                () =>
+                {
+                    executionOrder.Add("ApiInfo");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 1,
+                DependsOn: ["AppFolders"]
+            ),
+            new(
+                "NetworkProbe",
+                () =>
+                {
+                    executionOrder.Add("NetworkProbe");
+                    return Task.CompletedTask;
+                },
+                CanDefer: false,
+                Phase: 2,
+                DependsOn: ["ApiInfo"]
+            ),
+            new(
+                "Auth",
+                () => throw new InvalidOperationException("No network"),
+                CanDefer: true,
+                Phase: 2,
+                DependsOn: ["NetworkProbe"]
+            ),
+            new(
+                "CallerTask_0",
+                () =>
+                {
+                    executionOrder.Add("CallerTask_0");
+                    return Task.CompletedTask;
+                },
+                CanDefer: true,
+                Phase: 3,
+                DependsOn: ["Auth"]
+            ),
+            new(
+                "Register",
+                () =>
+                {
+                    executionOrder.Add("Register");
+                    return Task.CompletedTask;
+                },
+                CanDefer: true,
+                Phase: 4,
+                DependsOn: ["Auth", "Networking"]
+            ),
+            new(
+                "Networking",
+                () =>
+                {
+                    executionOrder.Add("Networking");
+                    return Task.CompletedTask;
+                },
+                CanDefer: true,
+                Phase: 3,
+                DependsOn: ["NetworkProbe"]
+            ),
         ];
 
         StartupTaskRunner runner = new(tasks);
@@ -267,7 +475,13 @@ public class StartupTaskRunnerTests
         List<StartupTask> tasks =
         [
             new("Dep", () => Task.CompletedTask, CanDefer: false, Phase: 1),
-            new("Dependent", () => Task.CompletedTask, CanDefer: false, Phase: 1, DependsOn: ["Dep"]),
+            new(
+                "Dependent",
+                () => Task.CompletedTask,
+                CanDefer: false,
+                Phase: 1,
+                DependsOn: ["Dep"]
+            ),
         ];
 
         StartupTaskRunner runner = new(tasks);
@@ -309,19 +523,29 @@ public class BuildStartupTasksTests
         List<TaskDelegate> callerTasks = [() => Task.CompletedTask];
         List<StartupTask> tasks = Start.BuildStartupTasks(callerTasks);
 
+        // Auth is now handled by AuthManager/BootOrchestrator — no longer a startup task.
         string[] expectedNames =
         [
-            "UserSettings", "CreateAppFolders", "ApiInfo",
-            "NetworkProbe", "Auth", "Binaries",
-            "Networking", "ChromeCast", "UpdateChecker",
-            "DesktopIcon", "CallerTask_0",
-            "Register"
+            "UserSettings",
+            "CreateAppFolders",
+            "ApiInfo",
+            "NetworkProbe",
+            "Binaries",
+            "Networking",
+            "ChromeCast",
+            "UpdateChecker",
+            "DesktopIcon",
+            "CallerTask_0",
+            "Register",
         ];
 
         foreach (string name in expectedNames)
         {
             Assert.Contains(tasks, t => t.Name == name);
         }
+
+        // Auth task should NOT exist in the task list.
+        Assert.DoesNotContain(tasks, t => t.Name == "Auth");
     }
 
     [Fact]
@@ -331,42 +555,47 @@ public class BuildStartupTasksTests
 
         List<StartupTask> phase1 = tasks.Where(t => t.Phase == 1).ToList();
 
-        Assert.All(phase1, t => Assert.False(t.CanDefer,
-            $"Phase 1 task '{t.Name}' should not be deferrable"));
+        Assert.All(
+            phase1,
+            t => Assert.False(t.CanDefer, $"Phase 1 task '{t.Name}' should not be deferrable")
+        );
     }
 
     [Fact]
-    public void BuildStartupTasks_RegisterDependsOnAuthAndNetworking()
+    public void BuildStartupTasks_RegisterDependsOnNetworking()
     {
+        // Auth is handled by AuthManager/BootOrchestrator — Register now only depends on Networking.
         List<StartupTask> tasks = Start.BuildStartupTasks([]);
 
         StartupTask register = tasks.Single(t => t.Name == "Register");
 
         Assert.NotNull(register.DependsOn);
-        Assert.Contains("Auth", register.DependsOn);
+        Assert.DoesNotContain("Auth", register.DependsOn);
         Assert.Contains("Networking", register.DependsOn);
     }
 
     [Fact]
-    public void BuildStartupTasks_CallerTasksDependOnAuth()
+    public void BuildStartupTasks_CallerTasksDependOnNetworkProbe()
     {
-        List<TaskDelegate> callerTasks =
-        [
-            () => Task.CompletedTask,
-            () => Task.CompletedTask,
-        ];
+        // Auth task removed — CallerTasks now depend on NetworkProbe instead.
+        List<TaskDelegate> callerTasks = [() => Task.CompletedTask, () => Task.CompletedTask];
 
         List<StartupTask> tasks = Start.BuildStartupTasks(callerTasks);
 
         List<StartupTask> callerStartupTasks = tasks
-            .Where(t => t.Name.StartsWith("CallerTask_")).ToList();
+            .Where(t => t.Name.StartsWith("CallerTask_"))
+            .ToList();
 
         Assert.Equal(2, callerStartupTasks.Count);
-        Assert.All(callerStartupTasks, t =>
-        {
-            Assert.NotNull(t.DependsOn);
-            Assert.Contains("Auth", t.DependsOn);
-        });
+        Assert.All(
+            callerStartupTasks,
+            t =>
+            {
+                Assert.NotNull(t.DependsOn);
+                Assert.DoesNotContain("Auth", t.DependsOn);
+                Assert.Contains("NetworkProbe", t.DependsOn);
+            }
+        );
     }
 
     [Fact]
@@ -386,7 +615,8 @@ public class BuildStartupTasksTests
 
         foreach (StartupTask task in tasks)
         {
-            if (task.DependsOn is null) continue;
+            if (task.DependsOn is null)
+                continue;
             foreach (string dep in task.DependsOn)
             {
                 Assert.Contains(dep, taskNames);

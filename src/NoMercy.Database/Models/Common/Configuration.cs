@@ -20,4 +20,7 @@ public class Configuration : Timestamps
 
     [JsonProperty("modified_by")]
     public Guid? ModifiedBy { get; set; }
+
+    [JsonIgnore]
+    public string? SecureValue { get; set; }
 }

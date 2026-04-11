@@ -29,8 +29,18 @@ public static class UsersSeed
                 ["with_self"] = "true",
             };
 
+            string? token = Globals.Globals.AccessToken;
+            if (string.IsNullOrEmpty(token))
+            {
+                Logger.Setup(
+                    "Skipping user seed — no auth token (will retry via DegradedModeRecovery)",
+                    LogEventLevel.Warning
+                );
+                return;
+            }
+
             GenericHttpClient authClient = new(Config.ApiServerBaseUrl, 10, 0);
-            authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+            authClient.SetDefaultHeaders(Config.UserAgent, token);
             string response = await authClient.SendAndReadAsync(
                 HttpMethod.Get,
                 "server-users",

@@ -1,0 +1,265 @@
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg:          #09090b;
+    --text:        #fafafa;
+    --muted:       #a1a1aa;
+    --border:      #27272a;
+    --accent-from: #8f00fc;
+    --accent-to:   #CBAFFF;
+    --error-bg:    #1c0a0a;
+    --error-border:#5c2040;
+    --error-text:  #f08080;
+    --radius:      0.5rem;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    width: 100%;
+    max-width: 420px;
+    padding: 24px;
+}
+
+/* ── Logo ───────────────────────────────────────────── */
+
+.logo {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.logo h1 {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.logo p {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+/* ── Steps ──────────────────────────────────────────── */
+
+.step { display: none; }
+.step.active { display: block; }
+
+/* ── Login ──────────────────────────────────────────── */
+
+.login-heading {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.login-sub {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: 24px;
+}
+
+/* ── Buttons ────────────────────────────────────────── */
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+    line-height: 1;
+}
+
+.btn:hover { opacity: 0.88; }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent-from), #6b35cc);
+    color: #fff;
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.btn-outline:hover { background: rgba(255,255,255,0.04); }
+
+/* ── Divider ────────────────────────────────────────── */
+
+.divider {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.divider::before,
+.divider::after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+}
+
+.divider span { padding: 0 12px; }
+
+/* ── QR section ─────────────────────────────────────── */
+
+.qr-section { text-align: center; }
+
+.qr-loading {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.qr-loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent-from);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+.qr-hidden { display: none !important; }
+
+#qr-container {
+    display: inline-block;
+    padding: 10px;
+    background: #fff;
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    line-height: 0;
+}
+
+#qr-container img { display: block; border-radius: 2px; }
+
+.device-code-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+
+#device-link { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+#device-link a { color: var(--accent-to); text-decoration: none; }
+#device-link a:hover { text-decoration: underline; }
+
+.device-code {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--accent-to);
+    margin-bottom: 8px;
+}
+
+.qr-error { font-size: 13px; color: var(--muted); padding: 12px 0; }
+
+/* ── Progress ───────────────────────────────────────── */
+
+.progress-section { text-align: center; padding: 8px 0; }
+
+.spinner {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent-from);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.phase-label { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.phase-detail { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+/* ── Complete ───────────────────────────────────────── */
+
+.success-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+    font-size: 22px;
+    margin-bottom: 20px;
+}
+
+.complete-heading { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+
+.complete-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+#server-url-display {
+    font-size: 12px;
+    color: var(--accent-to);
+    word-break: break-all;
+    margin-bottom: 20px;
+    font-family: monospace;
+}
+
+#redirect-msg { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+/* ── Errors ─────────────────────────────────────────── */
+
+.error-box {
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--error-text);
+    line-height: 1.5;
+    display: none;
+}
+
+.error-box.visible { display: block; }

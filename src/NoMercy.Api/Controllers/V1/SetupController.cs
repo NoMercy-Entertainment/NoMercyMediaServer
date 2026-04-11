@@ -22,6 +22,7 @@ namespace NoMercy.Api.Controllers.V1;
 [Route("api/v{version:apiVersion}/setup")]
 public class SetupController(
     MediaContext context,
+    AppDbContext appContext,
     SetupService setupService,
     HomeService homeService
 ) : BaseController
@@ -51,7 +52,7 @@ public class SetupController(
         bool setupComplete =
             context.Libraries.Any() && context.Folders.Any() && context.EncoderProfiles.Any();
 
-        Configuration? device = context.Configuration.FirstOrDefault(device =>
+        Configuration? device = appContext.Configuration.FirstOrDefault(device =>
             device.Key == "serverName"
         );
         string serverName = device?.Value ?? Environment.MachineName;

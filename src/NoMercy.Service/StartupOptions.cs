@@ -155,8 +155,8 @@ public class StartupOptions
             InternalPort = 7626;
             try
             {
-                MediaContext mediaContext = new();
-                ConfigurationModel? internalPortConfig = mediaContext.Configuration.FirstOrDefault(
+                AppDbContext appContext = new();
+                ConfigurationModel? internalPortConfig = appContext.Configuration.FirstOrDefault(
                     c => c.Key == "internalPort"
                 );
                 if (internalPortConfig != null)
@@ -164,7 +164,7 @@ public class StartupOptions
                     InternalPort = int.Parse(internalPortConfig.Value);
                     Logger.App("Loaded internal port from database: " + InternalPort);
                 }
-                mediaContext.Dispose();
+                appContext.Dispose();
             }
             catch (Exception)
             {
@@ -188,8 +188,8 @@ public class StartupOptions
             ExternalPort = 7626;
             try
             {
-                MediaContext mediaContext = new();
-                ConfigurationModel? externalPortConfig = mediaContext.Configuration.FirstOrDefault(
+                AppDbContext appContext = new();
+                ConfigurationModel? externalPortConfig = appContext.Configuration.FirstOrDefault(
                     c => c.Key == "externalPort"
                 );
                 if (externalPortConfig != null)
@@ -197,7 +197,7 @@ public class StartupOptions
                     ExternalPort = int.Parse(externalPortConfig.Value);
                     Logger.App("Loaded external port from database: " + ExternalPort);
                 }
-                mediaContext.Dispose();
+                appContext.Dispose();
             }
             catch (Exception)
             {

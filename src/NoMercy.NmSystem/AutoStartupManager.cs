@@ -40,6 +40,9 @@ public class AutoStartupManager
     {
         try
         {
+            if (Config.IsTest)
+                return false;
+
             if (Screen.IsDocker)
                 return false;
 

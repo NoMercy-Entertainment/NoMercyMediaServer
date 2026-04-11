@@ -151,40 +151,32 @@ public static class Program
 
         _applicationShutdownCts = new();
 
-        // Determine setup requirements BEFORE building the host so we can start
-        // in plain HTTP mode when auth or cert is missing — even if a stale cert
-        // file exists on disk.  The full HTTPS host is built after setup completes.
-        TokenState tokenState = await SetupState.ValidateTokenFile();
+        // Use certificate presence for the initial forceHttp decision — this is a
+        // filesystem check that doesn't require DI. BootOrchestrator (resolved below)
+        // will own the real needsSetupMode determination via token validation.
         bool hasCert = Certificate.HasValidCertificate();
-        bool needsSetupMode =
-            !hasCert
-            || tokenState is TokenState.Expired or TokenState.Missing or TokenState.Corrupt;
 
-        WebApplication app = CreateWebApplication(options, forceHttp: needsSetupMode);
+        WebApplication app = CreateWebApplication(options, forceHttp: !hasCert);
 
-        SetupState setupState = app.Services.GetRequiredService<SetupState>();
-        SetupPhase initialPhase = setupState.DetermineInitialPhase(tokenState);
-        Logger.App($"Token validation: {tokenState} → setup phase: {initialPhase}");
+        // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).
+        // It returns true when interactive auth is required (setup mode).
+        BootOrchestrator orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
+        bool needsSetupMode = await orchestrator.RunAsync(
+            app.Services,
+            _applicationShutdownCts.Token
+        );
 
         // Force QueueRunner singleton creation so QueueRunner.Current is set
-        // before InitRemaining's background task tries to call Initialize().
+        // before background tasks try to call Initialize().
         app.Services.GetRequiredService<QueueRunner>();
 
         RegisterLifetimeEvents(app, stopWatch);
 
-        // Run Phase 2-4 in background (auth, networking, registration) while host is starting
+        // Log addresses and run dev tasks after the host is live.
+        // InitRemaining is now owned by BootOrchestrator — only host-level
+        // post-startup concerns belong here.
         _ = Task.Run(async () =>
         {
-            try
-            {
-                await Setup.Start.InitRemaining();
-            }
-            catch (Exception ex)
-            {
-                Logger.App($"Background startup tasks failed: {ex.Message}");
-            }
-
-            // Show addresses and server box after all startup tasks complete
             NoMercy.Networking.Discovery.INetworkDiscovery? networkDiscovery =
                 app.Services.GetService<NoMercy.Networking.Discovery.INetworkDiscovery>();
             if (networkDiscovery is not null)
@@ -211,7 +203,7 @@ public static class Program
         if (needsSetupMode)
         {
             Logger.App("Starting in HTTP mode — waiting for setup completion...");
-            shouldRetry = await RunWithHttpsRestart(app, options);
+            shouldRetry = await RunWithHttpsRestart(app, options, orchestrator);
         }
         else
         {
@@ -251,7 +243,10 @@ public static class Program
             {
                 // Re-enter the setup/certificate flow so the server can complete
                 // first-boot setup rather than just running without HTTPS support.
-                await RunWithHttpsRestart(retryHost, options);
+                // Resolve a fresh orchestrator from the retry host's DI container.
+                BootOrchestrator retryOrchestrator =
+                    retryHost.Services.GetRequiredService<BootOrchestrator>();
+                await RunWithHttpsRestart(retryHost, options, retryOrchestrator);
             }
             else
             {
@@ -278,7 +273,8 @@ public static class Program
 
     private static async Task<bool> RunWithHttpsRestart(
         WebApplication httpHost,
-        StartupOptions options
+        StartupOptions options,
+        BootOrchestrator orchestrator
     )
     {
         SetupState setupState = httpHost.Services.GetRequiredService<SetupState>();
@@ -300,19 +296,38 @@ public static class Program
 
         // HTTP server is up — open setup page immediately so the user doesn't have to wait
         // for Phase 2-4 background tasks (Auth, Networking, etc.) before seeing the UI.
-        if (!IsRunningAsService && Auth.IsDesktopEnvironment() && setupState.IsSetupRequired)
+        if (!IsRunningAsService && AuthManager.IsDesktopEnvironment() && setupState.IsSetupRequired)
         {
             string setupUrl = $"http://localhost:{Config.InternalServerPort}/setup";
             Logger.App($"Opening setup page in browser: {setupUrl}");
             try
             {
-                Auth.OpenBrowser(setupUrl);
+                AuthManager.OpenBrowser(setupUrl);
             }
             catch (Exception ex)
             {
                 Logger.App($"Could not open browser automatically: {ex.Message}");
                 Logger.App($"Please open your browser and navigate to: {setupUrl}");
             }
+        }
+
+        // Headless environments (Docker, NAS, systemd) cannot open a browser — start
+        // the device code flow so the user can authenticate from another device.
+        if (IsRunningAsService || !AuthManager.IsDesktopEnvironment())
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await orchestrator.StartHeadlessDeviceCodeFlowAsync(
+                        _applicationShutdownCts!.Token
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Logger.App($"Headless device code flow error: {ex.Message}");
+                }
+            });
         }
 
         // Wait for either setup completion or shutdown.
@@ -365,11 +380,10 @@ public static class Program
 
         WebApplication httpsHost = CreateWebApplication(options);
 
-        // Re-evaluate token state so the new host's SetupState reflects
-        // that auth already completed — prevents reopening the setup page.
-        SetupState httpsSetupState = httpsHost.Services.GetRequiredService<SetupState>();
-        TokenState httpsTokenState = await SetupState.ValidateTokenFile();
-        httpsSetupState.DetermineInitialPhase(httpsTokenState);
+        // The new DI container has a fresh AuthManager — load tokens from DB so it
+        // can signal AuthReady and mark setup complete without re-running the setup UI.
+        AuthManager httpsAuthManager = httpsHost.Services.GetRequiredService<AuthManager>();
+        await httpsAuthManager.InitializeAsync();
 
         // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
         // The constructor sets QueueRunner.Current = this.

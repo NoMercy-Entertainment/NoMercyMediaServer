@@ -61,43 +61,7 @@ public class Start
                 Phase: 2,
                 DependsOn: ["ApiInfo"]
             ),
-            new(
-                "Auth",
-                async () =>
-                {
-                    if (hasNetwork)
-                    {
-                        try
-                        {
-                            await Auth.Init();
-                            if (Globals.Globals.AccessToken is null)
-                                throw new InvalidOperationException("No access token after auth");
-                        }
-                        catch (Exception)
-                        {
-                            Logger.Setup("Auth not yet available, checking for cached tokens");
-                            bool result = await Auth.InitWithFallback();
-                            if (!result)
-                                throw new InvalidOperationException(
-                                    "Auth failed and no cached tokens available"
-                                );
-                        }
-                    }
-                    else
-                    {
-                        bool result = await Auth.InitWithFallback();
-                        if (!result)
-                            throw new InvalidOperationException(
-                                "No network and no cached tokens available"
-                            );
-                    }
-
-                    Auth.ScheduleBackgroundRefresh();
-                },
-                CanDefer: false,
-                Phase: 2,
-                DependsOn: ["NetworkProbe"]
-            ),
+            // Auth is now handled by AuthManager (DI) via BootOrchestrator — not here.
             new(
                 "Binaries",
                 Binaries.DownloadAll,
@@ -151,16 +115,17 @@ public class Start
                         taskDelegate.Invoke,
                         CanDefer: true,
                         Phase: 3,
-                        DependsOn: ["Auth"]
+                        DependsOn: ["NetworkProbe"]
                     )
             ),
-            // ── PHASE 4: REGISTRATION (needs Auth + Networking) ────────
+            // ── PHASE 4: REGISTRATION (needs Networking) ────────────────
+            // Auth is handled by AuthManager/BootOrchestrator before InitRemaining runs.
             new(
                 "Register",
                 () => Register.Init(),
                 CanDefer: true,
                 Phase: 4,
-                DependsOn: ["Auth", "Networking"]
+                DependsOn: ["Networking"]
             ),
         ];
     }
@@ -198,7 +163,8 @@ public class Start
             DeferredTasks deferred = new()
             {
                 ApiKeysLoaded = _phase1Completed.Contains("ApiInfo"),
-                Authenticated = runner.CompletedTasks.Contains("Auth"),
+                // Auth is handled by AuthManager/BootOrchestrator — check AccessToken directly.
+                Authenticated = !string.IsNullOrEmpty(Globals.Globals.AccessToken),
                 NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
                 SeedsRun = runner.DeferredTasks.All(t => !t.Name.StartsWith("CallerTask_")),
                 Registered = runner.CompletedTasks.Contains("Register"),

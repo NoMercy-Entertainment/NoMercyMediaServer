@@ -1,8 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
-using Newtonsoft.Json;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Setup.Dto;
 using Serilog.Events;
 
 namespace NoMercy.Setup;
@@ -16,15 +12,6 @@ public enum SetupPhase
     Registered,
     CertificateAcquired,
     Complete,
-}
-
-public enum TokenState
-{
-    Valid,
-    Expired,
-    Missing,
-    Corrupt,
-    NoRefreshToken,
 }
 
 public class SetupState
@@ -223,96 +210,32 @@ public class SetupState
         };
     }
 
-    public static async Task<TokenState> ValidateTokenFile()
+    public SetupPhase DetermineInitialPhase(bool hasValidToken, bool isRegistered = true)
     {
-        return await ValidateTokenFile(AppFiles.TokenFile);
-    }
-
-    internal static async Task<TokenState> ValidateTokenFile(string tokenFilePath)
-    {
-        if (!File.Exists(tokenFilePath))
-            return TokenState.Missing;
-
-        string json;
-        try
+        if (hasValidToken && isRegistered)
         {
-            json = await File.ReadAllTextAsync(tokenFilePath);
-        }
-        catch
-        {
-            return TokenState.Corrupt;
-        }
-
-        if (string.IsNullOrWhiteSpace(json) || json.Trim() == "{}")
-            return TokenState.Missing;
-
-        AuthResponse? tokenData;
-        try
-        {
-            tokenData = JsonConvert.DeserializeObject<AuthResponse>(json);
-        }
-        catch
-        {
-            return TokenState.Corrupt;
-        }
-
-        if (string.IsNullOrEmpty(tokenData?.AccessToken))
-            return TokenState.Missing;
-
-        string[] parts = tokenData.AccessToken.Split('.');
-        if (parts.Length != 3)
-            return TokenState.Corrupt;
-
-        try
-        {
-            JwtSecurityTokenHandler handler = new();
-            JwtSecurityToken jwt = handler.ReadJwtToken(tokenData.AccessToken);
-
-            if (jwt.ValidTo < DateTime.UtcNow.AddDays(5))
-                return TokenState.Expired;
-        }
-        catch
-        {
-            return TokenState.Corrupt;
-        }
-
-        if (string.IsNullOrEmpty(tokenData.RefreshToken))
-            return TokenState.NoRefreshToken;
-
-        return TokenState.Valid;
-    }
-
-    public SetupPhase DetermineInitialPhase(TokenState tokenState)
-    {
-        lock (_lock)
-        {
-            _currentPhase = tokenState switch
+            lock (_lock)
             {
-                TokenState.Valid => SetupPhase.Complete,
-                TokenState.NoRefreshToken => SetupPhase.Complete,
-                TokenState.Expired => SetupPhase.Unauthenticated,
-                TokenState.Missing => SetupPhase.Unauthenticated,
-                TokenState.Corrupt => SetupPhase.Unauthenticated,
-                _ => SetupPhase.Unauthenticated,
-            };
-
-            if (tokenState == TokenState.NoRefreshToken)
-            {
-                Logger.Setup(
-                    "Token valid but no refresh token — will need re-auth later",
-                    LogEventLevel.Warning
-                );
+                _currentPhase = SetupPhase.Complete;
+                _setupCompletedSignal.TrySetResult();
             }
 
-            if (tokenState == TokenState.Corrupt)
+            NotifyChange();
+            return SetupPhase.Complete;
+        }
+
+        if (hasValidToken && !isRegistered)
+        {
+            lock (_lock)
             {
-                Logger.Setup(
-                    "Token file is corrupted — entering setup mode",
-                    LogEventLevel.Warning
-                );
+                _currentPhase = SetupPhase.Authenticated;
             }
 
-            return _currentPhase;
+            NotifyChange();
+            return SetupPhase.Authenticated;
         }
+
+        // No valid token — stay Unauthenticated (default)
+        return SetupPhase.Unauthenticated;
     }
 }

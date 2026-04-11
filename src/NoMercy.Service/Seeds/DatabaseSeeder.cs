@@ -1,6 +1,8 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercyQueue.Workers;
 using Serilog.Events;
@@ -17,30 +19,97 @@ public static class DatabaseSeeder
     /// </summary>
     public static async Task InitSchema()
     {
-        Logger.Setup("Initializing database schema...", LogEventLevel.Verbose);
+        Logger.Setup("Initializing database schemas...");
 
+        // 1. AppDbContext first — auth tokens live here, needed before content DB
+        AppDbContext appDbContext = new();
+        await Migrate(appDbContext);
+        await EnsureDatabaseCreated(appDbContext);
+
+        // Migrate Configuration data from media.db to app.db (one-time on update)
+        await MigrateConfigurationData(appDbContext);
+        await appDbContext.DisposeAsync();
+
+        // 2. MediaContext — content and metadata
         MediaContext mediaDbContext = new();
-        await using QueueContext queueDbContext = new();
+        await Migrate(mediaDbContext);
+        await EnsureDatabaseCreated(mediaDbContext);
+
+        // 3. QueueContext — background jobs
+        QueueContext queueDbContext = new();
+        await Migrate(queueDbContext);
+        await EnsureDatabaseCreated(queueDbContext);
+
+        CronWorker.SignalDatabaseReady();
+        Logger.Setup("Database schemas initialized");
+    }
+
+    private static async Task MigrateConfigurationData(AppDbContext appContext)
+    {
+        // Only migrate if app.db has no Configuration rows AND media.db exists with rows
+        bool appHasData = await appContext.Configuration.AnyAsync();
+        if (appHasData)
+            return;
+
+        string mediaDbPath = AppFiles.MediaDatabase;
+        if (!File.Exists(mediaDbPath))
+            return;
 
         try
         {
-            await Migrate(mediaDbContext);
-            await EnsureDatabaseCreated(mediaDbContext);
+            // Check if media.db has a Configuration table with rows
+            using SqliteConnection checkConn = new($"Data Source={mediaDbPath}");
+            await checkConn.OpenAsync();
 
-            await Migrate(queueDbContext);
-            await EnsureDatabaseCreated(queueDbContext);
+            using SqliteCommand checkCmd = checkConn.CreateCommand();
+            checkCmd.CommandText =
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Configuration'";
+            long tableExists = (long)(await checkCmd.ExecuteScalarAsync() ?? 0L);
 
-            CronWorker.SignalDatabaseReady();
-            Logger.Setup("Database schema initialized successfully", LogEventLevel.Verbose);
+            if (tableExists == 0)
+            {
+                await checkConn.CloseAsync();
+                return;
+            }
+
+            using SqliteCommand countCmd = checkConn.CreateCommand();
+            countCmd.CommandText = "SELECT COUNT(*) FROM Configuration";
+            long rowCount = (long)(await countCmd.ExecuteScalarAsync() ?? 0L);
+
+            await checkConn.CloseAsync();
+
+            if (rowCount == 0)
+                return;
+
+            // Copy rows using ATTACH DATABASE on the app.db connection
+            string appDbPath = AppFiles.AppDatabase;
+            using SqliteConnection appConn = new($"Data Source={appDbPath}");
+            await appConn.OpenAsync();
+
+            using SqliteCommand attachCmd = appConn.CreateCommand();
+            attachCmd.CommandText = $"ATTACH DATABASE '{mediaDbPath}' AS source";
+            await attachCmd.ExecuteNonQueryAsync();
+
+            using SqliteCommand copyCmd = appConn.CreateCommand();
+            copyCmd.CommandText =
+                "INSERT OR IGNORE INTO Configuration (Key, Value, ModifiedBy, CreatedAt, UpdatedAt) "
+                + "SELECT Key, Value, ModifiedBy, CreatedAt, UpdatedAt FROM source.Configuration";
+            int copied = await copyCmd.ExecuteNonQueryAsync();
+
+            using SqliteCommand detachCmd = appConn.CreateCommand();
+            detachCmd.CommandText = "DETACH DATABASE source";
+            await detachCmd.ExecuteNonQueryAsync();
+
+            await appConn.CloseAsync();
+
+            Logger.Setup($"Migrated {copied} configuration rows from media.db to app.db");
         }
         catch (Exception ex)
         {
-            CronWorker.SignalDatabaseReady(false);
             Logger.Setup(
-                $"Database schema initialization failed: {ex.Message}",
-                LogEventLevel.Fatal
+                $"Configuration migration from media.db failed (non-fatal): {ex.Message}",
+                LogEventLevel.Warning
             );
-            throw;
         }
     }
 
@@ -51,11 +120,12 @@ public static class DatabaseSeeder
     /// </summary>
     public static async Task SeedOfflineData()
     {
+        AppDbContext appDbContext = new();
         MediaContext mediaDbContext = new();
 
         Func<Task>[] offlineSeeds =
         [
-            () => ConfigSeed.Init(mediaDbContext),
+            () => ConfigSeed.Init(appDbContext),
             () => LibrariesSeed.Init(mediaDbContext),
             () => EncoderProfilesSeed.Init(mediaDbContext),
         ];

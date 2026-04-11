@@ -1,7 +1,9 @@
+using System.IO;
 using System.Security.Claims;
 using I18N.DotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -291,9 +293,26 @@ public static class ServiceConfiguration
 
     private static void ConfigureCoreServices(IServiceCollection services)
     {
-        // Setup state and server — singletons shared between middleware and setup flow
+        services
+            .AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(AppFiles.DataProtectionKeysDir))
+            .SetApplicationName("NoMercyMediaServer");
+
+        // Setup state and services — singletons shared between middleware and setup flow
         services.AddSingleton<SetupState>();
-        services.AddSingleton(sp => new SetupServer(sp.GetRequiredService<SetupState>()));
+        services.AddSingleton<AuthManager>(sp =>
+        {
+            // AuthManager is a long-lived singleton that needs a persistent AppDbContext.
+            // A dedicated scope is created here so the context lives for the server lifetime
+            // rather than being captured from a request scope (which would be disposed early).
+            IServiceScopeFactory scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+            IServiceScope authScope = scopeFactory.CreateScope();
+            AppDbContext authDbContext =
+                authScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            return new AuthManager(authDbContext);
+        });
+        services.AddSingleton<SetupEndpoints>();
+        services.AddSingleton<BootOrchestrator>();
 
         // Add Memory Cache with size limit to prevent unbounded growth
         services.AddMemoryCache(options =>
@@ -370,6 +389,10 @@ public static class ServiceConfiguration
         services.AddWallpaperService();
 
         // Add DbContexts
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseSqlite($"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;")
+        );
+
         services.AddDbContext<QueueContext>(optionsAction =>
         {
             optionsAction.UseSqlite($"Data Source={AppFiles.QueueDatabase}; Pooling=True;");

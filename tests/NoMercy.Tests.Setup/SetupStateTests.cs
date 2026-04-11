@@ -1,8 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using Newtonsoft.Json;
 using NoMercy.Setup;
-using NoMercy.Setup.Dto;
 
 namespace NoMercy.Tests.Setup;
 
@@ -231,8 +227,7 @@ public class SetupStateTests
     [InlineData(SetupPhase.Unauthenticated, SetupPhase.Complete, false)]
     [InlineData(SetupPhase.Unauthenticated, SetupPhase.Registered, false)]
     [InlineData(SetupPhase.Complete, SetupPhase.Unauthenticated, false)]
-    public void IsValidTransition_ReturnsExpected(
-        SetupPhase from, SetupPhase to, bool expected)
+    public void IsValidTransition_ReturnsExpected(SetupPhase from, SetupPhase to, bool expected)
     {
         Assert.Equal(expected, SetupState.IsValidTransition(from, to));
     }
@@ -293,7 +288,8 @@ public class SetupStateTests
 
         await Task.WhenAll(
             wait1.WaitAsync(TimeSpan.FromSeconds(1)),
-            wait2.WaitAsync(TimeSpan.FromSeconds(1)));
+            wait2.WaitAsync(TimeSpan.FromSeconds(1))
+        );
 
         Assert.True(wait1.IsCompleted);
         Assert.True(wait2.IsCompleted);
@@ -325,8 +321,9 @@ public class SetupStateTests
         Task waitTask = state.WaitForChangeAsync(cts.Token);
         cts.Cancel();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => waitTask.WaitAsync(TimeSpan.FromSeconds(1)));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            waitTask.WaitAsync(TimeSpan.FromSeconds(1))
+        );
     }
 
     // --- WaitForSetupCompleteAsync ---
@@ -357,7 +354,7 @@ public class SetupStateTests
     public async Task WaitForSetupCompleteAsync_CompletesImmediatelyWhenAlreadyComplete()
     {
         SetupState state = new();
-        state.DetermineInitialPhase(TokenState.Valid);
+        state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
 
         Task waitTask = state.WaitForSetupCompleteAsync();
 
@@ -374,8 +371,9 @@ public class SetupStateTests
         Task waitTask = state.WaitForSetupCompleteAsync(cts.Token);
         cts.Cancel();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => waitTask.WaitAsync(TimeSpan.FromSeconds(1)));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            waitTask.WaitAsync(TimeSpan.FromSeconds(1))
+        );
     }
 
     [Fact]
@@ -394,7 +392,8 @@ public class SetupStateTests
 
         await Task.WhenAll(
             wait1.WaitAsync(TimeSpan.FromSeconds(1)),
-            wait2.WaitAsync(TimeSpan.FromSeconds(1)));
+            wait2.WaitAsync(TimeSpan.FromSeconds(1))
+        );
 
         Assert.True(wait1.IsCompleted);
         Assert.True(wait2.IsCompleted);
@@ -420,196 +419,27 @@ public class SetupStateTests
     // --- DetermineInitialPhase ---
 
     [Fact]
-    public void DetermineInitialPhase_ValidToken_SetsComplete()
+    public void DetermineInitialPhase_ValidTokenRegistered_SetsComplete()
     {
         SetupState state = new();
-        SetupPhase phase = state.DetermineInitialPhase(TokenState.Valid);
+        SetupPhase phase = state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
         Assert.Equal(SetupPhase.Complete, phase);
         Assert.Equal(SetupPhase.Complete, state.CurrentPhase);
     }
 
     [Fact]
-    public void DetermineInitialPhase_NoRefreshToken_SetsComplete()
+    public void DetermineInitialPhase_ValidTokenNotRegistered_SetsAuthenticated()
     {
         SetupState state = new();
-        SetupPhase phase = state.DetermineInitialPhase(TokenState.NoRefreshToken);
-        Assert.Equal(SetupPhase.Complete, phase);
+        SetupPhase phase = state.DetermineInitialPhase(hasValidToken: true, isRegistered: false);
+        Assert.Equal(SetupPhase.Authenticated, phase);
     }
 
     [Fact]
-    public void DetermineInitialPhase_ExpiredToken_SetsUnauthenticated()
+    public void DetermineInitialPhase_NoToken_StaysUnauthenticated()
     {
         SetupState state = new();
-        SetupPhase phase = state.DetermineInitialPhase(TokenState.Expired);
+        SetupPhase phase = state.DetermineInitialPhase(hasValidToken: false);
         Assert.Equal(SetupPhase.Unauthenticated, phase);
-    }
-
-    [Fact]
-    public void DetermineInitialPhase_MissingToken_SetsUnauthenticated()
-    {
-        SetupState state = new();
-        SetupPhase phase = state.DetermineInitialPhase(TokenState.Missing);
-        Assert.Equal(SetupPhase.Unauthenticated, phase);
-    }
-
-    [Fact]
-    public void DetermineInitialPhase_CorruptToken_SetsUnauthenticated()
-    {
-        SetupState state = new();
-        SetupPhase phase = state.DetermineInitialPhase(TokenState.Corrupt);
-        Assert.Equal(SetupPhase.Unauthenticated, phase);
-    }
-}
-
-public class TokenValidationTests : IDisposable
-{
-    private readonly string _tempDir;
-
-    public TokenValidationTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), "nomercy_test_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDir);
-    }
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
-    }
-
-    private string CreateTokenFile(string content)
-    {
-        string filePath = Path.Combine(_tempDir, "token.json");
-        File.WriteAllText(filePath, content);
-        return filePath;
-    }
-
-    private static string CreateValidJwt(DateTime validTo)
-    {
-        JwtSecurityTokenHandler handler = new();
-        JwtSecurityToken token = new(
-            issuer: "test",
-            audience: "test",
-            claims: [new("sub", "user1")],
-            notBefore: DateTime.UtcNow.AddMinutes(-5),
-            expires: validTo);
-        return handler.WriteToken(token);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_MissingFile_ReturnsMissing()
-    {
-        string path = Path.Combine(_tempDir, "nonexistent.json");
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Missing, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_EmptyFile_ReturnsMissing()
-    {
-        string path = CreateTokenFile("");
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Missing, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_EmptyJson_ReturnsMissing()
-    {
-        string path = CreateTokenFile("{}");
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Missing, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_InvalidJson_ReturnsCorrupt()
-    {
-        string path = CreateTokenFile("not valid json {{{");
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Corrupt, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_NullAccessToken_ReturnsMissing()
-    {
-        AuthResponse data = new() { RefreshToken = "refresh" };
-        string path = CreateTokenFile(JsonConvert.SerializeObject(data));
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Missing, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_MalformedJwt_ReturnsCorrupt()
-    {
-        AuthResponse data = new() { AccessToken = "not.a.valid-jwt-token" };
-        string path = CreateTokenFile(JsonConvert.SerializeObject(data));
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Corrupt, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_JwtWrongPartCount_ReturnsCorrupt()
-    {
-        AuthResponse data = new() { AccessToken = "only-one-part" };
-        string path = CreateTokenFile(JsonConvert.SerializeObject(data));
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Corrupt, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_ExpiredJwt_ReturnsExpired()
-    {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddDays(1));
-        AuthResponse data = new() { AccessToken = jwt, RefreshToken = "refresh" };
-        string path = CreateTokenFile(JsonConvert.SerializeObject(data));
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Expired, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_ValidJwt_NoRefreshToken_ReturnsNoRefreshToken()
-    {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddDays(30));
-        AuthResponse data = new() { AccessToken = jwt };
-        string path = CreateTokenFile(JsonConvert.SerializeObject(data));
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.NoRefreshToken, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_ValidJwt_WithRefreshToken_ReturnsValid()
-    {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddDays(30));
-        AuthResponse data = new() { AccessToken = jwt, RefreshToken = "refresh-token" };
-        string path = CreateTokenFile(JsonConvert.SerializeObject(data));
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Valid, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_JwtExpiringIn4Days_ReturnsExpired()
-    {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddDays(4));
-        AuthResponse data = new() { AccessToken = jwt, RefreshToken = "refresh-token" };
-        string path = CreateTokenFile(JsonConvert.SerializeObject(data));
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Expired, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_JwtExpiringIn6Days_ReturnsValid()
-    {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddDays(6));
-        AuthResponse data = new() { AccessToken = jwt, RefreshToken = "refresh-token" };
-        string path = CreateTokenFile(JsonConvert.SerializeObject(data));
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Valid, result);
-    }
-
-    [Fact]
-    public async Task ValidateTokenFile_WhitespaceOnly_ReturnsMissing()
-    {
-        string path = CreateTokenFile("   \n\t  ");
-        TokenState result = await SetupState.ValidateTokenFile(path);
-        Assert.Equal(TokenState.Missing, result);
     }
 }

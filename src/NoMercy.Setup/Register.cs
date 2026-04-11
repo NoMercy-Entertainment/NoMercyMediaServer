@@ -24,8 +24,8 @@ public static class Register
     {
         try
         {
-            MediaContext mediaContext = new();
-            Configuration? device = mediaContext.Configuration.FirstOrDefault(device =>
+            AppDbContext appContext = new();
+            Configuration? device = appContext.Configuration.FirstOrDefault(device =>
                 device.Key == "serverName"
             );
 
@@ -141,24 +141,13 @@ public static class Register
                 bool is401 = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized");
                 if (is401)
                 {
+                    // Re-authentication is handled by AuthManager's background refresh loop.
+                    // If the token is invalid here, abort and let the caller retry when auth recovers.
                     Logger.Register(
-                        "Received 401 — attempting re-authentication before retry",
+                        "Received 401 — token invalid. Re-authentication required via /setup or background refresh.",
                         LogEventLevel.Warning
                     );
-                    bool reAuthed = await Auth.InitWithFallback();
-                    if (!reAuthed)
-                    {
-                        Logger.Register(
-                            "Re-authentication failed — aborting registration retries",
-                            LogEventLevel.Error
-                        );
-                        break;
-                    }
-
-                    Logger.Register(
-                        "Re-authentication succeeded — retrying registration",
-                        LogEventLevel.Information
-                    );
+                    break;
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(delay));
@@ -186,24 +175,13 @@ public static class Register
                 bool is401 = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized");
                 if (is401)
                 {
+                    // Re-authentication is handled by AuthManager's background refresh loop.
+                    // If the token is invalid here, abort and let the caller retry when auth recovers.
                     Logger.Register(
-                        "Received 401 — attempting re-authentication before retry",
+                        "Received 401 — token invalid. Re-authentication required via /setup or background refresh.",
                         LogEventLevel.Warning
                     );
-                    bool reAuthed = await Auth.InitWithFallback();
-                    if (!reAuthed)
-                    {
-                        Logger.Register(
-                            "Re-authentication failed — aborting assignment retries",
-                            LogEventLevel.Error
-                        );
-                        break;
-                    }
-
-                    Logger.Register(
-                        "Re-authentication succeeded — retrying server assignment",
-                        LogEventLevel.Information
-                    );
+                    break;
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(delay));

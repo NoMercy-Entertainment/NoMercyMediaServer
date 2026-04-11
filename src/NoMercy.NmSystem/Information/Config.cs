@@ -66,6 +66,7 @@ public static class Config
     public static bool Swagger { get; set; } = true;
 
     public static bool IsDev { get; set; }
+    public static bool IsTest { get; set; }
     public static bool UpdateAvailable { get; set; }
     public static bool RestartNeeded { get; set; }
     public static string? LatestVersion { get; set; }

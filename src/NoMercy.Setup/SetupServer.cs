@@ -15,6 +15,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercyQueue.Workers;
 using QRCoder;
 using Serilog.Events;
+using SystemHttpClient = System.Net.Http.HttpClient;
 
 namespace NoMercy.Setup;
 
@@ -23,6 +24,7 @@ public class SetupServer
     private SetupState _state;
     private WebApplication? _host;
     private readonly int _port;
+    private readonly AuthManager? _authManager;
 
     private static string? _cachedSetupHtml;
 
@@ -35,13 +37,14 @@ public class SetupServer
 
     public bool IsRunning { get; private set; }
 
-    public SetupServer(SetupState state, int? port = null)
+    public SetupServer(SetupState state, int? port = null, AuthManager? authManager = null)
     {
         _state = state;
         _port = port ?? Config.InternalServerPort;
-        _codeVerifier = Auth.GenerateCodeVerifier();
-        _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
-        _pkceState = Auth.GenerateCodeVerifier(); // Use same generator for state
+        _authManager = authManager;
+        _codeVerifier = AuthManager.GenerateCodeVerifier();
+        _codeChallenge = AuthManager.GenerateCodeChallenge(_codeVerifier);
+        _pkceState = AuthManager.GenerateCodeVerifier();
     }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -241,13 +244,21 @@ public class SetupServer
 
         try
         {
-            await Auth.TokenByAuthorizationCode(code, codeVerifier, redirectUri);
+            Dto.AuthResponse tokens = await ExchangeAuthorizationCode(
+                code,
+                codeVerifier,
+                redirectUri
+            );
+
+            if (_authManager is not null)
+                await _authManager.StoreTokensAsync(tokens);
+            else
+                Globals.Globals.AccessToken = tokens.AccessToken;
 
             if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
-                throw new("Token exchange succeeded but access token was not stored");
-
-            if (!File.Exists(AppFiles.TokenFile))
-                throw new("Token exchange succeeded but token file was not written");
+                throw new InvalidOperationException(
+                    "Token exchange succeeded but access token was not stored"
+                );
 
             _state.TransitionTo(SetupPhase.Authenticated);
             _terminalUi?.ShowProgress("Authenticated", "Signed in via browser");
@@ -272,10 +283,10 @@ public class SetupServer
         }
         finally
         {
-            _codeVerifier = Auth.GenerateCodeVerifier();
-            _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
-            _pkceState = Auth.GenerateCodeVerifier();
-            _state = new(); // Reset setup state object for retry
+            _codeVerifier = AuthManager.GenerateCodeVerifier();
+            _codeChallenge = AuthManager.GenerateCodeChallenge(_codeVerifier);
+            _pkceState = AuthManager.GenerateCodeVerifier();
+            _state = new();
         }
 
         context.Response.ContentType = "text/html; charset=utf-8";
@@ -488,9 +499,8 @@ public class SetupServer
 
         try
         {
-            List<KeyValuePair<string, string>> deviceCodeBody = Auth.BuildDeviceCodeRequestBody(
-                Config.TokenClientId
-            );
+            List<KeyValuePair<string, string>> deviceCodeBody =
+                AuthManager.BuildDeviceCodeRequestBody(Config.TokenClientId);
 
             GenericHttpClient authClient = new(Config.AuthBaseUrl);
             authClient.SetDefaultHeaders(Config.UserAgent);
@@ -603,7 +613,7 @@ public class SetupServer
 
         _state.TransitionTo(SetupPhase.Authenticating);
 
-        List<KeyValuePair<string, string>> tokenBody = Auth.BuildDeviceTokenBody(
+        List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildDeviceTokenBody(
             Config.TokenClientId,
             deviceData.DeviceCode
         );
@@ -630,7 +640,11 @@ public class SetupServer
                     Dto.AuthResponse data =
                         content.FromJson<Dto.AuthResponse>()
                         ?? throw new("Failed to deserialize token response");
-                    Auth.SetTokensFromSetup(data);
+                    if (_authManager is not null)
+                        await _authManager.StoreTokensAsync(data);
+                    else
+                        Globals.Globals.AccessToken = data.AccessToken;
+
                     _state.TransitionTo(SetupPhase.Authenticated);
 
                     _terminalUi?.ShowProgress("Authenticated", "Signed in successfully!");
@@ -772,5 +786,42 @@ public class SetupServer
     internal static void ClearHtmlCache()
     {
         _cachedSetupHtml = null;
+    }
+
+    private static async Task<Dto.AuthResponse> ExchangeAuthorizationCode(
+        string code,
+        string codeVerifier,
+        string redirectUri
+    )
+    {
+        if (string.IsNullOrEmpty(Config.TokenClientId))
+            throw new InvalidOperationException("Auth configuration not available");
+
+        List<KeyValuePair<string, string>> body = AuthManager.BuildAuthorizationCodeBody(
+            Config.TokenClientId,
+            code,
+            redirectUri,
+            codeVerifier
+        );
+
+        string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+
+        using SystemHttpClient httpClient = new();
+        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+
+        using HttpResponseMessage response = await httpClient.PostAsync(
+            tokenEndpoint,
+            new FormUrlEncodedContent(body)
+        );
+
+        string content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException(
+                $"Token exchange failed ({(int)response.StatusCode}): {content}"
+            );
+
+        return content.FromJson<Dto.AuthResponse>()
+            ?? throw new InvalidOperationException("Failed to deserialize token response");
     }
 }

@@ -18,13 +18,15 @@ public static class AppFiles
             : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
     public static string AppPath =>
-        Config.IsDev
-            ? Path.Combine(AppDataPath, "NoMercy_dev")
-            : Path.Combine(AppDataPath, "NoMercy");
+        Config.IsTest ? Path.Combine(AppDataPath, "NoMercy_test")
+        : Config.IsDev ? Path.Combine(AppDataPath, "NoMercy_dev")
+        : Path.Combine(AppDataPath, "NoMercy");
 
     // ── Config ───────────────────────────────────────────────────────────
 
     public static string ConfigPath => Path.Combine(AppPath, "config");
+
+    [Obsolete("Tokens are now stored encrypted in app.db. Kept for migration detection only.")]
     public static string TokenFile => Path.Combine(ConfigPath, "token.json");
     public static string AuthKeysFile => Path.Combine(ConfigPath, "auth_keys.json");
     public static string JwksCacheFile => Path.Combine(ConfigPath, "jwks_cache.json");
@@ -115,8 +117,14 @@ public static class AppFiles
     public static string SecurityPath => Path.Combine(AppPath, "security");
 
     public static string CertPath => Path.Combine(SecurityPath, "certs");
+
+    [Obsolete("Certs are now stored encrypted in app.db. Kept for migration detection only.")]
     public static string CertFile => Path.Combine(CertPath, "cert.pem");
+
+    [Obsolete("Certs are now stored encrypted in app.db. Kept for migration detection only.")]
     public static string KeyFile => Path.Combine(CertPath, "key.pem");
+
+    [Obsolete("Certs are now stored encrypted in app.db. Kept for migration detection only.")]
     public static string CaFile => Path.Combine(CertPath, "ca.pem");
 
     public static string SecretsPath => Path.Combine(SecurityPath, "secrets");
@@ -130,6 +138,11 @@ public static class AppFiles
 
     public static string MediaDatabase => Path.Combine(DataPath, "media.db");
     public static string QueueDatabase => Path.Combine(DataPath, "queue.db");
+    public static string AppDatabase => Path.Combine(DataPath, "app.db");
+
+    // ── DataProtection keys ─────────────────────────────────────────────
+
+    public static string DataProtectionKeysDir => Path.Combine(DataPath, "keys");
 
     // ── Directory management ─────────────────────────────────────────────
 
@@ -147,6 +160,7 @@ public static class AppFiles
             ConfigPath,
             SeedsPath,
             DataPath,
+            DataProtectionKeysDir,
             DependenciesPath,
             ImagesPath,
             LogPath,
@@ -169,6 +183,18 @@ public static class AppFiles
 
         MigrateOldPaths();
 
+        // DataProtection keys need restrictive permissions (700, not 755)
+        if (!Directory.Exists(DataProtectionKeysDir))
+        {
+            Directory.CreateDirectory(DataProtectionKeysDir);
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                DirectoryInfo keysDir = new(DataProtectionKeysDir);
+                keysDir.UnixFileMode =
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+            }
+        }
+
         foreach (string path in AllPaths().Where(path => !Directory.Exists(path)))
         {
             Logger.Setup($"Creating directory: {path}", LogEventLevel.Verbose);
@@ -189,6 +215,12 @@ public static class AppFiles
                         | UnixFileMode.OtherExecute;
                 }
             }
+        }
+
+        // app.db should have 600 permissions (owner read/write only — contains secrets)
+        if (File.Exists(AppDatabase) && (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()))
+        {
+            File.SetUnixFileMode(AppDatabase, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
 
         return Task.CompletedTask;

@@ -117,7 +117,7 @@ internal class Program
                         return;
                     }
 
-                    bool ok = await NoMercy.Setup.Auth.TryCompletePkceFromCallback(
+                    bool ok = await NoMercy.Setup.AuthManager.TryCompletePkceFromCallbackAsync(
                         code,
                         state,
                         redirectUri

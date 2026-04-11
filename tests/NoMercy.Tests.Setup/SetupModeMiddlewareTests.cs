@@ -1,19 +1,41 @@
-using System.Net;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
+using NoMercy.Database;
 using NoMercy.Setup;
 
 namespace NoMercy.Tests.Setup;
 
 public class SetupModeMiddlewareTests
 {
+    private static SetupEndpoints CreateSetupEndpoints(SetupState state)
+    {
+        ServiceCollection services = new();
+        services.AddDataProtection().UseEphemeralDataProtectionProvider();
+        ServiceProvider provider = services.BuildServiceProvider();
+        TokenStore.Initialize(provider);
+
+        DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
+        optionsBuilder.UseSqlite("Data Source=:memory:");
+        AppDbContext dbContext = new(optionsBuilder.Options);
+        dbContext.Database.OpenConnection();
+        dbContext.Database.EnsureCreated();
+
+        AuthManager authManager = new(dbContext);
+        return new SetupEndpoints(state, authManager);
+    }
+
     private static SetupModeMiddleware CreateMiddleware(
-        SetupState state, RequestDelegate? next = null)
+        SetupState state,
+        RequestDelegate? next = null
+    )
     {
         next ??= _ => Task.CompletedTask;
-        SetupServer setupServer = new(state);
-        return new(next, state, setupServer);
+        SetupEndpoints setupEndpoints = CreateSetupEndpoints(state);
+        return new(next, state, setupEndpoints);
     }
 
     private static DefaultHttpContext CreateContext(string path)
@@ -104,11 +126,14 @@ public class SetupModeMiddlewareTests
     {
         SetupState state = new();
         bool nextCalled = false;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            nextCalled = true;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            }
+        );
         DefaultHttpContext context = CreateContext("/api/v1/libraries");
 
         await middleware.InvokeAsync(context);
@@ -123,11 +148,14 @@ public class SetupModeMiddlewareTests
     {
         SetupState state = new();
         bool nextCalled = false;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            nextCalled = true;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            }
+        );
         DefaultHttpContext context = CreateContext("/setup");
 
         await middleware.InvokeAsync(context);
@@ -141,11 +169,14 @@ public class SetupModeMiddlewareTests
     {
         SetupState state = new();
         bool nextCalled = false;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            nextCalled = true;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            }
+        );
         DefaultHttpContext context = CreateContext("/setup/status");
 
         await middleware.InvokeAsync(context);
@@ -159,11 +190,14 @@ public class SetupModeMiddlewareTests
     {
         SetupState state = new();
         bool nextCalled = false;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            nextCalled = true;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            }
+        );
         DefaultHttpContext context = CreateContext("/setup/config");
 
         await middleware.InvokeAsync(context);
@@ -177,11 +211,14 @@ public class SetupModeMiddlewareTests
     {
         SetupState state = new();
         bool nextCalled = false;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            nextCalled = true;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            }
+        );
         DefaultHttpContext context = CreateContext("/sso-callback");
 
         await middleware.InvokeAsync(context);
@@ -195,11 +232,14 @@ public class SetupModeMiddlewareTests
     {
         SetupState state = new();
         bool nextCalled = false;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            nextCalled = true;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            }
+        );
         DefaultHttpContext context = CreateContext("/health");
 
         await middleware.InvokeAsync(context);
@@ -213,14 +253,17 @@ public class SetupModeMiddlewareTests
     public async Task AnyRoute_WhenSetupComplete_CallsNext()
     {
         SetupState state = new();
-        state.DetermineInitialPhase(TokenState.Valid);
+        state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
 
         bool nextCalled = false;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            nextCalled = true;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            }
+        );
         DefaultHttpContext context = CreateContext("/api/v1/libraries");
 
         await middleware.InvokeAsync(context);
@@ -232,7 +275,7 @@ public class SetupModeMiddlewareTests
     public async Task AnyRoute_WhenSetupComplete_DoesNotReturn503()
     {
         SetupState state = new();
-        state.DetermineInitialPhase(TokenState.Valid);
+        state.DetermineInitialPhase(hasValidToken: true, isRegistered: true);
 
         SetupModeMiddleware middleware = CreateMiddleware(state);
         DefaultHttpContext context = CreateContext("/api/v1/libraries");
@@ -249,11 +292,14 @@ public class SetupModeMiddlewareTests
     {
         SetupState state = new();
         bool nextCalled = false;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            nextCalled = true;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            }
+        );
         DefaultHttpContext context = CreateContext("/setup/");
 
         await middleware.InvokeAsync(context);
@@ -269,11 +315,14 @@ public class SetupModeMiddlewareTests
     {
         SetupState state = new();
         bool nextCalled = false;
-        SetupModeMiddleware middleware = CreateMiddleware(state, _ =>
-        {
-            nextCalled = true;
-            return Task.CompletedTask;
-        });
+        SetupModeMiddleware middleware = CreateMiddleware(
+            state,
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            }
+        );
         DefaultHttpContext context = CreateContext("/Setup");
 
         await middleware.InvokeAsync(context);

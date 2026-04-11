@@ -9,7 +9,7 @@ namespace NoMercy.Service.Seeds;
 
 public static class ConfigSeed
 {
-    public static async Task Init(this MediaContext dbContext)
+    public static async Task Init(this AppDbContext dbContext)
     {
         Logger.Setup("Adding Configurations", LogEventLevel.Verbose);
         ConfigurationModel[] configs =

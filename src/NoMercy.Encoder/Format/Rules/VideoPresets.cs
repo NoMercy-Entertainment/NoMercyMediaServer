@@ -29,4 +29,9 @@ public static class VideoPresets
     public const string P5 = "p5";
     public const string P6 = "p6";
     public const string P7 = "p7";
+
+    // AMD AMF presets
+    public const string Speed = "speed";
+    public const string Balanced = "balanced";
+    public const string Quality = "quality";
 }

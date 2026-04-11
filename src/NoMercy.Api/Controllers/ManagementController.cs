@@ -31,6 +31,7 @@ namespace NoMercy.Api.Controllers;
 public class ManagementController(
     IHostApplicationLifetime appLifetime,
     MediaContext mediaContext,
+    AppDbContext appContext,
     QueueRunner queueRunner,
     IPluginManager pluginManager,
     AppProcessManager appProcessManager,
@@ -42,7 +43,7 @@ public class ManagementController(
     [ProducesResponseType(typeof(ManagementStatusDto), StatusCodes.Status200OK)]
     public IActionResult GetStatus()
     {
-        Configuration? serverNameConfig = mediaContext.Configuration.FirstOrDefault(c =>
+        Configuration? serverNameConfig = appContext.Configuration.FirstOrDefault(c =>
             c.Key == "serverName"
         );
         string serverName = serverNameConfig?.Value ?? Environment.MachineName;
@@ -323,7 +324,7 @@ public class ManagementController(
     [ProducesResponseType(typeof(ManagementConfigDto), StatusCodes.Status200OK)]
     public IActionResult GetConfig()
     {
-        Configuration? serverNameConfig = mediaContext.Configuration.FirstOrDefault(c =>
+        Configuration? serverNameConfig = appContext.Configuration.FirstOrDefault(c =>
             c.Key == "serverName"
         );
 
@@ -432,7 +433,7 @@ public class ManagementController(
 
         if (request.ServerName is not null)
         {
-            Configuration? existing = await mediaContext.Configuration.FirstOrDefaultAsync(c =>
+            Configuration? existing = await appContext.Configuration.FirstOrDefaultAsync(c =>
                 c.Key == "serverName"
             );
 
@@ -442,12 +443,12 @@ public class ManagementController(
             }
             else
             {
-                mediaContext.Configuration.Add(
+                appContext.Configuration.Add(
                     new() { Key = "serverName", Value = request.ServerName }
                 );
             }
 
-            await mediaContext.SaveChangesAsync();
+            await appContext.SaveChangesAsync();
         }
 
         return Ok(new { status = "ok", message = "Configuration updated" });

@@ -65,13 +65,18 @@ public static class DegradedModeRecovery
 
             if (!tasks.Authenticated && tasks.ApiKeysLoaded)
             {
-                try
+                string? token = Globals.Globals.AccessToken;
+                if (string.IsNullOrEmpty(token))
                 {
-                    tasks.Authenticated = await Auth.InitWithFallback();
+                    // Auth not ready — AuthManager background refresh will handle it
+                    Logger.App(
+                        "Auth not ready — waiting for AuthManager background refresh",
+                        LogEventLevel.Verbose
+                    );
                 }
-                catch (Exception e)
+                else
                 {
-                    Logger.App($"Deferred Auth failed: {e.Message}", LogEventLevel.Warning);
+                    tasks.Authenticated = true;
                 }
             }
 
@@ -120,17 +125,18 @@ public static class DegradedModeRecovery
                     try
                     {
                         // Ensure token is present and not expired before attempting registration.
-                        // Auth.InitWithFallback() may keep an expired token for local access, so a
-                        // null/empty check is not sufficient — nomercy-tv will reject an expired JWT.
+                        // AuthManager background refresh keeps the token alive; a null/empty check
+                        // is not sufficient — nomercy-tv will reject an expired JWT.
                         bool tokenNeedsRefresh = true;
 
-                        if (!string.IsNullOrEmpty(Globals.Globals.AccessToken))
+                        string? registrationToken = Globals.Globals.AccessToken;
+                        if (!string.IsNullOrEmpty(registrationToken))
                         {
                             try
                             {
                                 JwtSecurityTokenHandler tokenHandler = new();
                                 JwtSecurityToken parsedToken = tokenHandler.ReadJwtToken(
-                                    Globals.Globals.AccessToken
+                                    registrationToken
                                 );
                                 tokenNeedsRefresh =
                                     parsedToken.ValidTo <= DateTime.UtcNow.AddSeconds(30);
@@ -144,10 +150,11 @@ public static class DegradedModeRecovery
                         if (tokenNeedsRefresh)
                         {
                             Logger.App(
-                                "Access token missing or expired before deferred registration — re-authenticating",
+                                "Access token missing or expired before deferred registration — waiting for AuthManager background refresh",
                                 LogEventLevel.Warning
                             );
-                            tasks.Authenticated = await Auth.InitWithFallback();
+                            // Auth not ready — AuthManager background refresh will handle it
+                            continue;
                         }
 
                         await Register.Init();

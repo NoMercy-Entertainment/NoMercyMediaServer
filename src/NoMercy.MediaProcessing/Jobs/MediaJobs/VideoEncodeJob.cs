@@ -137,10 +137,7 @@ public class VideoEncodeJob : AbstractEncoderJob
                         )
                         .Distinct()
                         .ToList(),
-                    HasGpu = container.VideoStreams.Any(x =>
-                        x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value
-                        || x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value
-                    ),
+                    HasGpu = container.VideoStreams.Any(x => x.VideoCodec.RequiresGpu),
                     IsHdr = container.VideoStreams.Any(x => x.IsHdr),
                 };
 

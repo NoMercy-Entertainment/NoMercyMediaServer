@@ -62,9 +62,27 @@ public class X264 : BaseVideo
                     VideoPresets.P7,
                 ];
             }
-            else if (VideoCodecs.H264Amf.Value == VideoCodec.Value) { }
-            else if (VideoCodecs.H264Qsv.Value == VideoCodec.Value) { }
-            else if (VideoCodecs.H264Videotoolbox.Value == VideoCodec.Value) { }
+            else if (VideoCodecs.H264Amf.Value == VideoCodec.Value)
+            {
+                return [VideoPresets.Speed, VideoPresets.Balanced, VideoPresets.Quality];
+            }
+            else if (VideoCodecs.H264Qsv.Value == VideoCodec.Value)
+            {
+                return
+                [
+                    VideoPresets.VeryFast,
+                    VideoPresets.Faster,
+                    VideoPresets.Fast,
+                    VideoPresets.Medium,
+                    VideoPresets.Slow,
+                    VideoPresets.Slower,
+                    VideoPresets.VerySlow,
+                ];
+            }
+            else if (VideoCodecs.H264Videotoolbox.Value == VideoCodec.Value)
+            {
+                return [];
+            }
 
             return
             [
@@ -98,9 +116,18 @@ public class X264 : BaseVideo
                     VideoProfiles.High444P,
                 ];
             }
-            else if (VideoCodecs.H264Amf.Value == VideoCodec.Value) { }
-            else if (VideoCodecs.H264Qsv.Value == VideoCodec.Value) { }
-            else if (VideoCodecs.H264Videotoolbox.Value == VideoCodec.Value) { }
+            else if (VideoCodecs.H264Amf.Value == VideoCodec.Value)
+            {
+                return [VideoProfiles.Baseline, VideoProfiles.Main, VideoProfiles.High];
+            }
+            else if (VideoCodecs.H264Qsv.Value == VideoCodec.Value)
+            {
+                return [VideoProfiles.Baseline, VideoProfiles.Main, VideoProfiles.High];
+            }
+            else if (VideoCodecs.H264Videotoolbox.Value == VideoCodec.Value)
+            {
+                return [VideoProfiles.Baseline, VideoProfiles.Main, VideoProfiles.High];
+            }
 
             return
             [

@@ -1,6 +1,12 @@
-﻿namespace NoMercy.Globals;
+namespace NoMercy.Globals;
 
 public static class Globals
 {
-    public static string? AccessToken { get; set; }
+    private static volatile string? _accessToken;
+
+    public static string? AccessToken
+    {
+        get => _accessToken;
+        set => _accessToken = value;
+    }
 }

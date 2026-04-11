@@ -4,4 +4,12 @@
     <!-- Use default.runsettings to serialize test assembly execution (prevents SQLite contention) -->
     <RunSettingsFilePath>$(MSBuildThisFileDirectory)default.runsettings</RunSettingsFilePath>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Shared test environment setup — routes paths to NoMercy_test, cleans before run -->
+    <Compile Include="$(MSBuildThisFileDirectory)TestEnvironmentSetup.cs" Link="TestEnvironmentSetup.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- TestEnvironmentSetup.cs needs NmSystem for Config.IsTest and AppFiles.AppPath -->
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\src\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+  </ItemGroup>
 </Project>
