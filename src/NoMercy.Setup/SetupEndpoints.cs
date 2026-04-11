@@ -819,7 +819,8 @@ public class SetupEndpoints
         if (string.IsNullOrEmpty(Config.TokenClientId))
             return;
 
-        _state.TransitionTo(SetupPhase.Authenticating);
+        // Don't transition to Authenticating here — that hides the login UI.
+        // Transition only happens when the user completes auth (success path below).
 
         List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildDeviceTokenBody(
             Config.TokenClientId,
