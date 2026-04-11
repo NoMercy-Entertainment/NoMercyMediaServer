@@ -342,6 +342,24 @@ public static class Program
             hostStopping
         );
 
+        // Run post-auth (registration + cert) in background — this waits for
+        // Authenticated state, then runs Phase 3 and transitions to Complete.
+        Task postAuthTask = Task.Run(
+            async () =>
+            {
+                try
+                {
+                    await orchestrator.RunPostAuthAsync(linkedCts.Token);
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    Logger.App($"Post-auth registration error: {ex.Message}");
+                }
+            },
+            linkedCts.Token
+        );
+
         Task shutdownTask = Task.Delay(Timeout.Infinite, linkedCts.Token);
         Task setupCompleteTask = setupState.WaitForSetupCompleteAsync(linkedCts.Token);
 
