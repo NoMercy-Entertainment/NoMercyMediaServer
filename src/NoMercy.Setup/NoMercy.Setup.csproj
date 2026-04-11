@@ -45,5 +45,6 @@
     <EmbeddedResource Include="Resources\setup.html" />
     <EmbeddedResource Include="Resources\setup.css" />
     <EmbeddedResource Include="Resources\setup.js" />
+    <EmbeddedResource Include="Resources\favicon.ico" />
   </ItemGroup>
 </Project>

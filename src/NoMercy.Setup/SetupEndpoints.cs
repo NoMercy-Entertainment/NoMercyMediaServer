@@ -65,6 +65,10 @@ public class SetupEndpoints
                 await HandleEmbeddedResource(context, "setup.js", "application/javascript");
                 break;
 
+            case "/favicon.ico":
+                await HandleEmbeddedBinary(context, "favicon.ico", "image/x-icon");
+                break;
+
             case "/setup/config":
                 await HandleSetupConfig(context);
                 break;
@@ -375,6 +379,7 @@ public class SetupEndpoints
                 ?? throw new InvalidOperationException("Failed to deserialize token response");
 
             await _authManager.StoreTokensAsync(tokens);
+            _state.TransitionTo(SetupPhase.Authenticating);
             _state.TransitionTo(SetupPhase.Authenticated);
 
             lock (_pkceLock)
@@ -515,6 +520,7 @@ public class SetupEndpoints
                 ?? throw new InvalidOperationException("Failed to deserialize token response");
 
             await _authManager.StoreTokensAsync(tokens);
+            _state.TransitionTo(SetupPhase.Authenticating);
             _state.TransitionTo(SetupPhase.Authenticated);
 
             _terminalUi?.ShowProgress("Authenticated", "Signed in via browser");
@@ -865,6 +871,7 @@ public class SetupEndpoints
                         );
 
                     await _authManager.StoreTokensAsync(data);
+                    _state.TransitionTo(SetupPhase.Authenticating);
                     _state.TransitionTo(SetupPhase.Authenticated);
 
                     _terminalUi?.ShowProgress("Authenticated", "Signed in successfully!");
@@ -916,6 +923,26 @@ public class SetupEndpoints
             throw new FileNotFoundException($"Embedded resource not found: {resourceName}");
         using StreamReader reader = new(stream);
         return await reader.ReadToEndAsync();
+    }
+
+    private static async Task HandleEmbeddedBinary(
+        HttpContext context,
+        string filename,
+        string contentType
+    )
+    {
+        Assembly assembly = typeof(SetupEndpoints).Assembly;
+        string resourceName = $"NoMercy.Setup.Resources.{filename}";
+        using Stream? stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream is null)
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        context.Response.ContentType = contentType;
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        await stream.CopyToAsync(context.Response.Body);
     }
 
     private static byte[] GenerateQrPng(string url)

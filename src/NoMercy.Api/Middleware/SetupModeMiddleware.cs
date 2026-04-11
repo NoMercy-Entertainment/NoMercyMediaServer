@@ -12,7 +12,12 @@ public class SetupModeMiddleware
     private readonly SetupState _setupState;
     private readonly SetupEndpoints _setupEndpoints;
 
-    private static readonly string[] SetupHandledRoutes = ["/setup", "/sso-callback"];
+    private static readonly string[] SetupHandledRoutes =
+    [
+        "/setup",
+        "/sso-callback",
+        "/favicon.ico",
+    ];
 
     private static readonly string[] PassthroughRoutes = ["/health", "/manage"];
 
