@@ -1,7 +1,9 @@
 namespace NoMercy.Encoder.V3.Output;
 
 using System.Text;
+using NoMercy.Encoder.V3.Codecs;
 using NoMercy.Encoder.V3.Pipeline;
+using NoMercy.Encoder.V3.PostProcess;
 
 public class PlaylistGenerator
 {
@@ -30,6 +32,24 @@ public class PlaylistGenerator
 
         sb.AppendLine();
 
+        // Subtitle groups
+        foreach (SubtitleOutputPlan sub in plan.SubtitleOutputs)
+        {
+            if (sub.Action is not (StreamAction.Extract or StreamAction.Copy))
+                continue;
+
+            string language = sub.Language ?? "und";
+            string uri = SubtitleExtractor.ResolveOutputFilename(sub, null);
+            bool isDefault = sub == plan.SubtitleOutputs[0];
+
+            sb.AppendLine(
+                $"#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"{language}\",LANGUAGE=\"{language}\",DEFAULT={YesNo(isDefault)},AUTOSELECT=YES,FORCED=NO,URI=\"{uri}\""
+            );
+        }
+
+        if (plan.SubtitleOutputs.Length > 0)
+            sb.AppendLine();
+
         // Video variants
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
@@ -39,9 +59,10 @@ public class PlaylistGenerator
             int bandwidth =
                 video.BitrateKbps > 0 ? video.BitrateKbps * 1000 : EstimateBandwidth(video);
             string subDir = $"video_{video.Width}x{video.Height}";
+            string subtitleGroup = plan.SubtitleOutputs.Length > 0 ? ",SUBTITLES=\"subs\"" : "";
 
             sb.AppendLine(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth},RESOLUTION={video.Width}x{video.Height},CODECS=\"{codecTag}{audioCodecTag}\",AUDIO=\"audio\""
+                $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth},RESOLUTION={video.Width}x{video.Height},CODECS=\"{codecTag}{audioCodecTag}\",AUDIO=\"audio\"{subtitleGroup}"
             );
             sb.AppendLine($"{subDir}/{subDir}.m3u8");
         }
