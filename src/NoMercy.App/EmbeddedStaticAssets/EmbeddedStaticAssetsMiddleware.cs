@@ -77,6 +77,14 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
 
         // Try to get or create cached asset
         CachedAsset? asset = await GetOrCreateCachedAssetAsync(filePath);
+
+        // SPA fallback: if no file found and request looks like a page navigation
+        // (no file extension), serve index.html — the Vue router handles the route
+        if (asset == null && !Path.HasExtension(filePath))
+        {
+            asset = await GetOrCreateCachedAssetAsync("index.html");
+        }
+
         if (asset == null)
         {
             await _next(context);

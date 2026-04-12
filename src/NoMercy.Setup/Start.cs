@@ -118,15 +118,8 @@ public class Start
                         DependsOn: ["NetworkProbe"]
                     )
             ),
-            // ── PHASE 4: REGISTRATION (needs Networking) ────────────────
-            // Auth is handled by AuthManager/BootOrchestrator before InitRemaining runs.
-            new(
-                "Register",
-                () => Register.Init(),
-                CanDefer: true,
-                Phase: 4,
-                DependsOn: ["Networking"]
-            ),
+            // Registration removed — BootOrchestrator handles it in Phase 3.
+            // Having it here caused double registration + 5-minute cert retry loops.
         ];
     }
 

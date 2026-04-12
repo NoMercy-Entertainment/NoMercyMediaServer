@@ -148,6 +148,13 @@ internal class Program
             {
                 // Inject InfiniFrame script before </body> - required for InfiniFrame communication
                 options.InjectScripts.Add("/_content/InfiniLore.InfiniFrame.Js/InfiniFrame.js");
+
+                // Force media query re-evaluation after WebView2 viewport settles.
+                // WebView2 starts with a small initial viewport before InfiniFrame
+                // sizes the window, causing Ionic's mobile detection to misfire.
+                options.InjectScripts.Add(
+                    "<script>window.addEventListener('load',function(){setTimeout(function(){window.dispatchEvent(new Event('resize'))},100)})</script>"
+                );
             },
             typeof(Program).Assembly,
             "wwwroot"
