@@ -8,6 +8,7 @@ using NoMercy.Encoder.V3.Composition;
 using NoMercy.Encoder.V3.Execution;
 using NoMercy.Encoder.V3.Hardware;
 using NoMercy.Encoder.V3.Infrastructure;
+using NoMercy.Encoder.V3.LiveTranscode;
 using NoMercy.Encoder.V3.Pipeline;
 using NoMercy.Encoder.V3.Pipeline.Optimizer;
 using NoMercy.Encoder.V3.Pipeline.Stages;
@@ -159,5 +160,32 @@ public class ServiceRegistrationTests
         HardwareInitializationService second =
             provider.GetRequiredService<HardwareInitializationService>();
         first.Should().BeSameAs(second);
+    }
+
+    [Fact]
+    public void AddNoMercyEncoder_ILiveEncoder_Resolves()
+    {
+        ServiceProvider provider = BuildProvider();
+        ILiveEncoder encoder = provider.GetRequiredService<ILiveEncoder>();
+        encoder.Should().NotBeNull();
+        encoder.Should().BeOfType<LiveEncoder>();
+    }
+
+    [Fact]
+    public void AddNoMercyEncoder_IPlaybackDecisionEngine_Resolves()
+    {
+        ServiceProvider provider = BuildProvider();
+        IPlaybackDecisionEngine engine = provider.GetRequiredService<IPlaybackDecisionEngine>();
+        engine.Should().NotBeNull();
+        engine.Should().BeOfType<PlaybackDecisionEngine>();
+    }
+
+    [Fact]
+    public void AddNoMercyEncoder_ISessionManager_Resolves()
+    {
+        ServiceProvider provider = BuildProvider();
+        ISessionManager manager = provider.GetRequiredService<ISessionManager>();
+        manager.Should().NotBeNull();
+        manager.Should().BeOfType<SessionManager>();
     }
 }

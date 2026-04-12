@@ -6,6 +6,7 @@ using NoMercy.Encoder.V3.Codecs;
 using NoMercy.Encoder.V3.Execution;
 using NoMercy.Encoder.V3.Hardware;
 using NoMercy.Encoder.V3.Infrastructure;
+using NoMercy.Encoder.V3.LiveTranscode;
 using NoMercy.Encoder.V3.Pipeline;
 using NoMercy.Encoder.V3.Pipeline.Optimizer;
 using NoMercy.Encoder.V3.Pipeline.Stages;
@@ -75,6 +76,19 @@ public static class ServiceCollectionExtensions
 
         // Encoder
         services.AddTransient<IEncoder, Encoder>();
+
+        // Live Transcoding
+        services.AddSingleton<IPlaybackDecisionEngine, PlaybackDecisionEngine>();
+        services.AddSingleton<LiveSessionLimits>();
+        services.AddSingleton<ISessionManager>(sp => new SessionManager(
+            sp.GetRequiredService<LiveSessionLimits>()
+        ));
+        services.AddTransient<ILiveQualitySelector, LiveQualitySelector>();
+        services.AddTransient<BufferManager>();
+        services.AddSingleton<SpeedIndex>(
+            new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>())
+        );
+        services.AddSingleton<ILiveEncoder, LiveEncoder>();
 
         return services;
     }
