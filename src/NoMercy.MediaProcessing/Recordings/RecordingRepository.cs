@@ -8,6 +8,31 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
 {
     public Task Store(Track recording, bool update = false)
     {
+        if (update)
+        {
+            return context
+                .Tracks.Upsert(recording)
+                .On(e => new { e.Id })
+                .WhenMatched(
+                    (ts, ti) =>
+                        new()
+                        {
+                            Id = ti.Id,
+                            Name = ti.Name,
+                            DiscNumber = ti.DiscNumber,
+                            TrackNumber = ti.TrackNumber,
+                            Date = ti.Date,
+                            Folder = ts.Folder,
+                            FolderId = ts.FolderId,
+                            HostFolder = ts.HostFolder,
+                            Duration = ts.Duration,
+                            Filename = ts.Filename,
+                            Quality = ts.Quality,
+                        }
+                )
+                .RunAsync();
+        }
+
         return context
             .Tracks.Upsert(recording)
             .On(e => new { e.Id })
@@ -20,13 +45,12 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
                         DiscNumber = ti.DiscNumber,
                         TrackNumber = ti.TrackNumber,
                         Date = ti.Date,
-
-                        Folder = update ? ts.Folder : ti.Folder,
-                        FolderId = update ? ts.FolderId : ti.FolderId,
-                        HostFolder = update ? ts.HostFolder : ti.HostFolder,
-                        Duration = update ? ts.Duration : ti.Duration,
-                        Filename = update ? ts.Filename : ti.Filename,
-                        Quality = update ? ts.Quality : ti.Quality,
+                        Folder = ti.Folder,
+                        FolderId = ti.FolderId,
+                        HostFolder = ti.HostFolder,
+                        Duration = ti.Duration,
+                        Filename = ti.Filename,
+                        Quality = ti.Quality,
                     }
             )
             .RunAsync();
