@@ -146,40 +146,68 @@ public static class DatabaseSeeder
     }
 
     /// <summary>
-    /// Phase 3: Seed all remaining data (TMDB genres, languages, users, etc.).
-    /// Requires network + auth — called after auth completes.
-    /// Schema and offline data must already exist.
+    /// Seed provider data (TMDB genres, languages, certifications, etc.).
+    /// Requires API keys (no auth). Called early in startup before any import jobs.
     /// </summary>
     public static async Task Run()
     {
         MediaContext mediaDbContext = new();
 
-        try
+        await SeedOfflineData();
+
+        Func<Task>[] seeds =
+        [
+            () => LanguagesSeed.Init(mediaDbContext),
+            () => CountriesSeed.Init(mediaDbContext),
+            () => GenresSeed.Init(mediaDbContext),
+            () => CertificationsSeed.Init(mediaDbContext),
+            () => MusicGenresSeed.Init(mediaDbContext),
+        ];
+
+        foreach (Func<Task> seed in seeds)
         {
-            // Re-run offline seeds to pick up any updates
-            await SeedOfflineData();
-
-            await LanguagesSeed.Init(mediaDbContext);
-            await CountriesSeed.Init(mediaDbContext);
-            await GenresSeed.Init(mediaDbContext);
-            await CertificationsSeed.Init(mediaDbContext);
-            await MusicGenresSeed.Init(mediaDbContext);
-            await UsersSeed.Init(mediaDbContext);
-
-            // Assign the owner to any seeded libraries that have no users yet
-            await AssignOwnerToUnassignedLibraries(mediaDbContext);
-
-            await ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext);
-
-            if (ShouldSeedMarvel)
+            try
             {
-                Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
-                thread.Start();
+                await seed();
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup($"Seed failed: {ex.Message}", LogEventLevel.Warning);
             }
         }
-        catch (Exception ex)
+    }
+
+    /// <summary>
+    /// Seed auth-dependent data (users, library assignment, claims).
+    /// Called after auth completes via BootOrchestrator.
+    /// </summary>
+    public static async Task SeedAuthData()
+    {
+        MediaContext mediaDbContext = new();
+
+        Func<Task>[] seeds =
+        [
+            () => UsersSeed.Init(mediaDbContext),
+            () => AssignOwnerToUnassignedLibraries(mediaDbContext),
+            () => ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext),
+        ];
+
+        foreach (Func<Task> seed in seeds)
         {
-            Logger.Setup($"Database seeding failed: {ex.Message}", LogEventLevel.Warning);
+            try
+            {
+                await seed();
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup($"Auth seed failed: {ex.Message}", LogEventLevel.Warning);
+            }
+        }
+
+        if (ShouldSeedMarvel)
+        {
+            Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
+            thread.Start();
         }
     }
 
