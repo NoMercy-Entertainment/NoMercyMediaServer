@@ -143,14 +143,26 @@ public class VideoEncodeJob : AbstractEncoderJob
 
                 await ffmpeg.Run(fullCommand, fileMetadata.Path, progressMeta);
 
-                await PublishStageAsync(
-                    fileMetadata,
-                    progressMeta,
-                    "running",
-                    "Building sprite images"
-                );
+                // Post-encoding steps: non-critical tasks that must not prevent
+                // the movie from being added to the library if they fail.
 
-                await sprite.BuildSprite(progressMeta);
+                try
+                {
+                    await PublishStageAsync(
+                        fileMetadata,
+                        progressMeta,
+                        "running",
+                        "Building sprite images"
+                    );
+                    await sprite.BuildSprite(progressMeta);
+                }
+                catch (Exception spriteEx)
+                {
+                    Logger.Encoder(
+                        $"Sprite generation failed (non-fatal): {spriteEx.Message}",
+                        LogEventLevel.Warning
+                    );
+                }
 
                 await PublishStageAsync(
                     fileMetadata,
@@ -161,36 +173,69 @@ public class VideoEncodeJob : AbstractEncoderJob
 
                 await container.BuildMasterPlaylist();
 
-                await PublishStageAsync(
-                    fileMetadata,
-                    progressMeta,
-                    "running",
-                    "Extracting chapters"
-                );
-
-                await container.ExtractChapters();
-
-                await PublishStageAsync(fileMetadata, progressMeta, "running", "Extracting fonts");
-
-                await container.ExtractFonts();
-
-                if (ffmpeg.Container.SubtitleStreams.Any(x => x.ConvertSubtitle))
+                try
                 {
                     await PublishStageAsync(
                         fileMetadata,
                         progressMeta,
                         "running",
-                        "Converting subtitles"
+                        "Extracting chapters"
                     );
+                    await container.ExtractChapters();
+                }
+                catch (Exception chapterEx)
+                {
+                    Logger.Encoder(
+                        $"Chapter extraction failed (non-fatal): {chapterEx.Message}",
+                        LogEventLevel.Warning
+                    );
+                }
 
-                    List<BaseSubtitle> streams = ffmpeg
-                        .Container.SubtitleStreams.Where(x => x.ConvertSubtitle)
-                        .ToList();
-                    await ffmpeg.ConvertSubtitles(
-                        streams,
-                        Id.ToInt(),
-                        fileMetadata.Title,
-                        fileMetadata.ImgPath
+                try
+                {
+                    await PublishStageAsync(
+                        fileMetadata,
+                        progressMeta,
+                        "running",
+                        "Extracting fonts"
+                    );
+                    await container.ExtractFonts();
+                }
+                catch (Exception fontEx)
+                {
+                    Logger.Encoder(
+                        $"Font extraction failed (non-fatal): {fontEx.Message}",
+                        LogEventLevel.Warning
+                    );
+                }
+
+                try
+                {
+                    if (ffmpeg.Container.SubtitleStreams.Any(x => x.ConvertSubtitle))
+                    {
+                        await PublishStageAsync(
+                            fileMetadata,
+                            progressMeta,
+                            "running",
+                            "Converting subtitles"
+                        );
+
+                        List<BaseSubtitle> streams = ffmpeg
+                            .Container.SubtitleStreams.Where(x => x.ConvertSubtitle)
+                            .ToList();
+                        await ffmpeg.ConvertSubtitles(
+                            streams,
+                            Id.ToInt(),
+                            fileMetadata.Title,
+                            fileMetadata.ImgPath
+                        );
+                    }
+                }
+                catch (Exception subtitleEx)
+                {
+                    Logger.Encoder(
+                        $"Subtitle conversion failed (non-fatal): {subtitleEx.Message}",
+                        LogEventLevel.Warning
                     );
                 }
 
