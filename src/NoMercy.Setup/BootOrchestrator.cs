@@ -30,6 +30,16 @@ public class BootOrchestrator
         // Initialize TokenStore before any DB access that touches SecureValue
         Database.TokenStore.Initialize(services);
 
+        // Load SSL certificate into memory cache (from DB or legacy PEM files)
+        try
+        {
+            Networking.Certificate.LoadFromDb();
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup($"Certificate pre-load skipped: {ex.Message}", LogEventLevel.Verbose);
+        }
+
         // Phase 2: Authentication
         Logger.Setup("Phase 2: Authentication...");
         bool authSucceeded = await _authManager.InitializeAsync();
