@@ -69,6 +69,7 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
     <!-- Hosting -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.5" />
     <!-- Avalonia (Tray App) -->
