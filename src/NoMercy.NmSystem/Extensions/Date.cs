@@ -36,38 +36,7 @@ public static class Date
 
     private static int _parseYear(DateTime? dateString = null)
     {
-        if (string.IsNullOrEmpty(dateString.ToString()))
-            return new DateTime().Year;
-
-        DateTime date;
-        try
-        {
-            date = DateTime.ParseExact(
-                dateString.ToString().OrEmpty(),
-                "d-M-yyyy HH:mm:ss",
-                CultureInfo.InvariantCulture
-            );
-        }
-        catch (Exception)
-        {
-            try
-            {
-                date = DateTime.ParseExact(
-                    dateString.ToString().OrEmpty(),
-                    "d/M/yyyy HH:mm:ss",
-                    CultureInfo.InvariantCulture
-                );
-            }
-            catch (Exception)
-            {
-                date = DateTime.Parse(
-                    dateString.ToString().OrEmpty(),
-                    CultureInfo.InvariantCulture
-                );
-            }
-        }
-
-        return date.Year;
+        return dateString?.Year ?? 0;
     }
 
     public static string ToHms(this int seconds)
