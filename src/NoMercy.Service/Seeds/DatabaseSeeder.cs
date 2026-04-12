@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -164,6 +166,9 @@ public static class DatabaseSeeder
             await MusicGenresSeed.Init(mediaDbContext);
             await UsersSeed.Init(mediaDbContext);
 
+            // Assign the owner to any seeded libraries that have no users yet
+            await AssignOwnerToUnassignedLibraries(mediaDbContext);
+
             await ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext);
 
             if (ShouldSeedMarvel)
@@ -175,6 +180,43 @@ public static class DatabaseSeeder
         catch (Exception ex)
         {
             Logger.Setup($"Database seeding failed: {ex.Message}", LogEventLevel.Warning);
+        }
+    }
+
+    private static async Task AssignOwnerToUnassignedLibraries(MediaContext mediaContext)
+    {
+        try
+        {
+            User? owner = await mediaContext.Users.FirstOrDefaultAsync(u => u.Owner);
+            if (owner is null)
+                return;
+
+            List<Ulid> assignedLibraryIds = await mediaContext
+                .LibraryUser.Select(lu => lu.LibraryId)
+                .Distinct()
+                .ToListAsync();
+
+            List<Library> unassigned = await mediaContext
+                .Libraries.Where(l => !assignedLibraryIds.Contains(l.Id))
+                .ToListAsync();
+
+            if (unassigned.Count == 0)
+                return;
+
+            foreach (Library library in unassigned)
+            {
+                mediaContext.LibraryUser.Add(new LibraryUser(library.Id, owner.Id));
+            }
+
+            await mediaContext.SaveChangesAsync();
+            Logger.Setup($"Assigned {unassigned.Count} libraries to owner {owner.Name}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup(
+                $"Failed to assign libraries to owner: {ex.Message}",
+                LogEventLevel.Warning
+            );
         }
     }
 
