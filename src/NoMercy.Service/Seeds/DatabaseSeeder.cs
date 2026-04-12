@@ -154,32 +154,37 @@ public static class DatabaseSeeder
     {
         MediaContext mediaDbContext = new();
 
-        try
+        // Re-run offline seeds to pick up any updates
+        await SeedOfflineData();
+
+        Func<Task>[] seeds =
+        [
+            () => LanguagesSeed.Init(mediaDbContext),
+            () => CountriesSeed.Init(mediaDbContext),
+            () => GenresSeed.Init(mediaDbContext),
+            () => CertificationsSeed.Init(mediaDbContext),
+            () => MusicGenresSeed.Init(mediaDbContext),
+            () => UsersSeed.Init(mediaDbContext),
+            () => AssignOwnerToUnassignedLibraries(mediaDbContext),
+            () => ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext),
+        ];
+
+        foreach (Func<Task> seed in seeds)
         {
-            // Re-run offline seeds to pick up any updates
-            await SeedOfflineData();
-
-            await LanguagesSeed.Init(mediaDbContext);
-            await CountriesSeed.Init(mediaDbContext);
-            await GenresSeed.Init(mediaDbContext);
-            await CertificationsSeed.Init(mediaDbContext);
-            await MusicGenresSeed.Init(mediaDbContext);
-            await UsersSeed.Init(mediaDbContext);
-
-            // Assign the owner to any seeded libraries that have no users yet
-            await AssignOwnerToUnassignedLibraries(mediaDbContext);
-
-            await ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext);
-
-            if (ShouldSeedMarvel)
+            try
             {
-                Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
-                thread.Start();
+                await seed();
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup($"Seed failed: {ex.Message}", LogEventLevel.Warning);
             }
         }
-        catch (Exception ex)
+
+        if (ShouldSeedMarvel)
         {
-            Logger.Setup($"Database seeding failed: {ex.Message}", LogEventLevel.Warning);
+            Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
+            thread.Start();
         }
     }
 
