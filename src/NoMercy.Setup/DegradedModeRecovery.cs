@@ -14,8 +14,6 @@ public class DeferredTasks
     public bool Registered { get; set; }
     public bool SeedsRun { get; set; }
     public bool AllCompleted { get; set; }
-
-    public List<TaskDelegate> CallerTasks { get; set; } = [];
 }
 
 public static class DegradedModeRecovery
@@ -94,22 +92,6 @@ public static class DegradedModeRecovery
                         $"Deferred network discovery failed: {e.Message}",
                         LogEventLevel.Warning
                     );
-                }
-            }
-
-            if (!tasks.SeedsRun && tasks.ApiKeysLoaded)
-            {
-                try
-                {
-                    foreach (TaskDelegate callerTask in tasks.CallerTasks)
-                    {
-                        await callerTask.Invoke();
-                    }
-                    tasks.SeedsRun = true;
-                }
-                catch (Exception e)
-                {
-                    Logger.App($"Deferred seeds failed: {e.Message}", LogEventLevel.Warning);
                 }
             }
 

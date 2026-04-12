@@ -25,7 +25,7 @@ public class BootOrchestrator
         // Phase 1: Essential tasks (blocking, no network)
         // Uses Start.cs as shim until Task 17 inlines task definitions
         Logger.Setup("Phase 1: Running essential tasks...");
-        await Start.InitEssential([]);
+        await Start.InitEssential();
 
         // Initialize TokenStore before any DB access that touches SecureValue
         Database.TokenStore.Initialize(services);

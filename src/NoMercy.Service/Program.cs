@@ -127,14 +127,8 @@ public static class Program
         Stopwatch stopWatch = new();
         stopWatch.Start();
 
-        List<TaskDelegate> startupTasks =
-        [
-            DatabaseSeeder.Run,
-            // new(Dev.Run)
-        ];
-
         // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
-        await Setup.Start.InitEssential(startupTasks);
+        await Setup.Start.InitEssential();
 
         // Create database schema before anything else can query it.
         // This does NOT require auth — only migrations + EnsureCreated.
@@ -143,6 +137,10 @@ public static class Program
         // Seed offline data (config, languages, encoder profiles, etc.)
         // immediately so the UI has data before auth completes.
         await DatabaseSeeder.SeedOfflineData();
+
+        // API keys are available without auth, so seed TMDB data (genres,
+        // languages, etc.) now — before any import jobs can run.
+        await DatabaseSeeder.Run();
 
         // Proactively resolve port conflicts before building the host.
         // This avoids the costly build→fail→kill→rebuild cycle and prevents
