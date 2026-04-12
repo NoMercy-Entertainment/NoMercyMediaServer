@@ -34,14 +34,25 @@ public class SetupModeMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        string path = (context.Request.Path.Value?.TrimEnd('/')).OrEmpty();
+        string pathLower = path.ToLowerInvariant();
+
+        // Always serve setup routes (even after Complete) — the setup page
+        // JS shows the success screen and redirects to the HTTPS URL.
+        foreach (string route in SetupHandledRoutes)
+        {
+            if (pathLower == route || pathLower.StartsWith(route + "/"))
+            {
+                await _setupEndpoints.HandleRequestAsync(context);
+                return;
+            }
+        }
+
         if (!_setupState.IsSetupRequired)
         {
             await _next(context);
             return;
         }
-
-        string path = (context.Request.Path.Value?.TrimEnd('/')).OrEmpty();
-        string pathLower = path.ToLowerInvariant();
 
         foreach (string route in SetupHandledRoutes)
         {

@@ -153,8 +153,6 @@ public class SetupEndpoints
             return;
         }
 
-        RegeneratePkce();
-
         string codeChallenge;
         string pkceState;
         lock (_pkceLock)
