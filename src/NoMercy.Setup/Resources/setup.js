@@ -237,24 +237,24 @@
             if (data.server_url) {
                 el("server-url").href = data.server_url;
                 el("server-url-display").textContent = data.server_url;
-                el("redirect-msg").style.display = "block";
+                el("redirect-msg").classList.remove("redirect-msg-hidden");
                 setTimeout(function() {
                     window.location.href = data.server_url;
-                }, 3000);
+                }, 5000);
             }
 
         } else if (data.error) {
             el("progress-error").textContent = data.error;
             el("progress-error").classList.add("visible");
             if (data.phase !== "Unauthenticated") {
-                el("btn-retry").style.display = "block";
+                el("btn-retry").classList.remove("btn-retry-hidden");
             }
             var spinner = el("step-progress").querySelector(".spinner");
             if (spinner) spinner.style.display = "none";
 
         } else {
             el("progress-error").classList.remove("visible");
-            el("btn-retry").style.display = "none";
+            el("btn-retry").classList.add("btn-retry-hidden");
             var spinner = el("step-progress").querySelector(".spinner");
             if (spinner) spinner.style.display = "inline-block";
         }
@@ -340,7 +340,7 @@
 
         // Retry button
         el("btn-retry").addEventListener("click", function() {
-            el("btn-retry").style.display = "none";
+            el("btn-retry").classList.add("btn-retry-hidden");
             el("progress-error").classList.remove("visible");
             var spinner = el("step-progress").querySelector(".spinner");
             if (spinner) spinner.style.display = "inline-block";

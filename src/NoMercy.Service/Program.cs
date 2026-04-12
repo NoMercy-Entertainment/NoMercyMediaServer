@@ -398,10 +398,15 @@ public static class Program
 
         WebApplication httpsHost = CreateWebApplication(options);
 
-        // The new DI container has a fresh AuthManager — load tokens from DB so it
-        // can signal AuthReady and mark setup complete without re-running the setup UI.
+        // The new DI container has a fresh AuthManager and SetupState — load tokens
+        // from DB and mark setup complete so the middleware stops blocking requests.
         AuthManager httpsAuthManager = httpsHost.Services.GetRequiredService<AuthManager>();
-        await httpsAuthManager.InitializeAsync();
+        bool hasValidToken = await httpsAuthManager.InitializeAsync();
+
+        SetupState httpsSetupState = httpsHost.Services.GetRequiredService<SetupState>();
+        httpsSetupState.DetermineInitialPhase(hasValidToken: hasValidToken, isRegistered: true);
+
+        httpsAuthManager.ScheduleBackgroundRefresh(_applicationShutdownCts!.Token);
 
         // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
         // The constructor sets QueueRunner.Current = this.
