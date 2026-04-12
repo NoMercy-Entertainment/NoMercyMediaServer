@@ -164,6 +164,10 @@ public static class Program
             _applicationShutdownCts.Token
         );
 
+        // Auth completed — seed auth-dependent data (users, library assignment, claims)
+        if (!needsSetupMode)
+            await DatabaseSeeder.SeedAuthData();
+
         // Force QueueRunner singleton creation so QueueRunner.Current is set
         // before background tasks try to call Initialize().
         app.Services.GetRequiredService<QueueRunner>();
