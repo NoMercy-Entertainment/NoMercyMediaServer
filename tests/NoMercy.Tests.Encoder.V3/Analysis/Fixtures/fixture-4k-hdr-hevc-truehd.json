@@ -1,0 +1,85 @@
+{
+  "streams": [
+    {
+      "index": 0,
+      "codec_name": "hevc",
+      "codec_type": "video",
+      "width": 3840,
+      "height": 2160,
+      "r_frame_rate": "24000/1001",
+      "avg_frame_rate": "24000/1001",
+      "pix_fmt": "yuv420p10le",
+      "bits_per_raw_sample": "10",
+      "color_primaries": "bt2020",
+      "color_transfer": "smpte2084",
+      "color_space": "bt2020nc",
+      "bit_rate": "40000000",
+      "disposition": {
+        "default": 1,
+        "forced": 0
+      }
+    },
+    {
+      "index": 1,
+      "codec_name": "truehd",
+      "codec_type": "audio",
+      "channels": 8,
+      "sample_rate": "48000",
+      "bit_rate": "4000000",
+      "disposition": {
+        "default": 1,
+        "forced": 0
+      },
+      "tags": {
+        "language": "eng"
+      }
+    },
+    {
+      "index": 2,
+      "codec_name": "ac3",
+      "codec_type": "audio",
+      "channels": 6,
+      "sample_rate": "48000",
+      "bit_rate": "640000",
+      "disposition": {
+        "default": 0,
+        "forced": 0
+      },
+      "tags": {
+        "language": "eng"
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "id": 0,
+      "start_time": "0.000000",
+      "end_time": "1200.000000",
+      "tags": {
+        "title": "Chapter 1"
+      }
+    },
+    {
+      "id": 1,
+      "start_time": "1200.000000",
+      "end_time": "3600.000000",
+      "tags": {
+        "title": "Chapter 2"
+      }
+    },
+    {
+      "id": 2,
+      "start_time": "3600.000000",
+      "end_time": "7200.000000",
+      "tags": {
+        "title": "Chapter 3"
+      }
+    }
+  ],
+  "format": {
+    "format_name": "matroska,webm",
+    "duration": "7200.000000",
+    "bit_rate": "44640000",
+    "size": "40176000000"
+  }
+}
