@@ -524,6 +524,9 @@ fabric.properties
 .idea/**/azureSettings.xml
 
 output/
+# Allow C# namespace folders named Output inside src and tests
+!src/**/Output/
+!tests/**/Output/
 .idea/
 src/NoMercy.App/Resources
 
