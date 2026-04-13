@@ -154,7 +154,7 @@ public class VideoEncodeJob : AbstractEncoderJob
                         "running",
                         "Building sprite images"
                     );
-                    await sprite.BuildSprite(progressMeta);
+                    await sprite.BuildSprite();
                 }
                 catch (Exception spriteEx)
                 {
