@@ -638,3 +638,10 @@ src/**/obj/
 
 # Temporary design/planning docs
 docs/superpowers/
+
+# Claude Code artifacts
+.claude/settings.local.json
+.claude/superpowers/
+.claude/memories/
+.claude/scheduled_tasks.lock
+.superpowers/

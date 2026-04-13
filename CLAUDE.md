@@ -105,4 +105,5 @@ tests/
 - Database changes require EF Core migrations. Don't modify the database schema manually.
 - All new API endpoints need corresponding test coverage in `tests/`.
 - GitHub release assets use these names: `nomercy-windows-x64.exe`, `nomercy-linux-x64`, `nomercy_VERSION_amd64.deb`, etc. Don't change asset naming without updating `infra/nomercy-packages` and `apps/nomercy-tv` download URLs.
+- Run `dotnet csharpier format` on all changed .cs files before every commit.
 - Run `dotnet test` before committing changes.
