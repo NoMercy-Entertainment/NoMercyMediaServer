@@ -1,7 +1,3 @@
-#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
-// TODO(encoder-v3): restore when V3 types are wired up (Tasks 4-7)
-// using NoMercy.Encoder.Core;
 using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
@@ -175,15 +171,13 @@ public class Start
             // Wait a bit for the server to fully start and be responsive
             await Task.Delay(TimeSpan.FromSeconds(3));
 
-            // Initialize hardware acceleration detection in background
-            await FFmpegHardwareConfig.InitializeAsync();
-            if (FFmpegHardwareConfig.Accelerators.Count > 0)
-            {
-                List<string> gpus = FFmpegHardwareConfig
-                    .Accelerators.Select(a => $"{a.Vendor}/{a.Accelerator}")
-                    .ToList();
-                Logger.Encoder($"GPU acceleration: {string.Join(", ", gpus)}", LogEventLevel.Debug);
-            }
+            // TODO(encoder-v3): Hardware acceleration detection is now handled by
+            // HardwareInitializationService (registered via services.AddNoMercyEncoder()).
+            // FFmpegHardwareConfig.InitializeAsync() was a V1 static helper — no longer needed here.
+            Logger.Encoder(
+                "Hardware acceleration detection deferred to V3 encoder startup service",
+                LogEventLevel.Debug
+            );
 
             // Start queue workers after a short delay
             await Task.Delay(TimeSpan.FromSeconds(2));

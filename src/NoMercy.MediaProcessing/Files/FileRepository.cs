@@ -1,5 +1,3 @@
-#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -11,8 +9,6 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-// TODO(encoder-v3): restore when V3 types are wired up (Tasks 4-7)
-// using NoMercy.Encoder;
 using NoMercy.Events;
 using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Images;
@@ -273,7 +269,7 @@ public class FileRepository(MediaContext context) : IFileRepository
         string title = file.FullName.Replace("v2", "");
         title = Str.RemoveBracketedString().Replace(title, string.Empty);
 
-        Ffprobe ffprobeData = await new Ffprobe(file.FullName).GetStreamData();
+        FfProbeData ffprobeData = await FfProbe.CreateAsync(file.FullName);
         MovieFile parsed = ParseVideoFileName(file, title);
 
         parsed.Year = extractedYear ?? parsed.Year;
@@ -728,7 +724,7 @@ public class FileRepository(MediaContext context) : IFileRepository
         FileInfo file,
         MovieFile parsed,
         MovieOrEpisode match,
-        Ffprobe ffprobeData
+        FfProbeData ffprobeData
     )
     {
         string? parentPath = string.IsNullOrEmpty(file.DirectoryName)

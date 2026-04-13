@@ -17,6 +17,7 @@ using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Encoder.Composition;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
 using NoMercy.Helpers.Extensions;
@@ -472,6 +473,8 @@ public static class ServiceConfiguration
 
         services.AddMediaServerQueue();
         services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();
+
+        services.AddNoMercyEncoder();
 
         services.AddPluginSystem(AppFiles.PluginsPath);
 

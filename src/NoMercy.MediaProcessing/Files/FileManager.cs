@@ -1,5 +1,3 @@
-#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
@@ -12,10 +10,6 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-// TODO(encoder-v3): restore when V3 types are wired up (Tasks 4-7)
-// using NoMercy.Encoder;
-// using NoMercy.Encoder.Dto;
-// using NoMercy.Encoder.Format.Rules;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.NmSystem;
@@ -371,11 +365,10 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
         List<IVideoTrack> extraFiles
     )
     {
-        string path = Path.Combine(hostFolder, fileName.Replace("\\", "").Replace("/", ""));
-        Ffprobe ffprobeData = await new Ffprobe(fileName).GetStreamData();
-
-        List<IVideo> video = GetVideoHashList(hostFolder, ffprobeData);
-        List<IAudio> audio = GetAudioHashList(hostFolder, ffprobeData);
+        // TODO(encoder-v3): Replace V1 Ffprobe with V3 IMediaAnalyzer for stream detection
+        // V1 Ffprobe was removed with the encoder; video/audio hash lists are empty until wired up.
+        List<IVideo> video = [];
+        List<IAudio> audio = [];
         List<ISubtitle> subtitles = GetSubtitleHashList(hostFolder);
         List<IFont> fonts = GetFontHashList(hostFolder);
         List<IPreview> previews = GetPreviewHashList(hostFolder, extraFiles);
@@ -438,117 +431,8 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
         return metadata;
     }
 
-    private static bool VideoIsHdr(VideoStream videoFile)
-    {
-        if (videoFile is null)
-            throw new("Video stream is null");
-        if (string.IsNullOrEmpty(videoFile.ColorSpace))
-            return false;
-        if (videoFile.ColorSpace.Contains(ColorSpaces.Bt2020))
-            return true;
-        return false;
-    }
-
-    private static List<IVideo> GetVideoHashList(string hostFolder, Ffprobe ffprobe)
-    {
-        List<IVideo> videos = [];
-
-        string[] videoFolders = Directory
-            .GetDirectories(hostFolder)
-            .Where(folder => Path.GetFileName(folder).StartsWith("video"))
-            .ToArray();
-
-        foreach (VideoStream videoFile in ffprobe.VideoStreams)
-        {
-            string tag = VideoIsHdr(videoFile) ? "HDR" : "SDR";
-            string fileName =
-                $"/{videoFile.Width}x{videoFile.Height}_{tag}/{videoFile.Width}x{videoFile.Height}_{tag}.m3u8";
-            string? videoFolderPath = videoFolders.FirstOrDefault(vf =>
-                vf.Contains($"video_{videoFile.Width}x{videoFile.Height}_{tag}")
-            );
-            if (string.IsNullOrEmpty(videoFolderPath))
-            {
-                fileName =
-                    $"/{videoFile.Width}x{videoFile.Height}/{videoFile.Width}x{videoFile.Height}.m3u8";
-                videoFolderPath = videoFolders.FirstOrDefault(vf =>
-                    vf.Contains($"video_{videoFile.Width}x{videoFile.Height}")
-                );
-                if (string.IsNullOrEmpty(videoFolderPath))
-                    continue;
-            }
-
-            string videoFilePath = Directory
-                .GetFiles(videoFolderPath)
-                .First(file => file.EndsWith("m3u8"));
-
-            videos.Add(
-                new()
-                {
-                    //TODO: Fix FileSize and BitRate
-                    FileName = fileName,
-                    FileHash = ComputeFileHash(videoFilePath),
-                    FileSize = GetDirectorySize(videoFilePath),
-                    Width = videoFile.Width,
-                    Height = videoFile.Height,
-                    Codec = videoFile.CodecName,
-                    BitRate = videoFile.BitRate,
-                }
-            );
-        }
-
-        return videos;
-    }
-
-    private static List<IAudio> GetAudioHashList(string hostFolder, Ffprobe ffprobe)
-    {
-        List<IAudio> audios = [];
-
-        string[] audioFolders = Directory
-            .GetDirectories(hostFolder)
-            .Where(folder => Path.GetFileName(folder).StartsWith("audio"))
-            .ToArray();
-
-        foreach (AudioStream audioFile in ffprobe.AudioStreams)
-        {
-            string fileName =
-                $"/audio_{audioFile.Language}_{audioFile.CodecName}/audio_{audioFile.Language}_{audioFile.CodecName}.m3u8";
-            string? audioFolderPath = audioFolders.FirstOrDefault(vf =>
-                vf.Contains($"audio_{audioFile.Language}_{audioFile.CodecName}")
-            );
-            if (string.IsNullOrEmpty(audioFolderPath))
-            {
-                fileName = $"/audio_{audioFile.Language}/audio_{audioFile.Language}.m3u8";
-                audioFolderPath = audioFolders.FirstOrDefault(vf =>
-                    vf.Contains($"audio_{audioFile.Language}")
-                );
-            }
-            if (string.IsNullOrEmpty(audioFolderPath))
-                continue;
-
-            string audioFilePath = Directory
-                .GetFiles(audioFolderPath)
-                .First(file => file.EndsWith("m3u8"));
-
-            audios.Add(
-                new()
-                {
-                    //:TODO: Fix FileSize and BitRate
-                    FileName = fileName,
-                    FileHash = ComputeFileHash(audioFilePath),
-                    FileSize = GetDirectorySize(audioFilePath),
-
-                    Codec = audioFile.CodecName,
-                    Language = audioFile.Language ?? "und",
-                    Channels = audioFile.Channels,
-                    BitRate = audioFile.BitRate,
-                    ChannelLayout = audioFile.ChannelLayout,
-                    SampleRate = audioFile.SampleRate,
-                }
-            );
-        }
-
-        return audios;
-    }
+    // TODO(encoder-v3): GetAudioHashList used V1 Ffprobe/AudioStream types.
+    // Returns empty list until V3 IMediaAnalyzer is wired into file scanning.
 
     private static List<ISubtitle> GetSubtitleHashList(string hostFolder)
     {

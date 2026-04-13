@@ -1,5 +1,3 @@
-#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Task 3)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Task 3)
 using System.Collections.Immutable;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -16,9 +14,6 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
-// TODO(encoder-v3): restore when V3 FfMpeg wrapper is wired up (Task 3)
-// using NoMercy.Encoder;
-// using NoMercy.Encoder.Core;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.Helpers.Extensions;
@@ -87,26 +82,24 @@ public class TasksController(MediaContext mediaContext) : BaseController
 
     [HttpPost]
     [Route("pause/{id:int}")]
-    public async Task<IActionResult> PauseTask(int id)
+    public IActionResult PauseTask(int id)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to pause tasks");
 
-        bool status = await FfMpeg.Pause(id);
-
-        return Ok(status);
+        // TODO(encoder-v3): Wire up V3 encoder pause/resume via IEncoder
+        return Ok(false);
     }
 
     [HttpPost]
     [Route("resume/{id:int}")]
-    public async Task<IActionResult> ResumeTask(int id)
+    public IActionResult ResumeTask(int id)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to resume tasks");
 
-        bool status = await FfMpeg.Resume(id);
-
-        return Ok(status);
+        // TODO(encoder-v3): Wire up V3 encoder pause/resume via IEncoder
+        return Ok(false);
     }
 
     [HttpGet]
@@ -188,7 +181,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
                 _ = EventBusProvider.Current.PublishAsync(
                     new EncoderProgressBroadcastEvent
                     {
-                        ProgressData = new Progress
+                        ProgressData = new
                         {
                             Id = job.Id,
                             Status = "running",

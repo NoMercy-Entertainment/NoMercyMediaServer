@@ -1,8 +1,4 @@
-﻿#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
-using AcoustID;
-// TODO(encoder-v3): restore when V3 types are wired up (Tasks 4-7)
-// using NoMercy.Encoder;
+﻿using AcoustID;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Setup;
@@ -41,22 +37,9 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
         if (file == null)
             return null;
 
-        string fingerprint = await FfMpeg.GetFingerprint(file);
-        string duration = await FfMpeg.GetDuration(file);
-
-        FingerPrintData? fingerprintData = new()
-        {
-            Fingerprint = fingerprint,
-            Duration = duration.ToInt(),
-        };
-
-        if (fingerprintData == null)
-            throw new("Fingerprint data is null");
-
-        return await WithFingerprint(
-            ["recordings", "releases", "tracks", "compress", "usermeta", "sources"],
-            fingerprintData,
-            priority
+        // TODO(encoder-v3): Wire up V3 IAudioFingerprinter for fingerprint/duration extraction
+        throw new NotImplementedException(
+            "AcoustID fingerprinting requires V3 IAudioFingerprinter — not yet wired (encoder-v3)"
         );
     }
 }

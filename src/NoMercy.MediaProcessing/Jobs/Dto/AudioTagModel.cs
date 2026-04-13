@@ -1,11 +1,6 @@
-#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
-// TODO(encoder-v3): restore when V3 Dto types are wired up (Tasks 4-7)
-// using NoMercy.Encoder.Dto;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using TagLib;
-// using AudioStream = NoMercy.Encoder.Dto.AudioStream;
-// using Ffprobe = NoMercy.Encoder.Ffprobe;
 
 namespace NoMercy.MediaProcessing.Jobs.Dto;
 
@@ -23,8 +18,8 @@ public class AudioTagModel
     }
 
     public MusicBrainzDto? MusicBrainz { get; set; }
-    public FfprobeSourceDataFormat Format { get; set; } = new();
-    public AudioStream? Stream { get; set; }
+    public FfProbeFormat Format { get; set; } = new();
+    public FfProbeAudioStream? Stream { get; set; }
     public Tag? Tags { get; set; }
 
     public double Duration { get; set; }
@@ -33,9 +28,8 @@ public class AudioTagModel
 
     public static async Task<AudioTagModel> Create(MediaFile fileItem)
     {
-        Ffprobe ffProbe = new(fileItem.Path);
-        Ffprobe ffProbeData = await ffProbe.GetStreamData();
-        Dictionary<string, string> tagsContainer = ffProbeData.Format.Tags;
+        FfProbeData ffProbeData = await FfProbe.CreateAsync(fileItem.Path);
+        Dictionary<string, string> tagsContainer = ffProbeData.Format.Tags ?? [];
         MusicBrainzDto? mb = null;
 
         if (fileItem.TagFile?.Tag is not null)
@@ -206,7 +200,7 @@ public class AudioTagModel
             MusicBrainz = mb,
             Tags = fileItem.TagFile?.Tag,
             FileItem = fileItem,
-            Duration = ffProbeData.Format.Duration?.TotalSeconds ?? 0,
+            Duration = ffProbeData.Format.Duration.TotalSeconds,
         };
 
         return metaData;

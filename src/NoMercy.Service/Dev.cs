@@ -1,13 +1,9 @@
-#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-// TODO(encoder-v3): restore when V3 types are wired up (Tasks 4-7)
-// using NoMercy.Encoder.Core;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using VideoFile = NoMercy.Database.Models.Media.VideoFile;
@@ -464,8 +460,9 @@ public static class Dev
                 }
             }
 
-            // Build new master using the HLS playlist generator
-            await HlsPlaylistGenerator.Build(hostFolder, targetName);
+            // TODO(encoder-v3): Wire up V3 HLS playlist builder
+            Logger.App($"V3 encoder: would rebuild master playlist for {hostFolder}");
+            await Task.CompletedTask;
 
             string newMaster = Path.Combine(hostFolder, targetName + ".m3u8");
             Logger.App($"Recreated master playlist: {newMaster}");

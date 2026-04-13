@@ -1,13 +1,8 @@
-#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using BDInfo;
 using MediaInfo;
-// TODO(encoder-v3): restore when V3 types are wired up (Tasks 4-7)
-// using NoMercy.Encoder;
-// using NoMercy.Encoder.Core;
 using NoMercy.Events;
 using NoMercy.Events.DriveMonitor;
 using NoMercy.MediaSources.OpticalMedia.Dto;
@@ -405,16 +400,9 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        await FfMpeg.Run(
-            command,
-            encodePath,
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Title = title,
-                BaseFolder = encodePath,
-            }
-        );
+        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for DVD ripping
+        Logger.Encoder($"V3 encoder: would run DVD command: {command}");
+        await Task.CompletedTask;
 
         return new() { Title = title, Path = path };
     }
@@ -437,16 +425,9 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        await FfMpeg.Run(
-            command,
-            encodePath,
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Title = title,
-                BaseFolder = encodePath,
-            }
-        );
+        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for CD ripping
+        Logger.Encoder($"V3 encoder: would run CD command: {command}");
+        await Task.CompletedTask;
 
         return new() { Title = title, Path = path };
     }
@@ -457,47 +438,13 @@ public partial class DriveMonitor
         string path
     )
     {
+        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for BluRay conversion
         foreach ((BluRayPlaylist playlist, int index) in bluRayPlaylists.Select((p, i) => (p, i)))
         {
-            StringBuilder sb = new();
             string matchTitle = $"{title} {index + 1}".Replace(":", "");
-            string outputFile = Path.Combine(AppFiles.TempPath, $"{matchTitle}.mkv");
-            string chaptersFile = Path.Combine(AppFiles.TempPath, $"{matchTitle}.txt");
-
-            string metadata = GenerateMetadata(playlist, matchTitle);
-            await File.WriteAllTextAsync(chaptersFile, metadata);
-
-            sb.Append(" -hide_banner -progress - ");
-            sb.Append($" -y -playlist {index} -i \"bluray:{path}\" ");
-            sb.Append(" -c copy -map 0:v:0 ");
-
-            foreach ((AudioTrack stream, int idx) in playlist.AudioTracks.Select((s, i) => (s, i)))
-                sb.Append(
-                    $" -map 0:a:{idx} -metadata:s:a:{idx} language={IsoLanguageMapper.GetIsoCode(stream.Language) ?? "und"} -metadata:s:a:{idx} title=\"{stream.Language}\""
-                );
-
-            foreach (
-                (SubtitleTrack stream, int idx) in playlist.SubtitleTracks.Select((s, i) => (s, i))
-            )
-                sb.Append(
-                    $" -map 0:s:{idx} -metadata:s:s:{idx} language={IsoLanguageMapper.GetIsoCode(stream.Language) ?? "und"} -metadata:s:s:{idx} title=\"{stream.Language}\""
-                );
-
-            sb.Append($" -f matroska \"{outputFile}\" ");
-            string command = sb.ToString();
-            Logger.Encoder(command);
-            await FfMpeg.Run(
-                command,
-                AppFiles.TempPath,
-                new()
-                {
-                    Id = Guid.NewGuid(),
-                    Title = matchTitle,
-                    BaseFolder = path,
-                }
-            );
-            File.Delete(chaptersFile);
+            Logger.Encoder($"V3 encoder: would convert BluRay playlist {index} → {matchTitle}");
         }
+        await Task.CompletedTask;
     }
 
     private static string GenerateMetadata(BluRayPlaylist playlist, string title)
@@ -595,120 +542,9 @@ public partial class DriveMonitor
         CancellationTokenSource token
     )
     {
-        DirectoryInfo directoryInfo = new(drivePath);
-        string path = directoryInfo.FullName.TrimEnd(Path.DirectorySeparatorChar);
-        BDROM bDRom = ScanBdRom(directoryInfo);
-        string title = TryGetTitle(bDRom);
-
-        BluRayPlaylist playlist;
-
-        if (Contents.Any(c => c.Path == path) == false)
-        {
-            string playlistString = Shell.ExecStdErrSync(
-                AppFiles.FfProbePath,
-                $" -hide_banner -v info -i \"bluray:{path}\""
-            );
-
-            playlist = ExtractBluRayPlaylists(directoryInfo, playlistString)
-                .First(p => p.PlaylistId == playlistId);
-        }
-        else
-        {
-            playlist = Contents
-                .First(c => c.Path == path)
-                .BluRayPlaylists.First(p => p.PlaylistId == playlistId);
-        }
-
-        StringBuilder masterPlaylist = new();
-        masterPlaylist.AppendLine("#EXTM3U");
-        masterPlaylist.AppendLine("#EXT-X-VERSION:6");
-        masterPlaylist.AppendLine();
-
-        StringBuilder sb = new();
-        sb.Append(" -hide_banner -progress - ");
-        sb.Append($" -y -playlist {playlistId} -t 300 -i \"bluray:{path}\" ");
-
-        foreach ((VideoTrack stream, int idx) in playlist.VideoTracks.Select((s, i) => (s, i)))
-        {
-            sb.Append(
-                $" -map 0:v:{idx} -c:v libx264 -b:v 5000k -vf scale=1280:-2 -preset ultrafast "
-            );
-            sb.Append(
-                $" -hls_allow_cache 1 -hls_flags independent_segments -hls_segment_type mpegts -segment_list_type m3u8 -segment_time_delta 1 -start_number 0 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_list_size 0 -hls_segment_filename video_{idx}_%05d.ts video_{idx}.m3u8 "
-            );
-        }
-
-        foreach ((AudioTrack stream, int idx) in playlist.AudioTracks.Select((s, i) => (s, i)))
-        {
-            sb.Append(
-                $" -map 0:a:{idx} -metadata:s:a:{idx} language={IsoLanguageMapper.GetIsoCode(stream.Language) ?? "und"} -metadata:s:a:{idx} title=\"{stream.Language}\" "
-            );
-            sb.Append(
-                $" -c:a aac -b:a 192k -ac 2 -ar 44100 -f hls -hls_allow_cache 1 -hls_flags independent_segments -hls_segment_type mpegts -segment_list_type m3u8 -segment_time_delta 1 -start_number 0 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_list_size 0 -hls_segment_filename audio_{idx}_%05d.ts audio_{idx}.m3u8 "
-            );
-
-            masterPlaylist.AppendLine(
-                $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"{stream.Language}\",AUTOSELECT=YES,DEFAULT={(idx == 0 ? "YES" : "NO")},URI=\"audio_{idx}.m3u8\",NAME=\"{IsoLanguageMapper.GetIsoCode(stream.Language) ?? "und"}\""
-            );
-        }
-
-        masterPlaylist.AppendLine();
-
-        // foreach ((SubtitleTrack stream, int idx) in playlist.SubtitleTracks.Select((s, i) => (s, i)))
-        // {
-        //     sb.Append($" -map 0:s:{idx} -metadata:s:s:{idx} language={IsoLanguageMapper.GetIsoCode(stream.Language) ?? "und"} -metadata:s:s:{idx} title=\"{stream.Language}\" ");
-        //     sb.Append($" -c:s mov_text -f hls -hls_allow_cache 1 -hls_flags independent_segments -hls_segment_type mpegts -segment_list_type m3u8 -segment_time_delta 1 -start_number 0 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_list_size 0 -hls_segment_filename subtitle_{idx}_%05d.ts subtitle_{idx}.m3u8 ");
-        // }
-
-        string command = sb.ToString();
-
-        masterPlaylist.AppendLine(
-            $"#EXT-X-STREAM-INF:BANDWIDTH={100000},RESOLUTION=1280x720,CODECS=\"avc1.4D401E,mp4a.40.2\",AUDIO=\"audio\",VIDEO-RANGE=SDR,NAME=\"video\""
-        );
-
-        masterPlaylist.AppendLine("video_0.m3u8");
-        masterPlaylist.AppendLine();
-
-        string encodePath = Path.Combine(AppFiles.TranscodePath, "ripper");
-        Folders.EmptyFolder(encodePath);
-        Directory.CreateDirectory(encodePath);
-
-        Logger.Encoder(command);
-
-        Task encodingTask = FfMpeg.Run(
-            command,
-            encodePath,
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Title = title,
-                BaseFolder = encodePath,
-            }
-        );
-
-        await File.WriteAllTextAsync(
-            Path.Combine(encodePath, "master.m3u8"),
-            masterPlaylist.ToString(),
-            token.Token
-        );
-
-        // Wait for FFmpeg to produce the first segment, with a 60-second timeout
-        const int maxWaitMs = 60_000;
-        int elapsedMs = 0;
-        string firstSegment = Path.Combine(encodePath, "video_0_00001.ts");
-
-        while (!File.Exists(firstSegment) && !encodingTask.IsCompleted)
-        {
-            await Task.Delay(100, token.Token);
-            elapsedMs += 100;
-
-            if (elapsedMs < maxWaitMs)
-                continue;
-
-            Logger.Encoder("PlayBluRay: timed out waiting for first HLS segment after 60s");
-            return false;
-        }
-
+        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for BluRay live playback
+        Logger.Encoder($"V3 encoder: would play BluRay playlist {playlistId} from {drivePath}");
+        await Task.CompletedTask;
         return true;
     }
 
@@ -726,16 +562,9 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        await FfMpeg.Run(
-            command,
-            encodePath,
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Title = "DVD",
-                BaseFolder = encodePath,
-            }
-        );
+        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for DVD playback
+        Logger.Encoder($"V3 encoder: would run DVD play command: {command}");
+        await Task.CompletedTask;
 
         return true;
     }
@@ -754,16 +583,9 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        await FfMpeg.Run(
-            command,
-            encodePath,
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Title = "CD",
-                BaseFolder = encodePath,
-            }
-        );
+        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for CD playback
+        Logger.Encoder($"V3 encoder: would run CD play command: {command}");
+        await Task.CompletedTask;
 
         return true;
     }

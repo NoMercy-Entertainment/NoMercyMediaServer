@@ -1,5 +1,3 @@
-#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Task 3)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Task 3)
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -9,10 +7,6 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
-// TODO(encoder-v3): restore when V3 container/rules/video types are wired up (Task 3)
-// using NoMercy.Encoder.Format.Container;
-// using NoMercy.Encoder.Format.Rules;
-// using NoMercy.Encoder.Format.Video;
 using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -105,11 +99,10 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to remove encoder profiles");
 
-        ContainerDto[] containers = BaseContainer
-            .AvailableContainers.Select(container => new ContainerDto(container))
-            .ToArray();
+        // TODO(encoder-v3): Return V3 CodecRegistry container data once wired up
+        object[] containers = [];
 
-        return Ok(new DataResponseDto<ContainerDto[]> { Data = containers });
+        return Ok(new DataResponseDto<object[]> { Data = containers });
     }
 
     [HttpGet]
@@ -119,8 +112,9 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to remove encoder profiles");
 
-        Classes.VideoQualityDto[] frameSizes = BaseVideo.AvailableVideoSizes;
+        // TODO(encoder-v3): Return V3 frame size list once wired up
+        object[] frameSizes = [];
 
-        return Ok(new DataResponseDto<Classes.VideoQualityDto[]> { Data = frameSizes.ToArray() });
+        return Ok(new DataResponseDto<object[]> { Data = frameSizes });
     }
 }

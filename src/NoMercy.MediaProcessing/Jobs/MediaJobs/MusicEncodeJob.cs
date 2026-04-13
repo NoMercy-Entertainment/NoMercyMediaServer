@@ -1,15 +1,8 @@
-#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
 using System.Diagnostics;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
-// TODO(encoder-v3): restore when V3 encode job types are wired up (Tasks 4-7)
-// using NoMercy.Encoder;
-// using NoMercy.Encoder.Core;
-// using NoMercy.Encoder.Format.Audio;
-// using NoMercy.Encoder.Format.Container;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Artists;
@@ -37,7 +30,6 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
     public override async Task Handle()
     {
         await using MediaContext context = new();
-        await using QueueContext queueContext = new();
 
         await using LibraryRepository libraryRepository = new(context);
 
@@ -76,41 +68,15 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                     );
                 }
 
-                BaseContainer container = BaseContainer.Create(profile.Container);
-
-                BuildAudioStreams(
-                    profile,
-                    ref container,
-                    FoundTrack,
-                    FolderMetaData.MusicBrainzRelease
+                // TODO(encoder-v3): Deserialize V3 EncodingProfile from profile.Param
+                // TODO(encoder-v3): Resolve IEncoder from DI
+                // TODO(encoder-v3): Call encoder.EncodeAsync() with EventBusProgressObserver
+                // For now, log that V3 encoding would happen here
+                Logger.Encoder(
+                    $"V3 encoder: would encode {MediaFile.Path} → {FolderMetaData.BasePath} with profile {profile.Name}"
                 );
 
-                VideoAudioFile ffmpeg = await new FfMpeg().OpenAsync(MediaFile.Path);
-
-                ffmpeg.SetBasePath(FolderMetaData.BasePath);
-                ffmpeg.SetTitle(MediaFile.Name);
-                ffmpeg.ToFile(track.CreateTitle());
-
-                ffmpeg.AddContainer(container);
-
-                ffmpeg.Prioritize();
-
-                ffmpeg.Build();
-
-                string fullCommand = ffmpeg.GetFullCommand();
-
-                ProgressMeta progressMeta = new()
-                {
-                    Id = track.Id,
-                    Title = FoundTrack.Title,
-                    BaseFolder = FolderMetaData.BasePath,
-                    Type = "audio",
-                };
-
-                Logger.Encoder(fullCommand);
-                await ffmpeg.Run(fullCommand, FolderMetaData.BasePath, progressMeta);
-
-                await AddRecording(container, folder);
+                await AddRecording(folder);
 
                 if (EventBusProvider.IsConfigured)
                 {
@@ -168,7 +134,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
         }
     }
 
-    private async Task AddRecording(BaseContainer container, Folder folder)
+    private async Task AddRecording(Folder folder)
     {
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
@@ -187,15 +153,13 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
 
         await using MediaScan mediaScan = new();
 
+        // TODO(encoder-v3): FilterByFileName needs actual encoded output filename once V3 is wired
         MediaFolderExtend mediaFolder = (
             await mediaScan
                 .EnableFileListing()
                 .FilterByMediaType("music")
-                .FilterByFileName(container.FileName)
                 .Process(FolderMetaData.BasePath)
         ).First();
-
-        mediaFolder.Files?.FilterConcurrentBag([container.FileName]);
 
         CoverArtImageManagerManager.CoverPalette? coverPalette =
             await CoverArtImageManagerManager.Add(
@@ -254,78 +218,5 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                 );
             }
         );
-    }
-
-    private static void BuildAudioStreams(
-        EncoderProfile encoderProfile,
-        ref BaseContainer container,
-        MusicBrainzTrack track,
-        MusicBrainzReleaseAppends musicBrainzRelease
-    )
-    {
-        foreach (IAudioProfile profile in encoderProfile.AudioProfiles)
-        {
-            MusicBrainzMedia album = musicBrainzRelease.Media.First(m =>
-                m.Tracks.Any(t => t.Title == track.Title)
-            );
-
-            string albumArtist = string.Join(
-                "/",
-                musicBrainzRelease.ArtistCredit.Select(c => c.Name)
-            );
-            string albumNumber = musicBrainzRelease.Title;
-            string artist = string.Join("/", track.ArtistCredit.Select(c => c.Name));
-            int date =
-                musicBrainzRelease.ReleaseEvents?[0].DateTime.ParseYear()
-                ?? track.Recording.FirstReleaseDate.ParseYear();
-            string disambiguation = track.Recording.Disambiguation;
-            string discNumber = $"{album.Position}/{musicBrainzRelease.Media.Length}";
-            string genre = string.Join(
-                "/",
-                musicBrainzRelease.MusicBrainzReleaseGroup?.Genres?.Select(c => c.Name) ?? []
-            );
-            string title = track.Title;
-            string trackNumber = $"{track.Number}/{album.TrackCount}";
-
-            Guid musicBrainzReleaseId = musicBrainzRelease.Id;
-            Guid musicBrainzRecordingId = track.Id;
-            Guid musicBrainzTrackId = track.Id;
-            Guid musicBrainzArtistId = track.ArtistCredit[0].MusicBrainzArtist.Id;
-            Guid musicBrainzAlbumArtistId = musicBrainzRelease.ArtistCredit[0].MusicBrainzArtist.Id;
-            Guid? musicBrainzReleaseGroupId = musicBrainzRelease.MusicBrainzReleaseGroup?.Id;
-
-            BaseAudio stream = BaseAudio
-                .Create(profile.Codec)
-                .SetAudioChannels(profile.Channels)
-                .SetAllowedLanguages(profile.AllowedLanguages)
-                .SetSampleRate(profile.SampleRate)
-                .SetHlsSegmentFilename(profile.SegmentName)
-                .SetHlsPlaylistFilename(profile.PlaylistName)
-                .AddOpts(profile.Opts)
-                .AddCustomArguments(profile.CustomArguments)
-                .SetLanguage(musicBrainzRelease.MusicBrainzTextRepresentation.Language)
-                .AddId3Tags(
-                    new()
-                    {
-                        { "album", albumNumber },
-                        { "album_artist", albumArtist },
-                        { "artist", artist },
-                        { "date", date.ToString() },
-                        { "disc", discNumber },
-                        { "genre", genre },
-                        { "title", title },
-                        { "track", trackNumber },
-                        { "Disambiguation", disambiguation },
-                        { "MusicBrainzReleaseId", musicBrainzReleaseId },
-                        { "MusicBrainzRecordingId", musicBrainzRecordingId },
-                        { "MusicBrainzTrackId", musicBrainzTrackId },
-                        { "MusicBrainzArtistId", musicBrainzArtistId },
-                        { "MusicBrainzAlbumArtistId", musicBrainzAlbumArtistId },
-                        { "MusicBrainzReleaseGroupId", musicBrainzReleaseGroupId },
-                    }
-                );
-
-            container.AddStream(stream);
-        }
     }
 }

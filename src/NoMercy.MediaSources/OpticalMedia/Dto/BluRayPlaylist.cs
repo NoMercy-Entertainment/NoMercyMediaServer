@@ -1,10 +1,6 @@
-#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
-#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-// TODO(encoder-v3): restore when V3 types are wired up (Tasks 4-7)
-// using NoMercy.Encoder.Core;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.MediaSources.OpticalMedia.Dto;
@@ -166,7 +162,8 @@ public partial class BluRayPlaylist
                 else if (line.StartsWith("Language"))
                 {
                     currentAudio.Language = value;
-                    currentAudio.Lang = IsoLanguageMapper.GetIsoCode(value);
+                    // TODO(encoder-v3): IsoLanguageMapper was a V1 encoder helper — wire up NmSystem equivalent
+                    currentAudio.Lang = value;
                     playlist.AudioTracks.Add(currentAudio);
                     currentAudio = null;
                 }
