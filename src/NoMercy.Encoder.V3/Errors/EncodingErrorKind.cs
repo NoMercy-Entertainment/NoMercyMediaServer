@@ -17,5 +17,6 @@ public enum EncodingErrorKind
     NetworkPathTimeout,
     NetworkPathPermission,
     ResourceExhausted,
+    InputDrmProtected,
     Unknown,
 }

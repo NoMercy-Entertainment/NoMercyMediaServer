@@ -17,11 +17,13 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddNoMercyEncoder(
         this IServiceCollection services,
-        EncoderOptions options
+        Action<EncoderOptions>? configure = null
     )
     {
         // Configuration
-        services.AddSingleton(options);
+        EncoderOptions opts = new();
+        configure?.Invoke(opts);
+        services.AddSingleton(opts);
 
         // Infrastructure
         services.AddSingleton<IProcessRunner, ProcessRunner>();
@@ -46,6 +48,13 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<HardwareInitializationService>();
             return initService.Capabilities
                 ?? new HardwareCapabilities([], Environment.ProcessorCount);
+        });
+
+        // IResourceBudget — built from IHardwareCapabilities after detection completes
+        services.AddSingleton<IResourceBudget>(sp =>
+        {
+            IHardwareCapabilities hw = sp.GetRequiredService<IHardwareCapabilities>();
+            return new ResourceBudget(hw.Gpus, hw.CpuCores);
         });
 
         // Startup — register concrete first so IHostedService resolves same instance

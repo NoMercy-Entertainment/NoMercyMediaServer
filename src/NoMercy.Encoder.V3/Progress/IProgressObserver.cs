@@ -1,10 +1,14 @@
 namespace NoMercy.Encoder.V3.Progress;
 
+using NoMercy.Encoder.V3.Errors;
+
 public interface IProgressObserver
 {
+    void OnStageStarted(string stageName);
+
     void OnProgress(EncodingProgress progress);
 
-    void OnCompleted(string correlationId);
+    void OnStageCompleted(string stageName, TimeSpan duration);
 
-    void OnError(string correlationId, string message);
+    void OnError(EncodingError error);
 }

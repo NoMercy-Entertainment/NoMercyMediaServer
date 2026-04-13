@@ -4,6 +4,8 @@ public interface IResourceBudget
 {
     int AvailableGpuEncoderSlots(GpuDevice device);
 
+    double CurrentGpuEncodeUtilization(GpuDevice device);
+
     int AvailableCpuThreads();
 
     ResourceLease Acquire(ResourceRequirement requirement);

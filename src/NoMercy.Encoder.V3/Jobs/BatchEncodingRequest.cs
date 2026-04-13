@@ -1,11 +1,19 @@
 namespace NoMercy.Encoder.V3.Jobs;
 
 using NoMercy.Encoder.V3.Pipeline;
-using NoMercy.Encoder.V3.Profiles;
 
-public record BatchEncodingRequest(
-    string[] InputPaths,
-    string OutputDirectory,
-    EncodingProfile Profile,
-    EncodingOptions? Options = null
+public record BatchEncodingRequest(EncodingRequest[] Items, BatchOptions Options);
+
+public record BatchOptions(
+    bool ShareAnalysis = true,
+    bool ParallelEncoding = false,
+    int MaxParallel = 1,
+    BatchCancellationMode CancelMode = BatchCancellationMode.SkipRemaining
 );
+
+public enum BatchCancellationMode
+{
+    SkipRemaining,
+    CancelAll,
+    CancelAndClean,
+}

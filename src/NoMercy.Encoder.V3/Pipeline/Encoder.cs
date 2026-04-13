@@ -51,7 +51,7 @@ public class Encoder(
         // Stage 1: Analyze
         StageResult analyzeResult = await analyzeStage.ExecuteAsync(request.InputPath, context, ct);
         if (analyzeResult is StageFailure analyzeFailure)
-            return Fail(analyzeFailure.Error, stopwatch.Elapsed, context.CorrelationId, progress);
+            return Fail(analyzeFailure.Error, stopwatch.Elapsed, progress);
 
         MediaInfo mediaInfo = ((StageSuccess<MediaInfo>)analyzeResult).Value;
         context = context with { MediaInfo = mediaInfo };
@@ -60,12 +60,12 @@ public class Encoder(
         ValidateInput validateInput = new(mediaInfo, request.Profile);
         StageResult validateResult = await validateStage.ExecuteAsync(validateInput, context, ct);
         if (validateResult is StageFailure validateFailure)
-            return Fail(validateFailure.Error, stopwatch.Elapsed, context.CorrelationId, progress);
+            return Fail(validateFailure.Error, stopwatch.Elapsed, progress);
 
         // Stage 3: Plan
         StageResult planResult = await planStage.ExecuteAsync(validateInput, context, ct);
         if (planResult is StageFailure planFailure)
-            return Fail(planFailure.Error, stopwatch.Elapsed, context.CorrelationId, progress);
+            return Fail(planFailure.Error, stopwatch.Elapsed, progress);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
 
@@ -73,7 +73,7 @@ public class Encoder(
         BuildInput buildInput = new(plan, request.InputPath, request.OutputDirectory);
         StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
         if (buildResult is StageFailure buildFailure)
-            return Fail(buildFailure.Error, stopwatch.Elapsed, context.CorrelationId, progress);
+            return Fail(buildFailure.Error, stopwatch.Elapsed, progress);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)buildResult).Value;
 
@@ -81,7 +81,7 @@ public class Encoder(
         ExecuteInput executeInput = new(commands, mediaInfo.Duration);
         StageResult executeResult = await executeStage.ExecuteAsync(executeInput, context, ct);
         if (executeResult is StageFailure executeFailure)
-            return Fail(executeFailure.Error, stopwatch.Elapsed, context.CorrelationId, progress);
+            return Fail(executeFailure.Error, stopwatch.Elapsed, progress);
 
         ExecutionResult[] executionResults = ((StageSuccess<ExecutionResult[]>)executeResult).Value;
 
@@ -93,12 +93,12 @@ public class Encoder(
         );
         StageResult finalizeResult = await finalizeStage.ExecuteAsync(finalizeInput, context, ct);
         if (finalizeResult is StageFailure finalizeFailure)
-            return Fail(finalizeFailure.Error, stopwatch.Elapsed, context.CorrelationId, progress);
+            return Fail(finalizeFailure.Error, stopwatch.Elapsed, progress);
 
         FinalizeOutput finalizeOutput = ((StageSuccess<FinalizeOutput>)finalizeResult).Value;
 
         stopwatch.Stop();
-        progress?.OnCompleted(context.CorrelationId);
+        progress?.OnStageCompleted("Encode", stopwatch.Elapsed);
 
         logger.LogInformation(
             "[{CorrelationId}] Encode complete in {Duration}",
@@ -123,14 +123,22 @@ public class Encoder(
         );
     }
 
+    public Task<PreviewResult> PreviewAsync(
+        EncodingRequest request,
+        int previewDurationSeconds = 10,
+        CancellationToken ct = default
+    )
+    {
+        throw new NotImplementedException("Preview encoding not yet implemented");
+    }
+
     private static EncodingResult Fail(
         EncodingError error,
         TimeSpan elapsed,
-        string correlationId,
         IProgressObserver? progress
     )
     {
-        progress?.OnError(correlationId, error.Message);
+        progress?.OnError(error);
         return new EncodingResult(
             Success: false,
             OutputPath: "",

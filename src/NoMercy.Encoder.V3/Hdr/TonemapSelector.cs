@@ -4,17 +4,20 @@ using NoMercy.Encoder.V3.Hardware;
 
 public class TonemapSelector : ITonemapSelector
 {
-    public TonemapStrategy SelectBest(IHardwareCapabilities hardware, IFfmpegCapabilities ffmpeg)
+    public TonemapStrategy SelectBest(
+        IHardwareCapabilities hardware,
+        IFfmpegCapabilities? ffmpeg = null
+    )
     {
         // Priority: libplacebo (Vulkan GPU) → tonemap_opencl (OpenCL) → zscale+tonemap (CPU)
-        if (ffmpeg.HasFilter("libplacebo"))
+        if (ffmpeg is not null && ffmpeg.HasFilter("libplacebo"))
             return new TonemapStrategy(
                 TonemapMethod.Libplacebo,
                 "libplacebo=tonemapping=hable:color_primaries=bt709:color_trc=bt709:colorspace=bt709:format=yuv420p",
                 true
             );
 
-        if (ffmpeg.HasFilter("tonemap_opencl"))
+        if (ffmpeg is not null && ffmpeg.HasFilter("tonemap_opencl"))
             return new TonemapStrategy(
                 TonemapMethod.TonemapOpencl,
                 "tonemap_opencl=tonemap=hable:desat=0:format=nv12",

@@ -14,7 +14,8 @@ public record VideoStreamInfo(
     bool IsDefault,
     long BitRateKbps,
     double? AverageFrameRate = null,
-    double? RealFrameRate = null
+    double? RealFrameRate = null,
+    int Rotation = 0
 )
 {
     private static readonly HashSet<string> HdrTransfers = ["smpte2084", "arib-std-b67"];

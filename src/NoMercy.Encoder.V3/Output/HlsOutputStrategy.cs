@@ -21,6 +21,10 @@ public class HlsOutputStrategy : IOutputStrategy
             string subDir = $"video_{video.Width}x{video.Height}";
             string playlistPath = Path.Combine(outputDirectory, subDir, $"{subDir}.m3u8");
 
+            bool isHevc =
+                video.EncoderName.Contains("265", StringComparison.OrdinalIgnoreCase)
+                || video.EncoderName.Contains("hevc", StringComparison.OrdinalIgnoreCase);
+
             Dictionary<string, string> extraFlags = new(video.ExtraFlags)
             {
                 ["-f"] = "hls",
@@ -31,6 +35,9 @@ public class HlsOutputStrategy : IOutputStrategy
                 ["-hls_segment_filename"] = Path.Combine(outputDirectory, subDir, "seg_%05d.m4s"),
                 ["-hls_fmp4_init_filename"] = "init.mp4",
             };
+
+            if (isHevc)
+                extraFlags["-tag:v"] = "hvc1";
 
             builder.AddOutput(
                 new OutputOptions(

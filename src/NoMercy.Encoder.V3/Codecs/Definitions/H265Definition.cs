@@ -108,10 +108,10 @@ public class H265Definition : ICodecDefinition
                     RateControlMode.Cbr,
                     RateControlMode.Vbr,
                 ],
-                Supports10Bit: false,
-                SupportsHdr: false,
+                Supports10Bit: true,
+                SupportsHdr: true,
                 MaxConcurrentSessions: int.MaxValue,
-                PixelFormat10Bit: "",
+                PixelFormat10Bit: "yuv420p10le",
                 VendorSpecificFlags: new Dictionary<string, string>()
             ),
             // Intel VAAPI — hevc_vaapi

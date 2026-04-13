@@ -8,4 +8,9 @@ public enum PlaybackAction
     TranscodeVideo,
 }
 
-public record PlaybackDecision(PlaybackAction Action, string? Reason, string? DirectStreamUrl);
+public record PlaybackDecision(
+    PlaybackAction Action,
+    string? Reason,
+    string? DirectStreamUrl,
+    LiveQuality? RecommendedQuality = null
+);

@@ -8,7 +8,7 @@ public class LiveEncoder(
     ILiveQualitySelector qualitySelector,
     ISessionManager sessionManager,
     SpeedIndex speedIndex,
-    IHardwareCapabilities hardware,
+    IResourceBudget budget,
     ILogger<LiveEncoder> logger
 ) : ILiveEncoder
 {
@@ -30,7 +30,7 @@ public class LiveEncoder(
                 request.CachedInfo,
                 request.Client,
                 speedIndex,
-                hardware
+                budget
             );
             quality =
                 available.FirstOrDefault(q => q.Id == request.PreferredQuality)
@@ -38,7 +38,7 @@ public class LiveEncoder(
                     request.CachedInfo,
                     request.Client,
                     speedIndex,
-                    hardware
+                    budget
                 );
         }
         else
@@ -47,7 +47,7 @@ public class LiveEncoder(
                 request.CachedInfo,
                 request.Client,
                 speedIndex,
-                hardware
+                budget
             );
         }
 

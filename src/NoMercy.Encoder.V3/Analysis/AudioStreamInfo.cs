@@ -8,5 +8,7 @@ public record AudioStreamInfo(
     long BitRateKbps,
     string? Language,
     bool IsDefault,
-    bool IsForced
+    bool IsForced,
+    double StartTimeSeconds = 0,
+    double DelayVsVideoSeconds = 0
 );

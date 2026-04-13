@@ -1,24 +1,25 @@
 namespace NoMercy.Encoder.V3.SystemFeatures;
 
+using NoMercy.Encoder.V3.Pipeline;
+
 public interface IEncoderPlugin
 {
     string Name { get; }
 
     string Version { get; }
 
-    void OnPipelineStageStart(string stageName, object context);
-
-    void OnPipelineStageEnd(string stageName, object context, object result);
+    PipelineHook[] GetHooks();
 }
 
-public enum PipelineHook
+public record PipelineHook(
+    PipelineStagePosition Position,
+    string TargetStage,
+    IPipelineStage Stage
+);
+
+public enum PipelineStagePosition
 {
-    BeforeAnalyze,
-    AfterAnalyze,
-    BeforeBuild,
-    AfterBuild,
-    BeforeExecute,
-    AfterExecute,
-    BeforeFinalize,
-    AfterFinalize,
+    Before,
+    After,
+    Replace,
 }

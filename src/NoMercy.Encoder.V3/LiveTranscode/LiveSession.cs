@@ -7,17 +7,18 @@ public class LiveSession : ILiveSession
 {
     private readonly Channel<Segment> _segmentChannel = Channel.CreateUnbounded<Segment>();
 
-    private LiveSessionState _state = LiveSessionState.Starting;
-    private TimeSpan _playbackPosition;
+    private int _state = (int)LiveSessionState.Starting;
+    private long _playbackPositionTicks;
     private TimeSpan _transcodedPosition;
     private double _currentSpeed;
 
     public string SessionId { get; }
-    public LiveSessionState State => _state;
+    public LiveSessionState State => (LiveSessionState)Volatile.Read(ref _state);
     public LiveQuality CurrentQuality { get; private set; }
     public double CurrentSpeed => _currentSpeed;
     public TimeSpan TranscodedPosition => _transcodedPosition;
-    public TimeSpan BufferAhead => _transcodedPosition - _playbackPosition;
+    public TimeSpan BufferAhead =>
+        _transcodedPosition - new TimeSpan(Interlocked.Read(ref _playbackPositionTicks));
 
     public IAsyncEnumerable<Segment> Segments => ReadSegmentsAsync();
 
@@ -34,7 +35,7 @@ public class LiveSession : ILiveSession
         _segmentChannel.Writer.TryWrite(segment);
     }
 
-    internal void SetState(LiveSessionState state) => _state = state;
+    internal void SetState(LiveSessionState state) => Volatile.Write(ref _state, (int)state);
 
     internal void SetSpeed(double speed) => _currentSpeed = speed;
 
@@ -42,35 +43,42 @@ public class LiveSession : ILiveSession
 
     public Task SeekAsync(TimeSpan position, CancellationToken ct)
     {
-        _state = LiveSessionState.Seeking;
-        _playbackPosition = position;
+        Volatile.Write(ref _state, (int)LiveSessionState.Seeking);
+        Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
         _transcodedPosition = position;
         return Task.CompletedTask;
     }
 
     public Task ChangeQualityAsync(string qualityId, CancellationToken ct)
     {
-        _state = LiveSessionState.ChangingQuality;
+        Volatile.Write(ref _state, (int)LiveSessionState.ChangingQuality);
         return Task.CompletedTask;
     }
 
     public void Suspend()
     {
-        if (_state == LiveSessionState.Transcoding)
-            _state = LiveSessionState.Buffered;
+        Interlocked.CompareExchange(
+            ref _state,
+            (int)LiveSessionState.Buffered,
+            (int)LiveSessionState.Transcoding
+        );
     }
 
     public void Resume()
     {
-        if (_state == LiveSessionState.Buffered)
-            _state = LiveSessionState.Transcoding;
+        Interlocked.CompareExchange(
+            ref _state,
+            (int)LiveSessionState.Transcoding,
+            (int)LiveSessionState.Buffered
+        );
     }
 
-    public void ReportPlaybackPosition(TimeSpan position) => _playbackPosition = position;
+    public void ReportPlaybackPosition(TimeSpan position) =>
+        Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
 
     public ValueTask DisposeAsync()
     {
-        _state = LiveSessionState.Ended;
+        Volatile.Write(ref _state, (int)LiveSessionState.Ended);
         _segmentChannel.Writer.TryComplete();
         return ValueTask.CompletedTask;
     }

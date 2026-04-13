@@ -36,6 +36,9 @@ public class ResourceBudget : IResourceBudget
             : 0;
     }
 
+    // TODO (Phase 7): inject IResourceMonitor and return real GPU encoder utilization.
+    public double CurrentGpuEncodeUtilization(GpuDevice device) => 0.0;
+
     public int AvailableCpuThreads()
     {
         return _cpuSemaphore.CurrentCount;

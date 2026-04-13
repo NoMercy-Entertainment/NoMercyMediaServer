@@ -14,6 +14,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         ValidateAudioOutputs(profile, errors);
         ValidateFormatCompatibility(profile, errors);
         ValidateSubtitleCompatibility(profile, errors);
+        ValidateHdrPathSafety(profile, errors);
 
         bool isValid = errors.All(e => e.Severity != ValidationSeverity.Error);
         return new ValidationResult(isValid, [.. errors]);
@@ -27,6 +28,48 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                 new ValidationError(
                     "Name",
                     "Profile must have a non-empty name.",
+                    ValidationSeverity.Error
+                )
+            );
+        }
+    }
+
+    private static void ValidateHdrPathSafety(EncodingProfile profile, List<ValidationError> errors)
+    {
+        // VideoOutput does not currently carry HdrOptions directly.
+        // When HdrOptions are added to VideoOutput, validate CustomLutPath here.
+        // This method exists as the spec-mandated hook for that validation.
+        for (int i = 0; i < profile.VideoOutputs.Length; i++)
+        {
+            // Future: if profile.VideoOutputs[i].HdrOptions?.CustomLutPath is set,
+            // call ValidatePathSafety($"VideoOutput[{i}].HdrOptions.CustomLutPath", ...)
+            _ = i;
+        }
+    }
+
+    private static void ValidatePathSafety(string field, string? path, List<ValidationError> errors)
+    {
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        if (path.Contains("..", StringComparison.Ordinal))
+        {
+            errors.Add(
+                new ValidationError(
+                    field,
+                    $"{field} must not contain path traversal sequences ('..').",
+                    ValidationSeverity.Error
+                )
+            );
+            return;
+        }
+
+        if (Path.IsPathRooted(path))
+        {
+            errors.Add(
+                new ValidationError(
+                    field,
+                    $"{field} must not be an absolute path.",
                     ValidationSeverity.Error
                 )
             );

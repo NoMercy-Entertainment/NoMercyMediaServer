@@ -6,5 +6,10 @@ public record RequestQualityMessage(string? QualityId);
 
 public record ReportPositionMessage(double CurrentTimeSeconds);
 
-// Parameterless client messages (RequestPause, RequestResume, Heartbeat, EndSession)
-// are signal-only — no payload needed, no record required.
+public record RequestPauseMessage;
+
+public record RequestResumeMessage;
+
+public record HeartbeatMessage;
+
+public record EndSessionMessage;

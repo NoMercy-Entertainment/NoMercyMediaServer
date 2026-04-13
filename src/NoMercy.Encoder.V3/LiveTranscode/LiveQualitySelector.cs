@@ -4,8 +4,11 @@ using NoMercy.Encoder.V3.Analysis;
 using NoMercy.Encoder.V3.Codecs;
 using NoMercy.Encoder.V3.Hardware;
 
-public class LiveQualitySelector(CodecRegistry registry, ICodecResolver codecResolver)
-    : ILiveQualitySelector
+public class LiveQualitySelector(
+    CodecRegistry registry,
+    ICodecResolver codecResolver,
+    IHardwareCapabilities hardware
+) : ILiveQualitySelector
 {
     // Standard resolution tiers, from highest to lowest
     private static readonly (int Width, int Height)[] ResolutionTiers =
@@ -20,7 +23,7 @@ public class LiveQualitySelector(CodecRegistry registry, ICodecResolver codecRes
         MediaInfo input,
         ClientCapabilities client,
         SpeedIndex speeds,
-        IHardwareCapabilities hardware
+        IResourceBudget budget
     )
     {
         VideoStreamInfo? primaryVideo = input.VideoStreams.Count > 0 ? input.VideoStreams[0] : null;
@@ -78,10 +81,10 @@ public class LiveQualitySelector(CodecRegistry registry, ICodecResolver codecRes
         MediaInfo input,
         ClientCapabilities client,
         SpeedIndex speeds,
-        IHardwareCapabilities hardware
+        IResourceBudget budget
     )
     {
-        LiveQuality[] candidates = GetAvailableQualities(input, client, speeds, hardware);
+        LiveQuality[] candidates = GetAvailableQualities(input, client, speeds, budget);
 
         // Filter by client capabilities
         IEnumerable<LiveQuality> allowed = candidates.Where(q =>

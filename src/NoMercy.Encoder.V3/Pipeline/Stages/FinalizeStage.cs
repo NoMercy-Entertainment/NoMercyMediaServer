@@ -68,7 +68,7 @@ public class FinalizeStage(
                 if (imageCount > 0)
                 {
                     FfmpegCommand spriteCmd = thumbGen.BuildSpriteCommand(
-                        options.FfmpegPath,
+                        options.FfmpegPathOverride,
                         input.OutputDirectory,
                         input.Plan.Thumbnails,
                         imageCount
@@ -112,7 +112,9 @@ public class FinalizeStage(
                 }
             }
 
-            long totalSize = input.Results.Sum(_ => 0L);
+            long totalSize = Directory
+                .GetFiles(input.OutputDirectory, "*", SearchOption.AllDirectories)
+                .Sum(f => new FileInfo(f).Length);
 
             return new StageSuccess<FinalizeOutput>(
                 new FinalizeOutput(input.OutputDirectory, totalSize)

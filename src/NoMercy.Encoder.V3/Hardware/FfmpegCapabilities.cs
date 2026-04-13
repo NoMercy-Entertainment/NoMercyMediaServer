@@ -24,6 +24,7 @@ public partial class FfmpegCapabilities(IProcessRunner processRunner) : IFfmpegC
     public async Task ProbeAsync(CancellationToken ct = default)
     {
         _encoders = await ProbeListAsync("-encoders", EncoderPattern(), ct);
+        _decoders = await ProbeListAsync("-decoders", EncoderPattern(), ct);
         _filters = await ProbeListAsync("-filters", FilterPattern(), ct);
         _protocols = await ProbeListAsync("-protocols", ProtocolPattern(), ct);
     }

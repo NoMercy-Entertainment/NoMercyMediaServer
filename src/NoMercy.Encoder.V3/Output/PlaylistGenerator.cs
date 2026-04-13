@@ -5,6 +5,7 @@ using NoMercy.Encoder.V3.Codecs;
 using NoMercy.Encoder.V3.Pipeline;
 using NoMercy.Encoder.V3.PostProcess;
 
+// NOTE: Master playlist generation is deferred per spec. This implementation exists for future use.
 public class PlaylistGenerator
 {
     public string GenerateMasterPlaylist(OutputPlan plan)

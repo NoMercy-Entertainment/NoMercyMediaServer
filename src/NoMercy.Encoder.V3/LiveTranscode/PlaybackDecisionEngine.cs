@@ -5,6 +5,9 @@ using NoMercy.Encoder.V3.Codecs;
 
 public class PlaybackDecisionEngine : IPlaybackDecisionEngine
 {
+    public PlaybackDecision[] DecideBatch(MediaInfo[] library, ClientCapabilities client) =>
+        library.Select(m => Decide(m, client)).ToArray();
+
     public PlaybackDecision Decide(MediaInfo media, ClientCapabilities client)
     {
         // Audio-only path

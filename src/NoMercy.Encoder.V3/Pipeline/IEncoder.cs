@@ -11,6 +11,12 @@ public interface IEncoder
         IProgressObserver? progress = null,
         CancellationToken ct = default
     );
+
+    Task<PreviewResult> PreviewAsync(
+        EncodingRequest request,
+        int previewDurationSeconds = 10,
+        CancellationToken ct = default
+    );
 }
 
 public record EncodingRequest(

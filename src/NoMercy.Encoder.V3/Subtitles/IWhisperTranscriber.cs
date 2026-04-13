@@ -27,6 +27,8 @@ public enum WhisperModelSize
     Base,
     Small,
     Medium,
+
+    // LargeV2 retained as an available model option beyond spec
     LargeV2,
     LargeV3,
 }

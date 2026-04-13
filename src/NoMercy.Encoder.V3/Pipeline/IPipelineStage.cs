@@ -1,9 +1,13 @@
 namespace NoMercy.Encoder.V3.Pipeline;
 
-public interface IPipelineStage<TInput, TOutput>
+// Non-generic marker interface used by plugin hooks
+public interface IPipelineStage
 {
     string Name { get; }
+}
 
+public interface IPipelineStage<TInput, TOutput> : IPipelineStage
+{
     Task<StageResult> ExecuteAsync(
         TInput input,
         EncodingContext context,

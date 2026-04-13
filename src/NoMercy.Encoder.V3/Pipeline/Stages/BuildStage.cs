@@ -31,7 +31,10 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
 
             strategy.ConfigureOutput(builder, input.Plan.OutputPlan, input.OutputDirectory);
 
-            FfmpegCommand mainCommand = builder.Build(options.FfmpegPath, input.OutputDirectory);
+            FfmpegCommand mainCommand = builder.Build(
+                options.FfmpegPathOverride,
+                input.OutputDirectory
+            );
 
             logger.LogDebug(
                 "[{CorrelationId}] Built main command: {Args}",
@@ -46,7 +49,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             {
                 SubtitleExtractor subtitleExtractor = new();
                 FfmpegCommand[] subCommands = subtitleExtractor.BuildExtractionCommands(
-                    options.FfmpegPath,
+                    options.FfmpegPathOverride,
                     input.InputPath,
                     input.OutputDirectory,
                     context.MediaInfo.SubtitleStreams,
@@ -67,7 +70,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             string fontDir = Path.Combine(input.OutputDirectory, "fonts");
             Directory.CreateDirectory(fontDir);
             FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
-                options.FfmpegPath,
+                options.FfmpegPathOverride,
                 input.InputPath,
                 input.OutputDirectory
             );
@@ -89,7 +92,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 Directory.CreateDirectory(thumbDir);
 
                 FfmpegCommand thumbCommand = thumbGen.BuildCaptureCommand(
-                    options.FfmpegPath,
+                    options.FfmpegPathOverride,
                     input.InputPath,
                     input.OutputDirectory,
                     input.Plan.OutputPlan.Thumbnails,

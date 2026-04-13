@@ -9,13 +9,13 @@ public interface ILiveQualitySelector
         MediaInfo input,
         ClientCapabilities client,
         SpeedIndex speeds,
-        IHardwareCapabilities hardware
+        IResourceBudget budget
     );
 
     LiveQuality SelectOptimal(
         MediaInfo input,
         ClientCapabilities client,
         SpeedIndex speeds,
-        IHardwareCapabilities hardware
+        IResourceBudget budget
     );
 }

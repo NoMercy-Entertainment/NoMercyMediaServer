@@ -8,5 +8,6 @@ public record EncodingProgress(
     double? CurrentFps,
     double? CurrentSpeed,
     string? CurrentStage,
-    string? CurrentOperation
+    string? CurrentOperation,
+    int? BitrateKbps = null
 );

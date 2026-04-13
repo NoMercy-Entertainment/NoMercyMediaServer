@@ -4,7 +4,7 @@ using NoMercy.Encoder.V3.Hardware;
 
 public interface ITonemapSelector
 {
-    TonemapStrategy SelectBest(IHardwareCapabilities hardware, IFfmpegCapabilities ffmpeg);
+    TonemapStrategy SelectBest(IHardwareCapabilities hardware, IFfmpegCapabilities? ffmpeg = null);
 }
 
 public record TonemapStrategy(

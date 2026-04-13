@@ -1,11 +1,10 @@
 namespace NoMercy.Encoder.V3.Jobs;
 
-using NoMercy.Encoder.V3.Pipeline;
 using NoMercy.Encoder.V3.Progress;
 
 public interface IJobDispatcher
 {
-    Task<EncodingResult> DispatchAsync(
+    Task<RemoteEncodingResult> DispatchAsync(
         EncodingJob job,
         IProgress<EncodingProgress> progress,
         CancellationToken ct

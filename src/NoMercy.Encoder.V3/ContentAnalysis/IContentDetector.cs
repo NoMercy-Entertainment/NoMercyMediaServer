@@ -2,7 +2,9 @@ namespace NoMercy.Encoder.V3.ContentAnalysis;
 
 public interface IContentDetector
 {
-    Task<ContentSegment[]> DetectSegmentsAsync(string inputPath, CancellationToken ct);
+    Task<ContentSegment[]> DetectAsync(string inputPath, CancellationToken ct);
+
+    Task<ContentSegment[]> DetectIntroOutroAsync(string[] episodePaths, CancellationToken ct);
 }
 
 public record ContentSegment(
@@ -17,6 +19,6 @@ public enum ContentSegmentType
     Intro,
     Outro,
     Commercial,
-    Credits,
-    MainContent,
+    Recap,
+    Content,
 }

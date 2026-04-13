@@ -7,5 +7,7 @@ public record EncodingJob(
     string InputPath,
     string OutputDirectory,
     EncodingProfile Profile,
-    JobCheckpoint? Checkpoint
+    JobCheckpoint? Checkpoint,
+    DateTime CreatedAtUtc,
+    string? HmacSignature = null
 );

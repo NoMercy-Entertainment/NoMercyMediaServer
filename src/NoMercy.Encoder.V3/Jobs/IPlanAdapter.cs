@@ -7,6 +7,7 @@ public interface IPlanAdapter
 {
     ExecutionPlan AdaptForLocalHardware(
         ExecutionPlan originalPlan,
-        IHardwareCapabilities localHardware
+        IHardwareCapabilities localHardware,
+        SpeedIndex localSpeeds
     );
 }

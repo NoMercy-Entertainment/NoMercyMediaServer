@@ -2,16 +2,23 @@ namespace NoMercy.Encoder.V3.DiscRipping;
 
 using NoMercy.Encoder.V3.Profiles;
 
+public enum RipMode
+{
+    RipAndEncode,
+    RipToRaw,
+}
+
 public record RipRequest(
     string DrivePath,
     int[] SelectedTitleIndices,
     string? MetadataId,
     CustomMetadata? Custom,
-    string LibraryId,
-    string FolderId,
+    Ulid LibraryId,
+    Ulid FolderId,
     string? EncodingProfileId,
     AudioTrackSelection[] AudioTracks,
-    SubtitleSelection[] Subtitles
+    SubtitleSelection[] Subtitles,
+    RipMode Mode = RipMode.RipAndEncode
 );
 
 public record CustomMetadata(string Title, int? Year, MediaType Type, string? PosterUrl);
