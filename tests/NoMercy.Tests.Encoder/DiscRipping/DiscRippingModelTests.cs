@@ -357,13 +357,16 @@ public class DiscRippingModelTests
             new(StreamIndex: 2, Include: true, Mode: SubtitleMode.Extract),
         ];
 
+        Ulid libraryId = Ulid.Parse("01HMZXX9P3VK7BKFMTQ2AHKGWY");
+        Ulid folderId = Ulid.Parse("01HMZXX9P3VK7BKFMTQ2AHKGWZ");
+
         RipRequest request = new(
             DrivePath: "/dev/sr0",
             SelectedTitleIndices: [0, 1],
             MetadataId: "tmdb:603",
             Custom: null,
-            LibraryId: "01HMZXX9P3VK7BKFMTQ2AHKGWY",
-            FolderId: "01HMZXX9P3VK7BKFMTQ2AHKGWZ",
+            LibraryId: libraryId,
+            FolderId: folderId,
             EncodingProfileId: "hd-streaming",
             AudioTracks: audioTracks,
             Subtitles: subtitles
@@ -373,8 +376,8 @@ public class DiscRippingModelTests
         request.SelectedTitleIndices.Should().Equal([0, 1]);
         request.MetadataId.Should().Be("tmdb:603");
         request.Custom.Should().BeNull();
-        request.LibraryId.Should().Be("01HMZXX9P3VK7BKFMTQ2AHKGWY");
-        request.FolderId.Should().Be("01HMZXX9P3VK7BKFMTQ2AHKGWZ");
+        request.LibraryId.Should().Be(libraryId);
+        request.FolderId.Should().Be(folderId);
         request.EncodingProfileId.Should().Be("hd-streaming");
         request.AudioTracks.Should().HaveCount(2);
         request.Subtitles.Should().HaveCount(1);
@@ -398,8 +401,8 @@ public class DiscRippingModelTests
             SelectedTitleIndices: [0],
             MetadataId: null,
             Custom: custom,
-            LibraryId: "01HMZXX9P3VK7BKFMTQ2AHKGWY",
-            FolderId: "01HMZXX9P3VK7BKFMTQ2AHKGWZ",
+            LibraryId: Ulid.Parse("01HMZXX9P3VK7BKFMTQ2AHKGWY"),
+            FolderId: Ulid.Parse("01HMZXX9P3VK7BKFMTQ2AHKGWZ"),
             EncodingProfileId: null,
             AudioTracks: [],
             Subtitles: []

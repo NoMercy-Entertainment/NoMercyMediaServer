@@ -70,8 +70,7 @@ public class LiveEncoderTests
 
     private static SpeedIndex MakeSpeedIndex() => new(new Dictionary<SpeedKey, SpeedMeasurement>());
 
-    private static IHardwareCapabilities MakeHardware() =>
-        new HardwareCapabilities(Gpus: [], CpuCores: 8);
+    private static IResourceBudget MakeBudget() => new ResourceBudget(gpuDevices: [], cpuCores: 8);
 
     private static LiveEncodeRequest MakeRequest(string? preferredQuality = null) =>
         new(
@@ -89,7 +88,7 @@ public class LiveEncoderTests
     {
         Mock<IPlaybackDecisionEngine> decisionEngine = new();
         SpeedIndex speedIndex = MakeSpeedIndex();
-        IHardwareCapabilities hardware = MakeHardware();
+        IResourceBudget budget = MakeBudget();
         LiveQuality defaultQuality = MakeQuality();
 
         ILiveQualitySelector selector =
@@ -102,7 +101,7 @@ public class LiveEncoderTests
             selector,
             manager,
             speedIndex,
-            hardware,
+            budget,
             NullLogger<LiveEncoder>.Instance
         );
     }
@@ -116,7 +115,7 @@ public class LiveEncoderTests
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
                     It.IsAny<SpeedIndex>(),
-                    It.IsAny<IHardwareCapabilities>()
+                    It.IsAny<IResourceBudget>()
                 )
             )
             .Returns(quality);
@@ -126,7 +125,7 @@ public class LiveEncoderTests
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
                     It.IsAny<SpeedIndex>(),
-                    It.IsAny<IHardwareCapabilities>()
+                    It.IsAny<IResourceBudget>()
                 )
             )
             .Returns([quality]);
@@ -196,7 +195,7 @@ public class LiveEncoderTests
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
                     It.IsAny<SpeedIndex>(),
-                    It.IsAny<IHardwareCapabilities>()
+                    It.IsAny<IResourceBudget>()
                 )
             )
             .Returns([preferred]);
@@ -207,7 +206,7 @@ public class LiveEncoderTests
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
                     It.IsAny<SpeedIndex>(),
-                    It.IsAny<IHardwareCapabilities>()
+                    It.IsAny<IResourceBudget>()
                 )
             )
             .Returns(fallback);
@@ -233,7 +232,7 @@ public class LiveEncoderTests
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
                     It.IsAny<SpeedIndex>(),
-                    It.IsAny<IHardwareCapabilities>()
+                    It.IsAny<IResourceBudget>()
                 )
             )
             .Returns([available]);
@@ -244,7 +243,7 @@ public class LiveEncoderTests
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
                     It.IsAny<SpeedIndex>(),
-                    It.IsAny<IHardwareCapabilities>()
+                    It.IsAny<IResourceBudget>()
                 )
             )
             .Returns(optimal);

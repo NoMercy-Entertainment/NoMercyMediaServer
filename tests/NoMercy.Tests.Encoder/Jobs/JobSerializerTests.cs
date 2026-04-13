@@ -79,7 +79,7 @@ public class JobSerializerTests
     private static EncodingJob CreateTestJob()
     {
         EncodingProfile profile = new(
-            Id: "profile-1",
+            Id: Ulid.NewUlid(),
             Name: "test-profile",
             Format: OutputFormat.Hls,
             VideoOutputs:
@@ -108,7 +108,8 @@ public class JobSerializerTests
             InputPath: "/media/video.mkv",
             OutputDirectory: "/output/encoded",
             Profile: profile,
-            Checkpoint: null
+            Checkpoint: null,
+            CreatedAtUtc: DateTime.UtcNow
         );
     }
 }

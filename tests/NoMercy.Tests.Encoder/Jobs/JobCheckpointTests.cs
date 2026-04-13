@@ -68,8 +68,10 @@ public class JobCheckpointTests
     [Fact]
     public void EncodingJob_RoundTrips_ThroughJson()
     {
+        Ulid profileId = Ulid.NewUlid();
+
         EncodingProfile profile = new(
-            Id: "hls-1080p",
+            Id: profileId,
             Name: "HLS 1080p",
             Format: OutputFormat.Hls,
             VideoOutputs: [],
@@ -82,7 +84,8 @@ public class JobCheckpointTests
             InputPath: "/media/source/movie.mkv",
             OutputDirectory: "/output/hls/movie",
             Profile: profile,
-            Checkpoint: null
+            Checkpoint: null,
+            CreatedAtUtc: DateTime.UtcNow
         );
 
         string json = JsonConvert.SerializeObject(job);
@@ -92,7 +95,7 @@ public class JobCheckpointTests
         deserialized!.JobId.Should().Be("encode-xyz-789");
         deserialized.InputPath.Should().Be("/media/source/movie.mkv");
         deserialized.OutputDirectory.Should().Be("/output/hls/movie");
-        deserialized.Profile.Id.Should().Be("hls-1080p");
+        deserialized.Profile.Id.Should().Be(profileId);
         deserialized.Checkpoint.Should().BeNull();
     }
 
@@ -108,7 +111,7 @@ public class JobCheckpointTests
         );
 
         EncodingProfile profile = new(
-            Id: "hls-1080p",
+            Id: Ulid.NewUlid(),
             Name: "HLS 1080p",
             Format: OutputFormat.Hls,
             VideoOutputs: [],
@@ -121,7 +124,8 @@ public class JobCheckpointTests
             InputPath: "/media/source/movie.mkv",
             OutputDirectory: "/output/hls/movie",
             Profile: profile,
-            Checkpoint: checkpoint
+            Checkpoint: checkpoint,
+            CreatedAtUtc: DateTime.UtcNow
         );
 
         string json = JsonConvert.SerializeObject(job);

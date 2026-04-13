@@ -116,7 +116,7 @@ public class PlanStageTests
 
     private static EncodingProfile BuildSimpleProfile() =>
         new(
-            Id: "test-id",
+            Id: Ulid.NewUlid(),
             Name: "Test",
             Format: OutputFormat.Hls,
             VideoOutputs:
@@ -229,7 +229,7 @@ public class PlanStageTests
     {
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = new(
-            Id: "multi",
+            Id: Ulid.NewUlid(),
             Name: "Multi",
             Format: OutputFormat.Hls,
             VideoOutputs:

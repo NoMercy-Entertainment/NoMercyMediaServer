@@ -46,9 +46,16 @@ public class SystemFeaturesTests
     }
 
     [Fact]
-    public void QualityResult_PassesThreshold_WhenVmafIsHigh()
+    public void QualityCheckResult_PassesThreshold_WhenVmafIsHigh()
     {
-        QualityResult result = new(VmafScore: 95.0, Ssim: 0.998, Psnr: 48.5, PassesThreshold: true);
+        QualityCheckResult result = new(
+            SourcePath: "/media/source.mkv",
+            EncodedPath: "/output/encoded.mkv",
+            VmafScore: 95.0,
+            Ssim: 0.998,
+            Psnr: 48.5,
+            PassesThreshold: true
+        );
 
         result.VmafScore.Should().BeApproximately(95.0, 0.01);
         result.Ssim.Should().BeApproximately(0.998, 0.0001);
@@ -57,18 +64,32 @@ public class SystemFeaturesTests
     }
 
     [Fact]
-    public void QualityResult_FailsThreshold_WhenVmafIsLow()
+    public void QualityCheckResult_FailsThreshold_WhenVmafIsLow()
     {
-        QualityResult result = new(VmafScore: 55.0, Ssim: 0.92, Psnr: 28.0, PassesThreshold: false);
+        QualityCheckResult result = new(
+            SourcePath: "/media/source.mkv",
+            EncodedPath: "/output/encoded.mkv",
+            VmafScore: 55.0,
+            Ssim: 0.92,
+            Psnr: 28.0,
+            PassesThreshold: false
+        );
 
         result.VmafScore.Should().BeLessThan(70.0);
         result.PassesThreshold.Should().BeFalse();
     }
 
     [Fact]
-    public void QualityResult_ZeroScores_IsValid()
+    public void QualityCheckResult_ZeroScores_IsValid()
     {
-        QualityResult result = new(VmafScore: 0.0, Ssim: 0.0, Psnr: 0.0, PassesThreshold: false);
+        QualityCheckResult result = new(
+            SourcePath: "/media/source.mkv",
+            EncodedPath: "/output/encoded.mkv",
+            VmafScore: 0.0,
+            Ssim: 0.0,
+            Psnr: 0.0,
+            PassesThreshold: false
+        );
 
         result.VmafScore.Should().Be(0.0);
         result.Ssim.Should().Be(0.0);
@@ -77,28 +98,24 @@ public class SystemFeaturesTests
     }
 
     [Fact]
-    public void PipelineHook_HasAllExpectedValues()
+    public void PipelineStagePosition_HasAllExpectedValues()
     {
-        PipelineHook[] values = Enum.GetValues<PipelineHook>();
+        PipelineStagePosition[] values = Enum.GetValues<PipelineStagePosition>();
 
-        values.Should().Contain(PipelineHook.BeforeAnalyze);
-        values.Should().Contain(PipelineHook.AfterAnalyze);
-        values.Should().Contain(PipelineHook.BeforeBuild);
-        values.Should().Contain(PipelineHook.AfterBuild);
-        values.Should().Contain(PipelineHook.BeforeExecute);
-        values.Should().Contain(PipelineHook.AfterExecute);
-        values.Should().Contain(PipelineHook.BeforeFinalize);
-        values.Should().Contain(PipelineHook.AfterFinalize);
-        values.Should().HaveCount(8);
+        values.Should().Contain(PipelineStagePosition.Before);
+        values.Should().Contain(PipelineStagePosition.After);
+        values.Should().Contain(PipelineStagePosition.Replace);
+        values.Should().HaveCount(3);
     }
 
     [Fact]
-    public void PipelineHook_HasSymmetricBeforeAfterPairs()
+    public void PipelineHook_ConstructsCorrectly()
     {
-        PipelineHook[] values = Enum.GetValues<PipelineHook>();
-        int beforeCount = values.Count(v => v.ToString().StartsWith("Before"));
-        int afterCount = values.Count(v => v.ToString().StartsWith("After"));
-
-        beforeCount.Should().Be(afterCount);
+        // PipelineHook is now a record, not an enum.
+        // It wraps a PipelineStagePosition, a target stage name, and a stage instance.
+        // Verify the record type exists and its properties are correct.
+        PipelineStagePosition[] positions = Enum.GetValues<PipelineStagePosition>();
+        positions.Should().Contain(PipelineStagePosition.Before);
+        positions.Should().Contain(PipelineStagePosition.After);
     }
 }

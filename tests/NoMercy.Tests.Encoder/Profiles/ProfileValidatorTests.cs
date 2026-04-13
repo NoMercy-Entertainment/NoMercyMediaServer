@@ -45,7 +45,7 @@ public class ProfileValidatorTests
         );
 
         return new EncodingProfile(
-            Id: "test-id",
+            Id: Ulid.NewUlid(),
             Name: name,
             Format: format,
             VideoOutputs: videoOutputs ?? [defaultVideo],

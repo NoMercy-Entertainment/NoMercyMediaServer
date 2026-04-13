@@ -7,9 +7,37 @@ using NoMercy.Encoder.LiveTranscode;
 
 public class LiveQualitySelectorTests
 {
-    private readonly LiveQualitySelector _selector = new(
+    private static IHardwareCapabilities MakeGpuHardware() =>
+        new HardwareCapabilities(
+            Gpus:
+            [
+                new GpuDevice(
+                    Vendor: GpuVendor.Nvidia,
+                    Name: "RTX 4090",
+                    VramMb: 24576,
+                    MaxEncoderSessions: 12,
+                    SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
+                ),
+            ],
+            CpuCores: 16
+        );
+
+    private static IHardwareCapabilities MakeSoftwareHardware() =>
+        new HardwareCapabilities(Gpus: [], CpuCores: 8);
+
+    private static IResourceBudget MakeBudget(IHardwareCapabilities hardware) =>
+        new ResourceBudget(hardware.Gpus, hardware.CpuCores);
+
+    private readonly LiveQualitySelector _gpuSelector = new(
         new CodecRegistry(),
-        new CodecResolver(new CodecRegistry())
+        new CodecResolver(new CodecRegistry()),
+        MakeGpuHardware()
+    );
+
+    private readonly LiveQualitySelector _softwareSelector = new(
+        new CodecRegistry(),
+        new CodecResolver(new CodecRegistry()),
+        MakeSoftwareHardware()
     );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -57,24 +85,6 @@ public class LiveQualitySelectorTests
             MaxBitrateKbps: 0
         );
 
-    private static IHardwareCapabilities MakeGpuHardware() =>
-        new HardwareCapabilities(
-            Gpus:
-            [
-                new GpuDevice(
-                    Vendor: GpuVendor.Nvidia,
-                    Name: "RTX 4090",
-                    VramMb: 24576,
-                    MaxEncoderSessions: 12,
-                    SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
-                ),
-            ],
-            CpuCores: 16
-        );
-
-    private static IHardwareCapabilities MakeSoftwareHardware() =>
-        new HardwareCapabilities(Gpus: [], CpuCores: 8);
-
     private static SpeedIndex MakeFastGpuSpeedIndex() =>
         new(
             new Dictionary<SpeedKey, SpeedMeasurement>
@@ -113,12 +123,13 @@ public class LiveQualitySelectorTests
     [Fact]
     public void FourK_Input_FastGpu_ProducesQualities_IncludingFourK()
     {
+        IHardwareCapabilities hardware = MakeGpuHardware();
         MediaInfo media = MakeMedia(3840, 2160);
         ClientCapabilities client = MakeClient();
         SpeedIndex speeds = MakeFastGpuSpeedIndex();
-        IHardwareCapabilities hardware = MakeGpuHardware();
+        IResourceBudget budget = MakeBudget(hardware);
 
-        LiveQuality[] qualities = _selector.GetAvailableQualities(media, client, speeds, hardware);
+        LiveQuality[] qualities = _gpuSelector.GetAvailableQualities(media, client, speeds, budget);
 
         qualities.Should().NotBeEmpty();
         qualities.Should().Contain(q => q.Width == 3840 && q.Height == 2160);
@@ -127,12 +138,13 @@ public class LiveQualitySelectorTests
     [Fact]
     public void FourK_Input_SkipsResolutionsLargerThanSource()
     {
+        IHardwareCapabilities hardware = MakeGpuHardware();
         MediaInfo media = MakeMedia(1280, 720);
         ClientCapabilities client = MakeClient();
         SpeedIndex speeds = MakeFastGpuSpeedIndex();
-        IHardwareCapabilities hardware = MakeGpuHardware();
+        IResourceBudget budget = MakeBudget(hardware);
 
-        LiveQuality[] qualities = _selector.GetAvailableQualities(media, client, speeds, hardware);
+        LiveQuality[] qualities = _gpuSelector.GetAvailableQualities(media, client, speeds, budget);
 
         qualities.Should().NotContain(q => q.Width > 1280);
     }
@@ -140,12 +152,13 @@ public class LiveQualitySelectorTests
     [Fact]
     public void NoSpeedData_AllMarkedCanRealtimeFalse()
     {
+        IHardwareCapabilities hardware = MakeGpuHardware();
         MediaInfo media = MakeMedia(1920, 1080);
         ClientCapabilities client = MakeClient();
         SpeedIndex speeds = MakeEmptySpeedIndex();
-        IHardwareCapabilities hardware = MakeGpuHardware();
+        IResourceBudget budget = MakeBudget(hardware);
 
-        LiveQuality[] qualities = _selector.GetAvailableQualities(media, client, speeds, hardware);
+        LiveQuality[] qualities = _gpuSelector.GetAvailableQualities(media, client, speeds, budget);
 
         qualities.Should().NotBeEmpty();
         qualities.Should().OnlyContain(q => q.CanRealtime == false);
@@ -154,12 +167,13 @@ public class LiveQualitySelectorTests
     [Fact]
     public void FastGpu_HighSpeedMultiplier_MarksCanRealtimeTrue()
     {
+        IHardwareCapabilities hardware = MakeGpuHardware();
         MediaInfo media = MakeMedia(1920, 1080);
         ClientCapabilities client = MakeClient();
         SpeedIndex speeds = MakeFastGpuSpeedIndex();
-        IHardwareCapabilities hardware = MakeGpuHardware();
+        IResourceBudget budget = MakeBudget(hardware);
 
-        LiveQuality[] qualities = _selector.GetAvailableQualities(media, client, speeds, hardware);
+        LiveQuality[] qualities = _gpuSelector.GetAvailableQualities(media, client, speeds, budget);
 
         qualities.Should().Contain(q => q.CanRealtime);
     }
@@ -167,12 +181,18 @@ public class LiveQualitySelectorTests
     [Fact]
     public void SoftwareOnly_IsHardwareAcceleratedFalse()
     {
+        IHardwareCapabilities hardware = MakeSoftwareHardware();
         MediaInfo media = MakeMedia(1920, 1080);
         ClientCapabilities client = MakeClient();
         SpeedIndex speeds = MakeEmptySpeedIndex();
-        IHardwareCapabilities hardware = MakeSoftwareHardware();
+        IResourceBudget budget = MakeBudget(hardware);
 
-        LiveQuality[] qualities = _selector.GetAvailableQualities(media, client, speeds, hardware);
+        LiveQuality[] qualities = _softwareSelector.GetAvailableQualities(
+            media,
+            client,
+            speeds,
+            budget
+        );
 
         qualities.Should().NotBeEmpty();
         qualities.Should().OnlyContain(q => q.IsHardwareAccelerated == false);
@@ -185,12 +205,13 @@ public class LiveQualitySelectorTests
     [Fact]
     public void FourK_FastGpu_SelectsHighestCanRealtime()
     {
+        IHardwareCapabilities hardware = MakeGpuHardware();
         MediaInfo media = MakeMedia(3840, 2160);
         ClientCapabilities client = MakeClient();
         SpeedIndex speeds = MakeFastGpuSpeedIndex();
-        IHardwareCapabilities hardware = MakeGpuHardware();
+        IResourceBudget budget = MakeBudget(hardware);
 
-        LiveQuality optimal = _selector.SelectOptimal(media, client, speeds, hardware);
+        LiveQuality optimal = _gpuSelector.SelectOptimal(media, client, speeds, budget);
 
         optimal.CanRealtime.Should().BeTrue();
         optimal.Width.Should().Be(3840);
@@ -199,12 +220,13 @@ public class LiveQualitySelectorTests
     [Fact]
     public void NoSpeedData_FallsBackToLowestQuality()
     {
+        IHardwareCapabilities hardware = MakeGpuHardware();
         MediaInfo media = MakeMedia(1920, 1080);
         ClientCapabilities client = MakeClient();
         SpeedIndex speeds = MakeEmptySpeedIndex();
-        IHardwareCapabilities hardware = MakeGpuHardware();
+        IResourceBudget budget = MakeBudget(hardware);
 
-        LiveQuality optimal = _selector.SelectOptimal(media, client, speeds, hardware);
+        LiveQuality optimal = _gpuSelector.SelectOptimal(media, client, speeds, budget);
 
         // No CanRealtime candidates → falls back to lowest resolution tier
         optimal.Should().NotBeNull();
@@ -214,12 +236,13 @@ public class LiveQualitySelectorTests
     [Fact]
     public void Client_Max720p_CapsOutputAt720p()
     {
+        IHardwareCapabilities hardware = MakeGpuHardware();
         MediaInfo media = MakeMedia(1920, 1080);
         ClientCapabilities client = MakeClient(maxWidth: 1280, maxHeight: 720);
         SpeedIndex speeds = MakeFastGpuSpeedIndex();
-        IHardwareCapabilities hardware = MakeGpuHardware();
+        IResourceBudget budget = MakeBudget(hardware);
 
-        LiveQuality optimal = _selector.SelectOptimal(media, client, speeds, hardware);
+        LiveQuality optimal = _gpuSelector.SelectOptimal(media, client, speeds, budget);
 
         optimal.Width.Should().BeLessThanOrEqualTo(1280);
         optimal.Height.Should().BeLessThanOrEqualTo(720);
@@ -228,12 +251,13 @@ public class LiveQualitySelectorTests
     [Fact]
     public void SoftwareOnly_MarkedNotHardwareAccelerated()
     {
+        IHardwareCapabilities hardware = MakeSoftwareHardware();
         MediaInfo media = MakeMedia(1280, 720);
         ClientCapabilities client = MakeClient();
         SpeedIndex speeds = MakeEmptySpeedIndex();
-        IHardwareCapabilities hardware = MakeSoftwareHardware();
+        IResourceBudget budget = MakeBudget(hardware);
 
-        LiveQuality optimal = _selector.SelectOptimal(media, client, speeds, hardware);
+        LiveQuality optimal = _softwareSelector.SelectOptimal(media, client, speeds, budget);
 
         optimal.IsHardwareAccelerated.Should().BeFalse();
     }

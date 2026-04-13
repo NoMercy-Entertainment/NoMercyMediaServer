@@ -33,7 +33,11 @@ public class EncoderTests
         SetupDefaultHardware();
         SetupDefaultCodecResolver();
 
-        EncoderOptions options = new("ffmpeg", "ffprobe");
+        EncoderOptions options = new()
+        {
+            FfmpegPathOverride = "ffmpeg",
+            FfprobePathOverride = "ffprobe",
+        };
 
         AnalyzeStage analyzeStage = new(
             _analyzer.Object,
@@ -158,7 +162,7 @@ public class EncoderTests
 
     private static EncodingProfile BuildProfile() =>
         new(
-            Id: "test-id",
+            Id: Ulid.NewUlid(),
             Name: "Test",
             Format: OutputFormat.Hls,
             VideoOutputs:
@@ -397,7 +401,10 @@ public class EncoderTests
 
         await _encoder.EncodeAsync(request, progressMock.Object);
 
-        progressMock.Verify(p => p.OnCompleted(It.IsAny<string>()), Times.Once);
+        progressMock.Verify(
+            p => p.OnStageCompleted(It.IsAny<string>(), It.IsAny<TimeSpan>()),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -414,6 +421,6 @@ public class EncoderTests
 
         await _encoder.EncodeAsync(request, progressMock.Object);
 
-        progressMock.Verify(p => p.OnError(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        progressMock.Verify(p => p.OnError(It.IsAny<EncodingError>()), Times.Once);
     }
 }

@@ -12,8 +12,8 @@ public class ContentAnalysisTests
         values.Should().Contain(ContentSegmentType.Intro);
         values.Should().Contain(ContentSegmentType.Outro);
         values.Should().Contain(ContentSegmentType.Commercial);
-        values.Should().Contain(ContentSegmentType.Credits);
-        values.Should().Contain(ContentSegmentType.MainContent);
+        values.Should().Contain(ContentSegmentType.Recap);
+        values.Should().Contain(ContentSegmentType.Content);
         values.Should().HaveCount(5);
     }
 
@@ -37,30 +37,30 @@ public class ContentAnalysisTests
     }
 
     [Fact]
-    public void ContentSegment_MainContent_HasHighConfidence()
+    public void ContentSegment_Content_HasHighConfidence()
     {
         ContentSegment segment = new(
             Start: TimeSpan.FromSeconds(90),
             End: TimeSpan.FromSeconds(3600),
-            Type: ContentSegmentType.MainContent,
+            Type: ContentSegmentType.Content,
             Confidence: 0.99
         );
 
-        segment.Type.Should().Be(ContentSegmentType.MainContent);
+        segment.Type.Should().Be(ContentSegmentType.Content);
         segment.Confidence.Should().BeGreaterThan(0.9);
     }
 
     [Fact]
-    public void ContentSegment_Credits_AtEndOfFile()
+    public void ContentSegment_Recap_AtEndOfFile()
     {
         ContentSegment segment = new(
             Start: TimeSpan.FromSeconds(3500),
             End: TimeSpan.FromSeconds(3700),
-            Type: ContentSegmentType.Credits,
+            Type: ContentSegmentType.Recap,
             Confidence: 0.88
         );
 
-        segment.Type.Should().Be(ContentSegmentType.Credits);
+        segment.Type.Should().Be(ContentSegmentType.Recap);
         segment.End.Should().BeGreaterThan(segment.Start);
     }
 

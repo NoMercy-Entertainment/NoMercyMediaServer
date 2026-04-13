@@ -21,9 +21,11 @@ public class ServiceRegistrationTests
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.AddNoMercyEncoder(
-            new EncoderOptions(FfmpegPath: "ffmpeg", FfprobePath: "ffprobe")
-        );
+        services.AddNoMercyEncoder(opts =>
+        {
+            opts.FfmpegPathOverride = "ffmpeg";
+            opts.FfprobePathOverride = "ffprobe";
+        });
         return services.BuildServiceProvider();
     }
 
@@ -63,15 +65,15 @@ public class ServiceRegistrationTests
     {
         ServiceCollection services = new();
         services.AddLogging();
-        EncoderOptions options = new(
-            FfmpegPath: "/usr/bin/ffmpeg",
-            FfprobePath: "/usr/bin/ffprobe"
-        );
-        services.AddNoMercyEncoder(options);
+        services.AddNoMercyEncoder(opts =>
+        {
+            opts.FfmpegPathOverride = "/usr/bin/ffmpeg";
+            opts.FfprobePathOverride = "/usr/bin/ffprobe";
+        });
         ServiceProvider provider = services.BuildServiceProvider();
         EncoderOptions resolved = provider.GetRequiredService<EncoderOptions>();
-        resolved.FfmpegPath.Should().Be("/usr/bin/ffmpeg");
-        resolved.FfprobePath.Should().Be("/usr/bin/ffprobe");
+        resolved.FfmpegPathOverride.Should().Be("/usr/bin/ffmpeg");
+        resolved.FfprobePathOverride.Should().Be("/usr/bin/ffprobe");
     }
 
     [Fact]

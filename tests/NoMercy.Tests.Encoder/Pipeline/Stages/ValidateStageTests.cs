@@ -51,7 +51,7 @@ public class ValidateStageTests
 
     private static EncodingProfile BuildProfile() =>
         new(
-            Id: "test-id",
+            Id: Ulid.NewUlid(),
             Name: "Test",
             Format: OutputFormat.Hls,
             VideoOutputs:

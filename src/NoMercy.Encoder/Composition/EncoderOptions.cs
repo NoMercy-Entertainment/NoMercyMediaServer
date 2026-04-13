@@ -1,13 +1,13 @@
 namespace NoMercy.Encoder.Composition;
 
-public record EncoderOptions
+public class EncoderOptions
 {
-    public string? FfmpegPathOverride { get; init; }
-    public string? FfprobePathOverride { get; init; }
-    public int DefaultSegmentDurationSeconds { get; init; } = 4;
-    public int MaxBufferAheadSeconds { get; init; } = 30;
-    public int MinBufferAheadSeconds { get; init; } = 15;
-    public int ProgressThrottleMs { get; init; } = 500;
-    public string? SpeedIndexCachePath { get; init; }
-    public bool AutoCalibrate { get; init; } = true;
+    public string? FfmpegPathOverride { get; set; }
+    public string? FfprobePathOverride { get; set; }
+    public int DefaultSegmentDurationSeconds { get; set; } = 4;
+    public int MaxBufferAheadSeconds { get; set; } = 30;
+    public int MinBufferAheadSeconds { get; set; } = 15;
+    public int ProgressThrottleMs { get; set; } = 500;
+    public string? SpeedIndexCachePath { get; set; }
+    public bool AutoCalibrate { get; set; } = true;
 }

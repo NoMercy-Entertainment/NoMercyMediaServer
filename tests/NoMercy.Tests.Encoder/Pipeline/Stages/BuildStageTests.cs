@@ -16,7 +16,11 @@ public class BuildStageTests
 
     public BuildStageTests()
     {
-        EncoderOptions options = new("ffmpeg", "ffprobe");
+        EncoderOptions options = new()
+        {
+            FfmpegPathOverride = "ffmpeg",
+            FfprobePathOverride = "ffprobe",
+        };
         _stage = new BuildStage(options, NullLogger<BuildStage>.Instance);
     }
 

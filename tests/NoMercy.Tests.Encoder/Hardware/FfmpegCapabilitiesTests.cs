@@ -22,6 +22,7 @@ public class FfmpegCapabilitiesTests
              A..... libopus              libopus Opus (codec opus)
             """;
         SetupResponse("-encoders", encoderOutput);
+        SetupResponse("-decoders", "");
         SetupResponse("-filters", "");
         SetupResponse("-protocols", "");
 
@@ -39,6 +40,7 @@ public class FfmpegCapabilitiesTests
     public async Task ProbeFilters_ParsesCorrectly()
     {
         SetupResponse("-encoders", "");
+        SetupResponse("-decoders", "");
         SetupResponse("-protocols", "");
         string filterOutput = """
             Filters:
@@ -66,6 +68,7 @@ public class FfmpegCapabilitiesTests
              V..... libx264              libx264 H.264
             """;
         SetupResponse("-encoders", encoderOutput);
+        SetupResponse("-decoders", "");
         SetupResponse("-filters", "");
         SetupResponse("-protocols", "");
 
@@ -79,7 +82,12 @@ public class FfmpegCapabilitiesTests
     {
         _processRunner
             .Setup(r =>
-                r.RunAsync("ffmpeg", new[] { flag }, (string?)null, It.IsAny<CancellationToken>())
+                r.RunAsync(
+                    "ffmpeg",
+                    It.Is<string[]>(args => args.Length == 1 && args[0] == flag),
+                    (string?)null,
+                    It.IsAny<CancellationToken>()
+                )
             )
             .ReturnsAsync(new ProcessResult(0, output, "", TimeSpan.Zero));
     }

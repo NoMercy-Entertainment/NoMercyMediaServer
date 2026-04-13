@@ -38,8 +38,10 @@ public class EncodingProfileTests
 
         ThumbnailOutput thumbnail = new ThumbnailOutput(Width: 320, IntervalSeconds: 10);
 
+        Ulid profileId = Ulid.NewUlid();
+
         EncodingProfile profile = new EncodingProfile(
-            Id: "test-profile-1",
+            Id: profileId,
             Name: "Test Profile",
             Format: OutputFormat.Hls,
             VideoOutputs: [video],
@@ -48,7 +50,7 @@ public class EncodingProfileTests
             Thumbnails: thumbnail
         );
 
-        profile.Id.Should().Be("test-profile-1");
+        profile.Id.Should().Be(profileId);
         profile.Name.Should().Be("Test Profile");
         profile.Format.Should().Be(OutputFormat.Hls);
         profile.VideoOutputs.Should().HaveCount(1);
@@ -90,7 +92,7 @@ public class EncodingProfileTests
         );
 
         EncodingProfile profile = new EncodingProfile(
-            Id: "audio-only",
+            Id: Ulid.NewUlid(),
             Name: "Audio Only",
             Format: OutputFormat.Mkv,
             VideoOutputs: [],
@@ -149,7 +151,7 @@ public class EncodingProfileTests
         );
 
         EncodingProfile profile = new EncodingProfile(
-            Id: "multi-res",
+            Id: Ulid.NewUlid(),
             Name: "Multi-Resolution HLS",
             Format: OutputFormat.Hls,
             VideoOutputs: [output1080p, output720p, output480p],
@@ -170,7 +172,7 @@ public class EncodingProfileTests
     public void EncodingProfile_ThumbnailOutput_IsOptional_DefaultsToNull()
     {
         EncodingProfile profile = new EncodingProfile(
-            Id: "no-thumbs",
+            Id: Ulid.NewUlid(),
             Name: "No Thumbnails",
             Format: OutputFormat.Mp4,
             VideoOutputs: [],
@@ -209,7 +211,7 @@ public class EncodingProfileTests
         );
 
         EncodingProfile profile = new EncodingProfile(
-            Id: "multi-lang",
+            Id: Ulid.NewUlid(),
             Name: "Multi-Language",
             Format: OutputFormat.Hls,
             VideoOutputs: [],

@@ -102,7 +102,7 @@ public class ExecutionGraphBuilderTests
 
     private static EncodingProfile SingleOutputProfile =>
         new(
-            Id: "test",
+            Id: Ulid.NewUlid(),
             Name: "Test",
             Format: OutputFormat.Hls,
             VideoOutputs: [SingleOutput1080pH264],
@@ -235,7 +235,7 @@ public class ExecutionGraphBuilderTests
         );
 
         EncodingProfile profile = new(
-            Id: "hdr-multi",
+            Id: Ulid.NewUlid(),
             Name: "HDR Multi",
             Format: OutputFormat.Hls,
             VideoOutputs: [output1080p, output720p, output480p],
@@ -280,7 +280,7 @@ public class ExecutionGraphBuilderTests
     {
         MediaInfo media = MakeMedia(video: [], audio: [DefaultAudio]);
         EncodingProfile profile = new(
-            Id: "audio-only",
+            Id: Ulid.NewUlid(),
             Name: "Audio Only",
             Format: OutputFormat.Hls,
             VideoOutputs: [],
@@ -306,7 +306,7 @@ public class ExecutionGraphBuilderTests
             AllowedLanguages: []
         );
         EncodingProfile profile = new(
-            Id: "subs",
+            Id: Ulid.NewUlid(),
             Name: "Subs",
             Format: OutputFormat.Hls,
             VideoOutputs: [SingleOutput1080pH264],
@@ -335,7 +335,7 @@ public class ExecutionGraphBuilderTests
         MediaInfo media = MakeMedia(video: [Sdr1080p]);
         ThumbnailOutput thumbnails = new(Width: 320, IntervalSeconds: 10);
         EncodingProfile profile = new(
-            Id: "thumbs",
+            Id: Ulid.NewUlid(),
             Name: "With Thumbs",
             Format: OutputFormat.Hls,
             VideoOutputs: [SingleOutput1080pH264],
@@ -394,7 +394,7 @@ public class ExecutionGraphBuilderTests
         );
         SubtitleOutput subOutput = new(SubtitleCodecType.WebVtt, SubtitleMode.Extract, []);
         EncodingProfile profile = new(
-            Id: "full",
+            Id: Ulid.NewUlid(),
             Name: "Full",
             Format: OutputFormat.Hls,
             VideoOutputs: [SingleOutput1080pH264],
@@ -434,7 +434,7 @@ public class ExecutionGraphBuilderTests
         };
         MediaInfo media = MakeMedia(video: [source4k]);
         EncodingProfile profile = new(
-            Id: "scale-down",
+            Id: Ulid.NewUlid(),
             Name: "Scale Down",
             Format: OutputFormat.Hls,
             VideoOutputs: [output1080p],
