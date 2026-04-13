@@ -9,6 +9,8 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Pipeline;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -950,6 +952,9 @@ public static class Program
         builder.Services.AddSingleton(options);
 
         WebApplication app = builder.Build();
+
+        // Wire static EncoderProvider so queue jobs can resolve IEncoder without DI
+        EncoderProvider.Configure(() => app.Services.GetRequiredService<IEncoder>());
 
         // Configure middleware from Startup.Configure
         IApiVersionDescriptionProvider provider =

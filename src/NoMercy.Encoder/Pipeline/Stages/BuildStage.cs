@@ -26,6 +26,14 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
         try
         {
             IOutputStrategy strategy = GetStrategy(input.Plan.OutputPlan.Format);
+
+            // Ensure output subdirectories exist before FFmpeg runs
+            Directory.CreateDirectory(input.OutputDirectory);
+            foreach (string subDir in strategy.GetOutputSubdirectories(input.Plan.OutputPlan))
+            {
+                Directory.CreateDirectory(Path.Combine(input.OutputDirectory, subDir));
+            }
+
             FfmpegCommandBuilder builder = new();
             builder.AddInput(new InputOptions(input.InputPath));
 

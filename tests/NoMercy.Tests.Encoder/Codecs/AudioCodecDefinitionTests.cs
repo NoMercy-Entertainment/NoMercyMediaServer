@@ -9,7 +9,7 @@ public class AudioCodecDefinitionTests
     public void Aac_HasCorrectEncoder()
     {
         AudioEncoderInfo aac = AudioCodecDefinitions.GetEncoder(AudioCodecType.Aac);
-        aac.FfmpegName.Should().Be("libfdk_aac");
+        aac.FfmpegName.Should().Be("aac");
         aac.Channels.Should().Contain(2);
         aac.Channels.Should().Contain(6);
     }

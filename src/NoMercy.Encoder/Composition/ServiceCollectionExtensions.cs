@@ -35,7 +35,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICodecResolver, CodecResolver>();
 
         // Hardware
-        services.AddSingleton<IHardwareDetector, NullHardwareDetector>();
+        services.AddSingleton<IHardwareDetector, PlatformHardwareDetector>();
         services.AddSingleton<FfmpegCapabilities>();
         services.AddSingleton<IFfmpegCapabilities>(sp =>
             sp.GetRequiredService<FfmpegCapabilities>()

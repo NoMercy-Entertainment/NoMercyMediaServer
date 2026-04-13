@@ -1,10 +1,14 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Files;
@@ -64,12 +68,44 @@ public class VideoEncodeJob : AbstractEncoderJob
                     );
                 }
 
-                // TODO(encoder-v3): Deserialize V3 EncodingProfile from dbProfile.Param
-                // TODO(encoder-v3): Resolve IEncoder from DI
-                // TODO(encoder-v3): Call encoder.EncodeAsync() with EventBusProgressObserver
-                // For now, log that V3 encoding would happen here
+                if (string.IsNullOrWhiteSpace(dbProfile.Param))
+                {
+                    Logger.Encoder(
+                        $"Skipping profile {dbProfile.Name}: no V3 encoding profile configured"
+                    );
+                    continue;
+                }
+
+                EncodingProfile encodingProfile =
+                    JsonConvert.DeserializeObject<EncodingProfile>(dbProfile.Param)
+                    ?? throw new InvalidOperationException(
+                        $"Failed to deserialize EncodingProfile from profile {dbProfile.Name}"
+                    );
+
+                IEncoder encoder = EncoderProvider.Resolve();
+
+                EncodingRequest request = new(
+                    InputPath: InputFile,
+                    OutputDirectory: fileMetadata.Path,
+                    Profile: encodingProfile
+                );
+
+                EventBusProgressObserver progressObserver = new(
+                    fileMetadata.Id,
+                    fileMetadata.Title
+                );
+
+                EncodingResult result = await encoder.EncodeAsync(request, progressObserver);
+
+                if (!result.Success)
+                {
+                    throw new InvalidOperationException(
+                        $"Encoding failed for {InputFile}: {result.Error?.Message ?? "unknown error"}"
+                    );
+                }
+
                 Logger.Encoder(
-                    $"V3 encoder: would encode {InputFile} → {fileMetadata.Path} with profile {dbProfile.Name}"
+                    $"Encoded {InputFile} → {result.OutputPath} in {result.Duration.TotalSeconds:F1}s ({result.Metrics.EncoderUsed})"
                 );
 
                 fileManager.FilterFiles(fileMetadata.FileName);

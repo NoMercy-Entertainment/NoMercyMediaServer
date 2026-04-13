@@ -1,8 +1,12 @@
 using System.Diagnostics;
+using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
+using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Artists;
@@ -68,12 +72,44 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                     );
                 }
 
-                // TODO(encoder-v3): Deserialize V3 EncodingProfile from profile.Param
-                // TODO(encoder-v3): Resolve IEncoder from DI
-                // TODO(encoder-v3): Call encoder.EncodeAsync() with EventBusProgressObserver
-                // For now, log that V3 encoding would happen here
+                if (string.IsNullOrWhiteSpace(profile.Param))
+                {
+                    Logger.Encoder(
+                        $"Skipping profile {profile.Name}: no V3 encoding profile configured"
+                    );
+                    continue;
+                }
+
+                EncodingProfile encodingProfile =
+                    JsonConvert.DeserializeObject<EncodingProfile>(profile.Param)
+                    ?? throw new InvalidOperationException(
+                        $"Failed to deserialize EncodingProfile from profile {profile.Name}"
+                    );
+
+                IEncoder encoder = EncoderProvider.Resolve();
+
+                EncodingRequest request = new(
+                    InputPath: MediaFile.Path,
+                    OutputDirectory: FolderMetaData.BasePath,
+                    Profile: encodingProfile
+                );
+
+                EventBusProgressObserver progressObserver = new(
+                    track.Id.GetHashCode(),
+                    FoundTrack.Title
+                );
+
+                EncodingResult encodeResult = await encoder.EncodeAsync(request, progressObserver);
+
+                if (!encodeResult.Success)
+                {
+                    throw new InvalidOperationException(
+                        $"Encoding failed for {MediaFile.Path}: {encodeResult.Error?.Message ?? "unknown error"}"
+                    );
+                }
+
                 Logger.Encoder(
-                    $"V3 encoder: would encode {MediaFile.Path} → {FolderMetaData.BasePath} with profile {profile.Name}"
+                    $"Encoded {MediaFile.Path} → {encodeResult.OutputPath} in {encodeResult.Duration.TotalSeconds:F1}s ({encodeResult.Metrics.EncoderUsed})"
                 );
 
                 await AddRecording(folder);
