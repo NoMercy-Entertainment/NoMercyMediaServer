@@ -1,3 +1,5 @@
+#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
+#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
@@ -10,9 +12,10 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Encoder;
-using NoMercy.Encoder.Dto;
-using NoMercy.Encoder.Format.Rules;
+// TODO(encoder-v3): restore when V3 types are wired up (Tasks 4-7)
+// using NoMercy.Encoder;
+// using NoMercy.Encoder.Dto;
+// using NoMercy.Encoder.Format.Rules;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.NmSystem;

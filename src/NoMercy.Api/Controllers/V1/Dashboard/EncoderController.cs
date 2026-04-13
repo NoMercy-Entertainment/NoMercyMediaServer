@@ -1,3 +1,5 @@
+#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Task 3)
+#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Task 3)
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -7,9 +9,10 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
-using NoMercy.Encoder.Format.Container;
-using NoMercy.Encoder.Format.Rules;
-using NoMercy.Encoder.Format.Video;
+// TODO(encoder-v3): restore when V3 container/rules/video types are wired up (Task 3)
+// using NoMercy.Encoder.Format.Container;
+// using NoMercy.Encoder.Format.Rules;
+// using NoMercy.Encoder.Format.Video;
 using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;

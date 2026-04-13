@@ -1,3 +1,5 @@
+#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
+#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
@@ -5,14 +7,15 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Encoder;
-using NoMercy.Encoder.Core;
-using NoMercy.Encoder.Format.Audio;
-using NoMercy.Encoder.Format.Container;
-using NoMercy.Encoder.Format.Image;
-using NoMercy.Encoder.Format.Rules;
-using NoMercy.Encoder.Format.Subtitle;
-using NoMercy.Encoder.Format.Video;
+// TODO(encoder-v3): restore when V3 encode job types are wired up (Tasks 4-7)
+// using NoMercy.Encoder;
+// using NoMercy.Encoder.Core;
+// using NoMercy.Encoder.Format.Audio;
+// using NoMercy.Encoder.Format.Container;
+// using NoMercy.Encoder.Format.Image;
+// using NoMercy.Encoder.Format.Rules;
+// using NoMercy.Encoder.Format.Subtitle;
+// using NoMercy.Encoder.Format.Video;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Files;

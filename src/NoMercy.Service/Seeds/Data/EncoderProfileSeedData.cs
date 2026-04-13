@@ -1,5 +1,8 @@
+#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
+#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
 using NoMercy.Database.Models.Media;
-using NoMercy.Encoder.Format.Rules;
+// TODO(encoder-v3): restore when V3 format rules are wired up (Tasks 4-7)
+// using NoMercy.Encoder.Format.Rules;
 
 namespace NoMercy.Service.Seeds.Data;
 

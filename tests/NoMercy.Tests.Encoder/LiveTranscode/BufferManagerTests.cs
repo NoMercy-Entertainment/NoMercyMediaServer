@@ -1,0 +1,113 @@
+namespace NoMercy.Tests.Encoder.LiveTranscode;
+
+using NoMercy.Encoder.LiveTranscode;
+
+public class BufferManagerTests
+{
+    private readonly BufferManager _manager = new();
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Suspend
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Buffer35s_NotSuspended_ReturnsSuspend()
+    {
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(35), isSuspended: false);
+
+        action.Should().Be(BufferAction.Suspend);
+    }
+
+    [Fact]
+    public void Buffer35s_AlreadySuspended_ReturnsNone()
+    {
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(35), isSuspended: true);
+
+        action.Should().Be(BufferAction.None);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Resume
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Buffer10s_Suspended_ReturnsResume()
+    {
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(10), isSuspended: true);
+
+        action.Should().Be(BufferAction.Resume);
+    }
+
+    [Fact]
+    public void Buffer10s_NotSuspended_ReturnsNone()
+    {
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(10), isSuspended: false);
+
+        action.Should().Be(BufferAction.None);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Quality drops
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Buffer4s_ReturnsDropQuality()
+    {
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(4), isSuspended: false);
+
+        action.Should().Be(BufferAction.DropQuality);
+    }
+
+    [Fact]
+    public void Buffer2s_ReturnsEmergencyDropQuality()
+    {
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(2), isSuspended: false);
+
+        action.Should().Be(BufferAction.EmergencyDropQuality);
+    }
+
+    [Fact]
+    public void Buffer5s_Boundary_ReturnsDropQuality()
+    {
+        // < 5 triggers DropQuality, exactly 5 should not
+        BufferAction below = _manager.Evaluate(TimeSpan.FromSeconds(4.9), isSuspended: false);
+        BufferAction boundary = _manager.Evaluate(TimeSpan.FromSeconds(5), isSuspended: false);
+
+        below.Should().Be(BufferAction.DropQuality);
+        boundary.Should().Be(BufferAction.None);
+    }
+
+    [Fact]
+    public void Buffer3s_Boundary_ReturnsEmergencyDropQuality()
+    {
+        // < 3 triggers Emergency, exactly 3 should be DropQuality
+        BufferAction below = _manager.Evaluate(TimeSpan.FromSeconds(2.9), isSuspended: false);
+        BufferAction boundary = _manager.Evaluate(TimeSpan.FromSeconds(3), isSuspended: false);
+
+        below.Should().Be(BufferAction.EmergencyDropQuality);
+        boundary.Should().Be(BufferAction.DropQuality);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // None
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Buffer20s_NotSuspended_ReturnsNone()
+    {
+        BufferAction action = _manager.Evaluate(TimeSpan.FromSeconds(20), isSuspended: false);
+
+        action.Should().Be(BufferAction.None);
+    }
+
+    [Fact]
+    public void Buffer30s_Boundary_Suspend()
+    {
+        // > 30 triggers suspend, exactly 30 should not
+        BufferAction above = _manager.Evaluate(TimeSpan.FromSeconds(30.1), isSuspended: false);
+        BufferAction boundary = _manager.Evaluate(TimeSpan.FromSeconds(30), isSuspended: false);
+
+        above.Should().Be(BufferAction.Suspend);
+        boundary.Should().Be(BufferAction.None);
+    }
+}

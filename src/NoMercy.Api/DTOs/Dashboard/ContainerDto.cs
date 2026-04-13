@@ -1,16 +1,19 @@
+#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Task 3)
+#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Task 3)
 using Newtonsoft.Json;
-using NoMercy.Encoder.Core;
-using NoMercy.Encoder.Format.Audio;
-using NoMercy.Encoder.Format.Container;
-using NoMercy.Encoder.Format.Rules;
-using NoMercy.Encoder.Format.Subtitle;
-using NoMercy.Encoder.Format.Video;
+// TODO(encoder-v3): restore when V3 container/format types are wired up (Task 3)
+// using NoMercy.Encoder.Core;
+// using NoMercy.Encoder.Format.Audio;
+// using NoMercy.Encoder.Format.Container;
+// using NoMercy.Encoder.Format.Rules;
+// using NoMercy.Encoder.Format.Subtitle;
+// using NoMercy.Encoder.Format.Video;
 using NoMercy.NmSystem.Extensions;
-using Ass = NoMercy.Encoder.Format.Container.Ass;
-using Flac = NoMercy.Encoder.Format.Container.Flac;
-using Mp3 = NoMercy.Encoder.Format.Container.Mp3;
-using Srt = NoMercy.Encoder.Format.Container.Srt;
-using Vtt = NoMercy.Encoder.Format.Container.Vtt;
+// using Ass = NoMercy.Encoder.Format.Container.Ass;
+// using Flac = NoMercy.Encoder.Format.Container.Flac;
+// using Mp3 = NoMercy.Encoder.Format.Container.Mp3;
+// using Srt = NoMercy.Encoder.Format.Container.Srt;
+// using Vtt = NoMercy.Encoder.Format.Container.Vtt;
 
 namespace NoMercy.Api.DTOs.Dashboard;
 

@@ -1,8 +1,11 @@
-using NoMercy.Encoder.Dto;
+#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Tasks 4-7)
+#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Tasks 4-7)
+// TODO(encoder-v3): restore when V3 Dto types are wired up (Tasks 4-7)
+// using NoMercy.Encoder.Dto;
 using NoMercy.NmSystem.Dto;
 using TagLib;
-using AudioStream = NoMercy.Encoder.Dto.AudioStream;
-using Ffprobe = NoMercy.Encoder.Ffprobe;
+// using AudioStream = NoMercy.Encoder.Dto.AudioStream;
+// using Ffprobe = NoMercy.Encoder.Ffprobe;
 
 namespace NoMercy.MediaProcessing.Jobs.Dto;
 

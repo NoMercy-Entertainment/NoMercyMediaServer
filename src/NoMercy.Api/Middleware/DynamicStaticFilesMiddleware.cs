@@ -1,10 +1,13 @@
+#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Task 3)
+#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Task 3)
 using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
-using NoMercy.Encoder.Format.Rules;
+// TODO(encoder-v3): restore when V3 format rules are wired up (Task 3)
+// using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;

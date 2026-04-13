@@ -1,3 +1,5 @@
+#pragma warning disable CS0246 // Type or namespace not found (V1 encoder types — will be restored in Task 3)
+#pragma warning disable CS0103 // Name does not exist (V1 encoder types — will be restored in Task 3)
 using System.Collections.Immutable;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -14,8 +16,9 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Encoder;
-using NoMercy.Encoder.Core;
+// TODO(encoder-v3): restore when V3 FfMpeg wrapper is wired up (Task 3)
+// using NoMercy.Encoder;
+// using NoMercy.Encoder.Core;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.Helpers.Extensions;
