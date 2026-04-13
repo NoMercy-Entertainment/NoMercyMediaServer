@@ -159,7 +159,7 @@ public class BaseImage : Classes
         return (info.Width, info.Height);
     }
 
-    public async Task BuildSprite(ProgressMeta progressMeta)
+    public async Task BuildSprite()
     {
         string spriteFilename = Filename.Split("/").First() + ".webp";
         string spriteFile = Path.Combine(BasePath, spriteFilename);
@@ -183,7 +183,7 @@ public class BaseImage : Classes
         string montageCommand =
             $"-i \"{Path.Combine(thumbnailsFolder, Filename.Split("/").First() + "-%04d.jpg")}\" -filter_complex tile=\"{gridWidth}x{gridHeight}\" -y \"{spriteFile}\"";
 
-        await FfMpeg.Run(montageCommand, BasePath, progressMeta);
+        await FfMpeg.ExecStdErrOut(montageCommand, BasePath);
 
         List<string> times = CreateTimeInterval(imageFiles.Length * FrameRate + 1, FrameRate);
 
