@@ -477,7 +477,7 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
         if (!Directory.Exists(hostFolder))
             return audioList;
 
-        // V3 encoder creates directories like audio_eng_2ch/ with .m3u8 playlist inside
+        // Encoder creates directories like audio_eng_aac/ with .m3u8 playlist inside
         foreach (string dir in Directory.GetDirectories(hostFolder, "audio_*"))
         {
             string dirName = Path.GetFileName(dir);
@@ -486,7 +486,7 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
                 continue;
 
             string language = match.Groups["lang"].Value;
-            int channels = int.Parse(match.Groups["channels"].Value);
+            string codec = match.Groups["codec"].Value;
 
             string[] playlists = Directory.GetFiles(dir, "*.m3u8");
             if (playlists.Length == 0)
@@ -499,7 +499,7 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
                 new()
                 {
                     Language = language,
-                    Channels = channels,
+                    Codec = codec,
                     FileName =
                         "/" + Path.GetRelativePath(hostFolder, playlistPath).Replace("\\", "/"),
                     FileHash = ComputeFileHash(playlistPath),
@@ -938,9 +938,9 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
     [GeneratedRegex(@"#xywh=\d+,\d+,(?<width>\d+),(?<height>\d+)")]
     private static partial Regex ImageDimensions();
 
-    [GeneratedRegex(@"^video_(?<width>\d+)x(?<height>\d+)$")]
+    [GeneratedRegex(@"^video_(?<width>\d+)x(?<height>\d+)(?:_(?:SDR|HDR))?$")]
     private static partial Regex VideoDirectoryRegex();
 
-    [GeneratedRegex(@"^audio_(?<lang>\w+)_(?<channels>\d+)ch$")]
+    [GeneratedRegex(@"^audio_(?<lang>\w+)_(?<codec>\w+)$")]
     private static partial Regex AudioDirectoryRegex();
 }

@@ -131,7 +131,9 @@ public class PlanStage(
                         TenBit: v.TenBit,
                         PixelFormat: v.TenBit ? encoder.PixelFormat10Bit : "yuv420p",
                         MapLabel: $"[v{i}]",
-                        ExtraFlags: extraFlags
+                        ExtraFlags: extraFlags,
+                        SegmentNameTemplate: v.SegmentNameTemplate,
+                        PlaylistNameTemplate: v.PlaylistNameTemplate
                     );
                 }
             )
@@ -149,7 +151,9 @@ public class PlanStage(
                         SampleRate: a.SampleRateHz,
                         Action: StreamAction.Transcode,
                         Language: a.AllowedLanguages.Length > 0 ? a.AllowedLanguages[0] : null,
-                        MapLabel: $"0:a:{i}"
+                        MapLabel: $"0:a:{i}",
+                        SegmentNameTemplate: a.SegmentNameTemplate,
+                        PlaylistNameTemplate: a.PlaylistNameTemplate
                     );
                 }
             )
@@ -165,7 +169,8 @@ public class PlanStage(
                             : StreamAction.Extract,
                         Language: s.AllowedLanguages.Length > 0 ? s.AllowedLanguages[0] : null,
                         SourceIndex: i,
-                        MapLabel: $"0:s:{i}"
+                        MapLabel: $"0:s:{i}",
+                        PlaylistNameTemplate: s.PlaylistNameTemplate
                     )
             )
             .ToArray();

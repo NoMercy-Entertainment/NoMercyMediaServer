@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -59,10 +58,10 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
 
             try
             {
-                if (string.IsNullOrWhiteSpace(profile.Param))
+                if (profile.AudioProfiles.Length == 0)
                 {
                     Logger.Encoder(
-                        $"Skipping profile {profile.Name}: no V3 encoding profile configured"
+                        $"Skipping profile {profile.Name}: no audio profiles configured"
                     );
                     continue;
                 }
@@ -80,11 +79,31 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                     );
                 }
 
-                EncodingProfile encodingProfile =
-                    JsonConvert.DeserializeObject<EncodingProfile>(profile.Param)
-                    ?? throw new InvalidOperationException(
-                        $"Failed to deserialize EncodingProfile from profile {profile.Name}"
-                    );
+                EncodingProfile encodingProfile = ProfileMapper.FromV1(
+                    profile.Id,
+                    profile.Name,
+                    profile.Container ?? "mp3",
+                    [],
+                    profile
+                        .AudioProfiles.Select(a => new V1AudioProfile(
+                            a.Codec,
+                            a.Channels,
+                            a.SampleRate,
+                            a.SegmentName,
+                            a.PlaylistName,
+                            a.AllowedLanguages,
+                            a.CustomArguments
+                        ))
+                        .ToArray(),
+                    profile
+                        .SubtitleProfiles.Select(s => new V1SubtitleProfile(
+                            s.Codec,
+                            s.PlaylistName,
+                            s.AllowedLanguages,
+                            s.CustomArguments
+                        ))
+                        .ToArray()
+                );
 
                 IEncoder encoder = EncoderProvider.Resolve();
 

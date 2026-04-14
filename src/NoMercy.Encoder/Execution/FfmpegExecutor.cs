@@ -106,10 +106,11 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
 
         EncodingError error = ClassifyError(result.StdErr, result.ExitCode);
         logger.LogError(
-            "[{CorrelationId}] FFmpeg failed: exit={ExitCode} error={ErrorKind}",
+            "[{CorrelationId}] FFmpeg failed: exit={ExitCode} error={ErrorKind}\nstderr: {StdErr}",
             correlationId,
             result.ExitCode,
-            error.Kind
+            error.Kind,
+            result.StdErr
         );
 
         return new ExecutionResult(

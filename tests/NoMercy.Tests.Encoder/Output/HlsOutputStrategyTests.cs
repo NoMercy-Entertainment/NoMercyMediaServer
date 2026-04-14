@@ -8,7 +8,7 @@ using NoMercy.Encoder.Pipeline;
 public class HlsOutputStrategyTests
 {
     [Fact]
-    public void ConfigureOutput_AddsFmp4Flags()
+    public void ConfigureOutput_AddsHlsFlags()
     {
         HlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
@@ -20,20 +20,36 @@ public class HlsOutputStrategyTests
         FfmpegCommand cmd = builder.Build("ffmpeg");
         string args = string.Join(" ", cmd.Arguments);
         args.Should().Contain("-f hls");
-        args.Should().Contain("-hls_segment_type fmp4");
         args.Should().Contain("-hls_playlist_type vod");
+        args.Should().Contain("_%05d.ts");
     }
 
     [Fact]
-    public void GetOutputSubdirectories_ReturnsVideoAndAudioDirs()
+    public void GetOutputSubdirectories_ReturnsTemplateResolvedDirs()
     {
         HlsOutputStrategy strategy = new();
         OutputPlan plan = CreateSimplePlan();
 
         string[] dirs = strategy.GetOutputSubdirectories(plan);
 
-        dirs.Should().Contain("video_1920x1080");
-        dirs.Should().Contain("audio_eng_2ch");
+        dirs.Should().Contain("video_1920x1080_SDR");
+        dirs.Should().Contain("audio_eng_aac");
+    }
+
+    [Fact]
+    public void ConfigureOutput_UsesTemplateForNaming()
+    {
+        HlsOutputStrategy strategy = new();
+        FfmpegCommandBuilder builder = new();
+        builder.AddInput(new InputOptions("/input.mkv"));
+        OutputPlan plan = CreateSimplePlan();
+
+        strategy.ConfigureOutput(builder, plan, "/output");
+
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+        args.Should().Contain("video_1920x1080_SDR");
+        args.Should().Contain("audio_eng_aac");
     }
 
     private static OutputPlan CreateSimplePlan()
@@ -54,7 +70,9 @@ public class HlsOutputStrategyTests
                     TenBit: false,
                     PixelFormat: "yuv420p",
                     MapLabel: "[v0]",
-                    ExtraFlags: new Dictionary<string, string>()
+                    ExtraFlags: new Dictionary<string, string>(),
+                    SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                    PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
                 ),
             ],
             AudioOutputs:
@@ -66,7 +84,9 @@ public class HlsOutputStrategyTests
                     SampleRate: 48000,
                     Action: StreamAction.Transcode,
                     Language: "eng",
-                    MapLabel: "0:a:0"
+                    MapLabel: "0:a:0",
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
             SubtitleOutputs: [],

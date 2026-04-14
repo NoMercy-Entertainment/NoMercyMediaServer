@@ -176,10 +176,10 @@ public class RealEncodeTests : IAsyncLifetime
 
         // Verify HLS: at least one playlist and at least one segment
         string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);
-        string[] segments = Directory.GetFiles(outputDir, "*.m4s", SearchOption.AllDirectories);
+        string[] segments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
 
         playlists.Should().NotBeEmpty("HLS output should contain at least one .m3u8 playlist");
-        segments.Should().NotBeEmpty("HLS output should contain at least one .m4s segment");
+        segments.Should().NotBeEmpty("HLS output should contain at least one .ts segment");
 
         // Verify progress observer received at least one callback (stage-completed at end)
         (observer.StagesStarted.Count + observer.ProgressCallCount)
@@ -247,17 +247,17 @@ public class RealEncodeTests : IAsyncLifetime
             );
 
         // Width=160, Height=null → auto-calculated: 160 * 180 / 320 = 90
-        string scaledDir = Path.Combine(outputDir, "video_160x90");
+        string scaledDir = Path.Combine(outputDir, "video_160x90_SDR");
         Directory
             .Exists(scaledDir)
             .Should()
-            .BeTrue($"expected subdirectory 'video_160x90' under {outputDir}");
+            .BeTrue($"expected subdirectory 'video_160x90_SDR' under {outputDir}");
 
         string[] playlists = Directory.GetFiles(scaledDir, "*.m3u8", SearchOption.TopDirectoryOnly);
-        string[] segments = Directory.GetFiles(scaledDir, "*.m4s", SearchOption.TopDirectoryOnly);
+        string[] segments = Directory.GetFiles(scaledDir, "*.ts", SearchOption.TopDirectoryOnly);
 
-        playlists.Should().NotBeEmpty("video_160x90 should contain a .m3u8 playlist");
-        segments.Should().NotBeEmpty("video_160x90 should contain .m4s segments");
+        playlists.Should().NotBeEmpty("video_160x90_SDR should contain a .m3u8 playlist");
+        segments.Should().NotBeEmpty("video_160x90_SDR should contain .ts segments");
     }
 
     [Fact]
@@ -332,35 +332,35 @@ public class RealEncodeTests : IAsyncLifetime
                 $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
-        string variant180Dir = Path.Combine(outputDir, "video_320x180");
-        string variant90Dir = Path.Combine(outputDir, "video_160x90");
+        string variant180Dir = Path.Combine(outputDir, "video_320x180_SDR");
+        string variant90Dir = Path.Combine(outputDir, "video_160x90_SDR");
 
         Directory
             .Exists(variant180Dir)
             .Should()
-            .BeTrue($"expected subdirectory 'video_320x180' under {outputDir}");
+            .BeTrue($"expected subdirectory 'video_320x180_SDR' under {outputDir}");
         Directory
             .Exists(variant90Dir)
             .Should()
-            .BeTrue($"expected subdirectory 'video_160x90' under {outputDir}");
+            .BeTrue($"expected subdirectory 'video_160x90_SDR' under {outputDir}");
 
         Directory
             .GetFiles(variant180Dir, "*.m3u8", SearchOption.TopDirectoryOnly)
             .Should()
-            .NotBeEmpty("video_320x180 should contain a .m3u8 playlist");
+            .NotBeEmpty("video_320x180_SDR should contain a .m3u8 playlist");
         Directory
             .GetFiles(variant90Dir, "*.m3u8", SearchOption.TopDirectoryOnly)
             .Should()
-            .NotBeEmpty("video_160x90 should contain a .m3u8 playlist");
+            .NotBeEmpty("video_160x90_SDR should contain a .m3u8 playlist");
 
         Directory
-            .GetFiles(variant180Dir, "*.m4s", SearchOption.TopDirectoryOnly)
+            .GetFiles(variant180Dir, "*.ts", SearchOption.TopDirectoryOnly)
             .Should()
-            .NotBeEmpty("video_320x180 should contain .m4s segments");
+            .NotBeEmpty("video_320x180_SDR should contain .ts segments");
         Directory
-            .GetFiles(variant90Dir, "*.m4s", SearchOption.TopDirectoryOnly)
+            .GetFiles(variant90Dir, "*.ts", SearchOption.TopDirectoryOnly)
             .Should()
-            .NotBeEmpty("video_160x90 should contain .m4s segments");
+            .NotBeEmpty("video_160x90_SDR should contain .ts segments");
     }
 
     [Fact]

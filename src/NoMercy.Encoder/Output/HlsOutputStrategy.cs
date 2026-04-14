@@ -18,8 +18,25 @@ public class HlsOutputStrategy : IOutputStrategy
     {
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
-            string subDir = $"video_{video.Width}x{video.Height}";
-            string playlistPath = Path.Combine(outputDirectory, subDir, $"{subDir}.m3u8");
+            Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+                video.Width,
+                video.Height,
+                video.TenBit
+            );
+
+            // Template resolves to e.g. "video_1920x1080_SDR/video_1920x1080_SDR"
+            string segmentResolved = TemplateResolver.Resolve(video.SegmentNameTemplate, tokens);
+            string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
+
+            // Split into directory and filename parts
+            string subDir =
+                Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
+            string playlistFile = Path.GetFileName(playlistResolved);
+            string segmentDir =
+                Path.GetDirectoryName(segmentResolved)?.Replace("\\", "/") ?? segmentResolved;
+            string segmentFile = Path.GetFileName(segmentResolved);
+
+            string playlistPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
 
             bool isHevc =
                 video.EncoderName.Contains("265", StringComparison.OrdinalIgnoreCase)
@@ -31,9 +48,11 @@ public class HlsOutputStrategy : IOutputStrategy
                 ["-hls_time"] = SegmentDurationSeconds.ToString(),
                 ["-hls_playlist_type"] = "vod",
                 ["-hls_flags"] = "independent_segments",
-                ["-hls_segment_type"] = "fmp4",
-                ["-hls_segment_filename"] = Path.Combine(outputDirectory, subDir, "seg_%05d.m4s"),
-                ["-hls_fmp4_init_filename"] = "init.mp4",
+                ["-hls_segment_filename"] = Path.Combine(
+                    outputDirectory,
+                    segmentDir,
+                    $"{segmentFile}_%05d.ts"
+                ),
             };
 
             if (isHevc)
@@ -60,8 +79,30 @@ public class HlsOutputStrategy : IOutputStrategy
         {
             if (audio.Action == StreamAction.Copy || audio.Action == StreamAction.Transcode)
             {
-                string subDir = $"audio_{audio.Language ?? "und"}_{audio.Channels}ch";
-                string playlistPath = Path.Combine(outputDirectory, subDir, $"{subDir}.m3u8");
+                string codecName = audio.EncoderName.Replace("libfdk_", "").Replace("lib", "");
+                Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
+                    audio.Language ?? "und",
+                    codecName,
+                    audio.Channels
+                );
+
+                string segmentResolved = TemplateResolver.Resolve(
+                    audio.SegmentNameTemplate,
+                    tokens
+                );
+                string playlistResolved = TemplateResolver.Resolve(
+                    audio.PlaylistNameTemplate,
+                    tokens
+                );
+
+                string subDir =
+                    Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
+                string playlistFile = Path.GetFileName(playlistResolved);
+                string segmentDir =
+                    Path.GetDirectoryName(segmentResolved)?.Replace("\\", "/") ?? segmentResolved;
+                string segmentFile = Path.GetFileName(segmentResolved);
+
+                string playlistPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
 
                 Dictionary<string, string> extraFlags = new()
                 {
@@ -69,13 +110,11 @@ public class HlsOutputStrategy : IOutputStrategy
                     ["-hls_time"] = SegmentDurationSeconds.ToString(),
                     ["-hls_playlist_type"] = "vod",
                     ["-hls_flags"] = "independent_segments",
-                    ["-hls_segment_type"] = "fmp4",
                     ["-hls_segment_filename"] = Path.Combine(
                         outputDirectory,
-                        subDir,
-                        "seg_%05d.m4s"
+                        segmentDir,
+                        $"{segmentFile}_%05d.ts"
                     ),
-                    ["-hls_fmp4_init_filename"] = "init.mp4",
                 };
 
                 string audioCodec = audio.Action == StreamAction.Copy ? "copy" : audio.EncoderName;
@@ -110,11 +149,32 @@ public class HlsOutputStrategy : IOutputStrategy
         List<string> dirs = [];
 
         foreach (VideoOutputPlan video in plan.VideoOutputs)
-            dirs.Add($"video_{video.Width}x{video.Height}");
+        {
+            Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+                video.Width,
+                video.Height,
+                !video.TenBit
+            );
+            string resolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
+            string subDir = Path.GetDirectoryName(resolved)?.Replace("\\", "/") ?? resolved;
+            dirs.Add(subDir);
+        }
 
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
+        {
             if (audio.Action is StreamAction.Copy or StreamAction.Transcode)
-                dirs.Add($"audio_{audio.Language ?? "und"}_{audio.Channels}ch");
+            {
+                string codecName = audio.EncoderName.Replace("libfdk_", "").Replace("lib", "");
+                Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
+                    audio.Language ?? "und",
+                    codecName,
+                    audio.Channels
+                );
+                string resolved = TemplateResolver.Resolve(audio.PlaylistNameTemplate, tokens);
+                string subDir = Path.GetDirectoryName(resolved)?.Replace("\\", "/") ?? resolved;
+                dirs.Add(subDir);
+            }
+        }
 
         return dirs.ToArray();
     }

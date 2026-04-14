@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -55,10 +54,10 @@ public class VideoEncodeJob : AbstractEncoderJob
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(dbProfile.Param))
+                if (dbProfile.VideoProfiles.Length == 0 && dbProfile.AudioProfiles.Length == 0)
                 {
                     Logger.Encoder(
-                        $"Skipping profile {dbProfile.Name}: no V3 encoding profile configured"
+                        $"Skipping profile {dbProfile.Name}: no video or audio profiles configured"
                     );
                     continue;
                 }
@@ -76,11 +75,49 @@ public class VideoEncodeJob : AbstractEncoderJob
                     );
                 }
 
-                EncodingProfile encodingProfile =
-                    JsonConvert.DeserializeObject<EncodingProfile>(dbProfile.Param)
-                    ?? throw new InvalidOperationException(
-                        $"Failed to deserialize EncodingProfile from profile {dbProfile.Name}"
-                    );
+                EncodingProfile encodingProfile = ProfileMapper.FromV1(
+                    dbProfile.Id,
+                    dbProfile.Name,
+                    dbProfile.Container ?? "m3u8",
+                    dbProfile
+                        .VideoProfiles.Select(v => new V1VideoProfile(
+                            v.Codec,
+                            v.Bitrate,
+                            v.Width,
+                            v.Height,
+                            v.Preset,
+                            v.Profile,
+                            v.Tune,
+                            v.Level,
+                            v.SegmentName,
+                            v.PlaylistName,
+                            v.ColorSpace,
+                            v.Crf,
+                            v.KeyInt,
+                            v.ConvertHdrToSdr,
+                            v.CustomArguments
+                        ))
+                        .ToArray(),
+                    dbProfile
+                        .AudioProfiles.Select(a => new V1AudioProfile(
+                            a.Codec,
+                            a.Channels,
+                            a.SampleRate,
+                            a.SegmentName,
+                            a.PlaylistName,
+                            a.AllowedLanguages,
+                            a.CustomArguments
+                        ))
+                        .ToArray(),
+                    dbProfile
+                        .SubtitleProfiles.Select(s => new V1SubtitleProfile(
+                            s.Codec,
+                            s.PlaylistName,
+                            s.AllowedLanguages,
+                            s.CustomArguments
+                        ))
+                        .ToArray()
+                );
 
                 IEncoder encoder = EncoderProvider.Resolve();
 

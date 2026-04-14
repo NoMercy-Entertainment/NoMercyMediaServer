@@ -49,9 +49,10 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 input.OutputDirectory
             );
 
-            logger.LogDebug(
-                "[{CorrelationId}] Built main command: {Args}",
+            logger.LogInformation(
+                "[{CorrelationId}] FFmpeg command: {Executable} {Args}",
                 context.CorrelationId,
+                mainCommand.Executable,
                 string.Join(" ", mainCommand.Arguments)
             );
 

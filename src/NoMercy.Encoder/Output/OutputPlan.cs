@@ -23,7 +23,9 @@ public record VideoOutputPlan(
     bool TenBit,
     string PixelFormat,
     string MapLabel,
-    Dictionary<string, string> ExtraFlags
+    Dictionary<string, string> ExtraFlags,
+    string SegmentNameTemplate = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+    string PlaylistNameTemplate = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
 );
 
 public record AudioOutputPlan(
@@ -33,7 +35,9 @@ public record AudioOutputPlan(
     int SampleRate,
     StreamAction Action,
     string? Language,
-    string MapLabel
+    string MapLabel,
+    string SegmentNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:",
+    string PlaylistNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:"
 );
 
 public record SubtitleOutputPlan(
@@ -41,7 +45,8 @@ public record SubtitleOutputPlan(
     StreamAction Action,
     string? Language,
     int SourceIndex,
-    string? MapLabel
+    string? MapLabel,
+    string PlaylistNameTemplate = "subtitles/:filename:.:language:.:variant:"
 );
 
 public record ThumbnailOutputPlan(int Width, int IntervalSeconds);
