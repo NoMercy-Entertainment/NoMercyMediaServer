@@ -62,7 +62,7 @@ public class EventBusProgressObserver : IProgressObserver
                         process_id = progress.ProcessId,
                         title = _title,
                         status = "running",
-                        message = "Encoding",
+                        message = "Encoding video",
                         progress = progress.PercentComplete,
                         speed = progress.CurrentSpeed ?? 0,
                         fps = progress.CurrentFps ?? 0,
