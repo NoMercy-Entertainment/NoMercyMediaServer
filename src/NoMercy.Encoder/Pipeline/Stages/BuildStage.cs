@@ -163,25 +163,28 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
 
         int sourceWidth = mediaInfo.VideoStreams[0].Width;
         int sourceHeight = mediaInfo.VideoStreams[0].Height;
+        bool sourceIs10Bit = mediaInfo.VideoStreams[0].BitDepth > 8;
 
         FilterGraphBuilder fg = new();
 
         if (videoOutputs.Length == 1)
         {
             VideoOutputPlan single = videoOutputs[0];
-            // Strip the surrounding brackets to get the raw label name
             string outputLabel = single.MapLabel.Trim('[', ']');
 
-            if (single.Width == sourceWidth && single.Height == sourceHeight)
-                fg.AddFilter("0:v:0", "copy", outputLabel);
-            else
-                fg.AddScaleWidth("0:v:0", single.Width, outputLabel);
+            BuildBranchFilter(
+                fg,
+                "0:v:0",
+                outputLabel,
+                single,
+                sourceWidth,
+                sourceHeight,
+                sourceIs10Bit
+            );
         }
         else
         {
-            // Multi-output: split first, then scale/copy each branch
             string[] splitLabels = videoOutputs.Select((_, i) => $"split{i}").ToArray();
-
             fg.AddSplit("0:v:0", splitLabels);
 
             for (int i = 0; i < videoOutputs.Length; i++)
@@ -189,13 +192,60 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 VideoOutputPlan video = videoOutputs[i];
                 string outputLabel = video.MapLabel.Trim('[', ']');
 
-                if (video.Width == sourceWidth && video.Height == sourceHeight)
-                    fg.AddFilter(splitLabels[i], "copy", outputLabel);
-                else
-                    fg.AddScaleWidth(splitLabels[i], video.Width, outputLabel);
+                BuildBranchFilter(
+                    fg,
+                    splitLabels[i],
+                    outputLabel,
+                    video,
+                    sourceWidth,
+                    sourceHeight,
+                    sourceIs10Bit
+                );
             }
         }
 
         return fg.HasFilters ? fg.Build() : null;
+    }
+
+    /// <summary>
+    /// Builds the filter chain for a single video output branch.
+    /// Handles: scaling, pixel format conversion (10-bit → 8-bit), or passthrough.
+    /// </summary>
+    private static void BuildBranchFilter(
+        FilterGraphBuilder fg,
+        string inputLabel,
+        string outputLabel,
+        VideoOutputPlan video,
+        int sourceWidth,
+        int sourceHeight,
+        bool sourceIs10Bit
+    )
+    {
+        bool needsScale = video.Width != sourceWidth || video.Height != sourceHeight;
+        bool needs8BitConversion = sourceIs10Bit && !video.TenBit;
+
+        if (!needsScale && !needs8BitConversion)
+        {
+            fg.AddFilter(inputLabel, "copy", outputLabel);
+            return;
+        }
+
+        // Build a filter chain: scale (if needed) → format conversion (if needed)
+        // When both are needed, chain through an intermediate label.
+        if (needsScale && needs8BitConversion)
+        {
+            string intermediate = $"{outputLabel}_scaled";
+            fg.AddScaleWidth(inputLabel, video.Width, intermediate);
+            fg.AddFilter(intermediate, $"format={video.PixelFormat}", outputLabel);
+        }
+        else if (needsScale)
+        {
+            fg.AddScaleWidth(inputLabel, video.Width, outputLabel);
+        }
+        else
+        {
+            // Same resolution but needs pixel format conversion (10-bit source, 8-bit encoder)
+            fg.AddFilter(inputLabel, $"format={video.PixelFormat}", outputLabel);
+        }
     }
 }
