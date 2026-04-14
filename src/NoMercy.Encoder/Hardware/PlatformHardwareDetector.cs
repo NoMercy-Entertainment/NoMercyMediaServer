@@ -12,7 +12,7 @@ public partial class PlatformHardwareDetector(
     ILogger<PlatformHardwareDetector> logger
 ) : IHardwareDetector
 {
-    private const int NvidiaConsumerMaxSessions = 12;
+    private const int NvidiaConsumerMaxSessions = 8;
     private const int DefaultMaxSessions = 8;
 
     public async Task<IReadOnlyList<GpuDevice>> DetectGpusAsync(CancellationToken ct = default)
