@@ -194,6 +194,94 @@ public class PlatformHardwareDetectorTests
     }
 
     [Fact]
+    public async Task DetectGpus_Mac_ParsesAppleSilicon()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            return;
+
+        string profilerOutput = string.Join(
+            "\n",
+            "Graphics/Displays:",
+            "",
+            "    Apple M2 Pro:",
+            "",
+            "      Chipset Model: Apple M2 Pro",
+            "      Type: GPU",
+            "      Bus: Built-In",
+            "      Total Number of Cores: 19",
+            "      Vendor: Apple (0x106b)",
+            "      Metal Support: Metal 3",
+            "      Displays:",
+            "        Color LCD:",
+            "          VRAM (Dynamic, Max): 21845 MB",
+            ""
+        );
+
+        _processRunner
+            .Setup(p =>
+                p.RunAsync(
+                    "system_profiler",
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, profilerOutput, "", TimeSpan.Zero));
+
+        _capabilities.Setup(c => c.HasEncoder("h264_videotoolbox")).Returns(true);
+        _capabilities.Setup(c => c.HasEncoder("hevc_videotoolbox")).Returns(true);
+
+        PlatformHardwareDetector detector = CreateDetector();
+        IReadOnlyList<GpuDevice> gpus = await detector.DetectGpusAsync();
+
+        gpus.Should().HaveCount(1);
+        gpus[0].Vendor.Should().Be(GpuVendor.Apple);
+        gpus[0].Name.Should().Contain("M2 Pro");
+        gpus[0].VramMb.Should().Be(21845);
+        gpus[0].SupportedCodecs.Should().Contain(VideoCodecType.H264);
+        gpus[0].SupportedCodecs.Should().Contain(VideoCodecType.H265);
+    }
+
+    [Fact]
+    public async Task DetectGpus_Mac_DiscreteAmdGpu()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            return;
+
+        string profilerOutput = string.Join(
+            "\n",
+            "Graphics/Displays:",
+            "",
+            "    AMD Radeon Pro 5500M:",
+            "",
+            "      Chipset Model: AMD Radeon Pro 5500M",
+            "      Type: GPU",
+            "      VRAM (Total): 8 GB",
+            ""
+        );
+
+        _processRunner
+            .Setup(p =>
+                p.RunAsync(
+                    "system_profiler",
+                    It.IsAny<string[]>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, profilerOutput, "", TimeSpan.Zero));
+
+        _capabilities.Setup(c => c.HasEncoder("h264_amf")).Returns(true);
+
+        PlatformHardwareDetector detector = CreateDetector();
+        IReadOnlyList<GpuDevice> gpus = await detector.DetectGpusAsync();
+
+        gpus.Should().HaveCount(1);
+        gpus[0].Vendor.Should().Be(GpuVendor.Amd);
+        gpus[0].VramMb.Should().Be(8192);
+    }
+
+    [Fact]
     public async Task DetectGpus_ProcessException_ReturnsEmpty()
     {
         _processRunner

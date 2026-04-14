@@ -25,6 +25,9 @@ public partial class PlatformHardwareDetector(
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 return await DetectLinuxGpusAsync(ct);
 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return await DetectMacGpusAsync(ct);
+
             logger.LogWarning(
                 "GPU detection not supported on {OS}",
                 RuntimeInformation.OSDescription
@@ -131,6 +134,73 @@ public partial class PlatformHardwareDetector(
         return devices;
     }
 
+    private async Task<IReadOnlyList<GpuDevice>> DetectMacGpusAsync(CancellationToken ct)
+    {
+        ProcessResult result = await processRunner.RunAsync(
+            "system_profiler",
+            ["SPDisplaysDataType"],
+            null,
+            ct
+        );
+
+        if (!result.IsSuccess)
+        {
+            logger.LogWarning(
+                "system_profiler failed (exit {Code}): {Err}",
+                result.ExitCode,
+                result.StdErr
+            );
+            return [];
+        }
+
+        List<GpuDevice> devices = [];
+        string? currentChipset = null;
+        long currentVramMb = 0;
+
+        foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string trimmed = line.Trim();
+
+            // Chipset line: "Chipset Model: Apple M2 Pro" or "Chipset Model: AMD Radeon Pro 5500M"
+            Match chipsetMatch = MacChipsetPattern().Match(trimmed);
+            if (chipsetMatch.Success)
+            {
+                // Flush previous GPU if any
+                if (currentChipset is not null)
+                {
+                    GpuDevice? prev = BuildGpuDevice(currentChipset, currentVramMb);
+                    if (prev is not null)
+                        devices.Add(prev);
+                }
+
+                currentChipset = chipsetMatch.Groups["name"].Value.Trim();
+                currentVramMb = 0;
+                continue;
+            }
+
+            // VRAM line: "VRAM (Total): 16 GB" or "VRAM (Dynamic, Max): 21845 MB"
+            Match vramMatch = MacVramPattern().Match(trimmed);
+            if (vramMatch.Success && currentChipset is not null)
+            {
+                if (long.TryParse(vramMatch.Groups["size"].Value, out long size))
+                {
+                    string unit = vramMatch.Groups["unit"].Value.ToUpperInvariant();
+                    currentVramMb = unit == "GB" ? size * 1024 : size;
+                }
+            }
+        }
+
+        // Flush last GPU
+        if (currentChipset is not null)
+        {
+            GpuDevice? last = BuildGpuDevice(currentChipset, currentVramMb);
+            if (last is not null)
+                devices.Add(last);
+        }
+
+        return devices;
+    }
+
     private GpuDevice? BuildGpuDevice(string name, long vramMb)
     {
         GpuVendor? vendor = ClassifyVendor(name);
@@ -190,6 +260,11 @@ public partial class PlatformHardwareDetector(
                 (VideoCodecType.Av1, ["av1_qsv"]),
                 (VideoCodecType.Vp9, ["vp9_qsv"]),
             ],
+            GpuVendor.Apple =>
+            [
+                (VideoCodecType.H264, ["h264_videotoolbox"]),
+                (VideoCodecType.H265, ["hevc_videotoolbox"]),
+            ],
             _ => [],
         };
 
@@ -234,6 +309,17 @@ public partial class PlatformHardwareDetector(
         )
             return GpuVendor.Intel;
 
+        if (
+            upper.Contains("APPLE")
+            && (
+                upper.Contains("M1")
+                || upper.Contains("M2")
+                || upper.Contains("M3")
+                || upper.Contains("M4")
+            )
+        )
+            return GpuVendor.Apple;
+
         return null;
     }
 
@@ -255,4 +341,10 @@ public partial class PlatformHardwareDetector(
 
     [GeneratedRegex(@"(?<size>\d+)\s*GB", RegexOptions.IgnoreCase)]
     private static partial Regex VramPattern();
+
+    [GeneratedRegex(@"^Chipset Model:\s*(?<name>.+)$")]
+    private static partial Regex MacChipsetPattern();
+
+    [GeneratedRegex(@"^VRAM\s*\([^)]*\):\s*(?<size>\d+)\s*(?<unit>MB|GB)", RegexOptions.IgnoreCase)]
+    private static partial Regex MacVramPattern();
 }
