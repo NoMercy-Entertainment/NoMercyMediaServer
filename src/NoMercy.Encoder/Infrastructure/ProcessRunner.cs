@@ -43,7 +43,8 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         Action<string>? onStdErr,
         string? workingDirectory,
         CancellationToken cancellationToken,
-        CancellationToken killSignal
+        CancellationToken killSignal,
+        Action<int>? onProcessStarted = null
     )
     {
         return RunCoreAsync(
@@ -53,7 +54,8 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             onStdErr,
             workingDirectory,
             cancellationToken,
-            killSignal
+            killSignal,
+            onProcessStarted
         );
     }
 
@@ -64,7 +66,8 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         Action<string>? onStdErr,
         string? workingDirectory,
         CancellationToken cancellationToken,
-        CancellationToken killSignal
+        CancellationToken killSignal,
+        Action<int>? onProcessStarted = null
     )
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -135,6 +138,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         }
 
         process.Start();
+        onProcessStarted?.Invoke(process.Id);
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
@@ -179,7 +183,8 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             ExitCode: exitCode,
             StdOut: stdOutBuilder.ToString().TrimEnd(),
             StdErr: stdErrBuilder.ToString().TrimEnd(),
-            Duration: stopwatch.Elapsed
+            Duration: stopwatch.Elapsed,
+            ProcessId: process.Id
         );
 
         logger.LogDebug(

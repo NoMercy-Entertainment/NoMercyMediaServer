@@ -30,6 +30,7 @@ public interface IProcessRunner
         Action<string>? onStdErr,
         string? workingDirectory,
         CancellationToken cancellationToken,
-        CancellationToken killSignal
+        CancellationToken killSignal,
+        Action<int>? onProcessStarted = null
     );
 }

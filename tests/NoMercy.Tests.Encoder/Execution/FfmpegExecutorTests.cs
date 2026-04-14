@@ -43,7 +43,8 @@ public class FfmpegExecutorTests
                     It.IsAny<Action<string>?>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<Action<int>?>()
                 )
             )
             .ReturnsAsync(
@@ -75,7 +76,8 @@ public class FfmpegExecutorTests
                     It.IsAny<Action<string>?>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<Action<int>?>()
                 )
             )
             .Callback<
@@ -85,9 +87,10 @@ public class FfmpegExecutorTests
                 Action<string>?,
                 string?,
                 CancellationToken,
-                CancellationToken
+                CancellationToken,
+                Action<int>?
             >(
-                (exe, args, onStdOut, onStdErr, dir, ct, kill) =>
+                (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
                 {
                     onStdOut?.Invoke("frame=100");
                     onStdOut?.Invoke("fps=30.0");
@@ -128,7 +131,8 @@ public class FfmpegExecutorTests
                     It.IsAny<Action<string>?>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<Action<int>?>()
                 )
             )
             .ReturnsAsync(
@@ -154,7 +158,8 @@ public class FfmpegExecutorTests
                     It.IsAny<Action<string>?>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>(),
-                    It.IsAny<CancellationToken>()
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<Action<int>?>()
                 )
             )
             .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(10)));

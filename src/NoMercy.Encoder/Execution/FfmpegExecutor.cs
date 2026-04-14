@@ -29,6 +29,7 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
         // This prevents the process from hanging indefinitely after output is written.
         CancellationTokenSource killCts = new();
         bool hasProgressPipe = command.Arguments.Contains("pipe:1");
+        int ffmpegPid = 0;
 
         logger.LogDebug(
             "[{CorrelationId}] Executing: {Executable} {Args}",
@@ -45,7 +46,6 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
 
             if (snapshot.IsEnd && hasProgressPipe)
             {
-                // Encoding is done — schedule kill after grace period
                 logger.LogDebug(
                     "[{CorrelationId}] progress=end received, starting {Grace}s exit grace period",
                     correlationId,
@@ -81,6 +81,11 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                     )
                     : null;
 
+            // Parse the raw bitrate string from FFmpeg (e.g. "1234.5kbits/s")
+            string bitrateStr = snapshot.BitrateKbps.HasValue
+                ? $"{snapshot.BitrateKbps.Value:F1}kbits/s"
+                : "N/A";
+
             EncodingProgress progress = new(
                 CorrelationId: correlationId ?? "",
                 PercentComplete: percent,
@@ -90,7 +95,11 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 CurrentSpeed: snapshot.Speed,
                 CurrentStage: "Execute",
                 CurrentOperation: null,
-                BitrateKbps: snapshot.BitrateKbps.HasValue ? (int)snapshot.BitrateKbps.Value : null
+                BitrateKbps: snapshot.BitrateKbps.HasValue ? (int)snapshot.BitrateKbps.Value : null,
+                Bitrate: bitrateStr,
+                ProcessId: ffmpegPid,
+                CurrentTimeSeconds: snapshot.OutTime.TotalSeconds,
+                DurationSeconds: inputDuration.TotalSeconds
             );
 
             onProgress(progress);
@@ -102,10 +111,11 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 command.Executable,
                 command.Arguments,
                 OnStdOut,
-                null, // stderr not streamed — captured in result
+                null,
                 command.WorkingDirectory,
                 ct,
-                killCts.Token
+                killCts.Token,
+                pid => ffmpegPid = pid
             );
 
             stopwatch.Stop();

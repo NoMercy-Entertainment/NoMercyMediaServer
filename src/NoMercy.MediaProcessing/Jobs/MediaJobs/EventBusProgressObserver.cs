@@ -59,20 +59,19 @@ public class EventBusProgressObserver : IProgressObserver
                     ProgressData = new
                     {
                         id = _jobId,
-                        process_id = _jobId,
+                        process_id = progress.ProcessId,
                         title = _title,
-                        value = progress.PercentComplete,
                         status = "running",
                         message = "Encoding",
                         progress = progress.PercentComplete,
                         speed = progress.CurrentSpeed ?? 0,
                         fps = progress.CurrentFps ?? 0,
-                        bitrate_kbps = progress.BitrateKbps ?? 0,
-                        seconds = (int)progress.Elapsed.TotalSeconds % 60,
-                        minutes = progress.Elapsed.Minutes,
-                        hours = (int)progress.Elapsed.TotalHours,
-                        days = progress.Elapsed.Days,
-                        eta = $"{(int)remaining.TotalHours:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}",
+                        frame = 0,
+                        bitrate = progress.Bitrate ?? "N/A",
+                        current_time = progress.CurrentTimeSeconds,
+                        duration = progress.DurationSeconds,
+                        remaining = remaining.TotalSeconds,
+                        remaining_hms = $"{remaining.Days}:{(int)remaining.TotalHours % 24:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}",
                         remaining_split = new[]
                         {
                             remaining.Days,
