@@ -2,9 +2,6 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Api.DTOs.Dashboard;
 
-// TODO(encoder-v3): This DTO used to wrap V1 BaseContainer/BaseVideo/BaseAudio/BaseSubtitle types.
-// Rewrite to use V3 CodecRegistry data once the encoder is fully wired up.
-
 public record ContainerDto
 {
     [JsonProperty("label")]

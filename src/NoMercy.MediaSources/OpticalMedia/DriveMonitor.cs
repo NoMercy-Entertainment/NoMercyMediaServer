@@ -400,8 +400,8 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for DVD ripping
-        Logger.Encoder($"V3 encoder: would run DVD command: {command}");
+        // Disc ripping commands are incomplete stubs — needs codec/output selection
+        Logger.Encoder($"DVD ripping not yet implemented: {command}");
         await Task.CompletedTask;
 
         return new() { Title = title, Path = path };
@@ -425,8 +425,8 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for CD ripping
-        Logger.Encoder($"V3 encoder: would run CD command: {command}");
+        // Disc ripping commands are incomplete stubs — needs codec/output selection
+        Logger.Encoder($"CD ripping not yet implemented: {command}");
         await Task.CompletedTask;
 
         return new() { Title = title, Path = path };
@@ -438,11 +438,13 @@ public partial class DriveMonitor
         string path
     )
     {
-        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for BluRay conversion
+        // BluRay conversion not yet implemented — needs disc ripping pipeline
         foreach ((BluRayPlaylist playlist, int index) in bluRayPlaylists.Select((p, i) => (p, i)))
         {
             string matchTitle = $"{title} {index + 1}".Replace(":", "");
-            Logger.Encoder($"V3 encoder: would convert BluRay playlist {index} → {matchTitle}");
+            Logger.Encoder(
+                $"BluRay conversion not yet implemented: playlist {index} → {matchTitle}"
+            );
         }
         await Task.CompletedTask;
     }
@@ -542,8 +544,10 @@ public partial class DriveMonitor
         CancellationTokenSource token
     )
     {
-        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for BluRay live playback
-        Logger.Encoder($"V3 encoder: would play BluRay playlist {playlistId} from {drivePath}");
+        // Disc playback not yet implemented — needs live transcoding pipeline
+        Logger.Encoder(
+            $"BluRay playback not yet implemented: playlist {playlistId} from {drivePath}"
+        );
         await Task.CompletedTask;
         return true;
     }
@@ -562,8 +566,8 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for DVD playback
-        Logger.Encoder($"V3 encoder: would run DVD play command: {command}");
+        // Disc playback not yet implemented — needs live transcoding pipeline
+        Logger.Encoder($"DVD playback not yet implemented: {command}");
         await Task.CompletedTask;
 
         return true;
@@ -583,8 +587,8 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        // TODO(encoder-v3): Wire up V3 FfmpegExecutor for CD playback
-        Logger.Encoder($"V3 encoder: would run CD play command: {command}");
+        // Disc playback not yet implemented — needs live transcoding pipeline
+        Logger.Encoder($"CD playback not yet implemented: {command}");
         await Task.CompletedTask;
 
         return true;

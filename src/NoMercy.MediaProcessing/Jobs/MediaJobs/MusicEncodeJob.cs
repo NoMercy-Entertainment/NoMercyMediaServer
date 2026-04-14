@@ -189,7 +189,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
 
         await using MediaScan mediaScan = new();
 
-        // TODO(encoder-v3): FilterByFileName needs actual encoded output filename once V3 is wired
+        // V3 encoder writes to BasePath — scan picks up all encoded output in that folder
         MediaFolderExtend mediaFolder = (
             await mediaScan
                 .EnableFileListing()

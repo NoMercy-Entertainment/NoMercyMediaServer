@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
@@ -460,11 +461,56 @@ public static class Dev
                 }
             }
 
-            // TODO(encoder-v3): Wire up V3 HLS playlist builder
-            Logger.App($"V3 encoder: would rebuild master playlist for {hostFolder}");
-            await Task.CompletedTask;
+            // Build master playlist by scanning variant playlists in subdirectories
+            StringBuilder masterBuilder = new();
+            masterBuilder.AppendLine("#EXTM3U");
+
+            // Video variants
+            foreach (
+                string dir in Directory
+                    .GetDirectories(hostFolder, "video_*")
+                    .OrderByDescending(d => d)
+            )
+            {
+                string[] playlists = Directory.GetFiles(dir, "*.m3u8");
+                if (playlists.Length == 0)
+                    continue;
+
+                string dirName = Path.GetFileName(dir);
+                string relativePath = Path.Combine(dirName, Path.GetFileName(playlists[0]))
+                    .Replace("\\", "/");
+
+                // Parse resolution from directory name (video_1920x1080)
+                System.Text.RegularExpressions.Match resMatch =
+                    System.Text.RegularExpressions.Regex.Match(dirName, @"video_(\d+)x(\d+)");
+                if (resMatch.Success)
+                {
+                    string width = resMatch.Groups[1].Value;
+                    string height = resMatch.Groups[2].Value;
+                    masterBuilder.AppendLine(
+                        $"#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION={width}x{height}"
+                    );
+                    masterBuilder.AppendLine(relativePath);
+                }
+            }
+
+            // Audio variants
+            foreach (string dir in Directory.GetDirectories(hostFolder, "audio_*"))
+            {
+                string[] playlists = Directory.GetFiles(dir, "*.m3u8");
+                if (playlists.Length == 0)
+                    continue;
+
+                string dirName = Path.GetFileName(dir);
+                string relativePath = Path.Combine(dirName, Path.GetFileName(playlists[0]))
+                    .Replace("\\", "/");
+                masterBuilder.AppendLine(
+                    $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",NAME=\"{dirName}\",URI=\"{relativePath}\""
+                );
+            }
 
             string newMaster = Path.Combine(hostFolder, targetName + ".m3u8");
+            await File.WriteAllTextAsync(newMaster, masterBuilder.ToString());
             Logger.App($"Recreated master playlist: {newMaster}");
         }
         catch (Exception ex)

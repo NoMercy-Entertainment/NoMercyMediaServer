@@ -365,10 +365,8 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
         List<IVideoTrack> extraFiles
     )
     {
-        // TODO(encoder-v3): Replace V1 Ffprobe with V3 IMediaAnalyzer for stream detection
-        // V1 Ffprobe was removed with the encoder; video/audio hash lists are empty until wired up.
-        List<IVideo> video = [];
-        List<IAudio> audio = [];
+        List<IVideo> video = GetVideoHashList(hostFolder);
+        List<IAudio> audio = GetAudioHashList(hostFolder);
         List<ISubtitle> subtitles = GetSubtitleHashList(hostFolder);
         List<IFont> fonts = GetFontHashList(hostFolder);
         List<IPreview> previews = GetPreviewHashList(hostFolder, extraFiles);
@@ -431,8 +429,87 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
         return metadata;
     }
 
-    // TODO(encoder-v3): GetAudioHashList used V1 Ffprobe/AudioStream types.
-    // Returns empty list until V3 IMediaAnalyzer is wired into file scanning.
+    private static List<IVideo> GetVideoHashList(string hostFolder)
+    {
+        List<IVideo> videos = [];
+
+        if (!Directory.Exists(hostFolder))
+            return videos;
+
+        // V3 encoder creates directories like video_1920x1080/ with .m3u8 playlist inside
+        foreach (string dir in Directory.GetDirectories(hostFolder, "video_*"))
+        {
+            string dirName = Path.GetFileName(dir);
+            Match match = VideoDirectoryRegex().Match(dirName);
+            if (!match.Success)
+                continue;
+
+            int width = int.Parse(match.Groups["width"].Value);
+            int height = int.Parse(match.Groups["height"].Value);
+
+            string[] playlists = Directory.GetFiles(dir, "*.m3u8");
+            if (playlists.Length == 0)
+                continue;
+
+            string playlistPath = playlists[0];
+            long dirSize = Directory.GetFiles(dir).Sum(f => new FileInfo(f).Length);
+
+            videos.Add(
+                new()
+                {
+                    Width = width,
+                    Height = height,
+                    FileName =
+                        "/" + Path.GetRelativePath(hostFolder, playlistPath).Replace("\\", "/"),
+                    FileHash = ComputeFileHash(playlistPath),
+                    FileSize = dirSize,
+                }
+            );
+        }
+
+        return videos;
+    }
+
+    private static List<IAudio> GetAudioHashList(string hostFolder)
+    {
+        List<IAudio> audioList = [];
+
+        if (!Directory.Exists(hostFolder))
+            return audioList;
+
+        // V3 encoder creates directories like audio_eng_2ch/ with .m3u8 playlist inside
+        foreach (string dir in Directory.GetDirectories(hostFolder, "audio_*"))
+        {
+            string dirName = Path.GetFileName(dir);
+            Match match = AudioDirectoryRegex().Match(dirName);
+            if (!match.Success)
+                continue;
+
+            string language = match.Groups["lang"].Value;
+            int channels = int.Parse(match.Groups["channels"].Value);
+
+            string[] playlists = Directory.GetFiles(dir, "*.m3u8");
+            if (playlists.Length == 0)
+                continue;
+
+            string playlistPath = playlists[0];
+            long dirSize = Directory.GetFiles(dir).Sum(f => new FileInfo(f).Length);
+
+            audioList.Add(
+                new()
+                {
+                    Language = language,
+                    Channels = channels,
+                    FileName =
+                        "/" + Path.GetRelativePath(hostFolder, playlistPath).Replace("\\", "/"),
+                    FileHash = ComputeFileHash(playlistPath),
+                    FileSize = dirSize,
+                }
+            );
+        }
+
+        return audioList;
+    }
 
     private static List<ISubtitle> GetSubtitleHashList(string hostFolder)
     {
@@ -860,4 +937,10 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
 
     [GeneratedRegex(@"#xywh=\d+,\d+,(?<width>\d+),(?<height>\d+)")]
     private static partial Regex ImageDimensions();
+
+    [GeneratedRegex(@"^video_(?<width>\d+)x(?<height>\d+)$")]
+    private static partial Regex VideoDirectoryRegex();
+
+    [GeneratedRegex(@"^audio_(?<lang>\w+)_(?<channels>\d+)ch$")]
+    private static partial Regex AudioDirectoryRegex();
 }

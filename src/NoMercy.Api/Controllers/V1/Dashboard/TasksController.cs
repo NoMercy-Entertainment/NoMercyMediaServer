@@ -87,7 +87,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to pause tasks");
 
-        // TODO(encoder-v3): Wire up V3 encoder pause/resume via IEncoder
+        // Pause/resume not yet supported in V3 encoder — returns false
         return Ok(false);
     }
 
@@ -98,7 +98,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to resume tasks");
 
-        // TODO(encoder-v3): Wire up V3 encoder pause/resume via IEncoder
+        // Pause/resume not yet supported in V3 encoder — returns false
         return Ok(false);
     }
 

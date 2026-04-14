@@ -37,9 +37,10 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
         if (file == null)
             return null;
 
-        // TODO(encoder-v3): Wire up V3 IAudioFingerprinter for fingerprint/duration extraction
-        throw new NotImplementedException(
-            "AcoustID fingerprinting requires V3 IAudioFingerprinter — not yet wired (encoder-v3)"
-        );
+        // Fingerprinting requires chromaprint/fpcalc to extract audio fingerprint + FFmpeg for duration.
+        // The V1 encoder bundled this; V3 encoder doesn't expose fingerprinting directly.
+        // Return null until a dedicated fingerprint service is wired up via DI.
+        await Task.CompletedTask;
+        return null;
     }
 }

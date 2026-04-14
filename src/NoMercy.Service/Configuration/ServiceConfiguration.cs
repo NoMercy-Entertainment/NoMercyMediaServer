@@ -474,7 +474,11 @@ public static class ServiceConfiguration
         services.AddMediaServerQueue();
         services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();
 
-        services.AddNoMercyEncoder();
+        services.AddNoMercyEncoder(opts =>
+        {
+            opts.FfmpegPathOverride = AppFiles.FfmpegPath;
+            opts.FfprobePathOverride = AppFiles.FfProbePath;
+        });
 
         services.AddPluginSystem(AppFiles.PluginsPath);
 

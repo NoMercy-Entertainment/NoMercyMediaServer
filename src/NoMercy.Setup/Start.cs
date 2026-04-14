@@ -171,11 +171,10 @@ public class Start
             // Wait a bit for the server to fully start and be responsive
             await Task.Delay(TimeSpan.FromSeconds(3));
 
-            // TODO(encoder-v3): Hardware acceleration detection is now handled by
-            // HardwareInitializationService (registered via services.AddNoMercyEncoder()).
-            // FFmpegHardwareConfig.InitializeAsync() was a V1 static helper — no longer needed here.
+            // Hardware acceleration detection is handled by HardwareInitializationService
+            // (registered via services.AddNoMercyEncoder() as IHostedService)
             Logger.Encoder(
-                "Hardware acceleration detection deferred to V3 encoder startup service",
+                "Hardware acceleration detection handled by V3 encoder startup service",
                 LogEventLevel.Debug
             );
 
