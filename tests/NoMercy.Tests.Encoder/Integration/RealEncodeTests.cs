@@ -184,6 +184,271 @@ public class RealEncodeTests : IAsyncLifetime
             .BeGreaterThan(0, "should receive at least one progress callback");
     }
 
+    [Fact]
+    public async Task EncodeAsync_ScalingProfile_ProducesDownscaledOutput()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
+
+        string outputDir = Path.Combine(_testDir, "output-scale");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "test-hls-90p-scale",
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                new VideoOutput(
+                    Codec: VideoCodecType.H264,
+                    Width: 160,
+                    Height: null,
+                    BitrateKbps: 100,
+                    Crf: 40,
+                    Preset: "ultrafast",
+                    Profile: "baseline",
+                    Level: "3.0",
+                    ConvertHdrToSdr: false,
+                    KeyframeIntervalSeconds: 2,
+                    TenBit: false
+                ),
+            ],
+            AudioOutputs:
+            [
+                new AudioOutput(
+                    Codec: AudioCodecType.Opus,
+                    BitrateKbps: 64,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["und"],
+                    Loudness: LoudnessMode.None
+                ),
+            ],
+            SubtitleOutputs: []
+        );
+
+        EncodingRequest request = new(
+            InputPath: _inputFile,
+            OutputDirectory: outputDir,
+            Profile: profile
+        );
+
+        TestProgressObserver observer = new();
+        IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
+
+        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+
+        // Width=160, Height=null → auto-calculated: 160 * 180 / 320 = 90
+        string scaledDir = Path.Combine(outputDir, "video_160x90");
+        Directory
+            .Exists(scaledDir)
+            .Should()
+            .BeTrue($"expected subdirectory 'video_160x90' under {outputDir}");
+
+        string[] playlists = Directory.GetFiles(scaledDir, "*.m3u8", SearchOption.TopDirectoryOnly);
+        string[] segments = Directory.GetFiles(scaledDir, "*.m4s", SearchOption.TopDirectoryOnly);
+
+        playlists.Should().NotBeEmpty("video_160x90 should contain a .m3u8 playlist");
+        segments.Should().NotBeEmpty("video_160x90 should contain .m4s segments");
+    }
+
+    [Fact]
+    public async Task EncodeAsync_MultiOutputProfile_ProducesMultipleVariants()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
+
+        string outputDir = Path.Combine(_testDir, "output-multi");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "test-hls-multi",
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                new VideoOutput(
+                    Codec: VideoCodecType.H264,
+                    Width: 320,
+                    Height: 180,
+                    BitrateKbps: 200,
+                    Crf: 40,
+                    Preset: "ultrafast",
+                    Profile: "baseline",
+                    Level: "3.0",
+                    ConvertHdrToSdr: false,
+                    KeyframeIntervalSeconds: 2,
+                    TenBit: false
+                ),
+                new VideoOutput(
+                    Codec: VideoCodecType.H264,
+                    Width: 160,
+                    Height: null,
+                    BitrateKbps: 100,
+                    Crf: 40,
+                    Preset: "ultrafast",
+                    Profile: "baseline",
+                    Level: "3.0",
+                    ConvertHdrToSdr: false,
+                    KeyframeIntervalSeconds: 2,
+                    TenBit: false
+                ),
+            ],
+            AudioOutputs:
+            [
+                new AudioOutput(
+                    Codec: AudioCodecType.Opus,
+                    BitrateKbps: 64,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["und"],
+                    Loudness: LoudnessMode.None
+                ),
+            ],
+            SubtitleOutputs: []
+        );
+
+        EncodingRequest request = new(
+            InputPath: _inputFile,
+            OutputDirectory: outputDir,
+            Profile: profile
+        );
+
+        TestProgressObserver observer = new();
+        IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
+
+        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+
+        string variant180Dir = Path.Combine(outputDir, "video_320x180");
+        string variant90Dir = Path.Combine(outputDir, "video_160x90");
+
+        Directory
+            .Exists(variant180Dir)
+            .Should()
+            .BeTrue($"expected subdirectory 'video_320x180' under {outputDir}");
+        Directory
+            .Exists(variant90Dir)
+            .Should()
+            .BeTrue($"expected subdirectory 'video_160x90' under {outputDir}");
+
+        Directory
+            .GetFiles(variant180Dir, "*.m3u8", SearchOption.TopDirectoryOnly)
+            .Should()
+            .NotBeEmpty("video_320x180 should contain a .m3u8 playlist");
+        Directory
+            .GetFiles(variant90Dir, "*.m3u8", SearchOption.TopDirectoryOnly)
+            .Should()
+            .NotBeEmpty("video_160x90 should contain a .m3u8 playlist");
+
+        Directory
+            .GetFiles(variant180Dir, "*.m4s", SearchOption.TopDirectoryOnly)
+            .Should()
+            .NotBeEmpty("video_320x180 should contain .m4s segments");
+        Directory
+            .GetFiles(variant90Dir, "*.m4s", SearchOption.TopDirectoryOnly)
+            .Should()
+            .NotBeEmpty("video_160x90 should contain .m4s segments");
+    }
+
+    [Fact]
+    public void V3EncodingProfile_SerializationRoundtrip_PreservesAllFields()
+    {
+        EncodingProfile original = new(
+            Id: Ulid.NewUlid(),
+            Name: "roundtrip-test-profile",
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                new VideoOutput(
+                    Codec: VideoCodecType.H264,
+                    Width: 1920,
+                    Height: 1080,
+                    BitrateKbps: 4000,
+                    Crf: 23,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.0",
+                    ConvertHdrToSdr: false,
+                    KeyframeIntervalSeconds: 2,
+                    TenBit: false
+                ),
+                new VideoOutput(
+                    Codec: VideoCodecType.H264,
+                    Width: 1280,
+                    Height: 720,
+                    BitrateKbps: 2000,
+                    Crf: 25,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.0",
+                    ConvertHdrToSdr: false,
+                    KeyframeIntervalSeconds: 2,
+                    TenBit: false
+                ),
+            ],
+            AudioOutputs:
+            [
+                new AudioOutput(
+                    Codec: AudioCodecType.Opus,
+                    BitrateKbps: 128,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["eng", "und"],
+                    Loudness: LoudnessMode.None
+                ),
+            ],
+            SubtitleOutputs:
+            [
+                new SubtitleOutput(
+                    Codec: SubtitleCodecType.WebVtt,
+                    Mode: SubtitleMode.Extract,
+                    AllowedLanguages: ["eng"]
+                ),
+            ],
+            Thumbnails: new ThumbnailOutput(Width: 320, IntervalSeconds: 10),
+            SchemaVersion: 1
+        );
+
+        string json = Newtonsoft.Json.JsonConvert.SerializeObject(original);
+        EncodingProfile? deserialized =
+            Newtonsoft.Json.JsonConvert.DeserializeObject<EncodingProfile>(json);
+
+        deserialized.Should().NotBeNull();
+        deserialized!.Name.Should().Be(original.Name);
+        deserialized.Format.Should().Be(original.Format);
+        deserialized.SchemaVersion.Should().Be(original.SchemaVersion);
+
+        deserialized.VideoOutputs.Should().HaveCount(original.VideoOutputs.Length);
+        deserialized.VideoOutputs[0].Width.Should().Be(1920);
+        deserialized.VideoOutputs[0].Height.Should().Be(1080);
+        deserialized.VideoOutputs[0].Codec.Should().Be(VideoCodecType.H264);
+        deserialized.VideoOutputs[1].Width.Should().Be(1280);
+        deserialized.VideoOutputs[1].Height.Should().Be(720);
+
+        deserialized.AudioOutputs.Should().HaveCount(original.AudioOutputs.Length);
+        deserialized.AudioOutputs[0].Codec.Should().Be(AudioCodecType.Opus);
+        deserialized.AudioOutputs[0].BitrateKbps.Should().Be(128);
+        deserialized.AudioOutputs[0].AllowedLanguages.Should().BeEquivalentTo(["eng", "und"]);
+
+        deserialized.SubtitleOutputs.Should().HaveCount(original.SubtitleOutputs.Length);
+        deserialized.SubtitleOutputs[0].Codec.Should().Be(SubtitleCodecType.WebVtt);
+        deserialized.SubtitleOutputs[0].Mode.Should().Be(SubtitleMode.Extract);
+
+        deserialized.Thumbnails.Should().NotBeNull();
+        deserialized.Thumbnails!.Width.Should().Be(320);
+        deserialized.Thumbnails.IntervalSeconds.Should().Be(10);
+    }
+
     private class TestProgressObserver : IProgressObserver
     {
         public List<string> StagesStarted { get; } = [];
