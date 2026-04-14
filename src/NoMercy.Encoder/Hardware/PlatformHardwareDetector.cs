@@ -255,10 +255,10 @@ public partial class PlatformHardwareDetector(
             ],
             GpuVendor.Intel =>
             [
-                (VideoCodecType.H264, ["h264_qsv"]),
-                (VideoCodecType.H265, ["hevc_qsv"]),
-                (VideoCodecType.Av1, ["av1_qsv"]),
-                (VideoCodecType.Vp9, ["vp9_qsv"]),
+                (VideoCodecType.H264, ["h264_qsv", "h264_vaapi"]),
+                (VideoCodecType.H265, ["hevc_qsv", "hevc_vaapi"]),
+                (VideoCodecType.Av1, ["av1_qsv", "av1_vaapi"]),
+                (VideoCodecType.Vp9, ["vp9_qsv", "vp9_vaapi"]),
             ],
             GpuVendor.Apple =>
             [
@@ -309,15 +309,7 @@ public partial class PlatformHardwareDetector(
         )
             return GpuVendor.Intel;
 
-        if (
-            upper.Contains("APPLE")
-            && (
-                upper.Contains("M1")
-                || upper.Contains("M2")
-                || upper.Contains("M3")
-                || upper.Contains("M4")
-            )
-        )
+        if (upper.Contains("APPLE") && AppleSiliconPattern().IsMatch(upper))
             return GpuVendor.Apple;
 
         return null;
@@ -341,6 +333,10 @@ public partial class PlatformHardwareDetector(
 
     [GeneratedRegex(@"(?<size>\d+)\s*GB", RegexOptions.IgnoreCase)]
     private static partial Regex VramPattern();
+
+    // Matches "M1", "M2 Pro", "M3 Max", "M4 Ultra", "M17" etc — any Apple Silicon generation
+    [GeneratedRegex(@"\bM\d+", RegexOptions.IgnoreCase)]
+    private static partial Regex AppleSiliconPattern();
 
     [GeneratedRegex(@"^Chipset Model:\s*(?<name>.+)$")]
     private static partial Regex MacChipsetPattern();

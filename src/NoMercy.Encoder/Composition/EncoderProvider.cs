@@ -4,7 +4,7 @@ using NoMercy.Encoder.Pipeline;
 
 public static class EncoderProvider
 {
-    private static Func<IEncoder>? _factory;
+    private static volatile Func<IEncoder>? _factory;
 
     public static bool IsConfigured => _factory is not null;
 

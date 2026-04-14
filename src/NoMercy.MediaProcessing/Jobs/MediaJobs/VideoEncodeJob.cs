@@ -55,6 +55,14 @@ public class VideoEncodeJob : AbstractEncoderJob
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(dbProfile.Param))
+                {
+                    Logger.Encoder(
+                        $"Skipping profile {dbProfile.Name}: no V3 encoding profile configured"
+                    );
+                    continue;
+                }
+
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
@@ -66,14 +74,6 @@ public class VideoEncodeJob : AbstractEncoderJob
                             ProfileName = dbProfile.Name,
                         }
                     );
-                }
-
-                if (string.IsNullOrWhiteSpace(dbProfile.Param))
-                {
-                    Logger.Encoder(
-                        $"Skipping profile {dbProfile.Name}: no V3 encoding profile configured"
-                    );
-                    continue;
                 }
 
                 EncodingProfile encodingProfile =

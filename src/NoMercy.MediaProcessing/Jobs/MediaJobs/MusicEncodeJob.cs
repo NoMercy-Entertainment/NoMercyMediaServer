@@ -59,6 +59,14 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
 
             try
             {
+                if (string.IsNullOrWhiteSpace(profile.Param))
+                {
+                    Logger.Encoder(
+                        $"Skipping profile {profile.Name}: no V3 encoding profile configured"
+                    );
+                    continue;
+                }
+
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
@@ -70,14 +78,6 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                             ProfileName = profile.Name,
                         }
                     );
-                }
-
-                if (string.IsNullOrWhiteSpace(profile.Param))
-                {
-                    Logger.Encoder(
-                        $"Skipping profile {profile.Name}: no V3 encoding profile configured"
-                    );
-                    continue;
                 }
 
                 EncodingProfile encodingProfile =
