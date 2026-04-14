@@ -2,11 +2,11 @@ namespace NoMercy.Encoder.Codecs.Definitions;
 
 public static class AudioCodecDefinitions
 {
-    // AAC — "aac" (FFmpeg built-in encoder; libfdk_aac is non-free and unavailable in most builds)
+    // AAC — "libfdk_aac" (Fraunhofer FDK; bundled in nomercy-ffmpeg with --enable-nonfree)
     // Lossy. Channels: mono/stereo/5.1/7.1. Sample rates: 44.1/48/96 kHz.
     // Bitrate: 32–512 kbps, default 192 kbps. Widely supported; preferred for streaming.
     private static readonly AudioEncoderInfo AacEncoder = new(
-        FfmpegName: "aac",
+        FfmpegName: "libfdk_aac",
         CodecType: AudioCodecType.Aac,
         Channels: [1, 2, 6, 8],
         SampleRates: [44100, 48000, 96000],

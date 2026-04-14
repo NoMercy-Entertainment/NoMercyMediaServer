@@ -136,11 +136,14 @@ public class RealEncodeTests : IAsyncLifetime
             ],
             AudioOutputs:
             [
+                // Use Opus — libopus is available in both the bundled FFmpeg and standard builds.
+                // libfdk_aac is only in the bundled build (nomercy-ffmpeg), so tests that
+                // run with system FFmpeg would fail with "Unknown encoder 'libfdk_aac'".
                 new AudioOutput(
-                    Codec: AudioCodecType.Aac,
+                    Codec: AudioCodecType.Opus,
                     BitrateKbps: 64,
                     Channels: 2,
-                    SampleRateHz: 44100,
+                    SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     Loudness: LoudnessMode.None
                 ),
