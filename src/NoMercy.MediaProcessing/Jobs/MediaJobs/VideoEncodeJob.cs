@@ -116,7 +116,13 @@ public class VideoEncodeJob : AbstractEncoderJob
                             s.AllowedLanguages,
                             s.CustomArguments
                         ))
-                        .ToArray()
+                        .ToArray(),
+                    dbProfile.Thumbnails is not null
+                        ? new V1ThumbnailProfile(
+                            dbProfile.Thumbnails.Width,
+                            dbProfile.Thumbnails.IntervalSeconds
+                        )
+                        : null
                 );
 
                 IEncoder encoder = EncoderProvider.Resolve();

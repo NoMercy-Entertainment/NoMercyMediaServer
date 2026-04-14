@@ -40,6 +40,7 @@ public static class EncoderProfilesSeed
                             _videoProfiles = vi._videoProfiles,
                             _audioProfiles = vi._audioProfiles,
                             _subtitleProfiles = vi._subtitleProfiles,
+                            _thumbnailProfile = vi._thumbnailProfile,
                         }
                 )
                 .RunAsync();

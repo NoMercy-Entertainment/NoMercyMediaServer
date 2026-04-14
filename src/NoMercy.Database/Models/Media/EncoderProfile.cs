@@ -70,6 +70,25 @@ public class EncoderProfile : Timestamps
         set => _subtitleProfiles = JsonConvert.SerializeObject(value);
     }
 
+    [Column("ThumbnailProfile")]
+    [JsonProperty("thumbnail_profile")]
+    [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
+    public string _thumbnailProfile { get; set; } = string.Empty;
+
+    [NotMapped]
+    public IThumbnailProfile? Thumbnails
+    {
+        get =>
+            _thumbnailProfile != string.Empty
+                ? JsonConvert.DeserializeObject<IThumbnailProfile>(_thumbnailProfile)
+                : null;
+        set =>
+            _thumbnailProfile = value is not null
+                ? JsonConvert.SerializeObject(value)
+                : string.Empty;
+    }
+
     [JsonProperty("encoder_profile_folder")]
     public ICollection<EncoderProfileFolder> EncoderProfileFolder { get; set; } = [];
 }
