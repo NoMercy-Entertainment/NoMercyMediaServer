@@ -332,7 +332,9 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 );
             }
 
-            // Thumbnail branch: fps → scale → tile → [thumbs]
+            // Thumbnail branch: format=yuv420p (force 8-bit) → fps → scale → tile → [thumbs]
+            // The format conversion is needed because the split receives the raw source
+            // pixel format (e.g. yuv420p10le for 10-bit content) and libwebp can't handle it.
             if (hasThumbnails)
             {
                 ThumbnailOutputPlan thumbs = plan.Thumbnails!;
@@ -343,7 +345,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
 
                 fg.AddFilter(
                     "thumbsrc",
-                    $"fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2,tile={gridWidth}x{gridHeight}",
+                    $"format=yuv420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2,tile={gridWidth}x{gridHeight}",
                     "thumbs"
                 );
             }
