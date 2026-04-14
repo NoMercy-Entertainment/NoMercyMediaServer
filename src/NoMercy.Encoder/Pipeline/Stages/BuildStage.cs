@@ -243,7 +243,8 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             if (parentDir is not null)
                 Directory.CreateDirectory(parentDir);
 
-            // Use MKS container for bitmap subs — preserves the codec without muxer issues
+            // Use MKS (Matroska) container for bitmap subs.
+            // Must specify -f matroska explicitly — FFmpeg doesn't auto-detect .mks.
             string outputPath = Path.ChangeExtension(info.OutputPath, ".mks");
 
             FfmpegCommand cmd = new FfmpegCommandBuilder()
@@ -253,7 +254,8 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                     new OutputOptions(
                         FilePath: outputPath,
                         SubtitleCodec: "copy",
-                        MapStreams: [$"0:s:{info.SourceIndex}"]
+                        MapStreams: [$"0:s:{info.SourceIndex}"],
+                        ExtraFlags: new Dictionary<string, string> { ["-f"] = "matroska" }
                     )
                 )
                 .Build(ffmpegPath);

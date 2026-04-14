@@ -43,7 +43,7 @@ public class PlaylistGenerator
 
             string uri = $"{subDir}/{playlistFile}.m3u8";
             string language = audio.Language ?? "und";
-            string displayName = GetAudioDisplayName(language, codecName);
+            string displayName = GetAudioDisplayName(language);
             bool isDefault = audio == plan.AudioOutputs[0];
 
             sb.AppendLine(
@@ -83,9 +83,9 @@ public class PlaylistGenerator
         return sb.ToString();
     }
 
-    private static string GetAudioDisplayName(string language, string codec)
+    private static string GetAudioDisplayName(string language)
     {
-        string langName = language.ToUpperInvariant() switch
+        return language.ToUpperInvariant() switch
         {
             "ENG" => "English",
             "FRE" or "FRA" => "French",
@@ -109,8 +109,6 @@ public class PlaylistGenerator
             "UND" => "Unknown",
             _ => language,
         };
-
-        return $"{langName} {codec}";
     }
 
     private static string GetVideoCodecTag(VideoOutputPlan video)
