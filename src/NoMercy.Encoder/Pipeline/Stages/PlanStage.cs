@@ -94,15 +94,7 @@ public class PlanStage(
                         ?? (v.Width * media.VideoStreams[0].Height / media.VideoStreams[0].Width);
                     ResolvedCodec resolved = resolvedCodecs[i];
 
-                    // Use direct stream mapping when no filter graph is needed
-                    // (single video output, no scaling, no HDR conversion)
-                    bool needsFilterGraph =
-                        profile.VideoOutputs.Length > 1
-                        || v.Width != media.VideoStreams[0].Width
-                        || height != media.VideoStreams[0].Height
-                        || v.ConvertHdrToSdr;
-
-                    string mapLabel = needsFilterGraph ? $"[v{i}]" : "0:v:0";
+                    string mapLabel = $"[v{i}]";
 
                     return new VideoOutputPlan(
                         Width: v.Width,

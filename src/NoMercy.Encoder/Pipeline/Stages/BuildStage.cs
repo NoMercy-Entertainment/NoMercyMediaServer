@@ -1,6 +1,7 @@
 namespace NoMercy.Encoder.Pipeline.Stages;
 
 using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
@@ -36,6 +37,10 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
 
             FfmpegCommandBuilder builder = new();
             builder.AddInput(new InputOptions(input.InputPath));
+
+            string? filterGraph = BuildFilterGraph(input.Plan.OutputPlan, context.MediaInfo);
+            if (filterGraph is not null)
+                builder.WithFilterComplex(filterGraph);
 
             strategy.ConfigureOutput(builder, input.Plan.OutputPlan, input.OutputDirectory);
 
@@ -143,4 +148,54 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             OutputFormat.Dash => new DashOutputStrategy(),
             _ => throw new ArgumentOutOfRangeException(nameof(format)),
         };
+
+    private static string? BuildFilterGraph(OutputPlan plan, MediaInfo? mediaInfo)
+    {
+        VideoOutputPlan[] videoOutputs = plan.VideoOutputs;
+
+        // No video outputs or no filter-graph labels — nothing to build
+        if (videoOutputs.Length == 0 || !videoOutputs.Any(v => v.MapLabel.StartsWith('[')))
+            return null;
+
+        // Source dimensions are required to decide copy vs. scale
+        if (mediaInfo is null || mediaInfo.VideoStreams.Count == 0)
+            return null;
+
+        int sourceWidth = mediaInfo.VideoStreams[0].Width;
+        int sourceHeight = mediaInfo.VideoStreams[0].Height;
+
+        FilterGraphBuilder fg = new();
+
+        if (videoOutputs.Length == 1)
+        {
+            VideoOutputPlan single = videoOutputs[0];
+            // Strip the surrounding brackets to get the raw label name
+            string outputLabel = single.MapLabel.Trim('[', ']');
+
+            if (single.Width == sourceWidth && single.Height == sourceHeight)
+                fg.AddFilter("0:v:0", "copy", outputLabel);
+            else
+                fg.AddScaleWidth("0:v:0", single.Width, outputLabel);
+        }
+        else
+        {
+            // Multi-output: split first, then scale/copy each branch
+            string[] splitLabels = videoOutputs.Select((_, i) => $"split{i}").ToArray();
+
+            fg.AddSplit("0:v:0", splitLabels);
+
+            for (int i = 0; i < videoOutputs.Length; i++)
+            {
+                VideoOutputPlan video = videoOutputs[i];
+                string outputLabel = video.MapLabel.Trim('[', ']');
+
+                if (video.Width == sourceWidth && video.Height == sourceHeight)
+                    fg.AddFilter(splitLabels[i], "copy", outputLabel);
+                else
+                    fg.AddScaleWidth(splitLabels[i], video.Width, outputLabel);
+            }
+        }
+
+        return fg.HasFilters ? fg.Build() : null;
+    }
 }
