@@ -26,12 +26,6 @@ public class SubtitleExtractor
                 continue;
 
             SubtitleStreamInfo? stream = i < streams.Count ? streams[i] : null;
-
-            // Skip bitmap subtitles (dvd_subtitle, pgs) when target is text (vtt, srt, ass)
-            // FFmpeg cannot convert bitmap to text — that requires OCR
-            if (stream is not null && !stream.IsTextBased)
-                continue;
-
             string language = stream?.Language ?? plan.Language ?? "und";
 
             string extension = plan.OutputCodec switch
