@@ -8,7 +8,8 @@ public record OutputPlan(
     VideoOutputPlan[] VideoOutputs,
     AudioOutputPlan[] AudioOutputs,
     SubtitleOutputPlan[] SubtitleOutputs,
-    ThumbnailOutputPlan? Thumbnails
+    ThumbnailOutputPlan? Thumbnails,
+    int SegmentDurationSeconds = 6
 );
 
 public record VideoOutputPlan(

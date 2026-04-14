@@ -8,14 +8,14 @@ public class HlsOutputStrategy : IOutputStrategy
 {
     public OutputFormat Format => OutputFormat.Hls;
 
-    public int SegmentDurationSeconds { get; init; } = 6;
-
     public void ConfigureOutput(
         FfmpegCommandBuilder builder,
         OutputPlan plan,
         string outputDirectory
     )
     {
+        int segmentDuration = plan.SegmentDurationSeconds;
+
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
             Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
@@ -46,12 +46,12 @@ public class HlsOutputStrategy : IOutputStrategy
             // -force_key_frames places IDR frames at precise second marks.
             // -forced-idr ensures HW encoders (NVENC/QSV/AMF) produce actual IDR frames.
             // -g is a safety ceiling at 2x segment duration — never relied on for alignment.
-            int gopCeiling = (int)Math.Ceiling(video.FrameRate * SegmentDurationSeconds * 2);
+            int gopCeiling = (int)Math.Ceiling(video.FrameRate * segmentDuration * 2);
 
             Dictionary<string, string> extraFlags = new(video.ExtraFlags)
             {
                 ["-f"] = "hls",
-                ["-hls_time"] = SegmentDurationSeconds.ToString(),
+                ["-hls_time"] = segmentDuration.ToString(),
                 ["-hls_playlist_type"] = "vod",
                 ["-hls_flags"] = "independent_segments",
                 ["-hls_segment_filename"] = Path.Combine(
@@ -59,7 +59,7 @@ public class HlsOutputStrategy : IOutputStrategy
                     segmentDir,
                     $"{segmentFile}_%05d.ts"
                 ),
-                ["-force_key_frames"] = $"expr:gte(t,n_forced*{SegmentDurationSeconds})",
+                ["-force_key_frames"] = $"expr:gte(t,n_forced*{segmentDuration})",
                 ["-forced-idr"] = "1",
             };
 
@@ -115,7 +115,7 @@ public class HlsOutputStrategy : IOutputStrategy
                 Dictionary<string, string> extraFlags = new()
                 {
                     ["-f"] = "hls",
-                    ["-hls_time"] = SegmentDurationSeconds.ToString(),
+                    ["-hls_time"] = segmentDuration.ToString(),
                     ["-hls_playlist_type"] = "vod",
                     ["-hls_flags"] = "independent_segments",
                     ["-hls_segment_filename"] = Path.Combine(

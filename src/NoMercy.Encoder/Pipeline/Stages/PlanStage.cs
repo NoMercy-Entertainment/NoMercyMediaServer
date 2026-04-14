@@ -231,6 +231,13 @@ public class PlanStage(
             ? new ThumbnailOutputPlan(profile.Thumbnails.Width, profile.Thumbnails.IntervalSeconds)
             : null;
 
-        return new OutputPlan(profile.Format, videoPlan, audioPlan, subtitlePlan, thumbPlan);
+        return new OutputPlan(
+            profile.Format,
+            videoPlan,
+            audioPlan,
+            subtitlePlan,
+            thumbPlan,
+            profile.SegmentDurationSeconds
+        );
     }
 }

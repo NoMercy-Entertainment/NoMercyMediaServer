@@ -10,6 +10,7 @@ public record EncodingProfile(
     AudioOutput[] AudioOutputs,
     SubtitleOutput[] SubtitleOutputs,
     ThumbnailOutput? Thumbnails = null,
+    int SegmentDurationSeconds = 6,
     int SchemaVersion = 1
 );
 
