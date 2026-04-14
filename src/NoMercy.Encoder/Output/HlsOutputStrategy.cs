@@ -68,7 +68,7 @@ public class HlsOutputStrategy : IOutputStrategy
                     Profile: video.Profile,
                     Level: video.Level,
                     PixelFormat: video.TenBit ? video.PixelFormat : null,
-                    KeyframeInterval: SegmentDurationSeconds * 30,
+                    KeyframeInterval: (int)Math.Ceiling(video.FrameRate * SegmentDurationSeconds),
                     MapStreams: [video.MapLabel],
                     ExtraFlags: extraFlags
                 )

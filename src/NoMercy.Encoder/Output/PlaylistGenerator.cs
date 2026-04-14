@@ -74,8 +74,13 @@ public class PlaylistGenerator
 
             string colorRange = video.TenBit ? "HDR" : "SDR";
 
+            string frameRate = video.FrameRate.ToString(
+                "F3",
+                System.Globalization.CultureInfo.InvariantCulture
+            );
+
             sb.AppendLine(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth},AVERAGE-BANDWIDTH={bandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE=23,976,CODECS=\"{codecTag}{audioCodecTag}\",AUDIO=\"{audioGroupId}\",VIDEO-RANGE={colorRange},COLOUR-SPACE=BT.709,NAME=\"{video.Width}x{video.Height} {colorRange}\""
+                $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth},AVERAGE-BANDWIDTH={bandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate},CODECS=\"{codecTag}{audioCodecTag}\",AUDIO=\"{audioGroupId}\",VIDEO-RANGE={colorRange},COLOUR-SPACE=BT.709,NAME=\"{video.Width}x{video.Height} {colorRange}\""
             );
             sb.AppendLine($"{subDir}/{playlistFile}.m3u8");
         }

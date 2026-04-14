@@ -24,6 +24,7 @@ public record VideoOutputPlan(
     string PixelFormat,
     string MapLabel,
     Dictionary<string, string> ExtraFlags,
+    double FrameRate = 23.976,
     string SegmentNameTemplate = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
     string PlaylistNameTemplate = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
 );

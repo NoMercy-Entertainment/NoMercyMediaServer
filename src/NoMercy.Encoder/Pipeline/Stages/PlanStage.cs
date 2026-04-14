@@ -132,6 +132,7 @@ public class PlanStage(
                         PixelFormat: v.TenBit ? encoder.PixelFormat10Bit : "yuv420p",
                         MapLabel: $"[v{i}]",
                         ExtraFlags: extraFlags,
+                        FrameRate: media.VideoStreams[0].FrameRate,
                         SegmentNameTemplate: v.SegmentNameTemplate,
                         PlaylistNameTemplate: v.PlaylistNameTemplate
                     );
