@@ -42,28 +42,7 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnStageStarted(string stageName)
     {
-        if (!EventBusProvider.IsConfigured)
-            return;
-
-        EventBusProvider
-            .Current.PublishAsync(
-                new EncodingStageChangedEvent
-                {
-                    JobId = _jobId,
-                    Status = "encoding",
-                    Title = _title,
-                    Message = $"Stage: {stageName}",
-                    BaseFolder = _baseFolder,
-                    ShareBasePath = _sharePath,
-                    VideoStreams = _videoStreams,
-                    AudioStreams = _audioStreams,
-                    SubtitleStreams = _subtitleStreams,
-                    HasGpu = _hasGpu,
-                    IsHdr = _isHdr,
-                }
-            )
-            .GetAwaiter()
-            .GetResult();
+        Publish(status: "encoding", message: $"Stage: {stageName}");
     }
 
     public void OnProgress(EncodingProgress progress)
@@ -71,17 +50,42 @@ public class EventBusProgressObserver : IProgressObserver
         if (!EventBusProvider.IsConfigured)
             return;
 
+        TimeSpan remaining = progress.EstimatedRemaining ?? TimeSpan.Zero;
+
         EventBusProvider
             .Current.PublishAsync(
-                new EncodingProgressEvent
+                new EncoderProgressBroadcastEvent
                 {
-                    JobId = _jobId,
-                    Percentage = progress.PercentComplete,
-                    Elapsed = progress.Elapsed,
-                    Estimated = progress.EstimatedRemaining,
-                    Fps = progress.CurrentFps,
-                    Speed = progress.CurrentSpeed,
-                    BitrateKbps = progress.BitrateKbps,
+                    ProgressData = new
+                    {
+                        id = _jobId,
+                        title = _title,
+                        status = "running",
+                        message = "Encoding",
+                        progress = progress.PercentComplete,
+                        speed = progress.CurrentSpeed ?? 0,
+                        fps = progress.CurrentFps ?? 0,
+                        bitrate_kbps = progress.BitrateKbps ?? 0,
+                        seconds = (int)progress.Elapsed.TotalSeconds % 60,
+                        minutes = progress.Elapsed.Minutes,
+                        hours = (int)progress.Elapsed.TotalHours,
+                        days = progress.Elapsed.Days,
+                        eta = $"{(int)remaining.TotalHours:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}",
+                        remaining_split = new[]
+                        {
+                            remaining.Days,
+                            (int)remaining.TotalHours % 24,
+                            remaining.Minutes,
+                            remaining.Seconds,
+                        },
+                        has_gpu = _hasGpu,
+                        is_hdr = _isHdr,
+                        base_folder = _baseFolder,
+                        share_path = _sharePath,
+                        video_streams = _videoStreams,
+                        audio_streams = _audioStreams,
+                        subtitle_streams = _subtitleStreams,
+                    },
                 }
             )
             .GetAwaiter()
@@ -90,45 +94,42 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnStageCompleted(string stageName, TimeSpan duration)
     {
-        if (!EventBusProvider.IsConfigured)
-            return;
-
-        EventBusProvider
-            .Current.PublishAsync(
-                new EncodingStageChangedEvent
-                {
-                    JobId = _jobId,
-                    Status = "encoding",
-                    Title = _title,
-                    Message = $"Completed: {stageName} ({duration.TotalSeconds:F1}s)",
-                    BaseFolder = _baseFolder,
-                    ShareBasePath = _sharePath,
-                    VideoStreams = _videoStreams,
-                    AudioStreams = _audioStreams,
-                    SubtitleStreams = _subtitleStreams,
-                    HasGpu = _hasGpu,
-                    IsHdr = _isHdr,
-                }
-            )
-            .GetAwaiter()
-            .GetResult();
+        Publish(
+            status: "encoding",
+            message: $"Completed: {stageName} ({duration.TotalSeconds:F1}s)"
+        );
     }
 
     public void OnError(EncodingError error)
+    {
+        Publish(status: "failed", message: error.Message);
+    }
+
+    private void Publish(string status, string message)
     {
         if (!EventBusProvider.IsConfigured)
             return;
 
         EventBusProvider
             .Current.PublishAsync(
-                new EncodingStageChangedEvent
+                new EncoderProgressBroadcastEvent
                 {
-                    JobId = _jobId,
-                    Status = "failed",
-                    Title = _title,
-                    Message = error.Message,
-                    BaseFolder = _baseFolder,
-                    ShareBasePath = _sharePath,
+                    ProgressData = new
+                    {
+                        id = _jobId,
+                        title = _title,
+                        status,
+                        message,
+                        progress = 0,
+                        speed = 0,
+                        has_gpu = _hasGpu,
+                        is_hdr = _isHdr,
+                        base_folder = _baseFolder,
+                        share_path = _sharePath,
+                        video_streams = _videoStreams,
+                        audio_streams = _audioStreams,
+                        subtitle_streams = _subtitleStreams,
+                    },
                 }
             )
             .GetAwaiter()

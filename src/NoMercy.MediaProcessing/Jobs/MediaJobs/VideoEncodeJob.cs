@@ -130,7 +130,8 @@ public class VideoEncodeJob : AbstractEncoderJob
                 EncodingRequest request = new(
                     InputPath: InputFile,
                     OutputDirectory: fileMetadata.Path,
-                    Profile: encodingProfile
+                    Profile: encodingProfile,
+                    MediaTitle: fileMetadata.FileName
                 );
 
                 EventBusProgressObserver progressObserver = new(
