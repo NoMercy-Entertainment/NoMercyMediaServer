@@ -39,6 +39,7 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
         List<VideoStreamInfo> videoStreams = [];
         List<AudioStreamInfo> audioStreams = [];
         List<SubtitleStreamInfo> subtitleStreams = [];
+        List<AttachmentInfo> attachments = [];
 
         foreach (JToken stream in streams)
         {
@@ -53,6 +54,16 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
                     break;
                 case "subtitle":
                     subtitleStreams.Add(ParseSubtitleStream(stream));
+                    break;
+                case "attachment":
+                    attachments.Add(
+                        new AttachmentInfo(
+                            Index: stream.Value<int>("index"),
+                            Codec: stream.Value<string>("codec_name") ?? "unknown",
+                            Filename: stream["tags"]?.Value<string>("filename"),
+                            MimeType: stream["tags"]?.Value<string>("mimetype")
+                        )
+                    );
                     break;
             }
         }
@@ -83,7 +94,8 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
             VideoStreams: videoStreams,
             AudioStreams: audioStreams,
             SubtitleStreams: subtitleStreams,
-            Chapters: chapterList
+            Chapters: chapterList,
+            Attachments: attachments
         );
     }
 

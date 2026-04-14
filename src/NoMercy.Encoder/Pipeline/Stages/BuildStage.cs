@@ -79,11 +79,8 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 );
             }
 
-            // Font extraction — only for MKV/Matroska which can embed font attachments
-            if (
-                context.MediaInfo is not null
-                && context.MediaInfo.Format.Contains("matroska", StringComparison.OrdinalIgnoreCase)
-            )
+            // Font extraction — only when the source has embedded attachments (fonts)
+            if (context.MediaInfo is not null && context.MediaInfo.HasAttachments)
             {
                 FontExtractor fontExtractor = new();
                 string fontDir = Path.Combine(input.OutputDirectory, "fonts");

@@ -17,6 +17,8 @@ public enum DvBlCompatibility
 
 public record CropArea(int W, int H, int X, int Y);
 
+public record AttachmentInfo(int Index, string Codec, string? Filename, string? MimeType);
+
 public record MediaInfo(
     string FilePath,
     string Format,
@@ -27,15 +29,18 @@ public record MediaInfo(
     IReadOnlyList<AudioStreamInfo> AudioStreams,
     IReadOnlyList<SubtitleStreamInfo> SubtitleStreams,
     IReadOnlyList<ChapterInfo> Chapters,
+    IReadOnlyList<AttachmentInfo> Attachments = null!,
     DolbyVisionInfo? DolbyVision = null,
     bool HasHdr10Plus = false,
     CropArea? DetectedCrop = null,
     double CropAspectRatio = 0
 )
 {
+    public IReadOnlyList<AttachmentInfo> Attachments { get; init; } = Attachments ?? [];
     public bool HasVideo => VideoStreams.Count > 0;
     public bool HasAudio => AudioStreams.Count > 0;
     public bool HasSubtitles => SubtitleStreams.Count > 0;
+    public bool HasAttachments => Attachments.Count > 0;
 
     public bool IsHdr => VideoStreams.Any(v => v.IsHdr);
     public int PrimaryBitDepth => VideoStreams.FirstOrDefault()?.BitDepth ?? 8;
