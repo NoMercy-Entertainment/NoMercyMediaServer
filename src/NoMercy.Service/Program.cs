@@ -168,6 +168,9 @@ public static class Program
             _applicationShutdownCts.Token
         );
 
+        // Load SSL cert from database now that TokenStore is initialized by BootOrchestrator
+        Certificate.LoadFromDb();
+
         // Force QueueRunner singleton creation so QueueRunner.Current is set
         // before background tasks try to call Initialize().
         app.Services.GetRequiredService<QueueRunner>();
