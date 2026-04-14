@@ -53,7 +53,7 @@ public class PlatformHardwareDetectorTests
         gpus[0].Vendor.Should().Be(GpuVendor.Nvidia);
         gpus[0].Name.Should().Contain("RTX 3070");
         gpus[0].VramMb.Should().Be(8192);
-        gpus[0].MaxEncoderSessions.Should().Be(12);
+        gpus[0].MaxEncoderSessions.Should().Be(8);
         gpus[0].SupportedCodecs.Should().Contain(VideoCodecType.H264);
         gpus[0].SupportedCodecs.Should().Contain(VideoCodecType.H265);
     }

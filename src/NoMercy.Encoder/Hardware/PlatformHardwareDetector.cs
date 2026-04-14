@@ -12,7 +12,6 @@ public partial class PlatformHardwareDetector(
     ILogger<PlatformHardwareDetector> logger
 ) : IHardwareDetector
 {
-    private const int NvidiaConsumerMaxSessions = 8;
     private const int DefaultMaxSessions = 8;
 
     public async Task<IReadOnlyList<GpuDevice>> DetectGpusAsync(CancellationToken ct = default)
@@ -220,8 +219,7 @@ public partial class PlatformHardwareDetector(
             return null;
         }
 
-        int maxSessions =
-            vendor.Value == GpuVendor.Nvidia ? NvidiaConsumerMaxSessions : DefaultMaxSessions;
+        int maxSessions = ResolveMaxSessions(vendor.Value, name);
 
         logger.LogInformation(
             "Detected GPU: {Vendor} {Name} ({VramMb}MB, {CodecCount} codecs, max {Sessions} sessions)",
@@ -313,6 +311,40 @@ public partial class PlatformHardwareDetector(
             return GpuVendor.Apple;
 
         return null;
+    }
+
+    /// <summary>
+    /// NVENC session limits are driver-enforced and not queryable via standard APIs.
+    /// Professional cards (Quadro, Tesla, A-series, RTX A/L-series) have no limit.
+    /// Consumer cards: 8 sessions (post-2024 driver update, up from 5).
+    /// </summary>
+    private static int ResolveMaxSessions(GpuVendor vendor, string name)
+    {
+        if (vendor != GpuVendor.Nvidia)
+            return DefaultMaxSessions;
+
+        string upper = name.ToUpperInvariant();
+
+        // Professional/datacenter cards — unlimited sessions
+        bool isProfessional =
+            upper.Contains("QUADRO")
+            || upper.Contains("TESLA")
+            || upper.Contains("RTX A")
+            || upper.Contains("RTX L")
+            || upper.Contains("A100")
+            || upper.Contains("A40")
+            || upper.Contains("A30")
+            || upper.Contains("A16")
+            || upper.Contains("A10")
+            || upper.Contains("L40")
+            || upper.Contains("H100")
+            || upper.Contains("H200");
+
+        if (isProfessional)
+            return int.MaxValue;
+
+        // Consumer GeForce/RTX — 8 concurrent sessions (driver-enforced)
+        return 8;
     }
 
     private static long EstimateVramFromName(string name)
