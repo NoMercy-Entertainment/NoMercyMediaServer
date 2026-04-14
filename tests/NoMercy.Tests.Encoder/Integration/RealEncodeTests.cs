@@ -246,18 +246,26 @@ public class RealEncodeTests : IAsyncLifetime
                 $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
-        // Width=160, Height=null → auto-calculated: 160 * 180 / 320 = 90
-        string scaledDir = Path.Combine(outputDir, "video_160x90_SDR");
-        Directory
-            .Exists(scaledDir)
+        // Find the video output directory (template resolves dimensions + colorrange)
+        string[] allDirs = Directory.GetDirectories(outputDir);
+        string[] allFiles = Directory.GetFiles(outputDir, "*", SearchOption.AllDirectories);
+        string[] videoDirs = Directory.GetDirectories(outputDir, "video_*");
+        videoDirs
             .Should()
-            .BeTrue($"expected subdirectory 'video_160x90_SDR' under {outputDir}");
+            .HaveCount(
+                1,
+                $"should have exactly one video output directory. All dirs: [{string.Join(", ", allDirs.Select(Path.GetFileName))}]. All files: [{string.Join(", ", allFiles.Select(f => Path.GetRelativePath(outputDir, f)))}]"
+            );
 
-        string[] playlists = Directory.GetFiles(scaledDir, "*.m3u8", SearchOption.TopDirectoryOnly);
-        string[] segments = Directory.GetFiles(scaledDir, "*.ts", SearchOption.TopDirectoryOnly);
+        string[] playlists = Directory.GetFiles(
+            videoDirs[0],
+            "*.m3u8",
+            SearchOption.TopDirectoryOnly
+        );
+        string[] segments = Directory.GetFiles(videoDirs[0], "*.ts", SearchOption.TopDirectoryOnly);
 
-        playlists.Should().NotBeEmpty("video_160x90_SDR should contain a .m3u8 playlist");
-        segments.Should().NotBeEmpty("video_160x90_SDR should contain .ts segments");
+        playlists.Should().NotBeEmpty("video dir should contain a .m3u8 playlist");
+        segments.Should().NotBeEmpty("video dir should contain .ts segments");
     }
 
     [Fact]
@@ -332,35 +340,21 @@ public class RealEncodeTests : IAsyncLifetime
                 $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
-        string variant180Dir = Path.Combine(outputDir, "video_320x180_SDR");
-        string variant90Dir = Path.Combine(outputDir, "video_160x90_SDR");
+        // Should have 2 video variant directories
+        string[] videoDirs = Directory.GetDirectories(outputDir, "video_*");
+        videoDirs.Should().HaveCount(2, "should have two video output directories");
 
-        Directory
-            .Exists(variant180Dir)
-            .Should()
-            .BeTrue($"expected subdirectory 'video_320x180_SDR' under {outputDir}");
-        Directory
-            .Exists(variant90Dir)
-            .Should()
-            .BeTrue($"expected subdirectory 'video_160x90_SDR' under {outputDir}");
-
-        Directory
-            .GetFiles(variant180Dir, "*.m3u8", SearchOption.TopDirectoryOnly)
-            .Should()
-            .NotBeEmpty("video_320x180_SDR should contain a .m3u8 playlist");
-        Directory
-            .GetFiles(variant90Dir, "*.m3u8", SearchOption.TopDirectoryOnly)
-            .Should()
-            .NotBeEmpty("video_160x90_SDR should contain a .m3u8 playlist");
-
-        Directory
-            .GetFiles(variant180Dir, "*.ts", SearchOption.TopDirectoryOnly)
-            .Should()
-            .NotBeEmpty("video_320x180_SDR should contain .ts segments");
-        Directory
-            .GetFiles(variant90Dir, "*.ts", SearchOption.TopDirectoryOnly)
-            .Should()
-            .NotBeEmpty("video_160x90_SDR should contain .ts segments");
+        foreach (string dir in videoDirs)
+        {
+            Directory
+                .GetFiles(dir, "*.m3u8", SearchOption.TopDirectoryOnly)
+                .Should()
+                .NotBeEmpty($"{Path.GetFileName(dir)} should contain a .m3u8 playlist");
+            Directory
+                .GetFiles(dir, "*.ts", SearchOption.TopDirectoryOnly)
+                .Should()
+                .NotBeEmpty($"{Path.GetFileName(dir)} should contain .ts segments");
+        }
     }
 
     [Fact]
