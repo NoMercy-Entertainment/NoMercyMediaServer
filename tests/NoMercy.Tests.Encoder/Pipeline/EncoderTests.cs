@@ -403,7 +403,7 @@ public class EncoderTests
 
         progressMock.Verify(
             p => p.OnStageCompleted(It.IsAny<string>(), It.IsAny<TimeSpan>()),
-            Times.Once
+            Times.Exactly(6)
         );
     }
 

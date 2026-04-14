@@ -4,8 +4,13 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Progress;
 
-public record ExecuteInput(FfmpegCommand[] Commands, TimeSpan InputDuration);
+public record ExecuteInput(
+    FfmpegCommand[] Commands,
+    TimeSpan InputDuration,
+    IProgressObserver? Progress = null
+);
 
 public class ExecuteStage(IFfmpegExecutor executor, ILogger<ExecuteStage> logger)
     : IPipelineStage<ExecuteInput, ExecutionResult[]>
@@ -30,9 +35,15 @@ public class ExecuteStage(IFfmpegExecutor executor, ILogger<ExecuteStage> logger
         {
             FfmpegCommand cmd = input.Commands[i];
 
+            // Only the main encode command (index 0) reports progress.
+            // Post-processing commands (subtitles, fonts) are short-lived.
+            Action<EncodingProgress>? onProgress =
+                i == 0 && input.Progress is not null ? p => input.Progress.OnProgress(p) : null;
+
             ExecutionResult result = await executor.ExecuteAsync(
                 cmd,
                 input.InputDuration,
+                onProgress: onProgress,
                 correlationId: context.CorrelationId,
                 ct: ct
             );

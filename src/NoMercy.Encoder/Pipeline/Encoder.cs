@@ -35,41 +35,35 @@ public class Encoder(
             request.OutputDirectory
         );
 
-        progress?.OnProgress(
-            new EncodingProgress(
-                context.CorrelationId,
-                0,
-                TimeSpan.Zero,
-                null,
-                null,
-                null,
-                "Analyze",
-                null
-            )
-        );
-
         // Stage 1: Analyze
+        progress?.OnStageStarted("Analyze");
         StageResult analyzeResult = await analyzeStage.ExecuteAsync(request.InputPath, context, ct);
         if (analyzeResult is StageFailure analyzeFailure)
             return Fail(analyzeFailure.Error, stopwatch.Elapsed, progress);
 
         MediaInfo mediaInfo = ((StageSuccess<MediaInfo>)analyzeResult).Value;
         context = context with { MediaInfo = mediaInfo };
+        progress?.OnStageCompleted("Analyze", stopwatch.Elapsed);
 
         // Stage 2: Validate
+        progress?.OnStageStarted("Validate");
         ValidateInput validateInput = new(mediaInfo, request.Profile);
         StageResult validateResult = await validateStage.ExecuteAsync(validateInput, context, ct);
         if (validateResult is StageFailure validateFailure)
             return Fail(validateFailure.Error, stopwatch.Elapsed, progress);
+        progress?.OnStageCompleted("Validate", stopwatch.Elapsed);
 
         // Stage 3: Plan
+        progress?.OnStageStarted("Plan");
         StageResult planResult = await planStage.ExecuteAsync(validateInput, context, ct);
         if (planResult is StageFailure planFailure)
             return Fail(planFailure.Error, stopwatch.Elapsed, progress);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
+        progress?.OnStageCompleted("Plan", stopwatch.Elapsed);
 
         // Stage 4: Build
+        progress?.OnStageStarted("Build");
         BuildInput buildInput = new(
             plan,
             request.InputPath,
@@ -81,16 +75,20 @@ public class Encoder(
             return Fail(buildFailure.Error, stopwatch.Elapsed, progress);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)buildResult).Value;
+        progress?.OnStageCompleted("Build", stopwatch.Elapsed);
 
         // Stage 5: Execute
-        ExecuteInput executeInput = new(commands, mediaInfo.Duration);
+        progress?.OnStageStarted("Encode");
+        ExecuteInput executeInput = new(commands, mediaInfo.Duration, progress);
         StageResult executeResult = await executeStage.ExecuteAsync(executeInput, context, ct);
         if (executeResult is StageFailure executeFailure)
             return Fail(executeFailure.Error, stopwatch.Elapsed, progress);
 
         ExecutionResult[] executionResults = ((StageSuccess<ExecutionResult[]>)executeResult).Value;
+        progress?.OnStageCompleted("Encode", stopwatch.Elapsed);
 
         // Stage 6: Finalize
+        progress?.OnStageStarted("Finalize");
         FinalizeInput finalizeInput = new(
             executionResults,
             plan.OutputPlan,
