@@ -93,11 +93,11 @@ public class PlaylistGenerator
                 Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
             string playlistFile = Path.GetFileName(playlistResolved);
 
-            string colorRange = video.TenBit ? "HDR" : "SDR";
+            string videoRange = video.TenBit ? "PQ" : "SDR";
             string frameRate = video.FrameRate.ToString("F3", CultureInfo.InvariantCulture);
 
             sb.AppendLine(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate},CODECS=\"{codecTag}{audioCodecTag}\",AUDIO=\"{audioGroupId}\",VIDEO-RANGE={colorRange},NAME=\"{video.Width}x{video.Height} {colorRange}\""
+                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate},CODECS=\"{codecTag}{audioCodecTag}\",VIDEO-RANGE={videoRange},AUDIO=\"{audioGroupId}\""
             );
             sb.AppendLine($"{subDir}/{playlistFile}.m3u8");
         }
