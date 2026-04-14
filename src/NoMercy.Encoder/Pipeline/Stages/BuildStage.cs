@@ -79,21 +79,22 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 );
             }
 
-            // Font extraction command — always attempt for MKV containers
-            FontExtractor fontExtractor = new();
-            string fontDir = Path.Combine(input.OutputDirectory, "fonts");
-            Directory.CreateDirectory(fontDir);
-            FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
-                options.FfmpegPathOverride,
-                input.InputPath,
-                input.OutputDirectory
-            );
-            allCommands.Add(fontCommand);
-
-            logger.LogDebug(
-                "[{CorrelationId}] Added font extraction command",
-                context.CorrelationId
-            );
+            // Font extraction — only for MKV/Matroska which can embed font attachments
+            if (
+                context.MediaInfo is not null
+                && context.MediaInfo.Format.Contains("matroska", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                FontExtractor fontExtractor = new();
+                string fontDir = Path.Combine(input.OutputDirectory, "fonts");
+                Directory.CreateDirectory(fontDir);
+                FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
+                    options.FfmpegPathOverride,
+                    input.InputPath,
+                    input.OutputDirectory
+                );
+                allCommands.Add(fontCommand);
+            }
 
             // Thumbnail capture command
             if (input.Plan.OutputPlan.Thumbnails is not null && context.MediaInfo is not null)
