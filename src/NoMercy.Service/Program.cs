@@ -171,9 +171,10 @@ public static class Program
         // Load SSL cert from database now that TokenStore is initialized by BootOrchestrator
         Certificate.LoadFromDb();
 
-        // Force QueueRunner singleton creation so QueueRunner.Current is set
-        // before background tasks try to call Initialize().
-        app.Services.GetRequiredService<QueueRunner>();
+        // Force QueueRunner singleton creation and initialize workers immediately —
+        // don't wait for InitRemaining() which can be blocked by rate-limited HTTP calls.
+        QueueRunner queueRunner = app.Services.GetRequiredService<QueueRunner>();
+        await queueRunner.Initialize();
 
         RegisterLifetimeEvents(app, stopWatch);
 
