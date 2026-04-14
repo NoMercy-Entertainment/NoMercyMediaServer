@@ -89,7 +89,8 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 CurrentFps: snapshot.Fps,
                 CurrentSpeed: snapshot.Speed,
                 CurrentStage: "Execute",
-                CurrentOperation: null
+                CurrentOperation: null,
+                BitrateKbps: snapshot.BitrateKbps.HasValue ? (int)snapshot.BitrateKbps.Value : null
             );
 
             onProgress(progress);

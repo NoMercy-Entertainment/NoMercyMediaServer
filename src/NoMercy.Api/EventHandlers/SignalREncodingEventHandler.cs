@@ -30,11 +30,11 @@ public class SignalREncodingEventHandler : IDisposable
             "dashboardHub",
             new
             {
-                @event.JobId,
-                @event.InputPath,
-                @event.OutputPath,
-                @event.ProfileName,
-                @event.Timestamp,
+                id = @event.JobId,
+                input_path = @event.InputPath,
+                output_path = @event.OutputPath,
+                profile_name = @event.ProfileName,
+                timestamp = @event.Timestamp,
             }
         );
 
@@ -48,13 +48,13 @@ public class SignalREncodingEventHandler : IDisposable
             "dashboardHub",
             new
             {
-                @event.JobId,
-                @event.Percentage,
-                Elapsed = @event.Elapsed.TotalSeconds,
-                Estimated = @event.Estimated?.TotalSeconds,
-                @event.Fps,
-                @event.Speed,
-                @event.BitrateKbps,
+                id = @event.JobId,
+                percentage = @event.Percentage,
+                elapsed = @event.Elapsed.TotalSeconds,
+                estimated = @event.Estimated?.TotalSeconds,
+                fps = @event.Fps,
+                speed = @event.Speed,
+                bitrate_kbps = @event.BitrateKbps,
             }
         );
     }
@@ -66,10 +66,10 @@ public class SignalREncodingEventHandler : IDisposable
             "dashboardHub",
             new
             {
-                @event.JobId,
-                @event.OutputPath,
-                Duration = @event.Duration.TotalSeconds,
-                @event.Timestamp,
+                id = @event.JobId,
+                output_path = @event.OutputPath,
+                duration = @event.Duration.TotalSeconds,
+                timestamp = @event.Timestamp,
             }
         );
 
@@ -83,11 +83,11 @@ public class SignalREncodingEventHandler : IDisposable
             "dashboardHub",
             new
             {
-                @event.JobId,
-                @event.InputPath,
-                @event.ErrorMessage,
-                @event.ExceptionType,
-                @event.Timestamp,
+                id = @event.JobId,
+                input_path = @event.InputPath,
+                error_message = @event.ErrorMessage,
+                exception_type = @event.ExceptionType,
+                timestamp = @event.Timestamp,
             }
         );
 
