@@ -42,6 +42,12 @@ public class HlsOutputStrategy : IOutputStrategy
                 video.EncoderName.Contains("265", StringComparison.OrdinalIgnoreCase)
                 || video.EncoderName.Contains("hevc", StringComparison.OrdinalIgnoreCase);
 
+            // Apple HLS requires keyframes at exact segment boundaries.
+            // -force_key_frames places IDR frames at precise second marks.
+            // -forced-idr ensures HW encoders (NVENC/QSV/AMF) produce actual IDR frames.
+            // -g is a safety ceiling at 2x segment duration — never relied on for alignment.
+            int gopCeiling = (int)Math.Ceiling(video.FrameRate * SegmentDurationSeconds * 2);
+
             Dictionary<string, string> extraFlags = new(video.ExtraFlags)
             {
                 ["-f"] = "hls",
@@ -53,6 +59,8 @@ public class HlsOutputStrategy : IOutputStrategy
                     segmentDir,
                     $"{segmentFile}_%05d.ts"
                 ),
+                ["-force_key_frames"] = $"expr:gte(t,n_forced*{SegmentDurationSeconds})",
+                ["-forced-idr"] = "1",
             };
 
             if (isHevc)
@@ -68,7 +76,7 @@ public class HlsOutputStrategy : IOutputStrategy
                     Profile: video.Profile,
                     Level: video.Level,
                     PixelFormat: video.TenBit ? video.PixelFormat : null,
-                    KeyframeInterval: (int)Math.Ceiling(video.FrameRate * SegmentDurationSeconds),
+                    KeyframeInterval: gopCeiling,
                     MapStreams: [video.MapLabel],
                     ExtraFlags: extraFlags
                 )
