@@ -61,13 +61,20 @@ public class Encoder(
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
 
-        // Update observer with resolved stream info from the actual output plan
+        // Update observer with resolved stream info from the actual output plan.
+        // Format matches V1: "{index}:{detail}" for dashboard display.
         progress?.OnPlanResolved(
-            plan.OutputPlan.VideoOutputs.Select(v => $"{v.Width}x{v.Height}_{v.EncoderName}")
+            plan.OutputPlan.VideoOutputs.Select(
+                    (v, i) => $"{i}:{v.Width}x{v.Height}_{v.EncoderName}"
+                )
                 .ToList(),
-            plan.OutputPlan.AudioOutputs.Select(a => $"{a.Language}_{a.EncoderName}_{a.Channels}ch")
+            plan.OutputPlan.AudioOutputs.Select(
+                    (a, i) =>
+                        $"{i}:{a.Language}_{a.EncoderName.Replace("libfdk_", "").Replace("lib", "")}"
+                )
                 .ToList(),
-            plan.OutputPlan.SubtitleOutputs.Select(s => $"{s.Language}_{s.OutputCodec}").ToList(),
+            plan.OutputPlan.SubtitleOutputs.Select((s, i) => $"{i}:{s.Language}_{s.OutputCodec}")
+                .ToList(),
             hasGpu: plan.OutputPlan.VideoOutputs.Any(v =>
                 v.EncoderName.Contains("nvenc", StringComparison.OrdinalIgnoreCase)
                 || v.EncoderName.Contains("qsv", StringComparison.OrdinalIgnoreCase)

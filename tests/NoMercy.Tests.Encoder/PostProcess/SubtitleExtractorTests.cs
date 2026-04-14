@@ -145,7 +145,7 @@ public class SubtitleExtractorTests
             MediaTitle
         );
 
-        info.Variant.Should().Be("forced");
+        info.Variant.Should().Be("sign");
     }
 
     // ------------------------------------------------------------------

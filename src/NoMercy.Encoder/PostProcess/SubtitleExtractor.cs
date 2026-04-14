@@ -28,7 +28,10 @@ public class SubtitleExtractor
     )
     {
         string language = stream.Language ?? plan.Language ?? "und";
-        string variant = stream.IsForced ? "forced" : "full";
+        string variant =
+            stream.IsForced ? "sign"
+            : stream.IsDefault ? "full"
+            : "sdh";
         bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
         bool isAss = AssCodecs.Contains(stream.Codec);
 
@@ -85,7 +88,10 @@ public class SubtitleExtractor
     )
     {
         string language = stream.Language ?? plan.Language ?? "und";
-        string variant = stream.IsForced ? "forced" : "full";
+        string variant =
+            stream.IsForced ? "sign"
+            : stream.IsDefault ? "full"
+            : "sdh";
         bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
         bool isAss = AssCodecs.Contains(stream.Codec);
 
