@@ -457,6 +457,14 @@ public class RealEncodeTests : IAsyncLifetime
 
         public void OnStageCompleted(string stageName, TimeSpan duration) { }
 
+        public void OnPlanResolved(
+            List<string> videoStreams,
+            List<string> audioStreams,
+            List<string> subtitleStreams,
+            bool hasGpu,
+            bool isHdr
+        ) { }
+
         public void OnError(NoMercy.Encoder.Errors.EncodingError error) { }
     }
 }

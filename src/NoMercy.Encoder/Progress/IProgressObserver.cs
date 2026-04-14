@@ -11,4 +11,12 @@ public interface IProgressObserver
     void OnStageCompleted(string stageName, TimeSpan duration);
 
     void OnError(EncodingError error);
+
+    void OnPlanResolved(
+        List<string> videoStreams,
+        List<string> audioStreams,
+        List<string> subtitleStreams,
+        bool hasGpu,
+        bool isHdr
+    );
 }

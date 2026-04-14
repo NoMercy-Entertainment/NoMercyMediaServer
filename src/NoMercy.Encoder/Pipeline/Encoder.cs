@@ -60,6 +60,21 @@ public class Encoder(
             return Fail(planFailure.Error, stopwatch.Elapsed, progress);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
+
+        // Update observer with resolved stream info from the actual output plan
+        progress?.OnPlanResolved(
+            plan.OutputPlan.VideoOutputs.Select(v => $"{v.Width}x{v.Height}_{v.EncoderName}")
+                .ToList(),
+            plan.OutputPlan.AudioOutputs.Select(a => $"{a.Language}_{a.EncoderName}_{a.Channels}ch")
+                .ToList(),
+            plan.OutputPlan.SubtitleOutputs.Select(s => $"{s.Language}_{s.OutputCodec}").ToList(),
+            hasGpu: plan.OutputPlan.VideoOutputs.Any(v =>
+                v.EncoderName.Contains("nvenc", StringComparison.OrdinalIgnoreCase)
+                || v.EncoderName.Contains("qsv", StringComparison.OrdinalIgnoreCase)
+                || v.EncoderName.Contains("amf", StringComparison.OrdinalIgnoreCase)
+            ),
+            isHdr: mediaInfo.VideoStreams.Count > 0 && mediaInfo.VideoStreams[0].IsHdr
+        );
         progress?.OnStageCompleted("Plan", stopwatch.Elapsed);
 
         // Stage 4: Build

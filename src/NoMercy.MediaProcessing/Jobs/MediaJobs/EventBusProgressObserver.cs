@@ -14,8 +14,8 @@ public class EventBusProgressObserver : IProgressObserver
     private readonly List<string> _videoStreams;
     private readonly List<string> _audioStreams;
     private readonly List<string> _subtitleStreams;
-    private readonly bool _hasGpu;
-    private readonly bool _isHdr;
+    private bool _hasGpu;
+    private bool _isHdr;
 
     public EventBusProgressObserver(
         int jobId,
@@ -36,6 +36,24 @@ public class EventBusProgressObserver : IProgressObserver
         _videoStreams = videoStreams ?? [];
         _audioStreams = audioStreams ?? [];
         _subtitleStreams = subtitleStreams ?? [];
+        _hasGpu = hasGpu;
+        _isHdr = isHdr;
+    }
+
+    public void OnPlanResolved(
+        List<string> videoStreams,
+        List<string> audioStreams,
+        List<string> subtitleStreams,
+        bool hasGpu,
+        bool isHdr
+    )
+    {
+        _videoStreams.Clear();
+        _videoStreams.AddRange(videoStreams);
+        _audioStreams.Clear();
+        _audioStreams.AddRange(audioStreams);
+        _subtitleStreams.Clear();
+        _subtitleStreams.AddRange(subtitleStreams);
         _hasGpu = hasGpu;
         _isHdr = isHdr;
     }
