@@ -89,28 +89,31 @@ public class PlanStage(
             .VideoOutputs.Select(
                 (v, i) =>
                 {
-                    int height =
-                        v.Height
-                        ?? (v.Width * media.VideoStreams[0].Height / media.VideoStreams[0].Width);
                     ResolvedCodec resolved = resolvedCodecs[i];
+                    EncoderInfo encoder = resolved.EncoderInfo;
 
-                    string mapLabel = $"[v{i}]";
+                    (int outputWidth, int outputHeight) = EncoderArgumentResolver.ResolveDimensions(
+                        v,
+                        media.VideoStreams[0].Width,
+                        media.VideoStreams[0].Height
+                    );
+
+                    Dictionary<string, string> extraFlags = new(encoder.VendorSpecificFlags);
+                    int crf = EncoderArgumentResolver.ResolveQuality(v.Crf, resolved, extraFlags);
 
                     return new VideoOutputPlan(
-                        Width: v.Width,
-                        Height: height,
+                        Width: outputWidth,
+                        Height: outputHeight,
                         EncoderName: resolved.FfmpegEncoderName,
-                        Crf: v.Crf,
+                        Crf: crf,
                         BitrateKbps: v.BitrateKbps,
-                        Preset: v.Preset,
-                        Profile: v.Profile,
+                        Preset: EncoderArgumentResolver.ResolvePreset(v.Preset, encoder),
+                        Profile: EncoderArgumentResolver.ResolveProfile(v.Profile, encoder),
                         Level: v.Level,
                         TenBit: v.TenBit,
-                        PixelFormat: v.TenBit ? resolved.EncoderInfo.PixelFormat10Bit : "yuv420p",
-                        MapLabel: mapLabel,
-                        ExtraFlags: new Dictionary<string, string>(
-                            resolved.EncoderInfo.VendorSpecificFlags
-                        )
+                        PixelFormat: v.TenBit ? encoder.PixelFormat10Bit : "yuv420p",
+                        MapLabel: $"[v{i}]",
+                        ExtraFlags: extraFlags
                     );
                 }
             )
