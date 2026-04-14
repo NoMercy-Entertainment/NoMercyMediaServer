@@ -62,32 +62,8 @@ public class FinalizeStage(
             FontExtractor fontExtractor = new();
             await fontExtractor.WriteFontManifestAsync(input.OutputDirectory, ct);
 
-            // Write thumbnail VTT cue file — the sprite webp was produced
-            // by the main FFmpeg command's filter_complex [thumbs] branch.
-            if (input.Plan.Thumbnails is not null && context.MediaInfo is not null)
-            {
-                int imageCount = (int)(
-                    context.MediaInfo.Duration.TotalSeconds / input.Plan.Thumbnails.IntervalSeconds
-                );
-
-                if (imageCount > 0)
-                {
-                    ThumbnailGenerator thumbGen = new();
-                    await thumbGen.WriteVttCueFileAsync(
-                        input.OutputDirectory,
-                        input.Plan.Thumbnails,
-                        imageCount,
-                        context.MediaInfo.Duration,
-                        ct
-                    );
-
-                    logger.LogDebug(
-                        "[{CorrelationId}] Wrote thumbnail VTT: {Count} cues",
-                        context.CorrelationId,
-                        imageCount
-                    );
-                }
-            }
+            // Thumbnail sprite + VTT are produced by the spritevtt muxer
+            // in the main FFmpeg command — no post-processing needed.
 
             long totalSize = Directory
                 .GetFiles(input.OutputDirectory, "*", SearchOption.AllDirectories)

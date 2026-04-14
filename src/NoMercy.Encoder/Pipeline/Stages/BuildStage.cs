@@ -56,8 +56,8 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             // Video + audio outputs via the output strategy (HLS, MKV, etc.)
             strategy.ConfigureOutput(builder, input.Plan.OutputPlan, input.OutputDirectory);
 
-            // Thumbnail sprite — produced by the filter_complex [thumbs] branch.
-            // Output as a single webp frame.
+            // Thumbnail sprite — the spritevtt muxer generates both the sprite
+            // sheet (.webp) and the companion VTT cue file in one pass.
             if (input.Plan.OutputPlan.Thumbnails is not null && context.MediaInfo is not null)
             {
                 ThumbnailOutputPlan thumbs = input.Plan.OutputPlan.Thumbnails;
@@ -65,12 +65,20 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                     input.OutputDirectory,
                     $"thumbs_{thumbs.Width}x{thumbs.Height}.webp"
                 );
+                string vttFile = Path.Combine(
+                    input.OutputDirectory,
+                    $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt"
+                );
 
                 builder.AddOutput(
                     new OutputOptions(
                         FilePath: spriteFile,
                         MapStreams: ["[thumbs]"],
-                        ExtraFlags: new Dictionary<string, string> { ["-frames:v"] = "1" }
+                        ExtraFlags: new Dictionary<string, string>
+                        {
+                            ["-f"] = "spritevtt",
+                            ["-vtt_filename"] = vttFile,
+                        }
                     )
                 );
             }
@@ -332,20 +340,17 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 );
             }
 
-            // Thumbnail branch: format=yuv420p (force 8-bit) → fps → scale → tile → [thumbs]
-            // The format conversion is needed because the split receives the raw source
-            // pixel format (e.g. yuv420p10le for 10-bit content) and libwebp can't handle it.
+            // Thumbnail branch: format=yuv420p (force 8-bit) → fps → scale → [thumbs]
+            // The spritevtt muxer handles tiling and VTT generation — no tile filter needed.
+            // format=yuv420p is required because the split receives raw source pixel format
+            // (e.g. yuv420p10le for 10-bit content) and libwebp can't encode 10-bit.
             if (hasThumbnails)
             {
                 ThumbnailOutputPlan thumbs = plan.Thumbnails!;
-                int imageCount = (int)(mediaInfo.Duration.TotalSeconds / thumbs.IntervalSeconds);
-                (int gridWidth, int gridHeight) = ThumbnailGenerator.ComputeGrid(
-                    Math.Max(imageCount, 1)
-                );
 
                 fg.AddFilter(
                     "thumbsrc",
-                    $"format=yuv420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2,tile={gridWidth}x{gridHeight}",
+                    $"format=yuv420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
                     "thumbs"
                 );
             }
