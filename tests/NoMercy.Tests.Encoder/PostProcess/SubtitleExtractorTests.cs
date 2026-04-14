@@ -79,11 +79,11 @@ public class SubtitleExtractorTests
     }
 
     // ------------------------------------------------------------------
-    // DVD subtitle (bitmap) → .sub with copy codec
+    // DVD subtitle (bitmap) → .mks with copy codec
     // ------------------------------------------------------------------
 
     [Fact]
-    public void ResolveOutput_DvdSubtitle_ProducesSubFile()
+    public void ResolveOutput_DvdSubtitle_ProducesMksFile()
     {
         SubtitleOutputPlan plan = MakePlan(0, "eng");
         SubtitleStreamInfo stream = MakeStream(0, "dvd_subtitle", "eng");
@@ -95,17 +95,17 @@ public class SubtitleExtractorTests
             MediaTitle
         );
 
-        info.Extension.Should().Be("sub");
+        info.Extension.Should().Be("mks");
         info.FfmpegCodec.Should().Be("copy");
         info.IsBitmap.Should().BeTrue();
     }
 
     // ------------------------------------------------------------------
-    // PGS subtitle (bitmap) → .sup with copy codec
+    // PGS subtitle (bitmap) → .mks with copy codec
     // ------------------------------------------------------------------
 
     [Fact]
-    public void ResolveOutput_PgsSubtitle_ProducesSupFile()
+    public void ResolveOutput_PgsSubtitle_ProducesMksFile()
     {
         SubtitleOutputPlan plan = MakePlan(0, "eng");
         SubtitleStreamInfo stream = MakeStream(0, "hdmv_pgs_subtitle", "eng");
@@ -117,7 +117,7 @@ public class SubtitleExtractorTests
             MediaTitle
         );
 
-        info.Extension.Should().Be("sup");
+        info.Extension.Should().Be("mks");
         info.FfmpegCodec.Should().Be("copy");
         info.IsBitmap.Should().BeTrue();
     }

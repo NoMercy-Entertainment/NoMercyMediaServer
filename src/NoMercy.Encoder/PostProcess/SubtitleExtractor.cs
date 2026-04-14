@@ -37,17 +37,10 @@ public class SubtitleExtractor
 
         if (isBitmap)
         {
-            if (stream.Codec.Equals("dvd_subtitle", StringComparison.OrdinalIgnoreCase))
-            {
-                extension = "sub";
-                ffmpegCodec = "copy";
-            }
-            else
-            {
-                // PGS / DVB → .sup
-                extension = "sup";
-                ffmpegCodec = "copy";
-            }
+            // Bitmap subs extracted as MKS (Matroska subtitle container).
+            // FFmpeg can't write .sub+.idx from MKV in a single command.
+            extension = "mks";
+            ffmpegCodec = "copy";
         }
         else if (isAss)
         {
@@ -98,9 +91,7 @@ public class SubtitleExtractor
         string extension;
         if (isBitmap)
         {
-            extension = stream.Codec.Equals("dvd_subtitle", StringComparison.OrdinalIgnoreCase)
-                ? "sub"
-                : "sup";
+            extension = "mks";
         }
         else if (isAss)
         {

@@ -184,7 +184,9 @@ public class PlanStage(
 
         // Build one SubtitleOutputPlan per matching source stream.
         // AllowedLanguages is a filter — language comes from the source stream.
+        // Deduplicate by source stream index — first matching profile wins.
         List<SubtitleOutputPlan> subtitlePlans = [];
+        HashSet<int> claimedStreams = [];
         foreach (SubtitleOutput subProfile in profile.SubtitleOutputs)
         {
             HashSet<string> allowed =
@@ -197,12 +199,16 @@ public class PlanStage(
 
             for (int si = 0; si < media.SubtitleStreams.Count; si++)
             {
+                if (claimedStreams.Contains(si))
+                    continue;
+
                 SubtitleStreamInfo stream = media.SubtitleStreams[si];
                 string streamLang = stream.Language ?? "und";
 
                 if (allowed.Count > 0 && !allowed.Contains(streamLang))
                     continue;
 
+                claimedStreams.Add(si);
                 subtitlePlans.Add(
                     new SubtitleOutputPlan(
                         OutputCodec: subProfile.Codec,
