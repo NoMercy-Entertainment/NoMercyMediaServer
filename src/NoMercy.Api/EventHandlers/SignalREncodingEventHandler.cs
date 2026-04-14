@@ -52,6 +52,9 @@ public class SignalREncodingEventHandler : IDisposable
                 @event.Percentage,
                 Elapsed = @event.Elapsed.TotalSeconds,
                 Estimated = @event.Estimated?.TotalSeconds,
+                @event.Fps,
+                @event.Speed,
+                @event.BitrateKbps,
             }
         );
     }

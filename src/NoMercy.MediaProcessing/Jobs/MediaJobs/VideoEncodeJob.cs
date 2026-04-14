@@ -134,8 +134,19 @@ public class VideoEncodeJob : AbstractEncoderJob
                 );
 
                 EventBusProgressObserver progressObserver = new(
-                    fileMetadata.Id,
-                    fileMetadata.Title
+                    jobId: fileMetadata.Id,
+                    title: fileMetadata.Title,
+                    baseFolder: fileMetadata.Path,
+                    sharePath: fileMetadata.Path,
+                    videoStreams: dbProfile
+                        .VideoProfiles.Select(v => $"{v.Width}x{v.Height} {v.Codec}")
+                        .ToList(),
+                    audioStreams: dbProfile
+                        .AudioProfiles.Select(a => $"{a.Codec} {a.Channels}ch")
+                        .ToList(),
+                    subtitleStreams: dbProfile.SubtitleProfiles.Select(s => s.Codec).ToList(),
+                    hasGpu: false,
+                    isHdr: false
                 );
 
                 EncodingResult result = await encoder.EncodeAsync(request, progressObserver);

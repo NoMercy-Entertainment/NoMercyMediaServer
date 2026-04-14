@@ -8,4 +8,7 @@ public sealed class EncodingProgressEvent : EventBase
     public required double Percentage { get; init; }
     public TimeSpan Elapsed { get; init; }
     public TimeSpan? Estimated { get; init; }
+    public double? Fps { get; init; }
+    public double? Speed { get; init; }
+    public int? BitrateKbps { get; init; }
 }
