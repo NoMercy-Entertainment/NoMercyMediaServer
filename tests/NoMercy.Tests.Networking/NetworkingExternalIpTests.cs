@@ -35,15 +35,18 @@ public class NetworkingExternalIpTests
 
             if (insideExternalIpGetter)
             {
-                if (trimmed.Contains('{')) braceDepth++;
-                if (trimmed.Contains('}')) braceDepth--;
+                if (trimmed.Contains('{'))
+                    braceDepth++;
+                if (trimmed.Contains('}'))
+                    braceDepth--;
 
                 if (trimmed.StartsWith("get"))
                 {
                     getterLines.Add(trimmed);
                 }
 
-                if (braceDepth <= 0 && getterLines.Count > 0) break;
+                if (braceDepth <= 0 && getterLines.Count > 0)
+                    break;
             }
         }
 
@@ -64,7 +67,8 @@ public class NetworkingExternalIpTests
 
         string[] lines = source.Split('\n');
         string? getterLine = lines.FirstOrDefault(l =>
-            l.Trim().StartsWith("get =>") && l.Contains("externalIp"));
+            l.Trim().StartsWith("get =>") && l.Contains("externalIp")
+        );
 
         Assert.NotNull(getterLine);
         Assert.Contains("??", getterLine);
@@ -107,7 +111,8 @@ public class NetworkingExternalIpTests
 
         string[] lines = source.Split('\n');
         string? getterLine = lines.FirstOrDefault(l =>
-            l.Trim().StartsWith("get =>") && l.Contains("externalIp"));
+            l.Trim().StartsWith("get =>") && l.Contains("externalIp")
+        );
 
         Assert.NotNull(getterLine);
         Assert.Contains("\"0.0.0.0\"", getterLine);
@@ -119,17 +124,20 @@ public class NetworkingExternalIpTests
         while (dir != null)
         {
             string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate)) return candidate;
+            if (File.Exists(candidate))
+                return candidate;
 
             string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
             string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved)) return resolved;
+            if (File.Exists(resolved))
+                return resolved;
 
             dir = Directory.GetParent(dir)?.FullName;
         }
 
         string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback)) return fallback;
+        if (File.Exists(fallback))
+            return fallback;
 
         throw new FileNotFoundException($"Could not find source file: {relativePath}");
     }

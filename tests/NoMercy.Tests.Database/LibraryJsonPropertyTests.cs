@@ -142,7 +142,7 @@ public class LibraryJsonPropertyTests
             ExtractChapters = true,
             ExtractChaptersDuring = false,
             AutoRefreshInterval = 60,
-            Image = "/test.png"
+            Image = "/test.png",
         };
 
         string json = JsonConvert.SerializeObject(original);
@@ -168,7 +168,10 @@ public class LibraryJsonPropertyTests
     [InlineData("SpecialSeasonName", "special_season_name")]
     [InlineData("Title", "title")]
     [InlineData("Type", "type")]
-    public void JsonPropertyName_MatchesSnakeCaseOfPropertyName(string propertyName, string expectedJsonName)
+    public void JsonPropertyName_MatchesSnakeCaseOfPropertyName(
+        string propertyName,
+        string expectedJsonName
+    )
     {
         string? actualJsonName = GetJsonPropertyName(propertyName);
         Assert.Equal(expectedJsonName, actualJsonName);

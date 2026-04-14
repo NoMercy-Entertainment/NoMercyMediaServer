@@ -48,7 +48,7 @@ public class CertificateRenewalCronJobTests
         // Note: This test will fail in the test environment because Certificate.RenewSslCertificate()
         // likely requires actual certificate infrastructure. In a real scenario, you'd want to
         // mock the Certificate.RenewSslCertificate() method or test it separately.
-        
+
         try
         {
             await job.ExecuteAsync("test-parameters");
@@ -60,13 +60,18 @@ public class CertificateRenewalCronJobTests
 
         // Verify that logging was attempted (at least the start message)
         loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Starting certificate renewal job")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            x =>
+                x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>(
+                        (v, t) => v.ToString()!.Contains("Starting certificate renewal job")
+                    ),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()
+                ),
+            Times.Once
+        );
     }
 
     [Fact]

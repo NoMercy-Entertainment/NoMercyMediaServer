@@ -45,17 +45,18 @@ public class InMemoryEventBusTests
         InMemoryEventBus bus = new();
         List<TestEvent> received = [];
 
-        bus.Subscribe<TestEvent>((e, _) =>
-        {
-            received.Add(e);
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (e, _) =>
+            {
+                received.Add(e);
+                return Task.CompletedTask;
+            }
+        );
 
         TestEvent evt = new() { Data = "test-data" };
         await bus.PublishAsync(evt);
 
-        received.Should().ContainSingle()
-            .Which.Data.Should().Be("test-data");
+        received.Should().ContainSingle().Which.Data.Should().Be("test-data");
     }
 
     [Fact]
@@ -69,8 +70,7 @@ public class InMemoryEventBusTests
         TestEvent evt = new() { Data = "handler-test" };
         await bus.PublishAsync(evt);
 
-        handler.Received.Should().ContainSingle()
-            .Which.Data.Should().Be("handler-test");
+        handler.Received.Should().ContainSingle().Which.Data.Should().Be("handler-test");
     }
 
     [Fact]
@@ -79,17 +79,21 @@ public class InMemoryEventBusTests
         InMemoryEventBus bus = new();
         List<string> order = [];
 
-        bus.Subscribe<TestEvent>((_, _) =>
-        {
-            order.Add("first");
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (_, _) =>
+            {
+                order.Add("first");
+                return Task.CompletedTask;
+            }
+        );
 
-        bus.Subscribe<TestEvent>((_, _) =>
-        {
-            order.Add("second");
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (_, _) =>
+            {
+                order.Add("second");
+                return Task.CompletedTask;
+            }
+        );
 
         TestHandler handler = new();
         bus.Subscribe(handler);
@@ -107,17 +111,21 @@ public class InMemoryEventBusTests
         List<TestEvent> testReceived = [];
         List<OtherEvent> otherReceived = [];
 
-        bus.Subscribe<TestEvent>((e, _) =>
-        {
-            testReceived.Add(e);
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (e, _) =>
+            {
+                testReceived.Add(e);
+                return Task.CompletedTask;
+            }
+        );
 
-        bus.Subscribe<OtherEvent>((e, _) =>
-        {
-            otherReceived.Add(e);
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<OtherEvent>(
+            (e, _) =>
+            {
+                otherReceived.Add(e);
+                return Task.CompletedTask;
+            }
+        );
 
         await bus.PublishAsync(new TestEvent { Data = "for-test" });
 
@@ -131,11 +139,13 @@ public class InMemoryEventBusTests
         InMemoryEventBus bus = new();
         List<TestEvent> received = [];
 
-        IDisposable subscription = bus.Subscribe<TestEvent>((e, _) =>
-        {
-            received.Add(e);
-            return Task.CompletedTask;
-        });
+        IDisposable subscription = bus.Subscribe<TestEvent>(
+            (e, _) =>
+            {
+                received.Add(e);
+                return Task.CompletedTask;
+            }
+        );
 
         await bus.PublishAsync(new TestEvent { Data = "before" });
         received.Should().ContainSingle();
@@ -169,18 +179,22 @@ public class InMemoryEventBusTests
         CancellationTokenSource cts = new();
         List<string> order = [];
 
-        bus.Subscribe<TestEvent>((_, _) =>
-        {
-            order.Add("first");
-            cts.Cancel();
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (_, _) =>
+            {
+                order.Add("first");
+                cts.Cancel();
+                return Task.CompletedTask;
+            }
+        );
 
-        bus.Subscribe<TestEvent>((_, _) =>
-        {
-            order.Add("second");
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (_, _) =>
+            {
+                order.Add("second");
+                return Task.CompletedTask;
+            }
+        );
 
         Func<Task> act = () => bus.PublishAsync(new TestEvent(), cts.Token);
 
@@ -193,13 +207,11 @@ public class InMemoryEventBusTests
     {
         InMemoryEventBus bus = new();
 
-        bus.Subscribe<TestEvent>((_, _) =>
-            throw new InvalidOperationException("handler error"));
+        bus.Subscribe<TestEvent>((_, _) => throw new InvalidOperationException("handler error"));
 
         Func<Task> act = () => bus.PublishAsync(new TestEvent());
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("handler error");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("handler error");
     }
 
     [Fact]
@@ -223,13 +235,16 @@ public class InMemoryEventBusTests
         InMemoryEventBus bus = new();
         int count = 0;
 
-        bus.Subscribe<TestEvent>((_, _) =>
-        {
-            Interlocked.Increment(ref count);
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (_, _) =>
+            {
+                Interlocked.Increment(ref count);
+                return Task.CompletedTask;
+            }
+        );
 
-        Task[] tasks = Enumerable.Range(0, 100)
+        Task[] tasks = Enumerable
+            .Range(0, 100)
             .Select(i => bus.PublishAsync(new TestEvent { Data = $"event-{i}" }))
             .ToArray();
 

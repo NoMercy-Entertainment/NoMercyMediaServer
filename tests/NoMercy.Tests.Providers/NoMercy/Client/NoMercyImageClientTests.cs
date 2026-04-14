@@ -18,7 +18,8 @@ public class NoMercyImageClientTests
     {
         MethodInfo? method = typeof(NoMercyImageClient).GetMethod(
             "Download",
-            BindingFlags.Public | BindingFlags.Static);
+            BindingFlags.Public | BindingFlags.Static
+        );
 
         Assert.NotNull(method);
         return method;
@@ -36,13 +37,13 @@ public class NoMercyImageClientTests
         // We search all nested types (including nested-of-nested) for one
         // that has MoveNext and IAsyncStateMachine.
         Type[] allNested = typeof(NoMercyImageClient).GetNestedTypes(
-            BindingFlags.NonPublic | BindingFlags.Public);
+            BindingFlags.NonPublic | BindingFlags.Public
+        );
 
         foreach (Type nested in allNested)
         {
             // Check nested types within the display class
-            Type[] deepNested = nested.GetNestedTypes(
-                BindingFlags.NonPublic | BindingFlags.Public);
+            Type[] deepNested = nested.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public);
 
             foreach (Type deep in deepNested)
             {
@@ -50,7 +51,8 @@ public class NoMercyImageClientTests
                 {
                     MethodInfo? moveNext = deep.GetMethod(
                         "MoveNext",
-                        BindingFlags.NonPublic | BindingFlags.Instance);
+                        BindingFlags.NonPublic | BindingFlags.Instance
+                    );
 
                     if (moveNext != null)
                         return (deep, moveNext);
@@ -62,7 +64,8 @@ public class NoMercyImageClientTests
             {
                 MethodInfo? moveNext = nested.GetMethod(
                     "MoveNext",
-                    BindingFlags.NonPublic | BindingFlags.Instance);
+                    BindingFlags.NonPublic | BindingFlags.Instance
+                );
 
                 if (moveNext != null)
                     return (nested, moveNext);
@@ -70,7 +73,8 @@ public class NoMercyImageClientTests
         }
 
         throw new InvalidOperationException(
-            "Could not find async state machine for the local Task() function in NoMercyImageClient.Download");
+            "Could not find async state machine for the local Task() function in NoMercyImageClient.Download"
+        );
     }
 
     private static List<string> GetCalledMethodNames(MethodInfo moveNext)
@@ -160,7 +164,8 @@ public class NoMercyImageClientTests
         List<string> calledMethods = GetCalledMethodNames(moveNext);
 
         int contentReadCalls = calledMethods.Count(n =>
-            n is "ReadAsByteArrayAsync" or "ReadAsStreamAsync" or "ReadAsStringAsync");
+            n is "ReadAsByteArrayAsync" or "ReadAsStreamAsync" or "ReadAsStringAsync"
+        );
 
         Assert.Equal(1, contentReadCalls);
     }
@@ -186,8 +191,10 @@ public class NoMercyImageClientTests
                     if (calledMethod?.Name == "Load" && calledMethod.GetParameters().Length > 0)
                     {
                         ParameterInfo firstParam = calledMethod.GetParameters()[0];
-                        if (firstParam.ParameterType == typeof(byte[]) ||
-                            firstParam.ParameterType == typeof(ReadOnlySpan<byte>))
+                        if (
+                            firstParam.ParameterType == typeof(byte[])
+                            || firstParam.ParameterType == typeof(ReadOnlySpan<byte>)
+                        )
                         {
                             hasImageLoadWithByteArray = true;
                         }
@@ -200,9 +207,11 @@ public class NoMercyImageClientTests
             }
         }
 
-        Assert.True(hasImageLoadWithByteArray,
-            "PROV-H16: Image.Load should use the byte[] overload, not Stream, " +
-            "to avoid consuming a stream that might be reused.");
+        Assert.True(
+            hasImageLoadWithByteArray,
+            "PROV-H16: Image.Load should use the byte[] overload, not Stream, "
+                + "to avoid consuming a stream that might be reused."
+        );
     }
 
     [Fact]

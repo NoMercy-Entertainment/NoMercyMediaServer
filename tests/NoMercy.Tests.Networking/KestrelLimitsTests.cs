@@ -23,7 +23,8 @@ public class KestrelLimitsTests
         string[] lines = GetKestrelConfigLines();
 
         string? bodyLine = lines.FirstOrDefault(l =>
-            l.Contains("MaxRequestBodySize") && !l.TrimStart().StartsWith("//"));
+            l.Contains("MaxRequestBodySize") && !l.TrimStart().StartsWith("//")
+        );
 
         Assert.NotNull(bodyLine);
         Assert.DoesNotContain("= null", bodyLine);
@@ -36,9 +37,10 @@ public class KestrelLimitsTests
         string[] lines = GetKestrelConfigLines();
 
         string? connLine = lines.FirstOrDefault(l =>
-            l.Contains("MaxConcurrentConnections") &&
-            !l.Contains("MaxConcurrentUpgradedConnections") &&
-            !l.TrimStart().StartsWith("//"));
+            l.Contains("MaxConcurrentConnections")
+            && !l.Contains("MaxConcurrentUpgradedConnections")
+            && !l.TrimStart().StartsWith("//")
+        );
 
         Assert.NotNull(connLine);
         Assert.DoesNotContain("= null", connLine);
@@ -51,8 +53,8 @@ public class KestrelLimitsTests
         string[] lines = GetKestrelConfigLines();
 
         string? upgradedLine = lines.FirstOrDefault(l =>
-            l.Contains("MaxConcurrentUpgradedConnections") &&
-            !l.TrimStart().StartsWith("//"));
+            l.Contains("MaxConcurrentUpgradedConnections") && !l.TrimStart().StartsWith("//")
+        );
 
         Assert.NotNull(upgradedLine);
         Assert.DoesNotContain("= null", upgradedLine);
@@ -66,8 +68,8 @@ public class KestrelLimitsTests
         string[] lines = GetKestrelConfigLines();
 
         string? bufferLine = lines.FirstOrDefault(l =>
-            l.Contains("MaxRequestBufferSize") &&
-            !l.TrimStart().StartsWith("//"));
+            l.Contains("MaxRequestBufferSize") && !l.TrimStart().StartsWith("//")
+        );
 
         Assert.NotNull(bufferLine);
         Assert.Contains("= null", bufferLine);
@@ -79,8 +81,8 @@ public class KestrelLimitsTests
         string[] lines = GetKestrelConfigLines();
 
         string? headerLine = lines.FirstOrDefault(l =>
-            l.Contains("AddServerHeader") &&
-            !l.TrimStart().StartsWith("//"));
+            l.Contains("AddServerHeader") && !l.TrimStart().StartsWith("//")
+        );
 
         Assert.NotNull(headerLine);
         Assert.Contains("false", headerLine);
@@ -104,13 +106,16 @@ public class KestrelLimitsTests
                 continue;
             }
 
-            if (!inMethod) continue;
+            if (!inMethod)
+                continue;
 
-            if (trimmed.Contains('{')) braceDepth++;
+            if (trimmed.Contains('{'))
+                braceDepth++;
             if (trimmed.Contains('}'))
             {
                 braceDepth--;
-                if (braceDepth <= 0) break;
+                if (braceDepth <= 0)
+                    break;
             }
 
             configLines.Add(trimmed);
@@ -125,17 +130,20 @@ public class KestrelLimitsTests
         while (dir != null)
         {
             string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate)) return candidate;
+            if (File.Exists(candidate))
+                return candidate;
 
             string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
             string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved)) return resolved;
+            if (File.Exists(resolved))
+                return resolved;
 
             dir = Directory.GetParent(dir)?.FullName;
         }
 
         string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback)) return fallback;
+        if (File.Exists(fallback))
+            return fallback;
 
         throw new FileNotFoundException($"Could not find source file: {relativePath}");
     }

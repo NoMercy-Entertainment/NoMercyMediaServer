@@ -49,12 +49,12 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Id.Should().Be(WellKnownMovieId);
         result.Title.Should().NotBeNullOrEmpty();
-        
+
         // Verify appended data
         result.Credits.Should().NotBeNull();
         result.Credits!.Cast.Should().NotBeEmpty();
         result.Credits.Crew.Should().NotBeEmpty();
-        
+
         result.ExternalIds.Should().NotBeNull();
         result.ExternalIds!.ImdbId.Should().NotBeNullOrEmpty();
     }
@@ -74,13 +74,13 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
         result!.Id.Should().Be(WellKnownMovieId);
         result.Cast.Should().NotBeEmpty();
         result.Crew.Should().NotBeEmpty();
-        
+
         // Verify cast data structure
         TmdbCast firstCast = result.Cast.First();
         firstCast.Id.Should().BeGreaterThan(0);
         firstCast.Name.Should().NotBeNullOrEmpty();
         firstCast.Character.Should().NotBeNullOrEmpty();
-        
+
         // Verify crew data structure
         TmdbCrew firstCrew = result.Crew.First();
         firstCrew.Id.Should().BeGreaterThan(0);
@@ -120,7 +120,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Backdrops.Should().NotBeEmpty();
         result.Posters.Should().NotBeEmpty();
-        
+
         // Verify image data structure
         TmdbImage firstBackdrop = result.Backdrops.First();
         firstBackdrop.FilePath.Should().NotBeNullOrEmpty();
@@ -142,7 +142,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Id.Should().Be(WellKnownMovieId);
         result.Results.Should().NotBeEmpty();
-        
+
         // Verify keyword structure
         TmdbKeyword firstKeyword = result.Results.First();
         firstKeyword.Id.Should().BeGreaterThan(0);
@@ -218,7 +218,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
 
         // Act & Assert
         TmdbMovieDetails? result = await client.Details();
-        
+
         // Note: ID 999999 actually returns valid movie data from TMDB API
         // "The El-Salomons: Marriage of Convenience" - so it's not truly invalid
         // API behavior may change, so we handle both scenarios
@@ -236,7 +236,10 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
         using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
 
         // Act - Make multiple quick calls to test rate limiting
-        Task<TmdbMovieDetails?>[] tasks = Enumerable.Range(0, 5).Select(_ => client.Details()).ToArray();
+        Task<TmdbMovieDetails?>[] tasks = Enumerable
+            .Range(0, 5)
+            .Select(_ => client.Details())
+            .ToArray();
         TmdbMovieDetails?[] results = await Task.WhenAll(tasks);
 
         // Assert

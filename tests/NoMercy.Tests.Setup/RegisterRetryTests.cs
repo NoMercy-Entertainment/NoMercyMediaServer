@@ -14,7 +14,8 @@ public class RegisterRetryTests
     private static async Task<int> ExecuteWithRetry(
         int maxRetries,
         Func<int, Task> action,
-        Func<int, int> getDelay)
+        Func<int, int> getDelay
+    )
     {
         int attemptsMade = 0;
         for (int attempt = 1; attempt <= maxRetries; attempt++)
@@ -47,7 +48,8 @@ public class RegisterRetryTests
                 callCount++;
                 return Task.CompletedTask;
             },
-            getDelay: attempt => BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)]);
+            getDelay: attempt => BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)]
+        );
 
         Assert.Equal(1, callCount);
         Assert.Equal(1, attempts);
@@ -68,7 +70,8 @@ public class RegisterRetryTests
                     throw new HttpRequestException("Network error");
                 return Task.CompletedTask;
             },
-            getDelay: attempt => 1);
+            getDelay: attempt => 1
+        );
 
         Assert.Equal(succeedOnAttempt, callCount);
         Assert.Equal(succeedOnAttempt, attempts);
@@ -103,8 +106,10 @@ public class RegisterRetryTests
     {
         for (int i = 1; i < BackoffSeconds.Length; i++)
         {
-            Assert.True(BackoffSeconds[i] > BackoffSeconds[i - 1],
-                $"BackoffSeconds[{i}] ({BackoffSeconds[i]}) should be greater than BackoffSeconds[{i - 1}] ({BackoffSeconds[i - 1]})");
+            Assert.True(
+                BackoffSeconds[i] > BackoffSeconds[i - 1],
+                $"BackoffSeconds[{i}] ({BackoffSeconds[i]}) should be greater than BackoffSeconds[{i - 1}] ({BackoffSeconds[i - 1]})"
+            );
         }
     }
 
@@ -122,15 +127,19 @@ public class RegisterRetryTests
     [Fact]
     public void BackoffSeconds_FirstValueIsSmall()
     {
-        Assert.True(BackoffSeconds[0] <= 5,
-            "First backoff delay should be small (<=5s) for fast initial retry");
+        Assert.True(
+            BackoffSeconds[0] <= 5,
+            "First backoff delay should be small (<=5s) for fast initial retry"
+        );
     }
 
     [Fact]
     public void BackoffSeconds_LastValueIsCapped()
     {
-        Assert.True(BackoffSeconds[^1] <= 120,
-            "Max backoff delay should be capped at a reasonable value (<=120s)");
+        Assert.True(
+            BackoffSeconds[^1] <= 120,
+            "Max backoff delay should be capped at a reasonable value (<=120s)"
+        );
     }
 
     [Fact]
@@ -175,7 +184,8 @@ public class RegisterRetryTests
                     callCount++;
                     throw new InvalidOperationException("Non-transient error");
                 },
-                getDelay: _ => 1);
+                getDelay: _ => 1
+            );
         });
 
         Assert.Equal(1, callCount);

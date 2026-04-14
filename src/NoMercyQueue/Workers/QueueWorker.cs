@@ -158,8 +158,10 @@ public class QueueWorker(
         {
             string typeName = current.GetType().Name;
 
-            if (typeName is "SqliteException" &&
-                current.Message.Contains("is locked", StringComparison.OrdinalIgnoreCase))
+            if (
+                typeName is "SqliteException"
+                && current.Message.Contains("is locked", StringComparison.OrdinalIgnoreCase)
+            )
             {
                 return true;
             }

@@ -25,25 +25,32 @@ public partial class ColdPathDisposalAuditTests
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                    continue;
 
-                if (!ProcessStartStaticPattern().IsMatch(trimmed)) continue;
+                if (!ProcessStartStaticPattern().IsMatch(trimmed))
+                    continue;
 
                 // Allow: lines with 'using' keyword
-                if (trimmed.Contains("using ")) continue;
+                if (trimmed.Contains("using "))
+                    continue;
 
                 // Allow: lines that call .Dispose() inline
-                if (trimmed.Contains(".Dispose()")) continue;
+                if (trimmed.Contains(".Dispose()"))
+                    continue;
 
                 // Allow: lines that call ?.Dispose() inline
-                if (trimmed.Contains("?.Dispose()")) continue;
+                if (trimmed.Contains("?.Dispose()"))
+                    continue;
 
                 // Allow: instance .Start() calls on managed process objects (not static factory)
-                if (InstanceStartPattern().IsMatch(trimmed)) continue;
+                if (InstanceStartPattern().IsMatch(trimmed))
+                    continue;
 
                 // Allow: test files
                 string relative = Path.GetRelativePath(srcDir, file);
-                if (relative.Contains("Test")) continue;
+                if (relative.Contains("Test"))
+                    continue;
 
                 violations.Add($"{relative}:{i + 1} — {trimmed}");
             }
@@ -68,15 +75,19 @@ public partial class ColdPathDisposalAuditTests
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                    continue;
 
-                if (!FileOpenPattern().IsMatch(trimmed)) continue;
+                if (!FileOpenPattern().IsMatch(trimmed))
+                    continue;
 
                 // Allow: lines with 'using' keyword
-                if (trimmed.Contains("using ")) continue;
+                if (trimmed.Contains("using "))
+                    continue;
 
                 string relative = Path.GetRelativePath(srcDir, file);
-                if (relative.Contains("Test")) continue;
+                if (relative.Contains("Test"))
+                    continue;
 
                 violations.Add($"{relative}:{i + 1} — {trimmed}");
             }
@@ -91,13 +102,15 @@ public partial class ColdPathDisposalAuditTests
         while (dir != null)
         {
             string candidate = Path.Combine(dir, "src");
-            if (Directory.Exists(candidate)) return candidate;
+            if (Directory.Exists(candidate))
+                return candidate;
 
             dir = Directory.GetParent(dir)?.FullName;
         }
 
         string fallback = "/workspaces/NoMercyMediaServer/src";
-        if (Directory.Exists(fallback)) return fallback;
+        if (Directory.Exists(fallback))
+            return fallback;
 
         throw new DirectoryNotFoundException("Could not find src/ directory");
     }

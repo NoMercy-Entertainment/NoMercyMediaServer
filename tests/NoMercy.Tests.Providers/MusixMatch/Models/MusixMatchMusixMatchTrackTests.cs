@@ -17,8 +17,9 @@ public class MusixMatchMusixMatchTrackTests
     [Fact]
     public void AlbumName_PropertyType_IsNullableString()
     {
-        PropertyInfo? property = typeof(MusixMatchMusixMatchTrack)
-            .GetProperty(nameof(MusixMatchMusixMatchTrack.AlbumName));
+        PropertyInfo? property = typeof(MusixMatchMusixMatchTrack).GetProperty(
+            nameof(MusixMatchMusixMatchTrack.AlbumName)
+        );
 
         Assert.NotNull(property);
         Assert.Equal(typeof(string), property.PropertyType);
@@ -29,7 +30,9 @@ public class MusixMatchMusixMatchTrackTests
     {
         string json = """{"album_name": "Abbey Road"}""";
 
-        MusixMatchMusixMatchTrack track = JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(json)!;
+        MusixMatchMusixMatchTrack track = JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(
+            json
+        )!;
 
         Assert.Equal("Abbey Road", track.AlbumName);
     }
@@ -39,7 +42,9 @@ public class MusixMatchMusixMatchTrackTests
     {
         string json = """{"album_name": null}""";
 
-        MusixMatchMusixMatchTrack track = JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(json)!;
+        MusixMatchMusixMatchTrack track = JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(
+            json
+        )!;
 
         Assert.Null(track.AlbumName);
     }
@@ -49,7 +54,9 @@ public class MusixMatchMusixMatchTrackTests
     {
         string json = """{"album_name": ""}""";
 
-        MusixMatchMusixMatchTrack track = JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(json)!;
+        MusixMatchMusixMatchTrack track = JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(
+            json
+        )!;
 
         Assert.Equal("", track.AlbumName);
     }
@@ -65,8 +72,9 @@ public class MusixMatchMusixMatchTrackTests
     [Fact]
     public void AlbumName_HasJsonPropertyAttribute_WithCorrectName()
     {
-        PropertyInfo? property = typeof(MusixMatchMusixMatchTrack)
-            .GetProperty(nameof(MusixMatchMusixMatchTrack.AlbumName));
+        PropertyInfo? property = typeof(MusixMatchMusixMatchTrack).GetProperty(
+            nameof(MusixMatchMusixMatchTrack.AlbumName)
+        );
 
         Assert.NotNull(property);
 
@@ -82,7 +90,8 @@ public class MusixMatchMusixMatchTrackTests
         MusixMatchMusixMatchTrack track = new() { AlbumName = "The Dark Side of the Moon" };
 
         string json = JsonConvert.SerializeObject(track);
-        MusixMatchMusixMatchTrack deserialized = JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(json)!;
+        MusixMatchMusixMatchTrack deserialized =
+            JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(json)!;
 
         Assert.Equal("The Dark Side of the Moon", deserialized.AlbumName);
     }

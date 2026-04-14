@@ -21,7 +21,9 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         // A route that doesn't exist should return 404, not the dev exception page
         HttpClient client = _factory.CreateClient().AsAuthenticated();
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/nonexistent-endpoint-for-testing");
+        HttpResponseMessage response = await client.GetAsync(
+            "/api/v1/nonexistent-endpoint-for-testing"
+        );
 
         // In non-dev mode, we should get a standard HTTP error, not an HTML exception page
         string content = await response.Content.ReadAsStringAsync();
@@ -35,7 +37,7 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         // Create a client that does NOT auto-decompress so we can inspect Content-Encoding
         HttpClient client = new(_factory.Server.CreateHandler())
         {
-            BaseAddress = new("http://localhost")
+            BaseAddress = new("http://localhost"),
         };
         client = client.AsAuthenticated();
 
@@ -47,8 +49,9 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
 
         // Response should be compressed when client accepts it
         // The Content-Encoding header indicates compression was applied
-        bool isCompressed = response.Content.Headers.ContentEncoding.Any(
-            e => e == "gzip" || e == "br");
+        bool isCompressed = response.Content.Headers.ContentEncoding.Any(e =>
+            e == "gzip" || e == "br"
+        );
 
         // If the response is very small, the server may skip compression
         // so we check either compression was applied OR the response is small enough
@@ -56,9 +59,10 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         long contentLength = response.Content.Headers.ContentLength ?? 0;
         Assert.True(
             isCompressed || contentLength < 100,
-            $"Expected compressed response or small body. " +
-            $"Content-Encoding: [{string.Join(", ", response.Content.Headers.ContentEncoding)}], " +
-            $"Content-Length: {contentLength}");
+            $"Expected compressed response or small body. "
+                + $"Content-Encoding: [{string.Join(", ", response.Content.Headers.ContentEncoding)}], "
+                + $"Content-Length: {contentLength}"
+        );
     }
 
     [Theory]
@@ -78,12 +82,14 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         // Pre-flight should succeed (2xx or 204)
         Assert.True(
             (int)response.StatusCode >= 200 && (int)response.StatusCode < 300,
-            $"CORS pre-flight expected 2xx for {origin}, got {(int)response.StatusCode}");
+            $"CORS pre-flight expected 2xx for {origin}, got {(int)response.StatusCode}"
+        );
 
         // Should include CORS headers
         Assert.True(
             response.Headers.Contains("Access-Control-Allow-Origin"),
-            $"Response should contain Access-Control-Allow-Origin header for {origin}");
+            $"Response should contain Access-Control-Allow-Origin header for {origin}"
+        );
     }
 
     [Fact]
@@ -98,7 +104,12 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         HttpResponseMessage response = await client.SendAsync(request);
 
         // Should not include the disallowed origin in Access-Control-Allow-Origin
-        if (response.Headers.TryGetValues("Access-Control-Allow-Origin", out IEnumerable<string>? values))
+        if (
+            response.Headers.TryGetValues(
+                "Access-Control-Allow-Origin",
+                out IEnumerable<string>? values
+            )
+        )
         {
             Assert.DoesNotContain("malicious-site.example.com", values);
         }
@@ -122,7 +133,12 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         HttpResponseMessage response = await client.SendAsync(request);
 
         // Should not include the dev origin in Access-Control-Allow-Origin
-        if (response.Headers.TryGetValues("Access-Control-Allow-Origin", out IEnumerable<string>? values))
+        if (
+            response.Headers.TryGetValues(
+                "Access-Control-Allow-Origin",
+                out IEnumerable<string>? values
+            )
+        )
         {
             Assert.DoesNotContain(devOrigin, values);
         }
@@ -132,7 +148,9 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
 internal static class HttpRequestMessageExtensions
 {
     public static async Task<HttpResponseMessage> SendAsync(
-        this HttpRequestMessage request, HttpClient client)
+        this HttpRequestMessage request,
+        HttpClient client
+    )
     {
         return await client.SendAsync(request);
     }

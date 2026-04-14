@@ -248,7 +248,13 @@ public class GenreRepository(MediaContext context)
         return (genreDetail, movies, tvShows);
     }
 
-    public Task<List<Genre>> GetGenres(Guid userId, string language, int take, int page, CancellationToken ct = default)
+    public Task<List<Genre>> GetGenres(
+        Guid userId,
+        string language,
+        int take,
+        int page,
+        CancellationToken ct = default
+    )
     {
         return context
             .Genres.AsNoTracking()

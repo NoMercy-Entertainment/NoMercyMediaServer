@@ -91,7 +91,10 @@ public class SignalREncodingEventHandler : IDisposable
         Logger.Socket($"Encoding failed: Job={@event.JobId}, Error={@event.ErrorMessage}");
     }
 
-    internal async Task OnEncodingStageChanged(EncodingStageChangedEvent @event, CancellationToken ct)
+    internal async Task OnEncodingStageChanged(
+        EncodingStageChangedEvent @event,
+        CancellationToken ct
+    )
     {
         await _clientMessenger.SendToAll(
             "encoder-progress",

@@ -39,13 +39,17 @@ public class HealthControllerTests : IClassFixture<NoMercyApiFactory>
 
         Assert.True(json.RootElement.TryGetProperty("status", out JsonElement statusElement));
         string? status = statusElement.GetString();
-        Assert.True(status == "ready" || status == "not_ready",
-            $"Expected 'ready' or 'not_ready', got '{status}'");
+        Assert.True(
+            status == "ready" || status == "not_ready",
+            $"Expected 'ready' or 'not_ready', got '{status}'"
+        );
 
         Assert.True(json.RootElement.TryGetProperty("database", out JsonElement dbElement));
         string? dbStatus = dbElement.GetString();
-        Assert.True(dbStatus == "ok" || dbStatus == "unavailable",
-            $"Expected 'ok' or 'unavailable', got '{dbStatus}'");
+        Assert.True(
+            dbStatus == "ok" || dbStatus == "unavailable",
+            $"Expected 'ok' or 'unavailable', got '{dbStatus}'"
+        );
 
         Assert.True(json.RootElement.TryGetProperty("server_started", out _));
         Assert.True(json.RootElement.TryGetProperty("timestamp", out _));
@@ -93,12 +97,18 @@ public class HealthControllerTests : IClassFixture<NoMercyApiFactory>
         string content = await response.Content.ReadAsStringAsync();
         JsonDocument json = JsonDocument.Parse(content);
 
-        Assert.True(json.RootElement.TryGetProperty("uptime_seconds", out JsonElement uptimeElement));
+        Assert.True(
+            json.RootElement.TryGetProperty("uptime_seconds", out JsonElement uptimeElement)
+        );
         long uptime = uptimeElement.GetInt64();
         Assert.True(uptime >= 0, $"Uptime should be non-negative, got {uptime}");
 
-        Assert.True(json.RootElement.TryGetProperty("is_degraded", out JsonElement degradedElement));
-        Assert.True(degradedElement.ValueKind is JsonValueKind.True or JsonValueKind.False,
-            "is_degraded should be a boolean");
+        Assert.True(
+            json.RootElement.TryGetProperty("is_degraded", out JsonElement degradedElement)
+        );
+        Assert.True(
+            degradedElement.ValueKind is JsonValueKind.True or JsonValueKind.False,
+            "is_degraded should be a boolean"
+        );
     }
 }

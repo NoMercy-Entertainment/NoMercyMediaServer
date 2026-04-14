@@ -21,8 +21,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/configuration", Order = 10)]
-public class ConfigurationController(MediaContext mediaContext, AppDbContext appContext, QueueRunner queueRunner)
-    : BaseController
+public class ConfigurationController(
+    MediaContext mediaContext,
+    AppDbContext appContext,
+    QueueRunner queueRunner
+) : BaseController
 {
     [HttpGet]
     public IActionResult Index()

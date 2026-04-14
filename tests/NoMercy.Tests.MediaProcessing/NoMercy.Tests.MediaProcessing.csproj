@@ -1,34 +1,32 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
 
-    <PropertyGroup>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
 
-        <IsPackable>false</IsPackable>
-        <IsTestProject>true</IsTestProject>
-        
-        <!-- Test parallelization settings -->
-        <ParallelizeAssembly>true</ParallelizeAssembly>
-        <ParallelizeTestCollections>true</ParallelizeTestCollections>
-    </PropertyGroup>
+    <!-- Test parallelization settings -->
+    <ParallelizeAssembly>true</ParallelizeAssembly>
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="Moq" />
-        <PackageReference Include="Newtonsoft.Json" />
-        <PackageReference Include="xunit"/>
-        <PackageReference Include="xunit.runner.visualstudio"/>
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <Using Include="Xunit"/>
-    </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\..\src\NoMercy.Data\NoMercy.Data.csproj"/>
-        <ProjectReference Include="..\..\src\NoMercy.Events\NoMercy.Events.csproj"/>
-        <ProjectReference Include="..\..\src\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj"/>
-    </ItemGroup>
-
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NoMercy.Data\NoMercy.Data.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Events\NoMercy.Events.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj" />
+  </ItemGroup>
 </Project>

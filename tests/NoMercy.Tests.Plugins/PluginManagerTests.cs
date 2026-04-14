@@ -17,7 +17,10 @@ public class PluginManagerTests : IDisposable
 
     public PluginManagerTests()
     {
-        _tempPluginsDir = Path.Combine(Path.GetTempPath(), "nomercy-plugin-tests-" + Guid.NewGuid().ToString("N"));
+        _tempPluginsDir = Path.Combine(
+            Path.GetTempPath(),
+            "nomercy-plugin-tests-" + Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(_tempPluginsDir);
 
         _eventBus = new();
@@ -47,28 +50,47 @@ public class PluginManagerTests : IDisposable
     [Fact]
     public void Constructor_NullEventBus_Throws()
     {
-        Action act = () => new PluginManager(null!, new MinimalServiceProvider(), NullLogger<PluginManager>.Instance, "/tmp");
+        Action act = () =>
+            new PluginManager(
+                null!,
+                new MinimalServiceProvider(),
+                NullLogger<PluginManager>.Instance,
+                "/tmp"
+            );
         act.Should().Throw<ArgumentNullException>().WithParameterName("eventBus");
     }
 
     [Fact]
     public void Constructor_NullServiceProvider_Throws()
     {
-        Action act = () => new PluginManager(new InMemoryEventBus(), null!, NullLogger<PluginManager>.Instance, "/tmp");
+        Action act = () =>
+            new PluginManager(
+                new InMemoryEventBus(),
+                null!,
+                NullLogger<PluginManager>.Instance,
+                "/tmp"
+            );
         act.Should().Throw<ArgumentNullException>().WithParameterName("serviceProvider");
     }
 
     [Fact]
     public void Constructor_NullLogger_Throws()
     {
-        Action act = () => new PluginManager(new InMemoryEventBus(), new MinimalServiceProvider(), null!, "/tmp");
+        Action act = () =>
+            new PluginManager(new InMemoryEventBus(), new MinimalServiceProvider(), null!, "/tmp");
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
 
     [Fact]
     public void Constructor_NullPluginsPath_Throws()
     {
-        Action act = () => new PluginManager(new InMemoryEventBus(), new MinimalServiceProvider(), NullLogger<PluginManager>.Instance, null!);
+        Action act = () =>
+            new PluginManager(
+                new InMemoryEventBus(),
+                new MinimalServiceProvider(),
+                NullLogger<PluginManager>.Instance,
+                null!
+            );
         act.Should().Throw<ArgumentNullException>().WithParameterName("pluginsPath");
     }
 
@@ -139,9 +161,17 @@ public class PluginManagerTests : IDisposable
     [Fact]
     public async Task LoadPluginsFromDirectoryAsync_NonExistentDirectory_DoesNotThrow()
     {
-        string nonExistentPath = Path.Combine(Path.GetTempPath(), "nonexistent-" + Guid.NewGuid().ToString("N"));
+        string nonExistentPath = Path.Combine(
+            Path.GetTempPath(),
+            "nonexistent-" + Guid.NewGuid().ToString("N")
+        );
         InMemoryEventBus bus = new();
-        PluginManager manager = new(bus, new MinimalServiceProvider(), NullLogger<PluginManager>.Instance, nonExistentPath);
+        PluginManager manager = new(
+            bus,
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            nonExistentPath
+        );
 
         Func<Task> act = () => manager.LoadPluginsFromDirectoryAsync();
 
@@ -169,11 +199,13 @@ public class PluginManagerTests : IDisposable
         await File.WriteAllTextAsync(dllPath, "not a valid dll");
 
         List<PluginErrorEvent> errors = [];
-        _eventBus.Subscribe<PluginErrorEvent>((evt, _) =>
-        {
-            errors.Add(evt);
-            return Task.CompletedTask;
-        });
+        _eventBus.Subscribe<PluginErrorEvent>(
+            (evt, _) =>
+            {
+                errors.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         await _manager.LoadPluginAssemblyAsync(dllPath);
 
@@ -215,7 +247,12 @@ public class PluginManagerTests : IDisposable
     public void Dispose_MultipleTimes_DoesNotThrow()
     {
         InMemoryEventBus bus = new();
-        PluginManager manager = new(bus, new MinimalServiceProvider(), NullLogger<PluginManager>.Instance, _tempPluginsDir);
+        PluginManager manager = new(
+            bus,
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir
+        );
 
         Action act = () =>
         {
@@ -256,28 +293,37 @@ public class PluginManagerTests : IDisposable
     [Fact]
     public void PluginContext_NullEventBus_Throws()
     {
-        Action act = () => new PluginContext(null!, new MinimalServiceProvider(), NullLogger.Instance, "/tmp");
+        Action act = () =>
+            new PluginContext(null!, new MinimalServiceProvider(), NullLogger.Instance, "/tmp");
         act.Should().Throw<ArgumentNullException>().WithParameterName("eventBus");
     }
 
     [Fact]
     public void PluginContext_NullServices_Throws()
     {
-        Action act = () => new PluginContext(new InMemoryEventBus(), null!, NullLogger.Instance, "/tmp");
+        Action act = () =>
+            new PluginContext(new InMemoryEventBus(), null!, NullLogger.Instance, "/tmp");
         act.Should().Throw<ArgumentNullException>().WithParameterName("services");
     }
 
     [Fact]
     public void PluginContext_NullLogger_Throws()
     {
-        Action act = () => new PluginContext(new InMemoryEventBus(), new MinimalServiceProvider(), null!, "/tmp");
+        Action act = () =>
+            new PluginContext(new InMemoryEventBus(), new MinimalServiceProvider(), null!, "/tmp");
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
 
     [Fact]
     public void PluginContext_NullDataFolder_Throws()
     {
-        Action act = () => new PluginContext(new InMemoryEventBus(), new MinimalServiceProvider(), NullLogger.Instance, null!);
+        Action act = () =>
+            new PluginContext(
+                new InMemoryEventBus(),
+                new MinimalServiceProvider(),
+                NullLogger.Instance,
+                null!
+            );
         act.Should().Throw<ArgumentNullException>().WithParameterName("dataFolderPath");
     }
 
@@ -296,7 +342,8 @@ public class PluginManagerTests : IDisposable
         string pluginDir = Path.Combine(_tempPluginsDir, "TestPlugin");
         Directory.CreateDirectory(pluginDir);
 
-        string manifestJson = $@"{{
+        string manifestJson =
+            $@"{{
             ""id"": ""{pluginId}"",
             ""name"": ""TestPlugin"",
             ""description"": ""A test"",
@@ -307,11 +354,13 @@ public class PluginManagerTests : IDisposable
         await File.WriteAllTextAsync(manifestPath, manifestJson);
 
         List<PluginErrorEvent> errors = [];
-        _eventBus.Subscribe<PluginErrorEvent>((evt, _) =>
-        {
-            errors.Add(evt);
-            return Task.CompletedTask;
-        });
+        _eventBus.Subscribe<PluginErrorEvent>(
+            (evt, _) =>
+            {
+                errors.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         await _manager.LoadPluginFromManifestAsync(manifestPath);
 
@@ -330,11 +379,13 @@ public class PluginManagerTests : IDisposable
         await File.WriteAllTextAsync(manifestPath, "not valid json");
 
         List<PluginErrorEvent> errors = [];
-        _eventBus.Subscribe<PluginErrorEvent>((evt, _) =>
-        {
-            errors.Add(evt);
-            return Task.CompletedTask;
-        });
+        _eventBus.Subscribe<PluginErrorEvent>(
+            (evt, _) =>
+            {
+                errors.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         await _manager.LoadPluginFromManifestAsync(manifestPath);
 
@@ -353,7 +404,8 @@ public class PluginManagerTests : IDisposable
         string dllPath = Path.Combine(pluginDir, "BadDll.dll");
         await File.WriteAllTextAsync(dllPath, "not a valid dll");
 
-        string manifestJson = $@"{{
+        string manifestJson =
+            $@"{{
             ""id"": ""{pluginId}"",
             ""name"": ""BadDll"",
             ""description"": ""A test"",
@@ -364,11 +416,13 @@ public class PluginManagerTests : IDisposable
         await File.WriteAllTextAsync(manifestPath, manifestJson);
 
         List<PluginErrorEvent> errors = [];
-        _eventBus.Subscribe<PluginErrorEvent>((evt, _) =>
-        {
-            errors.Add(evt);
-            return Task.CompletedTask;
-        });
+        _eventBus.Subscribe<PluginErrorEvent>(
+            (evt, _) =>
+            {
+                errors.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         await _manager.LoadPluginFromManifestAsync(manifestPath);
 
@@ -386,7 +440,8 @@ public class PluginManagerTests : IDisposable
         string dllPath = Path.Combine(pluginDir, "ManifestPlugin.dll");
         await File.WriteAllTextAsync(dllPath, "garbage data");
 
-        string manifestJson = $@"{{
+        string manifestJson =
+            $@"{{
             ""id"": ""{pluginId}"",
             ""name"": ""ManifestPlugin"",
             ""description"": ""Uses manifest"",
@@ -397,11 +452,13 @@ public class PluginManagerTests : IDisposable
         await File.WriteAllTextAsync(manifestPath, manifestJson);
 
         List<PluginErrorEvent> errors = [];
-        _eventBus.Subscribe<PluginErrorEvent>((evt, _) =>
-        {
-            errors.Add(evt);
-            return Task.CompletedTask;
-        });
+        _eventBus.Subscribe<PluginErrorEvent>(
+            (evt, _) =>
+            {
+                errors.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         await _manager.LoadPluginsFromDirectoryAsync();
 

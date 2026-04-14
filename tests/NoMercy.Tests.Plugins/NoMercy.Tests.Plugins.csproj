@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -28,5 +27,4 @@
     <ProjectReference Include="..\..\src\NoMercy.Plugins\NoMercy.Plugins.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Events\NoMercy.Events.csproj" />
   </ItemGroup>
-
 </Project>

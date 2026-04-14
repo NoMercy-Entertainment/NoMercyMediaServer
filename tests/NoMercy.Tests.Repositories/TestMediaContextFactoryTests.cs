@@ -46,8 +46,8 @@ public class TestMediaContextFactoryTests : IDisposable
     [Fact]
     public void CreateSeededContext_SeedsLibraryUserAccess()
     {
-        List<LibraryUser> libraryUsers = _context.LibraryUser
-            .Where(lu => lu.UserId == SeedConstants.UserId)
+        List<LibraryUser> libraryUsers = _context
+            .LibraryUser.Where(lu => lu.UserId == SeedConstants.UserId)
             .ToList();
         Assert.Equal(2, libraryUsers.Count);
     }

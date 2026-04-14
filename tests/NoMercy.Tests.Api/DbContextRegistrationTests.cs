@@ -70,8 +70,10 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
         MediaContext second = scope.ServiceProvider.GetRequiredService<MediaContext>();
 
         // If this were transient, ReferenceEquals would be false
-        Assert.True(ReferenceEquals(first, second),
-            "MediaContext should be scoped (same instance per scope), not transient (new instance per resolution)");
+        Assert.True(
+            ReferenceEquals(first, second),
+            "MediaContext should be scoped (same instance per scope), not transient (new instance per resolution)"
+        );
     }
 
     [Fact]
@@ -81,8 +83,10 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
         QueueContext first = scope.ServiceProvider.GetRequiredService<QueueContext>();
         QueueContext second = scope.ServiceProvider.GetRequiredService<QueueContext>();
 
-        Assert.True(ReferenceEquals(first, second),
-            "QueueContext should be scoped (same instance per scope), not transient (new instance per resolution)");
+        Assert.True(
+            ReferenceEquals(first, second),
+            "QueueContext should be scoped (same instance per scope), not transient (new instance per resolution)"
+        );
     }
 
     [Fact]
@@ -102,7 +106,9 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
 
         // Re-resolve from same scope — should be same instance with same change tracker
         MediaContext sameContext = scope.ServiceProvider.GetRequiredService<MediaContext>();
-        Database.Models.Users.User? reloaded = sameContext.Users.FirstOrDefault(u => u.Id == user.Id);
+        Database.Models.Users.User? reloaded = sameContext.Users.FirstOrDefault(u =>
+            u.Id == user.Id
+        );
         Assert.NotNull(reloaded);
         Assert.Equal(tempName, reloaded.Name);
 
@@ -126,7 +132,9 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
         user.Name = "SharedTracking";
 
         // ctx2 should see the same entity with the modified name (same change tracker)
-        Database.Models.Users.User? fromCtx2 = ctx2.Users.Local.FirstOrDefault(u => u.Id == user.Id);
+        Database.Models.Users.User? fromCtx2 = ctx2.Users.Local.FirstOrDefault(u =>
+            u.Id == user.Id
+        );
         Assert.NotNull(fromCtx2);
         Assert.Equal("SharedTracking", fromCtx2.Name);
 

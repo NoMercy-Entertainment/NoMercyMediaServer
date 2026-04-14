@@ -1,11 +1,11 @@
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
-using IQueueContext = NoMercyQueue.Core.Interfaces.IQueueContext;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
+using IQueueContext = NoMercyQueue.Core.Interfaces.IQueueContext;
 
 namespace NoMercy.Tests.Queue;
 
@@ -31,11 +31,7 @@ public class QueueIntegrationTests : IDisposable
     public async Task FullWorkflow_EnqueueDeserializeExecute_CompletesSuccessfully()
     {
         // Arrange - Create a job
-        TestJob originalJob = new()
-        {
-            Message = "Integration test job",
-            HasExecuted = false
-        };
+        TestJob originalJob = new() { Message = "Integration test job", HasExecuted = false };
 
         // Act 1 - Serialize and enqueue the job
         string serializedJob = SerializationHelper.Serialize(originalJob);
@@ -44,7 +40,7 @@ public class QueueIntegrationTests : IDisposable
             Queue = "integration-test",
             Payload = serializedJob,
             AvailableAt = DateTime.UtcNow,
-            Priority = 1
+            Priority = 1,
         };
 
         _jobQueue.Enqueue(queueJob);
@@ -82,17 +78,9 @@ public class QueueIntegrationTests : IDisposable
     public async Task FullWorkflow_MultipleJobTypes_ProcessedCorrectly()
     {
         // Arrange - Create different types of jobs
-        TestJob testJob1 = new()
-        {
-            Message = "First job",
-            HasExecuted = false
-        };
+        TestJob testJob1 = new() { Message = "First job", HasExecuted = false };
 
-        AnotherTestJob testJob2 = new()
-        {
-            Value = 5,
-            HasExecuted = false
-        };
+        AnotherTestJob testJob2 = new() { Value = 5, HasExecuted = false };
 
         // Act - Enqueue both jobs
         QueueJobModel queueJob1 = new()
@@ -100,7 +88,7 @@ public class QueueIntegrationTests : IDisposable
             Queue = "multi-test",
             Payload = SerializationHelper.Serialize(testJob1),
             AvailableAt = DateTime.UtcNow,
-            Priority = 1
+            Priority = 1,
         };
 
         QueueJobModel queueJob2 = new()
@@ -108,7 +96,7 @@ public class QueueIntegrationTests : IDisposable
             Queue = "multi-test",
             Payload = SerializationHelper.Serialize(testJob2),
             AvailableAt = DateTime.UtcNow,
-            Priority = 2 // Higher priority
+            Priority = 2, // Higher priority
         };
 
         _jobQueue.Enqueue(queueJob1);
@@ -118,7 +106,9 @@ public class QueueIntegrationTests : IDisposable
         QueueJobModel? firstReservedJob = _jobQueue.ReserveJob("multi-test", null);
         Assert.NotNull(firstReservedJob);
 
-        object firstDeserializedJob = SerializationHelper.Deserialize<object>(firstReservedJob.Payload);
+        object firstDeserializedJob = SerializationHelper.Deserialize<object>(
+            firstReservedJob.Payload
+        );
         Assert.IsType<AnotherTestJob>(firstDeserializedJob); // Should be the higher priority job
 
         await ((IShouldQueue)firstDeserializedJob).Handle();
@@ -128,7 +118,9 @@ public class QueueIntegrationTests : IDisposable
         QueueJobModel? secondReservedJob = _jobQueue.ReserveJob("multi-test", null);
         Assert.NotNull(secondReservedJob);
 
-        object secondDeserializedJob = SerializationHelper.Deserialize<object>(secondReservedJob.Payload);
+        object secondDeserializedJob = SerializationHelper.Deserialize<object>(
+            secondReservedJob.Payload
+        );
         Assert.IsType<TestJob>(secondDeserializedJob);
 
         await ((IShouldQueue)secondDeserializedJob).Handle();
@@ -158,7 +150,7 @@ public class QueueIntegrationTests : IDisposable
         {
             Message = "This job will fail",
             HasExecuted = false,
-            ShouldFail = true
+            ShouldFail = true,
         };
 
         QueueJobModel queueJob = new()
@@ -166,7 +158,7 @@ public class QueueIntegrationTests : IDisposable
             Queue = "failure-test",
             Payload = SerializationHelper.Serialize(failingJob),
             AvailableAt = DateTime.UtcNow,
-            Attempts = 2 // Set to max attempts - 1
+            Attempts = 2, // Set to max attempts - 1
         };
 
         _jobQueue.Enqueue(queueJob);
@@ -202,20 +194,24 @@ public class QueueIntegrationTests : IDisposable
 
         // Act 2 - Manual requeue (workaround for the type mismatch bug)
         _context.FailedJobs.Remove(failedJob);
-        _context.QueueJobs.Add(new()
-        {
-            Queue = failedJob.Queue,
-            Payload = failedJob.Payload,
-            AvailableAt = DateTime.UtcNow,
-            Attempts = 0
-        });
+        _context.QueueJobs.Add(
+            new()
+            {
+                Queue = failedJob.Queue,
+                Payload = failedJob.Payload,
+                AvailableAt = DateTime.UtcNow,
+                Attempts = 0,
+            }
+        );
         _context.SaveChanges();
 
         // Act 3 - Fix the job and process it successfully
         QueueJobModel? retriedJob = _jobQueue.ReserveJob("failure-test", null);
         Assert.NotNull(retriedJob);
 
-        TestJob retriedDeserializedJob = SerializationHelper.Deserialize<TestJob>(retriedJob.Payload);
+        TestJob retriedDeserializedJob = SerializationHelper.Deserialize<TestJob>(
+            retriedJob.Payload
+        );
         retriedDeserializedJob.ShouldFail = false; // Fix the job
 
         await retriedDeserializedJob.Handle();
@@ -235,11 +231,7 @@ public class QueueIntegrationTests : IDisposable
     public void DuplicateJobPrevention_SamePayload_OnlyOneJobEnqueued()
     {
         // Arrange - Create identical jobs
-        TestJob job = new()
-        {
-            Message = "Duplicate test",
-            HasExecuted = false
-        };
+        TestJob job = new() { Message = "Duplicate test", HasExecuted = false };
 
         string serializedPayload = SerializationHelper.Serialize(job);
 
@@ -247,14 +239,14 @@ public class QueueIntegrationTests : IDisposable
         {
             Queue = "duplicate-test",
             Payload = serializedPayload,
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
 
         QueueJobModel queueJob2 = new()
         {
             Queue = "duplicate-test",
             Payload = serializedPayload, // Same payload
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
 
         // Act
@@ -281,22 +273,22 @@ public class QueueIntegrationTests : IDisposable
                 Queue = "priority-test",
                 Payload = SerializationHelper.Serialize(lowPriorityJob),
                 AvailableAt = DateTime.UtcNow,
-                Priority = 1
+                Priority = 1,
             },
             new()
             {
                 Queue = "priority-test",
                 Payload = SerializationHelper.Serialize(highPriorityJob),
                 AvailableAt = DateTime.UtcNow,
-                Priority = 10
+                Priority = 10,
             },
             new()
             {
                 Queue = "priority-test",
                 Payload = SerializationHelper.Serialize(mediumPriorityJob),
                 AvailableAt = DateTime.UtcNow,
-                Priority = 5
-            }
+                Priority = 5,
+            },
         ];
 
         // Act - Enqueue in random order

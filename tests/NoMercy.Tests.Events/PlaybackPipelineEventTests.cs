@@ -13,42 +13,68 @@ public class PlaybackPipelineEventTests
         InMemoryEventBus bus = new();
         List<IEvent> received = [];
 
-        bus.Subscribe<PlaybackStartedEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
-        bus.Subscribe<PlaybackProgressEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
-        bus.Subscribe<PlaybackCompletedEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
+        bus.Subscribe<PlaybackStartedEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
+        bus.Subscribe<PlaybackProgressEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
+        bus.Subscribe<PlaybackCompletedEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         Guid userId = Guid.NewGuid();
 
-        await bus.PublishAsync(new PlaybackStartedEvent
-        {
-            UserId = userId,
-            MediaId = 129,
-            MediaType = "movie",
-            DeviceId = "device-1"
-        });
+        await bus.PublishAsync(
+            new PlaybackStartedEvent
+            {
+                UserId = userId,
+                MediaId = 129,
+                MediaType = "movie",
+                DeviceId = "device-1",
+            }
+        );
 
-        await bus.PublishAsync(new PlaybackProgressEvent
-        {
-            UserId = userId,
-            MediaId = 129,
-            Position = TimeSpan.FromMinutes(30),
-            Duration = TimeSpan.FromMinutes(120)
-        });
+        await bus.PublishAsync(
+            new PlaybackProgressEvent
+            {
+                UserId = userId,
+                MediaId = 129,
+                Position = TimeSpan.FromMinutes(30),
+                Duration = TimeSpan.FromMinutes(120),
+            }
+        );
 
-        await bus.PublishAsync(new PlaybackProgressEvent
-        {
-            UserId = userId,
-            MediaId = 129,
-            Position = TimeSpan.FromMinutes(90),
-            Duration = TimeSpan.FromMinutes(120)
-        });
+        await bus.PublishAsync(
+            new PlaybackProgressEvent
+            {
+                UserId = userId,
+                MediaId = 129,
+                Position = TimeSpan.FromMinutes(90),
+                Duration = TimeSpan.FromMinutes(120),
+            }
+        );
 
-        await bus.PublishAsync(new PlaybackCompletedEvent
-        {
-            UserId = userId,
-            MediaId = 129,
-            MediaType = "movie"
-        });
+        await bus.PublishAsync(
+            new PlaybackCompletedEvent
+            {
+                UserId = userId,
+                MediaId = 129,
+                MediaType = "movie",
+            }
+        );
 
         received.Should().HaveCount(4);
         received[0].Should().BeOfType<PlaybackStartedEvent>();
@@ -80,38 +106,62 @@ public class PlaybackPipelineEventTests
         InMemoryEventBus bus = new();
         List<IEvent> received = [];
 
-        bus.Subscribe<PlaybackStartedEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
-        bus.Subscribe<PlaybackProgressEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
-        bus.Subscribe<PlaybackCompletedEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
+        bus.Subscribe<PlaybackStartedEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
+        bus.Subscribe<PlaybackProgressEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
+        bus.Subscribe<PlaybackCompletedEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         Guid userId = Guid.NewGuid();
         Guid trackId = Guid.NewGuid();
 
-        await bus.PublishAsync(new PlaybackStartedEvent
-        {
-            UserId = userId,
-            MediaId = 0,
-            MediaIdentifier = trackId.ToString(),
-            MediaType = "music",
-            DeviceId = "device-2"
-        });
+        await bus.PublishAsync(
+            new PlaybackStartedEvent
+            {
+                UserId = userId,
+                MediaId = 0,
+                MediaIdentifier = trackId.ToString(),
+                MediaType = "music",
+                DeviceId = "device-2",
+            }
+        );
 
-        await bus.PublishAsync(new PlaybackProgressEvent
-        {
-            UserId = userId,
-            MediaId = 0,
-            MediaIdentifier = trackId.ToString(),
-            Position = TimeSpan.FromSeconds(90),
-            Duration = TimeSpan.FromSeconds(180)
-        });
+        await bus.PublishAsync(
+            new PlaybackProgressEvent
+            {
+                UserId = userId,
+                MediaId = 0,
+                MediaIdentifier = trackId.ToString(),
+                Position = TimeSpan.FromSeconds(90),
+                Duration = TimeSpan.FromSeconds(180),
+            }
+        );
 
-        await bus.PublishAsync(new PlaybackCompletedEvent
-        {
-            UserId = userId,
-            MediaId = 0,
-            MediaIdentifier = trackId.ToString(),
-            MediaType = "music"
-        });
+        await bus.PublishAsync(
+            new PlaybackCompletedEvent
+            {
+                UserId = userId,
+                MediaId = 0,
+                MediaIdentifier = trackId.ToString(),
+                MediaType = "music",
+            }
+        );
 
         received.Should().HaveCount(3);
 
@@ -136,7 +186,7 @@ public class PlaybackPipelineEventTests
         {
             UserId = userId,
             MediaId = 1,
-            MediaType = "movie"
+            MediaType = "movie",
         };
 
         PlaybackProgressEvent progress = new()
@@ -144,14 +194,14 @@ public class PlaybackPipelineEventTests
             UserId = userId,
             MediaId = 1,
             Position = TimeSpan.FromMinutes(10),
-            Duration = TimeSpan.FromMinutes(120)
+            Duration = TimeSpan.FromMinutes(120),
         };
 
         PlaybackCompletedEvent completed = new()
         {
             UserId = userId,
             MediaId = 1,
-            MediaType = "movie"
+            MediaType = "movie",
         };
 
         Guid[] eventIds = [started.EventId, progress.EventId, completed.EventId];
@@ -166,9 +216,25 @@ public class PlaybackPipelineEventTests
 
         IEvent[] events =
         [
-            new PlaybackStartedEvent { UserId = userId, MediaId = 1, MediaType = "movie" },
-            new PlaybackProgressEvent { UserId = userId, MediaId = 1, Position = TimeSpan.Zero, Duration = TimeSpan.Zero },
-            new PlaybackCompletedEvent { UserId = userId, MediaId = 1, MediaType = "movie" }
+            new PlaybackStartedEvent
+            {
+                UserId = userId,
+                MediaId = 1,
+                MediaType = "movie",
+            },
+            new PlaybackProgressEvent
+            {
+                UserId = userId,
+                MediaId = 1,
+                Position = TimeSpan.Zero,
+                Duration = TimeSpan.Zero,
+            },
+            new PlaybackCompletedEvent
+            {
+                UserId = userId,
+                MediaId = 1,
+                MediaType = "movie",
+            },
         ];
 
         foreach (IEvent evt in events)
@@ -183,18 +249,22 @@ public class PlaybackPipelineEventTests
         InMemoryEventBus bus = new();
         PlaybackStartedEvent? receivedEvent = null;
 
-        bus.Subscribe<PlaybackStartedEvent>((evt, _) =>
-        {
-            receivedEvent = evt;
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<PlaybackStartedEvent>(
+            (evt, _) =>
+            {
+                receivedEvent = evt;
+                return Task.CompletedTask;
+            }
+        );
 
-        await bus.PublishAsync(new PlaybackStartedEvent
-        {
-            UserId = Guid.NewGuid(),
-            MediaId = 129,
-            MediaType = "movie"
-        });
+        await bus.PublishAsync(
+            new PlaybackStartedEvent
+            {
+                UserId = Guid.NewGuid(),
+                MediaId = 129,
+                MediaType = "movie",
+            }
+        );
 
         receivedEvent.Should().NotBeNull();
         receivedEvent!.MediaIdentifier.Should().BeNull();
@@ -208,27 +278,43 @@ public class PlaybackPipelineEventTests
         EventBusProvider.Configure(bus);
 
         List<IEvent> received = [];
-        bus.Subscribe<PlaybackStartedEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
-        bus.Subscribe<PlaybackCompletedEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
+        bus.Subscribe<PlaybackStartedEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
+        bus.Subscribe<PlaybackCompletedEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         EventBusProvider.IsConfigured.Should().BeTrue();
 
         Guid userId = Guid.NewGuid();
 
-        await EventBusProvider.Current.PublishAsync(new PlaybackStartedEvent
-        {
-            UserId = userId,
-            MediaId = 42,
-            MediaType = "tv",
-            DeviceId = "test-device"
-        });
+        await EventBusProvider.Current.PublishAsync(
+            new PlaybackStartedEvent
+            {
+                UserId = userId,
+                MediaId = 42,
+                MediaType = "tv",
+                DeviceId = "test-device",
+            }
+        );
 
-        await EventBusProvider.Current.PublishAsync(new PlaybackCompletedEvent
-        {
-            UserId = userId,
-            MediaId = 42,
-            MediaType = "tv"
-        });
+        await EventBusProvider.Current.PublishAsync(
+            new PlaybackCompletedEvent
+            {
+                UserId = userId,
+                MediaId = 42,
+                MediaType = "tv",
+            }
+        );
 
         received.Should().HaveCount(2);
         received[0].Should().BeOfType<PlaybackStartedEvent>();
@@ -244,7 +330,7 @@ public class PlaybackPipelineEventTests
         {
             UserId = Guid.NewGuid(),
             MediaId = 1,
-            MediaType = "movie"
+            MediaType = "movie",
         };
 
         DateTime after = DateTime.UtcNow;

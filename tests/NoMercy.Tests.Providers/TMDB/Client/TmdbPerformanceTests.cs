@@ -112,18 +112,23 @@ public class TmdbPerformanceTests : TmdbTestBase
     [InlineData(10)]
     [InlineData(20)]
     [Trait("Category", "Performance")]
-    public async Task MovieClient_MultipleClients_ConcurrentAccess_CompletesWithinTimeout(int clientCount)
+    public async Task MovieClient_MultipleClients_ConcurrentAccess_CompletesWithinTimeout(
+        int clientCount
+    )
     {
         // Arrange
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         // Act
-        Task<TmdbMovieDetails?>[] tasks = Enumerable.Range(0, clientCount)
-            .Select(i => Task.Run(async () =>
-            {
-                using TmdbMovieClient client = CreateMockMovieClient(ValidMovieId + i);
-                return await client.Details();
-            }))
+        Task<TmdbMovieDetails?>[] tasks = Enumerable
+            .Range(0, clientCount)
+            .Select(i =>
+                Task.Run(async () =>
+                {
+                    using TmdbMovieClient client = CreateMockMovieClient(ValidMovieId + i);
+                    return await client.Details();
+                })
+            )
             .ToArray();
 
         TmdbMovieDetails?[] results = await Task.WhenAll(tasks);
@@ -182,9 +187,9 @@ public class TmdbPerformanceTests : TmdbTestBase
         // Assert
         long finalMemory = GC.GetTotalMemory(false);
         long memoryIncrease = finalMemory - initialMemory;
-        
+
         // Allow for some memory increase but not excessive (1MB threshold)
-        memoryIncrease.Should().BeLessThan(1024 * 1024); 
+        memoryIncrease.Should().BeLessThan(1024 * 1024);
     }
 
     [Fact]
@@ -241,9 +246,9 @@ public class TmdbPerformanceTests : TmdbTestBase
     {
         using TmdbMovieClient client = CreateMockMovieClient();
         Stopwatch stopwatch = Stopwatch.StartNew();
-        
+
         TmdbMovieDetails? result = await client.Details();
-        
+
         stopwatch.Stop();
         result.Should().NotBeNull();
         return stopwatch.ElapsedMilliseconds;
@@ -253,13 +258,14 @@ public class TmdbPerformanceTests : TmdbTestBase
     {
         using TmdbMovieClient client = CreateMockMovieClient();
         Stopwatch stopwatch = Stopwatch.StartNew();
-        
-        Task<TmdbMovieDetails?>[] tasks = Enumerable.Range(0, count)
+
+        Task<TmdbMovieDetails?>[] tasks = Enumerable
+            .Range(0, count)
             .Select(_ => client.Details())
             .ToArray();
-        
+
         TmdbMovieDetails?[] results = await Task.WhenAll(tasks);
-        
+
         stopwatch.Stop();
         results.Should().AllSatisfy(result => result.Should().NotBeNull());
         return stopwatch.ElapsedMilliseconds;

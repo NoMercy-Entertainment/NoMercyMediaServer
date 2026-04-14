@@ -1,10 +1,10 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 using IJobDispatcher = NoMercyQueue.Core.Interfaces.IJobDispatcher;
 
@@ -28,7 +28,7 @@ public class JobDispatcherTests
         {
             Message = "Test dispatch",
             HasExecuted = false,
-            ShouldFail = false
+            ShouldFail = false,
         };
 
         // Act
@@ -49,11 +49,7 @@ public class JobDispatcherTests
     public void Dispatch_ComplexJob_SerializesAndDeserializesCorrectly()
     {
         // Arrange
-        AnotherTestJob testJob = new()
-        {
-            Value = 100,
-            HasExecuted = true
-        };
+        AnotherTestJob testJob = new() { Value = 100, HasExecuted = true };
 
         // Act
         string serialized = SerializationHelper.Serialize(testJob);
@@ -72,11 +68,7 @@ public class JobDispatcherTests
     public void Dispatch_JobImplementsIShouldQueue_CanBeExecuted()
     {
         // Arrange
-        TestJob testJob = new()
-        {
-            Message = "Execution test",
-            HasExecuted = false
-        };
+        TestJob testJob = new() { Message = "Execution test", HasExecuted = false };
 
         // Act
         string serialized = SerializationHelper.Serialize(testJob);
@@ -154,7 +146,7 @@ public class JobDispatcherTests
             Message = "roundtrip test",
             HasExecuted = false,
             ShouldFail = true,
-            ExecutionDelay = 500
+            ExecutionDelay = 500,
         };
 
         // Act

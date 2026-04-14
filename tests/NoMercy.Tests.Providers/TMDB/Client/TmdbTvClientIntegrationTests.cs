@@ -84,12 +84,14 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         // result.Crew.Should().NotBeEmpty();
 
         // Verify cast and crew have basic properties
-        result.Cast.Should().AllSatisfy(castMember =>
-        {
-            castMember.Id.Should().BeGreaterThan(0);
-            castMember.Name.Should().NotBeNullOrEmpty();
-            castMember.Roles.Should().NotBeEmpty();
-        });
+        result
+            .Cast.Should()
+            .AllSatisfy(castMember =>
+            {
+                castMember.Id.Should().BeGreaterThan(0);
+                castMember.Name.Should().NotBeNullOrEmpty();
+                castMember.Roles.Should().NotBeEmpty();
+            });
     }
 
     [Fact]
@@ -109,12 +111,14 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         // result.Crew.Should().NotBeEmpty();
 
         // Verify cast data
-        result.Cast.Should().AllSatisfy(castMember =>
-        {
-            castMember.Id.Should().BeGreaterThan(0);
-            castMember.Name.Should().NotBeNullOrEmpty();
-            castMember.Character.Should().NotBeNullOrEmpty();
-        });
+        result
+            .Cast.Should()
+            .AllSatisfy(castMember =>
+            {
+                castMember.Id.Should().BeGreaterThan(0);
+                castMember.Name.Should().NotBeNullOrEmpty();
+                castMember.Character.Should().NotBeNullOrEmpty();
+            });
     }
 
     [Fact]
@@ -133,12 +137,14 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Posters.Should().NotBeEmpty();
 
         // Verify backdrop data
-        result.Backdrops.Should().AllSatisfy(backdrop =>
-        {
-            backdrop.FilePath.Should().NotBeNullOrEmpty();
-            backdrop.Width.Should().BeGreaterThan(0);
-            backdrop.Height.Should().BeGreaterThan(0);
-        });
+        result
+            .Backdrops.Should()
+            .AllSatisfy(backdrop =>
+            {
+                backdrop.FilePath.Should().NotBeNullOrEmpty();
+                backdrop.Width.Should().BeGreaterThan(0);
+                backdrop.Height.Should().BeGreaterThan(0);
+            });
     }
 
     [Fact]
@@ -156,14 +162,16 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Length != 0)
-            result.Results.Should().AllSatisfy(video =>
-            {
-                video.Id.Should().NotBeNullOrEmpty();
-                video.Key.Should().NotBeNullOrEmpty();
-                video.Name.Should().NotBeNullOrEmpty();
-                video.Site.Should().NotBeNullOrEmpty();
-                video.Type.Should().NotBeNullOrEmpty();
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(video =>
+                {
+                    video.Id.Should().NotBeNullOrEmpty();
+                    video.Key.Should().NotBeNullOrEmpty();
+                    video.Name.Should().NotBeNullOrEmpty();
+                    video.Site.Should().NotBeNullOrEmpty();
+                    video.Type.Should().NotBeNullOrEmpty();
+                });
     }
 
     [Fact]
@@ -197,11 +205,13 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Any())
-            result.Results.Should().AllSatisfy(show =>
-            {
-                show.Id.Should().BeGreaterThan(0);
-                show.Name.Should().NotBeNullOrEmpty();
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(show =>
+                {
+                    show.Id.Should().BeGreaterThan(0);
+                    show.Name.Should().NotBeNullOrEmpty();
+                });
     }
 
     [Fact]
@@ -220,11 +230,13 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Any())
-            result.Results.Should().AllSatisfy(show =>
-            {
-                show.Id.Should().BeGreaterThan(0);
-                show.Name.Should().NotBeNullOrEmpty();
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(show =>
+                {
+                    show.Id.Should().BeGreaterThan(0);
+                    show.Name.Should().NotBeNullOrEmpty();
+                });
     }
 
     [Fact]
@@ -241,14 +253,16 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result.Translations.Should().NotBeEmpty();
 
-        result.Translations.Should().AllSatisfy(translation =>
-        {
-            translation.Iso31661.Should().NotBeNullOrEmpty();
-            translation.Iso6391.Should().NotBeNullOrEmpty();
-            // Name can be empty in some TMDB translations due to data quality issues
-            translation.Name.Should().NotBeNull();
-            translation.EnglishName.Should().NotBeNullOrEmpty();
-        });
+        result
+            .Translations.Should()
+            .AllSatisfy(translation =>
+            {
+                translation.Iso31661.Should().NotBeNullOrEmpty();
+                translation.Iso6391.Should().NotBeNullOrEmpty();
+                // Name can be empty in some TMDB translations due to data quality issues
+                translation.Name.Should().NotBeNull();
+                translation.EnglishName.Should().NotBeNullOrEmpty();
+            });
 
         // Should have English translation
         result.Translations.Should().Contain(t => t.Iso6391 == "en");
@@ -269,11 +283,13 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Length != 0)
-            result.Results.Should().AllSatisfy(keyword =>
-            {
-                keyword.Id.Should().BeGreaterThan(0);
-                keyword.Name.Should().NotBeNullOrEmpty();
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(keyword =>
+                {
+                    keyword.Id.Should().BeGreaterThan(0);
+                    keyword.Name.Should().NotBeNullOrEmpty();
+                });
     }
 
     [Fact]
@@ -307,11 +323,13 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Length != 0)
-            result.Results.Should().AllSatisfy(rating =>
-            {
-                rating.Iso31661.Should().NotBeNullOrEmpty();
-                rating.Rating.Should().NotBeNullOrEmpty();
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(rating =>
+                {
+                    rating.Iso31661.Should().NotBeNullOrEmpty();
+                    rating.Rating.Should().NotBeNullOrEmpty();
+                });
     }
 
     [Fact]
@@ -329,11 +347,13 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Length != 0)
-            result.Results.Should().AllSatisfy(title =>
-            {
-                title.Iso31661.Should().NotBeNullOrEmpty();
-                title.Title.Should().NotBeNullOrEmpty();
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(title =>
+                {
+                    title.Iso31661.Should().NotBeNullOrEmpty();
+                    title.Title.Should().NotBeNullOrEmpty();
+                });
     }
 
     [Fact]
@@ -351,13 +371,15 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Length != 0)
-            result.Results.Should().AllSatisfy(group =>
-            {
-                group.Id.Should().NotBeNullOrEmpty();
-                group.Name.Should().NotBeNullOrEmpty();
-                group.EpisodeCount.Should().BeGreaterThan(0);
-                group.GroupCount.Should().BeGreaterThan(0);
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(group =>
+                {
+                    group.Id.Should().NotBeNullOrEmpty();
+                    group.Name.Should().NotBeNullOrEmpty();
+                    group.EpisodeCount.Should().BeGreaterThan(0);
+                    group.GroupCount.Should().BeGreaterThan(0);
+                });
     }
 
     [Fact]
@@ -375,13 +397,15 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Any())
-            result.Results.Should().AllSatisfy(review =>
-            {
-                review.Id.Should().NotBeNullOrEmpty();
-                review.Author.Should().NotBeNullOrEmpty();
-                review.Content.Should().NotBeNullOrEmpty();
-                review.CreatedAt.Should().NotBeNull();
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(review =>
+                {
+                    review.Id.Should().NotBeNullOrEmpty();
+                    review.Author.Should().NotBeNullOrEmpty();
+                    review.Content.Should().NotBeNullOrEmpty();
+                    review.CreatedAt.Should().NotBeNull();
+                });
     }
 
     [Fact]
@@ -399,12 +423,14 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Length != 0)
-            result.Results.Should().AllSatisfy(screening =>
-            {
-                screening.Id.Should().BeGreaterThan(0);
-                screening.EpisodeNumber.Should().BeGreaterThan(0);
-                screening.SeasonNumber.Should().BeGreaterThan(0);
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(screening =>
+                {
+                    screening.Id.Should().BeGreaterThan(0);
+                    screening.EpisodeNumber.Should().BeGreaterThan(0);
+                    screening.SeasonNumber.Should().BeGreaterThan(0);
+                });
     }
 
     [Fact]
@@ -422,12 +448,14 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Should().NotBeEmpty();
         result.Should().HaveCountLessThanOrEqualTo(10);
 
-        result.Should().AllSatisfy(show =>
-        {
-            show.Id.Should().BeGreaterThan(0);
-            show.Name.Should().NotBeNullOrEmpty();
-            show.Popularity.Should().BeGreaterThan(0);
-        });
+        result
+            .Should()
+            .AllSatisfy(show =>
+            {
+                show.Id.Should().BeGreaterThan(0);
+                show.Name.Should().NotBeNullOrEmpty();
+                show.Popularity.Should().BeGreaterThan(0);
+            });
     }
 
     [Fact]
@@ -445,12 +473,14 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Page.Should().BeGreaterThan(0);
         result.Results.Should().NotBeEmpty();
 
-        result.Results.Should().AllSatisfy(show =>
-        {
-            show.Id.Should().BeGreaterThan(0);
-            show.Name.Should().NotBeNullOrEmpty();
-            show.VoteAverage.Should().BeGreaterThan(7.0); // Top rated should have high ratings
-        });
+        result
+            .Results.Should()
+            .AllSatisfy(show =>
+            {
+                show.Id.Should().BeGreaterThan(0);
+                show.Name.Should().NotBeNullOrEmpty();
+                show.VoteAverage.Should().BeGreaterThan(7.0); // Top rated should have high ratings
+            });
     }
 
     [Fact]
@@ -469,11 +499,13 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Any())
-            result.Results.Should().AllSatisfy(show =>
-            {
-                show.Id.Should().BeGreaterThan(0);
-                show.Name.Should().NotBeNullOrEmpty();
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(show =>
+                {
+                    show.Id.Should().BeGreaterThan(0);
+                    show.Name.Should().NotBeNullOrEmpty();
+                });
     }
 
     [Fact]
@@ -492,11 +524,13 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Results.Should().NotBeNull();
 
         if (result.Results.Any())
-            result.Results.Should().AllSatisfy(show =>
-            {
-                show.Id.Should().BeGreaterThan(0);
-                show.Name.Should().NotBeNullOrEmpty();
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(show =>
+                {
+                    show.Id.Should().BeGreaterThan(0);
+                    show.Name.Should().NotBeNullOrEmpty();
+                });
     }
 
     [Fact]
@@ -530,11 +564,13 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result.Genres.Should().NotBeEmpty();
 
-        result.Genres.Should().AllSatisfy(genre =>
-        {
-            genre.Id.Should().BeGreaterThan(0);
-            genre.Name.Should().NotBeNullOrEmpty();
-        });
+        result
+            .Genres.Should()
+            .AllSatisfy(genre =>
+            {
+                genre.Id.Should().BeGreaterThan(0);
+                genre.Name.Should().NotBeNullOrEmpty();
+            });
 
         // Verify known TV genres exist
         result.Genres.Should().Contain(g => g.Name == "Drama");
@@ -561,12 +597,14 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         TmdbTvShowCertification[] usCertifications = result.Certifications["US"];
         usCertifications.Should().NotBeEmpty();
 
-        usCertifications.Should().AllSatisfy(cert =>
-        {
-            cert.Rating.Should().NotBeNullOrEmpty();
-            cert.Meaning.Should().NotBeNullOrEmpty();
-            cert.Order.Should().BeGreaterThanOrEqualTo(0);
-        });
+        usCertifications
+            .Should()
+            .AllSatisfy(cert =>
+            {
+                cert.Rating.Should().NotBeNullOrEmpty();
+                cert.Meaning.Should().NotBeNullOrEmpty();
+                cert.Order.Should().BeGreaterThanOrEqualTo(0);
+            });
     }
 
     [Fact]
@@ -610,6 +648,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
 
         // Assert
         // Changes endpoint may return null for invalid date formats
-        if (result != null) result.Items.Should().NotBeNull();
+        if (result != null)
+            result.Items.Should().NotBeNull();
     }
 }

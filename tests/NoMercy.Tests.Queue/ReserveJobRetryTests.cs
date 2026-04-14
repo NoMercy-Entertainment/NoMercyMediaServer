@@ -1,10 +1,10 @@
 using System.Reflection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -48,7 +48,8 @@ public class ReserveJobRetryTests : IDisposable
         MethodInfo? reserveJobMethod = typeof(JobQueue).GetMethod(
             "ReserveJob",
             BindingFlags.Public | BindingFlags.Instance,
-            [typeof(string), typeof(long?), typeof(int)]);
+            [typeof(string), typeof(long?), typeof(int)]
+        );
 
         Assert.NotNull(reserveJobMethod);
 
@@ -89,9 +90,11 @@ public class ReserveJobRetryTests : IDisposable
             }
         }
 
-        Assert.False(foundPopAfterRecursiveCall,
-            "CRIT-09 regression: ReserveJob recursive call result is being discarded (pop after call). " +
-            "The recursive call must have 'return' before it.");
+        Assert.False(
+            foundPopAfterRecursiveCall,
+            "CRIT-09 regression: ReserveJob recursive call result is being discarded (pop after call). "
+                + "The recursive call must have 'return' before it."
+        );
     }
 
     [Fact]
@@ -118,7 +121,7 @@ public class ReserveJobRetryTests : IDisposable
             Payload = "normal-payload",
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();

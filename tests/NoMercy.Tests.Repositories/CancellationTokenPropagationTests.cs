@@ -23,7 +23,8 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US", cts.Token));
+            repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US", cts.Token)
+        );
     }
 
     [Fact]
@@ -34,7 +35,8 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetMovieAvailableAsync(SeedConstants.UserId, 129, cts.Token));
+            repository.GetMovieAvailableAsync(SeedConstants.UserId, 129, cts.Token)
+        );
     }
 
     [Fact]
@@ -45,7 +47,8 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetMoviePlaylistAsync(SeedConstants.UserId, 129, "en", "US", cts.Token));
+            repository.GetMoviePlaylistAsync(SeedConstants.UserId, 129, "en", "US", cts.Token)
+        );
     }
 
     [Fact]
@@ -56,7 +59,8 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.DeleteAsync(999999, cts.Token));
+            repository.DeleteAsync(999999, cts.Token)
+        );
     }
 
     [Fact]
@@ -67,7 +71,8 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetTvAvailableAsync(SeedConstants.UserId, 1396, cts.Token));
+            repository.GetTvAvailableAsync(SeedConstants.UserId, 1396, cts.Token)
+        );
     }
 
     [Fact]
@@ -78,7 +83,8 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.DeleteAsync(999999, cts.Token));
+            repository.DeleteAsync(999999, cts.Token)
+        );
     }
 
     [Fact]
@@ -89,7 +95,8 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetLibraries(SeedConstants.UserId, cts.Token));
+            repository.GetLibraries(SeedConstants.UserId, cts.Token)
+        );
     }
 
     [Fact]
@@ -100,7 +107,15 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetLibraryMovieCardsAsync(SeedConstants.UserId, SeedConstants.MovieLibraryId, "US", 10, 0, cts.Token));
+            repository.GetLibraryMovieCardsAsync(
+                SeedConstants.UserId,
+                SeedConstants.MovieLibraryId,
+                "US",
+                10,
+                0,
+                cts.Token
+            )
+        );
     }
 
     [Fact]
@@ -111,7 +126,15 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetLibraryTvCardsAsync(SeedConstants.UserId, SeedConstants.TvLibraryId, "US", 10, 0, cts.Token));
+            repository.GetLibraryTvCardsAsync(
+                SeedConstants.UserId,
+                SeedConstants.TvLibraryId,
+                "US",
+                10,
+                0,
+                cts.Token
+            )
+        );
     }
 
     [Fact]
@@ -122,7 +145,8 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetCollectionsListAsync(SeedConstants.UserId, "en", "US", 10, 0, cts.Token));
+            repository.GetCollectionsListAsync(SeedConstants.UserId, "en", "US", 10, 0, cts.Token)
+        );
     }
 
     [Fact]
@@ -133,7 +157,8 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetGenresWithCountsAsync(SeedConstants.UserId, "en", 10, 0, cts.Token));
+            repository.GetGenresWithCountsAsync(SeedConstants.UserId, "en", 10, 0, cts.Token)
+        );
     }
 
     [Fact]
@@ -144,7 +169,8 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetSpecialsAsync(SeedConstants.UserId, "en", 10, 0, cts.Token));
+            repository.GetSpecialsAsync(SeedConstants.UserId, "en", 10, 0, cts.Token)
+        );
     }
 
     [Fact]
@@ -152,8 +178,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         MovieRepository repository = new(_context);
 
-        Movie? movie = await repository.GetMovieAsync(
-            SeedConstants.UserId, 129, "en", "US");
+        Movie? movie = await repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
         Assert.NotNull(movie);
         Assert.Equal("Spirited Away", movie.Title);

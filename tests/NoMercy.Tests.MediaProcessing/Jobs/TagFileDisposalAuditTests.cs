@@ -26,12 +26,15 @@ public partial class TagFileDisposalAuditTests
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                    continue;
 
-                if (!TagLibFileCreatePattern().IsMatch(trimmed)) continue;
+                if (!TagLibFileCreatePattern().IsMatch(trimmed))
+                    continue;
 
                 // Allow: lines with 'using' keyword
-                if (trimmed.Contains("using ")) continue;
+                if (trimmed.Contains("using "))
+                    continue;
 
                 string relative = Path.GetRelativePath(srcDir, file);
                 violations.Add($"{relative}:{i + 1} — {trimmed}");
@@ -47,13 +50,15 @@ public partial class TagFileDisposalAuditTests
         while (dir != null)
         {
             string candidate = Path.Combine(dir, "src");
-            if (Directory.Exists(candidate)) return candidate;
+            if (Directory.Exists(candidate))
+                return candidate;
 
             dir = Directory.GetParent(dir)?.FullName;
         }
 
         string fallback = "/workspaces/NoMercyMediaServer/src";
-        if (Directory.Exists(fallback)) return fallback;
+        if (Directory.Exists(fallback))
+            return fallback;
 
         throw new DirectoryNotFoundException("Could not find src/ directory");
     }

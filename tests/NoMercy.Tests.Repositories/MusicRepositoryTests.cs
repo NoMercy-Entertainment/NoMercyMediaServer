@@ -38,7 +38,7 @@ public class MusicRepositoryTests : IDisposable
             Name = "Test User",
             Owner = true,
             Allowed = true,
-            Manage = true
+            Manage = true,
         };
         context.Users.Add(testUser);
 
@@ -47,15 +47,11 @@ public class MusicRepositoryTests : IDisposable
             Id = SeedConstants.MusicLibraryId,
             Title = "Music",
             Type = "music",
-            Order = 3
+            Order = 3,
         };
         context.Libraries.Add(musicLibrary);
 
-        Folder musicFolder = new()
-        {
-            Id = SeedConstants.MusicFolderId,
-            Path = "/media/music"
-        };
+        Folder musicFolder = new() { Id = SeedConstants.MusicFolderId, Path = "/media/music" };
         context.Folders.Add(musicFolder);
 
         MusicGenre genre = new() { Id = Guid.NewGuid(), Name = "Rock" };
@@ -74,7 +70,7 @@ public class MusicRepositoryTests : IDisposable
             TrackNumber = 1,
             DiscNumber = 1,
             FolderId = SeedConstants.MusicFolderId,
-            LibraryFolder = musicFolder
+            LibraryFolder = musicFolder,
         };
         Track track2 = new()
         {
@@ -83,7 +79,7 @@ public class MusicRepositoryTests : IDisposable
             TrackNumber = 2,
             DiscNumber = 1,
             FolderId = SeedConstants.MusicFolderId,
-            LibraryFolder = musicFolder
+            LibraryFolder = musicFolder,
         };
         Track track3 = new()
         {
@@ -92,7 +88,7 @@ public class MusicRepositoryTests : IDisposable
             TrackNumber = 1,
             DiscNumber = 1,
             FolderId = SeedConstants.MusicFolderId,
-            LibraryFolder = musicFolder
+            LibraryFolder = musicFolder,
         };
         context.Tracks.AddRange(track1, track2, track3);
 
@@ -105,7 +101,7 @@ public class MusicRepositoryTests : IDisposable
             FolderId = SeedConstants.MusicFolderId,
             HostFolder = "/media/music/Arctic Monkeys",
             Library = musicLibrary,
-            LibraryFolder = musicFolder
+            LibraryFolder = musicFolder,
         };
         Artist artist2 = new()
         {
@@ -116,7 +112,7 @@ public class MusicRepositoryTests : IDisposable
             FolderId = SeedConstants.MusicFolderId,
             HostFolder = "/media/music/Radiohead",
             Library = musicLibrary,
-            LibraryFolder = musicFolder
+            LibraryFolder = musicFolder,
         };
         context.Artists.AddRange(artist1, artist2);
 
@@ -130,7 +126,7 @@ public class MusicRepositoryTests : IDisposable
             HostFolder = "/media/music/Arctic Monkeys/AM",
             Year = 2013,
             Library = musicLibrary,
-            LibraryFolder = musicFolder
+            LibraryFolder = musicFolder,
         };
         Album album2 = new()
         {
@@ -142,7 +138,7 @@ public class MusicRepositoryTests : IDisposable
             HostFolder = "/media/music/Radiohead/OK Computer",
             Year = 1997,
             Library = musicLibrary,
-            LibraryFolder = musicFolder
+            LibraryFolder = musicFolder,
         };
         context.Albums.AddRange(album1, album2);
 
@@ -152,16 +148,19 @@ public class MusicRepositoryTests : IDisposable
         context.AlbumTrack.AddRange(
             new AlbumTrack(AlbumId1, TrackId1),
             new AlbumTrack(AlbumId1, TrackId2),
-            new AlbumTrack(AlbumId2, TrackId3));
+            new AlbumTrack(AlbumId2, TrackId3)
+        );
 
         context.ArtistTrack.AddRange(
             new ArtistTrack(ArtistId1, TrackId1),
             new ArtistTrack(ArtistId1, TrackId2),
-            new ArtistTrack(ArtistId2, TrackId3));
+            new ArtistTrack(ArtistId2, TrackId3)
+        );
 
         context.AlbumArtist.AddRange(
             new AlbumArtist(AlbumId1, ArtistId1),
-            new AlbumArtist(AlbumId2, ArtistId2));
+            new AlbumArtist(AlbumId2, ArtistId2)
+        );
 
         context.ArtistUser.Add(new(ArtistId1, SeedConstants.UserId));
         context.AlbumUser.Add(new(AlbumId1, SeedConstants.UserId));
@@ -171,12 +170,14 @@ public class MusicRepositoryTests : IDisposable
             new MusicPlay(SeedConstants.UserId, TrackId1),
             new MusicPlay(SeedConstants.UserId, TrackId1),
             new MusicPlay(SeedConstants.UserId, TrackId1),
-            new MusicPlay(SeedConstants.UserId, TrackId3));
+            new MusicPlay(SeedConstants.UserId, TrackId3)
+        );
 
         context.MusicGenreTrack.AddRange(
             new MusicGenreTrack(genre.Id, TrackId1),
             new MusicGenreTrack(genre.Id, TrackId2),
-            new MusicGenreTrack(genre.Id, TrackId3));
+            new MusicGenreTrack(genre.Id, TrackId3)
+        );
 
         context.SaveChanges();
     }
@@ -186,7 +187,9 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetArtists_ReturnsList_ThatCanBePaginated()
     {
-        List<Artist> result = (await _repository.GetArtists(SeedConstants.UserId, "A")).Take(1).ToList();
+        List<Artist> result = (await _repository.GetArtists(SeedConstants.UserId, "A"))
+            .Take(1)
+            .ToList();
 
         Assert.Single(result);
         Assert.Equal("Arctic Monkeys", result[0].Name);
@@ -204,7 +207,9 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetAlbums_ReturnsList_ThatCanBePaginated()
     {
-        List<Album> result = (await _repository.GetAlbums(SeedConstants.UserId, "A")).Take(1).ToList();
+        List<Album> result = (await _repository.GetAlbums(SeedConstants.UserId, "A"))
+            .Take(1)
+            .ToList();
 
         Assert.Single(result);
         Assert.Equal("AM", result[0].Name);
@@ -247,7 +252,9 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetFavoriteArtists_ReturnsList_ThatCanBePaginated()
     {
-        List<ArtistUser> result = (await _repository.GetFavoriteArtists(SeedConstants.UserId)).Take(36).ToList();
+        List<ArtistUser> result = (await _repository.GetFavoriteArtists(SeedConstants.UserId))
+            .Take(36)
+            .ToList();
 
         Assert.Single(result);
         Assert.Equal(ArtistId1, result[0].ArtistId);
@@ -256,7 +263,9 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetFavoriteAlbums_ReturnsList_ThatCanBePaginated()
     {
-        List<AlbumUser> result = (await _repository.GetFavoriteAlbums(SeedConstants.UserId)).Take(36).ToList();
+        List<AlbumUser> result = (await _repository.GetFavoriteAlbums(SeedConstants.UserId))
+            .Take(36)
+            .ToList();
 
         Assert.Single(result);
         Assert.Equal(AlbumId1, result[0].AlbumId);
@@ -309,7 +318,9 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetFavoritePlaylistAsync_ReturnsMaterializedList()
     {
-        List<PlaylistTrack> result = await _repository.GetFavoritePlaylistAsync(SeedConstants.UserId);
+        List<PlaylistTrack> result = await _repository.GetFavoritePlaylistAsync(
+            SeedConstants.UserId
+        );
 
         Assert.NotNull(result);
     }
@@ -317,7 +328,9 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetFavoriteArtistAsync_ReturnsEmptyForUnknownUser()
     {
-        List<ArtistTrack> result = await _repository.GetFavoriteArtistAsync(SeedConstants.OtherUserId);
+        List<ArtistTrack> result = await _repository.GetFavoriteArtistAsync(
+            SeedConstants.OtherUserId
+        );
 
         Assert.Empty(result);
     }
@@ -325,7 +338,9 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetFavoriteAlbumAsync_ReturnsEmptyForUnknownUser()
     {
-        List<AlbumTrack> result = await _repository.GetFavoriteAlbumAsync(SeedConstants.OtherUserId);
+        List<AlbumTrack> result = await _repository.GetFavoriteAlbumAsync(
+            SeedConstants.OtherUserId
+        );
 
         Assert.Empty(result);
     }

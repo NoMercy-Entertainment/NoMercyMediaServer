@@ -34,7 +34,8 @@ public class AuthenticationTests : IClassFixture<NoMercyApiFactory>
         string content = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {content}");
+            $"Expected OK, got {(int)response.StatusCode}: {content}"
+        );
         Assert.Contains("owner", content);
         Assert.Contains("allowed", content);
     }
@@ -48,6 +49,7 @@ public class AuthenticationTests : IClassFixture<NoMercyApiFactory>
 
         Assert.True(
             response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            $"Expected 401 or 403, got {(int)response.StatusCode}");
+            $"Expected 401 or 403, got {(int)response.StatusCode}"
+        );
     }
 }

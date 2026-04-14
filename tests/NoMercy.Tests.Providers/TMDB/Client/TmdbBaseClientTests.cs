@@ -10,15 +10,25 @@ public class TmdbBaseClientTests : TmdbTestBase
 {
     private class TestableBaseClient : TmdbBaseClient
     {
-        public TestableBaseClient() : base() { }
-        public TestableBaseClient(int id, string language = "en-US") : base(id, language) { }
+        public TestableBaseClient()
+            : base() { }
 
-        public new Task<T?> Get<T>(string url, Dictionary<string, string?>? query = null, bool? priority = false, bool skipCache = false) where T : class
+        public TestableBaseClient(int id, string language = "en-US")
+            : base(id, language) { }
+
+        public new Task<T?> Get<T>(
+            string url,
+            Dictionary<string, string?>? query = null,
+            bool? priority = false,
+            bool skipCache = false
+        )
+            where T : class
         {
             return base.Get<T>(url, query, priority, skipCache);
         }
 
-        public new Task<List<T>?> Paginated<T>(string url, int limit) where T : class
+        public new Task<List<T>?> Paginated<T>(string url, int limit)
+            where T : class
         {
             return base.Paginated<T>(url, limit);
         }

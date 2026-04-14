@@ -84,7 +84,12 @@ public class LibraryRepositoryTests : IDisposable
     public async Task GetLibraryMovieCardsAsync_ReturnsMovieCards()
     {
         List<MovieCardDto> cards = await _repository.GetLibraryMovieCardsAsync(
-            SeedConstants.UserId, SeedConstants.MovieLibraryId, "US", 10, 0);
+            SeedConstants.UserId,
+            SeedConstants.MovieLibraryId,
+            "US",
+            10,
+            0
+        );
 
         Assert.Equal(2, cards.Count);
         Assert.Contains(cards, c => c.Title == "Spirited Away");
@@ -95,7 +100,12 @@ public class LibraryRepositoryTests : IDisposable
     public async Task GetLibraryMovieCardsAsync_RespectsSkipAndTake()
     {
         List<MovieCardDto> cards = await _repository.GetLibraryMovieCardsAsync(
-            SeedConstants.UserId, SeedConstants.MovieLibraryId, "US", 1, 0);
+            SeedConstants.UserId,
+            SeedConstants.MovieLibraryId,
+            "US",
+            1,
+            0
+        );
 
         Assert.Single(cards);
     }
@@ -104,7 +114,12 @@ public class LibraryRepositoryTests : IDisposable
     public async Task GetLibraryMovieCardsAsync_ReturnsEmpty_WhenUserHasNoAccess()
     {
         List<MovieCardDto> cards = await _repository.GetLibraryMovieCardsAsync(
-            SeedConstants.OtherUserId, SeedConstants.MovieLibraryId, "US", 10, 0);
+            SeedConstants.OtherUserId,
+            SeedConstants.MovieLibraryId,
+            "US",
+            10,
+            0
+        );
 
         Assert.Empty(cards);
     }
@@ -113,7 +128,12 @@ public class LibraryRepositoryTests : IDisposable
     public async Task GetLibraryTvCardsAsync_ReturnsTvCards()
     {
         List<TvCardDto> cards = await _repository.GetLibraryTvCardsAsync(
-            SeedConstants.UserId, SeedConstants.TvLibraryId, "US", 10, 0);
+            SeedConstants.UserId,
+            SeedConstants.TvLibraryId,
+            "US",
+            10,
+            0
+        );
 
         Assert.Single(cards);
         Assert.Equal("Breaking Bad", cards[0].Title);
@@ -124,11 +144,21 @@ public class LibraryRepositoryTests : IDisposable
     {
         // Verify that Take limits results to the requested carousel size
         List<MovieCardDto> allCards = await _repository.GetLibraryMovieCardsAsync(
-            SeedConstants.UserId, SeedConstants.MovieLibraryId, "US", 100, 0);
+            SeedConstants.UserId,
+            SeedConstants.MovieLibraryId,
+            "US",
+            100,
+            0
+        );
         Assert.Equal(2, allCards.Count);
 
         List<MovieCardDto> limitedCards = await _repository.GetLibraryMovieCardsAsync(
-            SeedConstants.UserId, SeedConstants.MovieLibraryId, "US", 1, 0);
+            SeedConstants.UserId,
+            SeedConstants.MovieLibraryId,
+            "US",
+            1,
+            0
+        );
         Assert.Single(limitedCards);
     }
 
@@ -136,11 +166,21 @@ public class LibraryRepositoryTests : IDisposable
     public async Task GetLibraryTvCardsAsync_TakeMatchesCarouselSize()
     {
         List<TvCardDto> allCards = await _repository.GetLibraryTvCardsAsync(
-            SeedConstants.UserId, SeedConstants.TvLibraryId, "US", 100, 0);
+            SeedConstants.UserId,
+            SeedConstants.TvLibraryId,
+            "US",
+            100,
+            0
+        );
         Assert.Single(allCards);
 
         List<TvCardDto> limitedCards = await _repository.GetLibraryTvCardsAsync(
-            SeedConstants.UserId, SeedConstants.TvLibraryId, "US", 1, 0);
+            SeedConstants.UserId,
+            SeedConstants.TvLibraryId,
+            "US",
+            1,
+            0
+        );
         Assert.Single(limitedCards);
     }
 
@@ -149,7 +189,13 @@ public class LibraryRepositoryTests : IDisposable
     {
         // The .Take(take) inside Include() limits movies per-carousel
         Library? library = await _repository.GetLibraryByIdAsync(
-            SeedConstants.MovieLibraryId, SeedConstants.UserId, "en", "US", 1, 0);
+            SeedConstants.MovieLibraryId,
+            SeedConstants.UserId,
+            "en",
+            "US",
+            1,
+            0
+        );
 
         Assert.NotNull(library);
         Assert.Single(library.LibraryMovies);
@@ -159,7 +205,13 @@ public class LibraryRepositoryTests : IDisposable
     public async Task GetLibraryByIdAsync_Paginated_TakeReturnsAllWhenHigherThanCount()
     {
         Library? library = await _repository.GetLibraryByIdAsync(
-            SeedConstants.MovieLibraryId, SeedConstants.UserId, "en", "US", 100, 0);
+            SeedConstants.MovieLibraryId,
+            SeedConstants.UserId,
+            "en",
+            "US",
+            100,
+            0
+        );
 
         Assert.NotNull(library);
         Assert.Equal(2, library.LibraryMovies.Count);
@@ -174,7 +226,7 @@ public class LibraryRepositoryTests : IDisposable
             Id = newLibraryId,
             Title = "Music",
             Type = "music",
-            Order = 3
+            Order = 3,
         };
 
         await _repository.AddLibraryAsync(newLibrary, SeedConstants.UserId);
@@ -187,8 +239,9 @@ public class LibraryRepositoryTests : IDisposable
     [Fact]
     public async Task DeleteLibraryAsync_RemovesLibrary()
     {
-        Library? library = await _context.Libraries
-            .FirstOrDefaultAsync(l => l.Id == SeedConstants.MovieLibraryId);
+        Library? library = await _context.Libraries.FirstOrDefaultAsync(l =>
+            l.Id == SeedConstants.MovieLibraryId
+        );
         Assert.NotNull(library);
 
         await _repository.DeleteLibraryAsync(library);

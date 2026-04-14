@@ -90,11 +90,7 @@ public class NetworkJsonPropertyTests
     [Fact]
     public void Serialization_NetworkTv_UsesNetworkTvKey()
     {
-        Network network = new()
-        {
-            Id = 1,
-            Name = "HBO"
-        };
+        Network network = new() { Id = 1, Name = "HBO" };
 
         string json = JsonConvert.SerializeObject(network);
         Assert.Contains("\"network_tv\"", json);
@@ -104,11 +100,7 @@ public class NetworkJsonPropertyTests
     [Fact]
     public void Serialization_Id_UsesIdKey()
     {
-        Network network = new()
-        {
-            Id = 42,
-            Name = "Netflix"
-        };
+        Network network = new() { Id = 42, Name = "Netflix" };
 
         string json = JsonConvert.SerializeObject(network);
         Assert.Contains("\"id\":42", json);
@@ -117,11 +109,7 @@ public class NetworkJsonPropertyTests
     [Fact]
     public void Serialization_NoDuplicateIdKeys()
     {
-        Network network = new()
-        {
-            Id = 1,
-            Name = "Test"
-        };
+        Network network = new() { Id = 1, Name = "Test" };
 
         string json = JsonConvert.SerializeObject(network);
 
@@ -149,11 +137,7 @@ public class NetworkJsonPropertyTests
     [Fact]
     public void Deserialization_RoundTrip_PreservesId()
     {
-        Network original = new()
-        {
-            Id = 55,
-            Name = "ABC"
-        };
+        Network original = new() { Id = 55, Name = "ABC" };
 
         string json = JsonConvert.SerializeObject(original);
         Network? deserialized = JsonConvert.DeserializeObject<Network>(json);
@@ -171,7 +155,10 @@ public class NetworkJsonPropertyTests
     [InlineData("Headquarters", "headquarters")]
     [InlineData("Homepage", "homepage")]
     [InlineData("NetworkTv", "network_tv")]
-    public void AllProperties_HaveCorrectJsonPropertyNames(string propertyName, string expectedJsonName)
+    public void AllProperties_HaveCorrectJsonPropertyNames(
+        string propertyName,
+        string expectedJsonName
+    )
     {
         string? name = GetJsonPropertyName(propertyName);
         Assert.Equal(expectedJsonName, name);
@@ -180,7 +167,9 @@ public class NetworkJsonPropertyTests
     [Fact]
     public void NoDuplicateJsonPropertyNames()
     {
-        PropertyInfo[] properties = typeof(Network).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        PropertyInfo[] properties = typeof(Network).GetProperties(
+            BindingFlags.Public | BindingFlags.Instance
+        );
         List<string> jsonNames = [];
 
         foreach (PropertyInfo prop in properties)

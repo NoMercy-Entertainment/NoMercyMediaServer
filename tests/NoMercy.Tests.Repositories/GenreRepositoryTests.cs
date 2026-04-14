@@ -20,8 +20,7 @@ public class GenreRepositoryTests : IDisposable
     [Fact]
     public async Task GetGenreAsync_ReturnsGenre_WhenUserHasAccess()
     {
-        Genre? genre = await _repository.GetGenreAsync(
-            SeedConstants.UserId, 18, "en", "US", 10, 0);
+        Genre? genre = await _repository.GetGenreAsync(SeedConstants.UserId, 18, "en", "US", 10, 0);
 
         Assert.NotNull(genre);
         Assert.Equal("Drama", genre.Name);
@@ -31,7 +30,13 @@ public class GenreRepositoryTests : IDisposable
     public async Task GetGenreAsync_ReturnsNull_WhenGenreDoesNotExist()
     {
         Genre? genre = await _repository.GetGenreAsync(
-            SeedConstants.UserId, 999, "en", "US", 10, 0);
+            SeedConstants.UserId,
+            999,
+            "en",
+            "US",
+            10,
+            0
+        );
 
         Assert.Null(genre);
     }
@@ -39,8 +44,7 @@ public class GenreRepositoryTests : IDisposable
     [Fact]
     public async Task GetGenreAsync_IncludesMoviesForUser()
     {
-        Genre? genre = await _repository.GetGenreAsync(
-            SeedConstants.UserId, 18, "en", "US", 10, 0);
+        Genre? genre = await _repository.GetGenreAsync(SeedConstants.UserId, 18, "en", "US", 10, 0);
 
         Assert.NotNull(genre);
         Assert.NotEmpty(genre.GenreMovies);
@@ -49,8 +53,7 @@ public class GenreRepositoryTests : IDisposable
     [Fact]
     public async Task GetGenreAsync_IncludesTvShowsForUser()
     {
-        Genre? genre = await _repository.GetGenreAsync(
-            SeedConstants.UserId, 18, "en", "US", 10, 0);
+        Genre? genre = await _repository.GetGenreAsync(SeedConstants.UserId, 18, "en", "US", 10, 0);
 
         Assert.NotNull(genre);
         Assert.NotEmpty(genre.GenreTvShows);
@@ -59,8 +62,7 @@ public class GenreRepositoryTests : IDisposable
     [Fact]
     public async Task GetGenres_ReturnsGenresForUser()
     {
-        List<Genre> genres = await _repository.GetGenres(
-            SeedConstants.UserId, "en", 10, 0);
+        List<Genre> genres = await _repository.GetGenres(SeedConstants.UserId, "en", 10, 0);
 
         Assert.Equal(2, genres.Count);
         Assert.Contains(genres, g => g.Name == "Action");
@@ -70,8 +72,7 @@ public class GenreRepositoryTests : IDisposable
     [Fact]
     public async Task GetGenres_ReturnsEmpty_WhenUserHasNoAccess()
     {
-        List<Genre> genres = await _repository.GetGenres(
-            SeedConstants.OtherUserId, "en", 10, 0);
+        List<Genre> genres = await _repository.GetGenres(SeedConstants.OtherUserId, "en", 10, 0);
 
         Assert.Empty(genres);
     }
@@ -80,7 +81,11 @@ public class GenreRepositoryTests : IDisposable
     public async Task GetGenresWithCountsAsync_ReturnsCorrectCounts()
     {
         List<GenreWithCountsDto> genres = await _repository.GetGenresWithCountsAsync(
-            SeedConstants.UserId, "en", 10, 0);
+            SeedConstants.UserId,
+            "en",
+            10,
+            0
+        );
 
         GenreWithCountsDto? dramaGenre = genres.FirstOrDefault(g => g.Name == "Drama");
         Assert.NotNull(dramaGenre);
@@ -98,8 +103,7 @@ public class GenreRepositoryTests : IDisposable
     [Fact]
     public async Task GetGenres_RespectsPageAndTake()
     {
-        List<Genre> genres = await _repository.GetGenres(
-            SeedConstants.UserId, "en", 1, 0);
+        List<Genre> genres = await _repository.GetGenres(SeedConstants.UserId, "en", 1, 0);
 
         Assert.Single(genres);
     }

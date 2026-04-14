@@ -65,7 +65,9 @@ public class ManagementControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task ManageLogs_WithLevelFilter_ReturnsOk()
     {
-        HttpResponseMessage response = await _client.GetAsync("/manage/logs?tail=10&levels=Information,Error");
+        HttpResponseMessage response = await _client.GetAsync(
+            "/manage/logs?tail=10&levels=Information,Error"
+        );
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -150,7 +152,8 @@ public class ManagementControllerTests : IClassFixture<NoMercyApiFactory>
         StringContent body = new(
             JsonSerializer.Serialize(new { server_name = "TestServer" }),
             Encoding.UTF8,
-            "application/json");
+            "application/json"
+        );
 
         HttpResponseMessage response = await _client.PutAsync("/manage/config", body);
 

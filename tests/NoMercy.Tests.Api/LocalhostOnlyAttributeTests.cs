@@ -65,10 +65,7 @@ public class LocalhostOnlyAttributeTests
         DefaultHttpContext httpContext = new();
         httpContext.Connection.RemoteIpAddress = remoteIp;
 
-        ActionContext actionContext = new(
-            httpContext,
-            new(),
-            new());
+        ActionContext actionContext = new(httpContext, new(), new());
 
         return new(actionContext, []);
     }

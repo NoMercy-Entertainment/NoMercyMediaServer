@@ -1,18 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    
+
     <!-- Test parallelization settings -->
     <ParallelizeAssembly>true</ParallelizeAssembly>
     <ParallelizeTestCollections>true</ParallelizeTestCollections>
   </PropertyGroup>
 
   <ItemGroup>
-      <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -34,5 +33,4 @@
     <ProjectReference Include="..\..\src\NoMercyQueue.Sqlite\NoMercyQueue.Sqlite.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Database\NoMercy.Database.csproj" />
   </ItemGroup>
-
 </Project>

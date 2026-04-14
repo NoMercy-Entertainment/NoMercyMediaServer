@@ -97,7 +97,8 @@ public class IpcUnixSocketIntegrationTests : IDisposable
             string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
 
             string responseBody = JsonSerializer.Serialize(new { status = "running" });
-            string httpResponse = $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {responseBody.Length}\r\nConnection: close\r\n\r\n{responseBody}";
+            string httpResponse =
+                $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {responseBody.Length}\r\nConnection: close\r\n\r\n{responseBody}";
             byte[] responseBytes = Encoding.UTF8.GetBytes(httpResponse);
             await stream.WriteAsync(responseBytes);
 
@@ -132,8 +133,11 @@ public class IpcUnixSocketIntegrationTests : IDisposable
             byte[] buffer = new byte[4096];
             _ = await stream.ReadAsync(buffer);
 
-            string responseBody = JsonSerializer.Serialize(new { status = "ok", message = "Server is shutting down" });
-            string httpResponse = $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {responseBody.Length}\r\nConnection: close\r\n\r\n{responseBody}";
+            string responseBody = JsonSerializer.Serialize(
+                new { status = "ok", message = "Server is shutting down" }
+            );
+            string httpResponse =
+                $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {responseBody.Length}\r\nConnection: close\r\n\r\n{responseBody}";
             await stream.WriteAsync(Encoding.UTF8.GetBytes(httpResponse));
         });
 
@@ -162,8 +166,11 @@ public class IpcUnixSocketIntegrationTests : IDisposable
             byte[] buffer = new byte[4096];
             _ = await stream.ReadAsync(buffer);
 
-            string responseBody = JsonSerializer.Serialize(new { status = "ok", message = "Configuration updated" });
-            string httpResponse = $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {responseBody.Length}\r\nConnection: close\r\n\r\n{responseBody}";
+            string responseBody = JsonSerializer.Serialize(
+                new { status = "ok", message = "Configuration updated" }
+            );
+            string httpResponse =
+                $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {responseBody.Length}\r\nConnection: close\r\n\r\n{responseBody}";
             await stream.WriteAsync(Encoding.UTF8.GetBytes(httpResponse));
         });
 
@@ -171,7 +178,8 @@ public class IpcUnixSocketIntegrationTests : IDisposable
         StringContent body = new(
             JsonSerializer.Serialize(new { server_name = "TestServer" }),
             Encoding.UTF8,
-            "application/json");
+            "application/json"
+        );
         HttpResponseMessage response = await client.PutAsync("/manage/config", body);
 
         await serverTask;
@@ -184,12 +192,16 @@ public class IpcUnixSocketIntegrationTests : IDisposable
         if (OperatingSystem.IsWindows())
             return;
 
-        string badPath = Path.Combine(Path.GetTempPath(), $"nomercy-nonexistent-{Guid.NewGuid():N}.sock");
+        string badPath = Path.Combine(
+            Path.GetTempPath(),
+            $"nomercy-nonexistent-{Guid.NewGuid():N}.sock"
+        );
 
         using IpcClient client = new(badPath);
 
         await Assert.ThrowsAsync<HttpRequestException>(async () =>
-            await client.GetAsync("/manage/status"));
+            await client.GetAsync("/manage/status")
+        );
     }
 
     public void Dispose()

@@ -61,7 +61,7 @@ public class StartupParallelizationTests
             {
                 executionLog.Add(("UpdateChecker", 3));
                 return Task.CompletedTask;
-            })
+            }),
         ];
 
         await Task.WhenAll(parallelTasks);
@@ -114,8 +114,10 @@ public class StartupParallelizationTests
     [Fact]
     public async Task Phase2_AuthAndBinaries_RunConcurrently()
     {
-        long authStart = 0, authEnd = 0;
-        long binariesStart = 0, binariesEnd = 0;
+        long authStart = 0,
+            authEnd = 0;
+        long binariesStart = 0,
+            binariesEnd = 0;
 
         Task binariesTask = Task.Run(async () =>
         {
@@ -138,8 +140,10 @@ public class StartupParallelizationTests
         bool authStartedBeforeBinariesEnded = authStart < binariesEnd;
         bool binariesStartedBeforeAuthEnded = binariesStart < authEnd;
 
-        Assert.True(authStartedBeforeBinariesEnded && binariesStartedBeforeAuthEnded,
-            "Tasks should have overlapping execution windows when running concurrently");
+        Assert.True(
+            authStartedBeforeBinariesEnded && binariesStartedBeforeAuthEnded,
+            "Tasks should have overlapping execution windows when running concurrently"
+        );
     }
 
     /// <summary>
@@ -156,7 +160,8 @@ public class StartupParallelizationTests
         await Task.Delay(10);
 
         // Phase 3: all tasks in parallel
-        List<Task> phase3Tasks = Enumerable.Range(0, taskCount)
+        List<Task> phase3Tasks = Enumerable
+            .Range(0, taskCount)
             .Select(_ => Task.Run(async () => await Task.Delay(perTaskDurationMs)))
             .ToList();
 
@@ -166,9 +171,11 @@ public class StartupParallelizationTests
 
         // If parallel: ~10ms (auth) + ~80ms (concurrent tasks) = ~90ms
         // If sequential: ~10ms + 4 * 80ms = ~330ms
-        Assert.True(elapsed.TotalMilliseconds < perTaskDurationMs * taskCount,
-            $"Phase 3 tasks appear to have run sequentially: elapsed {elapsed.TotalMilliseconds}ms " +
-            $"(expected < {perTaskDurationMs * taskCount}ms for concurrent execution)");
+        Assert.True(
+            elapsed.TotalMilliseconds < perTaskDurationMs * taskCount,
+            $"Phase 3 tasks appear to have run sequentially: elapsed {elapsed.TotalMilliseconds}ms "
+                + $"(expected < {perTaskDurationMs * taskCount}ms for concurrent execution)"
+        );
     }
 
     /// <summary>
@@ -215,7 +222,10 @@ public class StartupParallelizationTests
 
         Assert.True(authCompleted, "Auth should be completed before Register");
         Assert.True(networkingCompleted, "Networking should be completed before Register");
-        Assert.False(registerStartedBeforeDeps, "Register must not start before Auth and Networking complete");
+        Assert.False(
+            registerStartedBeforeDeps,
+            "Register must not start before Auth and Networking complete"
+        );
     }
 
     /// <summary>
@@ -242,12 +252,14 @@ public class StartupParallelizationTests
             {
                 callerTaskSawAuthComplete = authCompleted;
                 return Task.CompletedTask;
-            })
+            }),
         ];
 
         await Task.WhenAll(parallelTasks);
 
-        Assert.True(callerTaskSawAuthComplete,
-            "Caller tasks should execute after Auth completes (Phase 3)");
+        Assert.True(
+            callerTaskSawAuthComplete,
+            "Caller tasks should execute after Auth completes (Phase 3)"
+        );
     }
 }

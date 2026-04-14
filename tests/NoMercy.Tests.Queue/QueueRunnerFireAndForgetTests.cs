@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Models;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -26,7 +26,8 @@ public class QueueRunnerFireAndForgetTests
         foreach (string line in lines)
         {
             string trimmed = line.Trim();
-            if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+            if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                continue;
 
             Assert.DoesNotMatch(@"\.GetAwaiter\s*\(\s*\)\s*;", trimmed);
         }
@@ -84,13 +85,15 @@ public class QueueRunnerFireAndForgetTests
         // (now instance field since QueueRunner is no longer static)
         FieldInfo? field = typeof(QueueRunner).GetField(
             "_activeWorkerThreads",
-            BindingFlags.NonPublic | BindingFlags.Instance);
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
 
         Assert.NotNull(field);
         Assert.True(
-            field.FieldType.IsGenericType &&
-            field.FieldType.GetGenericTypeDefinition() == typeof(ConcurrentDictionary<,>),
-            "_activeWorkerThreads should be a ConcurrentDictionary for thread-safe tracking");
+            field.FieldType.IsGenericType
+                && field.FieldType.GetGenericTypeDefinition() == typeof(ConcurrentDictionary<,>),
+            "_activeWorkerThreads should be a ConcurrentDictionary for thread-safe tracking"
+        );
     }
 
     [Fact]
@@ -113,15 +116,19 @@ public class QueueRunnerFireAndForgetTests
         // protected by _workersLock instead of volatile.
         FieldInfo? isInitialized = typeof(QueueRunner).GetField(
             "_isInitialized",
-            BindingFlags.NonPublic | BindingFlags.Instance);
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
 
         Assert.NotNull(isInitialized);
 
         // Check for volatile modifier via attributes
         Assert.True(
-            isInitialized.GetRequiredCustomModifiers().Any(t => t == typeof(System.Runtime.CompilerServices.IsVolatile)) ||
-            isInitialized.FieldType == typeof(bool),
-            "_isInitialized should be volatile");
+            isInitialized
+                .GetRequiredCustomModifiers()
+                .Any(t => t == typeof(System.Runtime.CompilerServices.IsVolatile))
+                || isInitialized.FieldType == typeof(bool),
+            "_isInitialized should be volatile"
+        );
     }
 
     [Fact]
@@ -153,17 +160,20 @@ public class QueueRunnerFireAndForgetTests
         while (dir != null)
         {
             string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate)) return candidate;
+            if (File.Exists(candidate))
+                return candidate;
 
             string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
             string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved)) return resolved;
+            if (File.Exists(resolved))
+                return resolved;
 
             dir = Directory.GetParent(dir)?.FullName;
         }
 
         string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback)) return fallback;
+        if (File.Exists(fallback))
+            return fallback;
 
         throw new FileNotFoundException($"Could not find source file: {relativePath}");
     }

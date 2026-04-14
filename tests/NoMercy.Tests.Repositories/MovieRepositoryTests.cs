@@ -20,8 +20,7 @@ public class MovieRepositoryTests : IDisposable
     [Fact]
     public async Task GetMovieAsync_ReturnsMovie_WhenUserHasAccess()
     {
-        Movie? movie = await _repository.GetMovieAsync(
-            SeedConstants.UserId, 129, "en", "US");
+        Movie? movie = await _repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
         Assert.NotNull(movie);
         Assert.Equal(129, movie.Id);
@@ -31,8 +30,7 @@ public class MovieRepositoryTests : IDisposable
     [Fact]
     public async Task GetMovieAsync_ReturnsNull_WhenUserHasNoAccess()
     {
-        Movie? movie = await _repository.GetMovieAsync(
-            SeedConstants.OtherUserId, 129, "en", "US");
+        Movie? movie = await _repository.GetMovieAsync(SeedConstants.OtherUserId, 129, "en", "US");
 
         Assert.Null(movie);
     }
@@ -40,8 +38,7 @@ public class MovieRepositoryTests : IDisposable
     [Fact]
     public async Task GetMovieAsync_ReturnsNull_WhenMovieDoesNotExist()
     {
-        Movie? movie = await _repository.GetMovieAsync(
-            SeedConstants.UserId, 999999, "en", "US");
+        Movie? movie = await _repository.GetMovieAsync(SeedConstants.UserId, 999999, "en", "US");
 
         Assert.Null(movie);
     }
@@ -49,8 +46,7 @@ public class MovieRepositoryTests : IDisposable
     [Fact]
     public async Task GetMovieAsync_IncludesVideoFiles()
     {
-        Movie? movie = await _repository.GetMovieAsync(
-            SeedConstants.UserId, 129, "en", "US");
+        Movie? movie = await _repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
         Assert.NotNull(movie);
         Assert.NotEmpty(movie.VideoFiles);
@@ -60,8 +56,7 @@ public class MovieRepositoryTests : IDisposable
     [Fact]
     public async Task GetMovieAvailableAsync_ReturnsTrue_WhenMovieHasVideoFiles()
     {
-        bool available = await _repository.GetMovieAvailableAsync(
-            SeedConstants.UserId, 129);
+        bool available = await _repository.GetMovieAvailableAsync(SeedConstants.UserId, 129);
 
         Assert.True(available);
     }
@@ -69,8 +64,7 @@ public class MovieRepositoryTests : IDisposable
     [Fact]
     public async Task GetMovieAvailableAsync_ReturnsFalse_WhenUserHasNoAccess()
     {
-        bool available = await _repository.GetMovieAvailableAsync(
-            SeedConstants.OtherUserId, 129);
+        bool available = await _repository.GetMovieAvailableAsync(SeedConstants.OtherUserId, 129);
 
         Assert.False(available);
     }
@@ -79,7 +73,11 @@ public class MovieRepositoryTests : IDisposable
     public async Task GetMoviePlaylistAsync_ReturnsMovieWithVideoFiles()
     {
         List<Movie> playlist = await _repository.GetMoviePlaylistAsync(
-            SeedConstants.UserId, 129, "en", "US");
+            SeedConstants.UserId,
+            129,
+            "en",
+            "US"
+        );
 
         Assert.NotEmpty(playlist);
         Assert.Equal(129, playlist[0].Id);
@@ -91,8 +89,7 @@ public class MovieRepositoryTests : IDisposable
     {
         await _repository.DeleteAsync(129);
 
-        Movie? movie = await _repository.GetMovieAsync(
-            SeedConstants.UserId, 129, "en", "US");
+        Movie? movie = await _repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
         Assert.Null(movie);
     }
@@ -104,8 +101,9 @@ public class MovieRepositoryTests : IDisposable
 
         Assert.True(result);
 
-        MovieUser? movieUser = _context.MovieUser
-            .FirstOrDefault(mu => mu.MovieId == 129 && mu.UserId == SeedConstants.UserId);
+        MovieUser? movieUser = _context.MovieUser.FirstOrDefault(mu =>
+            mu.MovieId == 129 && mu.UserId == SeedConstants.UserId
+        );
         Assert.NotNull(movieUser);
     }
 
@@ -117,8 +115,9 @@ public class MovieRepositoryTests : IDisposable
 
         Assert.True(result);
 
-        MovieUser? movieUser = _context.MovieUser
-            .FirstOrDefault(mu => mu.MovieId == 129 && mu.UserId == SeedConstants.UserId);
+        MovieUser? movieUser = _context.MovieUser.FirstOrDefault(mu =>
+            mu.MovieId == 129 && mu.UserId == SeedConstants.UserId
+        );
         Assert.Null(movieUser);
     }
 

@@ -49,8 +49,12 @@ public class InterfaceContractTests
             .Where(m => m.Name == "Subscribe")
             .ToArray();
 
-        subscribeMethods.Should().HaveCount(2,
-            "IEventBus should have two Subscribe overloads: delegate and IEventHandler");
+        subscribeMethods
+            .Should()
+            .HaveCount(
+                2,
+                "IEventBus should have two Subscribe overloads: delegate and IEventHandler"
+            );
     }
 
     [Fact]
@@ -61,8 +65,7 @@ public class InterfaceContractTests
 
         await handler.HandleAsync(testEvent);
 
-        handler.ReceivedEvents.Should().ContainSingle()
-            .Which.Should().BeSameAs(testEvent);
+        handler.ReceivedEvents.Should().ContainSingle().Which.Should().BeSameAs(testEvent);
     }
 
     [Fact]
@@ -71,9 +74,12 @@ public class InterfaceContractTests
         Type handlerType = typeof(IEventHandler<>);
         Type genericParam = handlerType.GetGenericArguments()[0];
 
-        genericParam.GenericParameterAttributes
-            .HasFlag(System.Reflection.GenericParameterAttributes.Contravariant)
-            .Should().BeTrue("IEventHandler<TEvent> should be contravariant (in TEvent)");
+        genericParam
+            .GenericParameterAttributes.HasFlag(
+                System.Reflection.GenericParameterAttributes.Contravariant
+            )
+            .Should()
+            .BeTrue("IEventHandler<TEvent> should be contravariant (in TEvent)");
     }
 
     [Fact]
@@ -87,8 +93,9 @@ public class InterfaceContractTests
 
         foreach (System.Reflection.MethodInfo method in subscribeMethods)
         {
-            method.ReturnType.Should().Be(typeof(IDisposable),
-                "Subscribe should return IDisposable for unsubscription");
+            method
+                .ReturnType.Should()
+                .Be(typeof(IDisposable), "Subscribe should return IDisposable for unsubscription");
         }
     }
 }

@@ -14,7 +14,10 @@ public class PluginDiIntegrationTests : IDisposable
 
     public PluginDiIntegrationTests()
     {
-        _tempPluginsDir = Path.Combine(Path.GetTempPath(), "nomercy-di-tests-" + Guid.NewGuid().ToString("N"));
+        _tempPluginsDir = Path.Combine(
+            Path.GetTempPath(),
+            "nomercy-di-tests-" + Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(_tempPluginsDir);
     }
 
@@ -27,9 +30,7 @@ public class PluginDiIntegrationTests : IDisposable
                 Directory.Delete(_tempPluginsDir, recursive: true);
             }
         }
-        catch (IOException)
-        {
-        }
+        catch (IOException) { }
     }
 
     [Fact]
@@ -87,7 +88,12 @@ public class PluginDiIntegrationTests : IDisposable
     {
         IServiceCollection? services = null;
         InMemoryEventBus bus = new();
-        PluginManager manager = new(bus, new MinimalServiceProvider(), NullLogger<PluginManager>.Instance, _tempPluginsDir);
+        PluginManager manager = new(
+            bus,
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir
+        );
 
         Action act = () => services!.RegisterPluginServices(manager);
 
@@ -110,7 +116,12 @@ public class PluginDiIntegrationTests : IDisposable
     {
         ServiceCollection services = new();
         InMemoryEventBus bus = new();
-        PluginManager manager = new(bus, new MinimalServiceProvider(), NullLogger<PluginManager>.Instance, _tempPluginsDir);
+        PluginManager manager = new(
+            bus,
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir
+        );
 
         services.RegisterPluginServices(manager);
 
@@ -122,7 +133,12 @@ public class PluginDiIntegrationTests : IDisposable
     public void GetServiceRegistrators_NoPlugins_ReturnsEmpty()
     {
         InMemoryEventBus bus = new();
-        PluginManager manager = new(bus, new MinimalServiceProvider(), NullLogger<PluginManager>.Instance, _tempPluginsDir);
+        PluginManager manager = new(
+            bus,
+            new MinimalServiceProvider(),
+            NullLogger<PluginManager>.Instance,
+            _tempPluginsDir
+        );
 
         IEnumerable<IPluginServiceRegistrator> registrators = manager.GetServiceRegistrators();
 

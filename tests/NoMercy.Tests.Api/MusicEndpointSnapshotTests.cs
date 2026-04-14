@@ -22,9 +22,11 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
 
     private static void AssertJsonHasProperty(JsonElement element, string propertyName) =>
-        Assert.True(element.TryGetProperty(propertyName, out _),
-            $"Expected JSON property '{propertyName}' not found. " +
-            $"Properties: [{string.Join(", ", EnumerateProperties(element))}]");
+        Assert.True(
+            element.TryGetProperty(propertyName, out _),
+            $"Expected JSON property '{propertyName}' not found. "
+                + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
+        );
 
     private static IEnumerable<string> EnumerateProperties(JsonElement element)
     {
@@ -35,14 +37,16 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
     private static void AssertStatusResponse(JsonElement root)
     {
-        bool hasCustomStatus = root.TryGetProperty("message", out _)
-                               && root.TryGetProperty("status", out _);
-        bool hasProblemDetails = root.TryGetProperty("detail", out _)
-                                 && root.TryGetProperty("status", out _);
+        bool hasCustomStatus =
+            root.TryGetProperty("message", out _) && root.TryGetProperty("status", out _);
+        bool hasProblemDetails =
+            root.TryGetProperty("detail", out _) && root.TryGetProperty("status", out _);
 
-        Assert.True(hasCustomStatus || hasProblemDetails,
-            $"Expected status response shape. " +
-            $"Properties: [{string.Join(", ", EnumerateProperties(root))}]");
+        Assert.True(
+            hasCustomStatus || hasProblemDetails,
+            $"Expected status response shape. "
+                + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
+        );
     }
 
     // =========================================================================
@@ -57,7 +61,8 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -71,7 +76,8 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -81,12 +87,15 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Music_Favorites_ReturnsComponentResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/music/start/favorites", JsonBody(new { }));
+            "/api/v1/music/start/favorites",
+            JsonBody(new { })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -97,12 +106,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/music/start/favorite-artists",
-            JsonBody(new { replaceId = "favorite-artists" }));
+            JsonBody(new { replaceId = "favorite-artists" })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -113,12 +124,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/music/start/favorite-albums",
-            JsonBody(new { replaceId = "favorite-albums" }));
+            JsonBody(new { replaceId = "favorite-albums" })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -129,12 +142,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/music/start/playlists",
-            JsonBody(new { replaceId = "playlists" }));
+            JsonBody(new { replaceId = "playlists" })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -144,25 +159,28 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Music_Search_NoResults_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/music/search?query=zzznonexistentzzzxyz");
+            "/api/v1/music/search?query=zzznonexistentzzzxyz"
+        );
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.OK,
-            $"Expected NotFound or OK, got {(int)response.StatusCode}");
+            $"Expected NotFound or OK, got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]
     public async Task Music_Search_WithQuery_ReturnsComponentOrNotFound()
     {
-        HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/music/search?query=test");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/music/search?query=test");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK
-                or HttpStatusCode.NotFound
-                or HttpStatusCode.InternalServerError,
-            $"Expected OK, NotFound, or 500, got {(int)response.StatusCode}: {body}");
+            response.StatusCode
+                is HttpStatusCode.OK
+                    or HttpStatusCode.NotFound
+                    or HttpStatusCode.InternalServerError,
+            $"Expected OK, NotFound, or 500, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -175,12 +193,15 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Music_TypeSearch_ReturnsPlaceholderResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/music/search/test/artist", JsonBody(new { }));
+            "/api/v1/music/search/test/artist",
+            JsonBody(new { })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -198,7 +219,8 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -208,12 +230,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Artists_Show_ReturnsArtistResponse()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/artist/{NoMercyApiFactory.ArtistId1}");
+            $"/api/v1/music/artist/{NoMercyApiFactory.ArtistId1}"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -229,12 +253,12 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Artists_Show_NonExistent_ReturnsNotFound()
     {
-        HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/artist/{Guid.Empty}");
+        HttpResponseMessage response = await _client.GetAsync($"/api/v1/music/artist/{Guid.Empty}");
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}");
+            $"Expected NotFound, got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]
@@ -242,12 +266,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             $"/api/v1/music/artist/{NoMercyApiFactory.ArtistId1}/like",
-            JsonBody(new { value = true }));
+            JsonBody(new { value = true })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.UnprocessableEntity,
-            $"Expected OK or 422, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or 422, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertStatusResponse(json.RootElement);
@@ -258,12 +284,13 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             $"/api/v1/music/artist/{Guid.Empty}/like",
-            JsonBody(new { value = true }));
+            JsonBody(new { value = true })
+        );
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.UnprocessableEntity
-                or HttpStatusCode.NotFound,
-            $"Expected 422 or 404, got {(int)response.StatusCode}");
+            response.StatusCode is HttpStatusCode.UnprocessableEntity or HttpStatusCode.NotFound,
+            $"Expected 422 or 404, got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]
@@ -271,7 +298,8 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         // Use a non-existent ID to avoid modifying seed data
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/music/artist/{Guid.Parse("99999999-9999-9999-9999-999999999999")}");
+            $"/api/v1/music/artist/{Guid.Parse("99999999-9999-9999-9999-999999999999")}"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         JsonDocument json = JsonDocument.Parse(body);
@@ -290,7 +318,8 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -303,12 +332,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Albums_Show_ReturnsAlbumResponse()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/album/{NoMercyApiFactory.AlbumId1}");
+            $"/api/v1/music/album/{NoMercyApiFactory.AlbumId1}"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -324,12 +355,12 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Albums_Show_NonExistent_ReturnsNotFound()
     {
-        HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/album/{Guid.Empty}");
+        HttpResponseMessage response = await _client.GetAsync($"/api/v1/music/album/{Guid.Empty}");
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}");
+            $"Expected NotFound, got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]
@@ -337,14 +368,17 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             $"/api/v1/music/album/{NoMercyApiFactory.AlbumId1}/like",
-            JsonBody(new { value = true }));
+            JsonBody(new { value = true })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK
-                or HttpStatusCode.UnprocessableEntity
-                or HttpStatusCode.NotFound,
-            $"Expected OK, 422, or 404, got {(int)response.StatusCode}: {body}");
+            response.StatusCode
+                is HttpStatusCode.OK
+                    or HttpStatusCode.UnprocessableEntity
+                    or HttpStatusCode.NotFound,
+            $"Expected OK, 422, or 404, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -358,15 +392,18 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             $"/api/v1/music/album/{NoMercyApiFactory.AlbumId1}/rescan",
-            JsonBody(new { }));
+            JsonBody(new { })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         // Test user may not have moderator role, so 401/403 is acceptable
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK
-                or HttpStatusCode.Unauthorized
-                or HttpStatusCode.Forbidden,
-            $"Expected OK, 401, or 403, got {(int)response.StatusCode}: {body}");
+            response.StatusCode
+                is HttpStatusCode.OK
+                    or HttpStatusCode.Unauthorized
+                    or HttpStatusCode.Forbidden,
+            $"Expected OK, 401, or 403, got {(int)response.StatusCode}: {body}"
+        );
     }
 
     // =========================================================================
@@ -381,7 +418,8 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -391,12 +429,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Playlists_Show_ReturnsPlaylistResponse()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/playlists/{NoMercyApiFactory.PlaylistId1}");
+            $"/api/v1/music/playlists/{NoMercyApiFactory.PlaylistId1}"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -409,11 +449,13 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Playlists_Show_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/playlists/{Guid.Empty}");
+            $"/api/v1/music/playlists/{Guid.Empty}"
+        );
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}");
+            $"Expected NotFound, got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]
@@ -421,12 +463,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/music/playlists",
-            JsonBody(new { name = "Snapshot Test Playlist", description = "test" }));
+            JsonBody(new { name = "Snapshot Test Playlist", description = "test" })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.Conflict,
-            $"Expected OK or Conflict, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or Conflict, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -442,23 +486,27 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         // First create
         await _client.PostAsync(
             "/api/v1/music/playlists",
-            JsonBody(new { name = "Duplicate Test Playlist", description = "test" }));
+            JsonBody(new { name = "Duplicate Test Playlist", description = "test" })
+        );
 
         // Second create with same name
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/music/playlists",
-            JsonBody(new { name = "Duplicate Test Playlist", description = "test2" }));
+            JsonBody(new { name = "Duplicate Test Playlist", description = "test2" })
+        );
 
         Assert.True(
             response.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.OK,
-            $"Expected Conflict or OK, got {(int)response.StatusCode}");
+            $"Expected Conflict or OK, got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]
     public async Task Playlists_Delete_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/music/playlists/{Guid.Parse("99999999-9999-9999-9999-999999999998")}");
+            $"/api/v1/music/playlists/{Guid.Parse("99999999-9999-9999-9999-999999999998")}"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         JsonDocument json = JsonDocument.Parse(body);
@@ -470,13 +518,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             $"/api/v1/music/playlists/{NoMercyApiFactory.PlaylistId1}/tracks",
-            JsonBody(new { id = NoMercyApiFactory.TrackId2 }));
+            JsonBody(new { id = NoMercyApiFactory.TrackId2 })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK
-                or HttpStatusCode.InternalServerError,
-            $"Expected OK or 500 (duplicate key), got {(int)response.StatusCode}: {body}");
+            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.InternalServerError,
+            $"Expected OK or 500 (duplicate key), got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -489,11 +538,13 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Playlists_RemoveTrack_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/music/playlists/{NoMercyApiFactory.PlaylistId1}/tracks/{Guid.Empty}");
+            $"/api/v1/music/playlists/{NoMercyApiFactory.PlaylistId1}/tracks/{Guid.Empty}"
+        );
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}");
+            $"Expected NotFound, got {(int)response.StatusCode}"
+        );
     }
 
     // =========================================================================
@@ -508,7 +559,8 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -517,13 +569,13 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task MusicGenres_ByLetter_ReturnsComponentResponse()
     {
-        HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/music/genres/letter/_");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/music/genres/letter/_");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -533,12 +585,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task MusicGenres_Show_ReturnsGenreResponse()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/genres/{NoMercyApiFactory.MusicGenreId1}");
+            $"/api/v1/music/genres/{NoMercyApiFactory.MusicGenreId1}"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -550,12 +604,12 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task MusicGenres_Show_NonExistent_ReturnsNotFound()
     {
-        HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/genres/{Guid.Empty}");
+        HttpResponseMessage response = await _client.GetAsync($"/api/v1/music/genres/{Guid.Empty}");
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}");
+            $"Expected NotFound, got {(int)response.StatusCode}"
+        );
     }
 
     // =========================================================================
@@ -570,7 +624,8 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -588,12 +643,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             $"/api/v1/music/tracks/{NoMercyApiFactory.TrackId1}/like",
-            JsonBody(new { value = true }));
+            JsonBody(new { value = true })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -607,11 +664,13 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             $"/api/v1/music/tracks/{Guid.Empty}/like",
-            JsonBody(new { value = true }));
+            JsonBody(new { value = true })
+        );
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}");
+            $"Expected NotFound, got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]
@@ -623,12 +682,15 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         try
         {
             HttpResponseMessage response = await _client.GetAsync(
-                $"/api/v1/music/tracks/{NoMercyApiFactory.TrackId1}/lyrics", cts.Token);
+                $"/api/v1/music/tracks/{NoMercyApiFactory.TrackId1}/lyrics",
+                cts.Token
+            );
 
             string body = await response.Content.ReadAsStringAsync(cts.Token);
             Assert.True(
                 response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-                $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+                $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+            );
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
@@ -650,11 +712,13 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Tracks_Lyrics_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/music/tracks/{Guid.Empty}/lyrics");
+            $"/api/v1/music/tracks/{Guid.Empty}/lyrics"
+        );
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}");
+            $"Expected NotFound, got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]
@@ -662,12 +726,14 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             $"/api/v1/music/tracks/{NoMercyApiFactory.TrackId1}/playback",
-            JsonBody(new { }));
+            JsonBody(new { })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -681,11 +747,13 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             $"/api/v1/music/tracks/{Guid.Empty}/playback",
-            JsonBody(new { }));
+            JsonBody(new { })
+        );
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}");
+            $"Expected NotFound, got {(int)response.StatusCode}"
+        );
     }
 
     // =========================================================================
@@ -708,6 +776,7 @@ public class MusicEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
         Assert.True(
             response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            $"Expected 401/403 for {url}, got {(int)response.StatusCode}");
+            $"Expected 401/403 for {url}, got {(int)response.StatusCode}"
+        );
     }
 }

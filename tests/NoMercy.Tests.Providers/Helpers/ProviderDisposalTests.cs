@@ -35,7 +35,5 @@ public class ProviderDisposalTests : IDisposable
         action.Should().NotThrow<NotImplementedException>();
     }
 
-    private class TestableOpenSubtitlesClient : OpenSubtitlesBaseClient
-    {
-    }
+    private class TestableOpenSubtitlesClient : OpenSubtitlesBaseClient { }
 }

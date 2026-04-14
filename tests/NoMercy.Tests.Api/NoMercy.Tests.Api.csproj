@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -28,5 +27,4 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NoMercy.Service\NoMercy.Service.csproj" />
   </ItemGroup>
-
 </Project>

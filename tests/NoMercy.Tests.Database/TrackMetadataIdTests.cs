@@ -22,7 +22,8 @@ public class TrackMetadataIdTests
         Type trackMetadataIdType = typeof(Track).GetProperty("MetadataId")!.PropertyType;
         Type metadataIdType = typeof(Metadata).GetProperty("Id")!.PropertyType;
 
-        Type trackFkUnderlyingType = Nullable.GetUnderlyingType(trackMetadataIdType) ?? trackMetadataIdType;
+        Type trackFkUnderlyingType =
+            Nullable.GetUnderlyingType(trackMetadataIdType) ?? trackMetadataIdType;
         Assert.Equal(metadataIdType, trackFkUnderlyingType);
     }
 

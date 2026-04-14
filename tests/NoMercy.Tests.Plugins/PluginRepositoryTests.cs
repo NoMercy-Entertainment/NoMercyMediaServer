@@ -14,7 +14,10 @@ public class PluginRepositoryTests : IDisposable
 
     public PluginRepositoryTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), "nomercy-repo-tests-" + Guid.NewGuid().ToString("N"));
+        _tempDir = Path.Combine(
+            Path.GetTempPath(),
+            "nomercy-repo-tests-" + Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(_tempDir);
     }
 
@@ -27,40 +30,43 @@ public class PluginRepositoryTests : IDisposable
                 Directory.Delete(_tempDir, recursive: true);
             }
         }
-        catch (IOException)
-        {
-        }
+        catch (IOException) { }
     }
 
-    private static PluginRepositoryManifest CreateTestManifest(string name = "test-repo", int pluginCount = 2)
+    private static PluginRepositoryManifest CreateTestManifest(
+        string name = "test-repo",
+        int pluginCount = 2
+    )
     {
         List<PluginRepositoryEntry> plugins = [];
         for (int i = 0; i < pluginCount; i++)
         {
-            plugins.Add(new()
-            {
-                Id = Guid.NewGuid(),
-                Name = $"Plugin{i}",
-                Description = $"Test plugin {i}",
-                Author = "Test Author",
-                Versions =
-                [
-                    new()
-                    {
-                        Version = "1.0.0",
-                        DownloadUrl = $"https://example.com/plugin{i}-1.0.0.zip",
-                        TargetAbi = "9.0.0",
-                        Changelog = "Initial release"
-                    }
-                ]
-            });
+            plugins.Add(
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = $"Plugin{i}",
+                    Description = $"Test plugin {i}",
+                    Author = "Test Author",
+                    Versions =
+                    [
+                        new()
+                        {
+                            Version = "1.0.0",
+                            DownloadUrl = $"https://example.com/plugin{i}-1.0.0.zip",
+                            TargetAbi = "9.0.0",
+                            Changelog = "Initial release",
+                        },
+                    ],
+                }
+            );
         }
 
         return new()
         {
             Name = name,
             Url = "https://example.com/repo",
-            Plugins = plugins
+            Plugins = plugins,
         };
     }
 
@@ -147,8 +153,7 @@ public class PluginRepositoryTests : IDisposable
         await repo.AddRepositoryAsync("test", "https://example.com/repo1.json");
         Func<Task> act = () => repo.AddRepositoryAsync("test", "https://example.com/repo2.json");
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*already exists*");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*already exists*");
     }
 
     [Fact]
@@ -220,8 +225,7 @@ public class PluginRepositoryTests : IDisposable
 
         Func<Task> act = () => repo.RemoveRepositoryAsync("nonexistent");
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*not found*");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not found*");
     }
 
     [Fact]
@@ -246,10 +250,17 @@ public class PluginRepositoryTests : IDisposable
 
         // Manually add a repo without fetching (simulate pre-existing config)
         string configDir = Path.Combine(_tempDir, "configurations");
-        string repoConfig = JsonSerializer.Serialize(new List<PluginRepositoryInfo>
-        {
-            new() { Name = "broken", Url = "https://broken.example.com/repo.json", Enabled = true }
-        });
+        string repoConfig = JsonSerializer.Serialize(
+            new List<PluginRepositoryInfo>
+            {
+                new()
+                {
+                    Name = "broken",
+                    Url = "https://broken.example.com/repo.json",
+                    Enabled = true,
+                },
+            }
+        );
         File.WriteAllText(Path.Combine(configDir, "repositories.json"), repoConfig);
 
         PluginRepository repo2 = new(client, NullLogger.Instance, _tempDir);
@@ -350,32 +361,34 @@ public class PluginRepositoryTests : IDisposable
     public void PluginRepositoryManifest_CanDeserialize()
     {
         string json = """
-        {
-            "name": "Official Plugins",
-            "url": "https://plugins.nomercy.tv/manifest.json",
-            "plugins": [
-                {
-                    "id": "12345678-1234-1234-1234-123456789012",
-                    "name": "Scrobbler",
-                    "description": "Last.fm scrobbling",
-                    "author": "NoMercy",
-                    "versions": [
-                        {
-                            "version": "1.0.0",
-                            "targetAbi": "9.0.0",
-                            "downloadUrl": "https://plugins.nomercy.tv/scrobbler-1.0.0.zip",
-                            "checksum": "abc123",
-                            "changelog": "Initial release",
-                            "timestamp": "2026-01-01T00:00:00Z"
-                        }
-                    ]
-                }
-            ]
-        }
-        """;
+            {
+                "name": "Official Plugins",
+                "url": "https://plugins.nomercy.tv/manifest.json",
+                "plugins": [
+                    {
+                        "id": "12345678-1234-1234-1234-123456789012",
+                        "name": "Scrobbler",
+                        "description": "Last.fm scrobbling",
+                        "author": "NoMercy",
+                        "versions": [
+                            {
+                                "version": "1.0.0",
+                                "targetAbi": "9.0.0",
+                                "downloadUrl": "https://plugins.nomercy.tv/scrobbler-1.0.0.zip",
+                                "checksum": "abc123",
+                                "changelog": "Initial release",
+                                "timestamp": "2026-01-01T00:00:00Z"
+                            }
+                        ]
+                    }
+                ]
+            }
+            """;
 
-        PluginRepositoryManifest? manifest = JsonSerializer.Deserialize<PluginRepositoryManifest>(json,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        PluginRepositoryManifest? manifest = JsonSerializer.Deserialize<PluginRepositoryManifest>(
+            json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
 
         manifest.Should().NotBeNull();
         manifest!.Name.Should().Be("Official Plugins");
@@ -397,8 +410,13 @@ public class PluginRepositoryTests : IDisposable
             Versions =
             [
                 new() { Version = "1.0.0", DownloadUrl = "https://example.com/v1.zip" },
-                new() { Version = "2.0.0", DownloadUrl = "https://example.com/v2.zip", TargetAbi = "9.0.0" }
-            ]
+                new()
+                {
+                    Version = "2.0.0",
+                    DownloadUrl = "https://example.com/v2.zip",
+                    TargetAbi = "9.0.0",
+                },
+            ],
         };
 
         entry.Versions.Should().HaveCount(2);
@@ -413,7 +431,12 @@ public class PluginRepositoryTests : IDisposable
 
         List<PluginRepositoryInfo> repos =
         [
-            new() { Name = "persisted-repo", Url = "https://example.com/persisted.json", Enabled = true }
+            new()
+            {
+                Name = "persisted-repo",
+                Url = "https://example.com/persisted.json",
+                Enabled = true,
+            },
         ];
         string json = JsonSerializer.Serialize(repos);
         File.WriteAllText(Path.Combine(configDir, "repositories.json"), json);
@@ -425,13 +448,17 @@ public class PluginRepositoryTests : IDisposable
         loaded[0].Name.Should().Be("persisted-repo");
     }
 
-    private sealed class MockHttpHandler(string responseContent, HttpStatusCode statusCode) : HttpMessageHandler
+    private sealed class MockHttpHandler(string responseContent, HttpStatusCode statusCode)
+        : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
         {
             HttpResponseMessage response = new(statusCode)
             {
-                Content = new StringContent(responseContent)
+                Content = new StringContent(responseContent),
             };
             return Task.FromResult(response);
         }

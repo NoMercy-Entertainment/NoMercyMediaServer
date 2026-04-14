@@ -13,8 +13,17 @@ public class LocalizationMiddlewareTests
     public void ApplicationConfiguration_HasSingleUseRequestLocalizationCall()
     {
         string sourceFile = Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", "..", "..",
-            "src", "NoMercy.Service", "Configuration", "ApplicationConfiguration.cs");
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+            "src",
+            "NoMercy.Service",
+            "Configuration",
+            "ApplicationConfiguration.cs"
+        );
 
         string source = File.ReadAllText(Path.GetFullPath(sourceFile));
 

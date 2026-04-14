@@ -1,6 +1,6 @@
-using Xunit;
-using NoMercyQueue;
 using NCrontab;
+using NoMercyQueue;
+using Xunit;
 
 namespace NoMercy.Tests.Queue;
 
@@ -522,7 +522,11 @@ public class CronExpressionBuilderTests
     public void OnDaysOfWeek_ValidValues_SetsCommaSeparatedDays()
     {
         // Arrange & Act
-        CronExpressionBuilder builder = new CronExpressionBuilder().OnDaysOfWeek(DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday);
+        CronExpressionBuilder builder = new CronExpressionBuilder().OnDaysOfWeek(
+            DayOfWeek.Monday,
+            DayOfWeek.Wednesday,
+            DayOfWeek.Friday
+        );
         string result = builder.Build();
 
         // Assert
@@ -555,7 +559,11 @@ public class CronExpressionBuilderTests
     [InlineData(1, DayOfWeek.Monday, "0 0 * * 1#1")]
     [InlineData(2, DayOfWeek.Friday, "0 0 * * 5#2")]
     [InlineData(5, DayOfWeek.Sunday, "0 0 * * 0#5")]
-    public void OnNthDayOfWeek_ValidValues_SetsCorrectExpression(int nth, DayOfWeek dayOfWeek, string expected)
+    public void OnNthDayOfWeek_ValidValues_SetsCorrectExpression(
+        int nth,
+        DayOfWeek dayOfWeek,
+        string expected
+    )
     {
         // Arrange & Act
         CronExpressionBuilder builder = new CronExpressionBuilder().OnNthDayOfWeek(nth, dayOfWeek);
@@ -569,7 +577,10 @@ public class CronExpressionBuilderTests
     [InlineData(0, DayOfWeek.Monday)]
     [InlineData(6, DayOfWeek.Friday)]
     [InlineData(-1, DayOfWeek.Sunday)]
-    public void OnNthDayOfWeek_InvalidValues_ThrowsArgumentOutOfRangeException(int nth, DayOfWeek dayOfWeek)
+    public void OnNthDayOfWeek_InvalidValues_ThrowsArgumentOutOfRangeException(
+        int nth,
+        DayOfWeek dayOfWeek
+    )
     {
         // Arrange
         CronExpressionBuilder builder = new();
@@ -582,7 +593,10 @@ public class CronExpressionBuilderTests
     [InlineData(DayOfWeek.Monday, "0 0 * * 1L")]
     [InlineData(DayOfWeek.Friday, "0 0 * * 5L")]
     [InlineData(DayOfWeek.Sunday, "0 0 * * 0L")]
-    public void LastDayOfWeek_ValidValues_SetsCorrectExpression(DayOfWeek dayOfWeek, string expected)
+    public void LastDayOfWeek_ValidValues_SetsCorrectExpression(
+        DayOfWeek dayOfWeek,
+        string expected
+    )
     {
         // Arrange & Act
         CronExpressionBuilder builder = new CronExpressionBuilder().LastDayOfWeek(dayOfWeek);
@@ -614,7 +628,12 @@ public class CronExpressionBuilderTests
     [InlineData(DayOfWeek.Monday, 0, 0, "0 0 * * 1")]
     [InlineData(DayOfWeek.Friday, 18, 30, "30 18 * * 5")]
     [InlineData(DayOfWeek.Sunday, 9, 15, "15 9 * * 0")]
-    public void Weekly_ValidValues_SetsCorrectExpression(DayOfWeek dayOfWeek, int hour, int minute, string expected)
+    public void Weekly_ValidValues_SetsCorrectExpression(
+        DayOfWeek dayOfWeek,
+        int hour,
+        int minute,
+        string expected
+    )
     {
         // Arrange & Act
         CronExpressionBuilder builder = new CronExpressionBuilder().Weekly(dayOfWeek, hour, minute);
@@ -628,7 +647,12 @@ public class CronExpressionBuilderTests
     [InlineData(1, 0, 0, "0 0 1 * *")]
     [InlineData(15, 12, 30, "30 12 15 * *")]
     [InlineData(31, 23, 59, "59 23 31 * *")]
-    public void Monthly_ValidValues_SetsCorrectExpression(int day, int hour, int minute, string expected)
+    public void Monthly_ValidValues_SetsCorrectExpression(
+        int day,
+        int hour,
+        int minute,
+        string expected
+    )
     {
         // Arrange & Act
         CronExpressionBuilder builder = new CronExpressionBuilder().Monthly(day, hour, minute);
@@ -642,10 +666,21 @@ public class CronExpressionBuilderTests
     [InlineData(1, 1, 0, 0, "0 0 1 1 *")]
     [InlineData(12, 25, 18, 30, "30 18 25 12 *")]
     [InlineData(6, 15, 9, 45, "45 9 15 6 *")]
-    public void Yearly_ValidValues_SetsCorrectExpression(int month, int day, int hour, int minute, string expected)
+    public void Yearly_ValidValues_SetsCorrectExpression(
+        int month,
+        int day,
+        int hour,
+        int minute,
+        string expected
+    )
     {
         // Arrange & Act
-        CronExpressionBuilder builder = new CronExpressionBuilder().Yearly(month, day, hour, minute);
+        CronExpressionBuilder builder = new CronExpressionBuilder().Yearly(
+            month,
+            day,
+            hour,
+            minute
+        );
         string result = builder.Build();
 
         // Assert
@@ -823,16 +858,19 @@ public class CronExpressionBuilderTests
         // Arrange
         CronExpressionBuilder cronExpression = new CronExpressionBuilder().Daily(14, 30); // 2:30 PM daily
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0); // Sep 3, 2025 10:00 AM
         DateTime expectedTime = new(2025, 9, 3, 14, 30, 0); // Same day 2:30 PM
         DateTime nextOccurrence = schedule.GetNextOccurrence(baseTime);
-        
+
         // Assert
         Assert.Equal(expectedTime, nextOccurrence);
-        
+
         // Test multiple occurrences
-        List<DateTime> occurrences = schedule.GetNextOccurrences(baseTime, baseTime.AddDays(3)).Take(3).ToList();
+        List<DateTime> occurrences = schedule
+            .GetNextOccurrences(baseTime, baseTime.AddDays(3))
+            .Take(3)
+            .ToList();
         Assert.Equal(3, occurrences.Count);
         Assert.Equal(new(2025, 9, 3, 14, 30, 0), occurrences[0]);
         Assert.Equal(new(2025, 9, 4, 14, 30, 0), occurrences[1]);
@@ -843,17 +881,21 @@ public class CronExpressionBuilderTests
     public void Weekly_CronExpression_MatchesExpectedTimes()
     {
         // Arrange - Every Friday at 6:00 PM
-        CronExpressionBuilder cronExpression = new CronExpressionBuilder().Weekly(DayOfWeek.Friday, 18, 0);
+        CronExpressionBuilder cronExpression = new CronExpressionBuilder().Weekly(
+            DayOfWeek.Friday,
+            18,
+            0
+        );
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0); // Wednesday, Sep 3, 2025 10:00 AM
         DateTime expectedTime = new(2025, 9, 5, 18, 0, 0); // Friday, Sep 5, 2025 6:00 PM
         DateTime nextOccurrence = schedule.GetNextOccurrence(baseTime);
-        
+
         // Assert
         Assert.Equal(expectedTime, nextOccurrence);
         Assert.Equal(DayOfWeek.Friday, nextOccurrence.DayOfWeek);
-        
+
         // Test next week
         DateTime nextWeekOccurrence = schedule.GetNextOccurrence(nextOccurrence);
         Assert.Equal(new(2025, 9, 12, 18, 0, 0), nextWeekOccurrence);
@@ -866,15 +908,15 @@ public class CronExpressionBuilderTests
         // Arrange - 15th of every month at 9:15 AM
         CronExpressionBuilder cronExpression = new CronExpressionBuilder().Monthly(15, 9, 15);
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0); // Sep 3, 2025 10:00 AM
         DateTime expectedTime = new(2025, 9, 15, 9, 15, 0); // Sep 15, 2025 9:15 AM
         DateTime nextOccurrence = schedule.GetNextOccurrence(baseTime);
-        
+
         // Assert
         Assert.Equal(expectedTime, nextOccurrence);
         Assert.Equal(15, nextOccurrence.Day);
-        
+
         // Test next month
         DateTime nextMonthOccurrence = schedule.GetNextOccurrence(nextOccurrence);
         Assert.Equal(new(2025, 10, 15, 9, 15, 0), nextMonthOccurrence);
@@ -887,16 +929,16 @@ public class CronExpressionBuilderTests
         // Arrange - December 25th at 12:00 PM
         CronExpressionBuilder cronExpression = new CronExpressionBuilder().Yearly(12, 25, 12, 0);
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0); // Sep 3, 2025 10:00 AM
         DateTime expectedTime = new(2025, 12, 25, 12, 0, 0); // Dec 25, 2025 12:00 PM
         DateTime nextOccurrence = schedule.GetNextOccurrence(baseTime);
-        
+
         // Assert
         Assert.Equal(expectedTime, nextOccurrence);
         Assert.Equal(12, nextOccurrence.Month);
         Assert.Equal(25, nextOccurrence.Day);
-        
+
         // Test next year
         DateTime nextYearOccurrence = schedule.GetNextOccurrence(nextOccurrence);
         Assert.Equal(new(2026, 12, 25, 12, 0, 0), nextYearOccurrence);
@@ -908,15 +950,15 @@ public class CronExpressionBuilderTests
         // Arrange - Every hour at 45 minutes
         CronExpressionBuilder cronExpression = new CronExpressionBuilder().Hourly(45);
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 14, 30, 0); // Sep 3, 2025 2:30 PM
         DateTime expectedTime = new(2025, 9, 3, 14, 45, 0); // Same hour at 45 minutes
         DateTime nextOccurrence = schedule.GetNextOccurrence(baseTime);
-        
+
         // Assert
         Assert.Equal(expectedTime, nextOccurrence);
         Assert.Equal(45, nextOccurrence.Minute);
-        
+
         // Test next hour
         DateTime nextHourOccurrence = schedule.GetNextOccurrence(nextOccurrence);
         Assert.Equal(new(2025, 9, 3, 15, 45, 0), nextHourOccurrence);
@@ -929,16 +971,19 @@ public class CronExpressionBuilderTests
         // Arrange - Every 15 minutes
         CronExpressionBuilder cronExpression = new CronExpressionBuilder().EveryMinutes(15);
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 14, 7, 0); // Sep 3, 2025 2:07 PM
         DateTime expectedTime = new(2025, 9, 3, 14, 15, 0); // Next 15-minute mark
         DateTime nextOccurrence = schedule.GetNextOccurrence(baseTime);
-        
+
         // Assert
         Assert.Equal(expectedTime, nextOccurrence);
-        
+
         // Test multiple occurrences
-        List<DateTime> occurrences = schedule.GetNextOccurrences(baseTime, baseTime.AddHours(2)).Take(5).ToList();
+        List<DateTime> occurrences = schedule
+            .GetNextOccurrences(baseTime, baseTime.AddHours(2))
+            .Take(5)
+            .ToList();
         Assert.Equal(5, occurrences.Count);
         Assert.Equal(new(2025, 9, 3, 14, 15, 0), occurrences[0]);
         Assert.Equal(new(2025, 9, 3, 14, 30, 0), occurrences[1]);
@@ -953,20 +998,26 @@ public class CronExpressionBuilderTests
         // Arrange - Weekdays (Monday-Friday) at midnight
         CronExpressionBuilder cronExpression = new CronExpressionBuilder().Weekdays();
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0); // Wednesday, Sep 3, 2025 10:00 AM
-        
+
         // Get next few occurrences
-        List<DateTime> occurrences = schedule.GetNextOccurrences(baseTime, baseTime.AddDays(10)).Take(5).ToList();
-        
+        List<DateTime> occurrences = schedule
+            .GetNextOccurrences(baseTime, baseTime.AddDays(10))
+            .Take(5)
+            .ToList();
+
         // Assert all are weekdays at midnight
         foreach (DateTime occurrence in occurrences)
         {
-            Assert.True(occurrence.DayOfWeek != DayOfWeek.Saturday && occurrence.DayOfWeek != DayOfWeek.Sunday);
+            Assert.True(
+                occurrence.DayOfWeek != DayOfWeek.Saturday
+                    && occurrence.DayOfWeek != DayOfWeek.Sunday
+            );
             Assert.Equal(0, occurrence.Hour);
             Assert.Equal(0, occurrence.Minute);
         }
-        
+
         // Verify specific dates
         Assert.Equal(new(2025, 9, 4, 0, 0, 0), occurrences[0]); // Thursday
         Assert.Equal(new(2025, 9, 5, 0, 0, 0), occurrences[1]); // Friday
@@ -979,25 +1030,33 @@ public class CronExpressionBuilderTests
         // Arrange - Weekends (Saturday & Sunday) at midnight
         CronExpressionBuilder cronExpression = new CronExpressionBuilder().Weekends();
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0); // Wednesday, Sep 3, 2025 10:00 AM
-        
+
         // Get next few occurrences over a longer period to ensure we get weekend days
-        List<DateTime> occurrences = schedule.GetNextOccurrences(baseTime, baseTime.AddDays(15)).Take(4).ToList();
-        
+        List<DateTime> occurrences = schedule
+            .GetNextOccurrences(baseTime, baseTime.AddDays(15))
+            .Take(4)
+            .ToList();
+
         // Assert all are weekends at midnight
         foreach (DateTime occurrence in occurrences)
         {
-            Assert.True(occurrence.DayOfWeek == DayOfWeek.Saturday || occurrence.DayOfWeek == DayOfWeek.Sunday);
+            Assert.True(
+                occurrence.DayOfWeek == DayOfWeek.Saturday
+                    || occurrence.DayOfWeek == DayOfWeek.Sunday
+            );
             Assert.Equal(0, occurrence.Hour);
             Assert.Equal(0, occurrence.Minute);
         }
-        
+
         // Verify we have at least 4 occurrences
         Assert.True(occurrences.Count >= 4);
-        
+
         // Verify we get both Saturday and Sunday
-        List<DateTime> saturdays = occurrences.Where(o => o.DayOfWeek == DayOfWeek.Saturday).ToList();
+        List<DateTime> saturdays = occurrences
+            .Where(o => o.DayOfWeek == DayOfWeek.Saturday)
+            .ToList();
         List<DateTime> sundays = occurrences.Where(o => o.DayOfWeek == DayOfWeek.Sunday).ToList();
         Assert.True(saturdays.Count > 0);
         Assert.True(sundays.Count > 0);
@@ -1009,12 +1068,15 @@ public class CronExpressionBuilderTests
         // Arrange - At minutes 0, 15, 30, 45 of every hour
         CronExpressionBuilder cronExpression = new CronExpressionBuilder().AtMinutes(0, 15, 30, 45);
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 14, 7, 0); // Sep 3, 2025 2:07 PM
-        
+
         // Get next few occurrences
-        List<DateTime> occurrences = schedule.GetNextOccurrences(baseTime, baseTime.AddHours(2)).Take(6).ToList();
-        
+        List<DateTime> occurrences = schedule
+            .GetNextOccurrences(baseTime, baseTime.AddHours(2))
+            .Take(6)
+            .ToList();
+
         // Assert correct minutes
         Assert.Equal(new(2025, 9, 3, 14, 15, 0), occurrences[0]);
         Assert.Equal(new(2025, 9, 3, 14, 30, 0), occurrences[1]);
@@ -1030,19 +1092,22 @@ public class CronExpressionBuilderTests
         // Arrange - At hours 9, 12, 18 (9 AM, 12 PM, 6 PM) at minute 0
         CronExpressionBuilder cronExpression = new CronExpressionBuilder().AtHours(9, 12, 18);
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0); // Sep 3, 2025 10:00 AM
-        
+
         // Get next few occurrences
-        List<DateTime> occurrences = schedule.GetNextOccurrences(baseTime, baseTime.AddDays(2)).Take(5).ToList();
-        
+        List<DateTime> occurrences = schedule
+            .GetNextOccurrences(baseTime, baseTime.AddDays(2))
+            .Take(5)
+            .ToList();
+
         // Assert correct hours and minute is always 0
         Assert.Equal(new(2025, 9, 3, 12, 0, 0), occurrences[0]);
         Assert.Equal(new(2025, 9, 3, 18, 0, 0), occurrences[1]);
         Assert.Equal(new(2025, 9, 4, 9, 0, 0), occurrences[2]);
         Assert.Equal(new(2025, 9, 4, 12, 0, 0), occurrences[3]);
         Assert.Equal(new(2025, 9, 4, 18, 0, 0), occurrences[4]);
-        
+
         foreach (DateTime occurrence in occurrences)
         {
             Assert.Equal(0, occurrence.Minute);
@@ -1054,25 +1119,32 @@ public class CronExpressionBuilderTests
     public void OnDaysOfWeek_MultipleValues_MatchesExpectedTimes()
     {
         // Arrange - Monday, Wednesday, Friday (any time - uses current minute/hour settings)
-        CronExpressionBuilder cronExpression = new CronExpressionBuilder().OnDaysOfWeek(DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday);
+        CronExpressionBuilder cronExpression = new CronExpressionBuilder().OnDaysOfWeek(
+            DayOfWeek.Monday,
+            DayOfWeek.Wednesday,
+            DayOfWeek.Friday
+        );
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0); // Wednesday, Sep 3, 2025 10:00 AM
-        
+
         // Since the expression is "* * * * 1,3,5", it runs every minute on those days
         // Get just a few occurrences to test the day pattern
-        List<DateTime> occurrences = schedule.GetNextOccurrences(baseTime, baseTime.AddHours(1)).Take(10).ToList();
-        
+        List<DateTime> occurrences = schedule
+            .GetNextOccurrences(baseTime, baseTime.AddHours(1))
+            .Take(10)
+            .ToList();
+
         // Assert correct days of week
         DayOfWeek[] expectedDays = [DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday];
         foreach (DateTime occurrence in occurrences)
         {
             Assert.Contains(occurrence.DayOfWeek, expectedDays);
         }
-        
+
         // All occurrences should be on Wednesday since we're only looking at one hour
         Assert.True(occurrences.All(o => o.DayOfWeek == DayOfWeek.Wednesday));
-        
+
         // Should get many occurrences (every minute)
         Assert.Equal(10, occurrences.Count);
     }
@@ -1084,28 +1156,33 @@ public class CronExpressionBuilderTests
         // HourRange sets minute to "0", Weekdays sets minute to "0", hour to "0", dayOfWeek to "1-5"
         // So the final result will be: "0 9-17 * * 1-5" (every hour from 9-17 on weekdays at minute 0)
         CronExpressionBuilder cronExpression = new CronExpressionBuilder()
-            .AtMinutes(0, 30)  // This will be overridden
-            .HourRange(9, 17)  // This sets minute to "0" and hour to "9-17"
-            .Weekdays();       // This sets minute to "0", hour to "0", dayOfWeek to "1-5" - overriding hour!
-        
+            .AtMinutes(0, 30) // This will be overridden
+            .HourRange(9, 17) // This sets minute to "0" and hour to "9-17"
+            .Weekdays(); // This sets minute to "0", hour to "0", dayOfWeek to "1-5" - overriding hour!
+
         // The final expression should be: "0 0 * * 1-5" (midnight on weekdays only)
         Assert.Equal("0 0 * * 1-5", cronExpression.Build());
-        
+
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 8, 0, 0); // Wednesday, Sep 3, 2025 8:00 AM
-        
+
         // Get occurrences for a few days
-        List<DateTime> occurrences = schedule.GetNextOccurrences(baseTime, baseTime.AddDays(3)).ToList();
-        
+        List<DateTime> occurrences = schedule
+            .GetNextOccurrences(baseTime, baseTime.AddDays(3))
+            .ToList();
+
         // Should only occur on weekdays at midnight
         foreach (DateTime occurrence in occurrences)
         {
-            Assert.True(occurrence.DayOfWeek != DayOfWeek.Saturday && occurrence.DayOfWeek != DayOfWeek.Sunday);
-            Assert.Equal(0, occurrence.Hour);  // Midnight
+            Assert.True(
+                occurrence.DayOfWeek != DayOfWeek.Saturday
+                    && occurrence.DayOfWeek != DayOfWeek.Sunday
+            );
+            Assert.Equal(0, occurrence.Hour); // Midnight
             Assert.Equal(0, occurrence.Minute);
         }
-        
+
         // First occurrence should be midnight on the same day (Wednesday)
         Assert.Equal(new(2025, 9, 4, 0, 0, 0), occurrences[0]); // Thursday midnight
     }
@@ -1116,30 +1193,44 @@ public class CronExpressionBuilderTests
         // Arrange - Expression: "0 9,10,11,12,13,14,15,16,17 * * 1,2,3,4,5"
         // AtHours overrides AtMinutes, so final minute is "0"
         CronExpressionBuilder cronExpression = new CronExpressionBuilder()
-            .AtMinutes(0, 30)  // This gets overridden by AtHours
-            .AtHours(9, 10, 11, 12, 13, 14, 15, 16, 17)  // Sets minute to "0"
-            .OnDaysOfWeek(DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday);
-        
+            .AtMinutes(0, 30) // This gets overridden by AtHours
+            .AtHours(9, 10, 11, 12, 13, 14, 15, 16, 17) // Sets minute to "0"
+            .OnDaysOfWeek(
+                DayOfWeek.Monday,
+                DayOfWeek.Tuesday,
+                DayOfWeek.Wednesday,
+                DayOfWeek.Thursday,
+                DayOfWeek.Friday
+            );
+
         // The expression should be "0 9,10,11,12,13,14,15,16,17 * * 1,2,3,4,5"
         Assert.Equal("0 9,10,11,12,13,14,15,16,17 * * 1,2,3,4,5", cronExpression.Build());
-        
+
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        
+
         DateTime baseTime = new(2025, 9, 3, 8, 0, 0); // Wednesday, Sep 3, 2025 8:00 AM
-        
+
         // Get occurrences for one day
-        List<DateTime> occurrences = schedule.GetNextOccurrences(baseTime, baseTime.AddDays(1)).Take(20).ToList();
-        
+        List<DateTime> occurrences = schedule
+            .GetNextOccurrences(baseTime, baseTime.AddDays(1))
+            .Take(20)
+            .ToList();
+
         // Should only occur on weekdays, during business hours, at minute 0
         foreach (DateTime occurrence in occurrences)
         {
-            Assert.True(occurrence.DayOfWeek != DayOfWeek.Saturday && occurrence.DayOfWeek != DayOfWeek.Sunday);
+            Assert.True(
+                occurrence.DayOfWeek != DayOfWeek.Saturday
+                    && occurrence.DayOfWeek != DayOfWeek.Sunday
+            );
             Assert.True(occurrence.Hour is >= 9 and <= 17);
             Assert.Equal(0, occurrence.Minute); // Always minute 0 due to AtHours override
         }
-        
+
         // Should have 9 occurrences for Wednesday (9 AM to 5 PM)
-        List<DateTime> wednesdayOccurrences = occurrences.Where(o => o.DayOfWeek == DayOfWeek.Wednesday).ToList();
+        List<DateTime> wednesdayOccurrences = occurrences
+            .Where(o => o.DayOfWeek == DayOfWeek.Wednesday)
+            .ToList();
         Assert.Equal(9, wednesdayOccurrences.Count);
     }
 
@@ -1148,7 +1239,7 @@ public class CronExpressionBuilderTests
     {
         // Arrange - Create an invalid cron expression manually
         string invalidCron = "invalid cron expression";
-        
+
         // Act & Assert - NCrontab throws CrontabException, not FormatException
         Assert.Throws<CrontabException>(() => CrontabSchedule.Parse(invalidCron));
     }
@@ -1167,7 +1258,7 @@ public class CronExpressionBuilderTests
         // Act & Assert - Should not throw
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
         Assert.NotNull(schedule);
-        
+
         // Verify it can calculate next occurrence
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0);
         DateTime nextOccurrence = schedule.GetNextOccurrence(baseTime);

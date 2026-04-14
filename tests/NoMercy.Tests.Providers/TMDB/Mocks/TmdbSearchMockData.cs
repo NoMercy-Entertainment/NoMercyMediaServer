@@ -31,7 +31,8 @@ public static class TmdbSearchMockData
                     Id = 27205,
                     Title = "Inception",
                     OriginalTitle = "Inception",
-                    Overview = "A thief who steals corporate secrets through the use of dream-sharing technology...",
+                    Overview =
+                        "A thief who steals corporate secrets through the use of dream-sharing technology...",
                     ReleaseDate = DateTime.Parse("2010-07-16"),
                     PosterPath = "/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
                     BackdropPath = "/s3TBrRGB1iav7gFOCNx3H31MoES.jpg",
@@ -40,15 +41,15 @@ public static class TmdbSearchMockData
                     Popularity = 29.108,
                     GenresIds = [28, 878, 53],
                     OriginalLanguage = "en",
-                    Adult = false
+                    Adult = false,
                 },
-
                 new()
                 {
                     Id = 497582,
                     Title = "Inception: The Cobol Job",
                     OriginalTitle = "Inception: The Cobol Job",
-                    Overview = "This Inception prequel unfolds courtesy of a beautiful Motion Comic...",
+                    Overview =
+                        "This Inception prequel unfolds courtesy of a beautiful Motion Comic...",
                     ReleaseDate = DateTime.Parse("2010-12-07"),
                     PosterPath = "/jS71fcCxTaXSKnz6c11lJr4bFr6.jpg",
                     BackdropPath = null,
@@ -57,9 +58,9 @@ public static class TmdbSearchMockData
                     Popularity = 3.714,
                     GenresIds = [16, 28, 878, 53],
                     OriginalLanguage = "en",
-                    Adult = false
-                }
-            ]
+                    Adult = false,
+                },
+            ],
         };
     }
 
@@ -91,9 +92,8 @@ public static class TmdbSearchMockData
                     GenreIds = [18, 80],
                     OriginCountry = ["US"],
                     OriginalLanguage = "en",
-                    MediaType = "tv"
+                    MediaType = "tv",
                 },
-
                 new()
                 {
                     Id = 60625,
@@ -109,9 +109,9 @@ public static class TmdbSearchMockData
                     GenreIds = [18, 35, 80],
                     OriginCountry = ["US"],
                     OriginalLanguage = "en",
-                    MediaType = "tv"
-                }
-            ]
+                    MediaType = "tv",
+                },
+            ],
         };
     }
 
@@ -134,9 +134,9 @@ public static class TmdbSearchMockData
                     KnownForDepartment = "Acting",
                     ProfilePath = "/wo2hJpn04vbtmh0B9utCFdsQhxM.jpg",
                     Popularity = 45.824,
-                    Adult = false
-                }
-            ]
+                    Adult = false,
+                },
+            ],
         };
     }
 
@@ -152,7 +152,7 @@ public static class TmdbSearchMockData
             Page = 1,
             TotalResults = 3,
             TotalPages = 1,
-            Results = []
+            Results = [],
         };
     }
 
@@ -173,17 +173,16 @@ public static class TmdbSearchMockData
                     Id = 86311,
                     Name = "The Avengers Collection",
                     PosterPath = "/yFSIUVTCvgYrpalUktulvk3Gi5Y.jpg",
-                    BackdropPath = "/zuW6fOiusv4X9nnW3paHGfXcSll.jpg"
+                    BackdropPath = "/zuW6fOiusv4X9nnW3paHGfXcSll.jpg",
                 },
-
                 new()
                 {
                     Id = 131295,
                     Name = "Captain America Collection",
                     PosterPath = "/3jWmSzF6OF3VdXjmvJfhvnM7iU.jpg",
-                    BackdropPath = "/3jWmSzF6OF3VdXjmvJfhvnM7iU.jpg"
-                }
-            ]
+                    BackdropPath = "/3jWmSzF6OF3VdXjmvJfhvnM7iU.jpg",
+                },
+            ],
         };
     }
 
@@ -204,17 +203,16 @@ public static class TmdbSearchMockData
                     Id = 213,
                     Name = "Netflix",
                     LogoPath = "/wwemzKWzjKYJFfCeiB57q3r4Bcm.png",
-                    OriginCountry = "US"
+                    OriginCountry = "US",
                 },
-
                 new()
                 {
                     Id = 49,
                     Name = "HBO",
                     LogoPath = "/tuomPhY2UuLiEIKfQLw3TvXKEYf.png",
-                    OriginCountry = "US"
-                }
-            ]
+                    OriginCountry = "US",
+                },
+            ],
         };
     }
 
@@ -230,18 +228,9 @@ public static class TmdbSearchMockData
             TotalPages = 1,
             Results =
             [
-                new()
-                {
-                    Id = 9715,
-                    Name = "superhero"
-                },
-
-                new()
-                {
-                    Id = 163528,
-                    Name = "marvel cinematic universe"
-                }
-            ]
+                new() { Id = 9715, Name = "superhero" },
+                new() { Id = 163528, Name = "marvel cinematic universe" },
+            ],
         };
     }
 
@@ -255,7 +244,7 @@ public static class TmdbSearchMockData
             Page = 1,
             TotalResults = 0,
             TotalPages = 0,
-            Results = []
+            Results = [],
         };
     }
 }

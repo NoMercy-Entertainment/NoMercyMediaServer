@@ -1,10 +1,10 @@
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 using NoMercyQueue.Workers;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 using IQueueContext = NoMercyQueue.Core.Interfaces.IQueueContext;
 
@@ -32,25 +32,25 @@ public class QueueWorkerTests : IDisposable
     public async Task QueueWorker_ProcessesJob_Successfully()
     {
         // Arrange
-        TestJob testJob = new()
-        {
-            Message = "Worker test",
-            HasExecuted = false
-        };
+        TestJob testJob = new() { Message = "Worker test", HasExecuted = false };
 
         QueueJob queueJob = new()
         {
             Queue = "test-worker",
             Payload = SerializationHelper.Serialize(testJob),
             AvailableAt = DateTime.UtcNow,
-            Attempts = 0
+            Attempts = 0,
         };
 
         _context.QueueJobs.Add(queueJob);
         _context.SaveChanges();
 
         QueueWorker worker = new(_jobQueue, "test-worker");
-        worker.WorkCompleted += (_, _) => { /* Work completed */ };
+        worker.WorkCompleted += (
+            _,
+            _
+        ) => { /* Work completed */
+        };
 
         // Act
         Task workerTask = Task.Run(() =>
@@ -90,7 +90,7 @@ public class QueueWorkerTests : IDisposable
         {
             Message = "Failing job",
             HasExecuted = false,
-            ShouldFail = true // This will cause the job to throw an exception
+            ShouldFail = true, // This will cause the job to throw an exception
         };
 
         QueueJob queueJob = new()
@@ -98,7 +98,7 @@ public class QueueWorkerTests : IDisposable
             Queue = "test-worker",
             Payload = SerializationHelper.Serialize(testJob),
             AvailableAt = DateTime.UtcNow,
-            Attempts = 2 // Set to max attempts - 1
+            Attempts = 2, // Set to max attempts - 1
         };
 
         _context.QueueJobs.Add(queueJob);
@@ -114,7 +114,9 @@ public class QueueWorkerTests : IDisposable
                 {
                     try
                     {
-                        object jobWithArguments = SerializationHelper.Deserialize<object>(job.Payload);
+                        object jobWithArguments = SerializationHelper.Deserialize<object>(
+                            job.Payload
+                        );
                         if (jobWithArguments is IShouldQueue classInstance)
                         {
                             classInstance.Handle().Wait();
@@ -163,11 +165,7 @@ public class QueueWorkerTests : IDisposable
     public async Task ProcessJob_ValidIShouldQueueJob_ExecutesSuccessfully()
     {
         // Arrange
-        TestJob testJob = new()
-        {
-            Message = "Direct execution test",
-            HasExecuted = false
-        };
+        TestJob testJob = new() { Message = "Direct execution test", HasExecuted = false };
 
         // Act
         await testJob.Handle();
@@ -184,7 +182,7 @@ public class QueueWorkerTests : IDisposable
         {
             Message = "Delayed job",
             HasExecuted = false,
-            ExecutionDelay = 100 // 100ms delay
+            ExecutionDelay = 100, // 100ms delay
         };
 
         DateTime startTime = DateTime.UtcNow;
@@ -204,11 +202,7 @@ public class QueueWorkerTests : IDisposable
     public async Task ProcessJob_AnotherTestJob_ModifiesValue()
     {
         // Arrange
-        AnotherTestJob testJob = new()
-        {
-            Value = 10,
-            HasExecuted = false
-        };
+        AnotherTestJob testJob = new() { Value = 10, HasExecuted = false };
 
         // Act
         await testJob.Handle();
@@ -226,11 +220,14 @@ public class QueueWorkerTests : IDisposable
         {
             Message = "This will fail",
             HasExecuted = false,
-            ShouldFail = true
+            ShouldFail = true,
         };
 
         // Act & Assert
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(() => testJob.Handle());
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                testJob.Handle()
+        );
         Assert.Contains("TestJob failed with message: This will fail", exception.Message);
         Assert.False(testJob.HasExecuted); // Should not be marked as executed when it fails
     }
@@ -245,7 +242,7 @@ public class QueueWorkerTests : IDisposable
             Queue = "test-worker",
             Payload = SerializationHelper.Serialize(notAJob),
             AvailableAt = DateTime.UtcNow,
-            Attempts = 2 // Set to maxAttempts - 1 so FailJob moves it to FailedJobs
+            Attempts = 2, // Set to maxAttempts - 1 so FailJob moves it to FailedJobs
         };
 
         _context.QueueJobs.Add(queueJob);
@@ -268,8 +265,12 @@ public class QueueWorkerTests : IDisposable
                 {
                     // This is the new rejection path
                     string typeName = jobWithArguments?.GetType().FullName ?? "null";
-                    _jobQueue.FailJob(job, new InvalidOperationException(
-                        $"Job payload deserialized to {typeName} which does not implement IShouldQueue"));
+                    _jobQueue.FailJob(
+                        job,
+                        new InvalidOperationException(
+                            $"Job payload deserialized to {typeName} which does not implement IShouldQueue"
+                        )
+                    );
                 }
             }
         });
@@ -290,17 +291,13 @@ public class QueueWorkerTests : IDisposable
     public async Task QueueWorker_ValidIShouldQueuePayload_ExecutesAndDeletesJob()
     {
         // Arrange — a valid IShouldQueue job goes through the full worker path
-        TestJob testJob = new()
-        {
-            Message = "Valid job for full path test",
-            HasExecuted = false
-        };
+        TestJob testJob = new() { Message = "Valid job for full path test", HasExecuted = false };
         QueueJob queueJob = new()
         {
             Queue = "test-worker",
             Payload = SerializationHelper.Serialize(testJob),
             AvailableAt = DateTime.UtcNow,
-            Attempts = 0
+            Attempts = 0,
         };
 
         _context.QueueJobs.Add(queueJob);
@@ -324,8 +321,12 @@ public class QueueWorkerTests : IDisposable
                 else
                 {
                     string typeName = jobWithArguments?.GetType().FullName ?? "null";
-                    _jobQueue.FailJob(job, new InvalidOperationException(
-                        $"Job payload deserialized to {typeName} which does not implement IShouldQueue"));
+                    _jobQueue.FailJob(
+                        job,
+                        new InvalidOperationException(
+                            $"Job payload deserialized to {typeName} which does not implement IShouldQueue"
+                        )
+                    );
                 }
             }
         });

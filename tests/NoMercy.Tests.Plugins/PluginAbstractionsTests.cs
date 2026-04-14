@@ -24,9 +24,7 @@ public class PluginAbstractionsTests
             Initialized = true;
         }
 
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
     }
 
     private sealed class TestMetadataPlugin : IMetadataPlugin
@@ -38,14 +36,20 @@ public class PluginAbstractionsTests
 
         public void Initialize(IPluginContext context) { }
 
-        public Task<MediaMetadata?> GetMetadataAsync(string title, MediaType type, CancellationToken ct = default)
+        public Task<MediaMetadata?> GetMetadataAsync(
+            string title,
+            MediaType type,
+            CancellationToken ct = default
+        )
         {
-            return Task.FromResult<MediaMetadata?>(new()
-            {
-                Title = title,
-                Year = 2024,
-                Genres = ["Action"]
-            });
+            return Task.FromResult<MediaMetadata?>(
+                new()
+                {
+                    Title = title,
+                    Year = 2024,
+                    Genres = ["Action"],
+                }
+            );
         }
 
         public void Dispose() { }
@@ -62,9 +66,14 @@ public class PluginAbstractionsTests
 
         public Task<IEnumerable<MediaFile>> ScanAsync(string path, CancellationToken ct = default)
         {
-            return Task.FromResult<IEnumerable<MediaFile>>(
-            [
-                new() { Path = $"{path}/movie.mkv", FileName = "movie.mkv", Size = 1024, Type = MediaType.Movie }
+            return Task.FromResult<IEnumerable<MediaFile>>([
+                new()
+                {
+                    Path = $"{path}/movie.mkv",
+                    FileName = "movie.mkv",
+                    Size = 1024,
+                    Type = MediaType.Movie,
+                },
             ]);
         }
 
@@ -86,7 +95,7 @@ public class PluginAbstractionsTests
             {
                 Name = "test-profile",
                 VideoCodec = "libx264",
-                AudioCodec = "aac"
+                AudioCodec = "aac",
             };
         }
 
@@ -124,11 +133,13 @@ public class PluginAbstractionsTests
 
         public Task<AuthResult> AuthenticateAsync(string token, CancellationToken ct = default)
         {
-            return Task.FromResult(new AuthResult
-            {
-                IsAuthenticated = token == "valid-token",
-                UserName = token == "valid-token" ? "testuser" : null
-            });
+            return Task.FromResult(
+                new AuthResult
+                {
+                    IsAuthenticated = token == "valid-token",
+                    UserName = token == "valid-token" ? "testuser" : null,
+                }
+            );
         }
 
         public void Dispose() { }
@@ -158,11 +169,20 @@ public class PluginAbstractionsTests
 
         private sealed class NullPluginConfiguration : IPluginConfiguration
         {
-            public T? GetConfiguration<T>() where T : class, new() => null;
-            public Task<T?> GetConfigurationAsync<T>(CancellationToken ct = default) where T : class, new() => Task.FromResult<T?>(null);
-            public void SaveConfiguration<T>(T configuration) where T : class { }
-            public Task SaveConfigurationAsync<T>(T configuration, CancellationToken ct = default) where T : class => Task.CompletedTask;
+            public T? GetConfiguration<T>()
+                where T : class, new() => null;
+
+            public Task<T?> GetConfigurationAsync<T>(CancellationToken ct = default)
+                where T : class, new() => Task.FromResult<T?>(null);
+
+            public void SaveConfiguration<T>(T configuration)
+                where T : class { }
+
+            public Task SaveConfigurationAsync<T>(T configuration, CancellationToken ct = default)
+                where T : class => Task.CompletedTask;
+
             public bool HasConfiguration() => false;
+
             public void DeleteConfiguration() { }
         }
     }
@@ -302,7 +322,7 @@ public class PluginAbstractionsTests
             Description = "A useful plugin",
             Version = new(2, 1, 0),
             Status = PluginStatus.Active,
-            Author = "Test Author"
+            Author = "Test Author",
         };
 
         info.Name.Should().Be("My Plugin");
@@ -339,7 +359,7 @@ public class PluginAbstractionsTests
         {
             Name = "test",
             VideoCodec = "h264",
-            AudioCodec = "aac"
+            AudioCodec = "aac",
         };
 
         profile.Container.Should().Be("mp4");
@@ -398,18 +418,22 @@ public class PluginAbstractionsTests
         TestPluginContext context = new(bus);
 
         List<IEvent> received = [];
-        context.EventBus.Subscribe<Events.Playback.PlaybackStartedEvent>((evt, _) =>
-        {
-            received.Add(evt);
-            return Task.CompletedTask;
-        });
+        context.EventBus.Subscribe<Events.Playback.PlaybackStartedEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
-        await bus.PublishAsync(new Events.Playback.PlaybackStartedEvent
-        {
-            UserId = Guid.NewGuid(),
-            MediaId = 1,
-            MediaType = "movie"
-        });
+        await bus.PublishAsync(
+            new Events.Playback.PlaybackStartedEvent
+            {
+                UserId = Guid.NewGuid(),
+                MediaId = 1,
+                MediaType = "movie",
+            }
+        );
 
         received.Should().ContainSingle();
     }

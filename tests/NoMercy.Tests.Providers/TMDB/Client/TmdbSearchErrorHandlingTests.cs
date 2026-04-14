@@ -27,7 +27,8 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         Func<Task<TmdbPaginatedResponse<TmdbMovie>?>> act = async () => await client.Movie(null!);
 
         // Assert
-        await act.Should().NotThrowAsync("because the client should handle null queries gracefully");
+        await act.Should()
+            .NotThrowAsync("because the client should handle null queries gracefully");
     }
 
     [Fact]
@@ -143,7 +144,9 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         await Task.WhenAll(movieTask, tvTask, personTask, multiTask);
 
         // Assert
-        (await movieTask).Should().NotBeNull();
+        (await movieTask)
+            .Should()
+            .NotBeNull();
         (await tvTask).Should().NotBeNull();
         (await personTask).Should().NotBeNull();
         (await multiTask).Should().NotBeNull();
@@ -176,14 +179,18 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         string[] queries = Enumerable.Range(1, 10).Select(i => $"query{i}").ToArray();
 
         // Act
-        Task<TmdbPaginatedResponse<TmdbMovie>?>[] tasks = queries.Select(q => client.Movie(q)).ToArray();
+        Task<TmdbPaginatedResponse<TmdbMovie>?>[] tasks = queries
+            .Select(q => client.Movie(q))
+            .ToArray();
         await Task.WhenAll(tasks);
 
         // Assert
-        tasks.Should().AllSatisfy(task => 
-        {
-            task.Result.Should().NotBeNull();
-        });
+        tasks
+            .Should()
+            .AllSatisfy(task =>
+            {
+                task.Result.Should().NotBeNull();
+            });
     }
 
     #endregion
@@ -197,7 +204,8 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         using TmdbSearchClient client = new();
 
         // Act & Assert
-        Func<Task<TmdbPaginatedResponse<TmdbMovie>?>> act = async () => await client.Movie("Network Test");
+        Func<Task<TmdbPaginatedResponse<TmdbMovie>?>> act = async () =>
+            await client.Movie("Network Test");
         await act.Should().NotThrowAsync("because network errors should be handled gracefully");
     }
 
@@ -227,8 +235,12 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         long memoryIncrease = finalMemory - initialMemory;
 
         // Allow reasonable memory increase but not excessive
-        memoryIncrease.Should().BeLessThan(50 * 1024 * 1024, // 50MB
-            "because memory usage should remain reasonable");
+        memoryIncrease
+            .Should()
+            .BeLessThan(
+                50 * 1024 * 1024, // 50MB
+                "because memory usage should remain reasonable"
+            );
     }
 
     #endregion

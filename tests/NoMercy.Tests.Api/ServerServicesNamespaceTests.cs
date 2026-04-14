@@ -34,8 +34,10 @@ public class ServerServicesNamespaceTests
     [Fact]
     public void MusicHubServiceExtensions_HasAddMusicHubServicesMethod()
     {
-        MethodInfo? method = typeof(MusicHubServiceExtensions)
-            .GetMethod("AddMusicHubServices", BindingFlags.Public | BindingFlags.Static);
+        MethodInfo? method = typeof(MusicHubServiceExtensions).GetMethod(
+            "AddMusicHubServices",
+            BindingFlags.Public | BindingFlags.Static
+        );
 
         Assert.NotNull(method);
     }
@@ -43,8 +45,10 @@ public class ServerServicesNamespaceTests
     [Fact]
     public void VideoHubServiceExtensions_HasAddVideoHubServicesMethod()
     {
-        MethodInfo? method = typeof(VideoHubServiceExtensions)
-            .GetMethod("AddVideoHubServices", BindingFlags.Public | BindingFlags.Static);
+        MethodInfo? method = typeof(VideoHubServiceExtensions).GetMethod(
+            "AddVideoHubServices",
+            BindingFlags.Public | BindingFlags.Static
+        );
 
         Assert.NotNull(method);
     }

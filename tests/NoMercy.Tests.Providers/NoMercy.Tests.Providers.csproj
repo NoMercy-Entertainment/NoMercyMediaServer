@@ -1,45 +1,43 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
 
-    <PropertyGroup>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
 
-        <IsPackable>false</IsPackable>
-        <IsTestProject>true</IsTestProject>
-        
-        <!-- Test parallelization settings -->
-        <ParallelizeAssembly>true</ParallelizeAssembly>
-        <ParallelizeTestCollections>true</ParallelizeTestCollections>
-    </PropertyGroup>
+    <!-- Test parallelization settings -->
+    <ParallelizeAssembly>true</ParallelizeAssembly>
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="Moq" />
-        <PackageReference Include="Newtonsoft.Json" />
-        <PackageReference Include="xunit"/>
-        <PackageReference Include="xunit.runner.visualstudio">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
-        <PackageReference Include="coverlet.collector">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
-        <PackageReference Include="FluentAssertions" />
-        <PackageReference Include="Microsoft.Extensions.Http" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <Using Include="Xunit"/>
-        <Using Include="FluentAssertions"/>
-        <Using Include="Moq"/>
-    </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="FluentAssertions" />
+    <Using Include="Moq" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\..\src\NoMercy.Providers\NoMercy.Providers.csproj"/>
-        <ProjectReference Include="..\..\src\NoMercy.Database\NoMercy.Database.csproj"/>
-        <ProjectReference Include="..\..\src\NoMercy.Globals\NoMercy.Globals.csproj"/>
-        <ProjectReference Include="..\..\src\NoMercy.Helpers\NoMercy.Helpers.csproj"/>
-    </ItemGroup>
-
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NoMercy.Providers\NoMercy.Providers.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Database\NoMercy.Database.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Globals\NoMercy.Globals.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Helpers\NoMercy.Helpers.csproj" />
+  </ItemGroup>
 </Project>

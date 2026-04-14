@@ -13,7 +13,8 @@ public class TmdbTestDiscoveryTests
     {
         // Arrange
         Assembly assembly = Assembly.GetExecutingAssembly();
-        List<Type> testClasses = assembly.GetTypes()
+        List<Type> testClasses = assembly
+            .GetTypes()
             .Where(t => t.Namespace?.StartsWith("NoMercy.Tests.Providers.TMDB") == true)
             .Where(t => t.Name.EndsWith("Tests"))
             .Where(t => !t.IsAbstract)
@@ -21,7 +22,9 @@ public class TmdbTestDiscoveryTests
 
         // Act & Assert
         testClasses.Should().NotBeEmpty("TMDB test classes should be discoverable");
-        testClasses.Should().Contain(t => t.Name.Contains("Movie"), "Should include movie-related tests");
+        testClasses
+            .Should()
+            .Contain(t => t.Name.Contains("Movie"), "Should include movie-related tests");
         testClasses.Should().Contain(t => t.Name.Contains("Client"), "Should include client tests");
         testClasses.Should().Contain(t => t.Name.Contains("Models"), "Should include model tests");
     }
@@ -31,19 +34,29 @@ public class TmdbTestDiscoveryTests
     {
         // Arrange
         Assembly assembly = Assembly.GetExecutingAssembly();
-        List<Type> testClasses = assembly.GetTypes()
+        List<Type> testClasses = assembly
+            .GetTypes()
             .Where(t => t.Namespace?.StartsWith("NoMercy.Tests.Providers.TMDB") == true)
-            .Where(t => t.GetMethods().Any(m => m.GetCustomAttribute<FactAttribute>() != null || 
-                                              m.GetCustomAttribute<TheoryAttribute>() != null))
+            .Where(t =>
+                t.GetMethods()
+                    .Any(m =>
+                        m.GetCustomAttribute<FactAttribute>() != null
+                        || m.GetCustomAttribute<TheoryAttribute>() != null
+                    )
+            )
             .Where(t => t.Name != nameof(TmdbTestDiscoveryTests)) // Exclude this meta-test class
             .ToList();
 
         // Assert
-        testClasses.Should().AllSatisfy(testClass =>
-        {
-            testClass.Name.Should().EndWith("Tests", "All test classes should end with 'Tests'");
-            testClass.IsPublic.Should().BeTrue("All test classes should be public");
-        });
+        testClasses
+            .Should()
+            .AllSatisfy(testClass =>
+            {
+                testClass
+                    .Name.Should()
+                    .EndWith("Tests", "All test classes should end with 'Tests'");
+                testClass.IsPublic.Should().BeTrue("All test classes should be public");
+            });
     }
 
     [Fact]
@@ -51,21 +64,33 @@ public class TmdbTestDiscoveryTests
     {
         // Arrange
         Assembly assembly = Assembly.GetExecutingAssembly();
-        List<MethodInfo> testMethods = assembly.GetTypes()
+        List<MethodInfo> testMethods = assembly
+            .GetTypes()
             .Where(t => t.Namespace?.StartsWith("NoMercy.Tests.Providers.TMDB") == true)
             .Where(t => t.Name != nameof(TmdbTestDiscoveryTests)) // Exclude this meta-test class
             .SelectMany(t => t.GetMethods())
-            .Where(m => m.GetCustomAttribute<FactAttribute>() != null || 
-                       m.GetCustomAttribute<TheoryAttribute>() != null)
+            .Where(m =>
+                m.GetCustomAttribute<FactAttribute>() != null
+                || m.GetCustomAttribute<TheoryAttribute>() != null
+            )
             .ToList();
 
         // Assert
         testMethods.Should().NotBeEmpty("Should find test methods");
-        testMethods.Should().AllSatisfy(method =>
-        {
-            method.Name.Should().NotStartWith("Test", "Test methods should not start with 'Test' prefix");
-            method.Name.Should().Match("*_*_*", "Test methods should follow 'Method_Scenario_ExpectedResult' pattern");
-        });
+        testMethods
+            .Should()
+            .AllSatisfy(method =>
+            {
+                method
+                    .Name.Should()
+                    .NotStartWith("Test", "Test methods should not start with 'Test' prefix");
+                method
+                    .Name.Should()
+                    .Match(
+                        "*_*_*",
+                        "Test methods should follow 'Method_Scenario_ExpectedResult' pattern"
+                    );
+            });
     }
 
     public static class TestCategories

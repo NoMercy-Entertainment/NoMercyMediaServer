@@ -20,8 +20,10 @@ public class DiContextInjectionTests : IDisposable
     {
         _keepAliveConnection = new($"DataSource={_dbName};Mode=Memory;Cache=Shared");
         _keepAliveConnection.Open();
-        _keepAliveConnection.CreateFunction("normalize_search", (string? input) =>
-            input?.NormalizeSearch() ?? string.Empty);
+        _keepAliveConnection.CreateFunction(
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch() ?? string.Empty
+        );
 
         using MediaContext seedContext = CreateContext();
         seedContext.Database.EnsureCreated();
@@ -32,11 +34,16 @@ public class DiContextInjectionTests : IDisposable
     {
         SqliteConnection connection = new($"DataSource={_dbName};Mode=Memory;Cache=Shared");
         connection.Open();
-        connection.CreateFunction("normalize_search", (string? input) =>
-            input?.NormalizeSearch() ?? string.Empty);
+        connection.CreateFunction(
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch() ?? string.Empty
+        );
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .UseSqlite(
+                connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            )
             .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
 
@@ -53,7 +60,7 @@ public class DiContextInjectionTests : IDisposable
             Name = "Test User",
             Owner = true,
             Allowed = true,
-            Manage = true
+            Manage = true,
         };
         context.Users.Add(user);
 
@@ -62,16 +69,12 @@ public class DiContextInjectionTests : IDisposable
             Id = SeedConstants.MovieLibraryId,
             Title = "Music",
             Type = "music",
-            Order = 1
+            Order = 1,
         };
         context.Libraries.Add(musicLibrary);
         context.LibraryUser.Add(new(SeedConstants.MovieLibraryId, SeedConstants.UserId));
 
-        Folder musicFolder = new()
-        {
-            Id = SeedConstants.MovieFolderId,
-            Path = "/media/music"
-        };
+        Folder musicFolder = new() { Id = SeedConstants.MovieFolderId, Path = "/media/music" };
         context.Folders.Add(musicFolder);
         context.FolderLibrary.Add(new(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
 
@@ -84,7 +87,7 @@ public class DiContextInjectionTests : IDisposable
             Cover = "/test.jpg",
             HostFolder = "/media/music/Test Artist",
             LibraryId = SeedConstants.MovieLibraryId,
-            FolderId = SeedConstants.MovieFolderId
+            FolderId = SeedConstants.MovieFolderId,
         };
         context.Artists.Add(artist);
 
@@ -98,7 +101,7 @@ public class DiContextInjectionTests : IDisposable
             Tracks = 1,
             HostFolder = "/media/music/Test Artist/Test Album",
             LibraryId = SeedConstants.MovieLibraryId,
-            FolderId = SeedConstants.MovieFolderId
+            FolderId = SeedConstants.MovieFolderId,
         };
         context.Albums.Add(album);
 
@@ -114,50 +117,58 @@ public class DiContextInjectionTests : IDisposable
             Filename = "01-test-track.flac",
             Folder = "/media/music/Test Artist/Test Album",
             HostFolder = "/media/music/Test Artist/Test Album",
-            FolderId = SeedConstants.MovieFolderId
+            FolderId = SeedConstants.MovieFolderId,
         };
         context.Tracks.Add(track);
 
         context.SaveChanges();
 
-        context.ArtistTrack.Add(new()
-        {
-            ArtistId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333")
-        });
-        context.AlbumTrack.Add(new()
-        {
-            AlbumId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-            TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333")
-        });
-        context.AlbumArtist.Add(new()
-        {
-            AlbumId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-            ArtistId = Guid.Parse("11111111-1111-1111-1111-111111111111")
-        });
-        context.ArtistLibrary.Add(new(
-            Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            SeedConstants.MovieLibraryId));
-        context.AlbumLibrary.Add(new(
-            Guid.Parse("22222222-2222-2222-2222-222222222222"),
-            SeedConstants.MovieLibraryId));
+        context.ArtistTrack.Add(
+            new()
+            {
+                ArtistId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+            }
+        );
+        context.AlbumTrack.Add(
+            new()
+            {
+                AlbumId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+            }
+        );
+        context.AlbumArtist.Add(
+            new()
+            {
+                AlbumId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                ArtistId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            }
+        );
+        context.ArtistLibrary.Add(
+            new(Guid.Parse("11111111-1111-1111-1111-111111111111"), SeedConstants.MovieLibraryId)
+        );
+        context.AlbumLibrary.Add(
+            new(Guid.Parse("22222222-2222-2222-2222-222222222222"), SeedConstants.MovieLibraryId)
+        );
 
         Playlist playlist = new()
         {
             Id = Guid.Parse("44444444-4444-4444-4444-444444444444"),
             Name = "Test Playlist",
             Description = "A test playlist",
-            UserId = SeedConstants.UserId
+            UserId = SeedConstants.UserId,
         };
         context.Playlists.Add(playlist);
 
         context.SaveChanges();
 
-        context.PlaylistTrack.Add(new()
-        {
-            PlaylistId = Guid.Parse("44444444-4444-4444-4444-444444444444"),
-            TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333")
-        });
+        context.PlaylistTrack.Add(
+            new()
+            {
+                PlaylistId = Guid.Parse("44444444-4444-4444-4444-444444444444"),
+                TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+            }
+        );
 
         context.SaveChanges();
     }
@@ -215,7 +226,8 @@ public class DiContextInjectionTests : IDisposable
 
         Artist? artist = await repository.GetArtistAsync(
             SeedConstants.UserId,
-            Guid.Parse("11111111-1111-1111-1111-111111111111"));
+            Guid.Parse("11111111-1111-1111-1111-111111111111")
+        );
 
         Assert.NotNull(artist);
         Assert.Equal("Test Artist", artist.Name);
@@ -257,13 +269,20 @@ public class DiContextInjectionTests : IDisposable
         // Verify that a repository with no data returns empty results
         // (proves it reads from the injected context, not a global/static one)
         string isolatedDb = Guid.NewGuid().ToString();
-        using SqliteConnection isolatedConn = new($"DataSource={isolatedDb};Mode=Memory;Cache=Shared");
+        using SqliteConnection isolatedConn = new(
+            $"DataSource={isolatedDb};Mode=Memory;Cache=Shared"
+        );
         isolatedConn.Open();
-        isolatedConn.CreateFunction("normalize_search", (string? input) =>
-            input?.NormalizeSearch() ?? string.Empty);
+        isolatedConn.CreateFunction(
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch() ?? string.Empty
+        );
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(isolatedConn, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .UseSqlite(
+                isolatedConn,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            )
             .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
         using TestMediaContext emptyContext = new(options);

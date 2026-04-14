@@ -5,9 +5,8 @@ namespace NoMercy.Tests.Repositories.Infrastructure;
 
 public class TestMediaContext : MediaContext
 {
-    public TestMediaContext(DbContextOptions<MediaContext> options) : base(options)
-    {
-    }
+    public TestMediaContext(DbContextOptions<MediaContext> options)
+        : base(options) { }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {

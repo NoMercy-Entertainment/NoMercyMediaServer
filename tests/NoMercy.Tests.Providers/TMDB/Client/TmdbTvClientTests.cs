@@ -48,7 +48,8 @@ public class TmdbTvClientTests : TmdbTestBase
 
         // Assert
         // Changes endpoint may return null even for valid requests due to TMDB API limitations
-        if (result != null) result.Items.Should().NotBeNull();
+        if (result != null)
+            result.Items.Should().NotBeNull();
     }
 
     #endregion
@@ -389,7 +390,9 @@ public class TmdbTvClientTests : TmdbTestBase
         await Task.WhenAll(detailsTask, creditsTask, imagesTask, videosTask);
 
         // Assert
-        (await detailsTask).Should().NotBeNull();
+        (await detailsTask)
+            .Should()
+            .NotBeNull();
         (await creditsTask).Should().NotBeNull();
         (await imagesTask).Should().NotBeNull();
         (await videosTask).Should().NotBeNull();
@@ -550,12 +553,14 @@ public class TmdbTvClientTests : TmdbTestBase
         // Crew data might be empty for some shows like GTST, so we validate structure if present
         result.Crew.Should().NotBeNull();
         if (result.Crew.Length != 0)
-            result.Crew.Should().AllSatisfy(crew =>
-            {
-                crew.Name.Should().NotBeNullOrEmpty();
-                crew.Job.Should().NotBeNullOrEmpty();
-                crew.Id.Should().BeGreaterThan(0);
-            });
+            result
+                .Crew.Should()
+                .AllSatisfy(crew =>
+                {
+                    crew.Name.Should().NotBeNullOrEmpty();
+                    crew.Job.Should().NotBeNullOrEmpty();
+                    crew.Id.Should().BeGreaterThan(0);
+                });
     }
 
     #endregion
@@ -608,11 +613,13 @@ public class TmdbTvClientTests : TmdbTestBase
         // Assert
         result.Should().NotBeNull();
         result.Genres.Should().NotBeEmpty();
-        result.Genres.Should().AllSatisfy(genre =>
-        {
-            genre.Id.Should().BeGreaterThan(0);
-            genre.Name.Should().NotBeNullOrEmpty();
-        });
+        result
+            .Genres.Should()
+            .AllSatisfy(genre =>
+            {
+                genre.Id.Should().BeGreaterThan(0);
+                genre.Name.Should().NotBeNullOrEmpty();
+            });
     }
 
     [Theory]
@@ -685,7 +692,8 @@ public class TmdbTvClientTests : TmdbTestBase
         TmdbTvClient client = new(ValidTvShowId);
 
         // Act & Assert
-        Func<Task<TmdbTvChanges?>> act = async () => await client.Changes("invalid-date", "invalid-date");
+        Func<Task<TmdbTvChanges?>> act = async () =>
+            await client.Changes("invalid-date", "invalid-date");
         await act.Should().NotThrowAsync("because invalid dates should be handled gracefully");
     }
 

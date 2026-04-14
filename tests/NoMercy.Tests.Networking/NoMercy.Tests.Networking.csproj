@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -23,5 +22,4 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NoMercy.Networking\NoMercy.Networking.csproj" />
   </ItemGroup>
-
 </Project>

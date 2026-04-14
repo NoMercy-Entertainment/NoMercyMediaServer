@@ -20,10 +20,10 @@ public class TmdbSearchClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = CreateRealSearchClient();
-        
+
         // Act
         TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie("The Dark Knight", "2008");
-        
+
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
@@ -36,10 +36,10 @@ public class TmdbSearchClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = CreateRealSearchClient();
-        
+
         // Act
         TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow("Breaking Bad", "2008");
-        
+
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
@@ -52,10 +52,10 @@ public class TmdbSearchClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = CreateRealSearchClient();
-        
+
         // Act
         TmdbPaginatedResponse<TmdbPerson>? result = await client.Person("Leonardo DiCaprio");
-        
+
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
@@ -68,17 +68,17 @@ public class TmdbSearchClientIntegrationTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = CreateRealSearchClient();
-        
+
         // Act
         TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi("Marvel");
-        
+
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
         // Note: TmdbMultiSearch has a complex tuple structure, so we just verify the result exists
     }
 
-    private new static TmdbSearchClient CreateRealSearchClient()
+    private static new TmdbSearchClient CreateRealSearchClient()
     {
         // This would use real API configuration
         return new();

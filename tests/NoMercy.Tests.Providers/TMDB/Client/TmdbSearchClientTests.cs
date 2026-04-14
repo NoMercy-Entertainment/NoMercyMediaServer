@@ -44,7 +44,9 @@ public class TmdbSearchClientTests : TmdbTestBase
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
-        result.Results.Should().Contain(m => m.Title!.Contains("Dark Knight", StringComparison.OrdinalIgnoreCase));
+        result
+            .Results.Should()
+            .Contain(m => m.Title!.Contains("Dark Knight", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
@@ -110,7 +112,9 @@ public class TmdbSearchClientTests : TmdbTestBase
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
-        result.Results.Should().Contain(tv => tv.Name!.Contains("Breaking Bad", StringComparison.OrdinalIgnoreCase));
+        result
+            .Results.Should()
+            .Contain(tv => tv.Name!.Contains("Breaking Bad", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
@@ -162,7 +166,9 @@ public class TmdbSearchClientTests : TmdbTestBase
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();
-        result.Results.Should().Contain(p => p.Name!.Contains("Leonardo", StringComparison.OrdinalIgnoreCase));
+        result
+            .Results.Should()
+            .Contain(p => p.Name!.Contains("Leonardo", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
@@ -300,7 +306,8 @@ public class TmdbSearchClientTests : TmdbTestBase
 
         // Act & Assert
         Func<Task<TmdbPaginatedResponse<TmdbMovie>?>> act = async () => await client.Movie(null!);
-        await act.Should().NotThrowAsync("because the client should handle null queries gracefully");
+        await act.Should()
+            .NotThrowAsync("because the client should handle null queries gracefully");
     }
 
     [Fact]
@@ -354,7 +361,9 @@ public class TmdbSearchClientTests : TmdbTestBase
         await Task.WhenAll(movieTask, tvTask, personTask);
 
         // Assert
-        (await movieTask).Should().NotBeNull();
+        (await movieTask)
+            .Should()
+            .NotBeNull();
         (await tvTask).Should().NotBeNull();
         (await personTask).Should().NotBeNull();
     }
@@ -372,12 +381,12 @@ public class TmdbSearchClientTests : TmdbTestBase
 
         // Act & Assert
         using CancellationTokenSource cts = new(timeout);
-        
+
         Task<TmdbPaginatedResponse<TmdbMovie>?> movieTask = client.Movie("Avatar");
         Task<TmdbPaginatedResponse<TmdbTvShow>?> tvTask = client.TvShow("Game of Thrones");
-        
+
         await Task.WhenAll(movieTask, tvTask).WaitAsync(cts.Token);
-        
+
         (await movieTask).Should().NotBeNull();
         (await tvTask).Should().NotBeNull();
     }

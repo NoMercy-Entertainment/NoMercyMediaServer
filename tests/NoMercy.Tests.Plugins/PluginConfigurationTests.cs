@@ -12,7 +12,10 @@ public class PluginConfigurationTests : IDisposable
 
     public PluginConfigurationTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), "nomercy-config-tests-" + Guid.NewGuid().ToString("N"));
+        _tempDir = Path.Combine(
+            Path.GetTempPath(),
+            "nomercy-config-tests-" + Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(_tempDir);
         _config = new(_tempDir);
     }
@@ -26,9 +29,7 @@ public class PluginConfigurationTests : IDisposable
                 Directory.Delete(_tempDir, recursive: true);
             }
         }
-        catch (IOException)
-        {
-        }
+        catch (IOException) { }
     }
 
     private sealed class TestConfig
@@ -85,7 +86,7 @@ public class PluginConfigurationTests : IDisposable
             ApiKey = "test-key-123",
             MaxRetries = 5,
             Enabled = false,
-            Tags = ["tag1", "tag2"]
+            Tags = ["tag1", "tag2"],
         };
 
         _config.SaveConfiguration(saved);
@@ -174,7 +175,7 @@ public class PluginConfigurationTests : IDisposable
             ApiKey = "async-key",
             MaxRetries = 10,
             Enabled = true,
-            Tags = ["async-tag"]
+            Tags = ["async-tag"],
         };
 
         await _config.SaveConfigurationAsync(saved);

@@ -1,11 +1,11 @@
 using System.Reflection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
-using NoMercyQueue;
 using NoMercy.Queue.MediaServer;
+using NoMercy.Tests.Queue.TestHelpers;
+using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -41,7 +41,8 @@ public class BlockingPatternTests : IDisposable
         // ReserveJobQuery has been moved to EfQueueContextAdapter.
         FieldInfo? field = typeof(EfQueueContextAdapter).GetField(
             "ReserveJobQuery",
-            BindingFlags.Public | BindingFlags.Static);
+            BindingFlags.Public | BindingFlags.Static
+        );
 
         Assert.NotNull(field);
 
@@ -55,8 +56,9 @@ public class BlockingPatternTests : IDisposable
 
         Assert.False(
             returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>),
-            "ReserveJobQuery should return QueueJob? directly, not Task<QueueJob?>. " +
-            "Using async compiled query requires .Result which causes deadlocks (CRIT-04).");
+            "ReserveJobQuery should return QueueJob? directly, not Task<QueueJob?>. "
+                + "Using async compiled query requires .Result which causes deadlocks (CRIT-04)."
+        );
     }
 
     [Fact]
@@ -67,7 +69,8 @@ public class BlockingPatternTests : IDisposable
         // ExistsQuery has been moved to EfQueueContextAdapter.
         FieldInfo? field = typeof(EfQueueContextAdapter).GetField(
             "ExistsQuery",
-            BindingFlags.Public | BindingFlags.Static);
+            BindingFlags.Public | BindingFlags.Static
+        );
 
         Assert.NotNull(field);
 
@@ -78,9 +81,14 @@ public class BlockingPatternTests : IDisposable
         Type returnType = typeArgs[^1];
 
         Assert.False(
-            returnType == typeof(Task<bool>) || (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>)),
-            "ExistsQuery should return bool directly, not Task<bool>. " +
-            "Using async compiled query requires .Result which causes deadlocks (CRIT-04).");
+            returnType == typeof(Task<bool>)
+                || (
+                    returnType.IsGenericType
+                    && returnType.GetGenericTypeDefinition() == typeof(Task<>)
+                ),
+            "ExistsQuery should return bool directly, not Task<bool>. "
+                + "Using async compiled query requires .Result which causes deadlocks (CRIT-04)."
+        );
     }
 
     [Fact]
@@ -93,7 +101,7 @@ public class BlockingPatternTests : IDisposable
             Payload = "sync-test-payload",
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -114,13 +122,13 @@ public class BlockingPatternTests : IDisposable
         {
             Queue = "dup-test",
             Payload = "dup-payload",
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
         QueueJobModel job2 = new()
         {
             Queue = "dup-test",
             Payload = "dup-payload",
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
 
         _jobQueue.Enqueue(job1);
@@ -142,7 +150,8 @@ public class BlockingPatternTests : IDisposable
         foreach (string line in lines)
         {
             string trimmed = line.Trim();
-            if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+            if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                continue;
 
             Assert.DoesNotMatch(@"\.\s*Result\b", trimmed);
         }
@@ -151,7 +160,8 @@ public class BlockingPatternTests : IDisposable
         foreach (string line in lines)
         {
             string trimmed = line.Trim();
-            if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+            if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                continue;
 
             Assert.DoesNotMatch(@"\.\s*Wait\s*\(", trimmed);
         }
@@ -162,14 +172,16 @@ public class BlockingPatternTests : IDisposable
     {
         // Static analysis: Verify HomeController.cs no longer uses Task.Delay().Wait().
         string sourceFile = FindSourceFile(
-            "src/NoMercy.Api/Controllers/V1/Media/HomeController.cs");
+            "src/NoMercy.Api/Controllers/V1/Media/HomeController.cs"
+        );
         string source = File.ReadAllText(sourceFile);
 
         string[] lines = source.Split('\n');
         foreach (string line in lines)
         {
             string trimmed = line.Trim();
-            if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+            if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                continue;
 
             Assert.DoesNotMatch(@"Task\.Delay\([^)]*\)\s*\.Wait\s*\(", trimmed);
         }
@@ -180,14 +192,16 @@ public class BlockingPatternTests : IDisposable
     {
         // Static analysis: Verify MusicPlaybackService.cs has no .Wait() calls.
         string sourceFile = FindSourceFile(
-            "src/NoMercy.Api/Services/Music/MusicPlaybackService.cs");
+            "src/NoMercy.Api/Services/Music/MusicPlaybackService.cs"
+        );
         string source = File.ReadAllText(sourceFile);
 
         string[] lines = source.Split('\n');
         foreach (string line in lines)
         {
             string trimmed = line.Trim();
-            if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+            if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                continue;
 
             Assert.DoesNotMatch(@"\)\s*\.Wait\s*\(", trimmed);
         }
@@ -198,14 +212,16 @@ public class BlockingPatternTests : IDisposable
     {
         // Static analysis: Verify VideoPlaybackService.cs has no .Wait() calls.
         string sourceFile = FindSourceFile(
-            "src/NoMercy.Api/Services/Video/VideoPlaybackService.cs");
+            "src/NoMercy.Api/Services/Video/VideoPlaybackService.cs"
+        );
         string source = File.ReadAllText(sourceFile);
 
         string[] lines = source.Split('\n');
         foreach (string line in lines)
         {
             string trimmed = line.Trim();
-            if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+            if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                continue;
 
             Assert.DoesNotMatch(@"\)\s*\.Wait\s*\(", trimmed);
         }
@@ -216,7 +232,8 @@ public class BlockingPatternTests : IDisposable
     {
         // Verify the HomeController now uses await Task.Delay instead of .Wait().
         string sourceFile = FindSourceFile(
-            "src/NoMercy.Api/Controllers/V1/Media/HomeController.cs");
+            "src/NoMercy.Api/Controllers/V1/Media/HomeController.cs"
+        );
         string source = File.ReadAllText(sourceFile);
 
         Assert.Contains("await Task.Delay", source);
@@ -227,7 +244,8 @@ public class BlockingPatternTests : IDisposable
     {
         // Verify the HomeController polling loop has a timeout to prevent infinite waits.
         string sourceFile = FindSourceFile(
-            "src/NoMercy.Api/Controllers/V1/Media/HomeController.cs");
+            "src/NoMercy.Api/Controllers/V1/Media/HomeController.cs"
+        );
         string source = File.ReadAllText(sourceFile);
 
         Assert.Contains("CancelAfter", source);
@@ -240,19 +258,22 @@ public class BlockingPatternTests : IDisposable
         while (dir != null)
         {
             string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate)) return candidate;
+            if (File.Exists(candidate))
+                return candidate;
 
             // Also check if we're in a well-known build output structure
             string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
             string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved)) return resolved;
+            if (File.Exists(resolved))
+                return resolved;
 
             dir = Directory.GetParent(dir)?.FullName;
         }
 
         // Fallback: try from /workspaces/NoMercyMediaServer
         string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback)) return fallback;
+        if (File.Exists(fallback))
+            return fallback;
 
         throw new FileNotFoundException($"Could not find source file: {relativePath}");
     }

@@ -68,10 +68,7 @@ public class UserDataJsonPropertyTests
     [Fact]
     public void TvId_Serializes_AsTvId()
     {
-        UserData userData = new()
-        {
-            TvId = 42
-        };
+        UserData userData = new() { TvId = 42 };
 
         string json = JsonConvert.SerializeObject(userData);
 
@@ -104,10 +101,7 @@ public class UserDataJsonPropertyTests
     [Fact]
     public void TvId_RoundTrip_PreservesValue()
     {
-        UserData original = new()
-        {
-            TvId = 123
-        };
+        UserData original = new() { TvId = 123 };
 
         string json = JsonConvert.SerializeObject(original);
         UserData? deserialized = JsonConvert.DeserializeObject<UserData>(json);
@@ -131,7 +125,10 @@ public class UserDataJsonPropertyTests
     [InlineData("CollectionId", "collection_id")]
     [InlineData("SpecialId", "special_id")]
     [InlineData("VideoFileId", "video_file_id")]
-    public void AllFkProperties_HaveCorrectJsonProperty(string propertyName, string expectedJsonName)
+    public void AllFkProperties_HaveCorrectJsonProperty(
+        string propertyName,
+        string expectedJsonName
+    )
     {
         string? name = GetJsonPropertyName(propertyName);
         Assert.Equal(expectedJsonName, name);

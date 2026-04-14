@@ -28,9 +28,9 @@ public class ApiInfoApplyKeysTests
                     TmdbToken = "tmdb-token",
                     TvdbKey = "tvdb-key",
                     MusixmatchKey = "musix-key",
-                    JwplayerKey = "jwplayer-key"
-                }
-            }
+                    JwplayerKey = "jwplayer-key",
+                },
+            },
         };
     }
 
@@ -76,7 +76,8 @@ public class ApiInfoCacheTests : IDisposable
     {
         _tempDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy_apiinfo_test_" + Guid.NewGuid().ToString("N"));
+            "nomercy_apiinfo_test_" + Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(_tempDir);
 
         // Save original for reference (we can't easily override the static property)
@@ -118,9 +119,9 @@ public class ApiInfoCacheTests : IDisposable
                     TmdbToken = "cached-tmdb-token",
                     TvdbKey = "cached-tvdb",
                     MusixmatchKey = "cached-musix",
-                    JwplayerKey = "cached-jwplayer"
-                }
-            }
+                    JwplayerKey = "cached-jwplayer",
+                },
+            },
         };
     }
 
@@ -199,7 +200,8 @@ public class ApiInfoCacheFileParsingTests : IDisposable
     {
         _tempDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy_apiinfo_parse_" + Guid.NewGuid().ToString("N"));
+            "nomercy_apiinfo_parse_" + Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(_tempDir);
     }
 
@@ -213,18 +215,18 @@ public class ApiInfoCacheFileParsingTests : IDisposable
     public void ApiInfoResponse_DeserializesWithCachedAt()
     {
         string json = """
-        {
-            "_cached_at": "2026-02-07T12:00:00Z",
-            "status": "success",
-            "data": {
-                "quote": "test",
-                "colors": ["#111"],
-                "keys": {
-                    "tmdb_key": "key1"
+            {
+                "_cached_at": "2026-02-07T12:00:00Z",
+                "status": "success",
+                "data": {
+                    "quote": "test",
+                    "colors": ["#111"],
+                    "keys": {
+                        "tmdb_key": "key1"
+                    }
                 }
             }
-        }
-        """;
+            """;
 
         ApiInfoResponse? result = JsonConvert.DeserializeObject<ApiInfoResponse>(json);
 
@@ -238,15 +240,15 @@ public class ApiInfoCacheFileParsingTests : IDisposable
     public void ApiInfoResponse_DeserializesWithoutCachedAt()
     {
         string json = """
-        {
-            "status": "success",
-            "data": {
-                "quote": "test",
-                "colors": [],
-                "keys": {}
+            {
+                "status": "success",
+                "data": {
+                    "quote": "test",
+                    "colors": [],
+                    "keys": {}
+                }
             }
-        }
-        """;
+            """;
 
         ApiInfoResponse? result = JsonConvert.DeserializeObject<ApiInfoResponse>(json);
 
@@ -265,8 +267,8 @@ public class ApiInfoCacheFileParsingTests : IDisposable
             {
                 Quote = "test",
                 Colors = ["#fff"],
-                Keys = new() { TmdbKey = "key1" }
-            }
+                Keys = new() { TmdbKey = "key1" },
+            },
         };
 
         string json = JsonConvert.SerializeObject(response);
@@ -282,8 +284,10 @@ public class ApiInfoNoEnvironmentExitTests
     public void RequestInfo_DoesNotContainEnvironmentExit()
     {
         // Verify via reflection that the method exists and is async
-        System.Reflection.MethodInfo? method = typeof(ApiInfo)
-            .GetMethod("RequestInfo", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        System.Reflection.MethodInfo? method = typeof(ApiInfo).GetMethod(
+            "RequestInfo",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
+        );
 
         Assert.NotNull(method);
         Assert.Equal(typeof(Task), method!.ReturnType);
@@ -292,8 +296,10 @@ public class ApiInfoNoEnvironmentExitTests
     [Fact]
     public void ApiInfo_HasKeysLoadedProperty()
     {
-        System.Reflection.PropertyInfo? prop = typeof(ApiInfo)
-            .GetProperty("KeysLoaded", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        System.Reflection.PropertyInfo? prop = typeof(ApiInfo).GetProperty(
+            "KeysLoaded",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
+        );
 
         Assert.NotNull(prop);
         Assert.Equal(typeof(bool), prop!.PropertyType);

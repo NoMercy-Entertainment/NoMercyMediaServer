@@ -1,7 +1,7 @@
 using System.Reflection;
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -16,7 +16,7 @@ public class InterfaceTests
 
         // Act & Assert
         Assert.IsAssignableFrom<IShouldQueue>(testJob);
-        
+
         // Verify the Handle method exists and has correct signature
         MethodInfo? handleMethod = typeof(TestJob).GetMethod("Handle");
         Assert.NotNull(handleMethod);
@@ -31,7 +31,7 @@ public class InterfaceTests
 
         // Act & Assert
         Assert.IsAssignableFrom<IShouldQueue>(testJob);
-        
+
         // Verify the Handle method exists and has correct signature
         MethodInfo? handleMethod = typeof(AnotherTestJob).GetMethod("Handle");
         Assert.NotNull(handleMethod);
@@ -42,10 +42,10 @@ public class InterfaceTests
     public async Task IShouldQueue_CanBeExecutedPolymorphically()
     {
         // Arrange
-        IShouldQueue[] jobs = 
+        IShouldQueue[] jobs =
         [
             new TestJob { Message = "Polymorphic test 1" },
-            new AnotherTestJob { Value = 42 }
+            new AnotherTestJob { Value = 42 },
         ];
 
         // Act
@@ -57,7 +57,7 @@ public class InterfaceTests
         // Assert
         TestJob testJob = (TestJob)jobs[0];
         AnotherTestJob anotherJob = (AnotherTestJob)jobs[1];
-        
+
         Assert.True(testJob.HasExecuted);
         Assert.Equal("Polymorphic test 1", testJob.Message);
         Assert.True(anotherJob.HasExecuted);
@@ -138,11 +138,7 @@ public class StressTests
     public void SerializationHelper_MultipleSerializationCycles_MaintainsIntegrity()
     {
         // Arrange
-        TestJob originalJob = new()
-        { 
-            Message = "Stress test job",
-            HasExecuted = true
-        };
+        TestJob originalJob = new() { Message = "Stress test job", HasExecuted = true };
 
         // Act - Serialize and deserialize multiple times
         object currentJob = originalJob;

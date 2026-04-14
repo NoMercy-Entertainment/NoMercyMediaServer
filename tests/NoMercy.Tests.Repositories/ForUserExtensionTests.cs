@@ -20,10 +20,7 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        List<Movie> movies = await context.Movies
-            .AsNoTracking()
-            .ForUser(_userId)
-            .ToListAsync();
+        List<Movie> movies = await context.Movies.AsNoTracking().ForUser(_userId).ToListAsync();
 
         Assert.Equal(2, movies.Count);
         Assert.Contains(movies, m => m.Title == "Spirited Away");
@@ -35,8 +32,8 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        List<Movie> movies = await context.Movies
-            .AsNoTracking()
+        List<Movie> movies = await context
+            .Movies.AsNoTracking()
             .ForUser(_otherUserId)
             .ToListAsync();
 
@@ -48,10 +45,7 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        List<Tv> shows = await context.Tvs
-            .AsNoTracking()
-            .ForUser(_userId)
-            .ToListAsync();
+        List<Tv> shows = await context.Tvs.AsNoTracking().ForUser(_userId).ToListAsync();
 
         Assert.Single(shows);
         Assert.Equal("Breaking Bad", shows[0].Title);
@@ -62,10 +56,7 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        List<Tv> shows = await context.Tvs
-            .AsNoTracking()
-            .ForUser(_otherUserId)
-            .ToListAsync();
+        List<Tv> shows = await context.Tvs.AsNoTracking().ForUser(_otherUserId).ToListAsync();
 
         Assert.Empty(shows);
     }
@@ -75,8 +66,8 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        List<Library> libraries = await context.Libraries
-            .AsNoTracking()
+        List<Library> libraries = await context
+            .Libraries.AsNoTracking()
             .ForUser(_userId)
             .ToListAsync();
 
@@ -90,8 +81,8 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        List<Library> libraries = await context.Libraries
-            .AsNoTracking()
+        List<Library> libraries = await context
+            .Libraries.AsNoTracking()
             .ForUser(_otherUserId)
             .ToListAsync();
 
@@ -109,21 +100,21 @@ public class ForUserExtensionTests
             Id = 1001,
             Title = "Test Collection",
             TitleSort = "test collection",
-            LibraryId = SeedConstants.MovieLibraryId
+            LibraryId = SeedConstants.MovieLibraryId,
         };
         context.Collections.Add(collection);
         await context.SaveChangesAsync();
 
-        List<Collection> collections = await context.Collections
-            .AsNoTracking()
+        List<Collection> collections = await context
+            .Collections.AsNoTracking()
             .ForUser(_userId)
             .ToListAsync();
 
         Assert.Single(collections);
         Assert.Equal("Test Collection", collections[0].Title);
 
-        List<Collection> otherUserCollections = await context.Collections
-            .AsNoTracking()
+        List<Collection> otherUserCollections = await context
+            .Collections.AsNoTracking()
             .ForUser(_otherUserId)
             .ToListAsync();
 
@@ -137,26 +128,25 @@ public class ForUserExtensionTests
 
         // Add an album to the existing movie library (has user access already seeded)
         Folder folder = await context.Folders.FirstAsync();
-        context.Albums.Add(new()
-        {
-            Id = Guid.NewGuid(),
-            Name = "Test Album",
-            LibraryId = SeedConstants.MovieLibraryId,
-            FolderId = folder.Id,
-            Library = null!
-        });
+        context.Albums.Add(
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test Album",
+                LibraryId = SeedConstants.MovieLibraryId,
+                FolderId = folder.Id,
+                Library = null!,
+            }
+        );
         await context.SaveChangesAsync();
 
-        List<Album> albums = await context.Albums
-            .AsNoTracking()
-            .ForUser(_userId)
-            .ToListAsync();
+        List<Album> albums = await context.Albums.AsNoTracking().ForUser(_userId).ToListAsync();
 
         Assert.Single(albums);
         Assert.Equal("Test Album", albums[0].Name);
 
-        List<Album> otherUserAlbums = await context.Albums
-            .AsNoTracking()
+        List<Album> otherUserAlbums = await context
+            .Albums.AsNoTracking()
             .ForUser(_otherUserId)
             .ToListAsync();
 
@@ -171,47 +161,46 @@ public class ForUserExtensionTests
         // Set up music library with user access
         Ulid musicLibraryId = Ulid.NewUlid();
         Ulid musicFolderId = Ulid.NewUlid();
-        context.Libraries.Add(new()
-        {
-            Id = musicLibraryId,
-            Title = "Music",
-            Type = "music",
-            Order = 3
-        });
-        context.Folders.Add(new()
-        {
-            Id = musicFolderId,
-            Path = "/media/music"
-        });
-        context.Users.Add(new()
-        {
-            Id = _userId,
-            Email = "test@nomercy.tv",
-            Name = "Test User",
-            Owner = true,
-            Allowed = true
-        });
+        context.Libraries.Add(
+            new()
+            {
+                Id = musicLibraryId,
+                Title = "Music",
+                Type = "music",
+                Order = 3,
+            }
+        );
+        context.Folders.Add(new() { Id = musicFolderId, Path = "/media/music" });
+        context.Users.Add(
+            new()
+            {
+                Id = _userId,
+                Email = "test@nomercy.tv",
+                Name = "Test User",
+                Owner = true,
+                Allowed = true,
+            }
+        );
         context.LibraryUser.Add(new(musicLibraryId, _userId));
-        context.Artists.Add(new()
-        {
-            Id = Guid.NewGuid(),
-            Name = "Test Artist",
-            HostFolder = "/media/music/TestArtist",
-            LibraryId = musicLibraryId,
-            FolderId = musicFolderId
-        });
+        context.Artists.Add(
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test Artist",
+                HostFolder = "/media/music/TestArtist",
+                LibraryId = musicLibraryId,
+                FolderId = musicFolderId,
+            }
+        );
         await context.SaveChangesAsync();
 
-        List<Artist> artists = await context.Artists
-            .AsNoTracking()
-            .ForUser(_userId)
-            .ToListAsync();
+        List<Artist> artists = await context.Artists.AsNoTracking().ForUser(_userId).ToListAsync();
 
         Assert.Single(artists);
         Assert.Equal("Test Artist", artists[0].Name);
 
-        List<Artist> otherUserArtists = await context.Artists
-            .AsNoTracking()
+        List<Artist> otherUserArtists = await context
+            .Artists.AsNoTracking()
             .ForUser(_otherUserId)
             .ToListAsync();
 
@@ -223,8 +212,8 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        Movie? movie = await context.Movies
-            .AsNoTracking()
+        Movie? movie = await context
+            .Movies.AsNoTracking()
             .Where(m => m.Id == 129)
             .ForUser(_userId)
             .FirstOrDefaultAsync();
@@ -238,17 +227,11 @@ public class ForUserExtensionTests
     {
         MediaContext context = TestMediaContextFactory.CreateSeededContext();
 
-        int movieCount = await context.Movies
-            .AsNoTracking()
-            .ForUser(_userId)
-            .CountAsync();
+        int movieCount = await context.Movies.AsNoTracking().ForUser(_userId).CountAsync();
 
         Assert.Equal(2, movieCount);
 
-        int otherUserCount = await context.Movies
-            .AsNoTracking()
-            .ForUser(_otherUserId)
-            .CountAsync();
+        int otherUserCount = await context.Movies.AsNoTracking().ForUser(_otherUserId).CountAsync();
 
         Assert.Equal(0, otherUserCount);
     }
@@ -274,19 +257,24 @@ public class ForUserExtensionTests
 
         // Add a second user with access to only the TV library
         Guid partialUserId = Guid.NewGuid();
-        context.Users.Add(new()
-        {
-            Id = partialUserId,
-            Email = "partial@nomercy.tv",
-            Name = "Partial User",
-            Owner = false,
-            Allowed = true
-        });
+        context.Users.Add(
+            new()
+            {
+                Id = partialUserId,
+                Email = "partial@nomercy.tv",
+                Name = "Partial User",
+                Owner = false,
+                Allowed = true,
+            }
+        );
         context.LibraryUser.Add(new(SeedConstants.TvLibraryId, partialUserId));
         await context.SaveChangesAsync();
 
         // Partial user should see TV shows but not movies
-        List<Movie> movies = await context.Movies.AsNoTracking().ForUser(partialUserId).ToListAsync();
+        List<Movie> movies = await context
+            .Movies.AsNoTracking()
+            .ForUser(partialUserId)
+            .ToListAsync();
         List<Tv> shows = await context.Tvs.AsNoTracking().ForUser(partialUserId).ToListAsync();
 
         Assert.Empty(movies);
@@ -297,12 +285,10 @@ public class ForUserExtensionTests
     [Fact]
     public async Task ForUser_GeneratesExistsClauseInSql()
     {
-        (MediaContext context, SqlCaptureInterceptor interceptor) = TestMediaContextFactory.CreateSeededContextWithInterceptor();
+        (MediaContext context, SqlCaptureInterceptor interceptor) =
+            TestMediaContextFactory.CreateSeededContextWithInterceptor();
 
-        await context.Movies
-            .AsNoTracking()
-            .ForUser(_userId)
-            .ToListAsync();
+        await context.Movies.AsNoTracking().ForUser(_userId).ToListAsync();
 
         string sql = string.Join(" ", interceptor.CapturedSql);
         Assert.Contains("EXISTS", sql, StringComparison.OrdinalIgnoreCase);
