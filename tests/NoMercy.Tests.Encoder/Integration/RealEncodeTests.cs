@@ -72,7 +72,7 @@ public class RealEncodeTests : IAsyncLifetime
             throw new InvalidOperationException($"FFmpeg test clip generation failed: {stderr}");
         }
 
-        // Build DI — full encoder pipeline
+        // Build DI — full encoder pipeline with software-only encoding for deterministic tests
         ServiceCollection services = new();
         services.AddLogging();
         services.AddNoMercyEncoder(opts =>
@@ -80,6 +80,9 @@ public class RealEncodeTests : IAsyncLifetime
             opts.FfmpegPathOverride = "ffmpeg";
             opts.FfprobePathOverride = "ffprobe";
         });
+
+        // Force software encoding — override hardware detector so tests don't depend on GPU
+        services.AddSingleton<IHardwareDetector, NullHardwareDetector>();
 
         _serviceProvider = services.BuildServiceProvider();
 

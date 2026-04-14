@@ -19,6 +19,14 @@ public class HardwareInitializationService(
 
         try
         {
+            // Probe FFmpeg capabilities FIRST — GPU detection needs HasEncoder() to be populated
+            await ffmpegCapabilities.ProbeAsync(cancellationToken);
+            logger.LogInformation(
+                "FFmpeg: {EncoderCount} encoders, {FilterCount} filters",
+                ffmpegCapabilities.AvailableEncoders.Count,
+                ffmpegCapabilities.AvailableFilters.Count
+            );
+
             IReadOnlyList<GpuDevice> gpus = await hardwareDetector.DetectGpusAsync(
                 cancellationToken
             );
@@ -38,13 +46,6 @@ public class HardwareInitializationService(
                     gpu.VramMb,
                     gpu.MaxEncoderSessions
                 );
-
-            await ffmpegCapabilities.ProbeAsync(cancellationToken);
-            logger.LogInformation(
-                "FFmpeg: {EncoderCount} encoders, {FilterCount} filters",
-                ffmpegCapabilities.AvailableEncoders.Count,
-                ffmpegCapabilities.AvailableFilters.Count
-            );
 
             Capabilities = new HardwareCapabilities(gpus, cpuCores);
             IsReady = true;
