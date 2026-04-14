@@ -60,7 +60,8 @@ public class SubtitleExtractor
             mediaTitle
         );
         string resolved = TemplateResolver.Resolve(plan.PlaylistNameTemplate, tokens);
-        string outputPath = Path.Combine(outputDirectory, $"{resolved}.{extension}");
+        // Relative path — FFmpeg CWD is set to the output directory.
+        string outputPath = $"{resolved}.{extension}";
 
         return new SubtitleOutputInfo(
             OutputPath: outputPath,

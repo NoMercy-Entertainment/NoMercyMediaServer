@@ -36,16 +36,13 @@ public class HlsOutputStrategy : IOutputStrategy
                 Path.GetDirectoryName(segmentResolved)?.Replace("\\", "/") ?? segmentResolved;
             string segmentFile = Path.GetFileName(segmentResolved);
 
-            string playlistPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
+            // Paths are relative — FFmpeg CWD is set to the output directory.
+            string playlistPath = $"{subDir}/{playlistFile}.m3u8";
 
             bool isHevc =
                 video.EncoderName.Contains("265", StringComparison.OrdinalIgnoreCase)
                 || video.EncoderName.Contains("hevc", StringComparison.OrdinalIgnoreCase);
 
-            // Apple HLS requires keyframes at exact segment boundaries.
-            // -force_key_frames places IDR frames at precise second marks.
-            // -forced-idr ensures HW encoders (NVENC/QSV/AMF) produce actual IDR frames.
-            // -g is a safety ceiling at 2x segment duration — never relied on for alignment.
             int gopCeiling = (int)Math.Ceiling(video.FrameRate * segmentDuration * 2);
 
             Dictionary<string, string> extraFlags = new(video.ExtraFlags)
@@ -54,11 +51,7 @@ public class HlsOutputStrategy : IOutputStrategy
                 ["-hls_time"] = segmentDuration.ToString(),
                 ["-hls_playlist_type"] = "vod",
                 ["-hls_flags"] = "independent_segments",
-                ["-hls_segment_filename"] = Path.Combine(
-                    outputDirectory,
-                    segmentDir,
-                    $"{segmentFile}_%05d.ts"
-                ),
+                ["-hls_segment_filename"] = $"{segmentDir}/{segmentFile}_%05d.ts",
                 ["-force_key_frames"] = $"expr:gte(t,n_forced*{segmentDuration})",
                 ["-forced-idr"] = "1",
             };
@@ -110,7 +103,7 @@ public class HlsOutputStrategy : IOutputStrategy
                     Path.GetDirectoryName(segmentResolved)?.Replace("\\", "/") ?? segmentResolved;
                 string segmentFile = Path.GetFileName(segmentResolved);
 
-                string playlistPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
+                string playlistPath = $"{subDir}/{playlistFile}.m3u8";
 
                 Dictionary<string, string> extraFlags = new()
                 {
@@ -118,11 +111,7 @@ public class HlsOutputStrategy : IOutputStrategy
                     ["-hls_time"] = segmentDuration.ToString(),
                     ["-hls_playlist_type"] = "vod",
                     ["-hls_flags"] = "independent_segments",
-                    ["-hls_segment_filename"] = Path.Combine(
-                        outputDirectory,
-                        segmentDir,
-                        $"{segmentFile}_%05d.ts"
-                    ),
+                    ["-hls_segment_filename"] = $"{segmentDir}/{segmentFile}_%05d.ts",
                 };
 
                 string audioCodec = audio.Action == StreamAction.Copy ? "copy" : audio.EncoderName;

@@ -74,8 +74,10 @@
   </Entry>
   <Entry>
     <Key>An error occurred while saving the entity changes. See the inner exception for details.</Key>
-    <Value lang="nl">Er is een fout opgetreden bij het opslaan van de entiteitswijzigingen. Zie de
-      binnenste uitzondering voor details.</Value>
+    <Value lang="nl"
+      >Er is een fout opgetreden bij het opslaan van de entiteitswijzigingen. Zie de
+      binnenste uitzondering voor details.</Value
+    >
   </Entry>
   <Entry>
     <Key>Albums not found</Key>
@@ -355,7 +357,9 @@
   </Entry>
   <Entry>
     <Key>Something went wrong updating the library encoder profiles: {0}</Key>
-    <Value lang="nl">Er ging iets mis bij het bijwerken van de bibliotheek encoder profielen: {0}</Value>
+    <Value lang="nl"
+      >Er ging iets mis bij het bijwerken van de bibliotheek encoder profielen: {0}</Value
+    >
   </Entry>
   <Entry>
     <Key>You do not have permission to update the library</Key>

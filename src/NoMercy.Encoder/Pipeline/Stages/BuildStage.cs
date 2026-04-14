@@ -61,23 +61,15 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             if (input.Plan.OutputPlan.Thumbnails is not null && context.MediaInfo is not null)
             {
                 ThumbnailOutputPlan thumbs = input.Plan.OutputPlan.Thumbnails;
-                string spriteFile = Path.Combine(
-                    input.OutputDirectory,
-                    $"thumbs_{thumbs.Width}x{thumbs.Height}.webp"
-                );
-                string vttFile = Path.Combine(
-                    input.OutputDirectory,
-                    $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt"
-                );
 
                 builder.AddOutput(
                     new OutputOptions(
-                        FilePath: spriteFile,
+                        FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
                         MapStreams: ["[thumbs]"],
                         ExtraFlags: new Dictionary<string, string>
                         {
                             ["-f"] = "spritevtt",
-                            ["-vtt_filename"] = vttFile,
+                            ["-vtt_filename"] = $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
                         }
                     )
                 );
@@ -190,10 +182,13 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 mediaTitle
             );
 
-            string? parentDir = Path.GetDirectoryName(info.OutputPath);
+            // Ensure subtitle directory exists (absolute path for .NET IO)
+            string absolutePath = Path.Combine(outputDirectory, info.OutputPath);
+            string? parentDir = Path.GetDirectoryName(absolutePath);
             if (parentDir is not null)
                 Directory.CreateDirectory(parentDir);
 
+            // FFmpeg gets the relative path (CWD = output directory)
             builder.AddOutput(
                 new OutputOptions(
                     FilePath: info.OutputPath,
@@ -241,7 +236,9 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 mediaTitle
             );
 
-            string? parentDir = Path.GetDirectoryName(info.OutputPath);
+            // Ensure subtitle directory exists (absolute path for .NET IO)
+            string absolutePath = Path.Combine(outputDirectory, info.OutputPath);
+            string? parentDir = Path.GetDirectoryName(absolutePath);
             if (parentDir is not null)
                 Directory.CreateDirectory(parentDir);
 
@@ -260,7 +257,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                         ExtraFlags: new Dictionary<string, string> { ["-f"] = "matroska" }
                     )
                 )
-                .Build(ffmpegPath);
+                .Build(ffmpegPath, outputDirectory);
 
             commands.Add(cmd);
         }

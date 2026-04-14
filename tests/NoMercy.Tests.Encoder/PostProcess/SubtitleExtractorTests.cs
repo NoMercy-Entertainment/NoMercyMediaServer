@@ -165,7 +165,7 @@ public class SubtitleExtractorTests
             MediaTitle
         );
 
-        info.OutputPath.Should().Contain(Path.Combine(OutputDir, "subtitles"));
+        info.OutputPath.Should().StartWith("subtitles/");
     }
 
     // ------------------------------------------------------------------
