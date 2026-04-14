@@ -51,4 +51,4 @@ public record SubtitleOutputPlan(
     string PlaylistNameTemplate = "subtitles/:filename:.:language:.:variant:"
 );
 
-public record ThumbnailOutputPlan(int Width, int IntervalSeconds);
+public record ThumbnailOutputPlan(int Width, int Height, int IntervalSeconds);

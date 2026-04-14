@@ -227,9 +227,28 @@ public class PlanStage(
 
         SubtitleOutputPlan[] subtitlePlan = subtitlePlans.ToArray();
 
-        ThumbnailOutputPlan? thumbPlan = profile.Thumbnails is not null
-            ? new ThumbnailOutputPlan(profile.Thumbnails.Width, profile.Thumbnails.IntervalSeconds)
-            : null;
+        ThumbnailOutputPlan? thumbPlan = null;
+        if (profile.Thumbnails is not null && media.VideoStreams.Count > 0)
+        {
+            ThumbnailOutput thumbConfig = profile.Thumbnails;
+            // Calculate the actual thumbnail height from source aspect ratio.
+            // FFmpeg scale=W:-2 produces this height (rounded to even).
+            int thumbHeight = (int)(
+                2
+                * Math.Round(
+                    (double)thumbConfig.Width
+                        * media.VideoStreams[0].Height
+                        / media.VideoStreams[0].Width
+                        / 2
+                )
+            );
+
+            thumbPlan = new ThumbnailOutputPlan(
+                thumbConfig.Width,
+                thumbHeight,
+                thumbConfig.IntervalSeconds
+            );
+        }
 
         return new OutputPlan(
             profile.Format,

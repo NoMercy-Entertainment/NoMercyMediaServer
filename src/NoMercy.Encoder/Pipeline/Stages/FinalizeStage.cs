@@ -62,58 +62,30 @@ public class FinalizeStage(
             FontExtractor fontExtractor = new();
             await fontExtractor.WriteFontManifestAsync(input.OutputDirectory, ct);
 
-            // Assemble thumbnail sprite sheet + write VTT cue file
+            // Write thumbnail VTT cue file — the sprite webp was produced
+            // by the main FFmpeg command's filter_complex [thumbs] branch.
             if (input.Plan.Thumbnails is not null && context.MediaInfo is not null)
             {
-                ThumbnailGenerator thumbGen = new();
                 int imageCount = (int)(
                     context.MediaInfo.Duration.TotalSeconds / input.Plan.Thumbnails.IntervalSeconds
                 );
 
                 if (imageCount > 0)
                 {
-                    FfmpegCommand spriteCmd = thumbGen.BuildSpriteCommand(
-                        options.FfmpegPathOverride,
+                    ThumbnailGenerator thumbGen = new();
+                    await thumbGen.WriteVttCueFileAsync(
                         input.OutputDirectory,
                         input.Plan.Thumbnails,
+                        imageCount,
+                        context.MediaInfo.Duration,
+                        ct
+                    );
+
+                    logger.LogDebug(
+                        "[{CorrelationId}] Wrote thumbnail VTT: {Count} cues",
+                        context.CorrelationId,
                         imageCount
                     );
-
-                    ExecutionResult spriteResult = await executor.ExecuteAsync(
-                        spriteCmd,
-                        TimeSpan.FromSeconds(30),
-                        correlationId: context.CorrelationId,
-                        ct: ct
-                    );
-
-                    if (!spriteResult.Success)
-                    {
-                        logger.LogWarning(
-                            "[{CorrelationId}] Sprite assembly failed — skipping thumbnail VTT",
-                            context.CorrelationId
-                        );
-                    }
-                    else
-                    {
-                        await thumbGen.WriteVttCueFileAsync(
-                            input.OutputDirectory,
-                            input.Plan.Thumbnails,
-                            imageCount,
-                            context.MediaInfo.Duration,
-                            ct
-                        );
-
-                        thumbGen.CleanupIndividualThumbnails(
-                            input.OutputDirectory,
-                            input.Plan.Thumbnails
-                        );
-
-                        logger.LogDebug(
-                            "[{CorrelationId}] Sprite assembled: {Count} frames",
-                            context.CorrelationId,
-                            imageCount
-                        );
-                    }
                 }
             }
 

@@ -72,11 +72,10 @@ public class ThumbnailGenerator
     )
     {
         (int gridWidth, _) = ComputeGrid(imageCount);
-        string spriteFilename = $"thumbs_{plan.Width}.webp";
-        string vttFile = Path.Combine(outputDirectory, $"thumbs_{plan.Width}.vtt");
+        string spriteFilename = $"thumbs_{plan.Width}x{plan.Height}.webp";
+        string vttFile = Path.Combine(outputDirectory, $"thumbs_{plan.Width}x{plan.Height}.vtt");
 
-        // 16:9 proportional height
-        int thumbHeight = plan.Width * 9 / 16;
+        int thumbHeight = plan.Height;
 
         StringBuilder sb = new();
         sb.AppendLine("WEBVTT");

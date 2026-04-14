@@ -56,6 +56,25 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             // Video + audio outputs via the output strategy (HLS, MKV, etc.)
             strategy.ConfigureOutput(builder, input.Plan.OutputPlan, input.OutputDirectory);
 
+            // Thumbnail sprite — produced by the filter_complex [thumbs] branch.
+            // Output as a single webp frame.
+            if (input.Plan.OutputPlan.Thumbnails is not null && context.MediaInfo is not null)
+            {
+                ThumbnailOutputPlan thumbs = input.Plan.OutputPlan.Thumbnails;
+                string spriteFile = Path.Combine(
+                    input.OutputDirectory,
+                    $"thumbs_{thumbs.Width}x{thumbs.Height}.webp"
+                );
+
+                builder.AddOutput(
+                    new OutputOptions(
+                        FilePath: spriteFile,
+                        MapStreams: ["[thumbs]"],
+                        ExtraFlags: new Dictionary<string, string> { ["-frames:v"] = "1" }
+                    )
+                );
+            }
+
             // Text subtitles go in the main command (single-pass).
             // Bitmap subtitles need separate extraction (FFmpeg can't mux dvd_subtitle to .sub+.idx).
             List<FfmpegCommand> bitmapSubCommands = [];
@@ -108,31 +127,6 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                     input.OutputDirectory
                 );
                 allCommands.Add(fontCommand);
-            }
-
-            // Thumbnail capture command
-            if (input.Plan.OutputPlan.Thumbnails is not null && context.MediaInfo is not null)
-            {
-                ThumbnailGenerator thumbGen = new();
-                string thumbDir = Path.Combine(
-                    input.OutputDirectory,
-                    $"thumbs_{input.Plan.OutputPlan.Thumbnails.Width}"
-                );
-                Directory.CreateDirectory(thumbDir);
-
-                FfmpegCommand thumbCommand = thumbGen.BuildCaptureCommand(
-                    options.FfmpegPathOverride,
-                    input.InputPath,
-                    input.OutputDirectory,
-                    input.Plan.OutputPlan.Thumbnails,
-                    context.MediaInfo.Duration
-                );
-                allCommands.Add(thumbCommand);
-
-                logger.LogDebug(
-                    "[{CorrelationId}] Added thumbnail capture command",
-                    context.CorrelationId
-                );
             }
 
             return Task.FromResult<StageResult>(
@@ -291,14 +285,18 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
         int sourceWidth = mediaInfo.VideoStreams[0].Width;
         int sourceHeight = mediaInfo.VideoStreams[0].Height;
         bool sourceIs10Bit = mediaInfo.VideoStreams[0].BitDepth > 8;
+        bool hasThumbnails = plan.Thumbnails is not null;
 
         FilterGraphBuilder fg = new();
 
-        if (videoOutputs.Length == 1)
+        // Total split branches: one per video output + one for thumbnails (if enabled)
+        int totalBranches = videoOutputs.Length + (hasThumbnails ? 1 : 0);
+
+        if (totalBranches == 1 && !hasThumbnails)
         {
+            // Single video, no thumbnails — no split needed
             VideoOutputPlan single = videoOutputs[0];
             string outputLabel = single.MapLabel.Trim('[', ']');
-
             BuildBranchFilter(
                 fg,
                 "0:v:0",
@@ -311,8 +309,12 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
         }
         else
         {
-            string[] splitLabels = videoOutputs.Select((_, i) => $"split{i}").ToArray();
-            fg.AddSplit("0:v:0", splitLabels);
+            // Split source into N video branches + optional thumbnail branch
+            List<string> splitLabels = videoOutputs.Select((_, i) => $"split{i}").ToList();
+            if (hasThumbnails)
+                splitLabels.Add("thumbsrc");
+
+            fg.AddSplit("0:v:0", splitLabels.ToArray());
 
             for (int i = 0; i < videoOutputs.Length; i++)
             {
@@ -327,6 +329,22 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                     sourceWidth,
                     sourceHeight,
                     sourceIs10Bit
+                );
+            }
+
+            // Thumbnail branch: fps → scale → tile → [thumbs]
+            if (hasThumbnails)
+            {
+                ThumbnailOutputPlan thumbs = plan.Thumbnails!;
+                int imageCount = (int)(mediaInfo.Duration.TotalSeconds / thumbs.IntervalSeconds);
+                (int gridWidth, int gridHeight) = ThumbnailGenerator.ComputeGrid(
+                    Math.Max(imageCount, 1)
+                );
+
+                fg.AddFilter(
+                    "thumbsrc",
+                    $"fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2,tile={gridWidth}x{gridHeight}",
+                    "thumbs"
                 );
             }
         }

@@ -17,7 +17,8 @@ public static class ProfileMapper
         string container,
         IReadOnlyList<V1VideoProfile> videoProfiles,
         IReadOnlyList<V1AudioProfile> audioProfiles,
-        IReadOnlyList<V1SubtitleProfile> subtitleProfiles
+        IReadOnlyList<V1SubtitleProfile> subtitleProfiles,
+        V1ThumbnailProfile? thumbnailProfile = null
     )
     {
         OutputFormat format = container.ToLowerInvariant() switch
@@ -33,7 +34,11 @@ public static class ProfileMapper
         AudioOutput[] audio = audioProfiles.Select(MapAudio).ToArray();
         SubtitleOutput[] subtitles = subtitleProfiles.Select(MapSubtitle).ToArray();
 
-        return new EncodingProfile(id, name, format, video, audio, subtitles);
+        ThumbnailOutput? thumbnails = thumbnailProfile is not null
+            ? new ThumbnailOutput(thumbnailProfile.Width, thumbnailProfile.IntervalSeconds)
+            : null;
+
+        return new EncodingProfile(id, name, format, video, audio, subtitles, thumbnails);
     }
 
     private static VideoOutput MapVideo(V1VideoProfile v)
@@ -162,43 +167,3 @@ public static class ProfileMapper
         return AudioCodecType.Aac;
     }
 }
-
-/// <summary>
-/// V1 profile type aliases — these match the database IVideoProfile/IAudioProfile/ISubtitleProfile
-/// but live in the Encoder namespace so the mapper doesn't depend on Database project.
-/// The job maps from Database types to these before calling the mapper.
-/// </summary>
-public record V1VideoProfile(
-    string Codec,
-    int Bitrate,
-    int Width,
-    int Height,
-    string Preset,
-    string Profile,
-    string Tune,
-    string Level,
-    string SegmentName,
-    string PlaylistName,
-    string ColorSpace,
-    int Crf,
-    int KeyInt,
-    bool ConvertHdrToSdr,
-    (string key, string Val)[] CustomArguments
-);
-
-public record V1AudioProfile(
-    string Codec,
-    int Channels,
-    int SampleRate,
-    string SegmentName,
-    string PlaylistName,
-    string[] AllowedLanguages,
-    (string key, string Val)[] CustomArguments
-);
-
-public record V1SubtitleProfile(
-    string Codec,
-    string PlaylistName,
-    string[] AllowedLanguages,
-    (string key, string Val)[] CustomArguments
-);
