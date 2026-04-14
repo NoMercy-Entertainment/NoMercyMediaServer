@@ -146,7 +146,8 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
             Codec: stream.Value<string>("codec_name") ?? "unknown",
             Language: stream["tags"]?.Value<string>("language"),
             IsDefault: stream["disposition"]?.Value<int>("default") == 1,
-            IsForced: stream["disposition"]?.Value<int>("forced") == 1
+            IsForced: stream["disposition"]?.Value<int>("forced") == 1,
+            Title: stream["tags"]?.Value<string>("title")
         );
     }
 

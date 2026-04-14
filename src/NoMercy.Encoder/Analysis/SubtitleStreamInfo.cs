@@ -5,7 +5,8 @@ public record SubtitleStreamInfo(
     string Codec,
     string? Language,
     bool IsDefault,
-    bool IsForced
+    bool IsForced,
+    string? Title = null
 )
 {
     private static readonly HashSet<string> TextCodecs =

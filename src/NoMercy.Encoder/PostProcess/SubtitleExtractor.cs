@@ -28,10 +28,7 @@ public class SubtitleExtractor
     )
     {
         string language = stream.Language ?? plan.Language ?? "und";
-        string variant =
-            stream.IsForced ? "sign"
-            : stream.IsDefault ? "full"
-            : "sdh";
+        string variant = ResolveVariant(stream);
         bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
         bool isAss = AssCodecs.Contains(stream.Codec);
 
@@ -88,10 +85,7 @@ public class SubtitleExtractor
     )
     {
         string language = stream.Language ?? plan.Language ?? "und";
-        string variant =
-            stream.IsForced ? "sign"
-            : stream.IsDefault ? "full"
-            : "sdh";
+        string variant = ResolveVariant(stream);
         bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
         bool isAss = AssCodecs.Contains(stream.Codec);
 
@@ -116,6 +110,32 @@ public class SubtitleExtractor
         );
         string resolved = TemplateResolver.Resolve(plan.PlaylistNameTemplate, tokens);
         return $"{resolved}.{extension}";
+    }
+
+    /// <summary>
+    /// Determines the subtitle variant from track metadata.
+    /// Title takes priority over disposition flags for accuracy.
+    /// </summary>
+    private static string ResolveVariant(SubtitleStreamInfo stream)
+    {
+        string title = stream.Title?.ToLowerInvariant() ?? "";
+
+        // Title-based detection takes priority
+        if (title.Contains("s&s") || title.Contains("sign") || title.Contains("song"))
+            return "sign";
+
+        if (title.Contains("sdh") || title.Contains("hearing"))
+            return "sdh";
+
+        // Fall back to disposition flags
+        if (stream.IsForced)
+            return "sign";
+
+        if (stream.IsDefault)
+            return "full";
+
+        // Non-forced, non-default, no recognizable title → alternate translation
+        return "alt";
     }
 }
 

@@ -209,11 +209,6 @@ public class PlanStage(
                 if (allowed.Count > 0 && !allowed.Contains(streamLang))
                     continue;
 
-                // Only extract tracks with a clear role: forced (sign) or default (full).
-                // Tracks that are neither are ambiguous — skip them rather than guess.
-                if (!stream.IsForced && !stream.IsDefault)
-                    continue;
-
                 claimedStreams.Add(si);
                 subtitlePlans.Add(
                     new SubtitleOutputPlan(
