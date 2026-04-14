@@ -37,8 +37,26 @@ public class PlanStage(
 
         try
         {
+            // Resolve codecs with hardware session awareness — once we've filled
+            // all GPU sessions, overflow outputs fall back to software encoding.
+            int maxHwSessions = hardware.HasGpu ? hardware.Gpus.Min(g => g.MaxEncoderSessions) : 0;
+            int hwSessionsUsed = 0;
+
             ResolvedCodec[] resolvedCodecs = input
-                .Profile.VideoOutputs.Select(v => codecResolver.Resolve(v.Codec, hardware))
+                .Profile.VideoOutputs.Select(v =>
+                {
+                    EncoderPreference preference =
+                        hwSessionsUsed < maxHwSessions
+                            ? EncoderPreference.PreferHardware
+                            : EncoderPreference.ForceSoftware;
+
+                    ResolvedCodec resolved = codecResolver.Resolve(v.Codec, hardware, preference);
+
+                    if (resolved.Device is not null)
+                        hwSessionsUsed++;
+
+                    return resolved;
+                })
                 .ToArray();
 
             List<ExecutionNode> nodes = graphBuilder.BuildGraph(
