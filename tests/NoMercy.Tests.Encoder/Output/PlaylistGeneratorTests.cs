@@ -8,21 +8,48 @@ public class PlaylistGeneratorTests
 {
     private const string MediaTitle = "Movie.Name.NoMercy";
 
+    private static readonly Dictionary<
+        string,
+        HlsVariantAnalyzer.VariantMetrics
+    > EmptyVideoMetrics = [];
+
+    private static readonly Dictionary<
+        string,
+        HlsVariantAnalyzer.VariantMetrics
+    > EmptyAudioMetrics = [];
+
+    private string Generate(OutputPlan plan)
+    {
+        PlaylistGenerator generator = new();
+        return generator.GenerateMasterPlaylist(
+            plan,
+            MediaTitle,
+            EmptyVideoMetrics,
+            EmptyAudioMetrics
+        );
+    }
+
     [Fact]
     public void MasterPlaylist_ContainsExtm3u()
     {
-        PlaylistGenerator generator = new();
-        string playlist = generator.GenerateMasterPlaylist(CreatePlan(), MediaTitle);
+        string playlist = Generate(CreatePlan());
 
         playlist.Should().StartWith("#EXTM3U");
         playlist.Should().Contain("#EXT-X-VERSION:6");
     }
 
     [Fact]
+    public void MasterPlaylist_ContainsIndependentSegments()
+    {
+        string playlist = Generate(CreatePlan());
+
+        playlist.Should().Contain("#EXT-X-INDEPENDENT-SEGMENTS");
+    }
+
+    [Fact]
     public void MasterPlaylist_ContainsVideoVariants()
     {
-        PlaylistGenerator generator = new();
-        string playlist = generator.GenerateMasterPlaylist(CreateMultiResPlan(), MediaTitle);
+        string playlist = Generate(CreateMultiResPlan());
 
         playlist.Should().Contain("RESOLUTION=1920x1080");
         playlist.Should().Contain("RESOLUTION=1280x720");
@@ -33,9 +60,7 @@ public class PlaylistGeneratorTests
     [Fact]
     public void MasterPlaylist_H264_CorrectCodecTag()
     {
-        PlaylistGenerator generator = new();
-        OutputPlan plan = CreatePlan();
-        string playlist = generator.GenerateMasterPlaylist(plan, MediaTitle);
+        string playlist = Generate(CreatePlan());
 
         playlist.Should().Contain("avc1.640028");
     }
@@ -43,9 +68,7 @@ public class PlaylistGeneratorTests
     [Fact]
     public void MasterPlaylist_Hevc_CorrectCodecTag()
     {
-        PlaylistGenerator generator = new();
-        OutputPlan plan = CreatePlan(encoderName: "hevc_nvenc");
-        string playlist = generator.GenerateMasterPlaylist(plan, MediaTitle);
+        string playlist = Generate(CreatePlan(encoderName: "hevc_nvenc"));
 
         playlist.Should().Contain("hvc1.");
     }
@@ -53,9 +76,7 @@ public class PlaylistGeneratorTests
     [Fact]
     public void MasterPlaylist_Av1_10bit_CorrectCodecTag()
     {
-        PlaylistGenerator generator = new();
-        OutputPlan plan = CreatePlan(encoderName: "libsvtav1", tenBit: true);
-        string playlist = generator.GenerateMasterPlaylist(plan, MediaTitle);
+        string playlist = Generate(CreatePlan(encoderName: "libsvtav1", tenBit: true));
 
         playlist.Should().Contain("av01.0.15M.10");
     }
@@ -63,8 +84,7 @@ public class PlaylistGeneratorTests
     [Fact]
     public void MasterPlaylist_AudioGroup_Present()
     {
-        PlaylistGenerator generator = new();
-        string playlist = generator.GenerateMasterPlaylist(CreatePlan(), MediaTitle);
+        string playlist = Generate(CreatePlan());
 
         playlist.Should().Contain("#EXT-X-MEDIA:TYPE=AUDIO");
         playlist.Should().Contain("GROUP-ID=\"audio_aac\"");
@@ -74,10 +94,34 @@ public class PlaylistGeneratorTests
     [Fact]
     public void MasterPlaylist_AacAudio_Mp4aCodecTag()
     {
-        PlaylistGenerator generator = new();
-        string playlist = generator.GenerateMasterPlaylist(CreatePlan(), MediaTitle);
+        string playlist = Generate(CreatePlan());
 
         playlist.Should().Contain("mp4a.40.2");
+    }
+
+    [Fact]
+    public void MasterPlaylist_MeasuredBandwidth_UsedWhenProvided()
+    {
+        PlaylistGenerator generator = new();
+        OutputPlan plan = CreatePlan();
+        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> vidMetrics = new()
+        {
+            ["[v0]"] = new HlsVariantAnalyzer.VariantMetrics(5_000_000, 3_500_000),
+        };
+        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audMetrics = new()
+        {
+            ["0:a:0"] = new HlsVariantAnalyzer.VariantMetrics(256_000, 192_000),
+        };
+
+        string playlist = generator.GenerateMasterPlaylist(
+            plan,
+            MediaTitle,
+            vidMetrics,
+            audMetrics
+        );
+
+        playlist.Should().Contain("BANDWIDTH=5256000");
+        playlist.Should().Contain("AVERAGE-BANDWIDTH=3692000");
     }
 
     private static OutputPlan CreatePlan(string encoderName = "libx264", bool tenBit = false)

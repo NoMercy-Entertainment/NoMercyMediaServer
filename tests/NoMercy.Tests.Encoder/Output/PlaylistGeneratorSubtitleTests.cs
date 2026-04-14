@@ -6,25 +6,36 @@ using NoMercy.Encoder.Pipeline;
 
 public class PlaylistGeneratorSubtitleTests
 {
-    private readonly PlaylistGenerator _gen = new();
     private const string MediaTitle = "Movie.Name.NoMercy";
 
-    // ------------------------------------------------------------------
-    // Plan without subtitles does NOT include SUBTITLES tags
-    // ------------------------------------------------------------------
+    private static readonly Dictionary<
+        string,
+        HlsVariantAnalyzer.VariantMetrics
+    > EmptyVideoMetrics = [];
+
+    private static readonly Dictionary<
+        string,
+        HlsVariantAnalyzer.VariantMetrics
+    > EmptyAudioMetrics = [];
+
+    private string Generate(OutputPlan plan)
+    {
+        PlaylistGenerator generator = new();
+        return generator.GenerateMasterPlaylist(
+            plan,
+            MediaTitle,
+            EmptyVideoMetrics,
+            EmptyAudioMetrics
+        );
+    }
 
     [Fact]
     public void MasterPlaylist_WithoutSubtitles_NoSubtitleTags()
     {
-        OutputPlan plan = CreatePlanWithoutSubtitles();
-        string playlist = _gen.GenerateMasterPlaylist(plan, MediaTitle);
+        string playlist = Generate(CreatePlanWithoutSubtitles());
 
         playlist.Should().NotContain("TYPE=SUBTITLES");
     }
-
-    // ------------------------------------------------------------------
-    // Drop action subtitle is excluded from playlist
-    // ------------------------------------------------------------------
 
     [Fact]
     public void MasterPlaylist_SubtitleWithDropAction_IsExcluded()
@@ -46,27 +57,18 @@ public class PlaylistGeneratorSubtitleTests
             Thumbnails: null
         );
 
-        string playlist = _gen.GenerateMasterPlaylist(plan, MediaTitle);
+        string playlist = Generate(plan);
 
         playlist.Should().NotContain("TYPE=SUBTITLES");
     }
 
-    // ------------------------------------------------------------------
-    // Audio language appears in playlist
-    // ------------------------------------------------------------------
-
     [Fact]
     public void MasterPlaylist_AudioLanguage_Correct()
     {
-        OutputPlan plan = CreatePlanWithoutSubtitles();
-        string playlist = _gen.GenerateMasterPlaylist(plan, MediaTitle);
+        string playlist = Generate(CreatePlanWithoutSubtitles());
 
         playlist.Should().Contain("LANGUAGE=\"eng\"");
     }
-
-    // ------------------------------------------------------------------
-    // Helpers
-    // ------------------------------------------------------------------
 
     private static OutputPlan CreatePlanWithoutSubtitles()
     {

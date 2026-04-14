@@ -140,8 +140,53 @@ public class HlsOutputStrategy : IOutputStrategy
         CancellationToken ct
     )
     {
+        // Measure actual bitrates from the encoded variant playlists.
+        // These are the real values — not estimates from profile settings.
+        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics = [];
+        foreach (VideoOutputPlan video in plan.VideoOutputs)
+        {
+            Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+                video.Width,
+                video.Height,
+                video.TenBit
+            );
+            string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
+            string subDir =
+                Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
+            string playlistFile = Path.GetFileName(playlistResolved);
+            string variantPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
+
+            videoMetrics[video.MapLabel] = HlsVariantAnalyzer.Measure(variantPath);
+        }
+
+        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics = [];
+        foreach (AudioOutputPlan audio in plan.AudioOutputs)
+        {
+            if (audio.Action is not (StreamAction.Copy or StreamAction.Transcode))
+                continue;
+
+            string codecName = audio.EncoderName.Replace("libfdk_", "").Replace("lib", "");
+            Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
+                audio.Language ?? "und",
+                codecName,
+                audio.Channels
+            );
+            string playlistResolved = TemplateResolver.Resolve(audio.PlaylistNameTemplate, tokens);
+            string subDir =
+                Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
+            string playlistFile = Path.GetFileName(playlistResolved);
+            string variantPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
+
+            audioMetrics[audio.MapLabel] = HlsVariantAnalyzer.Measure(variantPath);
+        }
+
         PlaylistGenerator generator = new();
-        string masterPlaylist = generator.GenerateMasterPlaylist(plan, mediaTitle);
+        string masterPlaylist = generator.GenerateMasterPlaylist(
+            plan,
+            mediaTitle,
+            videoMetrics,
+            audioMetrics
+        );
         string masterPath = Path.Combine(outputDirectory, $"{mediaTitle}.m3u8");
         await File.WriteAllTextAsync(masterPath, masterPlaylist, ct);
     }

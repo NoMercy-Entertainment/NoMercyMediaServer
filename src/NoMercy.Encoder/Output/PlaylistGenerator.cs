@@ -1,17 +1,23 @@
 namespace NoMercy.Encoder.Output;
 
+using System.Globalization;
 using System.Text;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.PostProcess;
 
 public class PlaylistGenerator
 {
-    public string GenerateMasterPlaylist(OutputPlan plan, string mediaTitle)
+    public string GenerateMasterPlaylist(
+        OutputPlan plan,
+        string mediaTitle,
+        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics,
+        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics
+    )
     {
         StringBuilder sb = new();
         sb.AppendLine("#EXTM3U");
         sb.AppendLine("#EXT-X-VERSION:6");
+        sb.AppendLine("#EXT-X-INDEPENDENT-SEGMENTS");
         sb.AppendLine();
 
         // Audio groups — keyed by codec for GROUP-ID
@@ -53,14 +59,29 @@ public class PlaylistGenerator
 
         sb.AppendLine();
 
-        // Video variants
+        // Video variants with measured bandwidth
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
             string codecTag = GetVideoCodecTag(video);
             string audioCodecTag =
                 plan.AudioOutputs.Length > 0 ? $",{GetAudioCodecTag(plan.AudioOutputs[0])}" : "";
-            int bandwidth =
-                video.BitrateKbps > 0 ? video.BitrateKbps * 1000 : EstimateBandwidth(video);
+
+            // Use measured bandwidth. Apple requires BANDWIDTH = peak, AVERAGE-BANDWIDTH = average.
+            // Combine video + audio bandwidth for the STREAM-INF (Apple spec section 4.10).
+            HlsVariantAnalyzer.VariantMetrics vidMetrics = videoMetrics.GetValueOrDefault(
+                video.MapLabel,
+                new HlsVariantAnalyzer.VariantMetrics(0, 0)
+            );
+            HlsVariantAnalyzer.VariantMetrics audMetrics =
+                plan.AudioOutputs.Length > 0
+                    ? audioMetrics.GetValueOrDefault(
+                        plan.AudioOutputs[0].MapLabel,
+                        new HlsVariantAnalyzer.VariantMetrics(0, 0)
+                    )
+                    : new HlsVariantAnalyzer.VariantMetrics(0, 0);
+
+            int peakBandwidth = vidMetrics.PeakBandwidth + audMetrics.PeakBandwidth;
+            int avgBandwidth = vidMetrics.AverageBandwidth + audMetrics.AverageBandwidth;
 
             Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
                 video.Width,
@@ -73,14 +94,10 @@ public class PlaylistGenerator
             string playlistFile = Path.GetFileName(playlistResolved);
 
             string colorRange = video.TenBit ? "HDR" : "SDR";
-
-            string frameRate = video.FrameRate.ToString(
-                "F3",
-                System.Globalization.CultureInfo.InvariantCulture
-            );
+            string frameRate = video.FrameRate.ToString("F3", CultureInfo.InvariantCulture);
 
             sb.AppendLine(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth},AVERAGE-BANDWIDTH={bandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate},CODECS=\"{codecTag}{audioCodecTag}\",AUDIO=\"{audioGroupId}\",VIDEO-RANGE={colorRange},COLOUR-SPACE=BT.709,NAME=\"{video.Width}x{video.Height} {colorRange}\""
+                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate},CODECS=\"{codecTag}{audioCodecTag}\",AUDIO=\"{audioGroupId}\",VIDEO-RANGE={colorRange},NAME=\"{video.Width}x{video.Height} {colorRange}\""
             );
             sb.AppendLine($"{subDir}/{playlistFile}.m3u8");
         }
@@ -150,18 +167,6 @@ public class PlaylistGenerator
             "eac3" => "ec-3",
             "libopus" or "opus" => "opus",
             _ => "mp4a.40.2",
-        };
-    }
-
-    private static int EstimateBandwidth(VideoOutputPlan video)
-    {
-        return video.Width switch
-        {
-            >= 3840 => 15_000_000,
-            >= 1920 => 8_000_000,
-            >= 1280 => 4_000_000,
-            >= 854 => 2_000_000,
-            _ => 1_000_000,
         };
     }
 
