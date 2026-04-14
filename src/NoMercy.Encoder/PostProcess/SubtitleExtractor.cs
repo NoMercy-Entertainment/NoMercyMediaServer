@@ -5,79 +5,128 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Subtitles;
 
 public class SubtitleExtractor
 {
-    public FfmpegCommand[] BuildExtractionCommands(
-        string ffmpegPath,
-        string inputPath,
+    private static readonly HashSet<string> AssCodecs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ass",
+        "ssa",
+    };
+
+    /// <summary>
+    /// Resolves the output file path and FFmpeg codec for a subtitle stream.
+    /// ASS/SSA subtitles stay as ASS. Other text subtitles convert to WebVTT.
+    /// Bitmap subtitles are extracted as-is (VobSub → .sub+.idx, PGS/DVB → .sup).
+    /// </summary>
+    public static SubtitleOutputInfo ResolveOutput(
+        SubtitleOutputPlan plan,
+        SubtitleStreamInfo stream,
         string outputDirectory,
-        IReadOnlyList<SubtitleStreamInfo> streams,
-        SubtitleOutputPlan[] subtitlePlans
+        string mediaTitle
     )
     {
-        List<FfmpegCommand> commands = [];
+        string language = stream.Language ?? plan.Language ?? "und";
+        string variant = stream.IsForced ? "forced" : "full";
+        bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
+        bool isAss = AssCodecs.Contains(stream.Codec);
 
-        for (int i = 0; i < subtitlePlans.Length; i++)
+        string extension;
+        string ffmpegCodec;
+
+        if (isBitmap)
         {
-            SubtitleOutputPlan plan = subtitlePlans[i];
-
-            if (plan.Action is not (StreamAction.Extract or StreamAction.Copy))
-                continue;
-
-            SubtitleStreamInfo? stream = i < streams.Count ? streams[i] : null;
-            string language = stream?.Language ?? plan.Language ?? "und";
-
-            string extension = plan.OutputCodec switch
+            if (stream.Codec.Equals("dvd_subtitle", StringComparison.OrdinalIgnoreCase))
             {
-                SubtitleCodecType.WebVtt => "vtt",
-                SubtitleCodecType.Srt => "srt",
-                SubtitleCodecType.Ass => "ass",
-                _ => "vtt",
-            };
-
-            string codec = plan.OutputCodec switch
+                extension = "sub";
+                ffmpegCodec = "copy";
+            }
+            else
             {
-                SubtitleCodecType.WebVtt => "webvtt",
-                SubtitleCodecType.Srt => "srt",
-                SubtitleCodecType.Ass => "ass",
-                _ => "webvtt",
-            };
-
-            string outputFile = Path.Combine(
-                outputDirectory,
-                $"subtitles_{language}_{extension}.{extension}"
-            );
-
-            FfmpegCommand cmd = new FfmpegCommandBuilder()
-                .WithGlobalOptions(new GlobalOptions(ProgressPipe: false, Overwrite: true))
-                .AddInput(new InputOptions(inputPath))
-                .AddOutput(
-                    new OutputOptions(
-                        FilePath: outputFile,
-                        SubtitleCodec: codec,
-                        MapStreams: [$"0:s:{i}"]
-                    )
-                )
-                .Build(ffmpegPath);
-
-            commands.Add(cmd);
+                // PGS / DVB → .sup
+                extension = "sup";
+                ffmpegCodec = "copy";
+            }
+        }
+        else if (isAss)
+        {
+            extension = "ass";
+            ffmpegCodec = "ass";
+        }
+        else
+        {
+            // All other text formats → WebVTT
+            extension = "vtt";
+            ffmpegCodec = "webvtt";
         }
 
-        return commands.ToArray();
+        Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
+            language,
+            variant,
+            mediaTitle
+        );
+        string resolved = TemplateResolver.Resolve(plan.PlaylistNameTemplate, tokens);
+        string outputPath = Path.Combine(outputDirectory, $"{resolved}.{extension}");
+
+        return new SubtitleOutputInfo(
+            OutputPath: outputPath,
+            FfmpegCodec: ffmpegCodec,
+            Extension: extension,
+            Language: language,
+            Variant: variant,
+            IsBitmap: isBitmap,
+            SourceIndex: plan.SourceIndex
+        );
     }
 
-    public static string ResolveOutputFilename(SubtitleOutputPlan plan, string? streamLanguage)
+    /// <summary>
+    /// Resolves the URI for the master playlist's subtitle group entry.
+    /// Path is relative to the output directory.
+    /// </summary>
+    public static string ResolvePlaylistUri(
+        SubtitleOutputPlan plan,
+        SubtitleStreamInfo stream,
+        string mediaTitle
+    )
     {
-        string language = streamLanguage ?? plan.Language ?? "und";
-        string extension = plan.OutputCodec switch
-        {
-            SubtitleCodecType.WebVtt => "vtt",
-            SubtitleCodecType.Srt => "srt",
-            SubtitleCodecType.Ass => "ass",
-            _ => "vtt",
-        };
+        string language = stream.Language ?? plan.Language ?? "und";
+        string variant = stream.IsForced ? "forced" : "full";
+        bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
+        bool isAss = AssCodecs.Contains(stream.Codec);
 
-        return $"subtitles_{language}_{extension}.{extension}";
+        string extension;
+        if (isBitmap)
+        {
+            extension = stream.Codec.Equals("dvd_subtitle", StringComparison.OrdinalIgnoreCase)
+                ? "sub"
+                : "sup";
+        }
+        else if (isAss)
+        {
+            extension = "ass";
+        }
+        else
+        {
+            extension = "vtt";
+        }
+
+        Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
+            language,
+            variant,
+            mediaTitle
+        );
+        string resolved = TemplateResolver.Resolve(plan.PlaylistNameTemplate, tokens);
+        return $"{resolved}.{extension}";
     }
 }
+
+public record SubtitleOutputInfo(
+    string OutputPath,
+    string FfmpegCodec,
+    string Extension,
+    string Language,
+    string Variant,
+    bool IsBitmap,
+    int SourceIndex
+);

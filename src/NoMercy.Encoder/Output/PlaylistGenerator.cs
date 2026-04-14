@@ -5,51 +5,53 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.PostProcess;
 
-// NOTE: Master playlist generation is deferred per spec. This implementation exists for future use.
 public class PlaylistGenerator
 {
-    public string GenerateMasterPlaylist(OutputPlan plan)
+    public string GenerateMasterPlaylist(OutputPlan plan, string mediaTitle)
     {
         StringBuilder sb = new();
         sb.AppendLine("#EXTM3U");
-        sb.AppendLine("#EXT-X-VERSION:7");
+        sb.AppendLine("#EXT-X-VERSION:6");
         sb.AppendLine();
 
-        // Audio groups
+        // Audio groups — keyed by codec for GROUP-ID
+        string audioGroupId = "audio_aac";
+        if (plan.AudioOutputs.Length > 0)
+        {
+            string firstCodecName = plan.AudioOutputs[0]
+                .EncoderName.Replace("libfdk_", "")
+                .Replace("lib", "");
+            audioGroupId = $"audio_{firstCodecName}";
+        }
+
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
         {
             if (audio.Action is not (StreamAction.Copy or StreamAction.Transcode))
                 continue;
 
-            string subDir = $"audio_{audio.Language ?? "und"}_{audio.Channels}ch";
-            string uri = $"{subDir}/{subDir}.m3u8";
+            string codecName = audio.EncoderName.Replace("libfdk_", "").Replace("lib", "");
+            Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
+                audio.Language ?? "und",
+                codecName,
+                audio.Channels
+            );
+
+            string playlistResolved = TemplateResolver.Resolve(audio.PlaylistNameTemplate, tokens);
+            string subDir =
+                Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
+            string playlistFile = Path.GetFileName(playlistResolved);
+
+            string uri = $"{subDir}/{playlistFile}.m3u8";
             string language = audio.Language ?? "und";
+            string displayName = GetAudioDisplayName(language, codecName);
             bool isDefault = audio == plan.AudioOutputs[0];
 
             sb.AppendLine(
-                $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",NAME=\"{language}\",LANGUAGE=\"{language}\",DEFAULT={YesNo(isDefault)},AUTOSELECT=YES,URI=\"{uri}\""
+                $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{audioGroupId}\",LANGUAGE=\"{language}\",AUTOSELECT=YES,DEFAULT={YesNo(isDefault)},URI=\"{uri}\",NAME=\"{displayName}\""
             );
         }
 
         sb.AppendLine();
-
-        // Subtitle groups
-        foreach (SubtitleOutputPlan sub in plan.SubtitleOutputs)
-        {
-            if (sub.Action is not (StreamAction.Extract or StreamAction.Copy))
-                continue;
-
-            string language = sub.Language ?? "und";
-            string uri = SubtitleExtractor.ResolveOutputFilename(sub, null);
-            bool isDefault = sub == plan.SubtitleOutputs[0];
-
-            sb.AppendLine(
-                $"#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"{language}\",LANGUAGE=\"{language}\",DEFAULT={YesNo(isDefault)},AUTOSELECT=YES,FORCED=NO,URI=\"{uri}\""
-            );
-        }
-
-        if (plan.SubtitleOutputs.Length > 0)
-            sb.AppendLine();
 
         // Video variants
         foreach (VideoOutputPlan video in plan.VideoOutputs)
@@ -59,23 +61,62 @@ public class PlaylistGenerator
                 plan.AudioOutputs.Length > 0 ? $",{GetAudioCodecTag(plan.AudioOutputs[0])}" : "";
             int bandwidth =
                 video.BitrateKbps > 0 ? video.BitrateKbps * 1000 : EstimateBandwidth(video);
-            string subDir = $"video_{video.Width}x{video.Height}";
-            string subtitleGroup = plan.SubtitleOutputs.Length > 0 ? ",SUBTITLES=\"subs\"" : "";
+
+            Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+                video.Width,
+                video.Height,
+                video.TenBit
+            );
+            string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
+            string subDir =
+                Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
+            string playlistFile = Path.GetFileName(playlistResolved);
+
+            string colorRange = video.TenBit ? "HDR" : "SDR";
 
             sb.AppendLine(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth},RESOLUTION={video.Width}x{video.Height},CODECS=\"{codecTag}{audioCodecTag}\",AUDIO=\"audio\"{subtitleGroup}"
+                $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth},AVERAGE-BANDWIDTH={bandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE=23,976,CODECS=\"{codecTag}{audioCodecTag}\",AUDIO=\"{audioGroupId}\",VIDEO-RANGE={colorRange},COLOUR-SPACE=BT.709,NAME=\"{video.Width}x{video.Height} {colorRange}\""
             );
-            sb.AppendLine($"{subDir}/{subDir}.m3u8");
+            sb.AppendLine($"{subDir}/{playlistFile}.m3u8");
         }
 
         return sb.ToString();
+    }
+
+    private static string GetAudioDisplayName(string language, string codec)
+    {
+        string langName = language.ToUpperInvariant() switch
+        {
+            "ENG" => "English",
+            "FRE" or "FRA" => "French",
+            "GER" or "DEU" => "German",
+            "SPA" => "Spanish",
+            "ITA" => "Italian",
+            "DUT" or "NLD" => "Dutch",
+            "JPN" or "JAP" => "Japanese",
+            "KOR" => "Korean",
+            "CHI" or "ZHO" => "Chinese",
+            "RUS" => "Russian",
+            "POR" => "Portuguese",
+            "ARA" => "Arabic",
+            "HIN" => "Hindi",
+            "SWE" => "Swedish",
+            "NOR" => "Norwegian",
+            "DAN" => "Danish",
+            "FIN" => "Finnish",
+            "POL" => "Polish",
+            "TUR" => "Turkish",
+            "UND" => "Unknown",
+            _ => language,
+        };
+
+        return $"{langName} {codec}";
     }
 
     private static string GetVideoCodecTag(VideoOutputPlan video)
     {
         string encoder = video.EncoderName.ToLowerInvariant();
 
-        // H.264 encoders
         if (encoder.Contains("264") || encoder.Contains("x264"))
         {
             return video.Level switch
@@ -88,11 +129,9 @@ public class PlaylistGenerator
             };
         }
 
-        // HEVC encoders
         if (encoder.Contains("265") || encoder.Contains("hevc"))
             return video.TenBit ? "hvc1.2.4.L153.B0" : "hvc1.1.6.L93.B0";
 
-        // AV1 encoders
         if (encoder.Contains("av1") || encoder.Contains("svtav1") || encoder.Contains("aom"))
             return video.TenBit ? "av01.0.15M.10" : "av01.0.15M.08";
 

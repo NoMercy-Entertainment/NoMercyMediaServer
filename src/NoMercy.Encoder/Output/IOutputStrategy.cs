@@ -9,7 +9,12 @@ public interface IOutputStrategy
 
     void ConfigureOutput(FfmpegCommandBuilder builder, OutputPlan plan, string outputDirectory);
 
-    Task FinalizeAsync(string outputDirectory, OutputPlan plan, CancellationToken ct);
+    Task FinalizeAsync(
+        string outputDirectory,
+        OutputPlan plan,
+        string mediaTitle,
+        CancellationToken ct
+    );
 
     string[] GetOutputSubdirectories(OutputPlan plan);
 }

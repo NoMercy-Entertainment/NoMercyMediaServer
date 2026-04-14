@@ -136,11 +136,16 @@ public class HlsOutputStrategy : IOutputStrategy
         }
     }
 
-    public async Task FinalizeAsync(string outputDirectory, OutputPlan plan, CancellationToken ct)
+    public async Task FinalizeAsync(
+        string outputDirectory,
+        OutputPlan plan,
+        string mediaTitle,
+        CancellationToken ct
+    )
     {
         PlaylistGenerator generator = new();
-        string masterPlaylist = generator.GenerateMasterPlaylist(plan);
-        string masterPath = Path.Combine(outputDirectory, "master.m3u8");
+        string masterPlaylist = generator.GenerateMasterPlaylist(plan, mediaTitle);
+        string masterPath = Path.Combine(outputDirectory, $"{mediaTitle}.m3u8");
         await File.WriteAllTextAsync(masterPath, masterPlaylist, ct);
     }
 
@@ -153,7 +158,7 @@ public class HlsOutputStrategy : IOutputStrategy
             Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
                 video.Width,
                 video.Height,
-                !video.TenBit
+                video.TenBit
             );
             string resolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
             string subDir = Path.GetDirectoryName(resolved)?.Replace("\\", "/") ?? resolved;

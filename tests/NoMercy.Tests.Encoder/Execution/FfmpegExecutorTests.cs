@@ -42,6 +42,7 @@ public class FfmpegExecutorTests
                     It.IsAny<Action<string>?>(),
                     It.IsAny<Action<string>?>(),
                     It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>(),
                     It.IsAny<CancellationToken>()
                 )
             )
@@ -65,7 +66,6 @@ public class FfmpegExecutorTests
     [Fact]
     public async Task ProgressCallback_Invoked()
     {
-        // Setup process runner that simulates progress output via the onStdOut callback
         _processRunner
             .Setup(r =>
                 r.RunAsync(
@@ -74,6 +74,7 @@ public class FfmpegExecutorTests
                     It.IsAny<Action<string>?>(),
                     It.IsAny<Action<string>?>(),
                     It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>(),
                     It.IsAny<CancellationToken>()
                 )
             )
@@ -83,11 +84,11 @@ public class FfmpegExecutorTests
                 Action<string>?,
                 Action<string>?,
                 string?,
+                CancellationToken,
                 CancellationToken
             >(
-                (exe, args, onStdOut, onStdErr, dir, ct) =>
+                (exe, args, onStdOut, onStdErr, dir, ct, kill) =>
                 {
-                    // Simulate FFmpeg progress output
                     onStdOut?.Invoke("frame=100");
                     onStdOut?.Invoke("fps=30.0");
                     onStdOut?.Invoke("out_time_us=30000000");
@@ -111,7 +112,6 @@ public class FfmpegExecutorTests
             onProgress: p => progressEvents.Add(p)
         );
 
-        // Should have at least the end event (throttle may skip the first continue)
         progressEvents.Should().NotBeEmpty();
         progressEvents.Last().PercentComplete.Should().BeGreaterThan(0);
     }
@@ -127,6 +127,7 @@ public class FfmpegExecutorTests
                     It.IsAny<Action<string>?>(),
                     It.IsAny<Action<string>?>(),
                     It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>(),
                     It.IsAny<CancellationToken>()
                 )
             )
@@ -152,6 +153,7 @@ public class FfmpegExecutorTests
                     It.IsAny<Action<string>?>(),
                     It.IsAny<Action<string>?>(),
                     It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>(),
                     It.IsAny<CancellationToken>()
                 )
             )

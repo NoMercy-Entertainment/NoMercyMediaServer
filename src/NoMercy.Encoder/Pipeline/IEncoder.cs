@@ -23,8 +23,18 @@ public record EncodingRequest(
     string InputPath,
     string OutputDirectory,
     EncodingProfile Profile,
-    EncodingOptions? Options = null
-);
+    EncodingOptions? Options = null,
+    string? MediaTitle = null
+)
+{
+    /// <summary>
+    /// Title used for output file naming (master playlist, subtitles).
+    /// When not set, derived from the output directory leaf name + ".NoMercy".
+    /// </summary>
+    public string ResolvedTitle =>
+        MediaTitle
+        ?? $"{Path.GetFileName(Path.TrimEndingDirectorySeparator(OutputDirectory))}.NoMercy";
+}
 
 public record EncodingOptions(
     bool ResumeFromCheckpoint = false,

@@ -9,7 +9,12 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
 
-public record BuildInput(ExecutionPlan Plan, string InputPath, string OutputDirectory);
+public record BuildInput(
+    ExecutionPlan Plan,
+    string InputPath,
+    string OutputDirectory,
+    string MediaTitle
+);
 
 public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
     : IPipelineStage<BuildInput, FfmpegCommand[]>
@@ -35,6 +40,12 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 Directory.CreateDirectory(Path.Combine(input.OutputDirectory, subDir));
             }
 
+            // Ensure subtitles/ directory exists
+            if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0)
+            {
+                Directory.CreateDirectory(Path.Combine(input.OutputDirectory, "subtitles"));
+            }
+
             FfmpegCommandBuilder builder = new();
             builder.AddInput(new InputOptions(input.InputPath));
 
@@ -42,7 +53,21 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             if (filterGraph is not null)
                 builder.WithFilterComplex(filterGraph);
 
+            // Video + audio outputs via the output strategy (HLS, MKV, etc.)
             strategy.ConfigureOutput(builder, input.Plan.OutputPlan, input.OutputDirectory);
+
+            // Subtitle outputs — added to the SAME command for single-pass encoding.
+            // Text subtitles convert to WebVTT or ASS; bitmap subtitles extract as sub/sup.
+            if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0 && context.MediaInfo is not null)
+            {
+                AddSubtitleOutputs(
+                    builder,
+                    input.Plan.OutputPlan,
+                    context.MediaInfo,
+                    input.OutputDirectory,
+                    input.MediaTitle
+                );
+            }
 
             FfmpegCommand mainCommand = builder.Build(
                 options.FfmpegPathOverride,
@@ -58,28 +83,9 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
 
             List<FfmpegCommand> allCommands = [mainCommand];
 
-            // Subtitle extraction commands — one command per subtitle stream
-            if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0 && context.MediaInfo is not null)
-            {
-                SubtitleExtractor subtitleExtractor = new();
-                FfmpegCommand[] subCommands = subtitleExtractor.BuildExtractionCommands(
-                    options.FfmpegPathOverride,
-                    input.InputPath,
-                    input.OutputDirectory,
-                    context.MediaInfo.SubtitleStreams,
-                    input.Plan.OutputPlan.SubtitleOutputs
-                );
-
-                allCommands.AddRange(subCommands);
-
-                logger.LogDebug(
-                    "[{CorrelationId}] Added {Count} subtitle extraction command(s)",
-                    context.CorrelationId,
-                    subCommands.Length
-                );
-            }
-
-            // Font extraction — only when the source has embedded attachments (fonts)
+            // Font extraction — only when the source has embedded attachments (fonts).
+            // This requires a separate command because -dump_attachment is incompatible
+            // with encoding outputs.
             if (context.MediaInfo is not null && context.MediaInfo.HasAttachments)
             {
                 FontExtractor fontExtractor = new();
@@ -133,6 +139,46 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                         Name,
                         false
                     )
+                )
+            );
+        }
+    }
+
+    private static void AddSubtitleOutputs(
+        FfmpegCommandBuilder builder,
+        OutputPlan plan,
+        MediaInfo mediaInfo,
+        string outputDirectory,
+        string mediaTitle
+    )
+    {
+        foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
+        {
+            if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
+                continue;
+
+            if (subPlan.SourceIndex >= mediaInfo.SubtitleStreams.Count)
+                continue;
+
+            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[subPlan.SourceIndex];
+
+            SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+                subPlan,
+                stream,
+                outputDirectory,
+                mediaTitle
+            );
+
+            // Ensure parent directory of the output file exists
+            string? parentDir = Path.GetDirectoryName(info.OutputPath);
+            if (parentDir is not null)
+                Directory.CreateDirectory(parentDir);
+
+            builder.AddOutput(
+                new OutputOptions(
+                    FilePath: info.OutputPath,
+                    SubtitleCodec: info.FfmpegCodec,
+                    MapStreams: [$"0:s:{info.SourceIndex}"]
                 )
             );
         }

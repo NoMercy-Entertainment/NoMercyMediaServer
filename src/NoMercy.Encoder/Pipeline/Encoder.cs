@@ -70,7 +70,12 @@ public class Encoder(
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
 
         // Stage 4: Build
-        BuildInput buildInput = new(plan, request.InputPath, request.OutputDirectory);
+        BuildInput buildInput = new(
+            plan,
+            request.InputPath,
+            request.OutputDirectory,
+            request.ResolvedTitle
+        );
         StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
         if (buildResult is StageFailure buildFailure)
             return Fail(buildFailure.Error, stopwatch.Elapsed, progress);
@@ -89,7 +94,8 @@ public class Encoder(
         FinalizeInput finalizeInput = new(
             executionResults,
             plan.OutputPlan,
-            request.OutputDirectory
+            request.OutputDirectory,
+            request.ResolvedTitle
         );
         StageResult finalizeResult = await finalizeStage.ExecuteAsync(finalizeInput, context, ct);
         if (finalizeResult is StageFailure finalizeFailure)

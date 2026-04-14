@@ -2,331 +2,231 @@ namespace NoMercy.Tests.Encoder.PostProcess;
 
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.PostProcess;
 
 public class SubtitleExtractorTests
 {
-    private readonly SubtitleExtractor _extractor = new();
+    private const string OutputDir = "/output";
+    private const string MediaTitle = "Movie.Name.NoMercy";
 
     // ------------------------------------------------------------------
-    // WebVTT extraction produces correct output filename and codec
-    // ------------------------------------------------------------------
-
-    [Fact]
-    public void BuildExtractionCommands_WebVtt_CorrectCodecAndFilename()
-    {
-        SubtitleStreamInfo[] streams =
-        [
-            new SubtitleStreamInfo(
-                Index: 0,
-                Codec: "subrip",
-                Language: "eng",
-                IsDefault: true,
-                IsForced: false
-            ),
-        ];
-
-        SubtitleOutputPlan[] plans =
-        [
-            new SubtitleOutputPlan(
-                OutputCodec: SubtitleCodecType.WebVtt,
-                Action: StreamAction.Extract,
-                Language: "eng",
-                SourceIndex: 0,
-                MapLabel: "0:s:0"
-            ),
-        ];
-
-        FfmpegCommand[] commands = _extractor.BuildExtractionCommands(
-            "ffmpeg",
-            "/input/movie.mkv",
-            "/output",
-            streams,
-            plans
-        );
-
-        commands.Should().HaveCount(1);
-        commands[0].Arguments.Should().Contain("webvtt");
-        commands[0].Arguments.Should().Contain(Path.Combine("/output", "subtitles_eng_vtt.vtt"));
-        commands[0].Arguments.Should().Contain("0:s:0");
-    }
-
-    // ------------------------------------------------------------------
-    // SRT extraction uses srt codec
+    // Text subtitle (subrip) → WebVTT output
     // ------------------------------------------------------------------
 
     [Fact]
-    public void BuildExtractionCommands_Srt_UsesSrtCodec()
+    public void ResolveOutput_Subrip_ProducesWebVtt()
     {
-        SubtitleStreamInfo[] streams =
-        [
-            new SubtitleStreamInfo(
-                Index: 0,
-                Codec: "subrip",
-                Language: "fra",
-                IsDefault: false,
-                IsForced: false
-            ),
-        ];
+        SubtitleOutputPlan plan = MakePlan(0, "eng");
+        SubtitleStreamInfo stream = MakeStream(0, "subrip", "eng");
 
-        SubtitleOutputPlan[] plans =
-        [
-            new SubtitleOutputPlan(
-                OutputCodec: SubtitleCodecType.Srt,
-                Action: StreamAction.Extract,
-                Language: "fra",
-                SourceIndex: 0,
-                MapLabel: "0:s:0"
-            ),
-        ];
-
-        FfmpegCommand[] commands = _extractor.BuildExtractionCommands(
-            "ffmpeg",
-            "/input/movie.mkv",
-            "/output",
-            streams,
-            plans
+        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+            plan,
+            stream,
+            OutputDir,
+            MediaTitle
         );
 
-        commands.Should().HaveCount(1);
-        commands[0].Arguments.Should().Contain("srt");
-        commands[0].Arguments.Should().Contain(Path.Combine("/output", "subtitles_fra_srt.srt"));
+        info.Extension.Should().Be("vtt");
+        info.FfmpegCodec.Should().Be("webvtt");
+        info.IsBitmap.Should().BeFalse();
+        info.OutputPath.Should().Contain("subtitles");
+        info.OutputPath.Should().EndWith(".vtt");
     }
 
     // ------------------------------------------------------------------
-    // Stream index maps correctly in -map argument
+    // ASS subtitle stays as ASS
     // ------------------------------------------------------------------
 
     [Fact]
-    public void BuildExtractionCommands_MultipleStreams_MapsCorrectStreamIndex()
+    public void ResolveOutput_Ass_StaysAsAss()
     {
-        SubtitleStreamInfo[] streams =
-        [
-            new SubtitleStreamInfo(
-                Index: 0,
-                Codec: "subrip",
-                Language: "eng",
-                IsDefault: true,
-                IsForced: false
-            ),
-            new SubtitleStreamInfo(
-                Index: 1,
-                Codec: "subrip",
-                Language: "deu",
-                IsDefault: false,
-                IsForced: false
-            ),
-        ];
+        SubtitleOutputPlan plan = MakePlan(0, "eng");
+        SubtitleStreamInfo stream = MakeStream(0, "ass", "eng");
 
-        SubtitleOutputPlan[] plans =
-        [
-            new SubtitleOutputPlan(
-                OutputCodec: SubtitleCodecType.WebVtt,
-                Action: StreamAction.Extract,
-                Language: "eng",
-                SourceIndex: 0,
-                MapLabel: "0:s:0"
-            ),
-            new SubtitleOutputPlan(
-                OutputCodec: SubtitleCodecType.WebVtt,
-                Action: StreamAction.Extract,
-                Language: "deu",
-                SourceIndex: 1,
-                MapLabel: "0:s:1"
-            ),
-        ];
-
-        FfmpegCommand[] commands = _extractor.BuildExtractionCommands(
-            "ffmpeg",
-            "/input/movie.mkv",
-            "/output",
-            streams,
-            plans
+        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+            plan,
+            stream,
+            OutputDir,
+            MediaTitle
         );
 
-        commands.Should().HaveCount(2);
-        commands[0].Arguments.Should().Contain("0:s:0");
-        commands[1].Arguments.Should().Contain("0:s:1");
+        info.Extension.Should().Be("ass");
+        info.FfmpegCodec.Should().Be("ass");
+        info.IsBitmap.Should().BeFalse();
     }
 
     // ------------------------------------------------------------------
-    // Drop action is skipped — no command produced
+    // SSA subtitle also stays as ASS
     // ------------------------------------------------------------------
 
     [Fact]
-    public void BuildExtractionCommands_DropAction_ProducesNoCommand()
+    public void ResolveOutput_Ssa_StaysAsAss()
     {
-        SubtitleStreamInfo[] streams =
-        [
-            new SubtitleStreamInfo(
-                Index: 0,
-                Codec: "subrip",
-                Language: "eng",
-                IsDefault: true,
-                IsForced: false
-            ),
-        ];
+        SubtitleOutputPlan plan = MakePlan(0, "eng");
+        SubtitleStreamInfo stream = MakeStream(0, "ssa", "eng");
 
-        SubtitleOutputPlan[] plans =
-        [
-            new SubtitleOutputPlan(
-                OutputCodec: SubtitleCodecType.WebVtt,
-                Action: StreamAction.Drop,
-                Language: "eng",
-                SourceIndex: 0,
-                MapLabel: "0:s:0"
-            ),
-        ];
-
-        FfmpegCommand[] commands = _extractor.BuildExtractionCommands(
-            "ffmpeg",
-            "/input/movie.mkv",
-            "/output",
-            streams,
-            plans
+        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+            plan,
+            stream,
+            OutputDir,
+            MediaTitle
         );
 
-        commands.Should().BeEmpty();
+        info.Extension.Should().Be("ass");
+        info.FfmpegCodec.Should().Be("ass");
     }
 
     // ------------------------------------------------------------------
-    // Transcode action is skipped for extraction
+    // DVD subtitle (bitmap) → .sub with copy codec
     // ------------------------------------------------------------------
 
     [Fact]
-    public void BuildExtractionCommands_TranscodeAction_ProducesNoCommand()
+    public void ResolveOutput_DvdSubtitle_ProducesSubFile()
     {
-        SubtitleStreamInfo[] streams =
-        [
-            new SubtitleStreamInfo(
-                Index: 0,
-                Codec: "dvdsub",
-                Language: "eng",
-                IsDefault: true,
-                IsForced: false
-            ),
-        ];
+        SubtitleOutputPlan plan = MakePlan(0, "eng");
+        SubtitleStreamInfo stream = MakeStream(0, "dvd_subtitle", "eng");
 
-        SubtitleOutputPlan[] plans =
-        [
-            new SubtitleOutputPlan(
-                OutputCodec: SubtitleCodecType.WebVtt,
-                Action: StreamAction.Transcode,
-                Language: "eng",
-                SourceIndex: 0,
-                MapLabel: "0:s:0"
-            ),
-        ];
-
-        FfmpegCommand[] commands = _extractor.BuildExtractionCommands(
-            "ffmpeg",
-            "/input/movie.mkv",
-            "/output",
-            streams,
-            plans
+        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+            plan,
+            stream,
+            OutputDir,
+            MediaTitle
         );
 
-        commands.Should().BeEmpty();
+        info.Extension.Should().Be("sub");
+        info.FfmpegCodec.Should().Be("copy");
+        info.IsBitmap.Should().BeTrue();
     }
 
     // ------------------------------------------------------------------
-    // Copy action is treated the same as Extract
+    // PGS subtitle (bitmap) → .sup with copy codec
     // ------------------------------------------------------------------
 
     [Fact]
-    public void BuildExtractionCommands_CopyAction_ProducesCommand()
+    public void ResolveOutput_PgsSubtitle_ProducesSupFile()
     {
-        SubtitleStreamInfo[] streams =
-        [
-            new SubtitleStreamInfo(
-                Index: 0,
-                Codec: "webvtt",
-                Language: "eng",
-                IsDefault: true,
-                IsForced: false
-            ),
-        ];
+        SubtitleOutputPlan plan = MakePlan(0, "eng");
+        SubtitleStreamInfo stream = MakeStream(0, "hdmv_pgs_subtitle", "eng");
 
-        SubtitleOutputPlan[] plans =
-        [
-            new SubtitleOutputPlan(
-                OutputCodec: SubtitleCodecType.WebVtt,
-                Action: StreamAction.Copy,
-                Language: "eng",
-                SourceIndex: 0,
-                MapLabel: "0:s:0"
-            ),
-        ];
-
-        FfmpegCommand[] commands = _extractor.BuildExtractionCommands(
-            "ffmpeg",
-            "/input/movie.mkv",
-            "/output",
-            streams,
-            plans
+        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+            plan,
+            stream,
+            OutputDir,
+            MediaTitle
         );
 
-        commands.Should().HaveCount(1);
+        info.Extension.Should().Be("sup");
+        info.FfmpegCodec.Should().Be("copy");
+        info.IsBitmap.Should().BeTrue();
     }
 
     // ------------------------------------------------------------------
-    // Language fallback: plan language used when stream list is shorter
+    // Forced subtitle variant
     // ------------------------------------------------------------------
 
     [Fact]
-    public void BuildExtractionCommands_MissingStream_FallsBackToPlanLanguage()
+    public void ResolveOutput_ForcedSubtitle_VariantIsForced()
     {
-        // Empty streams — plan has a language
-        SubtitleOutputPlan[] plans =
-        [
-            new SubtitleOutputPlan(
-                OutputCodec: SubtitleCodecType.WebVtt,
-                Action: StreamAction.Extract,
-                Language: "jpn",
-                SourceIndex: 0,
-                MapLabel: "0:s:0"
-            ),
-        ];
-
-        FfmpegCommand[] commands = _extractor.BuildExtractionCommands(
-            "ffmpeg",
-            "/input/movie.mkv",
-            "/output",
-            [],
-            plans
+        SubtitleOutputPlan plan = MakePlan(0, "eng");
+        SubtitleStreamInfo stream = new(
+            Index: 0,
+            Codec: "subrip",
+            Language: "eng",
+            IsDefault: false,
+            IsForced: true
         );
 
-        commands.Should().HaveCount(1);
-        commands[0].Arguments.Should().Contain(Path.Combine("/output", "subtitles_jpn_vtt.vtt"));
+        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+            plan,
+            stream,
+            OutputDir,
+            MediaTitle
+        );
+
+        info.Variant.Should().Be("forced");
     }
 
     // ------------------------------------------------------------------
-    // ResolveOutputFilename helper
+    // Output path uses template with subtitles/ directory
     // ------------------------------------------------------------------
 
-    [Theory]
-    [InlineData(SubtitleCodecType.WebVtt, "eng", "subtitles_eng_vtt.vtt")]
-    [InlineData(SubtitleCodecType.Srt, "fra", "subtitles_fra_srt.srt")]
-    [InlineData(SubtitleCodecType.Ass, "deu", "subtitles_deu_ass.ass")]
-    public void ResolveOutputFilename_ReturnsCorrectName(
-        SubtitleCodecType codec,
-        string language,
-        string expected
-    )
+    [Fact]
+    public void ResolveOutput_OutputPath_UsesSubtitlesDirectory()
     {
-        SubtitleOutputPlan plan = new(
-            OutputCodec: codec,
+        SubtitleOutputPlan plan = MakePlan(0, "eng");
+        SubtitleStreamInfo stream = MakeStream(0, "subrip", "eng");
+
+        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+            plan,
+            stream,
+            OutputDir,
+            MediaTitle
+        );
+
+        info.OutputPath.Should().Contain(Path.Combine(OutputDir, "subtitles"));
+    }
+
+    // ------------------------------------------------------------------
+    // Language comes from stream, not plan
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void ResolveOutput_LanguageFromStream_NotPlan()
+    {
+        SubtitleOutputPlan plan = MakePlan(0, "und");
+        SubtitleStreamInfo stream = MakeStream(0, "subrip", "fra");
+
+        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+            plan,
+            stream,
+            OutputDir,
+            MediaTitle
+        );
+
+        info.Language.Should().Be("fra");
+    }
+
+    // ------------------------------------------------------------------
+    // Playlist URI resolution
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void ResolvePlaylistUri_TextSubtitle_VttExtension()
+    {
+        SubtitleOutputPlan plan = MakePlan(0, "eng");
+        SubtitleStreamInfo stream = MakeStream(0, "subrip", "eng");
+
+        string uri = SubtitleExtractor.ResolvePlaylistUri(plan, stream, MediaTitle);
+
+        uri.Should().EndWith(".vtt");
+        uri.Should().Contain("subtitles/");
+    }
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+
+    private static SubtitleOutputPlan MakePlan(int sourceIndex, string language)
+    {
+        return new SubtitleOutputPlan(
+            OutputCodec: SubtitleCodecType.WebVtt,
             Action: StreamAction.Extract,
             Language: language,
-            SourceIndex: 0,
-            MapLabel: "0:s:0"
+            SourceIndex: sourceIndex,
+            MapLabel: $"0:s:{sourceIndex}"
         );
+    }
 
-        string filename = SubtitleExtractor.ResolveOutputFilename(plan, language);
-
-        filename.Should().Be(expected);
+    private static SubtitleStreamInfo MakeStream(int index, string codec, string language)
+    {
+        return new SubtitleStreamInfo(
+            Index: index,
+            Codec: codec,
+            Language: language,
+            IsDefault: index == 0,
+            IsForced: false
+        );
     }
 }

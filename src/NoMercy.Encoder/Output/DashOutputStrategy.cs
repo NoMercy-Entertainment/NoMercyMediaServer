@@ -63,7 +63,12 @@ public class DashOutputStrategy : IOutputStrategy
         );
     }
 
-    public Task FinalizeAsync(string outputDirectory, OutputPlan plan, CancellationToken ct)
+    public Task FinalizeAsync(
+        string outputDirectory,
+        OutputPlan plan,
+        string mediaTitle,
+        CancellationToken ct
+    )
     {
         return Task.CompletedTask;
     }

@@ -16,13 +16,55 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         return RunAsync(executable, arguments, null, null, workingDirectory, cancellationToken);
     }
 
-    public async Task<ProcessResult> RunAsync(
+    public Task<ProcessResult> RunAsync(
         string executable,
         string[] arguments,
         Action<string>? onStdOut = null,
         Action<string>? onStdErr = null,
         string? workingDirectory = null,
         CancellationToken cancellationToken = default
+    )
+    {
+        return RunCoreAsync(
+            executable,
+            arguments,
+            onStdOut,
+            onStdErr,
+            workingDirectory,
+            cancellationToken,
+            killSignal: default
+        );
+    }
+
+    public Task<ProcessResult> RunAsync(
+        string executable,
+        string[] arguments,
+        Action<string>? onStdOut,
+        Action<string>? onStdErr,
+        string? workingDirectory,
+        CancellationToken cancellationToken,
+        CancellationToken killSignal
+    )
+    {
+        return RunCoreAsync(
+            executable,
+            arguments,
+            onStdOut,
+            onStdErr,
+            workingDirectory,
+            cancellationToken,
+            killSignal
+        );
+    }
+
+    private async Task<ProcessResult> RunCoreAsync(
+        string executable,
+        string[] arguments,
+        Action<string>? onStdOut,
+        Action<string>? onStdErr,
+        string? workingDirectory,
+        CancellationToken cancellationToken,
+        CancellationToken killSignal
     )
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -68,6 +110,30 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             onStdErr?.Invoke(e.Data);
         };
 
+        // When killSignal fires, terminate the process tree.
+        // This is NOT an error — the caller decided output is complete.
+        bool killedBySignal = false;
+        CancellationTokenRegistration killRegistration = default;
+        if (killSignal.CanBeCanceled)
+        {
+            killRegistration = killSignal.Register(() =>
+            {
+                killedBySignal = true;
+                try
+                {
+                    if (!process.HasExited)
+                    {
+                        logger.LogDebug(
+                            "Kill signal received — terminating process: {Executable}",
+                            executable
+                        );
+                        process.Kill(entireProcessTree: true);
+                    }
+                }
+                catch (InvalidOperationException) { }
+            });
+        }
+
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
@@ -75,6 +141,20 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         try
         {
             await process.WaitForExitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+            when (killedBySignal && !cancellationToken.IsCancellationRequested)
+        {
+            // Process was killed by our kill signal, not by user cancellation.
+            // Wait briefly for the kill to finalize.
+            try
+            {
+                using CancellationTokenSource finalizeCts = new(TimeSpan.FromSeconds(5));
+                await process.WaitForExitAsync(finalizeCts.Token);
+            }
+            catch
+            { /* best effort */
+            }
         }
         catch (OperationCanceledException)
         {
@@ -86,21 +166,28 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
 
             throw;
         }
+        finally
+        {
+            await killRegistration.DisposeAsync();
+        }
 
         stopwatch.Stop();
 
+        int exitCode = killedBySignal ? 0 : process.ExitCode;
+
         ProcessResult result = new(
-            ExitCode: process.ExitCode,
+            ExitCode: exitCode,
             StdOut: stdOutBuilder.ToString().TrimEnd(),
             StdErr: stdErrBuilder.ToString().TrimEnd(),
             Duration: stopwatch.Elapsed
         );
 
         logger.LogDebug(
-            "Process exited: {Executable} ExitCode={ExitCode} Duration={Duration}ms",
+            "Process exited: {Executable} ExitCode={ExitCode} Duration={Duration}ms{KillNote}",
             executable,
             result.ExitCode,
-            result.Duration.TotalMilliseconds
+            result.Duration.TotalMilliseconds,
+            killedBySignal ? " (killed by signal)" : ""
         );
 
         return result;

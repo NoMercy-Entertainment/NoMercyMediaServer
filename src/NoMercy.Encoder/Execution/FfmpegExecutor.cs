@@ -11,6 +11,7 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
     : IFfmpegExecutor
 {
     private static readonly TimeSpan ProgressThrottleInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan ExitGracePeriod = TimeSpan.FromSeconds(10);
 
     public async Task<ExecutionResult> ExecuteAsync(
         FfmpegCommand command,
@@ -24,6 +25,11 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
         Stopwatch stopwatch = Stopwatch.StartNew();
         DateTime lastProgressReport = DateTime.MinValue;
 
+        // Kill signal: fires after a grace period once FFmpeg reports progress=end.
+        // This prevents the process from hanging indefinitely after output is written.
+        CancellationTokenSource killCts = new();
+        bool hasProgressPipe = command.Arguments.Contains("pipe:1");
+
         logger.LogDebug(
             "[{CorrelationId}] Executing: {Executable} {Args}",
             correlationId,
@@ -34,14 +40,27 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
         void OnStdOut(string line)
         {
             FfmpegProgressSnapshot? snapshot = parser.FeedLine(line);
-            if (snapshot is null || onProgress is null)
+            if (snapshot is null)
+                return;
+
+            if (snapshot.IsEnd && hasProgressPipe)
+            {
+                // Encoding is done — schedule kill after grace period
+                logger.LogDebug(
+                    "[{CorrelationId}] progress=end received, starting {Grace}s exit grace period",
+                    correlationId,
+                    ExitGracePeriod.TotalSeconds
+                );
+                killCts.CancelAfter(ExitGracePeriod);
+            }
+
+            if (onProgress is null)
                 return;
 
             DateTime now = DateTime.UtcNow;
-            bool isEnd = snapshot.IsEnd;
             bool throttled = now - lastProgressReport < ProgressThrottleInterval;
 
-            if (!isEnd && throttled)
+            if (!snapshot.IsEnd && throttled)
                 return;
 
             lastProgressReport = now;
@@ -76,50 +95,58 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
             onProgress(progress);
         }
 
-        ProcessResult result = await processRunner.RunAsync(
-            command.Executable,
-            command.Arguments,
-            OnStdOut,
-            null, // stderr not streamed — captured in result
-            command.WorkingDirectory,
-            ct
-        );
-
-        stopwatch.Stop();
-
-        if (result.IsSuccess)
+        try
         {
-            logger.LogInformation(
-                "[{CorrelationId}] FFmpeg completed in {Duration}",
+            ProcessResult result = await processRunner.RunAsync(
+                command.Executable,
+                command.Arguments,
+                OnStdOut,
+                null, // stderr not streamed — captured in result
+                command.WorkingDirectory,
+                ct,
+                killCts.Token
+            );
+
+            stopwatch.Stop();
+
+            if (result.IsSuccess)
+            {
+                logger.LogInformation(
+                    "[{CorrelationId}] FFmpeg completed in {Duration}",
+                    correlationId,
+                    stopwatch.Elapsed
+                );
+
+                return new ExecutionResult(
+                    Success: true,
+                    ExitCode: 0,
+                    StdErr: result.StdErr,
+                    Duration: stopwatch.Elapsed,
+                    Error: null
+                );
+            }
+
+            EncodingError error = ClassifyError(result.StdErr, result.ExitCode);
+            logger.LogError(
+                "[{CorrelationId}] FFmpeg failed: exit={ExitCode} error={ErrorKind}\nstderr: {StdErr}",
                 correlationId,
-                stopwatch.Elapsed
+                result.ExitCode,
+                error.Kind,
+                result.StdErr
             );
 
             return new ExecutionResult(
-                Success: true,
-                ExitCode: 0,
+                Success: false,
+                ExitCode: result.ExitCode,
                 StdErr: result.StdErr,
                 Duration: stopwatch.Elapsed,
-                Error: null
+                Error: error
             );
         }
-
-        EncodingError error = ClassifyError(result.StdErr, result.ExitCode);
-        logger.LogError(
-            "[{CorrelationId}] FFmpeg failed: exit={ExitCode} error={ErrorKind}\nstderr: {StdErr}",
-            correlationId,
-            result.ExitCode,
-            error.Kind,
-            result.StdErr
-        );
-
-        return new ExecutionResult(
-            Success: false,
-            ExitCode: result.ExitCode,
-            StdErr: result.StdErr,
-            Duration: stopwatch.Elapsed,
-            Error: error
-        );
+        finally
+        {
+            killCts.Dispose();
+        }
     }
 
     private static EncodingError ClassifyError(string stderr, int exitCode)

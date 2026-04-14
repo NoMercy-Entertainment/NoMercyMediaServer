@@ -139,41 +139,86 @@ public class PlanStage(
             )
             .ToArray();
 
-        AudioOutputPlan[] audioPlan = profile
-            .AudioOutputs.Select(
-                (a, i) =>
-                {
-                    string encoderName = AudioCodecDefinitions.GetEncoder(a.Codec).FfmpegName;
-                    return new AudioOutputPlan(
-                        EncoderName: encoderName,
-                        BitrateKbps: a.BitrateKbps,
-                        Channels: a.Channels,
-                        SampleRate: a.SampleRateHz,
-                        Action: StreamAction.Transcode,
-                        Language: a.AllowedLanguages.Length > 0 ? a.AllowedLanguages[0] : null,
-                        MapLabel: $"0:a:{i}",
-                        SegmentNameTemplate: a.SegmentNameTemplate,
-                        PlaylistNameTemplate: a.PlaylistNameTemplate
-                    );
-                }
-            )
-            .ToArray();
+        // Build one AudioOutputPlan per matching source stream.
+        // AllowedLanguages is a FILTER — the actual language comes from the source stream.
+        // When AllowedLanguages is empty or contains all languages, include every stream.
+        List<AudioOutputPlan> audioPlans = [];
+        foreach (AudioOutput audioProfile in profile.AudioOutputs)
+        {
+            string encoderName = AudioCodecDefinitions.GetEncoder(audioProfile.Codec).FfmpegName;
+            HashSet<string> allowed =
+                audioProfile.AllowedLanguages.Length > 0
+                    ? new HashSet<string>(
+                        audioProfile.AllowedLanguages,
+                        StringComparer.OrdinalIgnoreCase
+                    )
+                    : [];
 
-        SubtitleOutputPlan[] subtitlePlan = profile
-            .SubtitleOutputs.Select(
-                (s, i) =>
+            for (int si = 0; si < media.AudioStreams.Count; si++)
+            {
+                AudioStreamInfo stream = media.AudioStreams[si];
+                string streamLang = stream.Language ?? "und";
+
+                // If AllowedLanguages is empty, include all streams.
+                // Otherwise only include streams whose language is in the filter list.
+                if (allowed.Count > 0 && !allowed.Contains(streamLang))
+                    continue;
+
+                audioPlans.Add(
+                    new AudioOutputPlan(
+                        EncoderName: encoderName,
+                        BitrateKbps: audioProfile.BitrateKbps,
+                        Channels: audioProfile.Channels,
+                        SampleRate: audioProfile.SampleRateHz,
+                        Action: StreamAction.Transcode,
+                        Language: streamLang,
+                        MapLabel: $"0:a:{si}",
+                        SegmentNameTemplate: audioProfile.SegmentNameTemplate,
+                        PlaylistNameTemplate: audioProfile.PlaylistNameTemplate
+                    )
+                );
+            }
+        }
+
+        AudioOutputPlan[] audioPlan = audioPlans.ToArray();
+
+        // Build one SubtitleOutputPlan per matching source stream.
+        // AllowedLanguages is a filter — language comes from the source stream.
+        List<SubtitleOutputPlan> subtitlePlans = [];
+        foreach (SubtitleOutput subProfile in profile.SubtitleOutputs)
+        {
+            HashSet<string> allowed =
+                subProfile.AllowedLanguages.Length > 0
+                    ? new HashSet<string>(
+                        subProfile.AllowedLanguages,
+                        StringComparer.OrdinalIgnoreCase
+                    )
+                    : [];
+
+            for (int si = 0; si < media.SubtitleStreams.Count; si++)
+            {
+                SubtitleStreamInfo stream = media.SubtitleStreams[si];
+                string streamLang = stream.Language ?? "und";
+
+                if (allowed.Count > 0 && !allowed.Contains(streamLang))
+                    continue;
+
+                subtitlePlans.Add(
                     new SubtitleOutputPlan(
-                        OutputCodec: s.Codec,
-                        Action: s.Mode == SubtitleMode.BurnIn
+                        OutputCodec: subProfile.Codec,
+                        Action: subProfile.Mode == SubtitleMode.BurnIn
                             ? StreamAction.Transcode
                             : StreamAction.Extract,
-                        Language: s.AllowedLanguages.Length > 0 ? s.AllowedLanguages[0] : null,
-                        SourceIndex: i,
-                        MapLabel: $"0:s:{i}",
-                        PlaylistNameTemplate: s.PlaylistNameTemplate
+                        Language: streamLang,
+                        SourceIndex: si,
+                        MapLabel: $"0:s:{si}",
+                        PlaylistNameTemplate: subProfile.PlaylistNameTemplate
                     )
-            )
-            .ToArray();
+                );
+            }
+        }
+
+        SubtitleOutputPlan[] subtitlePlan = subtitlePlans.ToArray();
 
         ThumbnailOutputPlan? thumbPlan = profile.Thumbnails is not null
             ? new ThumbnailOutputPlan(profile.Thumbnails.Width, profile.Thumbnails.IntervalSeconds)

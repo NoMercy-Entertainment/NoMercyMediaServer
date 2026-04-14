@@ -9,7 +9,12 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
 
-public record FinalizeInput(ExecutionResult[] Results, OutputPlan Plan, string OutputDirectory);
+public record FinalizeInput(
+    ExecutionResult[] Results,
+    OutputPlan Plan,
+    string OutputDirectory,
+    string MediaTitle
+);
 
 public record FinalizeOutput(string OutputPath, long OutputSizeBytes);
 
@@ -34,7 +39,7 @@ public class FinalizeStage(
             Directory.CreateDirectory(input.OutputDirectory);
 
             IOutputStrategy strategy = GetStrategy(input.Plan.Format);
-            await strategy.FinalizeAsync(input.OutputDirectory, input.Plan, ct);
+            await strategy.FinalizeAsync(input.OutputDirectory, input.Plan, input.MediaTitle, ct);
 
             // Write chapters.vtt from MediaInfo
             if (context.MediaInfo is not null && context.MediaInfo.Chapters.Count > 0)

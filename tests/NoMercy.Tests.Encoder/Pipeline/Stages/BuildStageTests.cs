@@ -97,7 +97,7 @@ public class BuildStageTests
     public async Task HlsPlan_BuildsAtLeastOneCommand()
     {
         ExecutionPlan plan = BuildHlsPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test");
+        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
@@ -114,7 +114,7 @@ public class BuildStageTests
     public async Task BuiltCommand_UsesConfiguredFfmpegPath()
     {
         ExecutionPlan plan = BuildHlsPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test");
+        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
@@ -130,7 +130,7 @@ public class BuildStageTests
     public async Task BuiltCommand_ContainsInputPath()
     {
         ExecutionPlan plan = BuildHlsPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test");
+        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
@@ -146,7 +146,7 @@ public class BuildStageTests
     public async Task BuiltCommand_ContainsVideoEncoder()
     {
         ExecutionPlan plan = BuildHlsPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test");
+        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
@@ -165,7 +165,7 @@ public class BuildStageTests
         {
             OutputPlan = BuildHlsPlan().OutputPlan with { Format = OutputFormat.Mkv },
         };
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test");
+        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
 
         StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
