@@ -59,7 +59,9 @@ public class EventBusProgressObserver : IProgressObserver
                     ProgressData = new
                     {
                         id = _jobId,
+                        process_id = _jobId,
                         title = _title,
+                        value = progress.PercentComplete,
                         status = "running",
                         message = "Encoding",
                         progress = progress.PercentComplete,
@@ -85,6 +87,7 @@ public class EventBusProgressObserver : IProgressObserver
                         video_streams = _videoStreams,
                         audio_streams = _audioStreams,
                         subtitle_streams = _subtitleStreams,
+                        thumbnails = "",
                     },
                 }
             )
@@ -117,7 +120,9 @@ public class EventBusProgressObserver : IProgressObserver
                     ProgressData = new
                     {
                         id = _jobId,
+                        process_id = _jobId,
                         title = _title,
+                        value = 0,
                         status,
                         message,
                         progress = 0,
@@ -126,6 +131,7 @@ public class EventBusProgressObserver : IProgressObserver
                         is_hdr = _isHdr,
                         base_folder = _baseFolder,
                         share_path = _sharePath,
+                        thumbnails = "",
                         video_streams = _videoStreams,
                         audio_streams = _audioStreams,
                         subtitle_streams = _subtitleStreams,
