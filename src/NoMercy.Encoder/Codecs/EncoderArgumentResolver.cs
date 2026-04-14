@@ -62,15 +62,28 @@ public static class EncoderArgumentResolver
         if (supportsCrf)
             return profileCrf; // Software encoder — use -crf as-is
 
-        // Hardware encoder — map to the correct quality flag
-        string qualityFlag = resolved.DefaultRateControl switch
+        // Hardware encoder — map to the correct quality flag with rate control mode
+        switch (resolved.DefaultRateControl)
         {
-            RateControlMode.Cq => "-cq",
-            RateControlMode.Icq => "-global_quality",
-            RateControlMode.QualityLevel => "-q:v",
-            _ => "-qp",
-        };
-        extraFlags[qualityFlag] = profileCrf.ToString();
+            case RateControlMode.Cq:
+                // NVENC: -rc vbr -cq VALUE
+                extraFlags["-rc"] = "vbr";
+                extraFlags["-cq"] = profileCrf.ToString();
+                break;
+            case RateControlMode.Icq:
+                // Intel QSV: -global_quality VALUE
+                extraFlags["-global_quality"] = profileCrf.ToString();
+                break;
+            case RateControlMode.QualityLevel:
+                // VideoToolbox: -q:v VALUE
+                extraFlags["-q:v"] = profileCrf.ToString();
+                break;
+            default:
+                // AMF/VAAPI: -rc cqp -qp VALUE
+                extraFlags["-rc"] = "cqp";
+                extraFlags["-qp"] = profileCrf.ToString();
+                break;
+        }
         return 0; // Don't emit -crf
     }
 
