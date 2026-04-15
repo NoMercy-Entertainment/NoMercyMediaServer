@@ -6,6 +6,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
+using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Profiles;
@@ -22,6 +23,8 @@ public class PlanStage(
     CostEstimator costEstimator,
     ICodecResolver codecResolver,
     IHardwareCapabilities hardware,
+    ITonemapSelector tonemapSelector,
+    IFfmpegCapabilities ffmpegCapabilities,
     ILogger<PlanStage> logger
 ) : IPipelineStage<ValidateInput, ExecutionPlan>
 {
@@ -97,48 +100,69 @@ public class PlanStage(
         }
     }
 
-    private static OutputPlan BuildOutputPlan(
+    private OutputPlan BuildOutputPlan(
         EncodingProfile profile,
         MediaInfo media,
         ResolvedCodec[] resolvedCodecs
     )
     {
-        VideoOutputPlan[] videoPlan = profile
-            .VideoOutputs.Select(
-                (v, i) =>
-                {
-                    ResolvedCodec resolved = resolvedCodecs[i];
-                    EncoderInfo encoder = resolved.EncoderInfo;
+        // Resolve tonemap strategy once — shared across all video outputs that need HDR→SDR
+        bool sourceIsHdr = media.VideoStreams.Count > 0 && media.VideoStreams[0].IsHdr;
+        TonemapStrategy? tonemap = sourceIsHdr
+            ? tonemapSelector.SelectBest(hardware, ffmpegCapabilities)
+            : null;
 
-                    (int outputWidth, int outputHeight) = EncoderArgumentResolver.ResolveDimensions(
-                        v,
-                        media.VideoStreams[0].Width,
-                        media.VideoStreams[0].Height
-                    );
+        // Audio-only: skip video planning entirely when source has no video streams
+        VideoOutputPlan[] videoPlan =
+            media.VideoStreams.Count > 0 && profile.VideoOutputs.Length > 0
+                ? profile
+                    .VideoOutputs.Select(
+                        (v, i) =>
+                        {
+                            ResolvedCodec resolved = resolvedCodecs[i];
+                            EncoderInfo encoder = resolved.EncoderInfo;
 
-                    Dictionary<string, string> extraFlags = new(encoder.VendorSpecificFlags);
-                    int crf = EncoderArgumentResolver.ResolveQuality(v.Crf, resolved, extraFlags);
+                            (int outputWidth, int outputHeight) =
+                                EncoderArgumentResolver.ResolveDimensions(
+                                    v,
+                                    media.VideoStreams[0].Width,
+                                    media.VideoStreams[0].Height
+                                );
 
-                    return new VideoOutputPlan(
-                        Width: outputWidth,
-                        Height: outputHeight,
-                        EncoderName: resolved.FfmpegEncoderName,
-                        Crf: crf,
-                        BitrateKbps: v.BitrateKbps,
-                        Preset: EncoderArgumentResolver.ResolvePreset(v.Preset, encoder),
-                        Profile: EncoderArgumentResolver.ResolveProfile(v.Profile, encoder),
-                        Level: v.Level,
-                        TenBit: v.TenBit,
-                        PixelFormat: v.TenBit ? encoder.PixelFormat10Bit : "yuv420p",
-                        MapLabel: $"[v{i}]",
-                        ExtraFlags: extraFlags,
-                        FrameRate: media.VideoStreams[0].FrameRate,
-                        SegmentNameTemplate: v.SegmentNameTemplate,
-                        PlaylistNameTemplate: v.PlaylistNameTemplate
-                    );
-                }
-            )
-            .ToArray();
+                            Dictionary<string, string> extraFlags = new(
+                                encoder.VendorSpecificFlags
+                            );
+                            int crf = EncoderArgumentResolver.ResolveQuality(
+                                v.Crf,
+                                resolved,
+                                extraFlags
+                            );
+
+                            return new VideoOutputPlan(
+                                Width: outputWidth,
+                                Height: outputHeight,
+                                EncoderName: resolved.FfmpegEncoderName,
+                                Crf: crf,
+                                BitrateKbps: v.BitrateKbps,
+                                Preset: EncoderArgumentResolver.ResolvePreset(v.Preset, encoder),
+                                Profile: EncoderArgumentResolver.ResolveProfile(v.Profile, encoder),
+                                Level: v.Level,
+                                TenBit: v.TenBit,
+                                PixelFormat: v.TenBit ? encoder.PixelFormat10Bit : "yuv420p",
+                                MapLabel: $"[v{i}]",
+                                ExtraFlags: extraFlags,
+                                FrameRate: media.VideoStreams[0].FrameRate,
+                                SegmentNameTemplate: v.SegmentNameTemplate,
+                                PlaylistNameTemplate: v.PlaylistNameTemplate,
+                                ConvertHdrToSdr: v.ConvertHdrToSdr && sourceIsHdr,
+                                TonemapFilterChain: v.ConvertHdrToSdr && tonemap is not null
+                                    ? tonemap.FfmpegFilterChain
+                                    : null
+                            );
+                        }
+                    )
+                    .ToArray()
+                : [];
 
         // Build one AudioOutputPlan per matching source stream.
         // AllowedLanguages is a FILTER — the actual language comes from the source stream.
@@ -250,13 +274,19 @@ public class PlanStage(
             );
         }
 
+        // Clamp segment duration to input length for very short files.
+        // A 2-second clip with 6-second segments produces malformed HLS playlists.
+        int segmentDuration = profile.SegmentDurationSeconds;
+        if (media.Duration.TotalSeconds > 0 && media.Duration.TotalSeconds < segmentDuration)
+            segmentDuration = Math.Max(1, (int)Math.Ceiling(media.Duration.TotalSeconds));
+
         return new OutputPlan(
             profile.Format,
             videoPlan,
             audioPlan,
             subtitlePlan,
             thumbPlan,
-            profile.SegmentDurationSeconds
+            segmentDuration
         );
     }
 }

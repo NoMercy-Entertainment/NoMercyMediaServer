@@ -59,6 +59,13 @@ public class Mp4OutputStrategy : IOutputStrategy
         CancellationToken ct
     )
     {
+        // Rename the generic output.mp4 to the proper media title
+        string sourcePath = Path.Combine(outputDirectory, "output.mp4");
+        string targetPath = Path.Combine(outputDirectory, $"{mediaTitle}.mp4");
+
+        if (File.Exists(sourcePath) && sourcePath != targetPath)
+            File.Move(sourcePath, targetPath, overwrite: true);
+
         return Task.CompletedTask;
     }
 

@@ -60,6 +60,13 @@ public class MkvOutputStrategy : IOutputStrategy
         CancellationToken ct
     )
     {
+        // Rename the generic output.mkv to the proper media title
+        string sourcePath = Path.Combine(outputDirectory, "output.mkv");
+        string targetPath = Path.Combine(outputDirectory, $"{mediaTitle}.mkv");
+
+        if (File.Exists(sourcePath) && sourcePath != targetPath)
+            File.Move(sourcePath, targetPath, overwrite: true);
+
         return Task.CompletedTask;
     }
 

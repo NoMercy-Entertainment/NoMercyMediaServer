@@ -27,7 +27,9 @@ public record VideoOutputPlan(
     Dictionary<string, string> ExtraFlags,
     double FrameRate = 23.976,
     string SegmentNameTemplate = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
-    string PlaylistNameTemplate = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+    string PlaylistNameTemplate = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+    bool ConvertHdrToSdr = false,
+    string? TonemapFilterChain = null
 );
 
 public record AudioOutputPlan(

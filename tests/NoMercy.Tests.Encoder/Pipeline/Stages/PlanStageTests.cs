@@ -5,6 +5,7 @@ using Moq;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
+using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
@@ -48,6 +49,8 @@ public class PlanStageTests
             _costEstimator,
             _codecResolver.Object,
             _hardware.Object,
+            new TonemapSelector(),
+            new Mock<IFfmpegCapabilities>().Object,
             NullLogger<PlanStage>.Instance
         );
     }

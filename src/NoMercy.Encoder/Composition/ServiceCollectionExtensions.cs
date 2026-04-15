@@ -5,6 +5,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
+using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Encoder.Pipeline;
@@ -60,6 +61,9 @@ public static class ServiceCollectionExtensions
         // Startup — register concrete first so IHostedService resolves same instance
         services.AddSingleton<HardwareInitializationService>();
         services.AddHostedService(sp => sp.GetRequiredService<HardwareInitializationService>());
+
+        // HDR
+        services.AddTransient<ITonemapSelector, TonemapSelector>();
 
         // Profiles
         services.AddTransient<IProfileValidator, ProfileValidator>();

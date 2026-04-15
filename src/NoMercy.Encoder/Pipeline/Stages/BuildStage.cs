@@ -360,7 +360,8 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
 
     /// <summary>
     /// Builds the filter chain for a single video output branch.
-    /// Handles: scaling, pixel format conversion (10-bit → 8-bit), or passthrough.
+    /// Pipeline: tonemap (HDR→SDR) → scale (resolution) → format (pixel format).
+    /// Each step is skipped when not needed.
     /// </summary>
     private static void BuildBranchFilter(
         IFilterGraphBuilder fg,
@@ -372,31 +373,48 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
         bool sourceIs10Bit
     )
     {
+        bool needsTonemap = video.ConvertHdrToSdr && video.TonemapFilterChain is not null;
         bool needsScale = video.Width != sourceWidth || video.Height != sourceHeight;
         bool needs8BitConversion = sourceIs10Bit && !video.TenBit;
 
-        if (!needsScale && !needs8BitConversion)
+        if (!needsTonemap && !needsScale && !needs8BitConversion)
         {
             fg.AddFilter(inputLabel, "copy", outputLabel);
             return;
         }
 
-        // Build a filter chain: scale (if needed) → format conversion (if needed)
-        // When both are needed, chain through an intermediate label.
+        // Chain: tonemap → scale → format, using intermediate labels between steps.
+        string currentLabel = inputLabel;
+
+        // Step 1: Tonemap (HDR→SDR) — outputs yuv420p, so 8-bit conversion is included
+        if (needsTonemap)
+        {
+            string nextLabel = needsScale ? $"{outputLabel}_tonemapped" : outputLabel;
+            fg.AddFilter(currentLabel, video.TonemapFilterChain!, nextLabel);
+            currentLabel = nextLabel;
+
+            // Tonemap filter chains (zscale, libplacebo) already output 8-bit yuv420p,
+            // so we don't need a separate format conversion after tonemap.
+            needs8BitConversion = false;
+
+            if (!needsScale)
+                return;
+        }
+
+        // Step 2: Scale (resolution change)
         if (needsScale && needs8BitConversion)
         {
             string intermediate = $"{outputLabel}_scaled";
-            fg.AddScaleWidth(inputLabel, video.Width, intermediate);
+            fg.AddScaleWidth(currentLabel, video.Width, intermediate);
             fg.AddFilter(intermediate, $"format={video.PixelFormat}", outputLabel);
         }
         else if (needsScale)
         {
-            fg.AddScaleWidth(inputLabel, video.Width, outputLabel);
+            fg.AddScaleWidth(currentLabel, video.Width, outputLabel);
         }
-        else
+        else if (needs8BitConversion)
         {
-            // Same resolution but needs pixel format conversion (10-bit source, 8-bit encoder)
-            fg.AddFilter(inputLabel, $"format={video.PixelFormat}", outputLabel);
+            fg.AddFilter(currentLabel, $"format={video.PixelFormat}", outputLabel);
         }
     }
 }

@@ -9,6 +9,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
+using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
@@ -54,6 +55,8 @@ public class EncoderTests
             new CostEstimator(),
             _codecResolver.Object,
             _hardware.Object,
+            new TonemapSelector(),
+            new Mock<IFfmpegCapabilities>().Object,
             NullLogger<PlanStage>.Instance
         );
         BuildStage buildStage = new(options, NullLogger<BuildStage>.Instance);

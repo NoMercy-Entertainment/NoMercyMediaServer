@@ -8,8 +8,6 @@ public class DashOutputStrategy : IOutputStrategy
 {
     public OutputFormat Format => OutputFormat.Dash;
 
-    public int SegmentDurationSeconds { get; init; } = 6;
-
     public void ConfigureOutput(
         FfmpegCommandBuilder builder,
         OutputPlan plan,
@@ -32,7 +30,7 @@ public class DashOutputStrategy : IOutputStrategy
         Dictionary<string, string> extraFlags = new()
         {
             ["-f"] = "dash",
-            ["-seg_duration"] = SegmentDurationSeconds.ToString(),
+            ["-seg_duration"] = plan.SegmentDurationSeconds.ToString(),
             ["-init_seg_name"] = "init_$RepresentationID$.m4s",
             ["-media_seg_name"] = "seg_$RepresentationID$_$Number%05d$.m4s",
             ["-use_template"] = "1",
@@ -70,6 +68,13 @@ public class DashOutputStrategy : IOutputStrategy
         CancellationToken ct
     )
     {
+        // Rename the generic manifest.mpd to use the media title
+        string sourcePath = Path.Combine(outputDirectory, "manifest.mpd");
+        string targetPath = Path.Combine(outputDirectory, $"{mediaTitle}.mpd");
+
+        if (File.Exists(sourcePath) && sourcePath != targetPath)
+            File.Move(sourcePath, targetPath, overwrite: true);
+
         return Task.CompletedTask;
     }
 
