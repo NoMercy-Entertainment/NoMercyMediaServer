@@ -11,6 +11,8 @@ public class SubtitleExtractorTests
     private const string OutputDir = "/output";
     private const string MediaTitle = "Movie.Name.NoMercy";
 
+    private readonly SubtitleExtractor _extractor = new();
+
     // ------------------------------------------------------------------
     // Text subtitle (subrip) → WebVTT output
     // ------------------------------------------------------------------
@@ -21,12 +23,7 @@ public class SubtitleExtractorTests
         SubtitleOutputPlan plan = MakePlan(0, "eng");
         SubtitleStreamInfo stream = MakeStream(0, "subrip", "eng");
 
-        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
-            plan,
-            stream,
-            OutputDir,
-            MediaTitle
-        );
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
 
         info.Extension.Should().Be("vtt");
         info.FfmpegCodec.Should().Be("webvtt");
@@ -45,12 +42,7 @@ public class SubtitleExtractorTests
         SubtitleOutputPlan plan = MakePlan(0, "eng");
         SubtitleStreamInfo stream = MakeStream(0, "ass", "eng");
 
-        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
-            plan,
-            stream,
-            OutputDir,
-            MediaTitle
-        );
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
 
         info.Extension.Should().Be("ass");
         info.FfmpegCodec.Should().Be("ass");
@@ -67,12 +59,7 @@ public class SubtitleExtractorTests
         SubtitleOutputPlan plan = MakePlan(0, "eng");
         SubtitleStreamInfo stream = MakeStream(0, "ssa", "eng");
 
-        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
-            plan,
-            stream,
-            OutputDir,
-            MediaTitle
-        );
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
 
         info.Extension.Should().Be("ass");
         info.FfmpegCodec.Should().Be("ass");
@@ -88,12 +75,7 @@ public class SubtitleExtractorTests
         SubtitleOutputPlan plan = MakePlan(0, "eng");
         SubtitleStreamInfo stream = MakeStream(0, "dvd_subtitle", "eng");
 
-        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
-            plan,
-            stream,
-            OutputDir,
-            MediaTitle
-        );
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
 
         info.Extension.Should().Be("mks");
         info.FfmpegCodec.Should().Be("copy");
@@ -110,12 +92,7 @@ public class SubtitleExtractorTests
         SubtitleOutputPlan plan = MakePlan(0, "eng");
         SubtitleStreamInfo stream = MakeStream(0, "hdmv_pgs_subtitle", "eng");
 
-        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
-            plan,
-            stream,
-            OutputDir,
-            MediaTitle
-        );
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
 
         info.Extension.Should().Be("mks");
         info.FfmpegCodec.Should().Be("copy");
@@ -138,12 +115,7 @@ public class SubtitleExtractorTests
             IsForced: true
         );
 
-        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
-            plan,
-            stream,
-            OutputDir,
-            MediaTitle
-        );
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
 
         info.Variant.Should().Be("sign");
     }
@@ -158,12 +130,7 @@ public class SubtitleExtractorTests
         SubtitleOutputPlan plan = MakePlan(0, "eng");
         SubtitleStreamInfo stream = MakeStream(0, "subrip", "eng");
 
-        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
-            plan,
-            stream,
-            OutputDir,
-            MediaTitle
-        );
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
 
         info.OutputPath.Should().StartWith("subtitles/");
     }
@@ -178,12 +145,7 @@ public class SubtitleExtractorTests
         SubtitleOutputPlan plan = MakePlan(0, "und");
         SubtitleStreamInfo stream = MakeStream(0, "subrip", "fra");
 
-        SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
-            plan,
-            stream,
-            OutputDir,
-            MediaTitle
-        );
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
 
         info.Language.Should().Be("fra");
     }
@@ -198,7 +160,7 @@ public class SubtitleExtractorTests
         SubtitleOutputPlan plan = MakePlan(0, "eng");
         SubtitleStreamInfo stream = MakeStream(0, "subrip", "eng");
 
-        string uri = SubtitleExtractor.ResolvePlaylistUri(plan, stream, MediaTitle);
+        string uri = _extractor.ResolvePlaylistUri(plan, stream, MediaTitle);
 
         uri.Should().EndWith(".vtt");
         uri.Should().Contain("subtitles/");

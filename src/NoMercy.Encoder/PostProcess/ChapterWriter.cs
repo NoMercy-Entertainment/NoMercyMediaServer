@@ -2,8 +2,9 @@ namespace NoMercy.Encoder.PostProcess;
 
 using System.Text;
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.BuildingBlocks;
 
-public class ChapterWriter
+public class ChapterWriter : IChapterWriter
 {
     public async Task WriteChaptersAsync(
         string outputDirectory,

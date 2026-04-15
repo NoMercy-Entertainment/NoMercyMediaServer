@@ -1,13 +1,14 @@
 namespace NoMercy.Encoder.PostProcess;
 
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Subtitles;
 
-public class SubtitleExtractor
+public class SubtitleExtractor : ISubtitleExtractor
 {
     private static readonly HashSet<string> AssCodecs = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -20,7 +21,7 @@ public class SubtitleExtractor
     /// ASS/SSA subtitles stay as ASS. Other text subtitles convert to WebVTT.
     /// Bitmap subtitles are extracted as-is (VobSub → .sub+.idx, PGS/DVB → .sup).
     /// </summary>
-    public static SubtitleOutputInfo ResolveOutput(
+    public SubtitleOutputInfo ResolveOutput(
         SubtitleOutputPlan plan,
         SubtitleStreamInfo stream,
         string outputDirectory,
@@ -78,7 +79,7 @@ public class SubtitleExtractor
     /// Resolves the URI for the master playlist's subtitle group entry.
     /// Path is relative to the output directory.
     /// </summary>
-    public static string ResolvePlaylistUri(
+    public string ResolvePlaylistUri(
         SubtitleOutputPlan plan,
         SubtitleStreamInfo stream,
         string mediaTitle

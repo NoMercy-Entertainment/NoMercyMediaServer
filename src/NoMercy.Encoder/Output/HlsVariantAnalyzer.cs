@@ -1,12 +1,13 @@
 namespace NoMercy.Encoder.Output;
 
 using System.Globalization;
+using NoMercy.Encoder.BuildingBlocks;
 
 /// <summary>
 /// Parses an HLS variant playlist (.m3u8) and its segment files
 /// to calculate actual bitrate metrics for the master playlist.
 /// </summary>
-public static class HlsVariantAnalyzer
+public class HlsVariantAnalyzer : IHlsVariantAnalyzer
 {
     public record VariantMetrics(int PeakBandwidth, int AverageBandwidth);
 
@@ -14,7 +15,7 @@ public static class HlsVariantAnalyzer
     /// Measures the actual bandwidth of an HLS variant by reading segment file sizes
     /// and durations from the playlist. Returns peak and average bitrate in bits/sec.
     /// </summary>
-    public static VariantMetrics Measure(string playlistPath)
+    public VariantMetrics Measure(string playlistPath)
     {
         if (!File.Exists(playlistPath))
             return new VariantMetrics(0, 0);

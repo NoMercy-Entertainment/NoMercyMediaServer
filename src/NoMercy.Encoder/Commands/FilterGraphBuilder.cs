@@ -1,18 +1,20 @@
 namespace NoMercy.Encoder.Commands;
 
-public class FilterGraphBuilder
+using NoMercy.Encoder.BuildingBlocks;
+
+public class FilterGraphBuilder : IFilterGraphBuilder
 {
     private readonly List<string> _chains = [];
 
     // Add a simple filter: [inputLabel]filter=params[outputLabel]
-    public FilterGraphBuilder AddFilter(string inputLabel, string filter, string outputLabel)
+    public IFilterGraphBuilder AddFilter(string inputLabel, string filter, string outputLabel)
     {
         _chains.Add($"[{inputLabel}]{filter}[{outputLabel}]");
         return this;
     }
 
     // Add a split filter: [inputLabel]split=N[out1][out2]...[outN]
-    public FilterGraphBuilder AddSplit(string inputLabel, string[] outputLabels)
+    public IFilterGraphBuilder AddSplit(string inputLabel, string[] outputLabels)
     {
         string outputs = string.Join("", outputLabels.Select(l => $"[{l}]"));
         _chains.Add($"[{inputLabel}]split={outputLabels.Length}{outputs}");
@@ -20,21 +22,26 @@ public class FilterGraphBuilder
     }
 
     // Add a scale filter: [inputLabel]scale=W:H[outputLabel]
-    public FilterGraphBuilder AddScale(string inputLabel, int width, int height, string outputLabel)
+    public IFilterGraphBuilder AddScale(
+        string inputLabel,
+        int width,
+        int height,
+        string outputLabel
+    )
     {
         _chains.Add($"[{inputLabel}]scale={width}:{height}[{outputLabel}]");
         return this;
     }
 
     // Scale maintaining aspect ratio (height=-2 for even value)
-    public FilterGraphBuilder AddScaleWidth(string inputLabel, int width, string outputLabel)
+    public IFilterGraphBuilder AddScaleWidth(string inputLabel, int width, string outputLabel)
     {
         _chains.Add($"[{inputLabel}]scale={width}:-2[{outputLabel}]");
         return this;
     }
 
     // Add tonemap filter chain for HDR→SDR
-    public FilterGraphBuilder AddTonemap(string inputLabel, string algorithm, string outputLabel)
+    public IFilterGraphBuilder AddTonemap(string inputLabel, string algorithm, string outputLabel)
     {
         // CPU tonemapping: zscale + tonemap chain
         string chain =
@@ -44,7 +51,7 @@ public class FilterGraphBuilder
     }
 
     // Add libplacebo tonemap (GPU-accelerated)
-    public FilterGraphBuilder AddLibplaceboTonemap(
+    public IFilterGraphBuilder AddLibplaceboTonemap(
         string inputLabel,
         string algorithm,
         string outputLabel
@@ -57,7 +64,7 @@ public class FilterGraphBuilder
     }
 
     // Add deinterlace filter
-    public FilterGraphBuilder AddDeinterlace(
+    public IFilterGraphBuilder AddDeinterlace(
         string inputLabel,
         string outputLabel,
         string method = "yadif"
@@ -68,7 +75,7 @@ public class FilterGraphBuilder
     }
 
     // Add crop filter
-    public FilterGraphBuilder AddCrop(
+    public IFilterGraphBuilder AddCrop(
         string inputLabel,
         int width,
         int height,

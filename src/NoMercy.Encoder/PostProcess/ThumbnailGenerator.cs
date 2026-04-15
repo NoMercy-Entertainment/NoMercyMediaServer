@@ -1,10 +1,11 @@
 namespace NoMercy.Encoder.PostProcess;
 
 using System.Text;
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 
-public class ThumbnailGenerator
+public class ThumbnailGenerator : IThumbnailGenerator
 {
     public FfmpegCommand BuildCaptureCommand(
         string ffmpegPath,

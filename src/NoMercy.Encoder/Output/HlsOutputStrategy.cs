@@ -142,6 +142,7 @@ public class HlsOutputStrategy : IOutputStrategy
     {
         // Measure actual bitrates from the encoded variant playlists.
         // These are the real values — not estimates from profile settings.
+        HlsVariantAnalyzer analyzer = new();
         Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics = [];
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
@@ -156,7 +157,7 @@ public class HlsOutputStrategy : IOutputStrategy
             string playlistFile = Path.GetFileName(playlistResolved);
             string variantPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
 
-            videoMetrics[video.MapLabel] = HlsVariantAnalyzer.Measure(variantPath);
+            videoMetrics[video.MapLabel] = analyzer.Measure(variantPath);
         }
 
         Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics = [];
@@ -177,7 +178,7 @@ public class HlsOutputStrategy : IOutputStrategy
             string playlistFile = Path.GetFileName(playlistResolved);
             string variantPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
 
-            audioMetrics[audio.MapLabel] = HlsVariantAnalyzer.Measure(variantPath);
+            audioMetrics[audio.MapLabel] = analyzer.Measure(variantPath);
         }
 
         PlaylistGenerator generator = new();

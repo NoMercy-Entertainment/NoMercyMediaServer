@@ -1,9 +1,10 @@
 namespace NoMercy.Encoder.PostProcess;
 
 using Newtonsoft.Json;
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
 
-public class FontExtractor
+public class FontExtractor : IFontExtractor
 {
     // FFmpeg dumps attachments via -dump_attachment:t "" which is a pre-input flag.
     // The standard builder does not model pre-input attachment flags, so we build

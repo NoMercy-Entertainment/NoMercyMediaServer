@@ -2,6 +2,7 @@ namespace NoMercy.Encoder.Pipeline.Stages;
 
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
@@ -161,6 +162,8 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
         string mediaTitle
     )
     {
+        SubtitleExtractor subtitleExtractor = new();
+
         foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
         {
             if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
@@ -175,7 +178,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             if (!stream.IsTextBased)
                 continue;
 
-            SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+            SubtitleOutputInfo info = subtitleExtractor.ResolveOutput(
                 subPlan,
                 stream,
                 outputDirectory,
@@ -214,6 +217,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
     )
     {
         List<FfmpegCommand> commands = [];
+        SubtitleExtractor subtitleExtractor = new();
 
         foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
         {
@@ -229,7 +233,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             if (stream.IsTextBased)
                 continue;
 
-            SubtitleOutputInfo info = SubtitleExtractor.ResolveOutput(
+            SubtitleOutputInfo info = subtitleExtractor.ResolveOutput(
                 subPlan,
                 stream,
                 outputDirectory,
@@ -361,7 +365,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
     /// Handles: scaling, pixel format conversion (10-bit → 8-bit), or passthrough.
     /// </summary>
     private static void BuildBranchFilter(
-        FilterGraphBuilder fg,
+        IFilterGraphBuilder fg,
         string inputLabel,
         string outputLabel,
         VideoOutputPlan video,
