@@ -7,5 +7,14 @@ public record ExecutionResult(
     int ExitCode,
     string StdErr,
     TimeSpan Duration,
-    EncodingError? Error
+    EncodingError? Error,
+    ExecutionMetrics? Metrics = null
+);
+
+public record ExecutionMetrics(
+    double AverageSpeed,
+    double AverageFps,
+    double PeakSpeed,
+    double PeakFps,
+    long TotalSizeBytes
 );

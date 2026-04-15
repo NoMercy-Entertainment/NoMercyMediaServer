@@ -86,7 +86,6 @@ public class LiveEncoderTests
         ILiveQualitySelector? qualitySelector = null
     )
     {
-        Mock<IPlaybackDecisionEngine> decisionEngine = new();
         SpeedIndex speedIndex = MakeSpeedIndex();
         IResourceBudget budget = MakeBudget();
         LiveQuality defaultQuality = MakeQuality();
@@ -97,7 +96,6 @@ public class LiveEncoderTests
         ISessionManager manager = sessionManager ?? CreateUnlimitedSessionManager();
 
         return new LiveEncoder(
-            decisionEngine.Object,
             selector,
             manager,
             speedIndex,

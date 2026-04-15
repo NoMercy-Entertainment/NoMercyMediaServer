@@ -58,11 +58,7 @@ public class EncoderTests
         );
         BuildStage buildStage = new(options, NullLogger<BuildStage>.Instance);
         ExecuteStage executeStage = new(_ffmpegExecutor.Object, NullLogger<ExecuteStage>.Instance);
-        FinalizeStage finalizeStage = new(
-            _ffmpegExecutor.Object,
-            options,
-            NullLogger<FinalizeStage>.Instance
-        );
+        FinalizeStage finalizeStage = new(NullLogger<FinalizeStage>.Instance);
 
         _encoder = new Encoder(
             analyzeStage,

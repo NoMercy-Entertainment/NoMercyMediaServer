@@ -14,7 +14,8 @@ public record BuildInput(
     ExecutionPlan Plan,
     string InputPath,
     string OutputDirectory,
-    string MediaTitle
+    string MediaTitle,
+    TimeSpan? DurationLimit = null
 );
 
 public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
@@ -48,7 +49,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             }
 
             FfmpegCommandBuilder builder = new();
-            builder.AddInput(new InputOptions(input.InputPath));
+            builder.AddInput(new InputOptions(input.InputPath, Duration: input.DurationLimit));
 
             string? filterGraph = BuildFilterGraph(input.Plan.OutputPlan, context.MediaInfo);
             if (filterGraph is not null)
@@ -90,7 +91,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 );
 
                 bitmapSubCommands = BuildBitmapSubtitleCommands(
-                    options.FfmpegPathOverride,
+                    options.FfmpegPath,
                     input.InputPath,
                     input.Plan.OutputPlan,
                     context.MediaInfo,
@@ -99,10 +100,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 );
             }
 
-            FfmpegCommand mainCommand = builder.Build(
-                options.FfmpegPathOverride,
-                input.OutputDirectory
-            );
+            FfmpegCommand mainCommand = builder.Build(options.FfmpegPath, input.OutputDirectory);
 
             logger.LogInformation(
                 "[{CorrelationId}] FFmpeg command: {Executable} {Args}",
@@ -123,7 +121,7 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                 string fontDir = Path.Combine(input.OutputDirectory, "fonts");
                 Directory.CreateDirectory(fontDir);
                 FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
-                    options.FfmpegPathOverride,
+                    options.FfmpegPath,
                     input.InputPath,
                     input.OutputDirectory
                 );

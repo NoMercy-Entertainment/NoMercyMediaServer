@@ -29,13 +29,11 @@ public class LiveQualitySelectorTests
         new ResourceBudget(hardware.Gpus, hardware.CpuCores);
 
     private readonly LiveQualitySelector _gpuSelector = new(
-        new CodecRegistry(),
         new CodecResolver(new CodecRegistry()),
         MakeGpuHardware()
     );
 
     private readonly LiveQualitySelector _softwareSelector = new(
-        new CodecRegistry(),
         new CodecResolver(new CodecRegistry()),
         MakeSoftwareHardware()
     );

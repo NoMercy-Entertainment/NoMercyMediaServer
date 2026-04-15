@@ -2,8 +2,6 @@ namespace NoMercy.Encoder.Pipeline.Stages;
 
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Commands;
-using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Output;
@@ -18,11 +16,8 @@ public record FinalizeInput(
 
 public record FinalizeOutput(string OutputPath, long OutputSizeBytes);
 
-public class FinalizeStage(
-    IFfmpegExecutor executor,
-    EncoderOptions options,
-    ILogger<FinalizeStage> logger
-) : IPipelineStage<FinalizeInput, FinalizeOutput>
+public class FinalizeStage(ILogger<FinalizeStage> logger)
+    : IPipelineStage<FinalizeInput, FinalizeOutput>
 {
     public string Name => "Finalize";
 

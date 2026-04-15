@@ -4,11 +4,8 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 
-public class LiveQualitySelector(
-    CodecRegistry registry,
-    ICodecResolver codecResolver,
-    IHardwareCapabilities hardware
-) : ILiveQualitySelector
+public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabilities hardware)
+    : ILiveQualitySelector
 {
     // Standard resolution tiers, from highest to lowest
     private static readonly (int Width, int Height)[] ResolutionTiers =

@@ -7,6 +7,7 @@ using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Pipeline.Stages;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 
 public class Encoder(
@@ -133,6 +134,25 @@ public class Encoder(
             stopwatch.Elapsed
         );
 
+        // Metrics from the main encode command (index 0)
+        ExecutionMetrics? execMetrics =
+            executionResults.Length > 0 ? executionResults[0].Metrics : null;
+
+        string encoderUsed =
+            plan.OutputPlan.VideoOutputs.Length > 0
+                ? plan.OutputPlan.VideoOutputs[0].EncoderName
+                : "audio-only";
+
+        // Resolve GPU name from the encoder — nvenc/qsv/amf indicate hardware encoding
+        string? gpuUsed = plan
+            .OutputPlan.VideoOutputs.Where(v =>
+                v.EncoderName.Contains("nvenc", StringComparison.OrdinalIgnoreCase)
+                || v.EncoderName.Contains("qsv", StringComparison.OrdinalIgnoreCase)
+                || v.EncoderName.Contains("amf", StringComparison.OrdinalIgnoreCase)
+            )
+            .Select(v => v.EncoderName)
+            .FirstOrDefault();
+
         return new EncodingResult(
             Success: true,
             OutputPath: finalizeOutput.OutputPath,
@@ -140,23 +160,140 @@ public class Encoder(
             Error: null,
             Metrics: new EncodingMetrics(
                 OutputSizeBytes: finalizeOutput.OutputSizeBytes,
-                AverageSpeed: 0,
-                AverageFps: 0,
-                EncoderUsed: plan.OutputPlan.VideoOutputs.Length > 0
-                    ? plan.OutputPlan.VideoOutputs[0].EncoderName
-                    : "audio-only",
-                GpuUsed: null
+                AverageSpeed: execMetrics?.AverageSpeed ?? 0,
+                AverageFps: execMetrics?.AverageFps ?? 0,
+                EncoderUsed: encoderUsed,
+                GpuUsed: gpuUsed
             )
         );
     }
 
-    public Task<PreviewResult> PreviewAsync(
+    public async Task<PreviewResult> PreviewAsync(
         EncodingRequest request,
         int previewDurationSeconds = 10,
         CancellationToken ct = default
     )
     {
-        throw new NotImplementedException("Preview encoding not yet implemented");
+        EncodingContext context = EncodingContext.Create();
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        TimeSpan previewDuration = TimeSpan.FromSeconds(previewDurationSeconds);
+
+        logger.LogInformation(
+            "[{CorrelationId}] Starting preview encode ({Duration}s): {Input}",
+            context.CorrelationId,
+            previewDurationSeconds,
+            request.InputPath
+        );
+
+        // Strip thumbnails and subtitles — not useful for a short preview
+        EncodingProfile previewProfile = request.Profile with
+        {
+            Thumbnails = null,
+            SubtitleOutputs = [],
+        };
+        EncodingRequest previewRequest = request with { Profile = previewProfile };
+
+        // Stage 1: Analyze
+        StageResult analyzeResult = await analyzeStage.ExecuteAsync(
+            previewRequest.InputPath,
+            context,
+            ct
+        );
+        if (analyzeResult is StageFailure af)
+            return PreviewFail(af.Error, stopwatch.Elapsed);
+
+        MediaInfo mediaInfo = ((StageSuccess<MediaInfo>)analyzeResult).Value;
+        context = context with { MediaInfo = mediaInfo };
+
+        // Stage 2: Validate
+        ValidateInput validateInput = new(mediaInfo, previewProfile);
+        StageResult validateResult = await validateStage.ExecuteAsync(validateInput, context, ct);
+        if (validateResult is StageFailure vf)
+            return PreviewFail(vf.Error, stopwatch.Elapsed);
+
+        // Stage 3: Plan
+        StageResult planResult = await planStage.ExecuteAsync(validateInput, context, ct);
+        if (planResult is StageFailure pf)
+            return PreviewFail(pf.Error, stopwatch.Elapsed);
+
+        ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)planResult).Value;
+
+        // Stage 4: Build — with duration limit
+        BuildInput buildInput = new(
+            plan,
+            previewRequest.InputPath,
+            previewRequest.OutputDirectory,
+            previewRequest.ResolvedTitle,
+            DurationLimit: previewDuration
+        );
+        StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
+        if (buildResult is StageFailure bf)
+            return PreviewFail(bf.Error, stopwatch.Elapsed);
+
+        FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)buildResult).Value;
+
+        // Stage 5: Execute — duration-limited input means short encode
+        ExecuteInput executeInput = new(commands, previewDuration);
+        StageResult executeResult = await executeStage.ExecuteAsync(executeInput, context, ct);
+        if (executeResult is StageFailure ef)
+            return PreviewFail(ef.Error, stopwatch.Elapsed);
+
+        ExecutionResult[] executionResults = ((StageSuccess<ExecutionResult[]>)executeResult).Value;
+
+        // Stage 6: Finalize
+        FinalizeInput finalizeInput = new(
+            executionResults,
+            plan.OutputPlan,
+            previewRequest.OutputDirectory,
+            previewRequest.ResolvedTitle
+        );
+        StageResult finalizeResult = await finalizeStage.ExecuteAsync(finalizeInput, context, ct);
+        if (finalizeResult is StageFailure ff)
+            return PreviewFail(ff.Error, stopwatch.Elapsed);
+
+        FinalizeOutput finalizeOutput = ((StageSuccess<FinalizeOutput>)finalizeResult).Value;
+        stopwatch.Stop();
+
+        ExecutionMetrics? execMetrics =
+            executionResults.Length > 0 ? executionResults[0].Metrics : null;
+
+        string encoderUsed =
+            plan.OutputPlan.VideoOutputs.Length > 0
+                ? plan.OutputPlan.VideoOutputs[0].EncoderName
+                : "audio-only";
+
+        logger.LogInformation(
+            "[{CorrelationId}] Preview encode complete in {Duration}",
+            context.CorrelationId,
+            stopwatch.Elapsed
+        );
+
+        return new PreviewResult(
+            Success: true,
+            OutputPath: finalizeOutput.OutputPath,
+            Duration: stopwatch.Elapsed,
+            Metrics: new EncodingMetrics(
+                OutputSizeBytes: finalizeOutput.OutputSizeBytes,
+                AverageSpeed: execMetrics?.AverageSpeed ?? 0,
+                AverageFps: execMetrics?.AverageFps ?? 0,
+                EncoderUsed: encoderUsed,
+                GpuUsed: null
+            ),
+            OutputSizeBytes: finalizeOutput.OutputSizeBytes,
+            Error: null
+        );
+    }
+
+    private static PreviewResult PreviewFail(EncodingError error, TimeSpan elapsed)
+    {
+        return new PreviewResult(
+            Success: false,
+            OutputPath: "",
+            Duration: elapsed,
+            Metrics: new EncodingMetrics(0, 0, 0, "", null),
+            OutputSizeBytes: 0,
+            Error: error
+        );
     }
 
     private static EncodingResult Fail(

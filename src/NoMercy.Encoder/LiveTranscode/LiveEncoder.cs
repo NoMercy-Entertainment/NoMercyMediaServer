@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Hardware;
 
 public class LiveEncoder(
-    IPlaybackDecisionEngine decisionEngine,
     ILiveQualitySelector qualitySelector,
     ISessionManager sessionManager,
     SpeedIndex speedIndex,

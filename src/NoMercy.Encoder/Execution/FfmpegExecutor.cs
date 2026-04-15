@@ -25,6 +25,14 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
         Stopwatch stopwatch = Stopwatch.StartNew();
         DateTime lastProgressReport = DateTime.MinValue;
 
+        // Metrics accumulators — sampled on every progress snapshot
+        double speedSum = 0;
+        double fpsSum = 0;
+        double peakSpeed = 0;
+        double peakFps = 0;
+        long lastTotalSize = 0;
+        int sampleCount = 0;
+
         // Kill signal: fires after a grace period once FFmpeg reports progress=end.
         // This prevents the process from hanging indefinitely after output is written.
         CancellationTokenSource killCts = new();
@@ -44,8 +52,20 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
             if (snapshot is null)
                 return;
 
+            // Collect metrics on every snapshot (not throttled)
+            if (!snapshot.IsEnd && snapshot.Speed > 0)
+            {
+                speedSum += snapshot.Speed;
+                fpsSum += snapshot.Fps;
+                peakSpeed = Math.Max(peakSpeed, snapshot.Speed);
+                peakFps = Math.Max(peakFps, snapshot.Fps);
+                lastTotalSize = snapshot.TotalSizeBytes;
+                sampleCount++;
+            }
+
             if (snapshot.IsEnd && hasProgressPipe)
             {
+                lastTotalSize = snapshot.TotalSizeBytes;
                 logger.LogDebug(
                     "[{CorrelationId}] progress=end received, starting {Grace}s exit grace period",
                     correlationId,
@@ -122,10 +142,20 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
 
             if (result.IsSuccess)
             {
+                ExecutionMetrics metrics = new(
+                    AverageSpeed: sampleCount > 0 ? speedSum / sampleCount : 0,
+                    AverageFps: sampleCount > 0 ? fpsSum / sampleCount : 0,
+                    PeakSpeed: peakSpeed,
+                    PeakFps: peakFps,
+                    TotalSizeBytes: lastTotalSize
+                );
+
                 logger.LogInformation(
-                    "[{CorrelationId}] FFmpeg completed in {Duration}",
+                    "[{CorrelationId}] FFmpeg completed in {Duration} (avg {Speed:F2}x, {Fps:F1} fps)",
                     correlationId,
-                    stopwatch.Elapsed
+                    stopwatch.Elapsed,
+                    metrics.AverageSpeed,
+                    metrics.AverageFps
                 );
 
                 return new ExecutionResult(
@@ -133,7 +163,8 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                     ExitCode: 0,
                     StdErr: result.StdErr,
                     Duration: stopwatch.Elapsed,
-                    Error: null
+                    Error: null,
+                    Metrics: metrics
                 );
             }
 
