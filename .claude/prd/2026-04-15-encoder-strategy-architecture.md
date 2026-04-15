@@ -142,8 +142,26 @@ For strategies that support 2-pass:
 - **Pass 1:** `ffmpeg -pass 1 -passlogfile {statsFile} -f null /dev/null` — analyzes source complexity, writes stats file, produces no output. Software encoders only (libx264, libx265, libsvtav1). NVENC/QSV/AMF ignore 2-pass (they have their own lookahead).
 - **Pass 2:** `ffmpeg -pass 2 -passlogfile {statsFile} {normal output}` — uses stats for optimal bit allocation.
 - Progress: pass 1 reports 0-50%, pass 2 reports 50-100%.
-- Stats file lives in temp directory, cleaned up after encode.
 - If pass 1 fails, the whole encode fails — no partial output.
+
+### Checkpoint & Resume
+
+2-pass encodes (and long single-pass encodes) must survive system restarts. The `JobCheckpoint` system persists encode state to the database.
+
+**What's checkpointed:**
+- Pass 1 stats file path and completion flag
+- Pass 2 progress (last completed segment for HLS, byte offset for single-file formats)
+- Encode task assignment for distributed encodes (which worker had which task)
+
+**Resume behavior on restart:**
+- Pass 1 completed, stats file exists on disk → skip to pass 2
+- Pass 1 incomplete or stats file missing → re-run pass 1 from scratch
+- Pass 2 incomplete, HLS segments on disk → resume from last completed segment
+- Pass 2 incomplete, single-file output → re-run pass 2 (can't resume mid-file)
+
+Stats files persist in the output directory (not temp) so they survive reboots. Cleaned up after successful pass 2 completion.
+
+The `EncodingRequest.Options.ResumeFromCheckpoint` flag (already exists) controls this behavior. Strategies check for existing checkpoints at the start of `EncodeAsync` and skip completed work.
 
 ### Migration Path
 
