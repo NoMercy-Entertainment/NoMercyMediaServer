@@ -282,25 +282,7 @@ public class TvShowRepository(MediaContext context)
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        // SQLite PRAGMAs are per-connection. Open explicitly so the FK disable
-        // and the delete share the same connection from the pool.
-        Microsoft.Data.Sqlite.SqliteConnection conn = (Microsoft.Data.Sqlite.SqliteConnection)
-            context.Database.GetDbConnection();
-        await conn.OpenAsync(ct);
-        try
-        {
-            await using Microsoft.Data.Sqlite.SqliteCommand pragmaOff = conn.CreateCommand();
-            pragmaOff.CommandText = "PRAGMA foreign_keys = OFF";
-            await pragmaOff.ExecuteNonQueryAsync(ct);
-
-            await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync(ct);
-        }
-        finally
-        {
-            await using Microsoft.Data.Sqlite.SqliteCommand pragmaOn = conn.CreateCommand();
-            pragmaOn.CommandText = "PRAGMA foreign_keys = ON";
-            await pragmaOn.ExecuteNonQueryAsync(ct);
-        }
+        await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync(ct);
     }
 
     public async Task<IEnumerable<Episode>> GetMissingLibraryShows(

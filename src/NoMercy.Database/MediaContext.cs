@@ -187,13 +187,26 @@ public class MediaContext : DbContext
             .HasForeignKey(u => u.VideoFileId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Mutation loop for join table FKs — these are not covered by explicit fluent API above
-        // but need Cascade so deleting a Library also removes their join rows.
-        // This runs last so it doesn't conflict with the explicit configs above.
+        // Ownership cascades: deleting a parent removes all dependent records.
+        // Tv → (seasons, episodes, casts, images, translations, join tables, etc.)
+        // Episode → (video files, casts, images, translations, etc.)
+        // Season → (episodes inherit via Tv, but season-specific records need cascade)
+        // Library → (join tables)
+        // VideoFile → (user data, playback preferences)
+        Type[] cascadeParents =
+        [
+            typeof(Library),
+            typeof(Tv),
+            typeof(Episode),
+            typeof(Season),
+            typeof(VideoFile),
+            typeof(Movie),
+        ];
+
         modelBuilder
             .Model.GetEntityTypes()
             .SelectMany(t => t.GetForeignKeys())
-            .Where(fk => fk.PrincipalEntityType.ClrType == typeof(Library))
+            .Where(fk => cascadeParents.Contains(fk.PrincipalEntityType.ClrType))
             .ToList()
             .ForEach(fk => fk.DeleteBehavior = DeleteBehavior.Cascade);
 
