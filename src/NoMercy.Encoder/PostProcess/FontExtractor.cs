@@ -61,12 +61,15 @@ public class FontExtractor
     private static string GetFontMimeType(string path) =>
         Path.GetExtension(path).ToLowerInvariant() switch
         {
-            ".ttf" => "font/ttf",
-            ".otf" => "font/otf",
+            ".ttf" => "application/x-font-truetype",
+            ".otf" => "application/x-font-opentype",
             ".woff" => "font/woff",
             ".woff2" => "font/woff2",
             _ => "application/octet-stream",
         };
 
-    private record FontEntry(string File, string MimeType);
+    private record FontEntry(
+        [property: JsonProperty("file")] string File,
+        [property: JsonProperty("mimeType")] string MimeType
+    );
 }
