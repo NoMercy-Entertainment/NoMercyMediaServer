@@ -278,6 +278,103 @@ The `LiveTranscodeStrategy` is fundamentally different from file-based strategie
 
 All implementations exist and are DI-registered. Needs wiring into the strategy pattern and connecting to the streaming hub.
 
+## DASH Output
+
+`DashOutputStrategy` exists with basic implementation. Needs a proper `DashSinglePassStrategy` and `DashTwoPassStrategy` following the same pattern as HLS. Required for Widevine DRM compatibility and broader device support (Android TV, game consoles).
+
+## DRM / Encryption
+
+Professional encoders support content protection:
+
+- **AES-128 HLS encryption** — encrypts each segment with a rotating key. Key served via key server URL in the playlist.
+- **CENC (Common Encryption)** — standard for DASH. Supports Widevine (Android/Chrome), PlayReady (Windows/Edge/Xbox), FairPlay (Apple).
+- **Clearkey** — unencrypted key exchange for testing.
+
+Implementation: DRM is a post-processing step on the output strategy. The strategy produces unencrypted segments, then a `IDrmProcessor` building block encrypts them and updates the playlist manifests with key URIs. Plugin-provided DRM processors can add proprietary schemes.
+
+DRM key management is out of scope for the encoder — the encoder receives a key/key URL and applies it. Key generation and licensing is a server-level concern.
+
+## ABR Ladder Generation
+
+Auto-generating quality tiers from source analysis instead of manual profile definition:
+
+`IAbrLadderGenerator` building block analyzes the source (resolution, bitrate, complexity via scene detection) and produces an optimized set of `VideoOutput` entries. Similar to Netflix's per-title optimization.
+
+- **Input:** Source `MediaInfo` + target constraints (max resolution, max bitrate, min quality)
+- **Output:** Array of `VideoOutput` profiles — the optimal quality ladder for this specific content
+- **Usage:** Optional. Users can still define manual profiles. The generator is a building block strategies can use during planning.
+
+Anime (flat colors, low motion) gets fewer tiers at lower bitrates. Action movies (high motion, grain) get more tiers at higher bitrates.
+
+## Encoding Presets
+
+Shareable, importable preset system beyond seed profiles:
+
+- **Preset format:** JSON file containing a complete `EncodingProfile` with metadata (name, description, author, tags)
+- **Preset library:** Built-in presets ship with the server (similar to Handbrake's preset list). Community presets importable via URL or file.
+- **Preset API:** CRUD endpoints for managing presets. Dashboard UI for browsing and applying.
+- **Preset inheritance:** A preset can extend another preset, overriding specific fields.
+
+Storage: presets live in the database, seeded from JSON files. The existing seed system already supports this — just needs a richer schema and import/export endpoints.
+
+## Queue Management
+
+Encode-specific job queue with user-facing controls:
+
+- **Priority:** Users reorder the queue from the dashboard. Higher priority encodes run first.
+- **Pause/Resume:** Per-job pause via kill -STOP/CONT (already works via `process_id`). Queue-level pause stops dispatching new jobs.
+- **Cancel:** Kill the FFmpeg process and clean up partial output.
+- **Concurrency:** Configurable max concurrent encodes per machine (respects GPU session limits via `IResourceBudget`).
+- **ETA:** Estimated completion for the full queue based on historical encode speed and remaining items.
+
+The current `QueueContext` handles generic jobs. Encoding jobs get their own queue view with these controls. The `IWorkerDispatcher` respects queue ordering when assigning tasks.
+
+## Encoding History & Statistics
+
+Record of every completed encode for profile optimization:
+
+- **Per-encode:** Input file, output path, profile used, encoder, duration, input size, output size, compression ratio, average speed, average bitrate
+- **Aggregated:** Average compression ratio per profile, per codec, per resolution. Helps users tune CRF values.
+- **Storage:** `EncodingHistory` table in the database. Written by the orchestrator after each successful encode.
+- **API:** Dashboard endpoint for browsing history. Export as CSV for analysis.
+
+## Watch Folders
+
+`FolderWatcher` / `LibraryFileWatcher` exists but isn't connected to auto-encoding:
+
+- **Trigger:** New file detected in a watched folder → auto-dispatch encode job with the folder's assigned profiles
+- **Dedup:** Don't re-encode files that already have output (check by filename match in output directory)
+- **Delay:** Configurable settle time (wait N seconds after last write before dispatching — prevents encoding incomplete downloads)
+- **Filter:** File extension and size filters to avoid encoding samples, NFOs, subtitles
+
+## Webhooks & Notifications
+
+Notify external systems on encode lifecycle events:
+
+- **Events:** encode.started, encode.progress (throttled), encode.completed, encode.failed
+- **Delivery:** HTTP POST to configured URLs. JSON payload matching the `EncoderProgressBroadcastEvent` shape.
+- **Configuration:** Per-profile or global webhook URLs. Retry with exponential backoff.
+- **Use cases:** Discord notification on completion, trigger Plex library scan, update external database
+
+Implementation: `INotificationDispatcher` building block. Strategies call it at lifecycle points. The event bus already publishes these events — the dispatcher subscribes and forwards to configured endpoints.
+
+## Hardware Benchmark
+
+`IHardwareBenchmark` interface exists, needs implementation:
+
+- **What it measures:** Encode speed (fps) for a standard test clip at each resolution tier, per encoder (NVENC, QSV, AMF, software)
+- **When it runs:** On first startup, on demand from dashboard, or when hardware changes detected
+- **Output:** `SpeedIndex` entries per encoder/resolution combination
+- **Purpose:** Accurate worker weighting for distributed encoding. Without benchmarks, the dispatcher guesses based on hardware specs.
+
+## Audio-Only Strategies
+
+Music library encoding (`MusicEncodeJob` exists):
+
+- **AudioStrategy** — encodes to AAC/Opus/FLAC based on profile. Single file output (M4A, OGG, FLAC).
+- **AudioHlsStrategy** — HLS audio-only streaming (for music player).
+- Building blocks: loudness normalization (`LoudnessMode`), ReplayGain, audio fingerprinting for metadata matching.
+
 ## Testing Strategy
 
 | Layer | Approach | Runner |
@@ -298,22 +395,37 @@ Extract all hardcoded `new()` instances into interfaces and DI registrations. Cr
 Create `IEncodingStrategy`, `IStrategyResolver`, `EncodingOrchestrator`. Extract current HLS logic into `HlsSinglePassStrategy`. Replace `Encoder` class. Existing encodes produce identical output.
 
 ### Phase 3: Additional File Strategies
-`HlsTwoPassStrategy`, `Mp4SinglePassStrategy`, `Mp4TwoPassStrategy`, `MkvStrategy`. Each with tests.
+`HlsTwoPassStrategy`, `Mp4SinglePassStrategy`, `Mp4TwoPassStrategy`, `MkvStrategy`, `DashSinglePassStrategy`, `DashTwoPassStrategy`. Each with tests.
 
 ### Phase 4: Checkpoint & Resume
 Persist encode state via `JobCheckpoint`. 2-pass stats file survival. HLS segment resume.
 
 ### Phase 5: Live Transcode Strategy
-Wire existing `LiveTranscode/` implementations into `LiveTranscodeStrategy`. Connect to SignalR hub. Session lifecycle tests.
+Wire existing `LiveTranscode/` implementations into `LiveTranscodeStrategy`. Connect to SignalR hub. `ILiveSessionTransport` implementation. Session lifecycle tests.
 
 ### Phase 6: Distribution
-`IWorkerDispatcher`, quality split, time split. Local dispatcher first. Remote dispatcher with `IRemoteWorker`. Feature-flagged.
+`IWorkerDispatcher`, quality split, time split. Local dispatcher first. Remote dispatcher with `IRemoteWorker`. `IHardwareBenchmark` implementation for accurate worker weighting. Feature-flagged.
 
 ### Phase 7: Plugin Integration
 Wire `IPluginServiceRegistrator` into strategy resolver. Plugin strategies discoverable via DI. Plugin building block replacement.
 
-### Phase 8: Content Intelligence
+### Phase 8: Queue & History
+Queue management API (reorder, pause, cancel, concurrency limits). `EncodingHistory` table and API. Dashboard endpoints.
+
+### Phase 9: Content Intelligence
 Implement `ICropDetector`, `IContentDetector`, `ISubtitleOcrEngine`. Wire whisper transcription. These are independent building blocks — strategies opt in.
 
-### Phase 9: Format Edge Cases
-Burn-in subtitles, Dolby Vision passthrough, audio mixing/normalization, disc ripping pipeline.
+### Phase 10: Format Capabilities
+Burn-in subtitles, Dolby Vision passthrough, HDR10+ handling, audio mixing/normalization, `IAbrLadderGenerator`.
+
+### Phase 11: DRM & Encryption
+`IDrmProcessor` building block. AES-128 HLS encryption. CENC for DASH (Widevine/PlayReady). Key management integration.
+
+### Phase 12: Presets & Automation
+Preset library (import/export, inheritance, community sharing). Watch folder auto-encoding. Webhook notifications on encode events.
+
+### Phase 13: Audio Strategies
+`AudioStrategy`, `AudioHlsStrategy`. Loudness normalization, ReplayGain. Music library encoding integration.
+
+### Phase 14: Disc Ripping
+Wire existing disc ripping interfaces into the strategy pattern. Drive monitoring, metadata resolution, rip-to-encode pipeline.
