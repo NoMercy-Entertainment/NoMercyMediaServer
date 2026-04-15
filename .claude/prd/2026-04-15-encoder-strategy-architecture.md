@@ -1,12 +1,12 @@
-# Encoder Strategy Architecture
+# NoMercy Encoder — Complete Architecture
 
 **Date:** 2026-04-15
 **Status:** Design approved, pending implementation plan
 **Branch:** feat/encoder-v3
 
-## Problem
+## Vision
 
-The V3 encoder works for single-pass HLS encoding. But it's a rigid pipeline — hardcoded stages, hardcoded output strategies, no 2-pass support, no live transcode integration, no plugin extensibility. To become a professional encoding engine (Handbrake-grade), the architecture needs to support arbitrary encoding workflows without code changes.
+A professional, plugin-extensible encoding engine. Handbrake on steroids — embedded in a media server but capable of standing alone as a product. Users control what they want. We provide the ability to do whatever they wish.
 
 ## Solution
 
@@ -210,3 +210,110 @@ src/NoMercy.Encoder/
 ```
 
 Existing folders (`Codecs/`, `Hardware/`, `Execution/`, `Analysis/`, `Infrastructure/`) stay unchanged — they're already building blocks.
+
+## Content Intelligence
+
+Pre-processing building blocks that run before encoding. Strategies can optionally use them. Each is an injectable service with an interface.
+
+### Crop Detection (`ICropDetector`)
+
+Interface exists. Analyzes black bars via FFmpeg `cropdetect` filter. Returns crop dimensions. Strategies inject the detected crop into their filter graph.
+
+### Content Detection (`IContentDetector`)
+
+Interface exists. Detects intro/outro/credits boundaries. Uses audio fingerprinting or scene detection. Returns timestamp ranges. Strategies can use these to:
+- Skip intros during live transcode
+- Chapter-mark intros in the output
+- Encode intros at lower quality (saves bitrate)
+
+### Audio Fingerprinting (`IAudioFingerprinter`)
+
+Interface exists. Identifies content via audio signatures (Chromaprint/AcoustID). Used by content detection and for matching episodes across different releases.
+
+### Whisper Transcription (`IWhisperTranscriber`)
+
+Interface exists. The custom nomercy-ffmpeg has whisper built in. Generates subtitles from audio — full speech-to-text. Produces WebVTT/SRT output. Can run as a pre-processing step or as its own strategy.
+
+### OCR Subtitles (`ISubtitleOcrEngine`)
+
+Interface exists. The custom nomercy-ffmpeg has libtesseract. Converts bitmap subtitles (PGS/VobSub) to text (WebVTT/SRT). Can run during encoding (as a filter) or as post-processing.
+
+## Format Capabilities
+
+### HDR → SDR Tonemapping
+
+`ITonemapSelector` and `TonemapSelector` exist. Support for:
+- CPU tonemapping via zscale + tonemap filters
+- GPU tonemapping via libplacebo (Vulkan)
+- Strategies add tonemap to the filter graph when source is HDR and output is SDR
+
+### Dolby Vision / HDR10+
+
+Dynamic metadata passthrough when encoding HEVC→HEVC. When transcoding to SDR, the tonemap path handles conversion. Requires proper tagging (`-tag:v hvc1`, color metadata flags).
+
+### Burn-in Subtitles
+
+`SubtitleMode.BurnIn` exists in the enum but isn't implemented. The filter graph adds a `subtitles` or `ass` filter that renders text onto the video. Used when the output format doesn't support subtitle tracks (e.g., some MP4 players) or when the user explicitly wants hardcoded subs.
+
+### Multi-Audio Handling
+
+Current: each source audio stream matching AllowedLanguages is encoded as a separate track. Future: support audio mixing (commentary + main), downmixing (5.1 → stereo), and audio normalization (loudness mode already has `LoudnessMode` enum).
+
+### Disc Ripping
+
+Full interface set exists (`IDiscScanner`, `IDriveMonitor`, `IDiscMetadataResolver`). Separate workflow from file encoding — scans optical drives, rips to intermediate format, then feeds into the encoding pipeline as a source. The strategy pattern supports this naturally: the source could be a disc instead of a file.
+
+## Live Transcode Details
+
+The `LiveTranscodeStrategy` is fundamentally different from file-based strategies:
+
+- **Entry point:** Triggered by a playback request from a client, not by an encoding job
+- **Decision engine:** `IPlaybackDecisionEngine` decides: DirectPlay, Remux, TranscodeVideo, TranscodeAudio
+- **Session management:** `ISessionManager` tracks active sessions, enforces per-user and global limits
+- **Adaptive quality:** `ILiveQualitySelector` adjusts quality based on client buffer state (via `BufferManager`)
+- **Output:** Segments pushed to a `Channel<Segment>` read by the SignalR/HTTP hub — no disk writes
+- **Lifecycle:** Runs until client disconnects or session times out
+- **Seeking:** Session state machine handles seek requests (Starting→Transcoding→Seeking→Transcoding)
+- **Transport:** `ILiveSessionTransport` (interface exists, needs implementation) handles segment delivery protocol
+
+All implementations exist and are DI-registered. Needs wiring into the strategy pattern and connecting to the streaming hub.
+
+## Testing Strategy
+
+| Layer | Approach | Runner |
+|---|---|---|
+| Building block unit tests | Mock FFmpeg, test codec resolution, filter building, playlist generation | ubuntu-latest |
+| Strategy integration tests | Real FFmpeg, test each strategy produces correct output structure | self-hosted (needs NVENC for HW tests) |
+| Live transcode tests | Mock client, test session lifecycle, quality switching, seek | ubuntu-latest |
+| Distribution tests | Mock workers, test task splitting, assignment, result stitching | ubuntu-latest |
+| Plugin tests | Test strategy registration, building block replacement | ubuntu-latest |
+| End-to-end encode tests | Real files, real NAS, verify output matches V1 reference | self-hosted (Eagle) |
+
+## Implementation Phases
+
+### Phase 1: Foundation (DI + Building Blocks)
+Extract all hardcoded `new()` instances into interfaces and DI registrations. Create the building block interfaces. No behavior change — existing tests pass.
+
+### Phase 2: Strategy Pattern
+Create `IEncodingStrategy`, `IStrategyResolver`, `EncodingOrchestrator`. Extract current HLS logic into `HlsSinglePassStrategy`. Replace `Encoder` class. Existing encodes produce identical output.
+
+### Phase 3: Additional File Strategies
+`HlsTwoPassStrategy`, `Mp4SinglePassStrategy`, `Mp4TwoPassStrategy`, `MkvStrategy`. Each with tests.
+
+### Phase 4: Checkpoint & Resume
+Persist encode state via `JobCheckpoint`. 2-pass stats file survival. HLS segment resume.
+
+### Phase 5: Live Transcode Strategy
+Wire existing `LiveTranscode/` implementations into `LiveTranscodeStrategy`. Connect to SignalR hub. Session lifecycle tests.
+
+### Phase 6: Distribution
+`IWorkerDispatcher`, quality split, time split. Local dispatcher first. Remote dispatcher with `IRemoteWorker`. Feature-flagged.
+
+### Phase 7: Plugin Integration
+Wire `IPluginServiceRegistrator` into strategy resolver. Plugin strategies discoverable via DI. Plugin building block replacement.
+
+### Phase 8: Content Intelligence
+Implement `ICropDetector`, `IContentDetector`, `ISubtitleOcrEngine`. Wire whisper transcription. These are independent building blocks — strategies opt in.
+
+### Phase 9: Format Edge Cases
+Burn-in subtitles, Dolby Vision passthrough, audio mixing/normalization, disc ripping pipeline.
