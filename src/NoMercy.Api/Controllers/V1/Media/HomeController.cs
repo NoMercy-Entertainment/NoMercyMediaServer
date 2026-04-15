@@ -74,7 +74,7 @@ public class HomeController : BaseController
             return Ok(response);
 
         LibraryRepository libraryRepository = new(await _contextFactory.CreateDbContextAsync(ct));
-        List<Library> libraries = await libraryRepository.GetLibraries(userId);
+        List<Library> libraries = await libraryRepository.GetLibrariesLite(userId);
 
         // Fetch all library data in parallel - each task needs its own MediaContext for thread safety
         Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = libraries

@@ -120,6 +120,11 @@ public class EventBusProgressObserver : IProgressObserver
         );
     }
 
+    public void OnCompleted()
+    {
+        Publish(status: "completed", message: "Done");
+    }
+
     public void OnError(EncodingError error)
     {
         Publish(status: "failed", message: error.Message);

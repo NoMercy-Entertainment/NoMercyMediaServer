@@ -21,6 +21,10 @@ public class GlobalExceptionHandlerMiddleware
         {
             await _next(context);
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            Logger.App($"[{context.TraceIdentifier}] Request cancelled by client: {context.Request.Path}", LogEventLevel.Debug);
+        }
         catch (Exception ex)
         {
             string traceId = context.TraceIdentifier;

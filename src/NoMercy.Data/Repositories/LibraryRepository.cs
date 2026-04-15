@@ -83,6 +83,39 @@ public class LibraryRepository(MediaContext context)
     }
 
     /// <summary>
+    /// Lightweight library query for endpoints that don't need LibraryMovies/LibraryTvs collections.
+    /// Use this in Mobile/TV/Home endpoints to avoid loading thousands of join entities into memory.
+    /// </summary>
+    public Task<List<Library>> GetLibrariesLite(Guid userId, CancellationToken ct = default)
+    {
+        return context
+            .Libraries.AsNoTracking()
+            .ForUser(userId)
+            .OrderBy(library => library.Order)
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Returns total item count (movies + TV) per library via cheap SQL COUNT.
+    /// Used for pagination mode decisions without loading join entities.
+    /// </summary>
+    public async Task<Dictionary<Ulid, int>> GetLibraryItemCountsAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        return await context
+            .Libraries.AsNoTracking()
+            .ForUser(userId)
+            .Select(library => new
+            {
+                library.Id,
+                Total = library.LibraryMovies.Count + library.LibraryTvs.Count,
+            })
+            .ToDictionaryAsync(x => x.Id, x => x.Total, ct);
+    }
+
+    /// <summary>
     /// Gets a library with its movies and TV shows limited to <paramref name="take"/> items each.
     /// The .Take(take) inside Include() is intentional: it limits items per-carousel (e.g. 10 for mobile, 6 for TV)
     /// to prevent loading the entire library into memory. The <paramref name="page"/> parameter is currently unused.

@@ -457,6 +457,8 @@ public class RealEncodeTests : IAsyncLifetime
 
         public void OnStageCompleted(string stageName, TimeSpan duration) { }
 
+        public void OnCompleted() { }
+
         public void OnPlanResolved(
             List<string> videoStreams,
             List<string> audioStreams,

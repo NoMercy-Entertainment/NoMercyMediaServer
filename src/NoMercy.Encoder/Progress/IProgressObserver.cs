@@ -10,6 +10,8 @@ public interface IProgressObserver
 
     void OnStageCompleted(string stageName, TimeSpan duration);
 
+    void OnCompleted();
+
     void OnError(EncodingError error);
 
     void OnPlanResolved(

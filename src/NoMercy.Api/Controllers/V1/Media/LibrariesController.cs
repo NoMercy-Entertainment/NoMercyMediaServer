@@ -53,7 +53,12 @@ public class LibrariesController(
         Task<List<Library>> librariesTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx).GetLibraries(userId, ct);
+            return await new LibraryRepository(ctx).GetLibrariesLite(userId, ct);
+        });
+        Task<Dictionary<Ulid, int>> countsTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetLibraryItemCountsAsync(userId, ct);
         });
         Task<List<CollectionListDto>> collectionsTask = Task.Run(async () =>
         {
@@ -102,6 +107,7 @@ public class LibrariesController(
 
         await Task.WhenAll(
             librariesTask,
+            countsTask,
             collectionsTask,
             specialsTask,
             randomTvTask,
@@ -109,6 +115,7 @@ public class LibrariesController(
         );
 
         List<Library> libraries = librariesTask.Result;
+        Dictionary<Ulid, int> itemCounts = countsTask.Result;
         List<CollectionListDto> collections = collectionsTask.Result;
         List<SpecialCardDto> specials = specialsTask.Result;
         HomeTvCardDto? tv = randomTvTask.Result;
@@ -159,8 +166,9 @@ public class LibrariesController(
             ) in libraryDataResults
         )
         {
+            int totalItems = itemCounts.GetValueOrDefault(library.Id);
             Uri moreLink =
-                library.LibraryMovies.Count + library.LibraryTvs.Count > 500
+                totalItems > 500
                     ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
                     : new($"/libraries/{library.Id}", UriKind.Relative);
 
@@ -262,7 +270,7 @@ public class LibrariesController(
         Task<List<Library>> librariesTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx).GetLibraries(userId, ct);
+            return await new LibraryRepository(ctx).GetLibrariesLite(userId, ct);
         });
         Task<List<CollectionListDto>> collectionsTask = Task.Run(async () =>
         {

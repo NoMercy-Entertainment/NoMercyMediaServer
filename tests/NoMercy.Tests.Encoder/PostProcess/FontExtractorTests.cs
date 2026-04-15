@@ -108,13 +108,13 @@ public class FontExtractorTests : IDisposable
         JArray entries = JArray.Parse(json);
         entries.Should().HaveCount(2);
 
-        List<string> files = entries.Select(e => e["File"]!.Value<string>()!).ToList();
+        List<string> files = entries.Select(e => e["file"]!.Value<string>()!).ToList();
         files.Should().Contain("fonts/Font.ttf");
         files.Should().Contain("fonts/Another.otf");
 
-        List<string> mimeTypes = entries.Select(e => e["MimeType"]!.Value<string>()!).ToList();
-        mimeTypes.Should().Contain("font/ttf");
-        mimeTypes.Should().Contain("font/otf");
+        List<string> mimeTypes = entries.Select(e => e["mimeType"]!.Value<string>()!).ToList();
+        mimeTypes.Should().Contain("application/x-font-truetype");
+        mimeTypes.Should().Contain("application/x-font-opentype");
     }
 
     // ------------------------------------------------------------------
@@ -134,7 +134,7 @@ public class FontExtractorTests : IDisposable
         string json = await File.ReadAllTextAsync(Path.Combine(_tempDir, "fonts.json"));
         JArray entries = JArray.Parse(json);
 
-        List<string> mimeTypes = entries.Select(e => e["MimeType"]!.Value<string>()!).ToList();
+        List<string> mimeTypes = entries.Select(e => e["mimeType"]!.Value<string>()!).ToList();
         mimeTypes.Should().Contain("font/woff");
         mimeTypes.Should().Contain("font/woff2");
     }
@@ -184,6 +184,6 @@ public class FontExtractorTests : IDisposable
 
         string json = await File.ReadAllTextAsync(Path.Combine(_tempDir, "fonts.json"));
         JArray entries = JArray.Parse(json);
-        entries[0]["MimeType"]!.Value<string>().Should().Be("application/octet-stream");
+        entries[0]["mimeType"]!.Value<string>().Should().Be("application/octet-stream");
     }
 }

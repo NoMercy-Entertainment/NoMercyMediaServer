@@ -124,7 +124,8 @@ public class Encoder(
         FinalizeOutput finalizeOutput = ((StageSuccess<FinalizeOutput>)finalizeResult).Value;
 
         stopwatch.Stop();
-        progress?.OnStageCompleted("Encode", stopwatch.Elapsed);
+        progress?.OnStageCompleted("Finalize", stopwatch.Elapsed);
+        progress?.OnCompleted();
 
         logger.LogInformation(
             "[{CorrelationId}] Encode complete in {Duration}",
