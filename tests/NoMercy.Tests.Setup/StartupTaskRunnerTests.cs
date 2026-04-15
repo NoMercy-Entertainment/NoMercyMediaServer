@@ -408,10 +408,10 @@ public class StartupTaskRunnerTests
                 DependsOn: ["NetworkProbe"]
             ),
             new(
-                "CallerTask_0",
+                "Seeds",
                 () =>
                 {
-                    executionOrder.Add("CallerTask_0");
+                    executionOrder.Add("Seeds");
                     return Task.CompletedTask;
                 },
                 CanDefer: true,
@@ -453,7 +453,7 @@ public class StartupTaskRunnerTests
 
         // Auth failed → deferred, along with downstream
         Assert.Contains(runner.DeferredTasks, t => t.Name == "Auth");
-        Assert.Contains(runner.DeferredTasks, t => t.Name == "CallerTask_0");
+        Assert.Contains(runner.DeferredTasks, t => t.Name == "Seeds");
         Assert.Contains(runner.DeferredTasks, t => t.Name == "Register");
     }
 
@@ -520,8 +520,7 @@ public class BuildStartupTasksTests
     [Fact]
     public void BuildStartupTasks_ContainsAllExpectedTasks()
     {
-        List<TaskDelegate> callerTasks = [() => Task.CompletedTask];
-        List<StartupTask> tasks = Start.BuildStartupTasks(callerTasks);
+        List<StartupTask> tasks = Start.BuildStartupTasks();
 
         // Auth is now handled by AuthManager/BootOrchestrator — no longer a startup task.
         string[] expectedNames =
@@ -535,8 +534,6 @@ public class BuildStartupTasksTests
             "ChromeCast",
             "UpdateChecker",
             "DesktopIcon",
-            "CallerTask_0",
-            "Register",
         ];
 
         foreach (string name in expectedNames)
@@ -551,7 +548,7 @@ public class BuildStartupTasksTests
     [Fact]
     public void BuildStartupTasks_Phase1TasksAreNotDeferrable()
     {
-        List<StartupTask> tasks = Start.BuildStartupTasks([]);
+        List<StartupTask> tasks = Start.BuildStartupTasks();
 
         List<StartupTask> phase1 = tasks.Where(t => t.Phase == 1).ToList();
 
@@ -562,46 +559,9 @@ public class BuildStartupTasksTests
     }
 
     [Fact]
-    public void BuildStartupTasks_RegisterDependsOnNetworking()
-    {
-        // Auth is handled by AuthManager/BootOrchestrator — Register now only depends on Networking.
-        List<StartupTask> tasks = Start.BuildStartupTasks([]);
-
-        StartupTask register = tasks.Single(t => t.Name == "Register");
-
-        Assert.NotNull(register.DependsOn);
-        Assert.DoesNotContain("Auth", register.DependsOn);
-        Assert.Contains("Networking", register.DependsOn);
-    }
-
-    [Fact]
-    public void BuildStartupTasks_CallerTasksDependOnNetworkProbe()
-    {
-        // Auth task removed — CallerTasks now depend on NetworkProbe instead.
-        List<TaskDelegate> callerTasks = [() => Task.CompletedTask, () => Task.CompletedTask];
-
-        List<StartupTask> tasks = Start.BuildStartupTasks(callerTasks);
-
-        List<StartupTask> callerStartupTasks = tasks
-            .Where(t => t.Name.StartsWith("CallerTask_"))
-            .ToList();
-
-        Assert.Equal(2, callerStartupTasks.Count);
-        Assert.All(
-            callerStartupTasks,
-            t =>
-            {
-                Assert.NotNull(t.DependsOn);
-                Assert.DoesNotContain("Auth", t.DependsOn);
-                Assert.Contains("NetworkProbe", t.DependsOn);
-            }
-        );
-    }
-
-    [Fact]
     public void BuildStartupTasks_NoDuplicateNames()
     {
-        List<StartupTask> tasks = Start.BuildStartupTasks([]);
+        List<StartupTask> tasks = Start.BuildStartupTasks();
 
         List<string> names = tasks.Select(t => t.Name).ToList();
         Assert.Equal(names.Count, names.Distinct().Count());
@@ -610,7 +570,7 @@ public class BuildStartupTasksTests
     [Fact]
     public void BuildStartupTasks_AllDependenciesExist()
     {
-        List<StartupTask> tasks = Start.BuildStartupTasks([() => Task.CompletedTask]);
+        List<StartupTask> tasks = Start.BuildStartupTasks();
         HashSet<string> taskNames = tasks.Select(t => t.Name).ToHashSet();
 
         foreach (StartupTask task in tasks)
@@ -627,7 +587,7 @@ public class BuildStartupTasksTests
     [Fact]
     public void BuildStartupTasks_PhasesAreOrdered()
     {
-        List<StartupTask> tasks = Start.BuildStartupTasks([]);
+        List<StartupTask> tasks = Start.BuildStartupTasks();
 
         // Phase 1 tasks should exist
         Assert.Contains(tasks, t => t.Phase == 1);
@@ -635,14 +595,12 @@ public class BuildStartupTasksTests
         Assert.Contains(tasks, t => t.Phase == 2);
         // Phase 3 tasks should exist
         Assert.Contains(tasks, t => t.Phase == 3);
-        // Phase 4 tasks should exist
-        Assert.Contains(tasks, t => t.Phase == 4);
     }
 
     [Fact]
     public void BuildStartupTasks_PassesValidation()
     {
-        List<StartupTask> tasks = Start.BuildStartupTasks([() => Task.CompletedTask]);
+        List<StartupTask> tasks = Start.BuildStartupTasks();
 
         // Should not throw — validates dependencies and circular references
         StartupTaskRunner runner = new(tasks);

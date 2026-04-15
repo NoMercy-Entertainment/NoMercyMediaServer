@@ -16,9 +16,8 @@ public class Start
 
     private static List<StartupTask> _allTasks = [];
     private static HashSet<string> _phase1Completed = [];
-    private static List<TaskDelegate> _callerTasks = [];
 
-    internal static List<StartupTask> BuildStartupTasks(List<TaskDelegate> callerTasks)
+    internal static List<StartupTask> BuildStartupTasks()
     {
         bool hasNetwork = false;
 
@@ -107,25 +106,14 @@ public class Start
                 CanDefer: true,
                 Phase: 3
             ),
-            .. callerTasks.Select(
-                (TaskDelegate taskDelegate, int i) =>
-                    new StartupTask(
-                        $"CallerTask_{i}",
-                        taskDelegate.Invoke,
-                        CanDefer: true,
-                        Phase: 3,
-                        DependsOn: ["NetworkProbe"]
-                    )
-            ),
             // Registration removed — BootOrchestrator handles it in Phase 3.
             // Having it here caused double registration + 5-minute cert retry loops.
         ];
     }
 
-    public static async Task InitEssential(List<TaskDelegate> tasks)
+    public static async Task InitEssential()
     {
-        _callerTasks = tasks;
-        _allTasks = BuildStartupTasks(tasks);
+        _allTasks = BuildStartupTasks();
 
         List<StartupTask> phase1Tasks = _allTasks.Where(t => t.Phase == 1).ToList();
         StartupTaskRunner runner = new(phase1Tasks);
@@ -158,9 +146,8 @@ public class Start
                 // Auth is handled by AuthManager/BootOrchestrator — check AccessToken directly.
                 Authenticated = !string.IsNullOrEmpty(Globals.Globals.AccessToken),
                 NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
-                SeedsRun = runner.DeferredTasks.All(t => !t.Name.StartsWith("CallerTask_")),
+                SeedsRun = true,
                 Registered = runner.CompletedTasks.Contains("Register"),
-                CallerTasks = _callerTasks,
             };
             _ = Task.Run(() => DegradedModeRecovery.StartRecoveryLoop(deferred));
         }

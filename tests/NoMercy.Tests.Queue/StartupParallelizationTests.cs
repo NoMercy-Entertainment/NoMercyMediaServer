@@ -15,7 +15,7 @@ public class StartupParallelizationTests
     /// Validates that the phased startup pattern executes tasks in the correct
     /// dependency order: Phase 1 completes before Phase 2 starts, etc.
     /// This mirrors Start.Init's structure where AppFiles → Auth || Binaries →
-    /// Networking || CallerTasks → Register.
+    /// Networking → Register.
     /// </summary>
     [Fact]
     public async Task PhasedStartup_MaintainsDependencyOrder()
@@ -225,41 +225,6 @@ public class StartupParallelizationTests
         Assert.False(
             registerStartedBeforeDeps,
             "Register must not start before Auth and Networking complete"
-        );
-    }
-
-    /// <summary>
-    /// Validates that caller-provided tasks (via the tasks parameter) execute
-    /// during Phase 3, after Auth has completed.
-    /// </summary>
-    [Fact]
-    public async Task CallerTasks_ExecuteInPhase3AfterAuth()
-    {
-        bool authCompleted = false;
-        bool callerTaskSawAuthComplete = false;
-
-        // Phase 2: Auth
-        await Task.Run(async () =>
-        {
-            await Task.Delay(50);
-            authCompleted = true;
-        });
-
-        // Phase 3: Caller tasks run after auth
-        List<Task> parallelTasks =
-        [
-            Task.Run(() =>
-            {
-                callerTaskSawAuthComplete = authCompleted;
-                return Task.CompletedTask;
-            }),
-        ];
-
-        await Task.WhenAll(parallelTasks);
-
-        Assert.True(
-            callerTaskSawAuthComplete,
-            "Caller tasks should execute after Auth completes (Phase 3)"
         );
     }
 }

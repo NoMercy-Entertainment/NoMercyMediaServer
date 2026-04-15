@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -144,37 +146,105 @@ public static class DatabaseSeeder
     }
 
     /// <summary>
-    /// Phase 3: Seed all remaining data (TMDB genres, languages, users, etc.).
-    /// Requires network + auth — called after auth completes.
-    /// Schema and offline data must already exist.
+    /// Seed provider data (TMDB genres, languages, certifications, etc.).
+    /// Requires API keys (no auth). Called early in startup before any import jobs.
     /// </summary>
     public static async Task Run()
     {
         MediaContext mediaDbContext = new();
 
+        await SeedOfflineData();
+
+        Func<Task>[] seeds =
+        [
+            () => LanguagesSeed.Init(mediaDbContext),
+            () => CountriesSeed.Init(mediaDbContext),
+            () => GenresSeed.Init(mediaDbContext),
+            () => CertificationsSeed.Init(mediaDbContext),
+            () => MusicGenresSeed.Init(mediaDbContext),
+        ];
+
+        foreach (Func<Task> seed in seeds)
+        {
+            try
+            {
+                await seed();
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup($"Seed failed: {ex.Message}", LogEventLevel.Warning);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Seed auth-dependent data (users, library assignment, claims).
+    /// Called after auth completes via BootOrchestrator.
+    /// </summary>
+    public static async Task SeedAuthData()
+    {
+        MediaContext mediaDbContext = new();
+
+        Func<Task>[] seeds =
+        [
+            () => UsersSeed.Init(mediaDbContext),
+            () => AssignOwnerToUnassignedLibraries(mediaDbContext),
+            () => ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext),
+        ];
+
+        foreach (Func<Task> seed in seeds)
+        {
+            try
+            {
+                await seed();
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup($"Auth seed failed: {ex.Message}", LogEventLevel.Warning);
+            }
+        }
+
+        if (ShouldSeedMarvel)
+        {
+            Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
+            thread.Start();
+        }
+    }
+
+    private static async Task AssignOwnerToUnassignedLibraries(MediaContext mediaContext)
+    {
         try
         {
-            // Re-run offline seeds to pick up any updates
-            await SeedOfflineData();
+            User? owner = await mediaContext.Users.FirstOrDefaultAsync(u => u.Owner);
+            if (owner is null)
+                return;
 
-            await LanguagesSeed.Init(mediaDbContext);
-            await CountriesSeed.Init(mediaDbContext);
-            await GenresSeed.Init(mediaDbContext);
-            await CertificationsSeed.Init(mediaDbContext);
-            await MusicGenresSeed.Init(mediaDbContext);
-            await UsersSeed.Init(mediaDbContext);
+            List<Ulid> assignedLibraryIds = await mediaContext
+                .LibraryUser.Select(lu => lu.LibraryId)
+                .Distinct()
+                .ToListAsync();
 
-            await ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext);
+            List<Library> unassigned = await mediaContext
+                .Libraries.Where(l => !assignedLibraryIds.Contains(l.Id))
+                .ToListAsync();
 
-            if (ShouldSeedMarvel)
+            if (unassigned.Count == 0)
+                return;
+
+            foreach (Library library in unassigned)
             {
-                Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
-                thread.Start();
+                mediaContext.LibraryUser.Add(new LibraryUser(library.Id, owner.Id));
             }
+
+            await mediaContext.SaveChangesAsync();
+            Logger.Setup($"Assigned {unassigned.Count} libraries to owner {owner.Name}");
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Database seeding failed: {ex.Message}", LogEventLevel.Warning);
+            Logger.Setup(
+                $"Failed to assign libraries to owner: {ex.Message}",
+                LogEventLevel.Warning
+            );
         }
     }
 

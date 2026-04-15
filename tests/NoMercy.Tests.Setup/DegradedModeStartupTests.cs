@@ -48,7 +48,6 @@ public class DegradedModeStartupTests
         Assert.False(deferred.Registered);
         Assert.False(deferred.SeedsRun);
         Assert.False(deferred.AllCompleted);
-        Assert.Empty(deferred.CallerTasks);
     }
 
     [Fact]
@@ -70,24 +69,6 @@ public class DegradedModeStartupTests
         Assert.True(deferred.SeedsRun);
         Assert.True(deferred.Registered);
         Assert.True(deferred.AllCompleted);
-    }
-
-    [Fact]
-    public void DeferredTasks_HoldsCallerTasks()
-    {
-        bool taskExecuted = false;
-        TaskDelegate testTask = () =>
-        {
-            taskExecuted = true;
-            return Task.CompletedTask;
-        };
-
-        DeferredTasks deferred = new() { CallerTasks = [testTask] };
-
-        Assert.Single(deferred.CallerTasks);
-
-        deferred.CallerTasks[0].Invoke().Wait();
-        Assert.True(taskExecuted);
     }
 
     [Fact]
@@ -155,53 +136,6 @@ public class DegradedModeStartupTests
 
 public class DegradedModeStartupPhasingTests
 {
-    [Fact]
-    public async Task DegradedMode_RunsCallerTasksWithErrorHandling()
-    {
-        // Simulates the degraded mode path in Start.Init where caller tasks
-        // are run with try/catch so failures don't kill the server
-        ConcurrentBag<string> results = [];
-        bool failingTaskRan = false;
-
-        List<TaskDelegate> tasks =
-        [
-            () =>
-            {
-                results.Add("task1_success");
-                return Task.CompletedTask;
-            },
-            () =>
-            {
-                failingTaskRan = true;
-                throw new InvalidOperationException("Network unavailable");
-            },
-            () =>
-            {
-                results.Add("task3_success");
-                return Task.CompletedTask;
-            },
-        ];
-
-        // Simulate degraded mode execution pattern from Start.Init
-        foreach (TaskDelegate callerTask in tasks)
-        {
-            try
-            {
-                await callerTask.Invoke();
-            }
-            catch
-            {
-                // In degraded mode, failures are caught and logged
-            }
-        }
-
-        // All tasks should have been attempted
-        Assert.True(failingTaskRan, "Even failing tasks should be attempted");
-        Assert.Contains("task1_success", results);
-        Assert.Contains("task3_success", results);
-        Assert.Equal(2, results.Count);
-    }
-
     [Fact]
     public async Task FullMode_MaintainsPhasedDependencyOrder()
     {
@@ -301,9 +235,6 @@ public class DegradedModeStartupPhasingTests
         // Phase 3: Degraded mode
         if (!hasNetwork || !hasAuth)
         {
-            // Run caller tasks with error handling
-            executionLog.Add(("CallerTasksDegraded", 3));
-
             // Schedule recovery
             recoveryLoopScheduled = true;
         }
@@ -313,7 +244,6 @@ public class DegradedModeStartupPhasingTests
 
         Assert.False(registerRan, "Register should not run in degraded mode");
         Assert.True(recoveryLoopScheduled, "Recovery loop should be scheduled in degraded mode");
-        Assert.Contains(executionLog, e => e.Name == "CallerTasksDegraded");
     }
 
     [Fact]
