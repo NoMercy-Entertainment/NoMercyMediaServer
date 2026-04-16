@@ -5,5 +5,9 @@ public record JobCheckpoint(
     string InputPath,
     string OutputDirectory,
     int[] CompletedGroupIndices,
-    DateTime LastUpdated
+    DateTime LastUpdated,
+    string? StatsFilePath = null,
+    bool Pass1Completed = false,
+    int LastCompletedSegment = -1,
+    string? EncodeMode = null
 );

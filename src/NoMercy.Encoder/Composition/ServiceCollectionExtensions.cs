@@ -9,6 +9,7 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
@@ -76,6 +77,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IFfmpegExecutor, FfmpegExecutor>();
         services.AddTransient<ProgressParser>();
         services.AddTransient<ProcessThrottle>();
+
+        // Checkpoint persistence
+        services.AddTransient<ICheckpointStore, JsonCheckpointStore>();
 
         // Building blocks
         services.AddTransient<IFilterGraphBuilder, FilterGraphBuilder>();
