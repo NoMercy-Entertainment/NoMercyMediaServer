@@ -7,6 +7,7 @@ using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.ContentAnalysis;
+using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
@@ -162,6 +163,12 @@ public static class ServiceCollectionExtensions
             new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>())
         );
         services.AddSingleton<ILiveEncoder, LiveEncoder>();
+
+        // Disc ripping — DriveMonitor is Singleton because its polling loop
+        // holds state (last-seen drives) across MonitorAsync() enumerations.
+        services.AddTransient<IDiscScanner, DiscScanner>();
+        services.AddSingleton<IDriveMonitor, DriveMonitor>();
+        services.AddTransient<IDiscRipper, DiscRipper>();
 
         return services;
     }

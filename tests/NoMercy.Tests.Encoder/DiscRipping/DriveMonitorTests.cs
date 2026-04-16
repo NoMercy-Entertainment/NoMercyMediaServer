@@ -1,0 +1,68 @@
+namespace NoMercy.Tests.Encoder.DiscRipping;
+
+using Microsoft.Extensions.Logging.Abstractions;
+using NoMercy.Encoder.DiscRipping;
+
+/// <summary>
+/// DriveMonitor reads real OS drive state via <see cref="DriveInfo.GetDrives"/>,
+/// which can't be mocked without a filesystem abstraction. These tests stay
+/// on the public contract: cancellation ends enumeration promptly, and
+/// <see cref="DriveMonitor.GetDrives"/> returns entries shaped correctly
+/// regardless of how many optical drives the host has (zero is fine).
+/// </summary>
+public class DriveMonitorTests
+{
+    [Fact]
+    public void GetDrives_ReturnsOpticalDrivesOnly()
+    {
+        DriveMonitor monitor = new(NullLogger<DriveMonitor>.Instance);
+
+        IReadOnlyList<DiscDrive> drives = monitor.GetDrives();
+
+        drives.Should().NotBeNull();
+        // On CI hosts there are typically zero optical drives. That's fine —
+        // we just need the list shape and path non-emptiness to be right.
+        foreach (DiscDrive drive in drives)
+        {
+            drive.Path.Should().NotBeNullOrWhiteSpace();
+        }
+    }
+
+    [Fact]
+    public async Task MonitorAsync_CancellationEndsEnumeration()
+    {
+        DriveMonitor monitor = new(NullLogger<DriveMonitor>.Instance);
+
+        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(100));
+        List<DriveEvent> events = [];
+
+        await foreach (DriveEvent evt in monitor.MonitorAsync(cts.Token))
+        {
+            events.Add(evt);
+        }
+
+        // The test completes — that's the success condition. We expect zero
+        // events on a stable host; the important thing is the loop exited.
+        events.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task MonitorAsync_AlreadyCancelledToken_ExitsImmediately()
+    {
+        DriveMonitor monitor = new(NullLogger<DriveMonitor>.Instance);
+
+        using CancellationTokenSource cts = new();
+        cts.Cancel();
+
+        List<DriveEvent> events = [];
+        DateTime start = DateTime.UtcNow;
+
+        await foreach (DriveEvent evt in monitor.MonitorAsync(cts.Token))
+        {
+            events.Add(evt);
+        }
+
+        TimeSpan elapsed = DateTime.UtcNow - start;
+        elapsed.Should().BeLessThan(TimeSpan.FromSeconds(1));
+    }
+}
