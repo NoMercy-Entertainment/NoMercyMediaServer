@@ -18,7 +18,8 @@ public static class ProfileMapper
         IReadOnlyList<V1VideoProfile> videoProfiles,
         IReadOnlyList<V1AudioProfile> audioProfiles,
         IReadOnlyList<V1SubtitleProfile> subtitleProfiles,
-        V1ThumbnailProfile? thumbnailProfile = null
+        V1ThumbnailProfile? thumbnailProfile = null,
+        string? encodeMode = null
     )
     {
         OutputFormat format = container.ToLowerInvariant() switch
@@ -38,7 +39,30 @@ public static class ProfileMapper
             ? new ThumbnailOutput(thumbnailProfile.Width, thumbnailProfile.IntervalSeconds)
             : null;
 
-        return new EncodingProfile(id, name, format, video, audio, subtitles, thumbnails);
+        EncodeMode mode = ParseEncodeMode(encodeMode);
+
+        return new EncodingProfile(
+            Id: id,
+            Name: name,
+            Format: format,
+            VideoOutputs: video,
+            AudioOutputs: audio,
+            SubtitleOutputs: subtitles,
+            Thumbnails: thumbnails,
+            EncodeMode: mode
+        );
+    }
+
+    private static EncodeMode ParseEncodeMode(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return EncodeMode.SinglePass;
+
+        return value.ToLowerInvariant() switch
+        {
+            "2pass" or "twopass" or "two_pass" or "two-pass" => EncodeMode.TwoPass,
+            _ => EncodeMode.SinglePass,
+        };
     }
 
     private static VideoOutput MapVideo(V1VideoProfile v)

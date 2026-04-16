@@ -11,6 +11,7 @@ public record EncodingProfile(
     SubtitleOutput[] SubtitleOutputs,
     ThumbnailOutput? Thumbnails = null,
     int SegmentDurationSeconds = 6,
+    EncodeMode EncodeMode = EncodeMode.SinglePass,
     int SchemaVersion = 1
 );
 
