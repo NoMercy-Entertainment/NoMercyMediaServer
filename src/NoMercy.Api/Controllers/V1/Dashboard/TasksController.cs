@@ -249,6 +249,30 @@ public class TasksController(
         if (job is null)
             return NotFoundResponse("Job not found");
 
+        // If the job is currently running, terminate the FFmpeg process(es) tracked
+        // for it. Without this the ffmpeg process keeps going after the queue entry
+        // is removed — V1 dashboard behavior expects the kill.
+        VideoEncodeJob? payload = job.Payload.FromJson<VideoEncodeJob>();
+        if (payload is not null && int.TryParse(payload.Id, out int mediaId))
+        {
+            IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(mediaId);
+            foreach (int pid in pids)
+            {
+                try
+                {
+                    using System.Diagnostics.Process ffmpegProcess =
+                        System.Diagnostics.Process.GetProcessById(pid);
+                    ffmpegProcess.Kill(entireProcessTree: true);
+                }
+                catch (Exception)
+                {
+                    // Process may have already exited or the PID may be stale —
+                    // clean up the registry entry regardless.
+                }
+                processRegistry.Unregister(mediaId, pid);
+            }
+        }
+
         queueContext.QueueJobs.Remove(job);
 
         await queueContext.SaveChangesAsync();
