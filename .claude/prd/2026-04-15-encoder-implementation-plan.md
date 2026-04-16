@@ -16,7 +16,7 @@
 
 ## Current Status — 2026-04-16
 
-**Build:** 175 commits ahead of `master` · 0 errors · 0 warnings · 678 encoder tests + 6 repository tests passing (+94 added this session).
+**Build:** 177 commits ahead of `master` · 0 errors · 0 warnings · 691 encoder tests + 6 repository tests passing (+107 added this session).
 
 **What already works today (outside the strategy pattern):**
 - 6-stage pipeline (`Analyze → Validate → Plan → Build → Execute → Finalize`) in [`Pipeline/Encoder.cs`](../../src/NoMercy.Encoder/Pipeline/Encoder.cs) delivering production-grade HLS single-pass
@@ -34,8 +34,8 @@
 |-------|--------|----------|
 | 1. Foundation — DI + Building Blocks | ✅ done | All 4 tasks shipped: interfaces (1.1), DI registration (1.2), stage injection (1.3), EncodeMode enum + parser (1.4). Pending sub-step: `IOutputStrategyFactory` for format selection via DI. |
 | 2. Strategy Pattern | ✅ MVP | `Orchestration/` has `IEncodingOrchestrator` + `EncodingOrchestrator` + `IStrategyResolver` + `StrategyResolver`. `Strategies/IEncodingStrategy` defines the contract. `VideoEncodeJob` / `MusicEncodeJob` call the orchestrator, not `IEncoder` directly. Task 2.2 (full HLS stage extraction) deferred — strategies currently wrap `IEncoder` as a seam; format-specific logic can peel out later. |
-| 3. Additional File Strategies | ✅ single-pass all formats | `HlsSinglePassStrategy`, `MkvStrategy`, `Mp4SinglePassStrategy`, `DashSinglePassStrategy` all registered. Each delegates to `IEncoder` — format routing already works via `BuildStage.GetStrategy(OutputFormat)`. 2-pass variants (3.1, 3.3, 3.5) still pending. |
-| 4. Checkpoint & Resume | ⚠️ store done, wiring pending | `JobCheckpoint` extended with `StatsFilePath`, `Pass1Completed`, `LastCompletedSegment`, `EncodeMode`. `ICheckpointStore` + `JsonCheckpointStore` ship with tests. Strategies do not yet consult the store (task 4.2 — gated on 2-pass strategies). |
+| 3. Additional File Strategies | ✅ + HLS 2-pass | `HlsSinglePassStrategy`, `HlsTwoPassStrategy`, `MkvStrategy`, `Mp4SinglePassStrategy`, `DashSinglePassStrategy` all registered. `EncodingOptions.Pass` (Single/One/Two) + `StatsFilePath` thread through to `BuildStage`, which branches the command layout accordingly: pass 1 emits a single video-only null-sink command, pass 2 injects `-pass 2 -passlogfile` into each video output's ExtraFlags. MP4 / DASH 2-pass variants (3.3, 3.5) still pending. |
+| 4. Checkpoint & Resume | ✅ done (for 2-pass) | `HlsTwoPassStrategy` loads checkpoint on start; if `Pass1Completed` and the stats file still exists on disk, pass 1 is skipped. Pass 1 success saves checkpoint; pass 2 success deletes checkpoint and cleans stats files. Single-pass doesn't need checkpoint granularity (one FFmpeg command, resume semantics don't apply). |
 | 5. Live Transcode Strategy | ❌ scaffolded only | `LiveEncoder.StartAsync` creates a session object but does not spawn FFmpeg. Session manager + decision engine work. No strategy wrapper, no transport impl. |
 | 6. Distribution | ❌ not started | No `Distribution/` dir. `IJobDispatcher` / `IRemoteWorker` / `IHardwareBenchmark` interfaces exist with zero implementations. |
 | 7. Plugin Integration | ✅ implicit | `StrategyResolver` iterates `IEnumerable<IEncodingStrategy>` and walks in reverse so later (plugin) registrations override built-ins. The existing `IPluginServiceRegistrator` pattern lets plugins register additional strategies with zero core changes. `StrategyResolverTests.Resolve_LastRegistrationWins_PluginsOverrideBuiltIn` proves it. |
