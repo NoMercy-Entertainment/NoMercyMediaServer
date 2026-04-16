@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NoMercy MediaServer is a self-hosted media streaming platform built with .NET 9.0, featuring automatic media encoding, comprehensive library management, and remote streaming capabilities. The project is under active development (work-in-progress).
+NoMercy MediaServer is a self-hosted media streaming platform built with .NET 10.0, featuring automatic media encoding, comprehensive library management, and remote streaming capabilities. The project is under active development (work-in-progress).
 
 ## Build & Run Commands
 
@@ -128,6 +128,10 @@ Encoding inheritance: `BaseVideo` → `X264`/`X265`/`AV1`, `BaseAudio` → forma
 - `src/NoMercy.Service/Configuration/ServiceConfiguration.cs`: DI container setup
 - `src/NoMercy.Service/Configuration/ApplicationConfiguration.cs`: Middleware pipeline
 - `src/NoMercy.Setup/Start.cs`: Startup sequence initialization
+
+## Formatting
+
+Run `dotnet csharpier format` on all changed .cs files before every commit.
 
 ## Code Style Rules
 
