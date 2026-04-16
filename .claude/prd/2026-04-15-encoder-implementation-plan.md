@@ -14,6 +14,43 @@
 
 ---
 
+## Current Status — 2026-04-16
+
+**Build:** 156 commits ahead of `master` · 0 errors · 0 warnings · 590 encoder tests passing.
+
+**What already works today (outside the strategy pattern):**
+- 6-stage pipeline (`Analyze → Validate → Plan → Build → Execute → Finalize`) in [`Pipeline/Encoder.cs`](../../src/NoMercy.Encoder/Pipeline/Encoder.cs) delivering production-grade HLS single-pass
+- V1 profile format (`VideoProfiles` / `AudioProfiles` / `SubtitleProfiles`) wired via [`ProfileMapper.FromV1()`](../../src/NoMercy.Encoder/Profiles/ProfileMapper.cs)
+- Hardware-aware codec resolution with GPU session tracking, cascade deletes
+- Apple-compliant HLS, measured bandwidth, dual audio, ASS subtitle variants (sign/full/alt)
+- Font extraction, chapter writing, sprite/thumbnail generation (sprites run as a separate command due to spritevtt `EAGAIN` bug in nomercy-ffmpeg)
+- HDR → SDR tonemap via `ITonemapSelector`
+- Preview encoding (`IEncoder.PreviewAsync`) with real metrics
+- EventBus progress channel, V1-compatible dashboard shape, audio-only encodes, subtitle variant detection
+
+**Phase-by-phase status:**
+
+| Phase | Status | Evidence |
+|-------|--------|----------|
+| 1. Foundation — DI + Building Blocks | ⚠️ 1 of 4 tasks | Interfaces exist (1.1 ✅). Not registered in DI, stages still `new()` (1.2, 1.3). No `EncodeMode` enum (1.4). |
+| 2. Strategy Pattern | ❌ not started | No `Orchestration/` or `Strategies/` dir. `Encoder.cs` is still the top-level. Jobs call `IEncoder`. |
+| 3. Additional File Strategies | ❌ not started | `Output/` has HLS/MKV/MP4/DASH `IOutputStrategy` impls, but not the plan's full-lifecycle `IEncodingStrategy`. |
+| 4. Checkpoint & Resume | ⚠️ partial | `JobCheckpoint` record exists with 5 fields. Not extended with `StatsFilePath`, `Pass1Completed`, `LastCompletedSegment`, `EncodeMode`. No `ICheckpointStore`. |
+| 5. Live Transcode Strategy | ❌ scaffolded only | `LiveEncoder.StartAsync` creates a session object but does not spawn FFmpeg. Session manager + decision engine work. No strategy wrapper, no transport impl. |
+| 6. Distribution | ❌ not started | No `Distribution/` dir. `IJobDispatcher` / `IRemoteWorker` / `IHardwareBenchmark` interfaces exist with zero implementations. |
+| 7. Plugin Integration | ❌ not started | `IEncoderPlugin` exists in `SystemFeatures/`. No plugin strategy resolver, no DI override tests. |
+| 8. Queue & History | ❌ not started | No `EncodingHistory` model. `TasksController` has pause/resume per-id and failed-retry but no reorder, queue pause, or ETA. |
+| 9. Content Intelligence | ❌ interfaces only | `ICropDetector`, `IContentDetector`, `ISubtitleOcrEngine`, `IWhisperTranscriber` defined. Zero implementations. **Depends on new nomercy-ffmpeg build (libtesseract filter, whisper filter).** |
+| 10. Format Capabilities | ⚠️ 1 of 7 steps | HDR→SDR tonemap done. HDR→HDR passthrough, DV passthrough, burn-in filter, ABR ladder, loudnorm, downmix all not done. |
+| 11. DRM & Encryption | ❌ not started | No `IDrmProcessor`. No AES-128 HLS, no CENC DASH. |
+| 12. Presets & Automation | ❌ not started | No `EncodingPreset` model. `FolderWatcher` exists but does not auto-encode. No webhook dispatcher. |
+| 13. Audio Strategies | ❌ not started | No `AudioStrategy`. `MusicEncodeJob` uses the current pipeline directly. |
+| 14. Disc Ripping | ❌ data only | `DiscDrive`, `DiscInfo`, `RipRequest`, `MetadataMatch`, `OpticalDiscType` records exist. Zero scanning/ripping logic. |
+
+**External dependency:** Phase 9 (OCR, Whisper) and the spritevtt single-command fix depend on the new `nomercy-ffmpeg` build currently in progress. Phase 11 (CENC DASH) depends on `mp4box` / `shaka-packager` integration — not in nomercy-ffmpeg.
+
+---
+
 ## Phase 1: Foundation (DI + Building Blocks)
 
 Extract all hardcoded `new()` instances into interfaces. Register everything in DI. No behavior change — existing 590 tests must still pass.
@@ -36,10 +73,10 @@ Extract all hardcoded `new()` instances into interfaces. Register everything in 
 - Modify: `src/NoMercy.Encoder/PostProcess/ThumbnailGenerator.cs` — implement `IThumbnailGenerator`
 - Modify: `src/NoMercy.Encoder/Output/HlsVariantAnalyzer.cs` — implement `IHlsVariantAnalyzer`
 
-- [ ] **Step 1:** Create each interface file extracting the public methods from the concrete class. Each interface lives in `BuildingBlocks/` — the implementations stay in their current folders.
-- [ ] **Step 2:** Add `: IInterfaceName` to each concrete class.
-- [ ] **Step 3:** Run `dotnet build` — verify 0 errors. No test changes needed since tests use concrete types.
-- [ ] **Step 4:** Commit: `refactor(encoder): extract building block interfaces`
+- [x] **Step 1:** Create each interface file extracting the public methods from the concrete class. Each interface lives in `BuildingBlocks/` — the implementations stay in their current folders.
+- [x] **Step 2:** Add `: IInterfaceName` to each concrete class.
+- [x] **Step 3:** Run `dotnet build` — verify 0 errors. No test changes needed since tests use concrete types.
+- [x] **Step 4:** Commit: `refactor(encoder): extract building block interfaces` — merged as `36dca39`
 
 ### Task 1.2: Register Building Blocks in DI
 
@@ -473,7 +510,7 @@ public interface IWorkerDispatcher
 **Files:**
 - Modify: Strategy classes
 
-- [ ] **Step 1:** HDR → SDR: Use existing `ITonemapSelector` to add tonemap filters when source is HDR and output profile requests SDR.
+- [x] **Step 1:** HDR → SDR: Use existing `ITonemapSelector` to add tonemap filters when source is HDR and output profile requests SDR. — `ITonemapSelector` injected in `PlanStage`, `FilterGraphBuilder` applies tonemap when HDR source + SDR target.
 - [ ] **Step 2:** HDR → HDR passthrough: Preserve color metadata (`-color_primaries bt2020`, `-color_trc smpte2084`, etc.) and tag correctly.
 - [ ] **Step 3:** Dolby Vision: When HEVC→HEVC, preserve DV metadata via stream copy of enhancement layer.
 - [ ] **Step 4:** Tests with HDR test clips, commit: `feat(encoder): HDR tonemap and DV passthrough`
