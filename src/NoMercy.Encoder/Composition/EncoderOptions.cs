@@ -43,4 +43,12 @@ public class EncoderOptions
     /// Required for speech-to-text subtitle generation.
     /// </summary>
     public string? WhisperModelPath { get; set; }
+
+    /// <summary>
+    /// Webhook URLs that receive a JSON POST for each encoder lifecycle event
+    /// (started / completed / failed). Empty by default. Each URL is retried up
+    /// to 3 times with exponential backoff; failures are logged and swallowed
+    /// so a notification error never fails the encode.
+    /// </summary>
+    public IList<string> NotificationWebhookUrls { get; } = [];
 }

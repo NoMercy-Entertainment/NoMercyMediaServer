@@ -13,6 +13,7 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Encoder.Notifications;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
@@ -104,6 +105,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISubtitleOcrEngine, SubtitleOcrEngine>();
         services.AddTransient<IWhisperTranscriber, WhisperTranscriber>();
         services.AddTransient<ICropDetector, CropDetector>();
+
+        // Notifications — plugins can replace INotificationDispatcher to swap
+        // webhooks for Discord/Slack/email/etc.
+        services.AddSingleton<INotificationDispatcher, WebhookNotificationDispatcher>();
 
         // Building blocks
         services.AddTransient<IFilterGraphBuilder, FilterGraphBuilder>();

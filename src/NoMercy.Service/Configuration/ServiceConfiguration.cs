@@ -483,6 +483,8 @@ public static class ServiceConfiguration
             opts.WhisperModelPath = AppFiles.WhisperModelPath;
         });
 
+        services.AddHostedService<MediaProcessing.EventHandlers.EncodingNotificationSubscriber>();
+
         services.AddPluginSystem(AppFiles.PluginsPath);
 
         services.AddVideoHubServices();
