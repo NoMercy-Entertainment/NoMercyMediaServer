@@ -71,7 +71,7 @@ The phased plan below kept the original phase numbers for continuity. **Executio
 5. **Phase 9.4 — Intro / outro detection.** Skip-intro button in the player. Requires `IAudioFingerprinter` implementation (chromaprint CLI is in the FFmpeg build).
 6. **Phase 5 — Live transcode.** When a client can't direct-play a file, transcode on demand. Core of "plays on every device".
 7. **Phase 10.2 step 3 — Dolby Vision passthrough.** HEVC → HEVC DV metadata preservation for 4K movie collectors.
-8. **Phase 13 remaining — mp3 / flac / ogg single-file audio.** Music collectors; m4a already landed.
+8. ✅ **Phase 13 remaining — mp3 / flac / ogg single-file audio** — shipped (`65850740`). `OutputFormat.Mp3/Flac/Ogg` added; `SingleFileAudioOutputStrategy` base with three thin subclasses; `Mp3Strategy`/`FlacStrategy`/`OggStrategy` single-pass resolvers; `ProfileValidator` enforces container↔codec pairing (mp3→lame, flac→flac, ogg→vorbis/opus/flac) and rejects video/subtitle outputs. 26 new tests.
 
 ### Tier 3 — nice-to-have, low blast radius
 
