@@ -15,6 +15,7 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
+using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 
@@ -59,9 +60,18 @@ public class EncoderTests
             new Mock<IFfmpegCapabilities>().Object,
             NullLogger<PlanStage>.Instance
         );
-        BuildStage buildStage = new(options, NullLogger<BuildStage>.Instance);
+        BuildStage buildStage = new(
+            options,
+            new FontExtractor(),
+            new SubtitleExtractor(),
+            NullLogger<BuildStage>.Instance
+        );
         ExecuteStage executeStage = new(_ffmpegExecutor.Object, NullLogger<ExecuteStage>.Instance);
-        FinalizeStage finalizeStage = new(NullLogger<FinalizeStage>.Instance);
+        FinalizeStage finalizeStage = new(
+            new ChapterWriter(),
+            new FontExtractor(),
+            NullLogger<FinalizeStage>.Instance
+        );
 
         _encoder = new Encoder(
             analyzeStage,

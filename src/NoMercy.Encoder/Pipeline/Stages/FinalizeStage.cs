@@ -1,11 +1,11 @@
 namespace NoMercy.Encoder.Pipeline.Stages;
 
 using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Output;
-using NoMercy.Encoder.PostProcess;
 
 public record FinalizeInput(
     ExecutionResult[] Results,
@@ -16,8 +16,11 @@ public record FinalizeInput(
 
 public record FinalizeOutput(string OutputPath, long OutputSizeBytes);
 
-public class FinalizeStage(ILogger<FinalizeStage> logger)
-    : IPipelineStage<FinalizeInput, FinalizeOutput>
+public class FinalizeStage(
+    IChapterWriter chapterWriter,
+    IFontExtractor fontExtractor,
+    ILogger<FinalizeStage> logger
+) : IPipelineStage<FinalizeInput, FinalizeOutput>
 {
     public string Name => "Finalize";
 
@@ -39,7 +42,6 @@ public class FinalizeStage(ILogger<FinalizeStage> logger)
             // Write chapters.vtt from MediaInfo
             if (context.MediaInfo is not null && context.MediaInfo.Chapters.Count > 0)
             {
-                ChapterWriter chapterWriter = new();
                 await chapterWriter.WriteChaptersAsync(
                     input.OutputDirectory,
                     context.MediaInfo.Chapters,
@@ -54,7 +56,6 @@ public class FinalizeStage(ILogger<FinalizeStage> logger)
             }
 
             // Write fonts.json manifest from previously extracted fonts
-            FontExtractor fontExtractor = new();
             await fontExtractor.WriteFontManifestAsync(input.OutputDirectory, ct);
 
             // Thumbnail sprite + VTT are produced by the spritevtt muxer

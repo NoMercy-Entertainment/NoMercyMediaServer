@@ -18,8 +18,12 @@ public record BuildInput(
     TimeSpan? DurationLimit = null
 );
 
-public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
-    : IPipelineStage<BuildInput, FfmpegCommand[]>
+public class BuildStage(
+    EncoderOptions options,
+    IFontExtractor fontExtractor,
+    ISubtitleExtractor subtitleExtractor,
+    ILogger<BuildStage> logger
+) : IPipelineStage<BuildInput, FfmpegCommand[]>
 {
     public string Name => "Build";
 
@@ -87,7 +91,8 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                     input.Plan.OutputPlan,
                     context.MediaInfo,
                     input.OutputDirectory,
-                    input.MediaTitle
+                    input.MediaTitle,
+                    subtitleExtractor
                 );
 
                 bitmapSubCommands = BuildBitmapSubtitleCommands(
@@ -96,7 +101,8 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
                     input.Plan.OutputPlan,
                     context.MediaInfo,
                     input.OutputDirectory,
-                    input.MediaTitle
+                    input.MediaTitle,
+                    subtitleExtractor
                 );
             }
 
@@ -117,7 +123,6 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
             // with encoding outputs.
             if (context.MediaInfo is not null && context.MediaInfo.HasAttachments)
             {
-                FontExtractor fontExtractor = new();
                 string fontDir = Path.Combine(input.OutputDirectory, "fonts");
                 Directory.CreateDirectory(fontDir);
                 FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
@@ -157,11 +162,10 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
         OutputPlan plan,
         MediaInfo mediaInfo,
         string outputDirectory,
-        string mediaTitle
+        string mediaTitle,
+        ISubtitleExtractor subtitleExtractor
     )
     {
-        SubtitleExtractor subtitleExtractor = new();
-
         foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
         {
             if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
@@ -211,11 +215,11 @@ public class BuildStage(EncoderOptions options, ILogger<BuildStage> logger)
         OutputPlan plan,
         MediaInfo mediaInfo,
         string outputDirectory,
-        string mediaTitle
+        string mediaTitle,
+        ISubtitleExtractor subtitleExtractor
     )
     {
         List<FfmpegCommand> commands = [];
-        SubtitleExtractor subtitleExtractor = new();
 
         foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
         {

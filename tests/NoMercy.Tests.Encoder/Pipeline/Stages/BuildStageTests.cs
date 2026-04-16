@@ -8,6 +8,7 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
+using NoMercy.Encoder.PostProcess;
 
 public class BuildStageTests
 {
@@ -21,7 +22,12 @@ public class BuildStageTests
             FfmpegPathOverride = "ffmpeg",
             FfprobePathOverride = "ffprobe",
         };
-        _stage = new BuildStage(options, NullLogger<BuildStage>.Instance);
+        _stage = new BuildStage(
+            options,
+            new FontExtractor(),
+            new SubtitleExtractor(),
+            NullLogger<BuildStage>.Instance
+        );
     }
 
     private static ExecutionPlan BuildHlsPlan() =>
