@@ -67,9 +67,12 @@ public class Mp4OutputStrategy : IOutputStrategy
         CancellationToken ct
     )
     {
-        // Rename the generic output.mp4 to the proper media title
+        // Rename the generic output.mp4 to the proper media title. Audio-only
+        // encodes land as .m4a (matches V1 music-encode behavior and the
+        // convention music players expect); video-bearing encodes stay .mp4.
+        string extension = plan.VideoOutputs.Length == 0 ? ".m4a" : ".mp4";
         string sourcePath = Path.Combine(outputDirectory, "output.mp4");
-        string targetPath = Path.Combine(outputDirectory, $"{mediaTitle}.mp4");
+        string targetPath = Path.Combine(outputDirectory, $"{mediaTitle}{extension}");
 
         if (File.Exists(sourcePath) && sourcePath != targetPath)
             File.Move(sourcePath, targetPath, overwrite: true);

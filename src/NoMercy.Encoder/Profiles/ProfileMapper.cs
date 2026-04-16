@@ -26,7 +26,9 @@ public static class ProfileMapper
         {
             "m3u8" or "hls" => OutputFormat.Hls,
             "mkv" or "matroska" => OutputFormat.Mkv,
-            "mp4" => OutputFormat.Mp4,
+            // m4a / aac are audio-only MP4 — the container is still MP4.
+            // Mp4OutputStrategy detects audio-only and writes .m4a accordingly.
+            "mp4" or "m4a" or "aac" => OutputFormat.Mp4,
             "dash" or "mpd" => OutputFormat.Dash,
             _ => OutputFormat.Hls,
         };
