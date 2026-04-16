@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IChapterWriter, ChapterWriter>();
         services.AddTransient<IThumbnailGenerator, ThumbnailGenerator>();
         services.AddTransient<IHlsVariantAnalyzer, HlsVariantAnalyzer>();
+        services.AddTransient<IAbrLadderGenerator, AbrLadderGenerator>();
 
         // Pipeline stages
         services.AddTransient<AnalyzeStage>();
