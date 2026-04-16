@@ -2,7 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Transform the V3 encoder from a working HLS single-pass encoder into a professional, plugin-extensible encoding engine supporting multiple formats, 2-pass encoding, live transcoding, distributed encoding, content intelligence, and DRM.
+**Goal:** A consumer-grade video archiver. Drop a movie, disc, or folder of files → get a clean, Netflix-quality library on your own hardware. Professional internals (DI, testability, plugin extensibility) but the features prioritized here are what a home user actually wants: automatic encoding, great playback on every device, intro/outro skip, disc ripping, HDR preservation.
+
+Pro / B2B features (multi-server distributed encoding, DRM encryption, CENC packaging) are deferred — they're not on the consumer path and shouldn't gate consumer quality.
 
 **Architecture:** Strategy-owns-the-pipeline. An orchestrator analyzes source media and resolves an encoding strategy. Each strategy (HLS, MP4, MKV, DASH, Live, Audio, Plugin) composes injectable building blocks (FFmpeg executor, codec resolver, filter builder, etc.) to implement its full encode lifecycle. Plugins provide custom strategies and replace building blocks via DI.
 
@@ -50,6 +52,38 @@
 **External dependency:** Phase 9 depends on the `nomercy-ffmpeg` build (libtesseract + whisper filters both verified present in the 8.0-NoMercy-MediaServer Windows build). Phase 11 (CENC DASH) depends on `mp4box` / `shaka-packager` integration — not in nomercy-ffmpeg.
 
 **V1 pause/resume/cancel parity** — shipped in a separate track alongside the plan. `EncoderProcessRegistry` (singleton, thread-safe) tracks live FFmpeg PIDs per job id; `EventBusProgressObserver` registers PIDs on first progress tick; `TasksController` pause/{id}, resume/{id}, and delete queue/{id} all operate via registry + `ProcessThrottle.Suspend/Resume` / `Process.Kill(entireProcessTree:true)`.
+
+---
+
+## Consumer-first roadmap (reprioritized 2026-04-16)
+
+The phased plan below kept the original phase numbers for continuity. **Execution order** is now driven by what a home user actually experiences, not by phase number. Pro-tier features (distribution, DRM) are parked at the bottom until consumer parity is complete.
+
+### Tier 1 — core consumer workflow (ship first)
+
+1. **Phase 12.2 — Watch-folder auto-encode.** Drop a file into a library folder, it encodes automatically using the folder's assigned profiles. Home users expect this.
+2. **Phase 14 — Disc ripping.** Rip DVD / Blu-ray collection to the library. `libdvdread` / `libdvdnav` / `libbluray` / `libcdio` already in the FFmpeg build — the plumbing is what's missing.
+3. **Multi-variant HLS 2-pass.** Today 2-pass requires exactly one video output. Quality ladders are 3–5 variants — need per-variant stats files + sequential pass-1 runs. Without this, high-quality adaptive streaming is locked to single-pass.
+4. **Phase 10.3 — Auto ABR ladder wire-up.** `AbrLadderGenerator` exists but nobody calls it. Opt-in flag on profile → analyze source → generate ladder. Users stop hand-editing variants for every resolution.
+
+### Tier 2 — polish that matters for the "Netflix-on-your-own-server" pitch
+
+5. **Phase 9.4 — Intro / outro detection.** Skip-intro button in the player. Requires `IAudioFingerprinter` implementation (chromaprint CLI is in the FFmpeg build).
+6. **Phase 5 — Live transcode.** When a client can't direct-play a file, transcode on demand. Core of "plays on every device".
+7. **Phase 10.2 step 3 — Dolby Vision passthrough.** HEVC → HEVC DV metadata preservation for 4K movie collectors.
+8. **Phase 13 remaining — mp3 / flac / ogg single-file audio.** Music collectors; m4a already landed.
+
+### Tier 3 — nice-to-have, low blast radius
+
+9. **Phase 10.4 — Pan matrix / `amerge` downmix.** `-ac N` covers the common case; explicit matrices are niche.
+10. **Phase 12.1 — Preset library.** `EncoderProfile` already serves as a preset — would need a product design pass before adding richer metadata.
+11. Multi-variant 2-pass for MP4 / DASH (same generalization as the HLS one).
+
+### Tier 4 — pro / B2B (deferred)
+
+- **Phase 6 — Distribution** (remote workers, quality / time-split encoding across servers).
+- **Phase 11 — DRM & encryption** (AES-128 HLS, CENC DASH). Only required for paid tiers or businesses.
+- **Phase 7 — Plugin-contributed strategies beyond the existing resolver pattern** (the resolver already discovers plugin strategies; pro-tier work here would be hardening the plugin contract + marketplace).
 
 ---
 
