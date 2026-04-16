@@ -79,7 +79,10 @@ public static class ServiceCollectionExtensions
         // Execution
         services.AddTransient<IFfmpegExecutor, FfmpegExecutor>();
         services.AddTransient<ProgressParser>();
-        services.AddTransient<ProcessThrottle>();
+        // ProcessThrottle holds the set of suspended pids; must be Singleton so
+        // suspend/resume operations across different callers see the same state.
+        services.AddSingleton<ProcessThrottle>();
+        services.AddSingleton<IEncoderProcessRegistry, EncoderProcessRegistry>();
 
         // Checkpoint persistence
         services.AddTransient<ICheckpointStore, JsonCheckpointStore>();

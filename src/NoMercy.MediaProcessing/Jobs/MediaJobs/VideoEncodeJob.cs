@@ -8,6 +8,7 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
@@ -137,6 +138,9 @@ public class VideoEncodeJob : AbstractEncoderJob
                     MediaTitle: fileMetadata.FileName
                 );
 
+                IEncoderProcessRegistry? processRegistry =
+                    EncoderProvider.ResolveService<IEncoderProcessRegistry>();
+
                 EventBusProgressObserver progressObserver = new(
                     jobId: fileMetadata.Id,
                     title: fileMetadata.Title,
@@ -150,7 +154,8 @@ public class VideoEncodeJob : AbstractEncoderJob
                         .ToList(),
                     subtitleStreams: dbProfile.SubtitleProfiles.Select(s => s.Codec).ToList(),
                     hasGpu: false,
-                    isHdr: false
+                    isHdr: false,
+                    registry: processRegistry
                 );
 
                 EncodingResult result = await encoder.EncodeAsync(request, progressObserver);

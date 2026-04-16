@@ -14,6 +14,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.Encoder.Execution;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.Helpers.Extensions;
@@ -30,7 +31,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/tasks", Order = 10)]
-public class TasksController(MediaContext mediaContext) : BaseController
+public class TasksController(
+    MediaContext mediaContext,
+    IEncoderProcessRegistry processRegistry,
+    ProcessThrottle processThrottle
+) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
@@ -87,8 +92,14 @@ public class TasksController(MediaContext mediaContext) : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to pause tasks");
 
-        // Pause/resume not yet supported in V3 encoder — returns false
-        return Ok(false);
+        IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(id);
+        if (pids.Count == 0)
+            return Ok(false);
+
+        foreach (int pid in pids)
+            processThrottle.Suspend(pid);
+
+        return Ok(true);
     }
 
     [HttpPost]
@@ -98,8 +109,14 @@ public class TasksController(MediaContext mediaContext) : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to resume tasks");
 
-        // Pause/resume not yet supported in V3 encoder — returns false
-        return Ok(false);
+        IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(id);
+        if (pids.Count == 0)
+            return Ok(false);
+
+        foreach (int pid in pids)
+            processThrottle.Resume(pid);
+
+        return Ok(true);
     }
 
     [HttpGet]

@@ -1,6 +1,7 @@
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 using NoMercy.Encoder.Errors;
+using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Progress;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
@@ -14,8 +15,10 @@ public class EventBusProgressObserver : IProgressObserver
     private readonly List<string> _videoStreams;
     private readonly List<string> _audioStreams;
     private readonly List<string> _subtitleStreams;
+    private readonly IEncoderProcessRegistry? _registry;
     private bool _hasGpu;
     private bool _isHdr;
+    private int _lastRegisteredPid;
 
     public EventBusProgressObserver(
         int jobId,
@@ -26,7 +29,8 @@ public class EventBusProgressObserver : IProgressObserver
         List<string>? audioStreams = null,
         List<string>? subtitleStreams = null,
         bool hasGpu = false,
-        bool isHdr = false
+        bool isHdr = false,
+        IEncoderProcessRegistry? registry = null
     )
     {
         _jobId = jobId;
@@ -38,6 +42,7 @@ public class EventBusProgressObserver : IProgressObserver
         _subtitleStreams = subtitleStreams ?? [];
         _hasGpu = hasGpu;
         _isHdr = isHdr;
+        _registry = registry;
     }
 
     public void OnPlanResolved(
@@ -65,6 +70,17 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnProgress(EncodingProgress progress)
     {
+        // Register the ffmpeg PID on first observation so pause/resume can find it.
+        if (
+            _registry is not null
+            && progress.ProcessId > 0
+            && progress.ProcessId != _lastRegisteredPid
+        )
+        {
+            _registry.Register(_jobId, progress.ProcessId);
+            _lastRegisteredPid = progress.ProcessId;
+        }
+
         if (!EventBusProvider.IsConfigured)
             return;
 
@@ -122,11 +138,13 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnCompleted()
     {
+        _registry?.UnregisterJob(_jobId);
         Publish(status: "completed", message: "Done");
     }
 
     public void OnError(EncodingError error)
     {
+        _registry?.UnregisterJob(_jobId);
         Publish(status: "failed", message: error.Message);
     }
 

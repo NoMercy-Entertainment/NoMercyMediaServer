@@ -23,7 +23,10 @@ public class GlobalExceptionHandlerMiddleware
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
-            Logger.App($"[{context.TraceIdentifier}] Request cancelled by client: {context.Request.Path}", LogEventLevel.Debug);
+            Logger.App(
+                $"[{context.TraceIdentifier}] Request cancelled by client: {context.Request.Path}",
+                LogEventLevel.Debug
+            );
         }
         catch (Exception ex)
         {
