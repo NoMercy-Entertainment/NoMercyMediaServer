@@ -181,6 +181,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SpeedIndex>(
             new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>())
         );
+        services.AddTransient<ILiveFfmpegRunner, LiveFfmpegRunner>();
         services.AddSingleton<ILiveEncoder, LiveEncoder>();
         services.AddSingleton<ILiveStreamingService, LiveStreamingService>();
         services.AddTransient<ILivePlaylistBuilder, LivePlaylistBuilder>();

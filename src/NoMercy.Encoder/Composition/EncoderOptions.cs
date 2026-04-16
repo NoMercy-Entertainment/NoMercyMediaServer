@@ -51,4 +51,16 @@ public class EncoderOptions
     /// so a notification error never fails the encode.
     /// </summary>
     public IList<string> NotificationWebhookUrls { get; } = [];
+
+    /// <summary>
+    /// Parent directory for live transcode scratch folders. Each live session
+    /// gets its own subfolder <c>{this}/{sessionId}</c> that holds the HLS
+    /// playlist + .ts segments emitted by FFmpeg. Caller is responsible for
+    /// cleanup when the session ends. Defaults to
+    /// <see cref="Path.GetTempPath"/><c>/nomercy-live</c>.
+    /// </summary>
+    public string? LiveTranscodeCachePath { get; set; }
+
+    public string ResolvedLiveTranscodeCachePath =>
+        LiveTranscodeCachePath ?? Path.Combine(Path.GetTempPath(), "nomercy-live");
 }

@@ -6,11 +6,19 @@ using System.Threading.Channels;
 public class LiveSession : ILiveSession
 {
     private readonly Channel<Segment> _segmentChannel = Channel.CreateUnbounded<Segment>();
+    private readonly CancellationTokenSource _runnerCts = new();
 
     private int _state = (int)LiveSessionState.Starting;
     private long _playbackPositionTicks;
     private TimeSpan _transcodedPosition;
     private double _currentSpeed;
+
+    /// <summary>
+    /// Fires when the session is disposed — the live transcode runner should
+    /// observe this token and terminate its FFmpeg process so we don't leak
+    /// subprocesses after a client tears down the session.
+    /// </summary>
+    public CancellationToken RunnerCancellation => _runnerCts.Token;
 
     public string SessionId { get; }
     public LiveSessionState State => (LiveSessionState)Volatile.Read(ref _state);
@@ -78,8 +86,18 @@ public class LiveSession : ILiveSession
 
     public ValueTask DisposeAsync()
     {
+        try
+        {
+            _runnerCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Already disposed
+        }
+
         Volatile.Write(ref _state, (int)LiveSessionState.Ended);
         _segmentChannel.Writer.TryComplete();
+        _runnerCts.Dispose();
         return ValueTask.CompletedTask;
     }
 

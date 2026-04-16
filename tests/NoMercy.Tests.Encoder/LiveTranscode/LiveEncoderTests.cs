@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.LiveTranscode;
 
@@ -95,13 +96,31 @@ public class LiveEncoderTests
 
         ISessionManager manager = sessionManager ?? CreateUnlimitedSessionManager();
 
+        EncoderOptions encoderOptions = new()
+        {
+            FfmpegPathOverride = "ffmpeg",
+            FfprobePathOverride = "ffprobe",
+            LiveTranscodeCachePath = Path.Combine(Path.GetTempPath(), "nomercy-live-tests"),
+        };
+
         return new LiveEncoder(
             selector,
             manager,
+            new NoOpLiveFfmpegRunner(),
+            encoderOptions,
             speedIndex,
             budget,
             NullLogger<LiveEncoder>.Instance
         );
+    }
+
+    private sealed class NoOpLiveFfmpegRunner : ILiveFfmpegRunner
+    {
+        public Task RunAsync(LiveRunInput input, LiveSession session, CancellationToken ct)
+        {
+            // Tests assert state + registration semantics — no real FFmpeg spawn.
+            return Task.CompletedTask;
+        }
     }
 
     private static ILiveQualitySelector CreateAlwaysReturnSelector(LiveQuality quality)
