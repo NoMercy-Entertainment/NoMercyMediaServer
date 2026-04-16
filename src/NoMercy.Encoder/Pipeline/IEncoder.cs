@@ -39,13 +39,29 @@ public record EncodingRequest(
 public record EncodingOptions(
     bool ResumeFromCheckpoint = false,
     int? MaxConcurrentEncodes = null,
-    Priority Priority = Priority.Normal
+    Priority Priority = Priority.Normal,
+    EncodingPass Pass = EncodingPass.Single,
+    string? StatsFilePath = null
 );
 
 public enum Priority
 {
     Normal,
     High,
+}
+
+/// <summary>
+/// Which pass of a 2-pass encode this call represents. <see cref="Single"/>
+/// is the default — the pipeline emits normal HLS output without any `-pass`
+/// flag. <see cref="One"/> does video-only analysis writing to a stats file
+/// (no HLS / audio / subtitle / sprite outputs). <see cref="Two"/> reads the
+/// stats file and produces the final HLS encode with `-pass 2`.
+/// </summary>
+public enum EncodingPass
+{
+    Single,
+    One,
+    Two,
 }
 
 public record EncodingResult(

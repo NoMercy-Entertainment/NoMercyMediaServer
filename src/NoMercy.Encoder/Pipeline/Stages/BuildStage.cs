@@ -16,7 +16,9 @@ public record BuildInput(
     string InputPath,
     string OutputDirectory,
     string MediaTitle,
-    TimeSpan? DurationLimit = null
+    TimeSpan? DurationLimit = null,
+    EncodingPass Pass = EncodingPass.Single,
+    string? StatsFilePath = null
 );
 
 public class BuildStage(
@@ -38,6 +40,51 @@ public class BuildStage(
 
         try
         {
+            // Pass 1 of a 2-pass encode: video-only analysis to the stats file,
+            // no audio / subtitles / sprite / font-extraction outputs.
+            if (input.Pass == EncodingPass.One)
+            {
+                if (string.IsNullOrWhiteSpace(input.StatsFilePath))
+                {
+                    return Task.FromResult<StageResult>(
+                        new StageFailure(
+                            new EncodingError(
+                                EncodingErrorKind.Unknown,
+                                "Pass 1 requires StatsFilePath to be set.",
+                                null,
+                                Name,
+                                false
+                            )
+                        )
+                    );
+                }
+
+                if (input.Plan.OutputPlan.VideoOutputs.Length != 1)
+                {
+                    return Task.FromResult<StageResult>(
+                        new StageFailure(
+                            new EncodingError(
+                                EncodingErrorKind.Unknown,
+                                $"2-pass supports exactly one video output; profile has {input.Plan.OutputPlan.VideoOutputs.Length}.",
+                                null,
+                                Name,
+                                false
+                            )
+                        )
+                    );
+                }
+
+                FfmpegCommand pass1 = BuildPass1Command(
+                    input.Plan.OutputPlan,
+                    context.MediaInfo,
+                    input.InputPath,
+                    input.OutputDirectory,
+                    input.StatsFilePath!,
+                    options.FfmpegPath
+                );
+                return Task.FromResult<StageResult>(new StageSuccess<FfmpegCommand[]>([pass1]));
+            }
+
             IOutputStrategy strategy = GetStrategy(input.Plan.OutputPlan.Format);
 
             // Ensure output subdirectories exist before FFmpeg runs
@@ -64,8 +111,16 @@ public class BuildStage(
             if (filterGraph is not null)
                 builder.WithFilterComplex(filterGraph);
 
+            // Pass 2 of a 2-pass encode: inject -pass 2 + -passlogfile into each video
+            // output's ExtraFlags before the output strategy emits them.
+            OutputPlan effectivePlan = input.Plan.OutputPlan;
+            if (input.Pass == EncodingPass.Two && !string.IsNullOrEmpty(input.StatsFilePath))
+            {
+                effectivePlan = InjectPass2Flags(effectivePlan, input.StatsFilePath);
+            }
+
             // Video + audio outputs via the output strategy (HLS, MKV, etc.)
-            strategy.ConfigureOutput(builder, input.Plan.OutputPlan, input.OutputDirectory);
+            strategy.ConfigureOutput(builder, effectivePlan, input.OutputDirectory);
 
             // Thumbnail sprite — the spritevtt muxer generates both the sprite
             // sheet (.webp) and the companion VTT cue file in one pass.
@@ -291,6 +346,91 @@ public class BuildStage(
             OutputFormat.Dash => new DashOutputStrategy(),
             _ => throw new ArgumentOutOfRangeException(nameof(format)),
         };
+
+    /// <summary>
+    /// Returns a copy of <paramref name="plan"/> with <c>-pass 2</c> +
+    /// <c>-passlogfile</c> injected into every video output's extra flags,
+    /// so the shared output strategy emits them on the FFmpeg command.
+    /// </summary>
+    private static OutputPlan InjectPass2Flags(OutputPlan plan, string statsFilePath)
+    {
+        VideoOutputPlan[] updated = plan
+            .VideoOutputs.Select(v =>
+            {
+                Dictionary<string, string> flags = new(v.ExtraFlags)
+                {
+                    ["-pass"] = "2",
+                    ["-passlogfile"] = statsFilePath,
+                };
+                return v with { ExtraFlags = flags };
+            })
+            .ToArray();
+
+        return plan with
+        {
+            VideoOutputs = updated,
+        };
+    }
+
+    /// <summary>
+    /// Builds the pass-1 FFmpeg command: video-only analysis that writes its
+    /// stats to <paramref name="statsFilePath"/> and discards actual output.
+    /// Uses the same filter graph as the full encode — keeps pass 1 and pass 2
+    /// measurements aligned (scale/tonemap/crop decisions must match between
+    /// passes or the stats file becomes meaningless).
+    /// </summary>
+    private static FfmpegCommand BuildPass1Command(
+        OutputPlan plan,
+        MediaInfo? mediaInfo,
+        string inputPath,
+        string outputDirectory,
+        string statsFilePath,
+        string ffmpegPath
+    )
+    {
+        VideoOutputPlan video = plan.VideoOutputs[0];
+
+        FfmpegCommandBuilder builder = new();
+        builder.AddInput(new InputOptions(inputPath));
+
+        // Pass 1 uses only the first video output — strip thumbnails + subtitles
+        // from the plan so the filter graph only produces the one video label.
+        OutputPlan videoOnly = plan with
+        {
+            AudioOutputs = [],
+            SubtitleOutputs = [],
+            Thumbnails = null,
+        };
+        string? filterGraph = BuildFilterGraph(videoOnly, mediaInfo, inputPath);
+        if (filterGraph is not null)
+            builder.WithFilterComplex(filterGraph);
+
+        // Pass 1 output: video encoder settings + -pass 1 + null sink.
+        Dictionary<string, string> extraFlags = new(video.ExtraFlags)
+        {
+            ["-pass"] = "1",
+            ["-passlogfile"] = statsFilePath,
+            ["-an"] = string.Empty,
+            ["-sn"] = string.Empty,
+            ["-f"] = "null",
+        };
+
+        builder.AddOutput(
+            new OutputOptions(
+                FilePath: "-",
+                VideoCodec: video.EncoderName,
+                VideoBitrateKbps: video.BitrateKbps > 0 ? video.BitrateKbps : null,
+                Preset: video.Preset,
+                Profile: video.Profile,
+                Level: video.Level,
+                PixelFormat: video.TenBit ? video.PixelFormat : null,
+                MapStreams: [video.MapLabel],
+                ExtraFlags: extraFlags
+            )
+        );
+
+        return builder.Build(ffmpegPath, outputDirectory);
+    }
 
     private static string? BuildFilterGraph(OutputPlan plan, MediaInfo? mediaInfo, string inputPath)
     {

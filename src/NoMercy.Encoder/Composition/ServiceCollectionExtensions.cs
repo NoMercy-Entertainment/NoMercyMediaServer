@@ -136,6 +136,7 @@ public static class ServiceCollectionExtensions
         // Plugins can register additional IEncodingStrategy impls and the resolver
         // will pick them up automatically (last registration wins).
         services.AddTransient<IEncodingStrategy, HlsSinglePassStrategy>();
+        services.AddTransient<IEncodingStrategy, HlsTwoPassStrategy>();
         services.AddTransient<IEncodingStrategy, MkvStrategy>();
         services.AddTransient<IEncodingStrategy, Mp4SinglePassStrategy>();
         services.AddTransient<IEncodingStrategy, DashSinglePassStrategy>();

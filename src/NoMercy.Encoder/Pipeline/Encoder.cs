@@ -91,7 +91,10 @@ public class Encoder(
             plan,
             request.InputPath,
             request.OutputDirectory,
-            request.ResolvedTitle
+            request.ResolvedTitle,
+            DurationLimit: null,
+            Pass: request.Options?.Pass ?? EncodingPass.Single,
+            StatsFilePath: request.Options?.StatsFilePath
         );
         StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
         if (buildResult is StageFailure buildFailure)
