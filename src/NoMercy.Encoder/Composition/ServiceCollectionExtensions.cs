@@ -22,7 +22,10 @@ using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Startup;
 using NoMercy.Encoder.Strategies;
+using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Hls;
+using NoMercy.Encoder.Strategies.Mkv;
+using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Encoder.Subtitles;
 
 public static class ServiceCollectionExtensions
@@ -133,6 +136,9 @@ public static class ServiceCollectionExtensions
         // Plugins can register additional IEncodingStrategy impls and the resolver
         // will pick them up automatically (last registration wins).
         services.AddTransient<IEncodingStrategy, HlsSinglePassStrategy>();
+        services.AddTransient<IEncodingStrategy, MkvStrategy>();
+        services.AddTransient<IEncodingStrategy, Mp4SinglePassStrategy>();
+        services.AddTransient<IEncodingStrategy, DashSinglePassStrategy>();
         services.AddTransient<IStrategyResolver, StrategyResolver>();
         services.AddTransient<IEncodingOrchestrator, EncodingOrchestrator>();
 
