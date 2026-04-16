@@ -16,7 +16,7 @@
 
 ## Current Status — 2026-04-16
 
-**Build:** 163 commits ahead of `master` · 0 errors · 0 warnings · 631 encoder tests passing (+41 added this session).
+**Build:** 165 commits ahead of `master` · 0 errors · 0 warnings · 650 encoder tests passing (+60 added this session).
 
 **What already works today (outside the strategy pattern):**
 - 6-stage pipeline (`Analyze → Validate → Plan → Build → Execute → Finalize`) in [`Pipeline/Encoder.cs`](../../src/NoMercy.Encoder/Pipeline/Encoder.cs) delivering production-grade HLS single-pass
@@ -40,7 +40,7 @@
 | 6. Distribution | ❌ not started | No `Distribution/` dir. `IJobDispatcher` / `IRemoteWorker` / `IHardwareBenchmark` interfaces exist with zero implementations. |
 | 7. Plugin Integration | ❌ not started | `IEncoderPlugin` exists in `SystemFeatures/`. No plugin strategy resolver, no DI override tests. |
 | 8. Queue & History | ❌ not started | No `EncodingHistory` model. `TasksController` has pause/resume per-id and failed-retry but no reorder, queue pause, or ETA. |
-| 9. Content Intelligence | ❌ interfaces only | `ICropDetector`, `IContentDetector`, `ISubtitleOcrEngine`, `IWhisperTranscriber` defined. Zero implementations. **Depends on new nomercy-ffmpeg build (libtesseract filter, whisper filter).** |
+| 9. Content Intelligence | ⚠️ 3 of 4 | Crop detection ✅ (9.1), subtitle OCR ✅ (9.2 with auto-download Tesseract model manager), Whisper transcription ✅ (9.3). Intro/outro content detection (9.4) still pending. New nomercy-ffmpeg Windows build provides libtesseract + whisper filters. |
 | 10. Format Capabilities | ⚠️ 4 of 7 done | HDR→SDR tonemap ✅, HDR→HDR passthrough ✅ (step 2), burn-in filter ✅ (10.1), loudnorm ✅ (10.4 partial), ABR ladder ✅ (10.3). Pending: DV passthrough (10.2 step 3), explicit downmix/`pan`/`amerge` (10.4 step 1 remainder), wire ABR generator into profile-load path. |
 | 11. DRM & Encryption | ❌ not started | No `IDrmProcessor`. No AES-128 HLS, no CENC DASH. |
 | 12. Presets & Automation | ❌ not started | No `EncodingPreset` model. `FolderWatcher` exists but does not auto-encode. No webhook dispatcher. |
@@ -431,10 +431,10 @@ public interface IWorkerDispatcher
 - Create: `src/NoMercy.Encoder/ContentAnalysis/CropDetector.cs`
 - Create: `tests/NoMercy.Tests.Encoder/ContentAnalysis/CropDetectorTests.cs`
 
-- [ ] **Step 1:** Implement `ICropDetector`. Runs `ffmpeg -i input -vf cropdetect -f null /dev/null` and parses the detected crop from stderr. Returns `CropResult(int Width, int Height, int X, int Y)`.
-- [ ] **Step 2:** Strategies optionally inject crop into filter graph: `crop={w}:{h}:{x}:{y}`.
-- [ ] **Step 3:** Tests, DI registration.
-- [ ] **Step 4:** Commit: `feat(encoder): crop detection building block`
+- [x] **Step 1:** `CropDetector` samples 60 s from the middle of the source (`-ss 120`), counts `crop=W:H:X:Y` observations from stderr, requires ≥ 5 matching observations before trusting the result. Returns `CropResult(Width, Height, X, Y, ShouldCrop)` with `ShouldCrop=false` when crop rectangle matches full frame.
+- [ ] **Step 2:** Strategies optionally inject crop into filter graph: `crop={w}:{h}:{x}:{y}` (generator ready, wiring into `BuildBranchFilter` pending).
+- [x] **Step 3:** 5 tests cover stable crop / full-frame / insufficient-observations / exit-code / most-frequent-wins. DI registered.
+- [x] **Step 4:** Commit: `feat(encoder): V1 feature parity — OCR, Whisper, crop detection, detailed stages` — merged as `3600754`
 
 ### Task 9.2: Subtitle OCR
 
@@ -442,10 +442,10 @@ public interface IWorkerDispatcher
 - Create: `src/NoMercy.Encoder/Subtitles/SubtitleOcrEngine.cs`
 - Create: `tests/NoMercy.Tests.Encoder/Subtitles/SubtitleOcrEngineTests.cs`
 
-- [ ] **Step 1:** Implement `ISubtitleOcrEngine`. Uses the nomercy-ffmpeg libtesseract filter to convert bitmap subtitles (PGS/VobSub) to text (SRT/VTT).
-- [ ] **Step 2:** Can run as part of a strategy's subtitle processing or standalone.
-- [ ] **Step 3:** Tests, DI registration.
-- [ ] **Step 4:** Commit: `feat(encoder): OCR subtitle extraction via libtesseract`
+- [x] **Step 1:** `SubtitleOcrEngine` runs the `ocr=language=X` filter with metadata=print output, parses pts_time + `lavfi.ocr.text=` blocks into cues, collapses identical consecutive texts (matches V1). Supports WebVTT or SRT output. `TesseractModelManager` streams missing *.traineddata files from the nomercy-tesseract repo via HttpClient, uses .tmp + rename so cancelled downloads leave no partial files.
+- [x] **Step 2:** `VideoEncodeJob` post-process resolves `ISubtitleOcrEngine` via `EncoderProvider.ResolveService<T>()`, runs OCR for every bitmap subtitle in source MediaInfo. Individual language failures are logged and skipped, not fatal.
+- [x] **Step 3:** 7 OCR parser tests + 7 Tesseract model manager tests. DI registered.
+- [x] **Step 4:** Commit: `feat(encoder): V1 feature parity — OCR, Whisper, crop detection, detailed stages` — merged as `3600754`
 
 ### Task 9.3: Whisper Transcription
 
@@ -453,9 +453,9 @@ public interface IWorkerDispatcher
 - Create: `src/NoMercy.Encoder/Subtitles/WhisperTranscriber.cs`
 - Create: `tests/NoMercy.Tests.Encoder/Subtitles/WhisperTranscriberTests.cs`
 
-- [ ] **Step 1:** Implement `IWhisperTranscriber`. Uses nomercy-ffmpeg's whisper filter for speech-to-text. Produces WebVTT/SRT from audio.
-- [ ] **Step 2:** Tests, DI registration.
-- [ ] **Step 3:** Commit: `feat(encoder): whisper transcription building block`
+- [x] **Step 1:** `WhisperTranscriber` emits the `whisper=model=...:language=...:queue=3:destination=...:format=srt` filter (matches V1 command exactly). Accepts optional `WhisperOptions` with `TranslateToEnglish` flag. Uses `EncoderOptions.WhisperModelPath` (defaults from `AppFiles.WhisperModelPath`).
+- [x] **Step 2:** DI registered. (Integration tests deferred — component is a thin shell around FFmpeg; unit-testing the argument string is low value vs. running a real encode.)
+- [x] **Step 3:** Commit: `feat(encoder): V1 feature parity — OCR, Whisper, crop detection, detailed stages` — merged as `3600754`
 
 ### Task 9.4: Content Detection (Intro/Outro)
 
