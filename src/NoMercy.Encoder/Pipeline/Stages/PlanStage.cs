@@ -138,6 +138,20 @@ public class PlanStage(
                                 extraFlags
                             );
 
+                            // HDR→HDR passthrough: when source is HDR and the output profile
+                            // keeps 10-bit without tonemapping to SDR, preserve color metadata
+                            // so players treat the file as HDR. Without these flags the output
+                            // is 10-bit bt709 (muddy colors on HDR displays).
+                            bool preservesHdr = sourceIsHdr && v.TenBit && !v.ConvertHdrToSdr;
+                            if (preservesHdr)
+                            {
+                                VideoStreamInfo src = media.VideoStreams[0];
+                                extraFlags["-color_primaries"] = src.ColorPrimaries ?? "bt2020";
+                                extraFlags["-color_trc"] = src.ColorTransfer ?? "smpte2084";
+                                extraFlags["-colorspace"] = src.ColorSpace ?? "bt2020nc";
+                                extraFlags["-color_range"] = "tv";
+                            }
+
                             return new VideoOutputPlan(
                                 Width: outputWidth,
                                 Height: outputHeight,
