@@ -139,7 +139,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IEncodingStrategy, HlsTwoPassStrategy>();
         services.AddTransient<IEncodingStrategy, MkvStrategy>();
         services.AddTransient<IEncodingStrategy, Mp4SinglePassStrategy>();
+        services.AddTransient<IEncodingStrategy, Mp4TwoPassStrategy>();
         services.AddTransient<IEncodingStrategy, DashSinglePassStrategy>();
+        services.AddTransient<IEncodingStrategy, DashTwoPassStrategy>();
         services.AddTransient<IStrategyResolver, StrategyResolver>();
         services.AddTransient<IEncodingOrchestrator, EncodingOrchestrator>();
 
