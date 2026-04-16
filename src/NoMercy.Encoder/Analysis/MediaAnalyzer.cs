@@ -85,6 +85,8 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
         long fileSize = ParseLong(format, "size");
         string formatName = format.Value<string>("format_name") ?? "unknown";
 
+        DolbyVisionInfo? dolbyVision = ParseDolbyVision(streams);
+
         return new MediaInfo(
             FilePath: filePath,
             Format: formatName,
@@ -95,7 +97,8 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
             AudioStreams: audioStreams,
             SubtitleStreams: subtitleStreams,
             Chapters: chapterList,
-            Attachments: attachments
+            Attachments: attachments,
+            DolbyVision: dolbyVision
         );
     }
 
@@ -123,6 +126,59 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
             AverageFrameRate: avgFrameRate,
             RealFrameRate: realFrameRate
         );
+    }
+
+    /// <summary>
+    /// Walks every video stream's <c>side_data_list</c> looking for the
+    /// "DOVI configuration record" entry that ffprobe emits for Dolby Vision
+    /// content. Returns <c>null</c> when no DV record is present. Only the
+    /// first DV-bearing stream is reported — a single file never has more
+    /// than one DV profile in practice.
+    /// </summary>
+    internal static DolbyVisionInfo? ParseDolbyVision(JArray streams)
+    {
+        foreach (JToken stream in streams)
+        {
+            if (stream.Value<string>("codec_type") != "video")
+                continue;
+
+            JArray? sideData = stream["side_data_list"] as JArray;
+            if (sideData is null)
+                continue;
+
+            foreach (JToken entry in sideData)
+            {
+                string? type = entry.Value<string>("side_data_type");
+                // ffprobe uses two spellings depending on how DV is muxed:
+                // "DOVI configuration record" (MP4/MKV container) and
+                // "Dolby Vision Metadata" (in-stream RPU).
+                if (
+                    type is null
+                    || (
+                        !type.Contains("DOVI", StringComparison.OrdinalIgnoreCase)
+                        && !type.Contains("Dolby Vision", StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                    continue;
+
+                int profile = entry.Value<int?>("dv_profile") ?? 0;
+                int level = entry.Value<int?>("dv_level") ?? 0;
+                bool hasRpu = entry.Value<int?>("rpu_present_flag") == 1;
+                bool hasEl = entry.Value<int?>("el_present_flag") == 1;
+                int compatId = entry.Value<int?>("dv_bl_signal_compatibility_id") ?? 0;
+
+                DvBlCompatibility compat = compatId switch
+                {
+                    1 => DvBlCompatibility.Hdr10,
+                    2 => DvBlCompatibility.Sdr,
+                    _ => DvBlCompatibility.None,
+                };
+
+                return new DolbyVisionInfo(profile, level, hasRpu, hasEl, compat);
+            }
+        }
+
+        return null;
     }
 
     private static AudioStreamInfo ParseAudioStream(JToken stream)

@@ -59,6 +59,11 @@ public class HlsOutputStrategy : IOutputStrategy
             if (isHevc)
                 extraFlags["-tag:v"] = "hvc1";
 
+            // Dolby Vision overrides hvc1 — HLS/fMP4 players require dvh1 to
+            // route the stream through the DV decoder path.
+            if (plan.PreserveDolbyVision && isHevc)
+                extraFlags["-tag:v"] = "dvh1";
+
             builder.AddOutput(
                 new OutputOptions(
                     FilePath: playlistPath,

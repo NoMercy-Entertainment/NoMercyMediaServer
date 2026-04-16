@@ -303,13 +303,36 @@ public class PlanStage(
         if (media.Duration.TotalSeconds > 0 && media.Duration.TotalSeconds < segmentDuration)
             segmentDuration = Math.Max(1, (int)Math.Ceiling(media.Duration.TotalSeconds));
 
+        // Dolby Vision passthrough: the RPU metadata survives when the output
+        // stays HEVC 10-bit and we don't tonemap. MP4 / HLS additionally need
+        // the "dvh1" codec tag; MKV carries DV in the bitstream unchanged.
+        // Transcoding or 8-bit output silently strips the RPU — log a warning
+        // so the user knows DV will be gone in the output.
+        bool preserveDv =
+            media.DolbyVision is not null
+            && profile.Format is OutputFormat.Hls or OutputFormat.Mp4 or OutputFormat.Mkv
+            && profile.VideoOutputs.Any(v =>
+                v.Codec == VideoCodecType.H265 && v.TenBit && !v.ConvertHdrToSdr
+            );
+
+        if (media.DolbyVision is not null && !preserveDv)
+        {
+            logger.LogWarning(
+                "Source has Dolby Vision (profile {Profile}.{Level}) but the output profile can't preserve it — "
+                    + "RPU will be stripped. Keep HEVC 10-bit in an HLS/MP4/MKV output without tonemapping to retain DV.",
+                media.DolbyVision.Profile,
+                media.DolbyVision.Level
+            );
+        }
+
         return new OutputPlan(
             profile.Format,
             videoPlan,
             audioPlan,
             subtitlePlan,
             thumbPlan,
-            segmentDuration
+            segmentDuration,
+            PreserveDolbyVision: preserveDv
         );
     }
 

@@ -10,7 +10,12 @@ public record OutputPlan(
     AudioOutputPlan[] AudioOutputs,
     SubtitleOutputPlan[] SubtitleOutputs,
     ThumbnailOutputPlan? Thumbnails,
-    int SegmentDurationSeconds = 6
+    int SegmentDurationSeconds = 6,
+    // Set by PlanStage when the source carries Dolby Vision metadata AND the
+    // video output is stream-copy. Output strategies use this to emit the
+    // container-specific codec tag that preserves DV playback signaling
+    // (dvh1 for MP4/HLS, hvc1+dv passthrough for MKV).
+    bool PreserveDolbyVision = false
 );
 
 public record VideoOutputPlan(

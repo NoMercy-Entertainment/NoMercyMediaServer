@@ -29,6 +29,13 @@ public class Mp4OutputStrategy : IOutputStrategy
 
         Dictionary<string, string> extraFlags = new() { ["-movflags"] = "+faststart" };
 
+        // Dolby Vision HEVC must be tagged dvh1 in MP4 so players recognize
+        // the DV profile. Without this, QuickTime/Apple TV play as HDR10.
+        if (plan.PreserveDolbyVision && primaryVideo is not null)
+        {
+            extraFlags["-tag:v"] = "dvh1";
+        }
+
         if (
             primaryAudio?.Action == StreamAction.Transcode
             && !string.IsNullOrEmpty(primaryAudio.AudioFilter)
