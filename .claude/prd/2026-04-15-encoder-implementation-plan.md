@@ -61,10 +61,10 @@ The phased plan below kept the original phase numbers for continuity. **Executio
 
 ### Tier 1 — core consumer workflow (ship first)
 
-1. **Phase 12.2 — Watch-folder auto-encode.** Drop a file into a library folder, it encodes automatically using the folder's assigned profiles. Home users expect this.
-2. **Phase 14 — Disc ripping.** Rip DVD / Blu-ray collection to the library. `libdvdread` / `libdvdnav` / `libbluray` / `libcdio` already in the FFmpeg build — the plumbing is what's missing.
-3. **Multi-variant HLS 2-pass.** Today 2-pass requires exactly one video output. Quality ladders are 3–5 variants — need per-variant stats files + sequential pass-1 runs. Without this, high-quality adaptive streaming is locked to single-pass.
-4. **Phase 10.3 — Auto ABR ladder wire-up.** `AbrLadderGenerator` exists but nobody calls it. Opt-in flag on profile → analyze source → generate ladder. Users stop hand-editing variants for every resolution.
+1. ✅ **Phase 12.2 — Watch-folder auto-encode** — shipped (`6328cc09`). `MediaFilesScannedEvent` fires after library rescan; `AutoEncodeSubscriber` hosted service dispatches `VideoEncodeJob` per file in folders that have an `EncoderProfileFolder` assignment. Idempotent via sibling `.NoMercy` / `*.m3u8` check.
+2. ✅ **Phase 14 / Tier 1.2 — Disc ripping** — shipped (`600b1b39`). `DiscScanner` (ffprobe → `DiscInfo`), `DriveMonitor` (polling CDRom DriveInfo, emits DriveEvents), `DiscRipper` (FFmpeg stream-copy per title, bluray `-playlist` support, opt-in audio/subtitle track mapping). 16 new tests, 747 total passing.
+3. ✅ **Tier 1.3 — Multi-variant HLS 2-pass** — shipped (`1eec5e14`). `BuildInput.Pass1VariantIndex` threaded through `Encoder` → `BuildStage`; `TwoPassStrategyBase` loops pass 1 per variant with `{base}_v{i}` stats files; resume requires all variant stats present (partials invalid).
+4. ✅ **Tier 1.4 — Auto ABR ladder wire-up** — shipped (`3a1b2c35`). `EncodingProfile.AutoLadder` opt-in flag; `PlanStage.ExpandAutoLadder` injects `IAbrLadderGenerator` and replaces user variants with source-analyzed ladder when the flag is set.
 
 ### Tier 2 — polish that matters for the "Netflix-on-your-own-server" pitch
 
@@ -644,21 +644,21 @@ public interface IWorkerDispatcher
 
 ---
 
-## Phase 14: Disc Ripping
+## Phase 14: Disc Ripping — shipped `600b1b39`
 
 ### Task 14.1: Disc Ripping Pipeline
 
 **Files:**
-- Create: `src/NoMercy.Encoder/DiscRipping/DiscRipStrategy.cs`
-- Create: `src/NoMercy.Encoder/DiscRipping/DiscScanner.cs`
-- Create: `src/NoMercy.Encoder/DiscRipping/DriveMonitor.cs`
-- Create: `src/NoMercy.Encoder/DiscRipping/DiscMetadataResolver.cs`
-- Create: `tests/NoMercy.Tests.Encoder/DiscRipping/DiscRipStrategyTests.cs`
+- Created: `src/NoMercy.Encoder/DiscRipping/DiscScanner.cs`
+- Created: `src/NoMercy.Encoder/DiscRipping/DriveMonitor.cs`
+- Created: `src/NoMercy.Encoder/DiscRipping/DiscRipper.cs` + `IDiscRipper.cs`
+- Created: `tests/NoMercy.Tests.Encoder/DiscRipping/DiscRipperTests.cs`, `DiscScannerParseTests.cs`, `DriveMonitorTests.cs`
 
-- [ ] **Step 1:** Implement existing interfaces: `IDiscScanner` (scan drive for titles/tracks), `IDriveMonitor` (watch for disc insert/eject events), `IDiscMetadataResolver` (match disc to TMDB/TVDB metadata).
-- [ ] **Step 2:** `DiscRipStrategy`: rip selected titles to intermediate MKV (via MakeMKV CLI or similar), then feed into the encoding pipeline as a regular file source.
-- [ ] **Step 3:** Tests, DI registration.
-- [ ] **Step 4:** Commit: `feat(encoder): disc ripping pipeline`
+- [x] **Step 1:** `DiscScanner` implements `IDiscScanner` — runs ffprobe against libbluray/libdvdread pseudo-URL and parses the JSON envelope into `DiscInfo` (titles, video/audio/subtitle streams, chapters).
+- [x] **Step 2:** `DriveMonitor` implements `IDriveMonitor` — polls `DriveInfo.GetDrives()` filtered to `DriveType.CDRom` every 3 seconds, emits `DriveEvent`s for disc insert/eject/drive add/remove. Singleton DI scope preserves state across `MonitorAsync` enumerations.
+- [x] **Step 3:** `DiscRipper` implements the new `IDiscRipper` — builds FFmpeg stream-copy command per selected title (`-playlist {i}` for bluray protocol, `-map` entries for user-opted audio/subtitle streams), writes `{outputDir}/title_NN.mkv` intermediates the regular encoding pipeline can pick up.
+- [x] **Step 4:** 16 new tests (42 total under `DiscRipping/`), DI registration in `ServiceCollectionExtensions`. `IDiscMetadataResolver` implementation deferred — scaffold still present; resolver integration happens when a disc rip UI lands.
+- [x] **Step 5:** Commit: `feat(encoder): Tier 1.2 — disc ripping scanner, drive monitor, ripper` — merged as `600b1b39`.
 
 ---
 
