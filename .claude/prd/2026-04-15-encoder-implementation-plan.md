@@ -16,7 +16,7 @@
 
 ## Current Status — 2026-04-16
 
-**Build:** 165 commits ahead of `master` · 0 errors · 0 warnings · 650 encoder tests passing (+60 added this session).
+**Build:** 175 commits ahead of `master` · 0 errors · 0 warnings · 678 encoder tests + 6 repository tests passing (+94 added this session).
 
 **What already works today (outside the strategy pattern):**
 - 6-stage pipeline (`Analyze → Validate → Plan → Build → Execute → Finalize`) in [`Pipeline/Encoder.cs`](../../src/NoMercy.Encoder/Pipeline/Encoder.cs) delivering production-grade HLS single-pass
@@ -33,13 +33,13 @@
 | Phase | Status | Evidence |
 |-------|--------|----------|
 | 1. Foundation — DI + Building Blocks | ✅ done | All 4 tasks shipped: interfaces (1.1), DI registration (1.2), stage injection (1.3), EncodeMode enum + parser (1.4). Pending sub-step: `IOutputStrategyFactory` for format selection via DI. |
-| 2. Strategy Pattern | ❌ not started | No `Orchestration/` or `Strategies/` dir. `Encoder.cs` is still the top-level. Jobs call `IEncoder`. |
-| 3. Additional File Strategies | ❌ not started | `Output/` has HLS/MKV/MP4/DASH `IOutputStrategy` impls, but not the plan's full-lifecycle `IEncodingStrategy`. |
-| 4. Checkpoint & Resume | ⚠️ store done, wiring pending | `JobCheckpoint` extended with `StatsFilePath`, `Pass1Completed`, `LastCompletedSegment`, `EncodeMode`. `ICheckpointStore` + `JsonCheckpointStore` ship with tests. Strategies do not yet consult the store (task 4.2). |
+| 2. Strategy Pattern | ✅ MVP | `Orchestration/` has `IEncodingOrchestrator` + `EncodingOrchestrator` + `IStrategyResolver` + `StrategyResolver`. `Strategies/IEncodingStrategy` defines the contract. `VideoEncodeJob` / `MusicEncodeJob` call the orchestrator, not `IEncoder` directly. Task 2.2 (full HLS stage extraction) deferred — strategies currently wrap `IEncoder` as a seam; format-specific logic can peel out later. |
+| 3. Additional File Strategies | ✅ single-pass all formats | `HlsSinglePassStrategy`, `MkvStrategy`, `Mp4SinglePassStrategy`, `DashSinglePassStrategy` all registered. Each delegates to `IEncoder` — format routing already works via `BuildStage.GetStrategy(OutputFormat)`. 2-pass variants (3.1, 3.3, 3.5) still pending. |
+| 4. Checkpoint & Resume | ⚠️ store done, wiring pending | `JobCheckpoint` extended with `StatsFilePath`, `Pass1Completed`, `LastCompletedSegment`, `EncodeMode`. `ICheckpointStore` + `JsonCheckpointStore` ship with tests. Strategies do not yet consult the store (task 4.2 — gated on 2-pass strategies). |
 | 5. Live Transcode Strategy | ❌ scaffolded only | `LiveEncoder.StartAsync` creates a session object but does not spawn FFmpeg. Session manager + decision engine work. No strategy wrapper, no transport impl. |
 | 6. Distribution | ❌ not started | No `Distribution/` dir. `IJobDispatcher` / `IRemoteWorker` / `IHardwareBenchmark` interfaces exist with zero implementations. |
-| 7. Plugin Integration | ❌ not started | `IEncoderPlugin` exists in `SystemFeatures/`. No plugin strategy resolver, no DI override tests. |
-| 8. Queue & History | ❌ not started | No `EncodingHistory` model. `TasksController` has pause/resume per-id and failed-retry but no reorder, queue pause, or ETA. |
+| 7. Plugin Integration | ✅ implicit | `StrategyResolver` iterates `IEnumerable<IEncodingStrategy>` and walks in reverse so later (plugin) registrations override built-ins. The existing `IPluginServiceRegistrator` pattern lets plugins register additional strategies with zero core changes. `StrategyResolverTests.Resolve_LastRegistrationWins_PluginsOverrideBuiltIn` proves it. |
+| 8. Queue & History | ✅ done | `EncodingHistory` DB model + migration + `EncodingHistoryRepository`. `VideoEncodeJob` writes one row per successful encode. `GET /dashboard/encoding/history` paginated endpoint (1–500 per page). Queue-level `pause-queue` / `resume-queue` endpoints via `QueueRunner.Stop/Start("encoder")`. `GET /dashboard/tasks/queue/eta` rolling-average ETA from 50 most-recent history samples × current queue depth. |
 | 9. Content Intelligence | ⚠️ 3 of 4 | Crop detection ✅ (9.1), subtitle OCR ✅ (9.2 with auto-download Tesseract model manager), Whisper transcription ✅ (9.3). Intro/outro content detection (9.4) still pending. New nomercy-ffmpeg Windows build provides libtesseract + whisper filters. |
 | 10. Format Capabilities | ⚠️ 4 of 7 done | HDR→SDR tonemap ✅, HDR→HDR passthrough ✅ (step 2), burn-in filter ✅ (10.1), loudnorm ✅ (10.4 partial), ABR ladder ✅ (10.3). Pending: DV passthrough (10.2 step 3), explicit downmix/`pan`/`amerge` (10.4 step 1 remainder), wire ABR generator into profile-load path. |
 | 11. DRM & Encryption | ❌ not started | No `IDrmProcessor`. No AES-128 HLS, no CENC DASH. |
@@ -47,7 +47,9 @@
 | 13. Audio Strategies | ❌ not started | No `AudioStrategy`. `MusicEncodeJob` uses the current pipeline directly. |
 | 14. Disc Ripping | ❌ data only | `DiscDrive`, `DiscInfo`, `RipRequest`, `MetadataMatch`, `OpticalDiscType` records exist. Zero scanning/ripping logic. |
 
-**External dependency:** Phase 9 (OCR, Whisper) and the spritevtt single-command fix depend on the new `nomercy-ffmpeg` build currently in progress. Phase 11 (CENC DASH) depends on `mp4box` / `shaka-packager` integration — not in nomercy-ffmpeg.
+**External dependency:** Phase 9 depends on the `nomercy-ffmpeg` build (libtesseract + whisper filters both verified present in the 8.0-NoMercy-MediaServer Windows build). Phase 11 (CENC DASH) depends on `mp4box` / `shaka-packager` integration — not in nomercy-ffmpeg.
+
+**V1 pause/resume/cancel parity** — shipped in a separate track alongside the plan. `EncoderProcessRegistry` (singleton, thread-safe) tracks live FFmpeg PIDs per job id; `EventBusProgressObserver` registers PIDs on first progress tick; `TasksController` pause/{id}, resume/{id}, and delete queue/{id} all operate via registry + `ProcessThrottle.Suspend/Resume` / `Process.Kill(entireProcessTree:true)`.
 
 ---
 
