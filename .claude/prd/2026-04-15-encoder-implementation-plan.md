@@ -68,9 +68,9 @@ The phased plan below kept the original phase numbers for continuity. **Executio
 
 ### Tier 2 — polish that matters for the "Netflix-on-your-own-server" pitch
 
-5. **Phase 9.4 — Intro / outro detection.** Skip-intro button in the player. Requires `IAudioFingerprinter` implementation (chromaprint CLI is in the FFmpeg build).
+5. ✅ **Phase 9.4 — Intro / outro detection** — shipped (`d400f344`). `IAudioFingerprinter` + `ChromaprintFingerprinter` invoke ffmpeg's chromaprint muxer; `IIntroDetector` + `ChromaprintIntroDetector` find shared regions across episode fingerprints via sliding-window Hamming-distance matching (handles shifted-offset intros). Analysis layer only — playback-API wiring is a follow-up. 17 new tests.
 6. **Phase 5 — Live transcode.** When a client can't direct-play a file, transcode on demand. Core of "plays on every device".
-7. **Phase 10.2 step 3 — Dolby Vision passthrough.** HEVC → HEVC DV metadata preservation for 4K movie collectors.
+7. ✅ **Phase 10.2 step 3 — Dolby Vision passthrough** — shipped (`03b0a543`). `MediaAnalyzer` extracts `DolbyVisionInfo` from ffprobe's `side_data_list` (both "DOVI configuration record" and "Dolby Vision Metadata" spellings). `OutputPlan.PreserveDolbyVision` set by PlanStage when source has DV + format is HLS/MP4/MKV + HEVC 10-bit output; Mp4/HLS strategies emit `-tag:v dvh1` so Apple TV / QuickTime route through the DV decoder. PlanStage logs a warning when DV is unavoidably stripped. 11 new tests.
 8. ✅ **Phase 13 remaining — mp3 / flac / ogg single-file audio** — shipped (`65850740`). `OutputFormat.Mp3/Flac/Ogg` added; `SingleFileAudioOutputStrategy` base with three thin subclasses; `Mp3Strategy`/`FlacStrategy`/`OggStrategy` single-pass resolvers; `ProfileValidator` enforces container↔codec pairing (mp3→lame, flac→flac, ogg→vorbis/opus/flac) and rejects video/subtitle outputs. 26 new tests.
 
 ### Tier 3 — nice-to-have, low blast radius
