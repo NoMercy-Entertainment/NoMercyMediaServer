@@ -94,7 +94,8 @@ public class Encoder(
             request.ResolvedTitle,
             DurationLimit: null,
             Pass: request.Options?.Pass ?? EncodingPass.Single,
-            StatsFilePath: request.Options?.StatsFilePath
+            StatsFilePath: request.Options?.StatsFilePath,
+            Pass1VariantIndex: request.Options?.Pass1VariantIndex ?? 0
         );
         StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
         if (buildResult is StageFailure buildFailure)

@@ -37,7 +37,9 @@ public class BuildStageTwoPassTests
         Assert.Single(commands);
         string[] args = commands[0].Arguments;
         AssertContainsPair(args, "-pass", "1");
-        AssertContainsPair(args, "-passlogfile", statsPath);
+        // BuildStage appends variant index to the stats base path so each
+        // variant writes its own stats file.
+        AssertContainsPair(args, "-passlogfile", $"{statsPath}_v0");
         AssertContains(args, "-an");
         AssertContains(args, "-sn");
         AssertContainsPair(args, "-f", "null");
@@ -55,17 +57,28 @@ public class BuildStageTwoPassTests
     }
 
     [Fact]
-    public async Task Pass1_WithMultipleVideoOutputs_ReturnsFailure()
+    public async Task Pass1_WithMultipleVideoOutputs_EncodesTargetVariantOnly()
     {
+        // Multi-variant profiles are now supported — pass 1 picks the variant
+        // by Pass1VariantIndex (default 0) and produces that variant's stats.
         OutputPlan plan = PlanWith(BuildVideo(1920, 1080, "[v0]"), BuildVideo(1280, 720, "[v1]"));
+
+        FfmpegCommand[] commands = await RunBuild(plan, EncodingPass.One, "/tmp/stats");
+
+        Assert.Single(commands);
+        string joined = string.Join(" ", commands[0].Arguments);
+        Assert.Contains("-passlogfile /tmp/stats_v0", joined);
+    }
+
+    [Fact]
+    public async Task Pass1_WithNoVideoOutputs_ReturnsFailure()
+    {
+        OutputPlan plan = PlanWith();
 
         StageResult result = await ExecuteBuild(plan, EncodingPass.One, "/tmp/stats");
 
         Assert.IsType<StageFailure>(result);
-        Assert.Contains(
-            "2-pass supports exactly one video output",
-            ((StageFailure)result).Error.Message
-        );
+        Assert.Contains("at least one video output", ((StageFailure)result).Error.Message);
     }
 
     [Fact]

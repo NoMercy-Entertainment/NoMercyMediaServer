@@ -41,7 +41,8 @@ public record EncodingOptions(
     int? MaxConcurrentEncodes = null,
     Priority Priority = Priority.Normal,
     EncodingPass Pass = EncodingPass.Single,
-    string? StatsFilePath = null
+    string? StatsFilePath = null,
+    int Pass1VariantIndex = 0
 );
 
 public enum Priority

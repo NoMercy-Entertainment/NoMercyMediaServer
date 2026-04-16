@@ -3,22 +3,26 @@ namespace NoMercy.Tests.Encoder.Strategies.Hls;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
 
-public class HlsTwoPassStrategyTests : IDisposable
+/// <summary>
+/// Covers the multi-variant 2-pass path added in Tier 1.3 — pass 1 runs once
+/// per variant (each with its own stats file), pass 2 runs once with all
+/// variants sharing the same run.
+/// </summary>
+public class HlsMultiVariantTwoPassTests : IDisposable
 {
     private readonly string _outputDir;
     private readonly Mock<IEncoder> _encoder = new();
     private readonly Mock<ICheckpointStore> _checkpointStore = new();
 
-    public HlsTwoPassStrategyTests()
+    public HlsMultiVariantTwoPassTests()
     {
-        _outputDir = Path.Combine(Path.GetTempPath(), $"HlsTwoPass_{Guid.NewGuid():N}");
+        _outputDir = Path.Combine(Path.GetTempPath(), $"MultiVar_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_outputDir);
     }
 
@@ -30,60 +34,13 @@ public class HlsTwoPassStrategyTests : IDisposable
     }
 
     [Fact]
-    public void FormatAndMode_AreHlsTwoPass()
-    {
-        HlsTwoPassStrategy strategy = BuildStrategy();
-
-        Assert.Equal(OutputFormat.Hls, strategy.Format);
-        Assert.Equal(EncodeMode.TwoPass, strategy.EncodeMode);
-    }
-
-    [Fact]
-    public async Task Encode_CallsEncoderTwice_Pass1ThenPass2()
+    public async Task Encode_ThreeVariants_RunsPass1ThreeTimesWithIncreasingIndex()
     {
         _checkpointStore
             .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((JobCheckpoint?)null);
-        SetupSuccessfulEncoder();
 
-        HlsTwoPassStrategy strategy = BuildStrategy();
-        EncodingResult result = await strategy.EncodeAsync(
-            BuildRequest(),
-            progress: null,
-            ct: CancellationToken.None
-        );
-
-        Assert.True(result.Success);
-        _encoder.Verify(
-            e =>
-                e.EncodeAsync(
-                    It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.One),
-                    It.IsAny<IProgressObserver?>(),
-                    It.IsAny<CancellationToken>()
-                ),
-            Times.Once
-        );
-        _encoder.Verify(
-            e =>
-                e.EncodeAsync(
-                    It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.Two),
-                    It.IsAny<IProgressObserver?>(),
-                    It.IsAny<CancellationToken>()
-                ),
-            Times.Once
-        );
-    }
-
-    [Fact]
-    public async Task Encode_Pass1AndPass2_ShareSameStatsFilePath()
-    {
-        _checkpointStore
-            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((JobCheckpoint?)null);
-        SetupSuccessfulEncoder();
-
-        string? pass1Stats = null;
-        string? pass2Stats = null;
+        List<int> pass1Indices = [];
         _encoder
             .Setup(e =>
                 e.EncodeAsync(
@@ -96,23 +53,41 @@ public class HlsTwoPassStrategyTests : IDisposable
                 (EncodingRequest req, IProgressObserver? _, CancellationToken _) =>
                 {
                     if (req.Options!.Pass == EncodingPass.One)
-                        pass1Stats = req.Options.StatsFilePath;
-                    else if (req.Options!.Pass == EncodingPass.Two)
-                        pass2Stats = req.Options.StatsFilePath;
+                        pass1Indices.Add(req.Options.Pass1VariantIndex);
                     return Success();
                 }
             );
 
         HlsTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(), null, CancellationToken.None);
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
 
-        Assert.NotNull(pass1Stats);
-        Assert.NotNull(pass2Stats);
-        Assert.Equal(pass1Stats, pass2Stats);
+        Assert.Equal(new[] { 0, 1, 2 }, pass1Indices);
     }
 
     [Fact]
-    public async Task Encode_Pass1Failure_Pass2NotRun_AndFailureReturned()
+    public async Task Encode_ThreeVariants_RunsPass2ExactlyOnce()
+    {
+        _checkpointStore
+            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobCheckpoint?)null);
+        SetupSuccessfulEncoder();
+
+        HlsTwoPassStrategy strategy = BuildStrategy();
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
+
+        _encoder.Verify(
+            e =>
+                e.EncodeAsync(
+                    It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.Two),
+                    It.IsAny<IProgressObserver?>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task Encode_Pass1FailsOnSecondVariant_Pass2NotRun()
     {
         _checkpointStore
             .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -121,22 +96,28 @@ public class HlsTwoPassStrategyTests : IDisposable
         _encoder
             .Setup(e =>
                 e.EncodeAsync(
-                    It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.One),
+                    It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Fail("pass1 exploded"));
+            .ReturnsAsync(
+                (EncodingRequest req, IProgressObserver? _, CancellationToken _) =>
+                {
+                    if (req.Options!.Pass == EncodingPass.One && req.Options.Pass1VariantIndex == 1)
+                        return Fail("pass1 variant 1 exploded");
+                    return Success();
+                }
+            );
 
         HlsTwoPassStrategy strategy = BuildStrategy();
         EncodingResult result = await strategy.EncodeAsync(
-            BuildRequest(),
+            BuildRequest(variantCount: 3),
             null,
             CancellationToken.None
         );
 
         Assert.False(result.Success);
-        Assert.Contains("pass1 exploded", result.Error!.Message);
         _encoder.Verify(
             e =>
                 e.EncodeAsync(
@@ -146,61 +127,27 @@ public class HlsTwoPassStrategyTests : IDisposable
                 ),
             Times.Never
         );
-    }
-
-    [Fact]
-    public async Task Encode_Pass1Success_SavesCheckpoint()
-    {
-        _checkpointStore
-            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((JobCheckpoint?)null);
-        SetupSuccessfulEncoder();
-
-        HlsTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(), null, CancellationToken.None);
-
-        _checkpointStore.Verify(
-            s =>
-                s.SaveAsync(
-                    It.Is<JobCheckpoint>(c =>
-                        c.Pass1Completed
-                        && !string.IsNullOrEmpty(c.StatsFilePath)
-                        && c.EncodeMode == "TwoPass"
-                    ),
+        // Pass 1 ran for variant 0 then failed on variant 1 → 2 calls, not 3.
+        _encoder.Verify(
+            e =>
+                e.EncodeAsync(
+                    It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.One),
+                    It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            Times.Exactly(2)
         );
     }
 
     [Fact]
-    public async Task Encode_FullSuccess_DeletesCheckpoint()
+    public async Task Encode_ResumeWithAllVariantStatsPresent_SkipsPass1()
     {
-        _checkpointStore
-            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((JobCheckpoint?)null);
-        SetupSuccessfulEncoder();
-
-        HlsTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(), null, CancellationToken.None);
-
-        _checkpointStore.Verify(
-            s => s.DeleteAsync(_outputDir, It.IsAny<CancellationToken>()),
-            Times.Once
-        );
-    }
-
-    [Fact]
-    public async Task Encode_ResumeWithValidCheckpoint_SkipsPass1()
-    {
-        // Per-variant stats files must exist on disk — the resume check walks
-        // 0..N-1 and requires each `{base}_v{i}-0.log` to be present.
+        // All per-variant stats files must exist for resume to skip pass 1.
         string statsDir = Path.Combine(_outputDir, ".2pass");
         Directory.CreateDirectory(statsDir);
         string statsFile = Path.Combine(statsDir, "x264");
-        // BuildRequest() uses a profile with zero VideoOutputs → variantCount
-        // clamps to 1, so a single _v0-0.log is enough for the resume check.
-        await File.WriteAllTextAsync($"{statsFile}_v0-0.log", "pass1 done");
+        for (int i = 0; i < 3; i++)
+            await File.WriteAllTextAsync($"{statsFile}_v{i}-0.log", $"variant {i} done");
 
         JobCheckpoint existing = new(
             JobId: "job-1",
@@ -220,9 +167,8 @@ public class HlsTwoPassStrategyTests : IDisposable
         SetupSuccessfulEncoder();
 
         HlsTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(), null, CancellationToken.None);
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
 
-        // Pass 1 should NOT have been called; pass 2 was.
         _encoder.Verify(
             e =>
                 e.EncodeAsync(
@@ -232,31 +178,26 @@ public class HlsTwoPassStrategyTests : IDisposable
                 ),
             Times.Never
         );
-        _encoder.Verify(
-            e =>
-                e.EncodeAsync(
-                    It.Is<EncodingRequest>(r =>
-                        r.Options!.Pass == EncodingPass.Two && r.Options.StatsFilePath == statsFile
-                    ),
-                    It.IsAny<IProgressObserver?>(),
-                    It.IsAny<CancellationToken>()
-                ),
-            Times.Once
-        );
     }
 
     [Fact]
-    public async Task Encode_ResumeWithCheckpointButStatsFileMissing_ReRunsPass1()
+    public async Task Encode_ResumeWithPartialVariantStats_ReRunsAllPass1()
     {
-        // Checkpoint claims pass 1 done but the stats file doesn't exist on disk
-        // — pretend a previous run was interrupted mid-cleanup. Must re-run.
-        JobCheckpoint stale = new(
+        // Only variant 0's stats exists — variant 1 + 2 are missing. Pass 1
+        // has to re-run for all variants; mixing stale and fresh stats across
+        // variants gives unreliable quality.
+        string statsDir = Path.Combine(_outputDir, ".2pass");
+        Directory.CreateDirectory(statsDir);
+        string statsFile = Path.Combine(statsDir, "x264");
+        await File.WriteAllTextAsync($"{statsFile}_v0-0.log", "stale");
+
+        JobCheckpoint existing = new(
             JobId: "job-1",
             InputPath: "/media/src.mkv",
             OutputDirectory: _outputDir,
             CompletedGroupIndices: [],
             LastUpdated: DateTime.UtcNow,
-            StatsFilePath: Path.Combine(_outputDir, "nonexistent-stats"),
+            StatsFilePath: statsFile,
             Pass1Completed: true,
             LastCompletedSegment: -1,
             EncodeMode: "TwoPass"
@@ -264,11 +205,11 @@ public class HlsTwoPassStrategyTests : IDisposable
 
         _checkpointStore
             .Setup(s => s.LoadAsync(_outputDir, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(stale);
+            .ReturnsAsync(existing);
         SetupSuccessfulEncoder();
 
         HlsTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(), null, CancellationToken.None);
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
 
         _encoder.Verify(
             e =>
@@ -277,7 +218,7 @@ public class HlsTwoPassStrategyTests : IDisposable
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            Times.Exactly(3)
         );
     }
 
@@ -308,8 +249,8 @@ public class HlsTwoPassStrategyTests : IDisposable
             Success: false,
             OutputPath: string.Empty,
             Duration: TimeSpan.Zero,
-            Error: new EncodingError(
-                EncodingErrorKind.ProcessCrashed,
+            Error: new NoMercy.Encoder.Errors.EncodingError(
+                NoMercy.Encoder.Errors.EncodingErrorKind.ProcessCrashed,
                 message,
                 null,
                 "Pass1",
@@ -321,15 +262,30 @@ public class HlsTwoPassStrategyTests : IDisposable
     private HlsTwoPassStrategy BuildStrategy() =>
         new(_encoder.Object, _checkpointStore.Object, NullLogger<HlsTwoPassStrategy>.Instance);
 
-    private EncodingRequest BuildRequest() =>
+    private EncodingRequest BuildRequest(int variantCount) =>
         new(
             InputPath: "/media/src.mkv",
             OutputDirectory: _outputDir,
             Profile: new EncodingProfile(
                 Id: Ulid.NewUlid(),
-                Name: "HLS 2-pass 1080p",
+                Name: $"HLS 2-pass {variantCount}-variant",
                 Format: OutputFormat.Hls,
-                VideoOutputs: [],
+                VideoOutputs: Enumerable
+                    .Range(0, variantCount)
+                    .Select(i => new VideoOutput(
+                        Codec: VideoCodecType.H264,
+                        Width: 1920 >> i,
+                        Height: 1080 >> i,
+                        BitrateKbps: 4000 >> i,
+                        Crf: 23,
+                        Preset: "medium",
+                        Profile: "high",
+                        Level: "4.1",
+                        ConvertHdrToSdr: false,
+                        KeyframeIntervalSeconds: 2,
+                        TenBit: false
+                    ))
+                    .ToArray(),
                 AudioOutputs: [],
                 SubtitleOutputs: [],
                 EncodeMode: EncodeMode.TwoPass

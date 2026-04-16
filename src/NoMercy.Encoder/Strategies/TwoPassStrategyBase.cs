@@ -38,11 +38,13 @@ public abstract class TwoPassStrategyBase(
     )
     {
         string statsFilePath = ResolveStatsFilePath(request);
+        int variantCount = Math.Max(1, request.Profile.VideoOutputs.Length);
+
         JobCheckpoint? checkpoint = await checkpointStore.LoadAsync(request.OutputDirectory, ct);
         bool pass1AlreadyDone =
             checkpoint is { Pass1Completed: true }
             && !string.IsNullOrEmpty(checkpoint.StatsFilePath)
-            && File.Exists(checkpoint.StatsFilePath);
+            && AllVariantStatsPresent(checkpoint.StatsFilePath!, variantCount);
 
         if (pass1AlreadyDone)
         {
@@ -50,35 +52,50 @@ public abstract class TwoPassStrategyBase(
             progress?.OnStageStarted("Pass 1 (resumed from checkpoint)");
             progress?.OnStageCompleted("Pass 1 (resumed from checkpoint)", TimeSpan.Zero);
             logger.LogInformation(
-                "Resuming 2-pass encode for {Input} — pass 1 already done at {Stats}",
+                "Resuming 2-pass encode for {Input} — pass 1 already done at {Stats} ({Variants} variants)",
                 request.InputPath,
-                statsFilePath
+                statsFilePath,
+                variantCount
             );
         }
         else
         {
-            progress?.OnStageStarted("Pass 1");
-            EncodingRequest pass1Request = request with
+            // Pass 1 runs once per variant, each with its own stats file.
+            // BuildStage picks which variant to analyze based on Pass1VariantIndex
+            // and appends _v{i} to the base stats path.
+            for (int variantIndex = 0; variantIndex < variantCount; variantIndex++)
             {
-                Options = (request.Options ?? new EncodingOptions()) with
-                {
-                    Pass = EncodingPass.One,
-                    StatsFilePath = statsFilePath,
-                },
-            };
+                string stageName =
+                    variantCount == 1
+                        ? "Pass 1"
+                        : $"Pass 1 variant {variantIndex + 1}/{variantCount}";
+                progress?.OnStageStarted(stageName);
 
-            EncodingResult pass1Result = await encoder.EncodeAsync(pass1Request, progress, ct);
-            if (!pass1Result.Success)
-            {
-                logger.LogWarning(
-                    "Pass 1 failed for {Input}: {Message}",
-                    request.InputPath,
-                    pass1Result.Error?.Message
-                );
-                return pass1Result;
+                EncodingRequest pass1Request = request with
+                {
+                    Options = (request.Options ?? new EncodingOptions()) with
+                    {
+                        Pass = EncodingPass.One,
+                        StatsFilePath = statsFilePath,
+                        Pass1VariantIndex = variantIndex,
+                    },
+                };
+
+                EncodingResult pass1Result = await encoder.EncodeAsync(pass1Request, progress, ct);
+                if (!pass1Result.Success)
+                {
+                    logger.LogWarning(
+                        "Pass 1 variant {Index} failed for {Input}: {Message}",
+                        variantIndex,
+                        request.InputPath,
+                        pass1Result.Error?.Message
+                    );
+                    return pass1Result;
+                }
+
+                progress?.OnStageCompleted(stageName, pass1Result.Duration);
             }
 
-            progress?.OnStageCompleted("Pass 1", pass1Result.Duration);
             await SaveCheckpointAsync(request, statsFilePath, ct);
         }
 
@@ -145,10 +162,12 @@ public abstract class TwoPassStrategyBase(
             return;
 
         string baseName = Path.GetFileName(statsFilePath);
+        // Covers every variant's output — x264 writes {base}_v{i}-0.log and
+        // {base}_v{i}-0.log.mbtree. `{baseName}_v*` matches all of them.
         foreach (
             string file in Directory.EnumerateFiles(
                 dir,
-                $"{baseName}-*",
+                $"{baseName}_v*",
                 SearchOption.TopDirectoryOnly
             )
         )
@@ -162,5 +181,22 @@ public abstract class TwoPassStrategyBase(
                 // Best-effort cleanup.
             }
         }
+    }
+
+    /// <summary>
+    /// Pass-1 resume check — verifies every variant's stats file exists.
+    /// Missing any one forces the whole pass 1 to re-run for consistency;
+    /// mixing fresh and stale stats across variants gives unreliable quality.
+    /// </summary>
+    private static bool AllVariantStatsPresent(string basePath, int variantCount)
+    {
+        for (int i = 0; i < variantCount; i++)
+        {
+            string variantBase = $"{basePath}_v{i}";
+            // x264 writes {variantBase}-0.log — that's the signal we look for.
+            if (!File.Exists($"{variantBase}-0.log"))
+                return false;
+        }
+        return true;
     }
 }
