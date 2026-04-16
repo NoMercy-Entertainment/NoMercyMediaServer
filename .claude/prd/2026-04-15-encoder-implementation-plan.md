@@ -16,7 +16,7 @@
 
 ## Current Status — 2026-04-16
 
-**Build:** 180 commits ahead of `master` · 0 errors · 0 warnings · 706 encoder tests + 6 repository tests passing (+122 added this session).
+**Build:** 182 commits ahead of `master` · 0 errors · 0 warnings · 720 encoder tests + 6 repository tests passing (+136 added this session).
 
 **What already works today (outside the strategy pattern):**
 - 6-stage pipeline (`Analyze → Validate → Plan → Build → Execute → Finalize`) in [`Pipeline/Encoder.cs`](../../src/NoMercy.Encoder/Pipeline/Encoder.cs) delivering production-grade HLS single-pass
@@ -44,7 +44,7 @@
 | 10. Format Capabilities | ⚠️ 4 of 7 done | HDR→SDR tonemap ✅, HDR→HDR passthrough ✅ (step 2), burn-in filter ✅ (10.1), loudnorm ✅ (10.4 partial), ABR ladder ✅ (10.3). Pending: DV passthrough (10.2 step 3), explicit downmix/`pan`/`amerge` (10.4 step 1 remainder), wire ABR generator into profile-load path. |
 | 11. DRM & Encryption | ❌ not started | No `IDrmProcessor`. No AES-128 HLS, no CENC DASH. |
 | 12. Presets & Automation | ⚠️ webhooks done | `INotificationDispatcher` + `WebhookNotificationDispatcher` (POST with exponential-backoff retries) + `EncodingNotificationSubscriber` hosted service wiring the event bus; configurable via `EncoderOptions.NotificationWebhookUrls`. Phase 12.1 preset CRUD + 12.2 watch-folder auto-encode still pending. |
-| 13. Audio Strategies | ❌ not started | No `AudioStrategy`. `MusicEncodeJob` uses the current pipeline directly. |
+| 13. Audio Strategies | ⚠️ m4a via Mp4 strategy | `ProfileMapper` maps `m4a` / `aac` containers → `OutputFormat.Mp4`. `Mp4OutputStrategy.FinalizeAsync` renames output to `.m4a` when the plan has no video tracks (V1 parity for music). Dedicated mp3 / flac / ogg output strategies still pending — only common case (m4a) landed. |
 | 14. Disc Ripping | ❌ data only | `DiscDrive`, `DiscInfo`, `RipRequest`, `MetadataMatch`, `OpticalDiscType` records exist. Zero scanning/ripping logic. |
 
 **External dependency:** Phase 9 depends on the `nomercy-ffmpeg` build (libtesseract + whisper filters both verified present in the 8.0-NoMercy-MediaServer Windows build). Phase 11 (CENC DASH) depends on `mp4box` / `shaka-packager` integration — not in nomercy-ffmpeg.
