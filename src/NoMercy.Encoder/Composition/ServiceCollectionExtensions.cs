@@ -170,6 +170,8 @@ public static class ServiceCollectionExtensions
             new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>())
         );
         services.AddSingleton<ILiveEncoder, LiveEncoder>();
+        services.AddSingleton<ILiveStreamingService, LiveStreamingService>();
+        services.AddTransient<ILivePlaylistBuilder, LivePlaylistBuilder>();
 
         // Disc ripping — DriveMonitor is Singleton because its polling loop
         // holds state (last-seen drives) across MonitorAsync() enumerations.
