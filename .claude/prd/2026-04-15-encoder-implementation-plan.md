@@ -16,7 +16,7 @@
 
 ## Current Status — 2026-04-16
 
-**Build:** 156 commits ahead of `master` · 0 errors · 0 warnings · 590 encoder tests passing.
+**Build:** 163 commits ahead of `master` · 0 errors · 0 warnings · 631 encoder tests passing (+41 added this session).
 
 **What already works today (outside the strategy pattern):**
 - 6-stage pipeline (`Analyze → Validate → Plan → Build → Execute → Finalize`) in [`Pipeline/Encoder.cs`](../../src/NoMercy.Encoder/Pipeline/Encoder.cs) delivering production-grade HLS single-pass
@@ -32,16 +32,16 @@
 
 | Phase | Status | Evidence |
 |-------|--------|----------|
-| 1. Foundation — DI + Building Blocks | ⚠️ 1 of 4 tasks | Interfaces exist (1.1 ✅). Not registered in DI, stages still `new()` (1.2, 1.3). No `EncodeMode` enum (1.4). |
+| 1. Foundation — DI + Building Blocks | ✅ done | All 4 tasks shipped: interfaces (1.1), DI registration (1.2), stage injection (1.3), EncodeMode enum + parser (1.4). Pending sub-step: `IOutputStrategyFactory` for format selection via DI. |
 | 2. Strategy Pattern | ❌ not started | No `Orchestration/` or `Strategies/` dir. `Encoder.cs` is still the top-level. Jobs call `IEncoder`. |
 | 3. Additional File Strategies | ❌ not started | `Output/` has HLS/MKV/MP4/DASH `IOutputStrategy` impls, but not the plan's full-lifecycle `IEncodingStrategy`. |
-| 4. Checkpoint & Resume | ⚠️ partial | `JobCheckpoint` record exists with 5 fields. Not extended with `StatsFilePath`, `Pass1Completed`, `LastCompletedSegment`, `EncodeMode`. No `ICheckpointStore`. |
+| 4. Checkpoint & Resume | ⚠️ store done, wiring pending | `JobCheckpoint` extended with `StatsFilePath`, `Pass1Completed`, `LastCompletedSegment`, `EncodeMode`. `ICheckpointStore` + `JsonCheckpointStore` ship with tests. Strategies do not yet consult the store (task 4.2). |
 | 5. Live Transcode Strategy | ❌ scaffolded only | `LiveEncoder.StartAsync` creates a session object but does not spawn FFmpeg. Session manager + decision engine work. No strategy wrapper, no transport impl. |
 | 6. Distribution | ❌ not started | No `Distribution/` dir. `IJobDispatcher` / `IRemoteWorker` / `IHardwareBenchmark` interfaces exist with zero implementations. |
 | 7. Plugin Integration | ❌ not started | `IEncoderPlugin` exists in `SystemFeatures/`. No plugin strategy resolver, no DI override tests. |
 | 8. Queue & History | ❌ not started | No `EncodingHistory` model. `TasksController` has pause/resume per-id and failed-retry but no reorder, queue pause, or ETA. |
 | 9. Content Intelligence | ❌ interfaces only | `ICropDetector`, `IContentDetector`, `ISubtitleOcrEngine`, `IWhisperTranscriber` defined. Zero implementations. **Depends on new nomercy-ffmpeg build (libtesseract filter, whisper filter).** |
-| 10. Format Capabilities | ⚠️ 1 of 7 steps | HDR→SDR tonemap done. HDR→HDR passthrough, DV passthrough, burn-in filter, ABR ladder, loudnorm, downmix all not done. |
+| 10. Format Capabilities | ⚠️ 4 of 7 done | HDR→SDR tonemap ✅, HDR→HDR passthrough ✅ (step 2), burn-in filter ✅ (10.1), loudnorm ✅ (10.4 partial), ABR ladder ✅ (10.3). Pending: DV passthrough (10.2 step 3), explicit downmix/`pan`/`amerge` (10.4 step 1 remainder), wire ABR generator into profile-load path. |
 | 11. DRM & Encryption | ❌ not started | No `IDrmProcessor`. No AES-128 HLS, no CENC DASH. |
 | 12. Presets & Automation | ❌ not started | No `EncodingPreset` model. `FolderWatcher` exists but does not auto-encode. No webhook dispatcher. |
 | 13. Audio Strategies | ❌ not started | No `AudioStrategy`. `MusicEncodeJob` uses the current pipeline directly. |
@@ -83,18 +83,9 @@ Extract all hardcoded `new()` instances into interfaces. Register everything in 
 **Files:**
 - Modify: `src/NoMercy.Encoder/Composition/ServiceCollectionExtensions.cs`
 
-- [ ] **Step 1:** Add transient registrations for each building block interface → implementation:
-```csharp
-services.AddTransient<IFilterGraphBuilder, FilterGraphBuilder>();
-services.AddTransient<IPlaylistGenerator, PlaylistGenerator>();
-services.AddTransient<ISubtitleExtractor, SubtitleExtractor>();
-services.AddTransient<IFontExtractor, FontExtractor>();
-services.AddTransient<IChapterWriter, ChapterWriter>();
-services.AddTransient<IThumbnailGenerator, ThumbnailGenerator>();
-services.AddTransient<IHlsVariantAnalyzer, HlsVariantAnalyzer>();
-```
-- [ ] **Step 2:** Run full test suite — 590 tests pass.
-- [ ] **Step 3:** Commit: `refactor(encoder): register building blocks in DI`
+- [x] **Step 1:** Add transient registrations for each building block interface → implementation (shipped in `ServiceCollectionExtensions.cs`).
+- [x] **Step 2:** Run full test suite — 590 tests pass.
+- [x] **Step 3:** Commit: `refactor(encoder): register building blocks in DI, inject into stages` — merged as `dc325cc`
 
 ### Task 1.3: Replace new() with Injected Building Blocks
 
@@ -103,12 +94,12 @@ services.AddTransient<IHlsVariantAnalyzer, HlsVariantAnalyzer>();
 - Modify: `src/NoMercy.Encoder/Pipeline/Stages/FinalizeStage.cs` — inject `IChapterWriter`, `IFontExtractor`
 - Modify: `src/NoMercy.Encoder/Output/HlsOutputStrategy.cs` — inject via method parameter or factory
 
-- [ ] **Step 1:** Change `BuildStage` constructor to accept injected building blocks instead of `new SubtitleExtractor()`, `new FontExtractor()`, `new ThumbnailGenerator()`. Static methods on `SubtitleExtractor` become instance methods.
-- [ ] **Step 2:** Change `FinalizeStage` to accept injected `IChapterWriter` and `IFontExtractor`.
-- [ ] **Step 3:** For `HlsOutputStrategy` (created via `new` in `GetStrategy()`): register `IOutputStrategy` implementations in DI and resolve by format. Create `IOutputStrategyFactory` that resolves from DI by `OutputFormat`.
-- [ ] **Step 4:** Update test mocks where constructors changed.
-- [ ] **Step 5:** Run full test suite — all pass.
-- [ ] **Step 6:** CSharpier format, commit: `refactor(encoder): inject building blocks, remove hardcoded new()`
+- [x] **Step 1:** Change `BuildStage` constructor to accept injected `IFontExtractor` + `ISubtitleExtractor`. `ThumbnailGenerator` is unused by BuildStage (spritevtt muxer replaces it); left out intentionally.
+- [x] **Step 2:** Change `FinalizeStage` to accept injected `IChapterWriter` and `IFontExtractor`.
+- [ ] **Step 3:** For `HlsOutputStrategy` (created via `new` in `GetStrategy()`): register `IOutputStrategy` implementations in DI and resolve by format. Create `IOutputStrategyFactory` that resolves from DI by `OutputFormat`. **(Still pending — `GetStrategy` is a static switch in `BuildStage`/`FinalizeStage`.)**
+- [x] **Step 4:** Update test mocks where constructors changed.
+- [x] **Step 5:** Run full test suite — all pass (590).
+- [x] **Step 6:** CSharpier format, commit: `refactor(encoder): register building blocks in DI, inject into stages` — merged as `dc325cc`
 
 ### Task 1.4: Add EncodeMode to Profile
 
@@ -118,11 +109,11 @@ services.AddTransient<IHlsVariantAnalyzer, HlsVariantAnalyzer>();
 - Modify: `src/NoMercy.Encoder/Profiles/ProfileMapper.cs`
 - Modify: `src/NoMercy.Encoder/Profiles/V1ProfileTypes.cs`
 
-- [ ] **Step 1:** Create `EncodeMode` enum: `SinglePass`, `TwoPass`.
-- [ ] **Step 2:** Add `EncodeMode EncodeMode = EncodeMode.SinglePass` to `EncodingProfile`.
-- [ ] **Step 3:** Add `string? EncodeMode` to `V1VideoProfile` or the top-level seed structure. `ProfileMapper` maps it.
-- [ ] **Step 4:** Run tests — all pass (default is SinglePass, existing behavior unchanged).
-- [ ] **Step 5:** Commit: `feat(encoder): add EncodeMode to profile schema`
+- [x] **Step 1:** Create `EncodeMode` enum: `SinglePass`, `TwoPass`.
+- [x] **Step 2:** Add `EncodeMode EncodeMode = EncodeMode.SinglePass` to `EncodingProfile`.
+- [x] **Step 3:** Added `string? encodeMode` parameter to `ProfileMapper.FromV1` with case-insensitive parsing (`2pass`/`twopass`/`two_pass`/`two-pass` → TwoPass, everything else → SinglePass).
+- [x] **Step 4:** Run tests — all pass (601, including 11 new EncodeMode parser tests).
+- [x] **Step 5:** Commit: `feat(encoder): add EncodeMode to profile schema` — merged as `8520d59`
 
 ---
 
@@ -269,23 +260,10 @@ public interface IEncodingStrategy
 - Create: `src/NoMercy.Encoder/Jobs/CheckpointStore.cs`
 - Create: `tests/NoMercy.Tests.Encoder/Jobs/CheckpointStoreTests.cs`
 
-- [ ] **Step 1:** Extend `JobCheckpoint` with encode-specific fields:
-```csharp
-public record JobCheckpoint(
-    string JobId,
-    string InputPath,
-    string OutputDirectory,
-    int[] CompletedGroupIndices,
-    DateTime LastUpdated,
-    string? StatsFilePath = null,
-    bool Pass1Completed = false,
-    int LastCompletedSegment = -1,
-    string? EncodeMode = null
-);
-```
-- [ ] **Step 2:** Create `ICheckpointStore` interface (Save, Load, Delete by JobId). Implementation persists to database or JSON file in output directory.
-- [ ] **Step 3:** Write tests for checkpoint persistence and resume logic.
-- [ ] **Step 4:** Commit: `feat(encoder): checkpoint store for encode state persistence`
+- [x] **Step 1:** Extended `JobCheckpoint` with `StatsFilePath`, `Pass1Completed`, `LastCompletedSegment`, `EncodeMode` (all default-valued for JSON back-compat).
+- [x] **Step 2:** `ICheckpointStore` (Save, Load, Delete) is keyed by output directory instead of jobId — the checkpoint lives next to its encode output (`{OutputDirectory}/.checkpoint.json`). `JsonCheckpointStore` handles corrupt files by returning null and logging.
+- [x] **Step 3:** 8 new `JsonCheckpointStoreTests` cover round-trip, missing file, corrupt file, timestamp refresh, nested-directory creation.
+- [x] **Step 4:** Commit: `feat(encoder): checkpoint store for encode state persistence` — merged as `7637c41`
 
 ### Task 4.2: Wire Checkpoint into Strategies
 
@@ -499,11 +477,9 @@ public interface IWorkerDispatcher
 - Modify: `src/NoMercy.Encoder/Commands/FilterGraphBuilder.cs`
 - Modify: Strategy classes that need burn-in support
 
-- [ ] **Step 1:** When `SubtitleMode.BurnIn` is set, add `subtitles` or `ass` filter to the video filter chain:
-  - Text subs (ASS/SRT): `ass=filename` or `subtitles=filename` filter
-  - Bitmap subs: `overlay` filter with PGS/VobSub decode
-- [ ] **Step 2:** The subtitle is rendered onto the video — no separate subtitle track in output.
-- [ ] **Step 3:** Tests, commit: `feat(encoder): burn-in subtitle support`
+- [x] **Step 1:** When `SubtitleMode.BurnIn` is set, `BuildStage.BuildFilterGraph` emits a `subtitles='<escaped-path>':si=<index>` filter on each video branch after scale/format. Colons in the source path are escaped. Text and bitmap subs both route through the same FFmpeg filter (decoded from source).
+- [x] **Step 2:** `AddTextSubtitleOutputs` and `BuildBitmapSubtitleCommands` skip `SubtitleMode.BurnIn` entries so no sidecar is written. `SubtitleOutputPlan` carries `Mode` so downstream code can distinguish.
+- [x] **Step 3:** 5 new `BuildStageBurnInTests` — commit: `feat(encoder): burn-in subtitle filter support` — merged as `3792ed9`
 
 ### Task 10.2: HDR Handling
 
@@ -511,9 +487,9 @@ public interface IWorkerDispatcher
 - Modify: Strategy classes
 
 - [x] **Step 1:** HDR → SDR: Use existing `ITonemapSelector` to add tonemap filters when source is HDR and output profile requests SDR. — `ITonemapSelector` injected in `PlanStage`, `FilterGraphBuilder` applies tonemap when HDR source + SDR target.
-- [ ] **Step 2:** HDR → HDR passthrough: Preserve color metadata (`-color_primaries bt2020`, `-color_trc smpte2084`, etc.) and tag correctly.
-- [ ] **Step 3:** Dolby Vision: When HEVC→HEVC, preserve DV metadata via stream copy of enhancement layer.
-- [ ] **Step 4:** Tests with HDR test clips, commit: `feat(encoder): HDR tonemap and DV passthrough`
+- [x] **Step 2:** HDR → HDR passthrough: `PlanStage` emits `-color_primaries`, `-color_trc`, `-colorspace`, `-color_range` flags when `sourceIsHdr && v.TenBit && !v.ConvertHdrToSdr`. Transfer is copied from source (smpte2084 / arib-std-b67). Merged as `a637559`.
+- [ ] **Step 3:** Dolby Vision: When HEVC→HEVC, preserve DV metadata via stream copy of enhancement layer. **(Pending — requires reading DV side-data from source and encoder-side preservation.)**
+- [x] **Step 4:** 5 new `PlanStageHdrPassthroughTests` cover HDR10 / HLG / SDR / explicit-SDR-conversion cases.
 
 ### Task 10.3: ABR Ladder Generator
 
@@ -522,21 +498,18 @@ public interface IWorkerDispatcher
 - Create: `src/NoMercy.Encoder/BuildingBlocks/AbrLadderGenerator.cs`
 - Create: `tests/NoMercy.Tests.Encoder/BuildingBlocks/AbrLadderGeneratorTests.cs`
 
-- [ ] **Step 1:** Analyzes source `MediaInfo` (resolution, bitrate, complexity estimate) and generates optimal `VideoOutput[]` quality ladder. Lower bitrate tiers for simple content (anime), more tiers for complex content (action).
-- [ ] **Step 2:** Optional — users can still define manual profiles.
-- [ ] **Step 3:** Tests, DI registration.
-- [ ] **Step 4:** Commit: `feat(encoder): ABR ladder generator`
+- [x] **Step 1:** `AbrLadderGenerator` analyzes `MediaInfo` (resolution + bitrate density in kbps/Mp) and emits a standard streaming ladder (360p/480p/720p/1080p/1440p/2160p) below the source. Complexity scale clamped to `[0.5, 1.2]` scales tier bitrates for simple/complex content. Non-standard heights get a native-resolution tier appended.
+- [x] **Step 2:** Optional — the generator is invoked only when callers opt in. Manual profiles still work unchanged. Wiring into profile-load path (feature flag / opt-in on the profile itself) still pending.
+- [x] **Step 3:** 8 new `AbrLadderGeneratorTests` cover tier selection, codec copy, bitrate scaling, even-width, audio-only empty, non-standard heights. DI registered.
+- [x] **Step 4:** Commit: `feat(encoder): ABR ladder generator` — merged as `c26f444`
 
 ### Task 10.4: Audio Mixing and Normalization
 
 **Files:**
 - Modify: `src/NoMercy.Encoder/Commands/FilterGraphBuilder.cs`
 
-- [ ] **Step 1:** Implement audio filter chains:
-  - Downmix: `pan=stereo|...` filter for 5.1 → stereo
-  - Loudness normalization: `loudnorm` filter using `LoudnessMode` enum (EBU R128, ReplayGain)
-  - Audio mixing: `amerge` + `pan` for combining commentary + main audio
-- [ ] **Step 2:** Tests, commit: `feat(encoder): audio mixing, downmix, loudness normalization`
+- [x] **Step 1 (partial):** `PlanStage` maps `LoudnessMode` to `loudnorm` filter targets (EBU R128 → `I=-16:TP=-1.5:LRA=11`, ReplayGain → `I=-18:TP=-1.5:LRA=11`). All four output strategies emit `-af` when a filter is set and action is Transcode. Downmix is handled by existing `-ac N` emission (FFmpeg auto-downmix). **Pending:** explicit `pan=` matrix for custom downmix, `amerge` for commentary+main mixing.
+- [x] **Step 2:** 4 new `PlanStageAudioFilterTests` cover each `LoudnessMode` branch. Commit: `feat(encoder): audio loudness normalization via loudnorm filter` — merged as `6f26c83`
 
 ---
 
