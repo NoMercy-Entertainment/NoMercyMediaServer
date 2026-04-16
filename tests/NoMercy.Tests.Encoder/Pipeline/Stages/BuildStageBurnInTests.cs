@@ -23,6 +23,7 @@ public class BuildStageBurnInTests
             options,
             new FontExtractor(),
             new SubtitleExtractor(),
+            OutputStrategyFactoryTestHelper.Create(),
             NullLogger<BuildStage>.Instance
         );
     }

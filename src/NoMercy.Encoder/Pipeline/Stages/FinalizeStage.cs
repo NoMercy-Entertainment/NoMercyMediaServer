@@ -2,7 +2,6 @@ namespace NoMercy.Encoder.Pipeline.Stages;
 
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.BuildingBlocks;
-using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Output;
@@ -21,6 +20,7 @@ public record FinalizeOutput(string OutputPath, long OutputSizeBytes);
 public class FinalizeStage(
     IChapterWriter chapterWriter,
     IFontExtractor fontExtractor,
+    IOutputStrategyFactory outputStrategyFactory,
     ILogger<FinalizeStage> logger
 ) : IPipelineStage<FinalizeInput, FinalizeOutput>
 {
@@ -38,7 +38,7 @@ public class FinalizeStage(
         {
             Directory.CreateDirectory(input.OutputDirectory);
 
-            IOutputStrategy strategy = GetStrategy(input.Plan.Format);
+            IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.Format);
 
             input.Progress?.OnStageStarted("Building Master Playlist");
             await strategy.FinalizeAsync(input.OutputDirectory, input.Plan, input.MediaTitle, ct);
@@ -91,17 +91,4 @@ public class FinalizeStage(
             );
         }
     }
-
-    private static IOutputStrategy GetStrategy(OutputFormat format) =>
-        format switch
-        {
-            OutputFormat.Hls => new HlsOutputStrategy(),
-            OutputFormat.Mkv => new MkvOutputStrategy(),
-            OutputFormat.Mp4 => new Mp4OutputStrategy(),
-            OutputFormat.Dash => new DashOutputStrategy(),
-            OutputFormat.Mp3 => new Mp3OutputStrategy(),
-            OutputFormat.Flac => new FlacOutputStrategy(),
-            OutputFormat.Ogg => new OggOutputStrategy(),
-            _ => throw new ArgumentOutOfRangeException(nameof(format)),
-        };
 }

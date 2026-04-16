@@ -34,7 +34,7 @@ Pro / B2B features (multi-server distributed encoding, DRM encryption, CENC pack
 
 | Phase | Status | Evidence |
 |-------|--------|----------|
-| 1. Foundation — DI + Building Blocks | ✅ done | All 4 tasks shipped: interfaces (1.1), DI registration (1.2), stage injection (1.3), EncodeMode enum + parser (1.4). Pending sub-step: `IOutputStrategyFactory` for format selection via DI. |
+| 1. Foundation — DI + Building Blocks | ✅ done | All 4 tasks shipped: interfaces (1.1), DI registration (1.2), stage injection (1.3 incl. `IOutputStrategyFactory`), EncodeMode enum + parser (1.4). |
 | 2. Strategy Pattern | ✅ MVP | `Orchestration/` has `IEncodingOrchestrator` + `EncodingOrchestrator` + `IStrategyResolver` + `StrategyResolver`. `Strategies/IEncodingStrategy` defines the contract. `VideoEncodeJob` / `MusicEncodeJob` call the orchestrator, not `IEncoder` directly. Task 2.2 (full HLS stage extraction) deferred — strategies currently wrap `IEncoder` as a seam; format-specific logic can peel out later. |
 | 3. Additional File Strategies | ✅ all formats, single + two-pass | `HlsSinglePassStrategy`, `HlsTwoPassStrategy`, `MkvStrategy`, `Mp4SinglePassStrategy`, `Mp4TwoPassStrategy`, `DashSinglePassStrategy`, `DashTwoPassStrategy` all registered. 2-pass orchestration shared via `TwoPassStrategyBase` — subclasses override only `Format`. Pass-1 / pass-2 command layout format-agnostic in `BuildStage`. Pending: multi-variant 2-pass (requires per-variant stats). |
 | 4. Checkpoint & Resume | ✅ done (for 2-pass) | `HlsTwoPassStrategy` loads checkpoint on start; if `Pass1Completed` and the stats file still exists on disk, pass 1 is skipped. Pass 1 success saves checkpoint; pass 2 success deletes checkpoint and cleans stats files. Single-pass doesn't need checkpoint granularity (one FFmpeg command, resume semantics don't apply). |
@@ -132,7 +132,7 @@ Extract all hardcoded `new()` instances into interfaces. Register everything in 
 
 - [x] **Step 1:** Change `BuildStage` constructor to accept injected `IFontExtractor` + `ISubtitleExtractor`. `ThumbnailGenerator` is unused by BuildStage (spritevtt muxer replaces it); left out intentionally.
 - [x] **Step 2:** Change `FinalizeStage` to accept injected `IChapterWriter` and `IFontExtractor`.
-- [ ] **Step 3:** For `HlsOutputStrategy` (created via `new` in `GetStrategy()`): register `IOutputStrategy` implementations in DI and resolve by format. Create `IOutputStrategyFactory` that resolves from DI by `OutputFormat`. **(Still pending — `GetStrategy` is a static switch in `BuildStage`/`FinalizeStage`.)**
+- [x] **Step 3:** `IOutputStrategyFactory` + `OutputStrategyFactory` resolve from `IEnumerable<IOutputStrategy>` (last-registration-wins, matching `IEncodingStrategy` resolver). 7 built-in strategies registered as `IOutputStrategy`; `BuildStage` + `FinalizeStage` inject the factory instead of new-ing strategies in a static switch. Plugin overrides supported automatically. 9 new `OutputStrategyFactoryTests`.
 - [x] **Step 4:** Update test mocks where constructors changed.
 - [x] **Step 5:** Run full test suite — all pass (590).
 - [x] **Step 6:** CSharpier format, commit: `refactor(encoder): register building blocks in DI, inject into stages` — merged as `dc325cc`

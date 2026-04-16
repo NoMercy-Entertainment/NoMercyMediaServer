@@ -26,6 +26,7 @@ public class BuildStage(
     EncoderOptions options,
     IFontExtractor fontExtractor,
     ISubtitleExtractor subtitleExtractor,
+    IOutputStrategyFactory outputStrategyFactory,
     ILogger<BuildStage> logger
 ) : IPipelineStage<BuildInput, FfmpegCommand[]>
 {
@@ -113,7 +114,7 @@ public class BuildStage(
                 return Task.FromResult<StageResult>(new StageSuccess<FfmpegCommand[]>([pass1]));
             }
 
-            IOutputStrategy strategy = GetStrategy(input.Plan.OutputPlan.Format);
+            IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.OutputPlan.Format);
 
             // Ensure output subdirectories exist before FFmpeg runs
             Directory.CreateDirectory(input.OutputDirectory);
@@ -364,19 +365,6 @@ public class BuildStage(
 
         return commands;
     }
-
-    private static IOutputStrategy GetStrategy(OutputFormat format) =>
-        format switch
-        {
-            OutputFormat.Hls => new HlsOutputStrategy(),
-            OutputFormat.Mkv => new MkvOutputStrategy(),
-            OutputFormat.Mp4 => new Mp4OutputStrategy(),
-            OutputFormat.Dash => new DashOutputStrategy(),
-            OutputFormat.Mp3 => new Mp3OutputStrategy(),
-            OutputFormat.Flac => new FlacOutputStrategy(),
-            OutputFormat.Ogg => new OggOutputStrategy(),
-            _ => throw new ArgumentOutOfRangeException(nameof(format)),
-        };
 
     /// <summary>
     /// Returns a copy of <paramref name="plan"/> with <c>-pass 2</c> +

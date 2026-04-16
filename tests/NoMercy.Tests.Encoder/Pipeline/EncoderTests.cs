@@ -62,16 +62,27 @@ public class EncoderTests
             new AbrLadderGenerator(),
             NullLogger<PlanStage>.Instance
         );
+        OutputStrategyFactory outputFactory = new([
+            new HlsOutputStrategy(),
+            new MkvOutputStrategy(),
+            new Mp4OutputStrategy(),
+            new DashOutputStrategy(),
+            new Mp3OutputStrategy(),
+            new FlacOutputStrategy(),
+            new OggOutputStrategy(),
+        ]);
         BuildStage buildStage = new(
             options,
             new FontExtractor(),
             new SubtitleExtractor(),
+            outputFactory,
             NullLogger<BuildStage>.Instance
         );
         ExecuteStage executeStage = new(_ffmpegExecutor.Object, NullLogger<ExecuteStage>.Instance);
         FinalizeStage finalizeStage = new(
             new ChapterWriter(),
             new FontExtractor(),
+            outputFactory,
             NullLogger<FinalizeStage>.Instance
         );
 

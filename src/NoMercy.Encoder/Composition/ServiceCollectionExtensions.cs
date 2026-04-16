@@ -125,6 +125,18 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IHlsVariantAnalyzer, HlsVariantAnalyzer>();
         services.AddTransient<IAbrLadderGenerator, AbrLadderGenerator>();
 
+        // Output strategies — resolved via IOutputStrategyFactory from DI.
+        // Plugins can register additional IOutputStrategy impls and the factory
+        // will prefer them (last registration wins).
+        services.AddTransient<IOutputStrategy, HlsOutputStrategy>();
+        services.AddTransient<IOutputStrategy, MkvOutputStrategy>();
+        services.AddTransient<IOutputStrategy, Mp4OutputStrategy>();
+        services.AddTransient<IOutputStrategy, DashOutputStrategy>();
+        services.AddTransient<IOutputStrategy, Mp3OutputStrategy>();
+        services.AddTransient<IOutputStrategy, FlacOutputStrategy>();
+        services.AddTransient<IOutputStrategy, OggOutputStrategy>();
+        services.AddTransient<IOutputStrategyFactory, OutputStrategyFactory>();
+
         // Pipeline stages
         services.AddTransient<AnalyzeStage>();
         services.AddTransient<ValidateStage>();
