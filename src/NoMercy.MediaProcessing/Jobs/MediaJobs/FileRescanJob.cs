@@ -41,6 +41,13 @@ public class FileRescanJob : AbstractMediaJob
             await EventBusProvider.Current.PublishAsync(
                 new LibraryRefreshEvent { QueryKey = ["home"] }
             );
+
+            // Signal that VideoFile rows are now queryable — auto-encode
+            // subscribers listen for this to dispatch encoding jobs against
+            // folders that have EncoderProfileFolder assignments.
+            await EventBusProvider.Current.PublishAsync(
+                new MediaFilesScannedEvent { MediaId = Id, LibraryId = LibraryId }
+            );
         }
     }
 }
