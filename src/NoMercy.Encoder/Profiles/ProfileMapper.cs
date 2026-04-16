@@ -19,7 +19,8 @@ public static class ProfileMapper
         IReadOnlyList<V1AudioProfile> audioProfiles,
         IReadOnlyList<V1SubtitleProfile> subtitleProfiles,
         V1ThumbnailProfile? thumbnailProfile = null,
-        string? encodeMode = null
+        string? encodeMode = null,
+        bool autoLadder = false
     )
     {
         OutputFormat format = container.ToLowerInvariant() switch
@@ -51,7 +52,8 @@ public static class ProfileMapper
             AudioOutputs: audio,
             SubtitleOutputs: subtitles,
             Thumbnails: thumbnails,
-            EncodeMode: mode
+            EncodeMode: mode,
+            AutoLadder: autoLadder
         );
     }
 

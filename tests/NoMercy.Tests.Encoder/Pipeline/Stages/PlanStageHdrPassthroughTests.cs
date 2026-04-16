@@ -3,6 +3,7 @@ namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
@@ -67,6 +68,7 @@ public class PlanStageHdrPassthroughTests
             _hardware.Object,
             new TonemapSelector(),
             _ffmpegCapabilities.Object,
+            new AbrLadderGenerator(),
             NullLogger<PlanStage>.Instance
         );
     }

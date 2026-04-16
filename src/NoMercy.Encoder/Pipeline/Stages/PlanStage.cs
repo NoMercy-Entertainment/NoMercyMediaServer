@@ -3,6 +3,7 @@ namespace NoMercy.Encoder.Pipeline.Stages;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Audio;
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Errors;
@@ -26,6 +27,7 @@ public class PlanStage(
     IHardwareCapabilities hardware,
     ITonemapSelector tonemapSelector,
     IFfmpegCapabilities ffmpegCapabilities,
+    IAbrLadderGenerator abrLadderGenerator,
     ILogger<PlanStage> logger
 ) : IPipelineStage<ValidateInput, ExecutionPlan>
 {
@@ -41,13 +43,15 @@ public class PlanStage(
 
         try
         {
+            EncodingProfile profile = ExpandAutoLadder(input.Profile, input.Media);
+
             // Resolve codecs with hardware session awareness — once we've filled
             // all GPU sessions, overflow outputs fall back to software encoding.
             int maxHwSessions = hardware.HasGpu ? hardware.Gpus.Min(g => g.MaxEncoderSessions) : 0;
             int hwSessionsUsed = 0;
 
-            ResolvedCodec[] resolvedCodecs = input
-                .Profile.VideoOutputs.Select(v =>
+            ResolvedCodec[] resolvedCodecs = profile
+                .VideoOutputs.Select(v =>
                 {
                     EncoderPreference preference =
                         hwSessionsUsed < maxHwSessions
@@ -65,7 +69,7 @@ public class PlanStage(
 
             List<ExecutionNode> nodes = graphBuilder.BuildGraph(
                 input.Media,
-                input.Profile,
+                profile,
                 resolvedCodecs
             );
 
@@ -73,7 +77,7 @@ public class PlanStage(
 
             TimeSpan totalEstimate = costEstimator.EstimateTotal(groups, input.Media.Duration);
 
-            OutputPlan outputPlan = BuildOutputPlan(input.Profile, input.Media, resolvedCodecs);
+            OutputPlan outputPlan = BuildOutputPlan(profile, input.Media, resolvedCodecs);
 
             logger.LogInformation(
                 "[{CorrelationId}] Plan: {Groups} groups, estimated {Duration}",
@@ -307,6 +311,39 @@ public class PlanStage(
             thumbPlan,
             segmentDuration
         );
+    }
+
+    /// <summary>
+    /// When the profile opts into <see cref="EncodingProfile.AutoLadder"/>,
+    /// expand the single reference video output into a multi-tier ABR ladder
+    /// generated from the source media's resolution + bitrate density.
+    /// Passthrough when auto-ladder is off or when the source has no video.
+    /// </summary>
+    private EncodingProfile ExpandAutoLadder(EncodingProfile profile, MediaInfo media)
+    {
+        if (!profile.AutoLadder || media.VideoStreams.Count == 0)
+            return profile;
+
+        if (profile.VideoOutputs.Length != 1)
+        {
+            logger.LogWarning(
+                "AutoLadder requires exactly one reference VideoOutput; profile has {Count}. "
+                    + "Falling back to manual variants.",
+                profile.VideoOutputs.Length
+            );
+            return profile;
+        }
+
+        VideoOutput[] ladder = abrLadderGenerator.Generate(media, profile.VideoOutputs[0]);
+        if (ladder.Length == 0)
+            return profile;
+
+        logger.LogInformation(
+            "AutoLadder expanded 1 reference profile → {Count} variants for {Source}",
+            ladder.Length,
+            media.FilePath
+        );
+        return profile with { VideoOutputs = ladder };
     }
 
     /// <summary>

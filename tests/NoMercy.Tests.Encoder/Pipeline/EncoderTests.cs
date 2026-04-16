@@ -3,6 +3,7 @@ namespace NoMercy.Tests.Encoder.Pipeline;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
@@ -58,6 +59,7 @@ public class EncoderTests
             _hardware.Object,
             new TonemapSelector(),
             new Mock<IFfmpegCapabilities>().Object,
+            new AbrLadderGenerator(),
             NullLogger<PlanStage>.Instance
         );
         BuildStage buildStage = new(

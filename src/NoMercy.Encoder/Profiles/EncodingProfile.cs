@@ -12,6 +12,7 @@ public record EncodingProfile(
     ThumbnailOutput? Thumbnails = null,
     int SegmentDurationSeconds = 6,
     EncodeMode EncodeMode = EncodeMode.SinglePass,
+    bool AutoLadder = false,
     int SchemaVersion = 1
 );
 
