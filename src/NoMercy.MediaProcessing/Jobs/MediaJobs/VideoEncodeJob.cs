@@ -9,6 +9,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
@@ -129,7 +130,11 @@ public class VideoEncodeJob : AbstractEncoderJob
                         : null
                 );
 
-                IEncoder encoder = EncoderProvider.Resolve();
+                IEncodingOrchestrator orchestrator =
+                    EncoderProvider.ResolveService<IEncodingOrchestrator>()
+                    ?? throw new InvalidOperationException(
+                        "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
+                    );
 
                 EncodingRequest request = new(
                     InputPath: InputFile,
@@ -158,7 +163,7 @@ public class VideoEncodeJob : AbstractEncoderJob
                     registry: processRegistry
                 );
 
-                EncodingResult result = await encoder.EncodeAsync(request, progressObserver);
+                EncodingResult result = await orchestrator.EncodeAsync(request, progressObserver);
 
                 if (!result.Success)
                 {

@@ -4,6 +4,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
@@ -105,7 +106,11 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                         .ToArray()
                 );
 
-                IEncoder encoder = EncoderProvider.Resolve();
+                IEncodingOrchestrator orchestrator =
+                    EncoderProvider.ResolveService<IEncodingOrchestrator>()
+                    ?? throw new InvalidOperationException(
+                        "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
+                    );
 
                 EncodingRequest request = new(
                     InputPath: MediaFile.Path,
@@ -118,7 +123,10 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                     FoundTrack.Title
                 );
 
-                EncodingResult encodeResult = await encoder.EncodeAsync(request, progressObserver);
+                EncodingResult encodeResult = await orchestrator.EncodeAsync(
+                    request,
+                    progressObserver
+                );
 
                 if (!encodeResult.Success)
                 {

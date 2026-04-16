@@ -13,6 +13,7 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
@@ -20,6 +21,8 @@ using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Startup;
+using NoMercy.Encoder.Strategies;
+using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Encoder.Subtitles;
 
 public static class ServiceCollectionExtensions
@@ -125,6 +128,13 @@ public static class ServiceCollectionExtensions
 
         // Encoder
         services.AddTransient<IEncoder, Encoder>();
+
+        // Strategies — one per {OutputFormat, EncodeMode} tuple.
+        // Plugins can register additional IEncodingStrategy impls and the resolver
+        // will pick them up automatically (last registration wins).
+        services.AddTransient<IEncodingStrategy, HlsSinglePassStrategy>();
+        services.AddTransient<IStrategyResolver, StrategyResolver>();
+        services.AddTransient<IEncodingOrchestrator, EncodingOrchestrator>();
 
         // Live Transcoding
         services.AddSingleton<IPlaybackDecisionEngine, PlaybackDecisionEngine>();
