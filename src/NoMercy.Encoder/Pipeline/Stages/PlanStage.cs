@@ -2,6 +2,7 @@ namespace NoMercy.Encoder.Pipeline.Stages;
 
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Errors;
@@ -203,6 +204,8 @@ public class PlanStage(
                 if (allowed.Count > 0 && !allowed.Contains(streamLang))
                     continue;
 
+                string? audioFilter = BuildAudioFilter(audioProfile.Loudness);
+
                 audioPlans.Add(
                     new AudioOutputPlan(
                         EncoderName: encoderName,
@@ -213,7 +216,8 @@ public class PlanStage(
                         Language: streamLang,
                         MapLabel: $"0:a:{si}",
                         SegmentNameTemplate: audioProfile.SegmentNameTemplate,
-                        PlaylistNameTemplate: audioProfile.PlaylistNameTemplate
+                        PlaylistNameTemplate: audioProfile.PlaylistNameTemplate,
+                        AudioFilter: audioFilter
                     )
                 );
             }
@@ -304,4 +308,20 @@ public class PlanStage(
             segmentDuration
         );
     }
+
+    /// <summary>
+    /// Builds a single FFmpeg audio filter string for the given loudness mode.
+    /// Returns null when no filter is required.
+    /// </summary>
+    private static string? BuildAudioFilter(LoudnessMode loudness) =>
+        loudness switch
+        {
+            // EBU R128 streaming target: -16 LUFS integrated, -1.5 dBTP true peak, 11 LU LRA.
+            LoudnessMode.EbuR128 => "loudnorm=I=-16:TP=-1.5:LRA=11",
+            // ReplayGain target: -18 LUFS integrated, same peak + range as R128.
+            LoudnessMode.ReplayGain => "loudnorm=I=-18:TP=-1.5:LRA=11",
+            // Custom loudnorm left to CustomArguments on the profile; no auto filter here.
+            LoudnessMode.Custom => null,
+            _ => null,
+        };
 }

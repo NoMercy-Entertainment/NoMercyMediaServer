@@ -42,7 +42,8 @@ public record AudioOutputPlan(
     string? Language,
     string MapLabel,
     string SegmentNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-    string PlaylistNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:"
+    string PlaylistNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:",
+    string? AudioFilter = null
 );
 
 public record SubtitleOutputPlan(

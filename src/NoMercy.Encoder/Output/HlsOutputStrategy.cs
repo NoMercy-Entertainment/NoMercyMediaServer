@@ -114,6 +114,14 @@ public class HlsOutputStrategy : IOutputStrategy
                     ["-hls_segment_filename"] = $"{segmentDir}/{segmentFile}_%05d.ts",
                 };
 
+                if (
+                    audio.Action == StreamAction.Transcode
+                    && !string.IsNullOrEmpty(audio.AudioFilter)
+                )
+                {
+                    extraFlags["-af"] = audio.AudioFilter;
+                }
+
                 string audioCodec = audio.Action == StreamAction.Copy ? "copy" : audio.EncoderName;
 
                 builder.AddOutput(

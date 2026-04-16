@@ -116,7 +116,7 @@ public static class ProfileMapper
             Channels: a.Channels > 0 ? a.Channels : 2,
             SampleRateHz: a.SampleRate > 0 ? a.SampleRate : 48000,
             AllowedLanguages: a.AllowedLanguages,
-            Loudness: LoudnessMode.None,
+            Loudness: ParseLoudness(a.Loudness),
             SegmentNameTemplate: string.IsNullOrEmpty(a.SegmentName)
                 ? ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 : a.SegmentName,
@@ -125,6 +125,21 @@ public static class ProfileMapper
                 : a.PlaylistName,
             CustomArguments: customArgs
         );
+    }
+
+    private static LoudnessMode ParseLoudness(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return LoudnessMode.None;
+
+        return value.ToLowerInvariant() switch
+        {
+            "ebu" or "ebur128" or "ebu_r128" or "ebu-r128" or "r128" => LoudnessMode.EbuR128,
+            "replaygain" or "replay_gain" or "replay-gain" or "rg" => LoudnessMode.ReplayGain,
+            "custom" => LoudnessMode.Custom,
+            "none" or "off" => LoudnessMode.None,
+            _ => LoudnessMode.None,
+        };
     }
 
     private static SubtitleOutput MapSubtitle(V1SubtitleProfile s)

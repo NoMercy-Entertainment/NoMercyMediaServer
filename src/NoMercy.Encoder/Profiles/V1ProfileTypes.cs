@@ -30,7 +30,8 @@ public record V1AudioProfile(
     string SegmentName,
     string PlaylistName,
     string[] AllowedLanguages,
-    (string key, string Val)[] CustomArguments
+    (string key, string Val)[] CustomArguments,
+    string? Loudness = null
 );
 
 public record V1SubtitleProfile(

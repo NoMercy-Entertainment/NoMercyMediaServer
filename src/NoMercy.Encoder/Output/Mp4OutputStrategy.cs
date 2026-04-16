@@ -29,6 +29,14 @@ public class Mp4OutputStrategy : IOutputStrategy
 
         Dictionary<string, string> extraFlags = new() { ["-movflags"] = "+faststart" };
 
+        if (
+            primaryAudio?.Action == StreamAction.Transcode
+            && !string.IsNullOrEmpty(primaryAudio.AudioFilter)
+        )
+        {
+            extraFlags["-af"] = primaryAudio.AudioFilter;
+        }
+
         builder.AddOutput(
             new OutputOptions(
                 FilePath: outputPath,

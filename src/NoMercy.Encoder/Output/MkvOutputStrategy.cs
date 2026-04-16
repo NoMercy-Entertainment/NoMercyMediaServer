@@ -31,6 +31,15 @@ public class MkvOutputStrategy : IOutputStrategy
         VideoOutputPlan? primaryVideo = plan.VideoOutputs.Length > 0 ? plan.VideoOutputs[0] : null;
         AudioOutputPlan? primaryAudio = plan.AudioOutputs.Length > 0 ? plan.AudioOutputs[0] : null;
 
+        Dictionary<string, string>? extraFlags = null;
+        if (
+            primaryAudio?.Action == StreamAction.Transcode
+            && !string.IsNullOrEmpty(primaryAudio.AudioFilter)
+        )
+        {
+            extraFlags = new Dictionary<string, string> { ["-af"] = primaryAudio.AudioFilter };
+        }
+
         builder.AddOutput(
             new OutputOptions(
                 FilePath: outputPath,
@@ -48,7 +57,8 @@ public class MkvOutputStrategy : IOutputStrategy
                 AudioBitrateKbps: primaryAudio?.Action == StreamAction.Transcode
                     ? primaryAudio.BitrateKbps
                     : null,
-                MapStreams: mapStreams.ToArray()
+                MapStreams: mapStreams.ToArray(),
+                ExtraFlags: extraFlags
             )
         );
     }

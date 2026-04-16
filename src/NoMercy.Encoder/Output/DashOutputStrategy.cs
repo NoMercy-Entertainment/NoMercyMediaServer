@@ -38,6 +38,14 @@ public class DashOutputStrategy : IOutputStrategy
             ["-adaptation_sets"] = "id=0,streams=v id=1,streams=a",
         };
 
+        if (
+            primaryAudio?.Action == StreamAction.Transcode
+            && !string.IsNullOrEmpty(primaryAudio.AudioFilter)
+        )
+        {
+            extraFlags["-af"] = primaryAudio.AudioFilter;
+        }
+
         builder.AddOutput(
             new OutputOptions(
                 FilePath: mpdPath,
