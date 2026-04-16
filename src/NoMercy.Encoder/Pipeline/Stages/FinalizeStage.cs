@@ -6,12 +6,14 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Output;
+using NoMercy.Encoder.Progress;
 
 public record FinalizeInput(
     ExecutionResult[] Results,
     OutputPlan Plan,
     string OutputDirectory,
-    string MediaTitle
+    string MediaTitle,
+    IProgressObserver? Progress = null
 );
 
 public record FinalizeOutput(string OutputPath, long OutputSizeBytes);
@@ -37,16 +39,21 @@ public class FinalizeStage(
             Directory.CreateDirectory(input.OutputDirectory);
 
             IOutputStrategy strategy = GetStrategy(input.Plan.Format);
+
+            input.Progress?.OnStageStarted("Building Master Playlist");
             await strategy.FinalizeAsync(input.OutputDirectory, input.Plan, input.MediaTitle, ct);
+            input.Progress?.OnStageCompleted("Building Master Playlist", TimeSpan.Zero);
 
             // Write chapters.vtt from MediaInfo
             if (context.MediaInfo is not null && context.MediaInfo.Chapters.Count > 0)
             {
+                input.Progress?.OnStageStarted("Extracting chapters");
                 await chapterWriter.WriteChaptersAsync(
                     input.OutputDirectory,
                     context.MediaInfo.Chapters,
                     ct
                 );
+                input.Progress?.OnStageCompleted("Extracting chapters", TimeSpan.Zero);
 
                 logger.LogDebug(
                     "[{CorrelationId}] Wrote {Count} chapters to chapters.vtt",
@@ -56,7 +63,9 @@ public class FinalizeStage(
             }
 
             // Write fonts.json manifest from previously extracted fonts
+            input.Progress?.OnStageStarted("Extracting fonts");
             await fontExtractor.WriteFontManifestAsync(input.OutputDirectory, ct);
+            input.Progress?.OnStageCompleted("Extracting fonts", TimeSpan.Zero);
 
             // Thumbnail sprite + VTT are produced by the spritevtt muxer
             // in the main FFmpeg command — no post-processing needed.

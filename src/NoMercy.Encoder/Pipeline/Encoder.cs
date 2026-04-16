@@ -116,7 +116,8 @@ public class Encoder(
             executionResults,
             plan.OutputPlan,
             request.OutputDirectory,
-            request.ResolvedTitle
+            request.ResolvedTitle,
+            Progress: progress
         );
         StageResult finalizeResult = await finalizeStage.ExecuteAsync(finalizeInput, context, ct);
         if (finalizeResult is StageFailure finalizeFailure)

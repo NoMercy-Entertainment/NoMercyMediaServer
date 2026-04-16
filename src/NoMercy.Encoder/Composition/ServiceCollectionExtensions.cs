@@ -1,10 +1,12 @@
 namespace NoMercy.Encoder.Composition;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
+using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
@@ -18,6 +20,7 @@ using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Startup;
+using NoMercy.Encoder.Subtitles;
 
 public static class ServiceCollectionExtensions
 {
@@ -80,6 +83,18 @@ public static class ServiceCollectionExtensions
 
         // Checkpoint persistence
         services.AddTransient<ICheckpointStore, JsonCheckpointStore>();
+
+        // Content intelligence (OCR / Whisper / crop detection)
+        services.TryAddSingleton(sp =>
+        {
+            HttpClient client = new();
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("NoMercy-MediaServer");
+            return client;
+        });
+        services.AddTransient<ITesseractModelManager, TesseractModelManager>();
+        services.AddTransient<ISubtitleOcrEngine, SubtitleOcrEngine>();
+        services.AddTransient<IWhisperTranscriber, WhisperTranscriber>();
+        services.AddTransient<ICropDetector, CropDetector>();
 
         // Building blocks
         services.AddTransient<IFilterGraphBuilder, FilterGraphBuilder>();

@@ -478,6 +478,8 @@ public static class ServiceConfiguration
         {
             opts.FfmpegPathOverride = AppFiles.FfmpegPath;
             opts.FfprobePathOverride = AppFiles.FfProbePath;
+            opts.TesseractModelsDirectory = AppFiles.TesseractModelsFolder;
+            opts.WhisperModelPath = AppFiles.WhisperModelPath;
         });
 
         services.AddPluginSystem(AppFiles.PluginsPath);

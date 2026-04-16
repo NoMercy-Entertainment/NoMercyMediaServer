@@ -412,7 +412,7 @@ public class EncoderTests
 
         progressMock.Verify(
             p => p.OnStageCompleted(It.IsAny<string>(), It.IsAny<TimeSpan>()),
-            Times.Exactly(6)
+            Times.AtLeast(6)
         );
     }
 

@@ -961,6 +961,7 @@ public static class Program
 
         // Wire static EncoderProvider so queue jobs can resolve IEncoder without DI
         EncoderProvider.Configure(() => app.Services.GetRequiredService<IEncoder>());
+        EncoderProvider.ConfigureServiceResolver(type => app.Services.GetService(type));
 
         // Configure middleware from Startup.Configure
         IApiVersionDescriptionProvider provider =

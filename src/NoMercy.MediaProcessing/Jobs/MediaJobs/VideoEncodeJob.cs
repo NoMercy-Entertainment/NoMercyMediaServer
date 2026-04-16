@@ -5,9 +5,12 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Subtitles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Files;
@@ -163,6 +166,8 @@ public class VideoEncodeJob : AbstractEncoderJob
                     $"Encoded {InputFile} → {result.OutputPath} in {result.Duration.TotalSeconds:F1}s ({result.Metrics.EncoderUsed})"
                 );
 
+                await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile);
+
                 fileManager.FilterFiles(fileMetadata.FileName);
                 await fileManager.FindFiles(
                     fileMetadata.Id,
@@ -210,6 +215,77 @@ public class VideoEncodeJob : AbstractEncoderJob
                 }
 
                 throw;
+            }
+        }
+    }
+
+    /// <summary>
+    /// V1 parity: after a successful encode, convert any bitmap subtitle streams
+    /// (PGS / VobSub / DVB) into WebVTT via Tesseract OCR. No-op when the encoder
+    /// analyzer isn't wired in the DI container or the source has no bitmap subs.
+    /// </summary>
+    private async Task RunBitmapSubtitleOcrAsync(FileMetadata fileMetadata, string inputPath)
+    {
+        IMediaAnalyzer? analyzer = EncoderProvider.ResolveService<IMediaAnalyzer>();
+        ISubtitleOcrEngine? ocrEngine = EncoderProvider.ResolveService<ISubtitleOcrEngine>();
+
+        if (analyzer is null || ocrEngine is null)
+            return;
+
+        MediaInfo mediaInfo;
+        try
+        {
+            mediaInfo = await analyzer.AnalyzeAsync(inputPath, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Logger.Encoder(
+                $"Could not analyze {inputPath} for OCR: {ex.Message}",
+                LogEventLevel.Warning
+            );
+            return;
+        }
+
+        List<SubtitleStreamInfo> bitmap = mediaInfo
+            .SubtitleStreams.Where(s => !s.IsTextBased)
+            .ToList();
+
+        if (bitmap.Count == 0)
+            return;
+
+        if (EventBusProvider.IsConfigured)
+        {
+            await EventBusProvider.Current.PublishAsync(
+                new EncodingStageChangedEvent
+                {
+                    JobId = fileMetadata.Id,
+                    Status = "running",
+                    Title = fileMetadata.Title,
+                    Message = "Converting subtitles",
+                }
+            );
+        }
+
+        foreach (SubtitleStreamInfo stream in bitmap)
+        {
+            string language = stream.Language ?? "eng";
+            try
+            {
+                SubtitleTrack track = await ocrEngine.OcrAsync(
+                    inputPath,
+                    stream.Index,
+                    language,
+                    SubtitleCodecType.WebVtt,
+                    CancellationToken.None
+                );
+                Logger.Encoder($"OCR {language} → {track.FilePath} ({track.CueCount} cues)");
+            }
+            catch (Exception ex)
+            {
+                Logger.Encoder(
+                    $"OCR failed for {inputPath} stream {stream.Index} ({language}): {ex.Message}",
+                    LogEventLevel.Warning
+                );
             }
         }
     }

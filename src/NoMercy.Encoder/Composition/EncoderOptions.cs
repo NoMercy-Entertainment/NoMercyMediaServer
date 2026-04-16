@@ -30,4 +30,17 @@ public class EncoderOptions
     public int ProgressThrottleMs { get; set; } = 500;
     public string? SpeedIndexCachePath { get; set; }
     public bool AutoCalibrate { get; set; } = true;
+
+    /// <summary>
+    /// Directory that holds Tesseract *.traineddata files. The manager creates
+    /// this folder on demand and downloads missing language models into it.
+    /// Required for subtitle OCR (PGS / VobSub → WebVTT).
+    /// </summary>
+    public string? TesseractModelsDirectory { get; set; }
+
+    /// <summary>
+    /// Absolute path to the whisper.cpp GGML model (e.g. ggml-large-v3.bin).
+    /// Required for speech-to-text subtitle generation.
+    /// </summary>
+    public string? WhisperModelPath { get; set; }
 }
