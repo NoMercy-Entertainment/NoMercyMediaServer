@@ -77,7 +77,7 @@ The phased plan below kept the original phase numbers for continuity. **Executio
 
 9. **Phase 10.4 — Pan matrix / `amerge` downmix.** `-ac N` covers the common case; explicit matrices are niche.
 10. **Phase 12.1 — Preset library.** `EncoderProfile` already serves as a preset — would need a product design pass before adding richer metadata.
-11. Multi-variant 2-pass for MP4 / DASH (same generalization as the HLS one).
+11. ✅ **Multi-variant 2-pass for MP4 / DASH** — shipped (`08e81101`). DASH inherits multi-variant from `TwoPassStrategyBase` for free; MP4 gets a validator warning when users configure multiple variants (MP4 is single-file; extra variants silently dropped into the container without the warning).
 
 ### Tier 4 — pro / B2B (deferred)
 
