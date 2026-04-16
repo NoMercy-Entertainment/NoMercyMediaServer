@@ -176,6 +176,8 @@ public class VideoEncodeJob : AbstractEncoderJob
                     $"Encoded {InputFile} → {result.OutputPath} in {result.Duration.TotalSeconds:F1}s ({result.Metrics.EncoderUsed})"
                 );
 
+                await RecordEncodingHistoryAsync(context, dbProfile, result, InputFile);
+
                 await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile);
 
                 fileManager.FilterFiles(fileMetadata.FileName);
@@ -226,6 +228,65 @@ public class VideoEncodeJob : AbstractEncoderJob
 
                 throw;
             }
+        }
+    }
+
+    /// <summary>
+    /// Append one EncodingHistory row per successful encode. Failures are
+    /// swallowed — a dashboard-history miss should never fail a working encode.
+    /// Denormalizes profile name / encoder so the row survives profile deletion.
+    /// </summary>
+    private static async Task RecordEncodingHistoryAsync(
+        MediaContext context,
+        EncoderProfile profile,
+        EncodingResult result,
+        string inputPath
+    )
+    {
+        try
+        {
+            long inputSize = 0;
+            try
+            {
+                FileInfo fi = new(inputPath);
+                if (fi.Exists)
+                    inputSize = fi.Length;
+            }
+            catch
+            {
+                // keep inputSize = 0 when the file is inaccessible
+            }
+
+            double ratio =
+                inputSize > 0 && result.Metrics.OutputSizeBytes > 0
+                    ? (double)result.Metrics.OutputSizeBytes / inputSize
+                    : 0;
+
+            context.EncodingHistory.Add(
+                new EncodingHistory
+                {
+                    InputPath = inputPath,
+                    OutputPath = result.OutputPath,
+                    ProfileId = profile.Id,
+                    ProfileName = profile.Name,
+                    EncoderUsed = result.Metrics.EncoderUsed,
+                    GpuUsed = result.Metrics.GpuUsed,
+                    DurationSeconds = result.Duration.TotalSeconds,
+                    InputSizeBytes = inputSize,
+                    OutputSizeBytes = result.Metrics.OutputSizeBytes,
+                    CompressionRatio = ratio,
+                    AverageSpeed = result.Metrics.AverageSpeed,
+                    AverageFps = result.Metrics.AverageFps,
+                }
+            );
+            await context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.Encoder(
+                $"Could not write encoding history: {ex.Message}",
+                LogEventLevel.Warning
+            );
         }
     }
 

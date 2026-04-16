@@ -432,6 +432,7 @@ public static class ServiceConfiguration
         services.AddScoped<HomeRepository>();
         services.AddScoped<MusicRepository>();
         services.AddScoped<EncoderRepository>();
+        services.AddScoped<EncodingHistoryRepository>();
         services.AddScoped<LibraryRepository>();
         services.AddScoped<MediaProcessingLibraryRepository>();
         services.AddScoped<DeviceRepository>();

@@ -227,6 +227,7 @@ public class MediaContext : DbContext
     public virtual DbSet<Device> Devices { get; init; }
     public virtual DbSet<EncoderProfileFolder> EncoderProfileFolder { get; init; }
     public virtual DbSet<EncoderProfile> EncoderProfiles { get; init; }
+    public virtual DbSet<EncodingHistory> EncodingHistory { get; init; }
     public virtual DbSet<Episode> Episodes { get; init; }
     public virtual DbSet<FolderLibrary> FolderLibrary { get; init; }
     public virtual DbSet<Folder> Folders { get; init; }
