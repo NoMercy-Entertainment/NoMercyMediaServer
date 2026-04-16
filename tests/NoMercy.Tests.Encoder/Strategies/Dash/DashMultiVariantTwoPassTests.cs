@@ -1,0 +1,185 @@
+namespace NoMercy.Tests.Encoder.Strategies.Dash;
+
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Jobs;
+using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Progress;
+using NoMercy.Encoder.Strategies.Dash;
+
+/// <summary>
+/// DASH adaptive ladders need the same multi-variant 2-pass treatment as HLS:
+/// pass 1 runs once per variant with per-variant stats files, pass 2 runs
+/// once producing every variant in the same ffmpeg invocation. These tests
+/// mirror the HLS coverage to confirm the shared <c>TwoPassStrategyBase</c>
+/// logic really does apply uniformly across adaptive formats.
+/// </summary>
+public class DashMultiVariantTwoPassTests : IDisposable
+{
+    private readonly string _outputDir;
+    private readonly Mock<IEncoder> _encoder = new();
+    private readonly Mock<ICheckpointStore> _checkpointStore = new();
+
+    public DashMultiVariantTwoPassTests()
+    {
+        _outputDir = Path.Combine(Path.GetTempPath(), $"DashMultiVar_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_outputDir);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_outputDir))
+            Directory.Delete(_outputDir, recursive: true);
+        GC.SuppressFinalize(this);
+    }
+
+    [Fact]
+    public async Task Encode_ThreeVariants_RunsPass1OncePerVariant()
+    {
+        _checkpointStore
+            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobCheckpoint?)null);
+
+        List<int> pass1Indices = [];
+        _encoder
+            .Setup(e =>
+                e.EncodeAsync(
+                    It.IsAny<EncodingRequest>(),
+                    It.IsAny<IProgressObserver?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                (EncodingRequest req, IProgressObserver? _, CancellationToken _) =>
+                {
+                    if (req.Options!.Pass == EncodingPass.One)
+                        pass1Indices.Add(req.Options.Pass1VariantIndex);
+                    return Success();
+                }
+            );
+
+        DashTwoPassStrategy strategy = BuildStrategy();
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
+
+        Assert.Equal(new[] { 0, 1, 2 }, pass1Indices);
+    }
+
+    [Fact]
+    public async Task Encode_ThreeVariants_RunsPass2ExactlyOnce()
+    {
+        _checkpointStore
+            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobCheckpoint?)null);
+        SetupSuccessfulEncoder();
+
+        DashTwoPassStrategy strategy = BuildStrategy();
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
+
+        _encoder.Verify(
+            e =>
+                e.EncodeAsync(
+                    It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.Two),
+                    It.IsAny<IProgressObserver?>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task Encode_ResumeWithAllVariantStatsPresent_SkipsPass1()
+    {
+        string statsDir = Path.Combine(_outputDir, ".2pass");
+        Directory.CreateDirectory(statsDir);
+        string statsFile = Path.Combine(statsDir, "x264");
+        for (int i = 0; i < 3; i++)
+            await File.WriteAllTextAsync($"{statsFile}_v{i}-0.log", $"variant {i} done");
+
+        JobCheckpoint existing = new(
+            JobId: "job-1",
+            InputPath: "/media/src.mkv",
+            OutputDirectory: _outputDir,
+            CompletedGroupIndices: [],
+            LastUpdated: DateTime.UtcNow,
+            StatsFilePath: statsFile,
+            Pass1Completed: true,
+            LastCompletedSegment: -1,
+            EncodeMode: "TwoPass"
+        );
+
+        _checkpointStore
+            .Setup(s => s.LoadAsync(_outputDir, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        SetupSuccessfulEncoder();
+
+        DashTwoPassStrategy strategy = BuildStrategy();
+        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
+
+        _encoder.Verify(
+            e =>
+                e.EncodeAsync(
+                    It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.One),
+                    It.IsAny<IProgressObserver?>(),
+                    It.IsAny<CancellationToken>()
+                ),
+            Times.Never
+        );
+    }
+
+    private void SetupSuccessfulEncoder()
+    {
+        _encoder
+            .Setup(e =>
+                e.EncodeAsync(
+                    It.IsAny<EncodingRequest>(),
+                    It.IsAny<IProgressObserver?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(Success());
+    }
+
+    private static EncodingResult Success() =>
+        new(
+            Success: true,
+            OutputPath: "/out",
+            Duration: TimeSpan.FromSeconds(1),
+            Error: null,
+            Metrics: new EncodingMetrics(1024, 2.0, 24.0, "libx264", null)
+        );
+
+    private DashTwoPassStrategy BuildStrategy() =>
+        new(_encoder.Object, _checkpointStore.Object, NullLogger<DashTwoPassStrategy>.Instance);
+
+    private EncodingRequest BuildRequest(int variantCount) =>
+        new(
+            InputPath: "/media/src.mkv",
+            OutputDirectory: _outputDir,
+            Profile: new EncodingProfile(
+                Id: Ulid.NewUlid(),
+                Name: $"DASH 2-pass {variantCount}-variant",
+                Format: OutputFormat.Dash,
+                VideoOutputs: Enumerable
+                    .Range(0, variantCount)
+                    .Select(i => new VideoOutput(
+                        Codec: VideoCodecType.H264,
+                        Width: 1920 >> i,
+                        Height: 1080 >> i,
+                        BitrateKbps: 4000 >> i,
+                        Crf: 23,
+                        Preset: "medium",
+                        Profile: "high",
+                        Level: "4.1",
+                        ConvertHdrToSdr: false,
+                        KeyframeIntervalSeconds: 2,
+                        TenBit: false
+                    ))
+                    .ToArray(),
+                AudioOutputs: [],
+                SubtitleOutputs: [],
+                EncodeMode: EncodeMode.TwoPass
+            )
+        );
+}

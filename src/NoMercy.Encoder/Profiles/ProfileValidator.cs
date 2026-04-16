@@ -421,6 +421,20 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                 );
             }
         }
+
+        // MP4 is a single-file format — additional variants are silently
+        // dropped by Mp4OutputStrategy (it only mixes the first video output
+        // into the container). Use HLS or DASH for adaptive ladders instead.
+        if (profile.VideoOutputs.Length > 1)
+        {
+            errors.Add(
+                new ValidationError(
+                    "VideoOutputs",
+                    "MP4 is a single-file format; only the first video output is muxed. Use HLS or DASH for multi-variant ladders.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
     }
 
     private static void ValidateDashCompatibility(
