@@ -24,6 +24,7 @@ using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Startup;
 using NoMercy.Encoder.Strategies;
+using NoMercy.Encoder.Strategies.Audio;
 using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Encoder.Strategies.Mkv;
@@ -148,6 +149,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IEncodingStrategy, Mp4TwoPassStrategy>();
         services.AddTransient<IEncodingStrategy, DashSinglePassStrategy>();
         services.AddTransient<IEncodingStrategy, DashTwoPassStrategy>();
+        services.AddTransient<IEncodingStrategy, Mp3Strategy>();
+        services.AddTransient<IEncodingStrategy, FlacStrategy>();
+        services.AddTransient<IEncodingStrategy, OggStrategy>();
         services.AddTransient<IStrategyResolver, StrategyResolver>();
         services.AddTransient<IEncodingOrchestrator, EncodingOrchestrator>();
 

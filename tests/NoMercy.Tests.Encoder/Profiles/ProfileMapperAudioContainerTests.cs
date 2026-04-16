@@ -17,6 +17,13 @@ public class ProfileMapperAudioContainerTests
     [InlineData("AAC", OutputFormat.Mp4)]
     [InlineData("dash", OutputFormat.Dash)]
     [InlineData("mpd", OutputFormat.Dash)]
+    [InlineData("mp3", OutputFormat.Mp3)]
+    [InlineData("MP3", OutputFormat.Mp3)]
+    [InlineData("flac", OutputFormat.Flac)]
+    [InlineData("FLAC", OutputFormat.Flac)]
+    [InlineData("ogg", OutputFormat.Ogg)]
+    [InlineData("oga", OutputFormat.Ogg)]
+    [InlineData("opus", OutputFormat.Ogg)]
     [InlineData("unknown", OutputFormat.Hls)]
     public void FromV1_Container_MapsToExpectedFormat(string container, OutputFormat expected)
     {

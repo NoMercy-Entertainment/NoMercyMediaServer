@@ -242,6 +242,112 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             case OutputFormat.Mkv:
                 // MKV allows everything — no restrictions
                 break;
+
+            case OutputFormat.Mp3:
+            case OutputFormat.Flac:
+            case OutputFormat.Ogg:
+                ValidateAudioOnlyCompatibility(profile, errors);
+                break;
+        }
+    }
+
+    private static void ValidateAudioOnlyCompatibility(
+        EncodingProfile profile,
+        List<ValidationError> errors
+    )
+    {
+        if (profile.VideoOutputs.Length > 0)
+        {
+            errors.Add(
+                new ValidationError(
+                    "VideoOutputs",
+                    $"{profile.Format} is an audio-only container; video outputs are not supported.",
+                    ValidationSeverity.Error
+                )
+            );
+        }
+
+        if (profile.SubtitleOutputs.Length > 0)
+        {
+            errors.Add(
+                new ValidationError(
+                    "SubtitleOutputs",
+                    $"{profile.Format} has no subtitle support; drop the subtitle outputs.",
+                    ValidationSeverity.Error
+                )
+            );
+        }
+
+        if (profile.AudioOutputs.Length == 0)
+        {
+            errors.Add(
+                new ValidationError(
+                    "AudioOutputs",
+                    $"{profile.Format} requires exactly one audio output.",
+                    ValidationSeverity.Error
+                )
+            );
+        }
+        else if (profile.AudioOutputs.Length > 1)
+        {
+            errors.Add(
+                new ValidationError(
+                    "AudioOutputs",
+                    $"{profile.Format} produces a single file; additional audio outputs are ignored.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
+
+        if (profile.Format == OutputFormat.Mp3 && profile.AudioOutputs.Length > 0)
+        {
+            AudioCodecType codec = profile.AudioOutputs[0].Codec;
+            if (codec != AudioCodecType.Mp3)
+            {
+                errors.Add(
+                    new ValidationError(
+                        "AudioOutputs[0].Codec",
+                        $"MP3 container requires the MP3 codec; got {codec}.",
+                        ValidationSeverity.Error
+                    )
+                );
+            }
+        }
+
+        if (profile.Format == OutputFormat.Flac && profile.AudioOutputs.Length > 0)
+        {
+            AudioCodecType codec = profile.AudioOutputs[0].Codec;
+            if (codec != AudioCodecType.Flac)
+            {
+                errors.Add(
+                    new ValidationError(
+                        "AudioOutputs[0].Codec",
+                        $"FLAC container requires the FLAC codec; got {codec}.",
+                        ValidationSeverity.Error
+                    )
+                );
+            }
+        }
+
+        if (profile.Format == OutputFormat.Ogg && profile.AudioOutputs.Length > 0)
+        {
+            AudioCodecType codec = profile.AudioOutputs[0].Codec;
+            AudioCodecType[] allowed =
+            [
+                AudioCodecType.Vorbis,
+                AudioCodecType.Opus,
+                AudioCodecType.Flac,
+            ];
+            if (Array.IndexOf(allowed, codec) < 0)
+            {
+                errors.Add(
+                    new ValidationError(
+                        "AudioOutputs[0].Codec",
+                        $"Ogg container accepts Vorbis, Opus, or FLAC; got {codec}.",
+                        ValidationSeverity.Error
+                    )
+                );
+            }
         }
     }
 

@@ -99,6 +99,9 @@ public class FinalizeStage(
             OutputFormat.Mkv => new MkvOutputStrategy(),
             OutputFormat.Mp4 => new Mp4OutputStrategy(),
             OutputFormat.Dash => new DashOutputStrategy(),
+            OutputFormat.Mp3 => new Mp3OutputStrategy(),
+            OutputFormat.Flac => new FlacOutputStrategy(),
+            OutputFormat.Ogg => new OggOutputStrategy(),
             _ => throw new ArgumentOutOfRangeException(nameof(format)),
         };
 }
