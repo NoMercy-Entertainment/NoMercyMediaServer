@@ -8,8 +8,10 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Queue;
@@ -34,7 +36,8 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 public class TasksController(
     MediaContext mediaContext,
     IEncoderProcessRegistry processRegistry,
-    ProcessThrottle processThrottle
+    ProcessThrottle processThrottle,
+    EncodingHistoryRepository historyRepository
 ) : BaseController
 {
     [HttpGet]
@@ -300,6 +303,103 @@ public class TasksController(
 
         return Ok(
             new StatusResponseDto<string> { Message = "Priority updated", Status = "success" }
+        );
+    }
+
+    /// <summary>
+    /// Stop dispatching new encoder jobs. In-flight FFmpeg processes keep running —
+    /// use the per-task pause endpoint to suspend those separately.
+    /// </summary>
+    [HttpPost]
+    [Route("pause-queue")]
+    public async Task<IActionResult> PauseEncoderQueue()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to pause the encoder queue");
+
+        if (QueueRunner.Current is null)
+            return Ok(
+                new StatusResponseDto<string>
+                {
+                    Message = "Queue runner not available",
+                    Status = "unavailable",
+                }
+            );
+
+        await QueueRunner.Current.Stop("encoder");
+        return Ok(
+            new StatusResponseDto<string> { Message = "Encoder queue paused", Status = "success" }
+        );
+    }
+
+    /// <summary>Resume dispatching jobs from the encoder queue.</summary>
+    [HttpPost]
+    [Route("resume-queue")]
+    public async Task<IActionResult> ResumeEncoderQueue()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to resume the encoder queue");
+
+        if (QueueRunner.Current is null)
+            return Ok(
+                new StatusResponseDto<string>
+                {
+                    Message = "Queue runner not available",
+                    Status = "unavailable",
+                }
+            );
+
+        await QueueRunner.Current.Start("encoder");
+        return Ok(
+            new StatusResponseDto<string> { Message = "Encoder queue resumed", Status = "success" }
+        );
+    }
+
+    /// <summary>
+    /// Estimated completion time for the current encoder queue. Based on the
+    /// rolling average duration of the most recent 50 successful encodes in
+    /// EncodingHistory × remaining queue size. Returns zero when history is
+    /// empty (no basis to extrapolate).
+    /// </summary>
+    [HttpGet]
+    [Route("queue/eta")]
+    public async Task<IActionResult> EncoderQueueEta()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view encoder queue ETA");
+
+        List<EncodingHistory> recent = await historyRepository.GetRecentAsync(
+            pageSize: 50,
+            pageIndex: 0
+        );
+
+        await using QueueContext queueContext = new();
+        int queueDepth = await queueContext.QueueJobs.CountAsync(j => j.Queue == "encoder");
+
+        if (recent.Count == 0 || queueDepth == 0)
+        {
+            return Ok(
+                new
+                {
+                    queueDepth,
+                    averageEncodeSeconds = 0.0,
+                    estimatedSecondsRemaining = 0.0,
+                    basedOnSamples = recent.Count,
+                }
+            );
+        }
+
+        double avgSeconds = recent.Average(h => h.DurationSeconds);
+        double etaSeconds = avgSeconds * queueDepth;
+
+        return Ok(
+            new
+            {
+                queueDepth,
+                averageEncodeSeconds = avgSeconds,
+                estimatedSecondsRemaining = etaSeconds,
+                basedOnSamples = recent.Count,
+            }
         );
     }
 
