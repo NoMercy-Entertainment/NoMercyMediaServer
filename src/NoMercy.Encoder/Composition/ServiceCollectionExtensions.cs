@@ -7,6 +7,7 @@ using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.ContentAnalysis;
+using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
@@ -107,6 +108,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISubtitleOcrEngine, SubtitleOcrEngine>();
         services.AddTransient<IWhisperTranscriber, WhisperTranscriber>();
         services.AddTransient<ICropDetector, CropDetector>();
+        services.AddTransient<IAudioFingerprinter, ChromaprintFingerprinter>();
+        services.AddTransient<IIntroDetector, ChromaprintIntroDetector>();
 
         // Notifications — plugins can replace INotificationDispatcher to swap
         // webhooks for Discord/Slack/email/etc.
