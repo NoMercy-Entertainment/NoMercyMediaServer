@@ -257,7 +257,8 @@ public class PlanStage(
                         Language: streamLang,
                         SourceIndex: si,
                         MapLabel: $"0:s:{si}",
-                        PlaylistNameTemplate: subProfile.PlaylistNameTemplate
+                        PlaylistNameTemplate: subProfile.PlaylistNameTemplate,
+                        Mode: subProfile.Mode
                     )
                 );
             }

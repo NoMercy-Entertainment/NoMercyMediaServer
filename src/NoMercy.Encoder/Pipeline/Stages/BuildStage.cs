@@ -9,6 +9,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
+using NoMercy.Encoder.Profiles;
 
 public record BuildInput(
     ExecutionPlan Plan,
@@ -55,7 +56,11 @@ public class BuildStage(
             FfmpegCommandBuilder builder = new();
             builder.AddInput(new InputOptions(input.InputPath, Duration: input.DurationLimit));
 
-            string? filterGraph = BuildFilterGraph(input.Plan.OutputPlan, context.MediaInfo);
+            string? filterGraph = BuildFilterGraph(
+                input.Plan.OutputPlan,
+                context.MediaInfo,
+                input.InputPath
+            );
             if (filterGraph is not null)
                 builder.WithFilterComplex(filterGraph);
 
@@ -168,6 +173,9 @@ public class BuildStage(
     {
         foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
         {
+            if (subPlan.Mode == SubtitleMode.BurnIn)
+                continue;
+
             if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
                 continue;
 
@@ -223,6 +231,9 @@ public class BuildStage(
 
         foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
         {
+            if (subPlan.Mode == SubtitleMode.BurnIn)
+                continue;
+
             if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
                 continue;
 
@@ -281,7 +292,7 @@ public class BuildStage(
             _ => throw new ArgumentOutOfRangeException(nameof(format)),
         };
 
-    private static string? BuildFilterGraph(OutputPlan plan, MediaInfo? mediaInfo)
+    private static string? BuildFilterGraph(OutputPlan plan, MediaInfo? mediaInfo, string inputPath)
     {
         VideoOutputPlan[] videoOutputs = plan.VideoOutputs;
 
@@ -297,6 +308,9 @@ public class BuildStage(
         int sourceHeight = mediaInfo.VideoStreams[0].Height;
         bool sourceIs10Bit = mediaInfo.VideoStreams[0].BitDepth > 8;
         bool hasThumbnails = plan.Thumbnails is not null;
+
+        // First subtitle output with BurnIn mode (at most one burns per encode).
+        string? burnInExpr = ResolveBurnInExpression(plan.SubtitleOutputs, inputPath);
 
         FilterGraphBuilder fg = new();
 
@@ -315,7 +329,8 @@ public class BuildStage(
                 single,
                 sourceWidth,
                 sourceHeight,
-                sourceIs10Bit
+                sourceIs10Bit,
+                burnInExpr
             );
         }
         else
@@ -339,7 +354,8 @@ public class BuildStage(
                     video,
                     sourceWidth,
                     sourceHeight,
-                    sourceIs10Bit
+                    sourceIs10Bit,
+                    burnInExpr
                 );
             }
 
@@ -364,7 +380,7 @@ public class BuildStage(
 
     /// <summary>
     /// Builds the filter chain for a single video output branch.
-    /// Pipeline: tonemap (HDR→SDR) → scale (resolution) → format (pixel format).
+    /// Pipeline: tonemap (HDR→SDR) → scale (resolution) → format (pixel format) → burn-in subs.
     /// Each step is skipped when not needed.
     /// </summary>
     private static void BuildBranchFilter(
@@ -374,51 +390,89 @@ public class BuildStage(
         VideoOutputPlan video,
         int sourceWidth,
         int sourceHeight,
-        bool sourceIs10Bit
+        bool sourceIs10Bit,
+        string? burnInExpr
     )
     {
         bool needsTonemap = video.ConvertHdrToSdr && video.TonemapFilterChain is not null;
         bool needsScale = video.Width != sourceWidth || video.Height != sourceHeight;
         bool needs8BitConversion = sourceIs10Bit && !video.TenBit;
+        bool needsBurnIn = burnInExpr is not null;
 
-        if (!needsTonemap && !needsScale && !needs8BitConversion)
+        if (!needsTonemap && !needsScale && !needs8BitConversion && !needsBurnIn)
         {
             fg.AddFilter(inputLabel, "copy", outputLabel);
             return;
         }
 
-        // Chain: tonemap → scale → format, using intermediate labels between steps.
+        // Determine whether we need to terminate the tonemap/scale/format chain on
+        // an intermediate label (because burn-in goes after) or on the output label.
+        string videoChainEnd = needsBurnIn ? $"{outputLabel}_presub" : outputLabel;
+
         string currentLabel = inputLabel;
 
         // Step 1: Tonemap (HDR→SDR) — outputs yuv420p, so 8-bit conversion is included
         if (needsTonemap)
         {
-            string nextLabel = needsScale ? $"{outputLabel}_tonemapped" : outputLabel;
+            string nextLabel = needsScale ? $"{outputLabel}_tonemapped" : videoChainEnd;
             fg.AddFilter(currentLabel, video.TonemapFilterChain!, nextLabel);
             currentLabel = nextLabel;
 
-            // Tonemap filter chains (zscale, libplacebo) already output 8-bit yuv420p,
-            // so we don't need a separate format conversion after tonemap.
             needs8BitConversion = false;
 
-            if (!needsScale)
+            if (!needsScale && !needsBurnIn)
                 return;
         }
 
-        // Step 2: Scale (resolution change)
+        // Step 2: Scale + format
         if (needsScale && needs8BitConversion)
         {
             string intermediate = $"{outputLabel}_scaled";
             fg.AddScaleWidth(currentLabel, video.Width, intermediate);
-            fg.AddFilter(intermediate, $"format={video.PixelFormat}", outputLabel);
+            fg.AddFilter(intermediate, $"format={video.PixelFormat}", videoChainEnd);
+            currentLabel = videoChainEnd;
         }
         else if (needsScale)
         {
-            fg.AddScaleWidth(currentLabel, video.Width, outputLabel);
+            fg.AddScaleWidth(currentLabel, video.Width, videoChainEnd);
+            currentLabel = videoChainEnd;
         }
         else if (needs8BitConversion)
         {
-            fg.AddFilter(currentLabel, $"format={video.PixelFormat}", outputLabel);
+            fg.AddFilter(currentLabel, $"format={video.PixelFormat}", videoChainEnd);
+            currentLabel = videoChainEnd;
         }
+        else if (needsBurnIn && !needsTonemap)
+        {
+            // No video processing yet — but we still need to land on the intermediate label
+            // so the subtitles filter below can read from it.
+            fg.AddFilter(currentLabel, "copy", videoChainEnd);
+            currentLabel = videoChainEnd;
+        }
+
+        // Step 3: Burn-in subtitles — always last (after resolution is final).
+        if (needsBurnIn)
+        {
+            fg.AddFilter(currentLabel, burnInExpr!, outputLabel);
+        }
+    }
+
+    /// <summary>
+    /// Resolves the first burn-in subtitle output into an FFmpeg subtitles filter
+    /// expression that reads from the input file + stream index. Returns null when
+    /// no burn-in subtitle is requested.
+    /// </summary>
+    private static string? ResolveBurnInExpression(SubtitleOutputPlan[] subs, string inputPath)
+    {
+        SubtitleOutputPlan? burnIn = subs.FirstOrDefault(s => s.Mode == SubtitleMode.BurnIn);
+        if (burnIn is null)
+            return null;
+
+        // FFmpeg subtitle filter path escaping: single-quote the path, escape
+        // colons and backslashes. Forward slashes are accepted on all platforms.
+        string normalized = inputPath.Replace('\\', '/');
+        string escaped = normalized.Replace(":", "\\:");
+
+        return $"subtitles='{escaped}':si={burnIn.SourceIndex}";
     }
 }

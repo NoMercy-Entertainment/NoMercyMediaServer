@@ -2,6 +2,7 @@ namespace NoMercy.Encoder.Output;
 
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Profiles;
 
 public record OutputPlan(
     OutputFormat Format,
@@ -50,7 +51,8 @@ public record SubtitleOutputPlan(
     string? Language,
     int SourceIndex,
     string? MapLabel,
-    string PlaylistNameTemplate = "subtitles/:filename:.:language:.:variant:"
+    string PlaylistNameTemplate = "subtitles/:filename:.:language:.:variant:",
+    SubtitleMode Mode = SubtitleMode.Extract
 );
 
 public record ThumbnailOutputPlan(int Width, int Height, int IntervalSeconds);
