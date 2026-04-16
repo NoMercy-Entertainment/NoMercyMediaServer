@@ -16,7 +16,7 @@
 
 ## Current Status — 2026-04-16
 
-**Build:** 177 commits ahead of `master` · 0 errors · 0 warnings · 691 encoder tests + 6 repository tests passing (+107 added this session).
+**Build:** 180 commits ahead of `master` · 0 errors · 0 warnings · 706 encoder tests + 6 repository tests passing (+122 added this session).
 
 **What already works today (outside the strategy pattern):**
 - 6-stage pipeline (`Analyze → Validate → Plan → Build → Execute → Finalize`) in [`Pipeline/Encoder.cs`](../../src/NoMercy.Encoder/Pipeline/Encoder.cs) delivering production-grade HLS single-pass
@@ -34,7 +34,7 @@
 |-------|--------|----------|
 | 1. Foundation — DI + Building Blocks | ✅ done | All 4 tasks shipped: interfaces (1.1), DI registration (1.2), stage injection (1.3), EncodeMode enum + parser (1.4). Pending sub-step: `IOutputStrategyFactory` for format selection via DI. |
 | 2. Strategy Pattern | ✅ MVP | `Orchestration/` has `IEncodingOrchestrator` + `EncodingOrchestrator` + `IStrategyResolver` + `StrategyResolver`. `Strategies/IEncodingStrategy` defines the contract. `VideoEncodeJob` / `MusicEncodeJob` call the orchestrator, not `IEncoder` directly. Task 2.2 (full HLS stage extraction) deferred — strategies currently wrap `IEncoder` as a seam; format-specific logic can peel out later. |
-| 3. Additional File Strategies | ✅ + HLS 2-pass | `HlsSinglePassStrategy`, `HlsTwoPassStrategy`, `MkvStrategy`, `Mp4SinglePassStrategy`, `DashSinglePassStrategy` all registered. `EncodingOptions.Pass` (Single/One/Two) + `StatsFilePath` thread through to `BuildStage`, which branches the command layout accordingly: pass 1 emits a single video-only null-sink command, pass 2 injects `-pass 2 -passlogfile` into each video output's ExtraFlags. MP4 / DASH 2-pass variants (3.3, 3.5) still pending. |
+| 3. Additional File Strategies | ✅ all formats, single + two-pass | `HlsSinglePassStrategy`, `HlsTwoPassStrategy`, `MkvStrategy`, `Mp4SinglePassStrategy`, `Mp4TwoPassStrategy`, `DashSinglePassStrategy`, `DashTwoPassStrategy` all registered. 2-pass orchestration shared via `TwoPassStrategyBase` — subclasses override only `Format`. Pass-1 / pass-2 command layout format-agnostic in `BuildStage`. Pending: multi-variant 2-pass (requires per-variant stats). |
 | 4. Checkpoint & Resume | ✅ done (for 2-pass) | `HlsTwoPassStrategy` loads checkpoint on start; if `Pass1Completed` and the stats file still exists on disk, pass 1 is skipped. Pass 1 success saves checkpoint; pass 2 success deletes checkpoint and cleans stats files. Single-pass doesn't need checkpoint granularity (one FFmpeg command, resume semantics don't apply). |
 | 5. Live Transcode Strategy | ❌ scaffolded only | `LiveEncoder.StartAsync` creates a session object but does not spawn FFmpeg. Session manager + decision engine work. No strategy wrapper, no transport impl. |
 | 6. Distribution | ❌ not started | No `Distribution/` dir. `IJobDispatcher` / `IRemoteWorker` / `IHardwareBenchmark` interfaces exist with zero implementations. |
@@ -43,7 +43,7 @@
 | 9. Content Intelligence | ⚠️ 3 of 4 | Crop detection ✅ (9.1), subtitle OCR ✅ (9.2 with auto-download Tesseract model manager), Whisper transcription ✅ (9.3). Intro/outro content detection (9.4) still pending. New nomercy-ffmpeg Windows build provides libtesseract + whisper filters. |
 | 10. Format Capabilities | ⚠️ 4 of 7 done | HDR→SDR tonemap ✅, HDR→HDR passthrough ✅ (step 2), burn-in filter ✅ (10.1), loudnorm ✅ (10.4 partial), ABR ladder ✅ (10.3). Pending: DV passthrough (10.2 step 3), explicit downmix/`pan`/`amerge` (10.4 step 1 remainder), wire ABR generator into profile-load path. |
 | 11. DRM & Encryption | ❌ not started | No `IDrmProcessor`. No AES-128 HLS, no CENC DASH. |
-| 12. Presets & Automation | ❌ not started | No `EncodingPreset` model. `FolderWatcher` exists but does not auto-encode. No webhook dispatcher. |
+| 12. Presets & Automation | ⚠️ webhooks done | `INotificationDispatcher` + `WebhookNotificationDispatcher` (POST with exponential-backoff retries) + `EncodingNotificationSubscriber` hosted service wiring the event bus; configurable via `EncoderOptions.NotificationWebhookUrls`. Phase 12.1 preset CRUD + 12.2 watch-folder auto-encode still pending. |
 | 13. Audio Strategies | ❌ not started | No `AudioStrategy`. `MusicEncodeJob` uses the current pipeline directly. |
 | 14. Disc Ripping | ❌ data only | `DiscDrive`, `DiscInfo`, `RipRequest`, `MetadataMatch`, `OpticalDiscType` records exist. Zero scanning/ripping logic. |
 
