@@ -14,26 +14,78 @@ using NoMercy.Encoder.Jobs;
 /// Stale entries are pruned lazily on reads: <see cref="GetActiveWorkers"/>
 /// filters out anything past the stale threshold and drops them from the
 /// dictionary so stopped workers don't accumulate forever.
+///
+/// Health tracking: workers that fail <see cref="FailureThreshold"/> tasks
+/// in a row enter a cooldown window during which they're hidden from
+/// <see cref="GetActiveWorkers"/>. A single success clears the counter.
+/// Prevents one bad GPU / flaky network link from soaking up every
+/// assignment while slowing every user's encode.
 /// </summary>
 public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
 {
+    private const int FailureThreshold = 3;
+
     private readonly ConcurrentDictionary<string, RegisteredWorker> _workers = new();
     private readonly TimeSpan _staleAfter;
+    private readonly TimeSpan _cooldownDuration;
     private readonly Func<DateTime> _clock;
 
-    public InMemoryRemoteWorkerRegistry(TimeSpan? staleAfter = null, Func<DateTime>? clock = null)
+    public InMemoryRemoteWorkerRegistry(
+        TimeSpan? staleAfter = null,
+        TimeSpan? cooldownDuration = null,
+        Func<DateTime>? clock = null
+    )
     {
         _staleAfter = staleAfter ?? TimeSpan.FromSeconds(60);
+        _cooldownDuration = cooldownDuration ?? TimeSpan.FromMinutes(2);
         _clock = clock ?? (() => DateTime.UtcNow);
     }
 
     /// <summary>
     /// Adds a new worker or refreshes an existing one. Idempotent — workers
-    /// that re-register after a restart replace their own entry.
+    /// that re-register after a restart replace their own entry. Re-register
+    /// also clears any outstanding cooldown since the worker is explicitly
+    /// announcing it's healthy again.
     /// </summary>
     public void Register(IRemoteWorker worker)
     {
-        _workers[worker.WorkerId] = new RegisteredWorker(worker, _clock());
+        _workers[worker.WorkerId] = new RegisteredWorker(
+            Worker: worker,
+            LastSeenUtc: _clock(),
+            ConsecutiveFailures: 0,
+            CooldownUntilUtc: null
+        );
+    }
+
+    /// <summary>
+    /// Called by the dispatcher after each task attempt. A successful task
+    /// resets the failure counter; enough failures push the worker into
+    /// cooldown where it's hidden from <see cref="GetActiveWorkers"/>
+    /// until the cooldown window elapses.
+    /// </summary>
+    public void RecordTaskOutcome(string workerId, bool success)
+    {
+        if (!_workers.TryGetValue(workerId, out RegisteredWorker? existing))
+            return;
+
+        if (success)
+        {
+            if (existing.ConsecutiveFailures == 0 && existing.CooldownUntilUtc is null)
+                return; // Already healthy — avoid needless dictionary write.
+
+            _workers[workerId] = existing with { ConsecutiveFailures = 0, CooldownUntilUtc = null };
+            return;
+        }
+
+        int failures = existing.ConsecutiveFailures + 1;
+        DateTime? cooldown =
+            failures >= FailureThreshold ? _clock() + _cooldownDuration : existing.CooldownUntilUtc;
+
+        _workers[workerId] = existing with
+        {
+            ConsecutiveFailures = failures,
+            CooldownUntilUtc = cooldown,
+        };
     }
 
     /// <summary>
@@ -71,8 +123,53 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
             _workers.TryRemove(kvp.Key, out _);
         }
 
-        return _workers.Values.Select(rw => rw.Worker).ToArray();
+        // Hide workers still in their cooldown window. They stay registered
+        // (so the operator sees them in /workers with a cooldown status),
+        // but the dispatcher doesn't pick them until the window elapses.
+        // Cooldown lifts automatically on the next read after the deadline.
+        return _workers
+            .Values.Where(rw => !IsInCooldown(rw, now))
+            .Select(rw => rw.Worker)
+            .ToArray();
     }
 
-    private sealed record RegisteredWorker(IRemoteWorker Worker, DateTime LastSeenUtc);
+    /// <summary>
+    /// Diagnostic accessor — returns every registered worker regardless
+    /// of cooldown state, along with the health counters. Used by the
+    /// /workers list endpoint so operators can see which workers are
+    /// currently benched.
+    /// </summary>
+    public IReadOnlyList<WorkerHealthSnapshot> GetAllWorkersWithHealth()
+    {
+        DateTime now = _clock();
+        return _workers
+            .Values.Select(rw => new WorkerHealthSnapshot(
+                Worker: rw.Worker,
+                LastSeenUtc: rw.LastSeenUtc,
+                ConsecutiveFailures: rw.ConsecutiveFailures,
+                CooldownUntilUtc: IsInCooldown(rw, now) ? rw.CooldownUntilUtc : null
+            ))
+            .ToArray();
+    }
+
+    private static bool IsInCooldown(RegisteredWorker rw, DateTime now) =>
+        rw.CooldownUntilUtc is DateTime until && now < until;
+
+    private sealed record RegisteredWorker(
+        IRemoteWorker Worker,
+        DateTime LastSeenUtc,
+        int ConsecutiveFailures,
+        DateTime? CooldownUntilUtc
+    );
 }
+
+/// <summary>
+/// Snapshot of a worker's health for the dashboard. CooldownUntilUtc is
+/// non-null only when the worker is currently benched.
+/// </summary>
+public record WorkerHealthSnapshot(
+    IRemoteWorker Worker,
+    DateTime LastSeenUtc,
+    int ConsecutiveFailures,
+    DateTime? CooldownUntilUtc
+);

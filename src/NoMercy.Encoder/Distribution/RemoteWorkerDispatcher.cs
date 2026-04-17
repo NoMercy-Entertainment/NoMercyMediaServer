@@ -86,6 +86,7 @@ public class RemoteWorkerDispatcher(
         try
         {
             DispatchResult result = await worker.ExecuteTaskAsync(task, ct).ConfigureAwait(false);
+            RecordOutcome(worker.WorkerId, result.Success);
             if (result.Success)
                 return result;
 
@@ -102,6 +103,7 @@ public class RemoteWorkerDispatcher(
         }
         catch (Exception ex)
         {
+            RecordOutcome(worker.WorkerId, success: false);
             logger.LogWarning(
                 ex,
                 "Worker {WorkerId} threw on task {TaskId} — retrying on local dispatcher",
@@ -124,5 +126,16 @@ public class RemoteWorkerDispatcher(
                 Duration: TimeSpan.Zero,
                 Error: "Local fallback returned no result"
             );
+    }
+
+    /// <summary>
+    /// Reports the outcome to the registry for health tracking. Gracefully
+    /// no-ops when the registry implementation doesn't track health — keeps
+    /// plugin registries that only implement IRemoteWorkerRegistry working.
+    /// </summary>
+    private void RecordOutcome(string workerId, bool success)
+    {
+        if (registry is InMemoryRemoteWorkerRegistry healthTracking)
+            healthTracking.RecordTaskOutcome(workerId, success);
     }
 }

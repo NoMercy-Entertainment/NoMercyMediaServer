@@ -99,6 +99,129 @@ public class InMemoryRemoteWorkerRegistryTests
         snapshot.Should().HaveCount(2);
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // Health tracking — consecutive-failure cooldown
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void RecordTaskOutcome_ConsecutiveFailures_PushesWorkerIntoCooldown()
+    {
+        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        InMemoryRemoteWorkerRegistry sut = new(
+            staleAfter: TimeSpan.FromMinutes(10),
+            cooldownDuration: TimeSpan.FromMinutes(2),
+            clock: () => now
+        );
+        sut.Register(MakeWorker("flaky"));
+
+        sut.RecordTaskOutcome("flaky", success: false);
+        sut.RecordTaskOutcome("flaky", success: false);
+        sut.RecordTaskOutcome("flaky", success: false);
+
+        sut.GetActiveWorkers().Should().BeEmpty("3 consecutive failures must trigger cooldown");
+
+        IReadOnlyList<WorkerHealthSnapshot> snapshot = sut.GetAllWorkersWithHealth();
+        snapshot.Should().HaveCount(1);
+        snapshot[0].ConsecutiveFailures.Should().Be(3);
+        snapshot[0].CooldownUntilUtc.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void RecordTaskOutcome_SuccessClearsFailureCount()
+    {
+        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        InMemoryRemoteWorkerRegistry sut = new(
+            staleAfter: TimeSpan.FromMinutes(10),
+            cooldownDuration: TimeSpan.FromMinutes(2),
+            clock: () => now
+        );
+        sut.Register(MakeWorker("recovering"));
+
+        sut.RecordTaskOutcome("recovering", success: false);
+        sut.RecordTaskOutcome("recovering", success: false);
+        sut.RecordTaskOutcome("recovering", success: true);
+        sut.RecordTaskOutcome("recovering", success: false);
+
+        // Failure counter reset on success — latest single failure doesn't
+        // push to cooldown.
+        sut.GetActiveWorkers().Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Cooldown_LiftsAutomaticallyAfterDuration()
+    {
+        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        InMemoryRemoteWorkerRegistry sut = new(
+            staleAfter: TimeSpan.FromMinutes(10),
+            cooldownDuration: TimeSpan.FromMinutes(2),
+            clock: () => now
+        );
+        sut.Register(MakeWorker("w"));
+        sut.RecordTaskOutcome("w", false);
+        sut.RecordTaskOutcome("w", false);
+        sut.RecordTaskOutcome("w", false);
+
+        sut.GetActiveWorkers().Should().BeEmpty(); // In cooldown.
+
+        // Advance past cooldown window + heartbeat refresh to keep it non-stale.
+        now = now.AddMinutes(3);
+        sut.Register(MakeWorker("w")); // Re-register refreshes LastSeenUtc AND clears cooldown per contract.
+
+        sut.GetActiveWorkers().Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Register_ClearsExistingCooldown()
+    {
+        // A worker that self-re-registers (e.g. after a restart) is claiming
+        // to be healthy again. Wipe the cooldown so it returns to rotation.
+        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        InMemoryRemoteWorkerRegistry sut = new(
+            staleAfter: TimeSpan.FromMinutes(10),
+            cooldownDuration: TimeSpan.FromMinutes(2),
+            clock: () => now
+        );
+        sut.Register(MakeWorker("w"));
+        sut.RecordTaskOutcome("w", false);
+        sut.RecordTaskOutcome("w", false);
+        sut.RecordTaskOutcome("w", false);
+
+        sut.GetActiveWorkers().Should().BeEmpty();
+
+        sut.Register(MakeWorker("w"));
+
+        sut.GetActiveWorkers().Should().HaveCount(1, "re-register must clear cooldown");
+    }
+
+    [Fact]
+    public void GetAllWorkersWithHealth_ReturnsCooledWorkers_ForDashboardVisibility()
+    {
+        // Hidden from dispatch ≠ hidden from the operator. Dashboard lists
+        // everyone so the user can see "workerX is cooling down, 3 failures".
+        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        InMemoryRemoteWorkerRegistry sut = new(
+            staleAfter: TimeSpan.FromMinutes(10),
+            cooldownDuration: TimeSpan.FromMinutes(2),
+            clock: () => now
+        );
+        sut.Register(MakeWorker("healthy"));
+        sut.Register(MakeWorker("cooling"));
+        sut.RecordTaskOutcome("cooling", false);
+        sut.RecordTaskOutcome("cooling", false);
+        sut.RecordTaskOutcome("cooling", false);
+
+        sut.GetActiveWorkers().Should().HaveCount(1);
+        sut.GetAllWorkersWithHealth().Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void RecordTaskOutcome_UnknownWorker_IsNoOp()
+    {
+        InMemoryRemoteWorkerRegistry sut = new();
+        Action act = () => sut.RecordTaskOutcome("never-registered", success: false);
+        act.Should().NotThrow();
+    }
+
     private static IRemoteWorker MakeWorker(string id)
     {
         Mock<IRemoteWorker> mock = new();
