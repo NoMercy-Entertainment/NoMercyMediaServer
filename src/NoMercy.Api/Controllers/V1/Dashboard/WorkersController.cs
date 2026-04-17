@@ -40,26 +40,35 @@ public class WorkersController(
         if (!User.IsOwner())
             return UnauthorizedResponse("Only the server owner can list workers");
 
-        IReadOnlyList<IRemoteWorker> workers = registry.GetActiveWorkers();
+        // Full health snapshot (includes cooled-down workers) so operators
+        // can see which workers are benched and why. The dispatcher uses a
+        // narrower GetActiveWorkers() that hides cooldowns, but the dashboard
+        // shows everyone with their current status.
+        IReadOnlyList<WorkerHealthSnapshot> snapshots = registry.GetAllWorkersWithHealth();
 
         return Ok(
             new
             {
                 distribution_enabled = encoderOptions.IsDistributedEncodingEnabled,
-                count = workers.Count,
-                data = workers
-                    .Select(w =>
+                count = snapshots.Count,
+                active_count = snapshots.Count(s => s.CooldownUntilUtc is null),
+                data = snapshots
+                    .Select(s =>
                     {
-                        ResourceBudgetSnapshot budget = w.GetAvailableBudget();
-                        IHardwareCapabilities caps = w.GetCapabilities();
+                        ResourceBudgetSnapshot budget = s.Worker.GetAvailableBudget();
+                        IHardwareCapabilities caps = s.Worker.GetCapabilities();
                         return new
                         {
-                            worker_id = w.WorkerId,
+                            worker_id = s.Worker.WorkerId,
                             available_gpu_slots = budget.AvailableGpuSlots,
                             available_cpu_threads = budget.AvailableCpuThreads,
                             gpu_utilization = budget.GpuUtilization,
                             cpu_cores = caps.CpuCores,
                             gpu_count = caps.Gpus.Count,
+                            last_seen_utc = s.LastSeenUtc,
+                            consecutive_failures = s.ConsecutiveFailures,
+                            cooldown_until_utc = s.CooldownUntilUtc,
+                            status = s.CooldownUntilUtc is null ? "active" : "cooldown",
                         };
                     })
                     .ToArray(),
