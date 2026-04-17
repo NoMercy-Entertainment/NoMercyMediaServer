@@ -2,19 +2,44 @@ namespace NoMercy.Encoder.Jobs;
 
 public record PathAllowlist(string[] AllowedInputPaths, string[] AllowedOutputPaths)
 {
-    public bool IsInputPathAllowed(string path)
-    {
-        string normalized = Path.GetFullPath(path);
-        return AllowedInputPaths.Any(allowed =>
-            normalized.StartsWith(Path.GetFullPath(allowed), StringComparison.OrdinalIgnoreCase)
-        );
-    }
+    public bool IsInputPathAllowed(string path) => IsUnderAny(path, AllowedInputPaths);
 
-    public bool IsOutputPathAllowed(string path)
+    public bool IsOutputPathAllowed(string path) => IsUnderAny(path, AllowedOutputPaths);
+
+    /// <summary>
+    /// Returns true when <paramref name="path"/> resolves to either an
+    /// allowed root itself or a descendant of one. Comparisons happen
+    /// after <see cref="Path.GetFullPath(string)"/> normalization so
+    /// <c>..</c> traversal is collapsed first. Matching requires a
+    /// directory-separator boundary so the allowlist entry
+    /// <c>/media/movies</c> does NOT also grant access to the sibling
+    /// <c>/media/movies_private</c> — a regression the old StartsWith
+    /// check was vulnerable to.
+    /// </summary>
+    private static bool IsUnderAny(string path, string[] allowedRoots)
     {
+        if (allowedRoots.Length == 0)
+            return false;
+
         string normalized = Path.GetFullPath(path);
-        return AllowedOutputPaths.Any(allowed =>
-            normalized.StartsWith(Path.GetFullPath(allowed), StringComparison.OrdinalIgnoreCase)
-        );
+
+        foreach (string allowed in allowedRoots)
+        {
+            string root = Path.GetFullPath(allowed)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            // Exact match: the path is the root itself.
+            if (normalized.Equals(root, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // Descendant: the path must continue with a directory separator
+            // immediately after the root prefix. Without the separator check,
+            // "/media/movies" would let "/media/movies_private" through.
+            string rootWithSep = root + Path.DirectorySeparatorChar;
+            if (normalized.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 }
