@@ -586,6 +586,8 @@ public class EncodingPresetsController(
         // apply regardless of source (level mismatch, inverted ladder, etc.).
         ValidationResult validation = profileValidator.Validate(profile);
 
+        List<object> sourceWarnings = CollectSourceHealthWarnings(media, profile);
+
         return Ok(
             new
             {
@@ -593,15 +595,22 @@ public class EncodingPresetsController(
                 {
                     path,
                     duration_seconds = media.Duration.TotalSeconds,
+                    overall_bitrate_kbps = media.OverallBitRateKbps,
+                    file_size_bytes = media.FileSizeBytes,
                     video_streams = media.VideoStreams.Count,
                     audio_streams = media.AudioStreams.Count,
                     subtitle_streams = media.SubtitleStreams.Count,
                     chapters = media.Chapters.Count,
+                    is_hdr = media.IsHdr,
+                    has_dolby_vision = media.DolbyVision is not null,
+                    has_hdr10_plus = media.HasHdr10Plus,
+                    is_variable_frame_rate = media.IsVariableFrameRate,
                 },
                 profile_format = profile.Format.ToString(),
                 video_plan = videoPlan,
                 audio_plan = audioPlan,
                 subtitle_plan = subtitlePlan,
+                source_warnings = sourceWarnings,
                 warnings = validation
                     .Errors.Where(e => e.Severity == ValidationSeverity.Warning)
                     .Select(e => new { field = e.Field, message = e.Message })
@@ -612,6 +621,164 @@ public class EncodingPresetsController(
                     .ToArray(),
             }
         );
+    }
+
+    /// <summary>
+    /// Source-level issues the encode pipeline will have to navigate. These
+    /// are not profile mistakes — the PROFILE can be perfect and still
+    /// produce degraded output because the SOURCE has problems. Surfacing
+    /// them in the preview tells the user what to expect before they kick
+    /// off the job: "your source is VFR, expect A/V sync issues", "this is
+    /// a Dolby Vision source but your profile targets SDR, RPU will be
+    /// stripped", etc.
+    /// </summary>
+    private static List<object> CollectSourceHealthWarnings(
+        NoMercy.Encoder.Analysis.MediaInfo media,
+        EncodingProfile profile
+    )
+    {
+        List<object> warnings = [];
+
+        // Variable frame rate is the most common source-side trap. Most
+        // phones and screen recordings are VFR, encoders assume CFR by
+        // default, and the output drifts audio/video sync over long clips.
+        if (media.IsVariableFrameRate)
+        {
+            warnings.Add(
+                new
+                {
+                    field = "source.frame_rate",
+                    severity = "warning",
+                    message = "Source has variable frame rate. Encoder will convert to constant FR; "
+                        + "check the output for audio/video sync drift on long content.",
+                }
+            );
+        }
+
+        // Missing / zero duration — ffprobe couldn't determine length, the
+        // segmented encoders can't estimate progress, the resume checkpoint
+        // can't validate completion. Usually indicates a broken source.
+        if (media.Duration == TimeSpan.Zero)
+        {
+            warnings.Add(
+                new
+                {
+                    field = "source.duration",
+                    severity = "warning",
+                    message = "Source duration could not be determined. Progress estimates will be "
+                        + "unavailable and segmented encode resume may not work correctly.",
+                }
+            );
+        }
+
+        // Source has no video streams but profile targets video — nothing to
+        // encode. Surface as a warning, not error: audio-only profiles still
+        // work fine and the plan stage will handle it gracefully.
+        if (media.VideoStreams.Count == 0 && profile.VideoOutputs.Length > 0)
+        {
+            warnings.Add(
+                new
+                {
+                    field = "source.video_streams",
+                    severity = "warning",
+                    message = "Profile targets video outputs but the source file has no video "
+                        + "streams. Video outputs will be skipped.",
+                }
+            );
+        }
+
+        // Source has no audio but profile targets audio — HLS/DASH playback
+        // breaks on iOS without audio. Mention it.
+        if (media.AudioStreams.Count == 0 && profile.AudioOutputs.Length > 0)
+        {
+            warnings.Add(
+                new
+                {
+                    field = "source.audio_streams",
+                    severity = "warning",
+                    message = "Profile targets audio outputs but the source has no audio streams. "
+                        + "Audio outputs will be skipped — consider switching to a video-only "
+                        + "profile for this source.",
+                }
+            );
+        }
+
+        // Dolby Vision source — RPU survives only under specific conditions
+        // (HEVC 10-bit output in HLS/MP4/MKV, no tonemap). Warn when the
+        // profile can't preserve it.
+        if (media.DolbyVision is not null)
+        {
+            bool profileCanPreserveDv = profile.VideoOutputs.Any(v =>
+                v.Codec == VideoCodecType.H265
+                && v.TenBit
+                && !v.ConvertHdrToSdr
+                && profile.Format is OutputFormat.Hls or OutputFormat.Mp4 or OutputFormat.Mkv
+            );
+
+            warnings.Add(
+                new
+                {
+                    field = "source.dolby_vision",
+                    severity = profileCanPreserveDv ? "info" : "warning",
+                    message = profileCanPreserveDv
+                        ? $"Source has Dolby Vision (profile {media.DolbyVision.Profile}) — "
+                            + "will be preserved through the encode."
+                        : $"Source has Dolby Vision (profile {media.DolbyVision.Profile}) but "
+                            + "the profile can't preserve it (needs HEVC 10-bit in HLS/MP4/MKV "
+                            + "without tonemap). The RPU metadata will be stripped.",
+                }
+            );
+        }
+
+        // HDR without Dolby Vision — still needs 10-bit output + HDR-capable
+        // container to preserve. Flag if the profile is SDR-only.
+        if (media.IsHdr && media.DolbyVision is null)
+        {
+            bool profilePreservesHdr = profile.VideoOutputs.Any(v =>
+                v.TenBit && !v.ConvertHdrToSdr
+            );
+            if (!profilePreservesHdr)
+            {
+                warnings.Add(
+                    new
+                    {
+                        field = "source.hdr",
+                        severity = "info",
+                        message = "Source is HDR10/HLG. Profile targets SDR output — tonemapping "
+                            + "will convert to SDR (set ConvertHdrToSdr=true to control the "
+                            + "algorithm, otherwise you may get incorrect colors).",
+                    }
+                );
+            }
+        }
+
+        // Upscale guard: profile target resolution > source resolution.
+        // ResolveDimensions clamps so the encoder NEVER upscales, but the
+        // user's output will be smaller than they expected. Warn.
+        if (media.VideoStreams.Count > 0)
+        {
+            NoMercy.Encoder.Analysis.VideoStreamInfo src = media.VideoStreams[0];
+            foreach (VideoOutput v in profile.VideoOutputs)
+            {
+                int targetH = v.Height ?? v.Width * 9 / 16;
+                if (v.Width > src.Width || targetH > src.Height)
+                {
+                    warnings.Add(
+                        new
+                        {
+                            field = "profile.resolution",
+                            severity = "info",
+                            message = $"Source is {src.Width}x{src.Height} but profile targets "
+                                + $"{v.Width}x{targetH}. Output will be clamped to source "
+                                + "resolution — upscaling is intentionally disabled.",
+                        }
+                    );
+                    break; // One warning covers the general issue.
+                }
+            }
+        }
+
+        return warnings;
     }
 
     private static string DescribeVideoAction(
