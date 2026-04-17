@@ -7,6 +7,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.ContentAnalysis;
+using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Helpers.Extensions;
 
@@ -26,6 +27,8 @@ public class ContentAnalysisController(
     ICropDetector cropDetector,
     ISubtitleOcrEngine? ocrEngine,
     IWhisperTranscriber? whisperTranscriber,
+    IAudioFingerprinter fingerprinter,
+    IIntroDetector introDetector,
     IDbContextFactory<MediaContext> contextFactory
 ) : BaseController
 {
@@ -202,5 +205,109 @@ public class ContentAnalysisController(
         {
             return InternalServerErrorResponse($"Transcription failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Runs the chromaprint intro / outro detector against every episode in
+    /// a season that has at least one VideoFile on disk and returns the
+    /// detected marker ranges. Useful for validating chromaprint quality on
+    /// a specific season before trusting the auto-detection subscriber's
+    /// output. Owner-only — fingerprinting every episode is minutes of
+    /// ffmpeg work per episode.
+    /// </summary>
+    [HttpPost("intro/{seasonId:int}")]
+    public async Task<IActionResult> DetectIntroForSeason(int seasonId, CancellationToken ct)
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("Only the server owner can probe intro detection");
+
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        List<Database.Models.TvShows.Episode> encoded = await context
+            .Episodes.AsNoTracking()
+            .Include(e => e.VideoFiles)
+            .Where(e => e.SeasonId == seasonId && e.VideoFiles.Count > 0)
+            .OrderBy(e => e.EpisodeNumber)
+            .ToListAsync(ct);
+
+        if (encoded.Count < 2)
+            return BadRequestResponse(
+                $"Need at least 2 encoded episodes, season has {encoded.Count}"
+            );
+
+        List<AudioFingerprint> intros = [];
+        List<AudioFingerprint> outros = [];
+
+        foreach (Database.Models.TvShows.Episode ep in encoded)
+        {
+            ct.ThrowIfCancellationRequested();
+            VideoFile? source = ep.VideoFiles.FirstOrDefault();
+            if (source is null)
+                continue;
+
+            string path = Path.Combine(source.HostFolder, source.Filename);
+            if (!System.IO.File.Exists(path))
+                continue;
+
+            try
+            {
+                AudioFingerprint introPrint = await fingerprinter.FingerprintAsync(
+                    path,
+                    new FingerprintWindow(TimeSpan.Zero, TimeSpan.FromMinutes(3)),
+                    ct
+                );
+                intros.Add(introPrint);
+
+                TimeSpan duration = TimeSpan.TryParse(source.Duration, out TimeSpan parsed)
+                    ? parsed
+                    : TimeSpan.Zero;
+                TimeSpan outroStart =
+                    duration > TimeSpan.FromMinutes(3)
+                        ? duration - TimeSpan.FromMinutes(3)
+                        : TimeSpan.Zero;
+
+                AudioFingerprint outroPrint = await fingerprinter.FingerprintAsync(
+                    path,
+                    new FingerprintWindow(outroStart, TimeSpan.FromMinutes(3)),
+                    ct
+                );
+                outros.Add(outroPrint);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerErrorResponse(
+                    $"Fingerprinting failed for episode {ep.Id}: {ex.Message}"
+                );
+            }
+        }
+
+        if (intros.Count < 2)
+            return BadRequestResponse("Not enough successful fingerprints to compare");
+
+        IntroMarker? introMarker = introDetector.DetectIntro(intros);
+        IntroMarker? outroMarker = introDetector.DetectOutro(outros);
+
+        return Ok(
+            new
+            {
+                season_id = seasonId,
+                episodes_scanned = intros.Count,
+                intro = introMarker is null
+                    ? null
+                    : new
+                    {
+                        start_seconds = introMarker.Start.TotalSeconds,
+                        end_seconds = introMarker.End.TotalSeconds,
+                        confidence = introMarker.Confidence,
+                    },
+                outro = outroMarker is null
+                    ? null
+                    : new
+                    {
+                        start_seconds = outroMarker.Start.TotalSeconds,
+                        end_seconds = outroMarker.End.TotalSeconds,
+                        confidence = outroMarker.Confidence,
+                    },
+            }
+        );
     }
 }
