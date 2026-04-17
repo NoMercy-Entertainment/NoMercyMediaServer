@@ -51,4 +51,43 @@ public class EncodingHistoryController(EncodingHistoryRepository historyReposito
             }
         );
     }
+
+    /// <summary>
+    /// Delete a single history row. Users clean up individual rows from
+    /// the dashboard; the encoded output on disk is untouched.
+    /// </summary>
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to delete encoding history");
+
+        if (!Ulid.TryParse(id, out Ulid entryId))
+            return BadRequestResponse("Invalid history id");
+
+        bool removed = await historyRepository.DeleteAsync(entryId);
+        return removed ? NoContent() : NotFoundResponse("History entry not found");
+    }
+
+    /// <summary>
+    /// Bulk purge. <c>older_than_days</c> drops every row older than N days;
+    /// omit it to clear the entire history. Owner-only because clearing the
+    /// full history is a coarse change.
+    /// </summary>
+    [HttpPost("purge")]
+    public async Task<IActionResult> Purge([FromBody] PurgeHistoryRequest request)
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("Only the server owner can bulk-purge encoding history");
+
+        int removed = request.OlderThanDays.HasValue
+            ? await historyRepository.DeleteOlderThanAsync(
+                DateTime.UtcNow.AddDays(-Math.Max(0, request.OlderThanDays.Value))
+            )
+            : await historyRepository.DeleteAllAsync();
+
+        return Ok(new { removed });
+    }
 }
+
+public record PurgeHistoryRequest(int? OlderThanDays = null);

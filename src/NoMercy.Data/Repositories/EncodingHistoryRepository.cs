@@ -35,4 +35,28 @@ public class EncodingHistoryRepository(MediaContext context)
 
     public Task<EncodingHistory?> GetByIdAsync(Ulid id) =>
         context.EncodingHistory.AsNoTracking().FirstOrDefaultAsync(h => h.Id == id);
+
+    public async Task<bool> DeleteAsync(Ulid id)
+    {
+        EncodingHistory? existing = await context.EncodingHistory.FirstOrDefaultAsync(h =>
+            h.Id == id
+        );
+        if (existing is null)
+            return false;
+
+        context.EncodingHistory.Remove(existing);
+        await context.SaveChangesAsync();
+        return true;
+    }
+
+    /// <summary>
+    /// Bulk purge every row strictly older than <paramref name="olderThan"/>.
+    /// Users clean up the dashboard view; the orchestrator keeps writing
+    /// fresh rows. Returns the removed-row count so the API response can
+    /// surface it.
+    /// </summary>
+    public Task<int> DeleteOlderThanAsync(DateTime olderThan) =>
+        context.EncodingHistory.Where(h => h.CreatedAt < olderThan).ExecuteDeleteAsync();
+
+    public Task<int> DeleteAllAsync() => context.EncodingHistory.ExecuteDeleteAsync();
 }

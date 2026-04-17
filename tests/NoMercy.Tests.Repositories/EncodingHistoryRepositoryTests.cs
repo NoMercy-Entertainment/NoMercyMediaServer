@@ -100,6 +100,51 @@ public class EncodingHistoryRepositoryTests : IDisposable
         Assert.Null(loaded);
     }
 
+    [Fact]
+    public async Task DeleteAsync_ExistingRow_Removes()
+    {
+        EncodingHistory entry = Build();
+        await _repository.AddAsync(entry);
+
+        bool removed = await _repository.DeleteAsync(entry.Id);
+
+        Assert.True(removed);
+        Assert.Null(await _repository.GetByIdAsync(entry.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UnknownId_ReturnsFalse()
+    {
+        bool removed = await _repository.DeleteAsync(Ulid.NewUlid());
+
+        Assert.False(removed);
+    }
+
+    [Fact]
+    public async Task DeleteOlderThanAsync_RemovesOnlyOlderEntries()
+    {
+        await _repository.AddAsync(Build(createdAt: DateTime.UtcNow.AddDays(-60)));
+        await _repository.AddAsync(Build(createdAt: DateTime.UtcNow.AddDays(-30)));
+        await _repository.AddAsync(Build(createdAt: DateTime.UtcNow.AddDays(-5)));
+
+        int removed = await _repository.DeleteOlderThanAsync(DateTime.UtcNow.AddDays(-15));
+
+        Assert.Equal(2, removed);
+        Assert.Equal(1, await _repository.GetTotalCountAsync());
+    }
+
+    [Fact]
+    public async Task DeleteAllAsync_RemovesEverything()
+    {
+        await _repository.AddAsync(Build());
+        await _repository.AddAsync(Build());
+
+        int removed = await _repository.DeleteAllAsync();
+
+        Assert.Equal(2, removed);
+        Assert.Equal(0, await _repository.GetTotalCountAsync());
+    }
+
     public void Dispose()
     {
         _context.Dispose();
