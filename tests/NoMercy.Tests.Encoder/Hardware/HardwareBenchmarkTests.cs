@@ -119,6 +119,21 @@ public class HardwareBenchmarkTests
         args[idx + 1].Should().Be("pipe:1");
     }
 
+    [Fact]
+    public void BuildCalibrationArguments_CapsEncodedFrames()
+    {
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(MakeSoftwareH264(), 1920, 1080);
+
+        int framesIdx = Array.IndexOf(args, "-frames:v");
+        framesIdx
+            .Should()
+            .BeGreaterThan(-1, "slow encoders need a frame cap to avoid minute-long probes");
+
+        int frameCount = int.Parse(args[framesIdx + 1]);
+        frameCount.Should().BeGreaterThan(0);
+        frameCount.Should().BeLessThanOrEqualTo(60);
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // SelectCandidates
     // ──────────────────────────────────────────────────────────────────────────

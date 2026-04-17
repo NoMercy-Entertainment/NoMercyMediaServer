@@ -33,8 +33,15 @@ public class HardwareBenchmark(
         (854, 480),
     ];
 
-    private const double CalibrationDurationSeconds = 5.0;
+    private const double CalibrationDurationSeconds = 1.0;
     private const double SourceFrameRate = 30.0;
+
+    // Cap output to this many frames regardless of source length. Fast
+    // encoders finish in milliseconds; slow ones (libaom-av1, librav1e)
+    // can crawl at 0.3 fps — running a full 5-second source there eats
+    // 8+ minutes per tier. 30 frames is enough to get a stable fps
+    // reading while keeping the worst-case benchmark tractable.
+    private const int MaxCalibrationFrames = 30;
 
     // Recalibrate once a month by default. Hardware / driver updates can
     // change real throughput noticeably.
@@ -223,6 +230,12 @@ public class HardwareBenchmark(
             args.Add("-preset");
             args.Add(preset);
         }
+
+        // Hard cap on encoded frames — ffmpeg stops as soon as the output
+        // reaches this count, regardless of how much source remains. Keeps
+        // slow encoders from holding the benchmark thread hostage.
+        args.Add("-frames:v");
+        args.Add(MaxCalibrationFrames.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
         args.Add("-f");
         args.Add("null");
