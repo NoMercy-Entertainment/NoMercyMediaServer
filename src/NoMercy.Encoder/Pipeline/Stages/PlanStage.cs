@@ -219,6 +219,25 @@ public class PlanStage(
                                 extraFlags["-color_range"] = "tv";
                             }
 
+                            // 10-bit downgrade guard: some hardware encoders (h264_nvenc,
+                            // h264_amf, h264_qsv, h264_vaapi, h264_videotoolbox,
+                            // hevc_videotoolbox) don't support 10-bit. If the profile asked
+                            // for 10-bit but the resolved encoder can't deliver, silently
+                            // downgrade to 8-bit — otherwise PlanStage would emit an empty
+                            // pixel format string and ffmpeg picks something random (or
+                            // fails). Log at Warning so the user understands why the
+                            // output isn't 10-bit.
+                            bool outputTenBit = v.TenBit && encoder.Supports10Bit;
+                            if (v.TenBit && !encoder.Supports10Bit)
+                            {
+                                logger.LogWarning(
+                                    "Profile requests 10-bit video_{Index} but encoder {Encoder} "
+                                        + "does not support 10-bit. Downgrading to 8-bit output.",
+                                    i,
+                                    encoder.FfmpegName
+                                );
+                            }
+
                             return new VideoOutputPlan(
                                 Width: outputWidth,
                                 Height: outputHeight,
@@ -228,8 +247,8 @@ public class PlanStage(
                                 Preset: EncoderArgumentResolver.ResolvePreset(v.Preset, encoder),
                                 Profile: EncoderArgumentResolver.ResolveProfile(v.Profile, encoder),
                                 Level: v.Level,
-                                TenBit: v.TenBit,
-                                PixelFormat: v.TenBit ? encoder.PixelFormat10Bit : "yuv420p",
+                                TenBit: outputTenBit,
+                                PixelFormat: outputTenBit ? encoder.PixelFormat10Bit : "yuv420p",
                                 MapLabel: $"[v{i}]",
                                 ExtraFlags: extraFlags,
                                 FrameRate: media.VideoStreams[0].FrameRate,

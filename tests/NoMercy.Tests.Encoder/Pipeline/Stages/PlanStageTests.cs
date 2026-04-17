@@ -230,6 +230,142 @@ public class PlanStageTests
     // Multi-output profile → multiple video output plans
     // ------------------------------------------------------------------
 
+    // ------------------------------------------------------------------
+    // 10-bit downgrade guard — encoders that don't support 10-bit must
+    // fall back to 8-bit instead of emitting an empty pixel format.
+    // Regression: previously "v.TenBit ? encoder.PixelFormat10Bit : yuv420p"
+    // would emit "" when PixelFormat10Bit was empty, and ffmpeg would
+    // either pick the source format or fail with "Invalid pixel format".
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task TenBitRequested_EncoderLacks10Bit_DowngradedTo8Bit()
+    {
+        // Default resolver returns libx264 with Supports10Bit=false + empty PixelFormat10Bit.
+        MediaInfo media = BuildMediaInfo();
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "TenBitDowngrade",
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                new VideoOutput(
+                    Codec: VideoCodecType.H264,
+                    Width: 1920,
+                    Height: 1080,
+                    BitrateKbps: 4000,
+                    Crf: 23,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.1",
+                    ConvertHdrToSdr: false,
+                    KeyframeIntervalSeconds: 2,
+                    TenBit: true
+                ),
+            ],
+            AudioOutputs:
+            [
+                new AudioOutput(
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["en"]
+                ),
+            ],
+            SubtitleOutputs: []
+        );
+
+        StageResult result = await _stage.ExecuteAsync(
+            new ValidateInput(media, profile),
+            _context,
+            default
+        );
+
+        ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
+        plan.OutputPlan.VideoOutputs[0].TenBit.Should().BeFalse("encoder doesn't support 10-bit");
+        plan.OutputPlan.VideoOutputs[0].PixelFormat.Should().Be("yuv420p");
+    }
+
+    [Fact]
+    public async Task TenBitRequested_EncoderSupports10Bit_KeepsTenBit()
+    {
+        // Override resolver to return an encoder that DOES support 10-bit.
+        _codecResolver
+            .Setup(r =>
+                r.Resolve(
+                    It.IsAny<VideoCodecType>(),
+                    It.IsAny<IHardwareCapabilities>(),
+                    It.IsAny<EncoderPreference>()
+                )
+            )
+            .Returns(
+                new ResolvedCodec(
+                    FfmpegEncoderName: "libx265",
+                    EncoderInfo: new EncoderInfo(
+                        FfmpegName: "libx265",
+                        RequiredVendor: null,
+                        Presets: ["slow", "medium", "fast"],
+                        Profiles: ["main", "main10"],
+                        Levels: ["4.1"],
+                        QualityRange: new QualityRange(0, 51, 28),
+                        SupportedRateControl: [RateControlMode.Crf],
+                        Supports10Bit: true,
+                        SupportsHdr: true,
+                        MaxConcurrentSessions: int.MaxValue,
+                        PixelFormat10Bit: "yuv420p10le",
+                        VendorSpecificFlags: new Dictionary<string, string>()
+                    ),
+                    Device: null,
+                    DefaultRateControl: RateControlMode.Crf
+                )
+            );
+
+        MediaInfo media = BuildMediaInfo();
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "TenBit",
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                new VideoOutput(
+                    Codec: VideoCodecType.H265,
+                    Width: 1920,
+                    Height: 1080,
+                    BitrateKbps: 4000,
+                    Crf: 28,
+                    Preset: "medium",
+                    Profile: "main10",
+                    Level: "4.1",
+                    ConvertHdrToSdr: false,
+                    KeyframeIntervalSeconds: 2,
+                    TenBit: true
+                ),
+            ],
+            AudioOutputs:
+            [
+                new AudioOutput(
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["en"]
+                ),
+            ],
+            SubtitleOutputs: []
+        );
+
+        StageResult result = await _stage.ExecuteAsync(
+            new ValidateInput(media, profile),
+            _context,
+            default
+        );
+
+        ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
+        plan.OutputPlan.VideoOutputs[0].TenBit.Should().BeTrue();
+        plan.OutputPlan.VideoOutputs[0].PixelFormat.Should().Be("yuv420p10le");
+    }
+
     [Fact]
     public async Task MultiOutputProfile_ProducesMultipleVideoOutputPlans()
     {

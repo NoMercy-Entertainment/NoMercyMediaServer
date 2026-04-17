@@ -115,6 +115,38 @@ public class EncoderArgumentResolverTests
         flags.Should().BeEmpty();
     }
 
+    [Fact]
+    public void ResolveQuality_PreservesPreExistingVendorFlags()
+    {
+        // PlanStage seeds extraFlags with encoder.VendorSpecificFlags BEFORE calling
+        // ResolveQuality. The resolver must add to the dict, not replace it —
+        // otherwise HEVC videotoolbox loses its required -tag:v hvc1 and Apple
+        // clients stop decoding, and AMF loses -usage transcoding and switches
+        // to the wrong ratecontrol profile.
+        ResolvedCodec amf = ResolveH264("h264_amf", GpuVendor.Amd, RateControlMode.Cqp);
+        Dictionary<string, string> flags = new(amf.EncoderInfo.VendorSpecificFlags);
+        flags["-usage"].Should().Be("transcoding");
+
+        EncoderArgumentResolver.ResolveQuality(25, amf, flags);
+
+        flags["-usage"].Should().Be("transcoding", "vendor flags must survive ResolveQuality");
+        flags["-rc"].Should().Be("cqp");
+        flags["-qp"].Should().Be("25");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // HEVC-specific — videotoolbox -tag:v hvc1 is mandatory for Apple playback
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void HevcVideoToolbox_HasMandatoryHvc1Tag()
+    {
+        EncoderInfo vt = GetEncoder(VideoCodecType.H265, "hevc_videotoolbox");
+        vt.VendorSpecificFlags.Should()
+            .ContainKey("-tag:v", "HEVC in MP4 without hvc1 tag plays as video/octet on Apple");
+        vt.VendorSpecificFlags["-tag:v"].Should().Be("hvc1");
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // ResolvePreset — per encoder family
     // ──────────────────────────────────────────────────────────────────────────
@@ -208,14 +240,17 @@ public class EncoderArgumentResolverTests
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────
 
-    private static EncoderInfo GetH264Encoder(string ffmpegName)
+    private static EncoderInfo GetH264Encoder(string ffmpegName) =>
+        GetEncoder(VideoCodecType.H264, ffmpegName);
+
+    private static EncoderInfo GetEncoder(VideoCodecType codec, string ffmpegName)
     {
-        foreach ((VideoCodecType _, EncoderInfo encoder) in Registry.EnumerateVideoEncoders())
+        foreach ((VideoCodecType c, EncoderInfo encoder) in Registry.EnumerateVideoEncoders())
         {
-            if (encoder.FfmpegName == ffmpegName)
+            if (c == codec && encoder.FfmpegName == ffmpegName)
                 return encoder;
         }
-        throw new InvalidOperationException($"Encoder {ffmpegName} not registered");
+        throw new InvalidOperationException($"Encoder {ffmpegName} not registered for {codec}");
     }
 
     private static ResolvedCodec ResolveH264(
