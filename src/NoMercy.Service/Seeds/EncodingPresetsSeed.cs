@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -23,7 +25,9 @@ public static class EncodingPresetsSeed
 
         try
         {
-            EncodingPreset[] presets = BuildBuiltInPresets();
+            EncodingPreset[] builtIns = BuildBuiltInPresets();
+            EncodingPreset[] userPresets = LoadUserPresetsFromFile();
+            EncodingPreset[] presets = [.. builtIns, .. userPresets];
 
             await context
                 .EncodingPresets.UpsertRange(presets)
@@ -51,6 +55,59 @@ public static class EncodingPresetsSeed
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
     }
+
+    /// <summary>
+    /// Loads user-authored presets from the config-directory seed file when
+    /// it exists. Swallowed on any parse error — a bad seed file must never
+    /// block server startup, it just logs a warning and moves on. Presets
+    /// loaded here are treated as normal user presets (IsBuiltIn = false).
+    /// </summary>
+    private static EncodingPreset[] LoadUserPresetsFromFile()
+    {
+        string path = AppFiles.EncodingPresetsSeedFile;
+        if (!File.Exists(path))
+            return [];
+
+        try
+        {
+            string json = File.ReadAllText(path);
+            PresetSeedEntry[]? entries = JsonConvert.DeserializeObject<PresetSeedEntry[]>(json);
+            if (entries is null || entries.Length == 0)
+                return [];
+
+            return entries
+                .Where(e => !string.IsNullOrWhiteSpace(e.Name))
+                .Where(e => !string.IsNullOrWhiteSpace(e.ProfileJson))
+                .Select(e => new EncodingPreset
+                {
+                    Id = e.Id ?? Ulid.NewUlid(),
+                    Name = e.Name!,
+                    Description = e.Description,
+                    Author = e.Author,
+                    Tags = e.Tags,
+                    ProfileJson = e.ProfileJson!,
+                    IsBuiltIn = false,
+                })
+                .ToArray();
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup(
+                $"Could not load encoding presets from {path}: {ex.Message}",
+                LogEventLevel.Warning
+            );
+            return [];
+        }
+    }
+
+    private sealed record PresetSeedEntry(
+        string? Name,
+        string? ProfileJson,
+        Ulid? Id = null,
+        string? Description = null,
+        string? Author = null,
+        string? Tags = null
+    );
 
     private static EncodingPreset[] BuildBuiltInPresets()
     {

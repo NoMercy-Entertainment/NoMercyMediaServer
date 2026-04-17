@@ -38,6 +38,8 @@ public static class AppFiles
     public static string LibrariesSeedFile => Path.Combine(SeedsPath, "libraries.jsonc");
     public static string EncoderProfilesSeedFile =>
         Path.Combine(SeedsPath, "encoderProfiles.jsonc");
+    public static string EncodingPresetsSeedFile =>
+        Path.Combine(SeedsPath, "encodingPresets.jsonc");
 
     // ── Data & Logs ──────────────────────────────────────────────────────
 
