@@ -25,6 +25,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 public class ContentAnalysisController(
     ICropDetector cropDetector,
     ISubtitleOcrEngine? ocrEngine,
+    IWhisperTranscriber? whisperTranscriber,
     IDbContextFactory<MediaContext> contextFactory
 ) : BaseController
 {
@@ -131,6 +132,75 @@ public class ContentAnalysisController(
         catch (Exception ex)
         {
             return InternalServerErrorResponse($"OCR failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Runs whisper.cpp against the first audio stream of a VideoFile and
+    /// writes the resulting WebVTT next to the source. Heavy — whisper is
+    /// multi-minute work even on decent hardware — so owner-only and
+    /// intended for dashboard spot-checks of transcription quality, not
+    /// library-wide jobs (the encode pipeline handles those).
+    /// </summary>
+    [HttpPost("transcribe/{videoFileId}")]
+    public async Task<IActionResult> Transcribe(
+        string videoFileId,
+        [FromQuery] string language,
+        [FromQuery] bool translateToEnglish = false,
+        CancellationToken ct = default
+    )
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("Only the server owner can probe transcription");
+
+        if (whisperTranscriber is null)
+            return NotImplementedResponse("Whisper transcriber is not registered on this build");
+
+        if (!Ulid.TryParse(videoFileId, out Ulid fileId))
+            return BadRequestResponse("Invalid video file id");
+
+        if (string.IsNullOrWhiteSpace(language))
+            return BadRequestResponse("language query parameter is required");
+
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(v => v.Id == fileId, ct);
+
+        if (file is null)
+            return NotFoundResponse("Video file not found");
+
+        string path = Path.Combine(file.HostFolder, file.Filename);
+        if (!System.IO.File.Exists(path))
+            return NotFoundResponse($"Source file missing on disk: {path}");
+
+        WhisperOptions options = new(
+            ModelPath: string.Empty, // Transcriber reads from EncoderOptions.WhisperModelPath.
+            ModelSize: WhisperModelSize.LargeV3,
+            TranslateToEnglish: translateToEnglish
+        );
+
+        try
+        {
+            SubtitleTrack track = await whisperTranscriber.TranscribeAsync(
+                path,
+                audioStreamIndex: 0,
+                language: language,
+                options: options,
+                progress: null,
+                ct: ct
+            );
+            return Ok(
+                new
+                {
+                    language,
+                    translate_to_english = translateToEnglish,
+                    file_path = track.FilePath,
+                    cue_count = track.CueCount,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Transcription failed: {ex.Message}");
         }
     }
 }
