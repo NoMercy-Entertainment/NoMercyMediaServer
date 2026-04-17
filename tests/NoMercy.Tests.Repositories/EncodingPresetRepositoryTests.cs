@@ -137,15 +137,67 @@ public class EncodingPresetRepositoryTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    [Fact]
+    public async Task ListAsync_TagFilter_ReturnsOnlyMatches()
+    {
+        await _repository.CreateAsync(Build(name: "Anime 1080p", tags: "anime,1080p,h264"));
+        await _repository.CreateAsync(Build(name: "Archive", tags: "archival,h265"));
+        await _repository.CreateAsync(Build(name: "Web", tags: "web,720p"));
+
+        List<EncodingPreset> animeMatches = await _repository.ListAsync(tagFilter: "anime");
+        List<EncodingPreset> hevcMatches = await _repository.ListAsync(tagFilter: "h265");
+
+        Assert.Single(animeMatches);
+        Assert.Equal("Anime 1080p", animeMatches[0].Name);
+        Assert.Single(hevcMatches);
+        Assert.Equal("Archive", hevcMatches[0].Name);
+    }
+
+    [Fact]
+    public async Task ListAsync_TagFilter_IsCaseInsensitive()
+    {
+        await _repository.CreateAsync(Build(name: "a", tags: "Anime,Drama"));
+
+        List<EncodingPreset> lower = await _repository.ListAsync(tagFilter: "anime");
+        List<EncodingPreset> upper = await _repository.ListAsync(tagFilter: "ANIME");
+
+        Assert.Single(lower);
+        Assert.Single(upper);
+    }
+
+    [Fact]
+    public async Task ListAsync_TagFilter_UnknownTagReturnsEmpty()
+    {
+        await _repository.CreateAsync(Build(tags: "anime"));
+
+        List<EncodingPreset> matches = await _repository.ListAsync(tagFilter: "nonexistent");
+
+        Assert.Empty(matches);
+    }
+
+    [Fact]
+    public async Task GetAllTagsAsync_ReturnsDistinctSortedTags()
+    {
+        await _repository.CreateAsync(Build(name: "a", tags: "anime,1080p"));
+        await _repository.CreateAsync(Build(name: "b", tags: "anime,archival"));
+        await _repository.CreateAsync(Build(name: "c", tags: null));
+
+        IReadOnlyList<string> tags = await _repository.GetAllTagsAsync();
+
+        Assert.Equal(["1080p", "anime", "archival"], tags);
+    }
+
     private static EncodingPreset Build(
         string name = "Sample",
         string? description = null,
+        string? tags = null,
         bool isBuiltIn = false
     ) =>
         new()
         {
             Name = name,
             Description = description,
+            Tags = tags,
             ProfileJson =
                 "{\"Name\":\"sample\",\"Format\":\"Hls\",\"VideoOutputs\":[],\"AudioOutputs\":[],\"SubtitleOutputs\":[]}",
             IsBuiltIn = isBuiltIn,
