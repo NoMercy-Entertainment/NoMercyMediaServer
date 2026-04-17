@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.ContentAnalysis;
+using NoMercy.Encoder.Subtitles;
 using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -22,6 +24,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [Route("api/v{version:apiVersion}/dashboard/content-analysis")]
 public class ContentAnalysisController(
     ICropDetector cropDetector,
+    ISubtitleOcrEngine? ocrEngine,
     IDbContextFactory<MediaContext> contextFactory
 ) : BaseController
 {
@@ -67,6 +70,67 @@ public class ContentAnalysisController(
         catch (Exception ex)
         {
             return InternalServerErrorResponse($"Crop detection failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Runs subtitle OCR on a single bitmap subtitle stream (PGS / VobSub /
+    /// DVB) inside the requested VideoFile and returns the resulting
+    /// WebVTT track. Useful for spot-checking OCR quality before enabling
+    /// it on a library-wide re-encode.
+    /// </summary>
+    [HttpPost("ocr/{videoFileId}")]
+    public async Task<IActionResult> OcrBitmapSubtitle(
+        string videoFileId,
+        [FromQuery] int streamIndex,
+        [FromQuery] string language,
+        CancellationToken ct
+    )
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("Only the server owner can probe OCR");
+
+        if (ocrEngine is null)
+            return NotImplementedResponse("Subtitle OCR engine is not registered on this build");
+
+        if (!Ulid.TryParse(videoFileId, out Ulid fileId))
+            return BadRequestResponse("Invalid video file id");
+
+        if (string.IsNullOrWhiteSpace(language))
+            return BadRequestResponse("language query parameter is required");
+
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(v => v.Id == fileId, ct);
+
+        if (file is null)
+            return NotFoundResponse("Video file not found");
+
+        string path = Path.Combine(file.HostFolder, file.Filename);
+        if (!System.IO.File.Exists(path))
+            return NotFoundResponse($"Source file missing on disk: {path}");
+
+        try
+        {
+            SubtitleTrack track = await ocrEngine.OcrAsync(
+                path,
+                streamIndex,
+                language,
+                SubtitleCodecType.WebVtt,
+                ct
+            );
+            return Ok(
+                new
+                {
+                    language,
+                    stream_index = streamIndex,
+                    cue_count = track.CueCount,
+                    file_path = track.FilePath,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"OCR failed: {ex.Message}");
         }
     }
 }
