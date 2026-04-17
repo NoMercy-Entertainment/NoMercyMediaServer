@@ -3,9 +3,9 @@ namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
-using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
@@ -14,23 +14,88 @@ using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Profiles;
 
-public class PlanStageAudioFilterTests
+public class PlanStageCropTests
 {
-    private readonly Mock<ICodecResolver> _codecResolver = new();
-    private readonly Mock<IHardwareCapabilities> _hardware = new();
-    private readonly PlanStage _stage;
-
-    public PlanStageAudioFilterTests()
+    [Fact]
+    public async Task AutoDetectCropOff_DetectorNotInvoked()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
-        _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+        Mock<ICropDetector> detector = new();
+        PlanStage stage = BuildStage(detector.Object);
 
-        _codecResolver
+        EncodingProfile profile = BuildProfile(autoDetectCrop: false);
+        OutputPlan plan = await RunPlan(stage, profile);
+
+        detector.Verify(
+            d => d.DetectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never
+        );
+        plan.VideoOutputs[0].CropFilter.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AutoDetectCropOn_ShouldCrop_PopulatesCropFilterOnAllOutputs()
+    {
+        Mock<ICropDetector> detector = new();
+        detector
+            .Setup(d => d.DetectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
+
+        PlanStage stage = BuildStage(detector.Object);
+        EncodingProfile profile = BuildProfile(autoDetectCrop: true);
+
+        OutputPlan plan = await RunPlan(stage, profile);
+
+        plan.VideoOutputs.Should().HaveCountGreaterThan(0);
+        plan.VideoOutputs[0].CropFilter.Should().Be("1920:800:0:140");
+        detector.Verify(
+            d => d.DetectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task AutoDetectCropOn_NoCropNeeded_CropFilterNull()
+    {
+        Mock<ICropDetector> detector = new();
+        detector
+            .Setup(d => d.DetectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CropResult(0, 0, 0, 0, ShouldCrop: false));
+
+        PlanStage stage = BuildStage(detector.Object);
+        EncodingProfile profile = BuildProfile(autoDetectCrop: true);
+
+        OutputPlan plan = await RunPlan(stage, profile);
+
+        plan.VideoOutputs[0].CropFilter.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AutoDetectCropOn_DetectorThrows_ContinuesWithoutCrop()
+    {
+        Mock<ICropDetector> detector = new();
+        detector
+            .Setup(d => d.DetectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        PlanStage stage = BuildStage(detector.Object);
+        EncodingProfile profile = BuildProfile(autoDetectCrop: true);
+
+        OutputPlan plan = await RunPlan(stage, profile);
+
+        plan.VideoOutputs[0].CropFilter.Should().BeNull();
+    }
+
+    private static PlanStage BuildStage(ICropDetector cropDetector)
+    {
+        Mock<IHardwareCapabilities> hardware = new();
+        hardware.Setup(h => h.HasGpu).Returns(false);
+        hardware.Setup(h => h.CpuCores).Returns(8);
+        hardware.Setup(h => h.Gpus).Returns([]);
+        hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
+
+        Mock<ICodecResolver> codecResolver = new();
+        codecResolver
             .Setup(r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
@@ -60,67 +125,25 @@ public class PlanStageAudioFilterTests
                 )
             );
 
-        _stage = new PlanStage(
+        return new PlanStage(
             new ExecutionGraphBuilder(),
             new GroupingStrategy(),
             new CostEstimator(),
-            _codecResolver.Object,
-            _hardware.Object,
+            codecResolver.Object,
+            hardware.Object,
             new TonemapSelector(),
             new Mock<IFfmpegCapabilities>().Object,
             new AbrLadderGenerator(),
-            new NoOpCropDetector(),
+            cropDetector,
             NullLogger<PlanStage>.Instance
         );
     }
 
-    [Fact]
-    public async Task LoudnessNone_NoAudioFilter()
-    {
-        EncodingProfile profile = BuildProfile(LoudnessMode.None);
-        OutputPlan plan = await RunPlan(profile);
-
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        Assert.Null(audio.AudioFilter);
-    }
-
-    [Fact]
-    public async Task LoudnessEbuR128_EmitsLoudnormWithR128Targets()
-    {
-        EncodingProfile profile = BuildProfile(LoudnessMode.EbuR128);
-        OutputPlan plan = await RunPlan(profile);
-
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        Assert.Equal("loudnorm=I=-16:TP=-1.5:LRA=11", audio.AudioFilter);
-    }
-
-    [Fact]
-    public async Task LoudnessReplayGain_EmitsLoudnormWithRgTargets()
-    {
-        EncodingProfile profile = BuildProfile(LoudnessMode.ReplayGain);
-        OutputPlan plan = await RunPlan(profile);
-
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        Assert.Equal("loudnorm=I=-18:TP=-1.5:LRA=11", audio.AudioFilter);
-    }
-
-    [Fact]
-    public async Task LoudnessCustom_NoAutoFilter()
-    {
-        // Custom mode means the profile's CustomArguments carry the filter — the mapper
-        // does not emit one automatically.
-        EncodingProfile profile = BuildProfile(LoudnessMode.Custom);
-        OutputPlan plan = await RunPlan(profile);
-
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        Assert.Null(audio.AudioFilter);
-    }
-
-    private async Task<OutputPlan> RunPlan(EncodingProfile profile)
+    private static async Task<OutputPlan> RunPlan(PlanStage stage, EncodingProfile profile)
     {
         ValidateInput input = new(BuildMedia(), profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input, context, CancellationToken.None);
 
         StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
         return success.Value.OutputPlan;
@@ -150,27 +173,15 @@ public class PlanStageAudioFilterTests
                     BitRateKbps: 6000
                 ),
             ],
-            AudioStreams:
-            [
-                new AudioStreamInfo(
-                    Index: 1,
-                    Codec: "ac3",
-                    Channels: 6,
-                    SampleRate: 48000,
-                    BitRateKbps: 640,
-                    Language: "en",
-                    IsDefault: true,
-                    IsForced: false
-                ),
-            ],
+            AudioStreams: [],
             SubtitleStreams: [],
             Chapters: []
         );
 
-    private static EncodingProfile BuildProfile(LoudnessMode loudness) =>
+    private static EncodingProfile BuildProfile(bool autoDetectCrop) =>
         new(
             Id: Ulid.NewUlid(),
-            Name: "Audio Filter Test",
+            Name: "Crop Test",
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
@@ -188,17 +199,8 @@ public class PlanStageAudioFilterTests
                     TenBit: false
                 ),
             ],
-            AudioOutputs:
-            [
-                new AudioOutput(
-                    Codec: AudioCodecType.Aac,
-                    BitrateKbps: 192,
-                    Channels: 2,
-                    SampleRateHz: 48000,
-                    AllowedLanguages: [],
-                    Loudness: loudness
-                ),
-            ],
-            SubtitleOutputs: []
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            AutoDetectCrop: autoDetectCrop
         );
 }

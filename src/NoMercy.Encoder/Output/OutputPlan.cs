@@ -35,7 +35,8 @@ public record VideoOutputPlan(
     string SegmentNameTemplate = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
     string PlaylistNameTemplate = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
     bool ConvertHdrToSdr = false,
-    string? TonemapFilterChain = null
+    string? TonemapFilterChain = null,
+    string? CropFilter = null
 );
 
 public record AudioOutputPlan(

@@ -69,6 +69,7 @@ public class PlanStageHdrPassthroughTests
             new TonemapSelector(),
             _ffmpegCapabilities.Object,
             new AbrLadderGenerator(),
+            new NoOpCropDetector(),
             NullLogger<PlanStage>.Instance
         );
     }

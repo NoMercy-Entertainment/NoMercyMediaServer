@@ -53,6 +53,7 @@ public class PlanStageTests
             new TonemapSelector(),
             new Mock<IFfmpegCapabilities>().Object,
             new AbrLadderGenerator(),
+            new NoOpCropDetector(),
             NullLogger<PlanStage>.Instance
         );
     }

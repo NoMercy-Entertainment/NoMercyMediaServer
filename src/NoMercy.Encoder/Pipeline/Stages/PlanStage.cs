@@ -28,12 +28,13 @@ public class PlanStage(
     ITonemapSelector tonemapSelector,
     IFfmpegCapabilities ffmpegCapabilities,
     IAbrLadderGenerator abrLadderGenerator,
+    ContentAnalysis.ICropDetector cropDetector,
     ILogger<PlanStage> logger
 ) : IPipelineStage<ValidateInput, ExecutionPlan>
 {
     public string Name => "Plan";
 
-    public Task<StageResult> ExecuteAsync(
+    public async Task<StageResult> ExecuteAsync(
         ValidateInput input,
         EncodingContext context,
         CancellationToken ct
@@ -44,6 +45,12 @@ public class PlanStage(
         try
         {
             EncodingProfile profile = ExpandAutoLadder(input.Profile, input.Media);
+            string? cropFilter = await ResolveCropFilterAsync(
+                profile,
+                input.Media,
+                context.CorrelationId,
+                ct
+            );
 
             // Resolve codecs with hardware session awareness — once we've filled
             // all GPU sessions, overflow outputs fall back to software encoding.
@@ -77,7 +84,12 @@ public class PlanStage(
 
             TimeSpan totalEstimate = costEstimator.EstimateTotal(groups, input.Media.Duration);
 
-            OutputPlan outputPlan = BuildOutputPlan(profile, input.Media, resolvedCodecs);
+            OutputPlan outputPlan = BuildOutputPlan(
+                profile,
+                input.Media,
+                resolvedCodecs,
+                cropFilter
+            );
 
             logger.LogInformation(
                 "[{CorrelationId}] Plan: {Groups} groups, estimated {Duration}",
@@ -87,28 +99,78 @@ public class PlanStage(
             );
 
             ExecutionPlan plan = new(groups.ToArray(), totalEstimate, outputPlan);
-            return Task.FromResult<StageResult>(new StageSuccess<ExecutionPlan>(plan));
+            return new StageSuccess<ExecutionPlan>(plan);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Task.FromResult<StageResult>(
-                new StageFailure(
-                    new EncodingError(
-                        EncodingErrorKind.Unknown,
-                        $"Planning failed: {ex.Message}",
-                        null,
-                        Name,
-                        false
-                    )
+            return new StageFailure(
+                new EncodingError(
+                    EncodingErrorKind.Unknown,
+                    $"Planning failed: {ex.Message}",
+                    null,
+                    Name,
+                    false
                 )
             );
+        }
+    }
+
+    /// <summary>
+    /// When the profile opts into <see cref="EncodingProfile.AutoDetectCrop"/>
+    /// and the source has a video stream, run the crop detector and return
+    /// a <c>W:H:X:Y</c> string suitable for the <c>crop=</c> filter. Returns
+    /// null when the profile disables auto-crop, the source has no video,
+    /// or detection concludes the frame is already letterbox-free.
+    /// </summary>
+    private async Task<string?> ResolveCropFilterAsync(
+        EncodingProfile profile,
+        MediaInfo media,
+        string correlationId,
+        CancellationToken ct
+    )
+    {
+        if (!profile.AutoDetectCrop || media.VideoStreams.Count == 0)
+            return null;
+
+        try
+        {
+            ContentAnalysis.CropResult crop = await cropDetector
+                .DetectAsync(media.FilePath, ct)
+                .ConfigureAwait(false);
+
+            if (!crop.ShouldCrop)
+                return null;
+
+            logger.LogInformation(
+                "[{CorrelationId}] Crop detected: {W}x{H}+{X}+{Y}",
+                correlationId,
+                crop.Width,
+                crop.Height,
+                crop.X,
+                crop.Y
+            );
+
+            return $"{crop.Width}:{crop.Height}:{crop.X}:{crop.Y}";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Best-effort: a crop detection failure shouldn't fail the encode.
+            // The log surfaces the issue so users can disable AutoDetectCrop if
+            // the source consistently trips the detector.
+            logger.LogWarning(
+                ex,
+                "[{CorrelationId}] Crop detection failed — continuing without crop",
+                correlationId
+            );
+            return null;
         }
     }
 
     private OutputPlan BuildOutputPlan(
         EncodingProfile profile,
         MediaInfo media,
-        ResolvedCodec[] resolvedCodecs
+        ResolvedCodec[] resolvedCodecs,
+        string? cropFilter
     )
     {
         // Resolve tonemap strategy once — shared across all video outputs that need HDR→SDR
@@ -176,7 +238,8 @@ public class PlanStage(
                                 ConvertHdrToSdr: v.ConvertHdrToSdr && sourceIsHdr,
                                 TonemapFilterChain: v.ConvertHdrToSdr && tonemap is not null
                                     ? tonemap.FfmpegFilterChain
-                                    : null
+                                    : null,
+                                CropFilter: cropFilter
                             );
                         }
                     )

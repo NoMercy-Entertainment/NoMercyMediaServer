@@ -18,7 +18,7 @@ Pro / B2B features (multi-server distributed encoding, DRM encryption, CENC pack
 
 ## Current Status — 2026-04-16
 
-**Build:** 199 commits ahead of `master` · 0 errors · 0 warnings · 850 encoder tests + 6 repository tests passing (+15 live transcode HTTP surface, +9 IOutputStrategyFactory, +10 LiveFfmpegRunner, +9 pan-matrix downmix).
+**Build:** 201 commits ahead of `master` · 0 errors · 0 warnings · 857 encoder tests + 6 repository tests passing (+15 live transcode HTTP, +9 IOutputStrategyFactory, +10 LiveFfmpegRunner, +9 pan-matrix downmix, +2 scratch cleanup, +5 crop wiring).
 
 **What already works today (outside the strategy pattern):**
 - 6-stage pipeline (`Analyze → Validate → Plan → Build → Execute → Finalize`) in [`Pipeline/Encoder.cs`](../../src/NoMercy.Encoder/Pipeline/Encoder.cs) delivering production-grade HLS single-pass
@@ -42,7 +42,7 @@ Pro / B2B features (multi-server distributed encoding, DRM encryption, CENC pack
 | 6. Distribution | ❌ not started | No `Distribution/` dir. `IJobDispatcher` / `IRemoteWorker` / `IHardwareBenchmark` interfaces exist with zero implementations. |
 | 7. Plugin Integration | ✅ implicit | `StrategyResolver` iterates `IEnumerable<IEncodingStrategy>` and walks in reverse so later (plugin) registrations override built-ins. The existing `IPluginServiceRegistrator` pattern lets plugins register additional strategies with zero core changes. `StrategyResolverTests.Resolve_LastRegistrationWins_PluginsOverrideBuiltIn` proves it. |
 | 8. Queue & History | ✅ done | `EncodingHistory` DB model + migration + `EncodingHistoryRepository`. `VideoEncodeJob` writes one row per successful encode. `GET /dashboard/encoding/history` paginated endpoint (1–500 per page). Queue-level `pause-queue` / `resume-queue` endpoints via `QueueRunner.Stop/Start("encoder")`. `GET /dashboard/tasks/queue/eta` rolling-average ETA from 50 most-recent history samples × current queue depth. |
-| 9. Content Intelligence | ⚠️ 3 of 4 | Crop detection ✅ (9.1), subtitle OCR ✅ (9.2 with auto-download Tesseract model manager), Whisper transcription ✅ (9.3). Intro/outro content detection (9.4) still pending. New nomercy-ffmpeg Windows build provides libtesseract + whisper filters. |
+| 9. Content Intelligence | ✅ all 4 | Crop detection ✅ (9.1, wired end-to-end — AutoDetectCrop profile flag drives PlanStage → VideoOutputPlan.CropFilter → BuildStage crop=W:H:X:Y as the first filter), subtitle OCR ✅ (9.2 with auto-download Tesseract model manager), Whisper transcription ✅ (9.3), intro/outro detection ✅ (9.4 chromaprint). |
 | 10. Format Capabilities | ⚠️ 4 of 7 done | HDR→SDR tonemap ✅, HDR→HDR passthrough ✅ (step 2), burn-in filter ✅ (10.1), loudnorm ✅ (10.4 partial), ABR ladder ✅ (10.3). Pending: DV passthrough (10.2 step 3), explicit downmix/`pan`/`amerge` (10.4 step 1 remainder), wire ABR generator into profile-load path. |
 | 11. DRM & Encryption | ❌ not started | No `IDrmProcessor`. No AES-128 HLS, no CENC DASH. |
 | 12. Presets & Automation | ⚠️ webhooks done | `INotificationDispatcher` + `WebhookNotificationDispatcher` (POST with exponential-backoff retries) + `EncodingNotificationSubscriber` hosted service wiring the event bus; configurable via `EncoderOptions.NotificationWebhookUrls`. Phase 12.1 preset CRUD + 12.2 watch-folder auto-encode still pending. |
@@ -468,7 +468,7 @@ public interface IWorkerDispatcher
 - Create: `tests/NoMercy.Tests.Encoder/ContentAnalysis/CropDetectorTests.cs`
 
 - [x] **Step 1:** `CropDetector` samples 60 s from the middle of the source (`-ss 120`), counts `crop=W:H:X:Y` observations from stderr, requires ≥ 5 matching observations before trusting the result. Returns `CropResult(Width, Height, X, Y, ShouldCrop)` with `ShouldCrop=false` when crop rectangle matches full frame.
-- [ ] **Step 2:** Strategies optionally inject crop into filter graph: `crop={w}:{h}:{x}:{y}` (generator ready, wiring into `BuildBranchFilter` pending).
+- [x] **Step 2:** `EncodingProfile.AutoDetectCrop` opt-in flag. `PlanStage` runs `ICropDetector.DetectAsync` once per encode when set, stores the detected rect as `VideoOutputPlan.CropFilter` on every variant. `BuildStage.BuildBranchFilter` emits `crop=W:H:X:Y` as the first filter — before tonemap and scale — so downstream filters see the real picture region. Detector exceptions degrade gracefully (no crop, encode continues). 9 new tests (`PlanStageCropTests` + crop case in `BuildStageFilterGraphTests`).
 - [x] **Step 3:** 5 tests cover stable crop / full-frame / insufficient-observations / exit-code / most-frequent-wins. DI registered.
 - [x] **Step 4:** Commit: `feat(encoder): V1 feature parity — OCR, Whisper, crop detection, detailed stages` — merged as `3600754`
 

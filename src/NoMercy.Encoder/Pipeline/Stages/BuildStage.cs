@@ -568,12 +568,13 @@ public class BuildStage(
         string? burnInExpr
     )
     {
+        bool needsCrop = !string.IsNullOrWhiteSpace(video.CropFilter);
         bool needsTonemap = video.ConvertHdrToSdr && video.TonemapFilterChain is not null;
         bool needsScale = video.Width != sourceWidth || video.Height != sourceHeight;
         bool needs8BitConversion = sourceIs10Bit && !video.TenBit;
         bool needsBurnIn = burnInExpr is not null;
 
-        if (!needsTonemap && !needsScale && !needs8BitConversion && !needsBurnIn)
+        if (!needsCrop && !needsTonemap && !needsScale && !needs8BitConversion && !needsBurnIn)
         {
             fg.AddFilter(inputLabel, "copy", outputLabel);
             return;
@@ -584,6 +585,20 @@ public class BuildStage(
         string videoChainEnd = needsBurnIn ? $"{outputLabel}_presub" : outputLabel;
 
         string currentLabel = inputLabel;
+
+        // Step 0: Crop (remove letterbox / pillarbox). Must run before tonemap /
+        // scale so the later filters operate on the real picture region.
+        if (needsCrop)
+        {
+            bool hasDownstreamWork =
+                needsTonemap || needsScale || needs8BitConversion || needsBurnIn;
+            string cropOut = hasDownstreamWork ? $"{outputLabel}_cropped" : videoChainEnd;
+            fg.AddFilter(currentLabel, $"crop={video.CropFilter}", cropOut);
+            currentLabel = cropOut;
+
+            if (!hasDownstreamWork)
+                return;
+        }
 
         // Step 1: Tonemap (HDR→SDR) — outputs yuv420p, so 8-bit conversion is included
         if (needsTonemap)

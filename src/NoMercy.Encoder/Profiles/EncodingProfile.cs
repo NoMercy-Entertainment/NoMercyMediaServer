@@ -13,6 +13,7 @@ public record EncodingProfile(
     int SegmentDurationSeconds = 6,
     EncodeMode EncodeMode = EncodeMode.SinglePass,
     bool AutoLadder = false,
+    bool AutoDetectCrop = false,
     int SchemaVersion = 1
 );
 

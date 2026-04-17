@@ -67,6 +67,7 @@ public class PlanStageDownmixTests
             new TonemapSelector(),
             new Mock<IFfmpegCapabilities>().Object,
             new AbrLadderGenerator(),
+            new NoOpCropDetector(),
             NullLogger<PlanStage>.Instance
         );
     }

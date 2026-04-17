@@ -60,6 +60,7 @@ public class EncoderTests
             new TonemapSelector(),
             new Mock<IFfmpegCapabilities>().Object,
             new AbrLadderGenerator(),
+            new Stages.NoOpCropDetector(),
             NullLogger<PlanStage>.Instance
         );
         OutputStrategyFactory outputFactory = new([

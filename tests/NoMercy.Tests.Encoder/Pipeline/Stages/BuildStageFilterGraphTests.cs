@@ -255,4 +255,47 @@ public class BuildStageFilterGraphTests
 
         commands[0].Arguments.Should().NotContain("-filter_complex");
     }
+
+    // ------------------------------------------------------------------
+    // Test 5: video with CropFilter → crop=... filter emitted
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task BuildStage_CropFilterSet_EmitsCropFilterBeforeScale()
+    {
+        VideoOutputPlan videoWithCrop = BuildVideoOutput(1280, 720, "[v0]") with
+        {
+            CropFilter = "1920:800:0:140",
+        };
+
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [videoWithCrop],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: null
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        EncodingContext context = new(
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfo(1920, 1080)
+        );
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
+        FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
+
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
+        string filterValue = commands[0].Arguments[filterComplexIdx + 1];
+
+        filterValue.Should().Contain("crop=1920:800:0:140");
+
+        // Crop must appear before scale so the scaler operates on the cropped picture.
+        int cropIdx = filterValue.IndexOf("crop=", StringComparison.Ordinal);
+        int scaleIdx = filterValue.IndexOf("scale=", StringComparison.Ordinal);
+        cropIdx.Should().BeLessThan(scaleIdx);
+    }
 }
