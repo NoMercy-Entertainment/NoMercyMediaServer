@@ -2,6 +2,7 @@ namespace NoMercy.Encoder.Profiles;
 
 using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Codecs.Definitions;
 
 /// <summary>
 /// Maps V1 encoder profile types (IVideoProfile, IAudioProfile, ISubtitleProfile)
@@ -117,9 +118,18 @@ public static class ProfileMapper
                 ? a.CustomArguments.ToDictionary(c => c.key, c => c.Val)
                 : null;
 
+        // V1 profiles don't store a bitrate, so we use the codec's own default.
+        // Previously hardcoded to 192 kbps, which was fine for AAC stereo but
+        // too low for AC3 5.1 (spec default 384), laughably low for EAC3 7.1
+        // (default 640), and meaningless on lossless codecs (flac, truehd use 0).
+        // Using the codec's DefaultBitrateKbps keeps every output on its own
+        // reasonable default instead of forcing every codec into one number.
+        AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codec);
+        int bitrate = encoder.IsLossless ? 0 : encoder.DefaultBitrateKbps;
+
         return new AudioOutput(
             Codec: codec,
-            BitrateKbps: 192, // V1 doesn't store bitrate per-profile, use default
+            BitrateKbps: bitrate,
             Channels: a.Channels > 0 ? a.Channels : 2,
             SampleRateHz: a.SampleRate > 0 ? a.SampleRate : 48000,
             AllowedLanguages: a.AllowedLanguages,
