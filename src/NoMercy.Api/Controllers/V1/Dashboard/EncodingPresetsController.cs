@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
 using NoMercy.Helpers.Extensions;
@@ -13,7 +14,10 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/encoding/presets")]
-public class EncodingPresetsController(EncodingPresetRepository presetRepository) : BaseController
+public class EncodingPresetsController(
+    EncodingPresetRepository presetRepository,
+    IHttpClientFactory httpClientFactory
+) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> List(
@@ -192,6 +196,50 @@ public class EncodingPresetsController(EncodingPresetRepository presetRepository
         return Ok(saved);
     }
 
+    [HttpPost("import-url")]
+    public async Task<IActionResult> ImportFromUrl(
+        [FromBody] ImportFromUrlRequest request,
+        CancellationToken ct
+    )
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to import presets");
+
+        if (string.IsNullOrWhiteSpace(request.Url))
+            return BadRequestResponse("url is required");
+
+        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out Uri? parsed))
+            return BadRequestResponse("url is not a valid absolute URL");
+
+        // Only allow HTTPS for community presets — HTTP means a MITM attacker
+        // can inject arbitrary encoding profiles onto the server. HTTPS shifts
+        // trust to certificate validation, which is what we want.
+        if (parsed.Scheme != Uri.UriSchemeHttps)
+            return BadRequestResponse("Only https:// URLs are supported for preset imports");
+
+        PresetExport? export;
+        try
+        {
+            HttpClient client = httpClientFactory.CreateClient("preset-import");
+            client.Timeout = TimeSpan.FromSeconds(15);
+            string body = await client.GetStringAsync(parsed, ct);
+            export = JsonConvert.DeserializeObject<PresetExport>(body);
+        }
+        catch (TaskCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse($"Could not fetch or parse preset from URL: {ex.Message}");
+        }
+
+        if (export is null || string.IsNullOrWhiteSpace(export.Name))
+            return BadRequestResponse("URL response did not contain a valid preset payload");
+
+        return await Import(export);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
@@ -232,6 +280,8 @@ public record PresetExport(
     string? Author = null,
     string? Tags = null
 );
+
+public record ImportFromUrlRequest(string Url);
 
 public record UpdatePresetRequest(
     string? Name = null,
