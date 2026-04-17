@@ -18,6 +18,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 public class EncodingPresetsController(
     EncodingPresetRepository presetRepository,
     IPresetResolver presetResolver,
+    IProfileValidator profileValidator,
     IHttpClientFactory httpClientFactory
 ) : BaseController
 {
@@ -342,6 +343,24 @@ public class EncodingPresetsController(
         return parent?.Name;
     }
 
+    /// <summary>
+    /// Validates a preset's profile JSON at save time so the UI can surface
+    /// errors and warnings before the user ships a broken preset into an
+    /// encode. Uses the canonical <see cref="IProfileValidator"/> — same
+    /// rules the encode pipeline enforces at run time — so what validates
+    /// here will not be rejected during encoding.
+    ///
+    /// Response shape:
+    ///   {
+    ///     valid: bool,          // true when no ERROR-severity issues
+    ///     errors: [{ field, message }],
+    ///     warnings: [{ field, message }]
+    ///   }
+    ///
+    /// Warnings never block. They flag the "this will encode but might not
+    /// be what you want" cases (preset mismatch, inverted ABR ladder,
+    /// segment-keyframe misalignment, etc).
+    /// </summary>
     [HttpPost("validate")]
     public IActionResult Validate([FromBody] ValidatePresetRequest request)
     {
@@ -351,53 +370,68 @@ public class EncodingPresetsController(
         if (string.IsNullOrWhiteSpace(request.ProfileJson))
             return BadRequestResponse("profile_json is required");
 
-        List<string> errors = [];
-
         EncodingProfile? profile;
         try
         {
-            profile = Newtonsoft.Json.JsonConvert.DeserializeObject<EncodingProfile>(
-                request.ProfileJson
-            );
+            profile = JsonConvert.DeserializeObject<EncodingProfile>(request.ProfileJson);
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
-            return Ok(new { valid = false, errors = new[] { $"JSON parse error: {ex.Message}" } });
+            return Ok(
+                new
+                {
+                    valid = false,
+                    errors = new[]
+                    {
+                        new
+                        {
+                            field = "ProfileJson",
+                            message = $"Profile JSON is malformed: {ex.Message}",
+                        },
+                    },
+                    warnings = Array.Empty<object>(),
+                }
+            );
         }
 
         if (profile is null)
         {
-            errors.Add("JSON deserialized to null — check the structure");
-            return Ok(new { valid = false, errors });
+            return Ok(
+                new
+                {
+                    valid = false,
+                    errors = new[]
+                    {
+                        new
+                        {
+                            field = "ProfileJson",
+                            message = "Profile JSON deserialized to null — check the outer object is present",
+                        },
+                    },
+                    warnings = Array.Empty<object>(),
+                }
+            );
         }
 
-        if (string.IsNullOrWhiteSpace(profile.Name))
-            errors.Add("Name is required");
+        ValidationResult result = profileValidator.Validate(profile);
 
-        if (profile.VideoOutputs.Length == 0 && profile.AudioOutputs.Length == 0)
-            errors.Add("Profile needs at least one video output or one audio output");
+        object[] errors = result
+            .Errors.Where(e => e.Severity == ValidationSeverity.Error)
+            .Select(e => (object)new { field = e.Field, message = e.Message })
+            .ToArray();
+        object[] warnings = result
+            .Errors.Where(e => e.Severity == ValidationSeverity.Warning)
+            .Select(e => (object)new { field = e.Field, message = e.Message })
+            .ToArray();
 
-        foreach (VideoOutput video in profile.VideoOutputs)
-        {
-            if (video.Width <= 0 || video.Height.GetValueOrDefault() <= 0)
+        return Ok(
+            new
             {
-                errors.Add(
-                    $"VideoOutput with codec {video.Codec}: width and height must be positive"
-                );
+                valid = result.IsValid,
+                errors,
+                warnings,
             }
-            if (video.Crf < 0 || video.Crf > 51)
-                errors.Add($"VideoOutput with codec {video.Codec}: CRF must be in 0..51");
-        }
-
-        foreach (AudioOutput audio in profile.AudioOutputs)
-        {
-            if (audio.Channels <= 0)
-                errors.Add($"AudioOutput {audio.Codec}: channels must be positive");
-            if (audio.SampleRateHz <= 0)
-                errors.Add($"AudioOutput {audio.Codec}: sample rate must be positive");
-        }
-
-        return Ok(new { valid = errors.Count == 0, errors });
+        );
     }
 
     [HttpDelete("{id}")]
