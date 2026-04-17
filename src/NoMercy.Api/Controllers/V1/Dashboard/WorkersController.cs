@@ -28,6 +28,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 public class WorkersController(
     InMemoryRemoteWorkerRegistry registry,
     ITaskSerializer serializer,
+    ITaskProgressStore progressStore,
     EncoderOptions encoderOptions,
     IHttpClientFactory httpClientFactory,
     ILogger<WorkersController> logger,
@@ -177,6 +178,86 @@ public class WorkersController(
         return Ok(new { worker_id = workerId, accepted = true });
     }
 
+    /// <summary>
+    /// Receives per-task progress updates from remote workers. The worker's
+    /// HttpTaskProgressSink POSTs these every ~2 seconds during an encode;
+    /// we cache the latest snapshot per task in the in-memory progress store
+    /// so the dashboard can render live progress without holding persistent
+    /// connections to every worker.
+    ///
+    /// Open endpoint (no bearer) — workers are headless processes; they
+    /// authenticate via knowing the coordinator URL + being in the trusted
+    /// network. Distribution signing key doesn't guard this endpoint
+    /// because progress payloads contain no secrets; the worst a hostile
+    /// caller can do is spoof a fake progress bar.
+    /// </summary>
+    [HttpPost("{workerId}/tasks/{taskId}/progress")]
+    [AllowAnonymous]
+    public IActionResult ReceiveProgress(
+        string workerId,
+        string taskId,
+        [FromBody] ProgressUpdateRequest update
+    )
+    {
+        if (!encoderOptions.IsDistributedEncodingEnabled)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+
+        progressStore.Update(
+            taskId,
+            new TaskProgressSnapshot(
+                TaskId: taskId,
+                WorkerId: workerId,
+                PercentComplete: update.PercentComplete,
+                CurrentFps: update.CurrentFps,
+                CurrentSpeed: update.CurrentSpeed,
+                CurrentStage: update.CurrentStage,
+                ElapsedSeconds: update.ElapsedSeconds,
+                EstimatedRemainingSeconds: update.EstimatedRemainingSeconds,
+                CurrentTimeSeconds: update.CurrentTimeSeconds,
+                DurationSeconds: update.DurationSeconds,
+                ReceivedAtUtc: DateTime.UtcNow
+            )
+        );
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Dashboard-facing list of currently-running remote tasks with their
+    /// latest progress snapshot. Empty when no remote tasks are running.
+    /// </summary>
+    [HttpGet("tasks/progress")]
+    public IActionResult ListActiveTaskProgress()
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("Only the server owner can view task progress");
+
+        IReadOnlyList<TaskProgressSnapshot> snapshots = progressStore.GetAll();
+
+        return Ok(
+            new
+            {
+                count = snapshots.Count,
+                data = snapshots
+                    .Select(s => new
+                    {
+                        task_id = s.TaskId,
+                        worker_id = s.WorkerId,
+                        percent_complete = s.PercentComplete,
+                        current_fps = s.CurrentFps,
+                        current_speed = s.CurrentSpeed,
+                        current_stage = s.CurrentStage,
+                        elapsed_seconds = s.ElapsedSeconds,
+                        estimated_remaining_seconds = s.EstimatedRemainingSeconds,
+                        current_time_seconds = s.CurrentTimeSeconds,
+                        duration_seconds = s.DurationSeconds,
+                        received_at_utc = s.ReceivedAtUtc,
+                    })
+                    .ToArray(),
+            }
+        );
+    }
+
     [HttpDelete("{workerId}")]
     public IActionResult Unregister(string workerId)
     {
@@ -205,4 +286,18 @@ public record HeartbeatRequest(
     [property: JsonProperty("available_cpu_threads")] int AvailableCpuThreads,
     [property: JsonProperty("available_gpu_slots")] int AvailableGpuSlots,
     [property: JsonProperty("gpu_utilization")] double? GpuUtilization = null
+);
+
+public record ProgressUpdateRequest(
+    [property: JsonProperty("percent_complete")] double PercentComplete,
+    [property: JsonProperty("elapsed_seconds")] double ElapsedSeconds,
+    [property: JsonProperty("current_time_seconds")] double CurrentTimeSeconds,
+    [property: JsonProperty("duration_seconds")] double DurationSeconds,
+    [property: JsonProperty("current_fps")] double? CurrentFps = null,
+    [property: JsonProperty("current_speed")] double? CurrentSpeed = null,
+    [property: JsonProperty("current_stage")] string? CurrentStage = null,
+    [property: JsonProperty("current_operation")] string? CurrentOperation = null,
+    [property: JsonProperty("estimated_remaining_seconds")]
+        double? EstimatedRemainingSeconds = null,
+    [property: JsonProperty("bitrate_kbps")] int? BitrateKbps = null
 );

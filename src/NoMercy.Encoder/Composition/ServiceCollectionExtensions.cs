@@ -236,6 +236,16 @@ public static class ServiceCollectionExtensions
         // install uses shared storage and no fetching is needed.
         services.AddTransient<ISourceFetcher, HttpSourceFetcher>();
 
+        // Per-task progress: workers push to the coordinator via
+        // HttpTaskProgressSink (only actually pushes when CoordinatorUrl
+        // is set). Coordinator-side InMemoryTaskProgressStore holds the
+        // latest snapshot per task so the dashboard can read live progress.
+        services.AddSingleton<InMemoryTaskProgressStore>();
+        services.AddSingleton<ITaskProgressStore>(sp =>
+            sp.GetRequiredService<InMemoryTaskProgressStore>()
+        );
+        services.AddTransient<ITaskProgressSink, HttpTaskProgressSink>();
+
         // Self-registration background service — no-ops on standalone
         // installs (when CoordinatorUrl is not set). Safe to always
         // register; the service exits cleanly in that case.

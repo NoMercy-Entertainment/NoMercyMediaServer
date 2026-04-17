@@ -3,6 +3,7 @@ namespace NoMercy.Encoder.Distribution;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Progress;
 
 /// <summary>
 /// Runs every task locally on the same machine via <see cref="IFfmpegExecutor"/>.
@@ -10,10 +11,22 @@ using NoMercy.Encoder.Execution;
 /// behavior today. Tasks run sequentially so GPU / CPU contention stays bounded;
 /// the outer job queue already serializes encodes and we don't want to punch
 /// through that by running multiple ffmpeg processes in parallel here.
+///
+/// Progress events from the executor get forwarded to the injected
+/// <see cref="ITaskProgressSink"/> so remote workers can push updates to
+/// the coordinator. On standalone installs the sink is a no-op.
 /// </summary>
-public class LocalWorkerDispatcher(IFfmpegExecutor executor, ILogger<LocalWorkerDispatcher> logger)
-    : IWorkerDispatcher
+public class LocalWorkerDispatcher(
+    IFfmpegExecutor executor,
+    ITaskProgressSink progressSink,
+    ILogger<LocalWorkerDispatcher> logger
+) : IWorkerDispatcher
 {
+    // Overload for callers that don't want to plumb a progress sink —
+    // keeps the test-bootstrap shape unchanged.
+    public LocalWorkerDispatcher(IFfmpegExecutor executor, ILogger<LocalWorkerDispatcher> logger)
+        : this(executor, new NullTaskProgressSink(), logger) { }
+
     public int AvailableWorkerCount => 1;
 
     public async Task<DispatchResult[]> DispatchAsync(EncodeTask[] tasks, CancellationToken ct)
@@ -34,10 +47,31 @@ public class LocalWorkerDispatcher(IFfmpegExecutor executor, ILogger<LocalWorker
 
             try
             {
+                // Forward every progress tick to the configured sink. Use a
+                // local to capture task.TaskId so the Action doesn't close
+                // over the loop variable.
+                string currentTaskId = task.TaskId;
+                Action<EncodingProgress> onProgress = progress =>
+                {
+                    try
+                    {
+                        progressSink.Report(currentTaskId, progress);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Progress reporting must NEVER fail the encode.
+                        logger.LogDebug(
+                            ex,
+                            "Progress sink failed for task {TaskId}",
+                            currentTaskId
+                        );
+                    }
+                };
+
                 ExecutionResult exec = await executor.ExecuteAsync(
                     task.Command,
                     task.TimeRangeDuration ?? TimeSpan.Zero,
-                    null,
+                    onProgress,
                     task.TaskId,
                     ct
                 );
