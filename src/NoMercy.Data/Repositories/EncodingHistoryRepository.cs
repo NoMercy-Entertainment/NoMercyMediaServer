@@ -59,4 +59,46 @@ public class EncodingHistoryRepository(MediaContext context)
         context.EncodingHistory.Where(h => h.CreatedAt < olderThan).ExecuteDeleteAsync();
 
     public Task<int> DeleteAllAsync() => context.EncodingHistory.ExecuteDeleteAsync();
+
+    /// <summary>
+    /// Aggregated stats for the dashboard summary card — total rows,
+    /// bytes in / out, average speed, average compression ratio, average
+    /// fps. Computed in one SQL round-trip so the dashboard stays snappy
+    /// even with tens of thousands of history rows.
+    /// </summary>
+    public async Task<EncodingHistoryStats> GetAggregateStatsAsync()
+    {
+        var raw = await context
+            .EncodingHistory.GroupBy(_ => 1)
+            .Select(g => new
+            {
+                TotalEncodes = g.Count(),
+                TotalInputBytes = g.Sum(h => h.InputSizeBytes),
+                TotalOutputBytes = g.Sum(h => h.OutputSizeBytes),
+                AverageSpeed = g.Average(h => h.AverageSpeed),
+                AverageCompressionRatio = g.Average(h => h.CompressionRatio),
+                AverageFps = g.Average(h => h.AverageFps),
+            })
+            .FirstOrDefaultAsync();
+
+        return raw is null
+            ? new EncodingHistoryStats(0, 0, 0, 0, 0, 0)
+            : new EncodingHistoryStats(
+                TotalEncodes: raw.TotalEncodes,
+                TotalInputBytes: raw.TotalInputBytes,
+                TotalOutputBytes: raw.TotalOutputBytes,
+                AverageSpeed: raw.AverageSpeed,
+                AverageCompressionRatio: raw.AverageCompressionRatio,
+                AverageFps: raw.AverageFps
+            );
+    }
 }
+
+public record EncodingHistoryStats(
+    int TotalEncodes,
+    long TotalInputBytes,
+    long TotalOutputBytes,
+    double AverageSpeed,
+    double AverageCompressionRatio,
+    double AverageFps
+);

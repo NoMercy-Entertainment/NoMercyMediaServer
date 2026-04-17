@@ -53,6 +53,22 @@ public class EncodingHistoryController(EncodingHistoryRepository historyReposito
     }
 
     /// <summary>
+    /// Aggregated stats across every history row (total encodes, bytes
+    /// in / out, average speed / fps / compression ratio). One SQL
+    /// round-trip, cached for 30 seconds.
+    /// </summary>
+    [HttpGet("stats")]
+    [ResponseCache(Duration = 30)]
+    public async Task<IActionResult> Stats()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view encoding history");
+
+        EncodingHistoryStats stats = await historyRepository.GetAggregateStatsAsync();
+        return Ok(stats);
+    }
+
+    /// <summary>
     /// Delete a single history row. Users clean up individual rows from
     /// the dashboard; the encoded output on disk is untouched.
     /// </summary>

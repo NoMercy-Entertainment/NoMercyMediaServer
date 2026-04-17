@@ -145,6 +145,34 @@ public class EncodingHistoryRepositoryTests : IDisposable
         Assert.Equal(0, await _repository.GetTotalCountAsync());
     }
 
+    [Fact]
+    public async Task GetAggregateStatsAsync_EmptyTable_ReturnsZeros()
+    {
+        EncodingHistoryStats stats = await _repository.GetAggregateStatsAsync();
+
+        Assert.Equal(0, stats.TotalEncodes);
+        Assert.Equal(0, stats.TotalInputBytes);
+        Assert.Equal(0, stats.TotalOutputBytes);
+    }
+
+    [Fact]
+    public async Task GetAggregateStatsAsync_AggregatesAcrossRows()
+    {
+        await _repository.AddAsync(
+            Build(profileName: "a", createdAt: DateTime.UtcNow.AddHours(-1))
+        );
+        await _repository.AddAsync(
+            Build(profileName: "b", createdAt: DateTime.UtcNow.AddHours(-2))
+        );
+
+        EncodingHistoryStats stats = await _repository.GetAggregateStatsAsync();
+
+        Assert.Equal(2, stats.TotalEncodes);
+        Assert.Equal(16_000_000_000, stats.TotalInputBytes);
+        Assert.Equal(8_000_000_000, stats.TotalOutputBytes);
+        Assert.Equal(2.0, stats.AverageSpeed);
+    }
+
     public void Dispose()
     {
         _context.Dispose();
