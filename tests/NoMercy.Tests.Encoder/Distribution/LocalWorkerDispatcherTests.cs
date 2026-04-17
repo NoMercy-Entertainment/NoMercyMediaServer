@@ -186,7 +186,7 @@ public class LocalWorkerDispatcherTests
         ];
 
         using CancellationTokenSource cts = new();
-        cts.CancelAfter(0);
+        cts.Cancel();
 
         Func<Task> act = () => dispatcher.DispatchAsync(tasks, cts.Token);
 

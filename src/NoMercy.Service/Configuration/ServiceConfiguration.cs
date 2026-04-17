@@ -487,6 +487,7 @@ public static class ServiceConfiguration
 
         services.AddHostedService<MediaProcessing.EventHandlers.EncodingNotificationSubscriber>();
         services.AddHostedService<MediaProcessing.EventHandlers.AutoEncodeSubscriber>();
+        services.AddHostedService<MediaProcessing.EventHandlers.IntroDetectionSubscriber>();
 
         services.AddPluginSystem(AppFiles.PluginsPath);
 
