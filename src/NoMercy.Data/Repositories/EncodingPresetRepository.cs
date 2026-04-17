@@ -13,20 +13,56 @@ namespace NoMercy.Data.Repositories;
 /// </summary>
 public class EncodingPresetRepository(MediaContext context)
 {
-    public Task<List<EncodingPreset>> ListAsync(int pageSize = 100, int pageIndex = 0)
+    public Task<List<EncodingPreset>> ListAsync(
+        int pageSize = 100,
+        int pageIndex = 0,
+        string? tagFilter = null
+    )
     {
         if (pageSize <= 0)
             pageSize = 100;
         if (pageIndex < 0)
             pageIndex = 0;
 
-        return context
-            .EncodingPresets.AsNoTracking()
+        IQueryable<EncodingPreset> query = context.EncodingPresets.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(tagFilter))
+        {
+            // Tags are stored as a comma-separated string (see model). Matching
+            // on substring is fine for now — the tag list is small and the
+            // column isn't indexed anyway. If the preset library grows past
+            // a few hundred entries we'd normalize into a join table.
+            string normalized = tagFilter.Trim().ToLower();
+            query = query.Where(p => p.Tags != null && p.Tags.ToLower().Contains(normalized));
+        }
+
+        return query
             .OrderBy(p => p.IsBuiltIn ? 0 : 1)
             .ThenBy(p => p.Name)
             .Skip(pageIndex * pageSize)
             .Take(pageSize)
             .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<string>> GetAllTagsAsync()
+    {
+        List<string?> rows = await context
+            .EncodingPresets.AsNoTracking()
+            .Where(p => p.Tags != null && p.Tags != "")
+            .Select(p => p.Tags)
+            .ToListAsync();
+
+        HashSet<string> tags = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string? row in rows)
+        {
+            if (string.IsNullOrWhiteSpace(row))
+                continue;
+
+            foreach (string tag in row.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                tags.Add(tag.Trim());
+        }
+
+        return tags.OrderBy(t => t).ToList();
     }
 
     public Task<EncodingPreset?> GetByIdAsync(Ulid id) =>

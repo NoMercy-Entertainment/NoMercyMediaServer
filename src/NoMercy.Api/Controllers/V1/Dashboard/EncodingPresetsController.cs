@@ -24,7 +24,8 @@ public class EncodingPresetsController(
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] int pageSize = 100,
-        [FromQuery] int pageIndex = 0
+        [FromQuery] int pageIndex = 0,
+        [FromQuery] string? tag = null
     )
     {
         if (!User.IsModerator())
@@ -34,7 +35,7 @@ public class EncodingPresetsController(
         if (pageIndex < 0)
             pageIndex = 0;
 
-        List<EncodingPreset> presets = await presetRepository.ListAsync(pageSize, pageIndex);
+        List<EncodingPreset> presets = await presetRepository.ListAsync(pageSize, pageIndex, tag);
         int total = await presetRepository.GetTotalCountAsync();
 
         return Ok(
@@ -137,6 +138,66 @@ public class EncodingPresetsController(
         {
             return ConflictResponse(ex.Message);
         }
+    }
+
+    [HttpGet("tags")]
+    public async Task<IActionResult> ListAllTags()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view presets");
+
+        IReadOnlyList<string> tags = await presetRepository.GetAllTagsAsync();
+        return Ok(new { data = tags });
+    }
+
+    [HttpPost("{id}/clone")]
+    public async Task<IActionResult> Clone(string id, [FromBody] ClonePresetRequest request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to clone presets");
+
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid preset id");
+
+        EncodingPreset? source = await presetRepository.GetByIdAsync(presetId);
+        if (source is null)
+            return NotFoundResponse("Preset not found");
+
+        string name = string.IsNullOrWhiteSpace(request.Name)
+            ? await FindUnusedCloneNameAsync(source.Name)
+            : request.Name;
+
+        if (await presetRepository.GetByNameAsync(name) is not null)
+            return ConflictResponse($"A preset named '{name}' already exists");
+
+        EncodingPreset clone = new()
+        {
+            Name = name,
+            Description = source.Description,
+            Author = request.Author ?? source.Author,
+            Tags = source.Tags,
+            ProfileJson = source.ProfileJson,
+            ParentPresetId = source.ParentPresetId,
+            // Cloning a built-in produces an editable user preset. That's
+            // the whole point — lets users tweak base presets without
+            // touching the seeded rows.
+            IsBuiltIn = false,
+        };
+
+        EncodingPreset saved = await presetRepository.CreateAsync(clone);
+        return Ok(saved);
+    }
+
+    private async Task<string> FindUnusedCloneNameAsync(string sourceName)
+    {
+        string candidate = $"{sourceName} (copy)";
+        int suffix = 1;
+        while (await presetRepository.GetByNameAsync(candidate) is not null)
+        {
+            suffix++;
+            candidate = $"{sourceName} (copy {suffix})";
+        }
+        return candidate;
     }
 
     [HttpGet("{id}/resolve")]
@@ -346,6 +407,8 @@ public record PresetExport(
 );
 
 public record ImportFromUrlRequest(string Url);
+
+public record ClonePresetRequest(string? Name = null, string? Author = null);
 
 public record UpdatePresetRequest(
     string? Name = null,
