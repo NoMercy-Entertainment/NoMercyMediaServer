@@ -133,6 +133,65 @@ public class EncodingPresetsController(EncodingPresetRepository presetRepository
         }
     }
 
+    [HttpGet("{id}/export")]
+    public async Task<IActionResult> Export(string id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to export presets");
+
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid preset id");
+
+        EncodingPreset? preset = await presetRepository.GetByIdAsync(presetId);
+        if (preset is null)
+            return NotFoundResponse("Preset not found");
+
+        PresetExport export = new(
+            Name: preset.Name,
+            Description: preset.Description,
+            Author: preset.Author,
+            Tags: preset.Tags,
+            ProfileJson: preset.ProfileJson
+        );
+
+        return Ok(export);
+    }
+
+    [HttpPost("import")]
+    public async Task<IActionResult> Import([FromBody] PresetExport import)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to import presets");
+
+        if (string.IsNullOrWhiteSpace(import.Name))
+            return BadRequestResponse("name is required");
+        if (string.IsNullOrWhiteSpace(import.ProfileJson))
+            return BadRequestResponse("profile_json is required");
+
+        // Collision rename: append "(imported N)" until we find an unused name.
+        // Users can rename afterwards — we'd rather keep both copies than
+        // silently overwrite an existing preset.
+        string finalName = import.Name;
+        int suffix = 1;
+        while (await presetRepository.GetByNameAsync(finalName) is not null)
+        {
+            finalName = $"{import.Name} (imported {suffix++})";
+        }
+
+        EncodingPreset preset = new()
+        {
+            Name = finalName,
+            Description = import.Description,
+            Author = import.Author,
+            Tags = import.Tags,
+            ProfileJson = import.ProfileJson,
+            IsBuiltIn = false,
+        };
+
+        EncodingPreset saved = await presetRepository.CreateAsync(preset);
+        return Ok(saved);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
@@ -164,6 +223,14 @@ public record CreatePresetRequest(
     string? Author = null,
     string? Tags = null,
     Ulid? ParentPresetId = null
+);
+
+public record PresetExport(
+    string Name,
+    string ProfileJson,
+    string? Description = null,
+    string? Author = null,
+    string? Tags = null
 );
 
 public record UpdatePresetRequest(
