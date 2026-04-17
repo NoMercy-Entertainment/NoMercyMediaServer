@@ -9,6 +9,7 @@ using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.DiscRipping;
+using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
@@ -189,6 +190,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILiveEncoder, LiveEncoder>();
         services.AddSingleton<ILiveStreamingService, LiveStreamingService>();
         services.AddTransient<ILivePlaylistBuilder, LivePlaylistBuilder>();
+
+        // Distribution — LocalWorkerDispatcher is the default; remote workers
+        // land as a follow-up behind a feature flag. Plugins can register a
+        // replacement IWorkerDispatcher to change behavior project-wide.
+        services.AddTransient<IWorkerDispatcher, LocalWorkerDispatcher>();
 
         // Disc ripping — DriveMonitor is Singleton because its polling loop
         // holds state (last-seen drives) across MonitorAsync() enumerations.
