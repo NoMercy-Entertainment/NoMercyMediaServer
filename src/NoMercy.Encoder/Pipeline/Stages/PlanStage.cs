@@ -399,7 +399,8 @@ public class PlanStage(
             subtitlePlan,
             thumbPlan,
             segmentDuration,
-            PreserveDolbyVision: preserveDv
+            PreserveDolbyVision: preserveDv,
+            Drm: profile.Drm
         );
     }
 

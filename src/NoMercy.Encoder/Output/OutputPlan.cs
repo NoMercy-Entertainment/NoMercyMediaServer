@@ -15,7 +15,13 @@ public record OutputPlan(
     // video output is stream-copy. Output strategies use this to emit the
     // container-specific codec tag that preserves DV playback signaling
     // (dvh1 for MP4/HLS, hvc1+dv passthrough for MKV).
-    bool PreserveDolbyVision = false
+    bool PreserveDolbyVision = false,
+    // DRM config propagated from the profile. BuildStage runs the matching
+    // IDrmProcessor to generate key + keyinfo artifacts, then injects the
+    // resulting `-hls_key_info_file` path into each video output's extra
+    // flags so ffmpeg encrypts segments inline and emits EXT-X-KEY tags
+    // in the playlist automatically.
+    NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig? Drm = null
 );
 
 public record VideoOutputPlan(

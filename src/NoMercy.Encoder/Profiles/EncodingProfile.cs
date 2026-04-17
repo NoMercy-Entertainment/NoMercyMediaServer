@@ -14,6 +14,7 @@ public record EncodingProfile(
     EncodeMode EncodeMode = EncodeMode.SinglePass,
     bool AutoLadder = false,
     bool AutoDetectCrop = false,
+    BuildingBlocks.Drm.DrmConfig? Drm = null,
     int SchemaVersion = 1
 );
 

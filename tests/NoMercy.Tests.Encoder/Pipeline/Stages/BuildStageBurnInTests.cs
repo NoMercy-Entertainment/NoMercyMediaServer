@@ -24,6 +24,7 @@ public class BuildStageBurnInTests
             new FontExtractor(),
             new SubtitleExtractor(),
             OutputStrategyFactoryTestHelper.Create(),
+            [],
             NullLogger<BuildStage>.Instance
         );
     }

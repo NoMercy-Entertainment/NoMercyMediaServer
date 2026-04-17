@@ -77,6 +77,7 @@ public class EncoderTests
             new FontExtractor(),
             new SubtitleExtractor(),
             outputFactory,
+            [],
             NullLogger<BuildStage>.Instance
         );
         ExecuteStage executeStage = new(_ffmpegExecutor.Object, NullLogger<ExecuteStage>.Instance);

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
+using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.ContentAnalysis;
@@ -125,6 +126,11 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IThumbnailGenerator, ThumbnailGenerator>();
         services.AddTransient<IHlsVariantAnalyzer, HlsVariantAnalyzer>();
         services.AddTransient<IAbrLadderGenerator, AbrLadderGenerator>();
+
+        // DRM processors — plugins can register additional processors for
+        // custom schemes. IEnumerable<IDrmProcessor> resolution picks the
+        // one whose Method matches the profile's DrmConfig.
+        services.AddTransient<IDrmProcessor, Aes128HlsDrmProcessor>();
 
         // Output strategies — resolved via IOutputStrategyFactory from DI.
         // Plugins can register additional IOutputStrategy impls and the factory

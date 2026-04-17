@@ -27,12 +27,13 @@ public class BuildStage(
     IFontExtractor fontExtractor,
     ISubtitleExtractor subtitleExtractor,
     IOutputStrategyFactory outputStrategyFactory,
+    IEnumerable<BuildingBlocks.Drm.IDrmProcessor> drmProcessors,
     ILogger<BuildStage> logger
 ) : IPipelineStage<BuildInput, FfmpegCommand[]>
 {
     public string Name => "Build";
 
-    public Task<StageResult> ExecuteAsync(
+    public async Task<StageResult> ExecuteAsync(
         BuildInput input,
         EncodingContext context,
         CancellationToken ct
@@ -42,6 +43,7 @@ public class BuildStage(
 
         try
         {
+            input = await ApplyDrmPreparationAsync(input, ct).ConfigureAwait(false);
             // Pass 1 of a 2-pass encode: video-only analysis to the stats file,
             // no audio / subtitles / sprite / font-extraction outputs. The
             // Pass1VariantIndex selects which variant to analyze — the strategy
@@ -50,30 +52,26 @@ public class BuildStage(
             {
                 if (string.IsNullOrWhiteSpace(input.StatsFilePath))
                 {
-                    return Task.FromResult<StageResult>(
-                        new StageFailure(
-                            new EncodingError(
-                                EncodingErrorKind.Unknown,
-                                "Pass 1 requires StatsFilePath to be set.",
-                                null,
-                                Name,
-                                false
-                            )
+                    return new StageFailure(
+                        new EncodingError(
+                            EncodingErrorKind.Unknown,
+                            "Pass 1 requires StatsFilePath to be set.",
+                            null,
+                            Name,
+                            false
                         )
                     );
                 }
 
                 if (input.Plan.OutputPlan.VideoOutputs.Length == 0)
                 {
-                    return Task.FromResult<StageResult>(
-                        new StageFailure(
-                            new EncodingError(
-                                EncodingErrorKind.Unknown,
-                                "2-pass requires at least one video output.",
-                                null,
-                                Name,
-                                false
-                            )
+                    return new StageFailure(
+                        new EncodingError(
+                            EncodingErrorKind.Unknown,
+                            "2-pass requires at least one video output.",
+                            null,
+                            Name,
+                            false
                         )
                     );
                 }
@@ -83,16 +81,14 @@ public class BuildStage(
                     || input.Pass1VariantIndex >= input.Plan.OutputPlan.VideoOutputs.Length
                 )
                 {
-                    return Task.FromResult<StageResult>(
-                        new StageFailure(
-                            new EncodingError(
-                                EncodingErrorKind.Unknown,
-                                $"Pass1VariantIndex {input.Pass1VariantIndex} is out of range for "
-                                    + $"profile with {input.Plan.OutputPlan.VideoOutputs.Length} variants.",
-                                null,
-                                Name,
-                                false
-                            )
+                    return new StageFailure(
+                        new EncodingError(
+                            EncodingErrorKind.Unknown,
+                            $"Pass1VariantIndex {input.Pass1VariantIndex} is out of range for "
+                                + $"profile with {input.Plan.OutputPlan.VideoOutputs.Length} variants.",
+                            null,
+                            Name,
+                            false
                         )
                     );
                 }
@@ -111,7 +107,7 @@ public class BuildStage(
                     options.FfmpegPath,
                     input.Pass1VariantIndex
                 );
-                return Task.FromResult<StageResult>(new StageSuccess<FfmpegCommand[]>([pass1]));
+                return new StageSuccess<FfmpegCommand[]>([pass1]);
             }
 
             IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.OutputPlan.Format);
@@ -222,24 +218,65 @@ public class BuildStage(
                 allCommands.Add(fontCommand);
             }
 
-            return Task.FromResult<StageResult>(
-                new StageSuccess<FfmpegCommand[]>(allCommands.ToArray())
-            );
+            return new StageSuccess<FfmpegCommand[]>(allCommands.ToArray());
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Task.FromResult<StageResult>(
-                new StageFailure(
-                    new EncodingError(
-                        EncodingErrorKind.Unknown,
-                        $"Command build failed: {ex.Message}",
-                        null,
-                        Name,
-                        false
-                    )
+            return new StageFailure(
+                new EncodingError(
+                    EncodingErrorKind.Unknown,
+                    $"Command build failed: {ex.Message}",
+                    null,
+                    Name,
+                    false
                 )
             );
         }
+    }
+
+    /// <summary>
+    /// When the profile ships a DRM config, resolve the matching processor,
+    /// generate key + keyinfo artifacts in the output directory, and splice
+    /// <c>-hls_key_info_file</c> into every video output's extra flags so
+    /// the output strategy emits it on the ffmpeg command. Returns the input
+    /// unchanged when DRM is disabled or no processor handles the method.
+    /// </summary>
+    private async Task<BuildInput> ApplyDrmPreparationAsync(BuildInput input, CancellationToken ct)
+    {
+        BuildingBlocks.Drm.DrmConfig? drm = input.Plan.OutputPlan.Drm;
+        if (drm is null || drm.Method == BuildingBlocks.Drm.DrmMethod.None)
+            return input;
+
+        BuildingBlocks.Drm.IDrmProcessor? processor = drmProcessors.FirstOrDefault(p =>
+            p.Method == drm.Method
+        );
+        if (processor is null)
+        {
+            logger.LogWarning(
+                "No DRM processor registered for {Method} — encoding without DRM",
+                drm.Method
+            );
+            return input;
+        }
+
+        BuildingBlocks.Drm.DrmArtifact artifact = await processor
+            .PrepareAsync(input.OutputDirectory, drm, ct)
+            .ConfigureAwait(false);
+
+        VideoOutputPlan[] encryptedVideos = input
+            .Plan.OutputPlan.VideoOutputs.Select(v =>
+            {
+                Dictionary<string, string> extra = new(v.ExtraFlags)
+                {
+                    ["-hls_key_info_file"] = artifact.KeyInfoFilePath,
+                };
+                return v with { ExtraFlags = extra };
+            })
+            .ToArray();
+
+        OutputPlan newOutputPlan = input.Plan.OutputPlan with { VideoOutputs = encryptedVideos };
+        ExecutionPlan newPlan = input.Plan with { OutputPlan = newOutputPlan };
+        return input with { Plan = newPlan };
     }
 
     /// <summary>

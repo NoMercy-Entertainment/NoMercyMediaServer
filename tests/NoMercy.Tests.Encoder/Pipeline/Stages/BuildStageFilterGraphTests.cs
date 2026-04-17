@@ -23,6 +23,7 @@ public class BuildStageFilterGraphTests
             new FontExtractor(),
             new SubtitleExtractor(),
             OutputStrategyFactoryTestHelper.Create(),
+            [],
             NullLogger<BuildStage>.Instance
         );
     }

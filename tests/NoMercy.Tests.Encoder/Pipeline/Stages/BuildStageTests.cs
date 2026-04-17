@@ -27,6 +27,7 @@ public class BuildStageTests
             new FontExtractor(),
             new SubtitleExtractor(),
             OutputStrategyFactoryTestHelper.Create(),
+            [],
             NullLogger<BuildStage>.Instance
         );
     }
