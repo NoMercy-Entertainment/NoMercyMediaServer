@@ -1,0 +1,199 @@
+using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Distribution;
+using NoMercy.Encoder.Hardware;
+using NoMercy.Encoder.Jobs;
+using NoMercy.Helpers.Extensions;
+
+namespace NoMercy.Api.Controllers.V1.Dashboard;
+
+/// <summary>
+/// Manages the registry of remote encoder workers. Remote workers POST to
+/// /register on boot, send periodic heartbeats to stay active, and either
+/// unregister cleanly on shutdown or drop off after 60s of silence.
+///
+/// Endpoints gated by EncoderOptions.DistributedEncodingSigningKey being
+/// set — single-machine installs return 503 and the registry stays empty.
+/// </summary>
+[ApiController]
+[Tags("Dashboard Workers")]
+[ApiVersion(1.0)]
+[Authorize]
+[Route("api/v{version:apiVersion}/dashboard/workers")]
+public class WorkersController(
+    InMemoryRemoteWorkerRegistry registry,
+    ITaskSerializer serializer,
+    EncoderOptions encoderOptions,
+    IHttpClientFactory httpClientFactory,
+    ILogger<WorkersController> logger,
+    ILogger<HttpRemoteWorker> workerLogger
+) : BaseController
+{
+    [HttpGet]
+    public IActionResult List()
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("Only the server owner can list workers");
+
+        IReadOnlyList<IRemoteWorker> workers = registry.GetActiveWorkers();
+
+        return Ok(
+            new
+            {
+                distribution_enabled = encoderOptions.IsDistributedEncodingEnabled,
+                count = workers.Count,
+                data = workers
+                    .Select(w =>
+                    {
+                        ResourceBudgetSnapshot budget = w.GetAvailableBudget();
+                        IHardwareCapabilities caps = w.GetCapabilities();
+                        return new
+                        {
+                            worker_id = w.WorkerId,
+                            available_gpu_slots = budget.AvailableGpuSlots,
+                            available_cpu_threads = budget.AvailableCpuThreads,
+                            gpu_utilization = budget.GpuUtilization,
+                            cpu_cores = caps.CpuCores,
+                            gpu_count = caps.Gpus.Count,
+                        };
+                    })
+                    .ToArray(),
+            }
+        );
+    }
+
+    [HttpPost("register")]
+    public IActionResult Register([FromBody] RegisterWorkerRequest request)
+    {
+        if (!encoderOptions.IsDistributedEncodingEnabled)
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new
+                {
+                    error = "Distributed encoding is not enabled on this server. "
+                        + "Set DistributedEncodingSigningKey in EncoderOptions and restart.",
+                }
+            );
+
+        if (!User.IsOwner())
+            return UnauthorizedResponse("Only the server owner can register workers");
+
+        if (string.IsNullOrWhiteSpace(request.WorkerId))
+            return BadRequestResponse("worker_id is required");
+
+        if (
+            string.IsNullOrWhiteSpace(request.BaseUrl)
+            || !Uri.TryCreate(request.BaseUrl, UriKind.Absolute, out Uri? baseUri)
+        )
+            return BadRequestResponse("base_url must be an absolute URL");
+
+        // Only HTTPS in production paths; local dev can still use HTTP via
+        // loopback / localhost, but anything else must be TLS.
+        bool isLoopback = baseUri.IsLoopback;
+        if (!isLoopback && baseUri.Scheme != Uri.UriSchemeHttps)
+            return BadRequestResponse(
+                "base_url must use https:// (plain http is allowed only on loopback)"
+            );
+
+        HttpClient httpClient = httpClientFactory.CreateClient("remote-worker");
+        httpClient.BaseAddress = baseUri;
+        httpClient.Timeout = TimeSpan.FromMinutes(10); // Task encodes take minutes.
+
+        HttpRemoteWorker worker = new(
+            workerId: request.WorkerId,
+            http: httpClient,
+            serializer: serializer,
+            signingKey: encoderOptions.GetDistributedEncodingSigningKey(),
+            initialCapabilities: new HardwareCapabilities(
+                Gpus: request.Gpus ?? [],
+                CpuCores: request.CpuCores
+            ),
+            initialBudget: new ResourceBudgetSnapshot(
+                AvailableGpuSlots: request.AvailableGpuSlots,
+                AvailableCpuThreads: request.AvailableCpuThreads,
+                GpuUtilization: 0
+            ),
+            logger: workerLogger
+        );
+
+        registry.Register(worker);
+        logger.LogInformation(
+            "Registered remote worker {WorkerId} at {BaseUrl}",
+            request.WorkerId,
+            baseUri
+        );
+
+        return Ok(new { worker_id = request.WorkerId, registered = true });
+    }
+
+    [HttpPost("{workerId}/heartbeat")]
+    public IActionResult Heartbeat(string workerId, [FromBody] HeartbeatRequest? request)
+    {
+        if (!encoderOptions.IsDistributedEncodingEnabled)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+
+        if (!User.IsOwner())
+            return UnauthorizedResponse("Only the server owner can send heartbeats");
+
+        bool accepted = registry.Heartbeat(workerId);
+        if (!accepted)
+            return NotFoundResponse($"Worker '{workerId}' is not registered; re-register first");
+
+        // If the heartbeat carries a fresh budget, push it into the worker
+        // so the dispatcher sees current values. Capabilities rarely change
+        // mid-run so we keep the original set.
+        if (request is { AvailableCpuThreads: int cpu, AvailableGpuSlots: int gpu })
+        {
+            IRemoteWorker? existing = registry
+                .GetActiveWorkers()
+                .FirstOrDefault(w => w.WorkerId == workerId);
+            if (existing is HttpRemoteWorker http)
+            {
+                http.UpdateSnapshot(
+                    http.GetCapabilities(),
+                    new ResourceBudgetSnapshot(
+                        AvailableGpuSlots: gpu,
+                        AvailableCpuThreads: cpu,
+                        GpuUtilization: request.GpuUtilization ?? 0
+                    )
+                );
+            }
+        }
+
+        return Ok(new { worker_id = workerId, accepted = true });
+    }
+
+    [HttpDelete("{workerId}")]
+    public IActionResult Unregister(string workerId)
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("Only the server owner can unregister workers");
+
+        bool removed = registry.Unregister(workerId);
+        if (!removed)
+            return NotFoundResponse($"Worker '{workerId}' is not registered");
+
+        logger.LogInformation("Unregistered remote worker {WorkerId}", workerId);
+        return NoContent();
+    }
+}
+
+public record RegisterWorkerRequest(
+    [property: JsonProperty("worker_id")] string WorkerId,
+    [property: JsonProperty("base_url")] string BaseUrl,
+    [property: JsonProperty("cpu_cores")] int CpuCores,
+    [property: JsonProperty("available_cpu_threads")] int AvailableCpuThreads,
+    [property: JsonProperty("available_gpu_slots")] int AvailableGpuSlots,
+    [property: JsonProperty("gpus")] List<GpuDevice>? Gpus = null
+);
+
+public record HeartbeatRequest(
+    [property: JsonProperty("available_cpu_threads")] int AvailableCpuThreads,
+    [property: JsonProperty("available_gpu_slots")] int AvailableGpuSlots,
+    [property: JsonProperty("gpu_utilization")] double? GpuUtilization = null
+);

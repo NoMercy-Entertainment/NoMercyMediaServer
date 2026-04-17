@@ -63,4 +63,29 @@ public class EncoderOptions
 
     public string ResolvedLiveTranscodeCachePath =>
         LiveTranscodeCachePath ?? Path.Combine(Path.GetTempPath(), "nomercy-live");
+
+    /// <summary>
+    /// Shared secret that signs distributed-encoding payloads between the
+    /// coordinator and remote workers (see <see cref="NoMercy.Encoder.Distribution.TaskSerializer"/>).
+    /// Must be identical on both sides — any divergence causes every task
+    /// and every heartbeat to fail HMAC verification. Leave null on single-
+    /// machine installs; distribution features stay disabled.
+    /// </summary>
+    public string? DistributedEncodingSigningKey { get; set; }
+
+    /// <summary>
+    /// True when a distributed-encoding signing key is configured — the API
+    /// layer uses this to gate worker registration endpoints.
+    /// </summary>
+    public bool IsDistributedEncodingEnabled =>
+        !string.IsNullOrWhiteSpace(DistributedEncodingSigningKey);
+
+    public byte[] GetDistributedEncodingSigningKey()
+    {
+        if (string.IsNullOrWhiteSpace(DistributedEncodingSigningKey))
+            throw new InvalidOperationException(
+                "DistributedEncodingSigningKey not configured — set it via AddNoMercyEncoder() to enable remote workers."
+            );
+        return System.Text.Encoding.UTF8.GetBytes(DistributedEncodingSigningKey);
+    }
 }

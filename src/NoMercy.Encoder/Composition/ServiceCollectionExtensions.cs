@@ -211,7 +211,19 @@ public static class ServiceCollectionExtensions
         // replacement IWorkerDispatcher to change behavior project-wide.
         services.AddTransient<LocalWorkerDispatcher>();
         services.AddTransient<IWorkerAssigner, WorkerAssigner>();
-        services.AddSingleton<IRemoteWorkerRegistry, EmptyRemoteWorkerRegistry>();
+
+        // Registry is a singleton so registrations accumulate across the
+        // process lifetime. InMemoryRemoteWorkerRegistry replaces the
+        // empty default so runtime worker registration actually takes
+        // effect — callers can still swap this out for a SignalR-backed
+        // registry later.
+        services.AddSingleton<InMemoryRemoteWorkerRegistry>();
+        services.AddSingleton<IRemoteWorkerRegistry>(sp =>
+            sp.GetRequiredService<InMemoryRemoteWorkerRegistry>()
+        );
+
+        // Signed transport between coordinator and workers.
+        services.AddTransient<ITaskSerializer, TaskSerializer>();
         // The remote dispatcher is the public face — it transparently falls
         // back to the local dispatcher when no remote workers are registered,
         // which is the default behavior today.
