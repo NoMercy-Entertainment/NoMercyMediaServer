@@ -281,6 +281,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         {
             case OutputFormat.Hls:
                 ValidateHlsCompatibility(profile, errors);
+                ValidateSegmentKeyframeAlignment(profile, errors);
                 break;
 
             case OutputFormat.Mp4:
@@ -289,6 +290,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
 
             case OutputFormat.Dash:
                 ValidateDashCompatibility(profile, errors);
+                ValidateSegmentKeyframeAlignment(profile, errors);
                 break;
 
             case OutputFormat.Mkv:
@@ -300,6 +302,47 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             case OutputFormat.Ogg:
                 ValidateAudioOnlyCompatibility(profile, errors);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// HLS / DASH segments should start on a keyframe. If segment duration
+    /// is not an integer multiple of the keyframe interval, the encoder
+    /// either inserts unexpected keyframes (raising bitrate) or segments
+    /// drift in duration — players re-buffer on every drift. Warn so the
+    /// profile author knows before shipping a broken ladder.
+    /// </summary>
+    private static void ValidateSegmentKeyframeAlignment(
+        EncodingProfile profile,
+        List<ValidationError> errors
+    )
+    {
+        int segmentSeconds = profile.SegmentDurationSeconds;
+        if (segmentSeconds <= 0)
+            return;
+
+        for (int i = 0; i < profile.VideoOutputs.Length; i++)
+        {
+            VideoOutput output = profile.VideoOutputs[i];
+            int keyInt = output.KeyframeIntervalSeconds;
+
+            if (keyInt <= 0)
+                continue;
+
+            if (segmentSeconds % keyInt != 0)
+            {
+                errors.Add(
+                    new ValidationError(
+                        $"VideoOutput[{i}].KeyframeIntervalSeconds",
+                        $"KeyframeIntervalSeconds ({keyInt}s) does not evenly divide "
+                            + $"SegmentDurationSeconds ({segmentSeconds}s). Segments may start "
+                            + $"mid-GOP, causing extra keyframes or drift in segment length. "
+                            + $"Use a key interval that divides the segment duration (e.g. 2s "
+                            + $"key / 6s segment).",
+                        ValidationSeverity.Warning
+                    )
+                );
+            }
         }
     }
 

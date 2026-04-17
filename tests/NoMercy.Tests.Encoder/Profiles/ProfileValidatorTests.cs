@@ -509,6 +509,111 @@ public class ProfileValidatorTests
     }
 
     [Fact]
+    public void HlsSegmentNotMultipleOfKeyInterval_WarnsAboutDrift()
+    {
+        // 5s segment / 2s key interval → 5%2==1 → unaligned. Encoder will
+        // insert an extra keyframe or drift segment length.
+        VideoOutput video = new VideoOutput(
+            Codec: VideoCodecType.H264,
+            Width: 1920,
+            Height: 1080,
+            BitrateKbps: 4000,
+            Crf: 23,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.1",
+            ConvertHdrToSdr: false,
+            KeyframeIntervalSeconds: 2,
+            TenBit: false
+        );
+
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "Misaligned",
+            Format: OutputFormat.Hls,
+            VideoOutputs: [video],
+            AudioOutputs:
+            [
+                new AudioOutput(
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: []
+                ),
+            ],
+            SubtitleOutputs: [],
+            SegmentDurationSeconds: 5 // 5 % 2 != 0
+        );
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.IsValid.Should().BeTrue();
+        result
+            .Errors.Should()
+            .ContainSingle(e =>
+                e.Field == "VideoOutput[0].KeyframeIntervalSeconds"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("does not evenly divide")
+            );
+    }
+
+    [Fact]
+    public void HlsSegmentAlignedToKeyInterval_NoWarning()
+    {
+        // Default profile is 6s segment / 2s keyint — 6%2==0.
+        EncodingProfile profile = BuildValidProfile();
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Field == "VideoOutput[0].KeyframeIntervalSeconds");
+    }
+
+    [Fact]
+    public void MkvProfile_DoesNotWarnAboutSegmentAlignment()
+    {
+        // MKV isn't segmented — alignment doesn't matter. The validator must
+        // not warn on MKV profiles with any keyframe interval / segment
+        // duration combination.
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "Mkv",
+            Format: OutputFormat.Mkv,
+            VideoOutputs:
+            [
+                new VideoOutput(
+                    Codec: VideoCodecType.H264,
+                    Width: 1920,
+                    Height: 1080,
+                    BitrateKbps: 4000,
+                    Crf: 23,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.1",
+                    ConvertHdrToSdr: false,
+                    KeyframeIntervalSeconds: 2,
+                    TenBit: false
+                ),
+            ],
+            AudioOutputs:
+            [
+                new AudioOutput(
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: []
+                ),
+            ],
+            SubtitleOutputs: [],
+            SegmentDurationSeconds: 5
+        );
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Field == "VideoOutput[0].KeyframeIntervalSeconds");
+    }
+
+    [Fact]
     public void AudioOnly_Profile_Passes()
     {
         // No video outputs — just audio — is valid as long as there is at least one output
