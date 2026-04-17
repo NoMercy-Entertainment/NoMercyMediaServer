@@ -86,8 +86,12 @@ public class EncoderArgumentResolverTests
     }
 
     [Fact]
-    public void ResolveQuality_VideoToolbox_MapsToQ()
+    public void ResolveQuality_VideoToolbox_MapsToQ_ScaledIntoPercentRange()
     {
+        // VideoToolbox quality is 0-100 (higher = better). The profile's CRF
+        // is H264 reference 0-51. Scaled: round(50/51*100)=98.
+        // Without scaling, passing 50 raw would be mid-range quality instead
+        // of near-lossless as the profile intended.
         ResolvedCodec resolved = ResolveH264(
             "h264_videotoolbox",
             GpuVendor.Apple,
@@ -98,7 +102,9 @@ public class EncoderArgumentResolverTests
         int crf = EncoderArgumentResolver.ResolveQuality(50, resolved, flags);
 
         crf.Should().Be(0);
-        flags["-q:v"].Should().Be("50");
+        flags["-q:v"]
+            .Should()
+            .Be("98", "50/51 of the 0-100 VideoToolbox range = 98 (near-max quality)");
         flags.Should().NotContainKey("-rc");
     }
 

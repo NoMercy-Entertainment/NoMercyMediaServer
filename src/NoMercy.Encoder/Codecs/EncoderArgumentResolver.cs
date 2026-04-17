@@ -62,29 +62,79 @@ public static class EncoderArgumentResolver
         if (supportsCrf)
             return profileCrf; // Software encoder — use -crf as-is
 
-        // Hardware encoder — map to the correct quality flag with rate control mode
+        // Hardware encoder — map to the correct quality flag with rate control mode.
+        // Scale the profile's CRF value into the encoder's native quality range.
+        // Without this, a profile written in libsvtav1 terms (Crf=35 on a 0-63 scale)
+        // would reach av1_amf as "-qp 35" on its 0-255 scale (near-lossless) —
+        // same CRF number, wildly different output size.
+        int scaledQuality = ScaleQualityToEncoder(profileCrf, resolved.EncoderInfo);
+        string qualityString = scaledQuality.ToString();
+
         switch (resolved.DefaultRateControl)
         {
             case RateControlMode.Cq:
                 // NVENC: -rc vbr -cq VALUE
                 extraFlags["-rc"] = "vbr";
-                extraFlags["-cq"] = profileCrf.ToString();
+                extraFlags["-cq"] = qualityString;
                 break;
             case RateControlMode.Icq:
                 // Intel QSV: -global_quality VALUE
-                extraFlags["-global_quality"] = profileCrf.ToString();
+                extraFlags["-global_quality"] = qualityString;
                 break;
             case RateControlMode.QualityLevel:
                 // VideoToolbox: -q:v VALUE
-                extraFlags["-q:v"] = profileCrf.ToString();
+                extraFlags["-q:v"] = qualityString;
                 break;
             default:
                 // AMF/VAAPI: -rc cqp -qp VALUE
                 extraFlags["-rc"] = "cqp";
-                extraFlags["-qp"] = profileCrf.ToString();
+                extraFlags["-qp"] = qualityString;
                 break;
         }
         return 0; // Don't emit -crf
+    }
+
+    /// <summary>
+    /// Scales a profile-level CRF value (always in "software-encoder" units for
+    /// the codec) into the target encoder's native quality range. Proportional
+    /// linear mapping — perceptually it's a rough approximation (CRF vs QP
+    /// curves differ per encoder), but orders of magnitude closer than passing
+    /// raw values. Clamped to the encoder's [Min, Max] so the emitted value is
+    /// always accepted by ffmpeg.
+    /// </summary>
+    internal static int ScaleQualityToEncoder(int profileCrf, EncoderInfo encoder)
+    {
+        QualityRange range = encoder.QualityRange;
+
+        // Reference ranges — the "software encoder" scale the profile was written in.
+        // If the target encoder shares the same max, pass through to avoid
+        // floating-point drift for the common case.
+        int referenceMax = InferReferenceMax(encoder);
+        if (range.Max == referenceMax)
+            return Math.Clamp(profileCrf, range.Min, range.Max);
+
+        double ratio = (double)profileCrf / referenceMax;
+        int scaled = (int)Math.Round(ratio * range.Max);
+        return Math.Clamp(scaled, Math.Max(1, range.Min), range.Max);
+    }
+
+    /// <summary>
+    /// Returns the "reference" quality max for the codec family the encoder
+    /// belongs to. H264 / HEVC / most QSV variants use 0-51. AV1 / VP9
+    /// software uses 0-63. The profile is written in these reference units
+    /// so scaling target the same point on the quality curve.
+    /// </summary>
+    private static int InferReferenceMax(EncoderInfo encoder)
+    {
+        // Heuristic based on encoder name — the codec family determines the
+        // reference scale. Avoids taking a CodecRegistry dependency here.
+        string name = encoder.FfmpegName.ToLowerInvariant();
+        if (name.Contains("av1") || name.StartsWith("libsvtav1") || name.StartsWith("libaom"))
+            return 63;
+        if (name.Contains("vp9") || name.Contains("libvpx"))
+            return 63;
+        // H264, HEVC, and anything else — 0-51 reference.
+        return 51;
     }
 
     /// <summary>

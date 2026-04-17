@@ -66,15 +66,20 @@ public class Av1ArgumentResolverTests
     }
 
     [Fact]
-    public void Av1Nvenc_MapsCrfToVbrCq()
+    public void Av1Nvenc_MapsCrfToVbrCq_ScaledFromAv1Range()
     {
+        // av1_nvenc uses 0-51 CQ, but the profile's CRF is written in the AV1
+        // software reference scale (0-63). Without scaling, CRF 35 would land
+        // as -cq 35 on a 0-51 scale = near-lossless. Expected: round(35/63*51)=28.
         ResolvedCodec nvenc = Resolve("av1_nvenc", GpuVendor.Nvidia, RateControlMode.Cq);
         Dictionary<string, string> flags = [];
 
         EncoderArgumentResolver.ResolveQuality(35, nvenc, flags);
 
         flags["-rc"].Should().Be("vbr");
-        flags["-cq"].Should().Be("35");
+        flags["-cq"]
+            .Should()
+            .Be("28", "35/63 of the 0-51 range = 28; passing 35 raw would be near-lossless");
     }
 
     [Fact]
@@ -85,6 +90,41 @@ public class Av1ArgumentResolverTests
         // -qp 35 (near-lossless) on av1_amf.
         EncoderInfo amf = Get("av1_amf");
         amf.QualityRange.Max.Should().Be(255, "AMD AV1 QP range is 0-255, NOT 0-51");
+    }
+
+    [Fact]
+    public void Av1Amf_ScalesProfileCrfFromAv1RangeTo0To255()
+    {
+        // CRF 35 on the 0-63 AV1 software reference scale → QP ~142 on the
+        // 0-255 AMF scale. Without scaling, av1_amf would receive -qp 35,
+        // which in a 0-255 range is lossless territory (~10-20x the file
+        // size the profile asked for).
+        ResolvedCodec amf = Resolve("av1_amf", GpuVendor.Amd, RateControlMode.Cqp);
+        Dictionary<string, string> flags = [];
+
+        EncoderArgumentResolver.ResolveQuality(35, amf, flags);
+
+        flags["-rc"].Should().Be("cqp");
+        // round(35/63*255) = 142
+        flags["-qp"].Should().Be("142");
+    }
+
+    [Fact]
+    public void ScaleQualityToEncoder_SameRange_ReturnsInput()
+    {
+        // No drift for the common case where encoder range matches reference.
+        EncoderInfo libsvtav1 = Get("libsvtav1"); // 0-63 — matches AV1 ref
+        EncoderArgumentResolver.ScaleQualityToEncoder(35, libsvtav1).Should().Be(35);
+    }
+
+    [Fact]
+    public void ScaleQualityToEncoder_ClampsToEncoderRange()
+    {
+        // If the profile somehow sends CRF 80 (above AV1 sw range), scaling
+        // must still produce a value inside the target encoder's [Min, Max].
+        EncoderInfo qsv = Get("av1_qsv"); // 1-51
+        int scaled = EncoderArgumentResolver.ScaleQualityToEncoder(80, qsv);
+        scaled.Should().BeInRange(1, 51);
     }
 
     [Fact]

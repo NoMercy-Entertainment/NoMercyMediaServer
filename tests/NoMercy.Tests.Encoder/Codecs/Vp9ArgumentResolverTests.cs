@@ -64,14 +64,18 @@ public class Vp9ArgumentResolverTests
     }
 
     [Fact]
-    public void Vp9Qsv_MapsCrfToGlobalQuality()
+    public void Vp9Qsv_MapsCrfToGlobalQuality_ScaledFromVpxRange()
     {
+        // vp9_qsv uses 1-51 ICQ, but the profile's CRF is written in the VP9
+        // software reference scale (0-63). Scaled: round(33/63*51)=27.
         ResolvedCodec qsv = Resolve("vp9_qsv", GpuVendor.Intel, RateControlMode.Icq);
         Dictionary<string, string> flags = [];
 
         EncoderArgumentResolver.ResolveQuality(33, qsv, flags);
 
-        flags["-global_quality"].Should().Be("33");
+        flags["-global_quality"]
+            .Should()
+            .Be("27", "33 on the 0-63 VP9 reference scale maps to 27 on the 1-51 QSV scale");
     }
 
     [Fact]
