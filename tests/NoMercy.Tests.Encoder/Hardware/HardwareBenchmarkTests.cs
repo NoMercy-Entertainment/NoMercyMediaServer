@@ -18,7 +18,11 @@ public class HardwareBenchmarkTests
     {
         EncoderInfo encoder = MakeSoftwareH264();
 
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(encoder, 1920, 1080);
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+            SoftwareTarget(encoder),
+            1920,
+            1080
+        );
 
         int fIdx = Array.IndexOf(args, "-f");
         args[fIdx + 1].Should().Be("lavfi");
@@ -32,7 +36,11 @@ public class HardwareBenchmarkTests
     [Fact]
     public void BuildCalibrationArguments_UsesNullMuxerSoNothingIsWritten()
     {
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(MakeSoftwareH264(), 1280, 720);
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+            SoftwareTarget(MakeSoftwareH264()),
+            1280,
+            720
+        );
 
         // Last output should be "-f null -" to discard encoded frames.
         int nullIdx = -1;
@@ -55,7 +63,11 @@ public class HardwareBenchmarkTests
     [Fact]
     public void BuildCalibrationArguments_SelectsMediumPresetForSoftware()
     {
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(MakeSoftwareH264(), 1280, 720);
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+            SoftwareTarget(MakeSoftwareH264()),
+            1280,
+            720
+        );
 
         int presetIdx = Array.IndexOf(args, "-preset");
         args[presetIdx + 1].Should().Be("medium");
@@ -79,7 +91,11 @@ public class HardwareBenchmarkTests
             VendorSpecificFlags: new Dictionary<string, string>()
         );
 
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(nvenc, 1920, 1080);
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+            HardwareTarget(nvenc, "RTX 4080", vendorIndex: 0),
+            1920,
+            1080
+        );
 
         int presetIdx = Array.IndexOf(args, "-preset");
         args[presetIdx + 1].Should().Be("p4");
@@ -103,7 +119,11 @@ public class HardwareBenchmarkTests
             VendorSpecificFlags: new Dictionary<string, string> { ["-usage"] = "transcoding" }
         );
 
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(amf, 1280, 720);
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+            HardwareTarget(amf, "Radeon 7900XT", vendorIndex: 0),
+            1280,
+            720
+        );
 
         int usageIdx = Array.IndexOf(args, "-usage");
         usageIdx.Should().BeGreaterThan(-1);
@@ -113,7 +133,11 @@ public class HardwareBenchmarkTests
     [Fact]
     public void BuildCalibrationArguments_IncludesProgressPipe()
     {
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(MakeSoftwareH264(), 1920, 1080);
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+            SoftwareTarget(MakeSoftwareH264()),
+            1920,
+            1080
+        );
 
         int idx = Array.IndexOf(args, "-progress");
         args[idx + 1].Should().Be("pipe:1");
@@ -122,7 +146,11 @@ public class HardwareBenchmarkTests
     [Fact]
     public void BuildCalibrationArguments_CapsEncodedFrames()
     {
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(MakeSoftwareH264(), 1920, 1080);
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+            SoftwareTarget(MakeSoftwareH264()),
+            1920,
+            1080
+        );
 
         int framesIdx = Array.IndexOf(args, "-frames:v");
         framesIdx
@@ -178,6 +206,139 @@ public class HardwareBenchmarkTests
 
         names.Should().Contain("h264_nvenc");
         names.Should().NotContain("h264_amf");
+    }
+
+    [Fact]
+    public void SelectCandidates_MultipleNvidiaGpus_YieldsOncePerDeviceWithDistinctIndex()
+    {
+        Mock<IHardwareCapabilities> hardware = new();
+        hardware
+            .Setup(h => h.Gpus)
+            .Returns([
+                new GpuDevice(
+                    Vendor: GpuVendor.Nvidia,
+                    Name: "RTX 4080",
+                    VramMb: 16_384,
+                    MaxEncoderSessions: 12,
+                    SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
+                ),
+                new GpuDevice(
+                    Vendor: GpuVendor.Nvidia,
+                    Name: "RTX 3060",
+                    VramMb: 12_288,
+                    MaxEncoderSessions: 8,
+                    SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
+                ),
+            ]);
+
+        HardwareBenchmark sut = NewBenchmark(hardware.Object);
+
+        List<CalibrationTarget> nvencH264 = sut.SelectCandidates()
+            .Where(c => c.Encoder.FfmpegName == "h264_nvenc")
+            .ToList();
+
+        nvencH264.Should().HaveCount(2);
+        nvencH264.Select(c => c.VendorIndex).Should().BeEquivalentTo([0, 1]);
+        nvencH264.Select(c => c.Device!.Name).Should().BeEquivalentTo(["RTX 4080", "RTX 3060"]);
+    }
+
+    [Fact]
+    public void SelectCandidates_MixedVendors_IndexesEachVendorSeparately()
+    {
+        Mock<IHardwareCapabilities> hardware = new();
+        hardware
+            .Setup(h => h.Gpus)
+            .Returns([
+                new GpuDevice(
+                    Vendor: GpuVendor.Nvidia,
+                    Name: "RTX 4080",
+                    VramMb: 16_384,
+                    MaxEncoderSessions: 12,
+                    SupportedCodecs: [VideoCodecType.H264]
+                ),
+                new GpuDevice(
+                    Vendor: GpuVendor.Intel,
+                    Name: "Arc A770",
+                    VramMb: 16_384,
+                    MaxEncoderSessions: 8,
+                    SupportedCodecs: [VideoCodecType.H264]
+                ),
+                new GpuDevice(
+                    Vendor: GpuVendor.Nvidia,
+                    Name: "RTX 3060",
+                    VramMb: 12_288,
+                    MaxEncoderSessions: 8,
+                    SupportedCodecs: [VideoCodecType.H264]
+                ),
+            ]);
+
+        HardwareBenchmark sut = NewBenchmark(hardware.Object);
+
+        List<CalibrationTarget> targets = sut.SelectCandidates().ToList();
+
+        CalibrationTarget[] nvenc = targets
+            .Where(t => t.Encoder.FfmpegName == "h264_nvenc")
+            .ToArray();
+        nvenc.Should().HaveCount(2);
+        // Vendor-relative indexing: Nvidia positions inside the Nvidia-only list,
+        // NOT positions inside the global Gpus list.
+        nvenc.Select(t => t.VendorIndex).Should().BeEquivalentTo([0, 1]);
+
+        CalibrationTarget[] qsv = targets.Where(t => t.Encoder.FfmpegName == "h264_qsv").ToArray();
+        qsv.Should().HaveCount(1);
+        qsv[0].VendorIndex.Should().Be(0);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Hardware init args — must be emitted per vendor so multi-GPU boxes
+    // actually exercise each card instead of silently defaulting to GPU 0.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildCalibrationArguments_Nvidia_EmitsCudaInitWithVendorIndex()
+    {
+        EncoderInfo nvenc = new(
+            FfmpegName: "h264_nvenc",
+            RequiredVendor: GpuVendor.Nvidia,
+            Presets: ["p1", "p4", "p7"],
+            Profiles: ["high"],
+            Levels: [],
+            QualityRange: new QualityRange(0, 51, 23),
+            SupportedRateControl: [RateControlMode.Cqp],
+            Supports10Bit: false,
+            SupportsHdr: false,
+            MaxConcurrentSessions: 12,
+            PixelFormat10Bit: "",
+            VendorSpecificFlags: new Dictionary<string, string>()
+        );
+
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+            HardwareTarget(nvenc, "RTX 3060", vendorIndex: 1),
+            1920,
+            1080
+        );
+
+        int initIdx = Array.IndexOf(args, "-init_hw_device");
+        initIdx.Should().BeGreaterThan(-1);
+        args[initIdx + 1].Should().Be("cuda=cu:1");
+
+        int gpuIdx = Array.IndexOf(args, "-gpu");
+        gpuIdx.Should().BeGreaterThan(-1);
+        args[gpuIdx + 1].Should().Be("1");
+    }
+
+    [Fact]
+    public void BuildCalibrationArguments_Software_DoesNotEmitHwInit()
+    {
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+            SoftwareTarget(MakeSoftwareH264()),
+            1920,
+            1080
+        );
+
+        args.Should().NotContain("-init_hw_device");
+        args.Should().NotContain("-filter_hw_device");
+        args.Should().NotContain("-gpu");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -376,4 +537,23 @@ public class HardwareBenchmarkTests
             PixelFormat10Bit: "yuv420p10le",
             VendorSpecificFlags: new Dictionary<string, string>()
         );
+
+    private static CalibrationTarget SoftwareTarget(EncoderInfo encoder) =>
+        new(VideoCodecType.H264, encoder, Device: null, VendorIndex: 0);
+
+    private static CalibrationTarget HardwareTarget(
+        EncoderInfo encoder,
+        string deviceName,
+        int vendorIndex
+    )
+    {
+        GpuDevice device = new(
+            Vendor: encoder.RequiredVendor ?? GpuVendor.Nvidia,
+            Name: deviceName,
+            VramMb: 16_384,
+            MaxEncoderSessions: 12,
+            SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
+        );
+        return new CalibrationTarget(VideoCodecType.H264, encoder, device, vendorIndex);
+    }
 }
