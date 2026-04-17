@@ -2,9 +2,14 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
+using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
 
@@ -19,6 +24,8 @@ public class EncodingPresetsController(
     EncodingPresetRepository presetRepository,
     IPresetResolver presetResolver,
     IProfileValidator profileValidator,
+    IMediaAnalyzer mediaAnalyzer,
+    IDbContextFactory<MediaContext> contextFactory,
     IHttpClientFactory httpClientFactory
 ) : BaseController
 {
@@ -434,6 +441,290 @@ public class EncodingPresetsController(
         );
     }
 
+    /// <summary>
+    /// Previews what the encoder will do with a specific source file under a
+    /// profile. Returns the per-stream plan: copy / transcode / extract /
+    /// drop, plus a human-readable rationale for each decision. Lets the UI
+    /// tell users things like "your DTS 5.1 track will be transcoded to AAC
+    /// stereo because HLS doesn't carry DTS" before they kick off a job.
+    ///
+    /// Accepts any ffmpeg-parseable input — source codec/container
+    /// combinations that aren't in our output set still work, we just
+    /// transcode them automatically.
+    /// </summary>
+    [HttpPost("preview")]
+    public async Task<IActionResult> Preview(
+        [FromBody] PreviewRequest request,
+        CancellationToken ct
+    )
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to preview encodes");
+
+        if (string.IsNullOrWhiteSpace(request.ProfileJson))
+            return BadRequestResponse("profile_json is required");
+        if (string.IsNullOrWhiteSpace(request.VideoFileId))
+            return BadRequestResponse("video_file_id is required");
+        if (!Ulid.TryParse(request.VideoFileId, out Ulid fileId))
+            return BadRequestResponse("video_file_id is not a valid ULID");
+
+        EncodingProfile? profile;
+        try
+        {
+            profile = JsonConvert.DeserializeObject<EncodingProfile>(request.ProfileJson);
+        }
+        catch (JsonException ex)
+        {
+            return BadRequestResponse($"profile_json is malformed: {ex.Message}");
+        }
+        if (profile is null)
+            return BadRequestResponse("profile_json deserialized to null");
+
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        Database.Models.Media.VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(
+            v => v.Id == fileId,
+            ct
+        );
+        if (file is null)
+            return NotFoundResponse("Video file not found");
+
+        string path = Path.Combine(file.HostFolder, file.Filename);
+        if (!System.IO.File.Exists(path))
+            return NotFoundResponse($"Source file missing on disk: {path}");
+
+        NoMercy.Encoder.Analysis.MediaInfo media;
+        try
+        {
+            media = await mediaAnalyzer.AnalyzeAsync(path, ct);
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"ffprobe failed: {ex.Message}");
+        }
+
+        StreamActionResolver resolver = new();
+        List<object> videoPlan = [];
+        List<object> audioPlan = [];
+        List<object> subtitlePlan = [];
+
+        // Per-variant video decisions. When the profile has multiple variants
+        // (ABR ladder), each one gets its own plan against the first source
+        // video stream.
+        foreach (VideoStreamInfo source in media.VideoStreams)
+        {
+            for (int i = 0; i < profile.VideoOutputs.Length; i++)
+            {
+                VideoOutput output = profile.VideoOutputs[i];
+                StreamAction action = resolver.ResolveVideo(source, output);
+                videoPlan.Add(
+                    new
+                    {
+                        source_index = source.Index,
+                        source_codec = source.Codec,
+                        source_resolution = $"{source.Width}x{source.Height}",
+                        source_bitrate_kbps = source.BitRateKbps,
+                        variant_index = i,
+                        target_codec = output.Codec.ToString(),
+                        target_resolution = $"{output.Width}x{output.Height ?? source.Height}",
+                        target_bitrate_kbps = output.BitrateKbps,
+                        action = action.ToString(),
+                        rationale = DescribeVideoAction(source, output, action),
+                    }
+                );
+            }
+        }
+
+        foreach (AudioStreamInfo source in media.AudioStreams)
+        {
+            for (int i = 0; i < profile.AudioOutputs.Length; i++)
+            {
+                AudioOutput output = profile.AudioOutputs[i];
+                StreamAction action = resolver.ResolveAudio(source, output, profile.Format);
+                audioPlan.Add(
+                    new
+                    {
+                        source_index = source.Index,
+                        source_codec = source.Codec,
+                        source_language = source.Language,
+                        source_channels = source.Channels,
+                        source_bitrate_kbps = source.BitRateKbps,
+                        output_index = i,
+                        target_codec = output.Codec.ToString(),
+                        target_channels = output.Channels,
+                        target_bitrate_kbps = output.BitrateKbps,
+                        action = action.ToString(),
+                        rationale = DescribeAudioAction(source, output, profile.Format, action),
+                    }
+                );
+            }
+        }
+
+        foreach (SubtitleStreamInfo source in media.SubtitleStreams)
+        {
+            for (int i = 0; i < profile.SubtitleOutputs.Length; i++)
+            {
+                SubtitleOutput output = profile.SubtitleOutputs[i];
+                StreamAction action = resolver.ResolveSubtitle(source, output, profile.Format);
+                subtitlePlan.Add(
+                    new
+                    {
+                        source_index = source.Index,
+                        source_codec = source.Codec,
+                        source_language = source.Language,
+                        source_is_text = source.IsTextBased,
+                        output_index = i,
+                        target_codec = output.Codec.ToString(),
+                        mode = output.Mode.ToString(),
+                        action = action.ToString(),
+                        rationale = DescribeSubtitleAction(source, output, profile.Format, action),
+                    }
+                );
+            }
+        }
+
+        // Also run profile validation so the preview carries warnings that
+        // apply regardless of source (level mismatch, inverted ladder, etc.).
+        ValidationResult validation = profileValidator.Validate(profile);
+
+        return Ok(
+            new
+            {
+                source = new
+                {
+                    path,
+                    duration_seconds = media.Duration.TotalSeconds,
+                    video_streams = media.VideoStreams.Count,
+                    audio_streams = media.AudioStreams.Count,
+                    subtitle_streams = media.SubtitleStreams.Count,
+                    chapters = media.Chapters.Count,
+                },
+                profile_format = profile.Format.ToString(),
+                video_plan = videoPlan,
+                audio_plan = audioPlan,
+                subtitle_plan = subtitlePlan,
+                warnings = validation
+                    .Errors.Where(e => e.Severity == ValidationSeverity.Warning)
+                    .Select(e => new { field = e.Field, message = e.Message })
+                    .ToArray(),
+                errors = validation
+                    .Errors.Where(e => e.Severity == ValidationSeverity.Error)
+                    .Select(e => new { field = e.Field, message = e.Message })
+                    .ToArray(),
+            }
+        );
+    }
+
+    private static string DescribeVideoAction(
+        VideoStreamInfo source,
+        VideoOutput target,
+        StreamAction action
+    )
+    {
+        return action switch
+        {
+            StreamAction.Copy =>
+                $"Source {source.Codec} {source.Width}x{source.Height} @ {source.BitRateKbps}kbps "
+                    + $"already matches target — remuxing without re-encoding.",
+            StreamAction.Transcode => BuildVideoTranscodeRationale(source, target),
+            _ => action.ToString(),
+        };
+    }
+
+    private static string BuildVideoTranscodeRationale(VideoStreamInfo source, VideoOutput target)
+    {
+        List<string> reasons = [];
+        string sourceCodec = source.Codec.ToLowerInvariant();
+        if (!MatchesTargetCodec(sourceCodec, target.Codec))
+            reasons.Add($"source is {source.Codec}, target is {target.Codec}");
+        if (source.Width != target.Width)
+            reasons.Add($"resolution {source.Width}px → {target.Width}px");
+        if (target.Height is int th && source.Height != th)
+            reasons.Add($"height {source.Height}px → {th}px");
+        if (source.BitRateKbps < target.BitrateKbps && target.BitrateKbps > 0)
+            reasons.Add(
+                $"source bitrate {source.BitRateKbps}kbps below target {target.BitrateKbps}kbps"
+            );
+
+        if (reasons.Count == 0)
+            return "Transcoding (no exact match found for passthrough).";
+        return "Transcoding: " + string.Join(", ", reasons) + ".";
+    }
+
+    private static bool MatchesTargetCodec(string sourceCodecName, VideoCodecType target) =>
+        (target, sourceCodecName) switch
+        {
+            (VideoCodecType.H264, "h264" or "avc") => true,
+            (VideoCodecType.H265, "hevc" or "h265") => true,
+            (VideoCodecType.Av1, "av1") => true,
+            (VideoCodecType.Vp9, "vp9") => true,
+            _ => false,
+        };
+
+    private static string DescribeAudioAction(
+        AudioStreamInfo source,
+        AudioOutput target,
+        OutputFormat format,
+        StreamAction action
+    )
+    {
+        return action switch
+        {
+            StreamAction.Copy =>
+                $"Source {source.Codec} {source.Channels}ch @ {source.BitRateKbps}kbps is a passthrough match — remuxing.",
+            StreamAction.Transcode => BuildAudioTranscodeRationale(source, target, format),
+            _ => action.ToString(),
+        };
+    }
+
+    private static string BuildAudioTranscodeRationale(
+        AudioStreamInfo source,
+        AudioOutput target,
+        OutputFormat format
+    )
+    {
+        string sourceCodec = source.Codec.ToLowerInvariant();
+        // Container-forbidden codecs — highlight when the user's source is
+        // something the output container simply can't carry.
+        if (format == OutputFormat.Hls && sourceCodec is "dts" or "dca" or "truehd")
+            return $"{source.Codec} is not supported in HLS — transcoding to {target.Codec}.";
+        if (format == OutputFormat.Mp4 && sourceCodec is "truehd")
+            return $"TrueHD is not standard in MP4 — transcoding to {target.Codec}.";
+
+        if (sourceCodec is "flac" or "truehd" && !IsLossless(target.Codec))
+            return $"Lossless source ({source.Codec}) → lossy target ({target.Codec}) always transcodes.";
+
+        if (source.Channels > target.Channels)
+            return $"Downmixing {source.Channels}ch → {target.Channels}ch with {target.Codec}.";
+
+        return $"Transcoding {source.Codec} → {target.Codec} "
+            + $"({source.BitRateKbps}kbps → {target.BitrateKbps}kbps).";
+    }
+
+    private static bool IsLossless(AudioCodecType codec) =>
+        codec is AudioCodecType.Flac or AudioCodecType.TrueHd;
+
+    private static string DescribeSubtitleAction(
+        SubtitleStreamInfo source,
+        SubtitleOutput target,
+        OutputFormat format,
+        StreamAction action
+    )
+    {
+        return action switch
+        {
+            StreamAction.Copy =>
+                $"Source {source.Codec} subtitle copied into MKV container unchanged.",
+            StreamAction.Extract =>
+                $"Source {source.Codec} subtitle extracted to a WebVTT/SRT sidecar next to the playlist.",
+            StreamAction.Transcode when target.Mode == SubtitleMode.BurnIn =>
+                $"Subtitle burned into the video frame (BurnIn mode).",
+            StreamAction.Transcode when !source.IsTextBased =>
+                $"Bitmap subtitle ({source.Codec}) cannot be embedded in {format} — burning into video.",
+            StreamAction.Transcode => $"Transcoding {source.Codec} subtitle to {target.Codec}.",
+            _ => action.ToString(),
+        };
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
@@ -503,6 +794,11 @@ public record ImportFromUrlRequest(string Url);
 public record ClonePresetRequest(string? Name = null, string? Author = null);
 
 public record ValidatePresetRequest(string ProfileJson);
+
+public record PreviewRequest(
+    [property: JsonProperty("profile_json")] string ProfileJson,
+    [property: JsonProperty("video_file_id")] string VideoFileId
+);
 
 public record UpdatePresetRequest(
     string? Name = null,
