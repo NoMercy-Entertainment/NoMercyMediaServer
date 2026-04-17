@@ -202,7 +202,18 @@ public static class ServiceCollectionExtensions
         // Distribution — LocalWorkerDispatcher is the default; remote workers
         // land as a follow-up behind a feature flag. Plugins can register a
         // replacement IWorkerDispatcher to change behavior project-wide.
-        services.AddTransient<IWorkerDispatcher, LocalWorkerDispatcher>();
+        services.AddTransient<LocalWorkerDispatcher>();
+        services.AddTransient<IWorkerAssigner, WorkerAssigner>();
+        services.AddSingleton<IRemoteWorkerRegistry, EmptyRemoteWorkerRegistry>();
+        // The remote dispatcher is the public face — it transparently falls
+        // back to the local dispatcher when no remote workers are registered,
+        // which is the default behavior today.
+        services.AddTransient<IWorkerDispatcher>(sp => new RemoteWorkerDispatcher(
+            sp.GetRequiredService<IRemoteWorkerRegistry>(),
+            sp.GetRequiredService<IWorkerAssigner>(),
+            sp.GetRequiredService<LocalWorkerDispatcher>(),
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<RemoteWorkerDispatcher>>()
+        ));
 
         // Disc ripping — DriveMonitor is Singleton because its polling loop
         // holds state (last-seen drives) across MonitorAsync() enumerations.
