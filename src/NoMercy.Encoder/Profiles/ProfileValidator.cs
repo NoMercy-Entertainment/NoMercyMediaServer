@@ -17,9 +17,103 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         ValidateHdrPathSafety(profile, errors);
         ValidateNoDuplicateVariants(profile, errors);
         ValidateMonotonicLadder(profile, errors);
+        ValidateVideoWithoutAudioForStreaming(profile, errors);
+        ValidateAudioLanguageFilterOverlap(profile, errors);
 
         bool isValid = errors.All(e => e.Severity != ValidationSeverity.Error);
         return new ValidationResult(isValid, [.. errors]);
+    }
+
+    /// <summary>
+    /// Streaming container (HLS / DASH) with video outputs but zero audio
+    /// outputs is almost always a mistake — iOS clients particularly refuse
+    /// to play HLS streams with no audio track, and the web client shows
+    /// a muted player with no explanation. Legitimate silent-video use
+    /// cases exist (CCTV replay, demo loops) but they're rare and the user
+    /// should know they're on that path.
+    /// </summary>
+    private static void ValidateVideoWithoutAudioForStreaming(
+        EncodingProfile profile,
+        List<ValidationError> errors
+    )
+    {
+        bool isStreamingContainer = profile.Format is OutputFormat.Hls or OutputFormat.Dash;
+        if (
+            isStreamingContainer
+            && profile.VideoOutputs.Length > 0
+            && profile.AudioOutputs.Length == 0
+        )
+        {
+            errors.Add(
+                new ValidationError(
+                    "AudioOutputs",
+                    $"{profile.Format} profile has video but no audio outputs. iOS and many smart-"
+                        + "TV clients refuse to play streams with no audio track. Add at least one "
+                        + "audio output, or switch to MKV/MP4 if silent video is intentional.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
+    }
+
+    /// <summary>
+    /// Two audio outputs whose AllowedLanguages lists overlap will both
+    /// try to encode the same source stream — double the CPU, two copies
+    /// of the same file at the same codec. Almost always a misconfiguration
+    /// (user meant to separate english and japanese tracks, forgot to set
+    /// the language filter). Warn.
+    ///
+    /// Empty AllowedLanguages means "all languages" — treat overlap with
+    /// any other entry as total overlap.
+    /// </summary>
+    private static void ValidateAudioLanguageFilterOverlap(
+        EncodingProfile profile,
+        List<ValidationError> errors
+    )
+    {
+        if (profile.AudioOutputs.Length < 2)
+            return;
+
+        for (int i = 0; i < profile.AudioOutputs.Length; i++)
+        {
+            for (int j = i + 1; j < profile.AudioOutputs.Length; j++)
+            {
+                AudioOutput a = profile.AudioOutputs[i];
+                AudioOutput b = profile.AudioOutputs[j];
+
+                // Only flag when the codec+channels pair would produce
+                // identical outputs. Different codecs or channel counts is
+                // legit intent (e.g., AAC stereo + EAC3 5.1 of the same
+                // language for bandwidth tiering).
+                if (a.Codec != b.Codec || a.Channels != b.Channels)
+                    continue;
+
+                if (!LanguageFiltersOverlap(a.AllowedLanguages, b.AllowedLanguages))
+                    continue;
+
+                errors.Add(
+                    new ValidationError(
+                        $"AudioOutput[{j}].AllowedLanguages",
+                        $"AudioOutput[{i}] and AudioOutput[{j}] have the same codec "
+                            + $"({a.Codec} {a.Channels}ch) and overlapping language filters — "
+                            + "they'll both encode the same source streams, wasting CPU and "
+                            + "producing duplicate output files. Narrow one of the filters or "
+                            + "remove the duplicate output.",
+                        ValidationSeverity.Warning
+                    )
+                );
+            }
+        }
+    }
+
+    private static bool LanguageFiltersOverlap(string[] first, string[] second)
+    {
+        // Empty list means "accept all" — overlaps with anything.
+        if (first.Length == 0 || second.Length == 0)
+            return true;
+
+        HashSet<string> a = new(first, StringComparer.OrdinalIgnoreCase);
+        return second.Any(l => a.Contains(l));
     }
 
     private static void ValidateName(EncodingProfile profile, List<ValidationError> errors)

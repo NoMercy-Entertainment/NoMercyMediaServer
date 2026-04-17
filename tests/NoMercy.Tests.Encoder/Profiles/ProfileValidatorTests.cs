@@ -1319,6 +1319,166 @@ public class ProfileValidatorTests
             );
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // Streaming-container audio requirement
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void HlsProfile_NoAudioOutputs_Warns()
+    {
+        EncodingProfile profile = BuildValidProfile(format: OutputFormat.Hls, audioOutputs: []);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "AudioOutputs"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("iOS")
+            );
+    }
+
+    [Fact]
+    public void DashProfile_NoAudioOutputs_Warns()
+    {
+        EncodingProfile profile = BuildValidProfile(format: OutputFormat.Dash, audioOutputs: []);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e => e.Field == "AudioOutputs" && e.Severity == ValidationSeverity.Warning);
+    }
+
+    [Fact]
+    public void MkvProfile_NoAudio_DoesNotTriggerStreamingWarning()
+    {
+        // MKV with video-only is a legitimate use case (screen recordings,
+        // silent footage) — the streaming warning must NOT fire.
+        EncodingProfile profile = BuildValidProfile(format: OutputFormat.Mkv, audioOutputs: []);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .NotContain(e => e.Field == "AudioOutputs" && e.Message.Contains("iOS"));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Audio language-filter overlap — duplicate encode trap
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void AudioOutputs_OverlappingEnglishFilter_Warns()
+    {
+        AudioOutput one = new(
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: ["en"]
+        );
+        AudioOutput two = new(
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: ["en", "jp"]
+        );
+        EncodingProfile profile = BuildValidProfile(audioOutputs: [one, two]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "AudioOutput[1].AllowedLanguages"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("duplicate")
+            );
+    }
+
+    [Fact]
+    public void AudioOutputs_DisjointLanguageFilters_NoWarning()
+    {
+        AudioOutput one = new(
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: ["en"]
+        );
+        AudioOutput two = new(
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: ["jp"]
+        );
+        EncodingProfile profile = BuildValidProfile(audioOutputs: [one, two]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Message.Contains("duplicate"));
+    }
+
+    [Fact]
+    public void AudioOutputs_DifferentCodec_DoesNotTriggerOverlap()
+    {
+        // Legit intent: AAC stereo + EAC3 5.1 of the same language for
+        // bandwidth tiering. Different codec × channel combo → not flagged.
+        AudioOutput aac = new(
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: ["en"]
+        );
+        AudioOutput eac3 = new(
+            Codec: AudioCodecType.Eac3,
+            BitrateKbps: 640,
+            Channels: 6,
+            SampleRateHz: 48000,
+            AllowedLanguages: ["en"]
+        );
+        EncodingProfile profile = BuildValidProfile(audioOutputs: [aac, eac3]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Message.Contains("duplicate"));
+    }
+
+    [Fact]
+    public void AudioOutputs_EmptyFilterOverlapsAll_Warns()
+    {
+        // Empty AllowedLanguages means "all languages". With two identical
+        // outputs both catching "all", they'll produce duplicate files.
+        AudioOutput one = new(
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: []
+        );
+        AudioOutput two = new(
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: []
+        );
+        EncodingProfile profile = BuildValidProfile(audioOutputs: [one, two]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "AudioOutput[1].AllowedLanguages" && e.Message.Contains("duplicate")
+            );
+    }
+
     [Fact]
     public void AudioOnly_Profile_Passes()
     {
