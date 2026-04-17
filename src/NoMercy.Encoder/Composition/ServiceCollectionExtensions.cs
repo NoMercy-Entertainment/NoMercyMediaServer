@@ -71,11 +71,18 @@ public static class ServiceCollectionExtensions
                 ?? new HardwareCapabilities([], Environment.ProcessorCount);
         });
 
+        // IResourceMonitor — cross-platform CPU/memory readings via
+        // System.Diagnostics. GPU utilization stays at 0 until a vendor-
+        // specific plugin replaces this with one that shells out to
+        // nvidia-smi / rocm-smi / intel_gpu_top.
+        services.AddSingleton<IResourceMonitor, ProcessResourceMonitor>();
+
         // IResourceBudget — built from IHardwareCapabilities after detection completes
         services.AddSingleton<IResourceBudget>(sp =>
         {
             IHardwareCapabilities hw = sp.GetRequiredService<IHardwareCapabilities>();
-            return new ResourceBudget(hw.Gpus, hw.CpuCores);
+            IResourceMonitor monitor = sp.GetRequiredService<IResourceMonitor>();
+            return new ResourceBudget(hw.Gpus, hw.CpuCores, monitor);
         });
 
         // Startup — register concrete first so IHostedService resolves same instance

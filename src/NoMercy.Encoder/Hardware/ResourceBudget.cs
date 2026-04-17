@@ -7,14 +7,17 @@ public class ResourceBudget : IResourceBudget
 {
     private readonly ConcurrentDictionary<GpuDevice, SemaphoreSlim> _gpuSemaphores;
     private readonly SemaphoreSlim _cpuSemaphore;
+    private readonly IResourceMonitor? _monitor;
     private readonly ILogger<ResourceBudget>? _logger;
 
     public ResourceBudget(
         IReadOnlyList<GpuDevice> gpuDevices,
         int cpuCores,
+        IResourceMonitor? monitor = null,
         ILogger<ResourceBudget>? logger = null
     )
     {
+        _monitor = monitor;
         _logger = logger;
         _cpuSemaphore = new SemaphoreSlim(cpuCores, cpuCores);
 
@@ -36,8 +39,8 @@ public class ResourceBudget : IResourceBudget
             : 0;
     }
 
-    // TODO (Phase 7): inject IResourceMonitor and return real GPU encoder utilization.
-    public double CurrentGpuEncodeUtilization(GpuDevice device) => 0.0;
+    public double CurrentGpuEncodeUtilization(GpuDevice device) =>
+        _monitor?.GetGpuEncodeUtilization(device) ?? 0.0;
 
     public int AvailableCpuThreads()
     {
