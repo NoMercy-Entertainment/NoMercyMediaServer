@@ -27,29 +27,181 @@ public class RemoteWorkerDispatcherTests
     }
 
     [Fact]
-    public async Task DispatchAsync_WithRemoteWorkers_StillFallsBackToLocal_UntilProtocolImplemented()
+    public async Task DispatchAsync_WorkerSucceeds_UsesWorkerResult()
     {
-        // Protocol isn't implemented yet — even when remote workers are
-        // registered, results today come from the local dispatcher. The
-        // test locks in that contract so future refactors don't silently
-        // regress installs that happen to have a stray worker registered.
+        // Worker returns a successful DispatchResult — dispatcher must
+        // return that directly, not the local fallback. WorkerId on the
+        // result proves the worker was the one that executed.
         Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
         LocalWorkerDispatcher local = NewLocal(executor.Object);
 
-        FakeRegistry registry = new([
-            MakeRemoteWorker("beast", slots: 8),
-            MakeRemoteWorker("laptop", slots: 2),
-        ]);
+        IRemoteWorker beast = MakeRemoteWorkerWithResult(
+            "beast",
+            slots: 8,
+            result: new DispatchResult(
+                TaskId: "t0",
+                Success: true,
+                OutputPath: "/remote/out/t0",
+                Duration: TimeSpan.FromSeconds(5),
+                WorkerId: "beast"
+            )
+        );
 
+        FakeRegistry registry = new([beast]);
         RemoteWorkerDispatcher sut = NewRemote(local, registry);
 
         DispatchResult[] results = await sut.DispatchAsync(
-            [MakeTask("t0"), MakeTask("t1")],
+            [MakeTask("t0")],
             CancellationToken.None
         );
 
-        results.Should().HaveCount(2);
+        results.Should().HaveCount(1);
+        results[0].Success.Should().BeTrue();
+        results[0].WorkerId.Should().Be("beast");
+        results[0].OutputPath.Should().Be("/remote/out/t0");
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WorkerReturnsFailure_FallsBackToLocalForThatTask()
+    {
+        // A worker that reports failure (not throws) must trigger local
+        // retry for that specific task. The whole job shouldn't fail
+        // because one worker went sideways.
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
+        LocalWorkerDispatcher local = NewLocal(executor.Object);
+
+        IRemoteWorker brokenWorker = MakeRemoteWorkerWithResult(
+            "broken",
+            slots: 4,
+            result: new DispatchResult(
+                TaskId: "t0",
+                Success: false,
+                OutputPath: "",
+                Duration: TimeSpan.Zero,
+                Error: "Worker OOM"
+            )
+        );
+
+        FakeRegistry registry = new([brokenWorker]);
+        RemoteWorkerDispatcher sut = NewRemote(local, registry);
+
+        DispatchResult[] results = await sut.DispatchAsync(
+            [MakeTask("t0")],
+            CancellationToken.None
+        );
+
+        // Local fallback succeeded, so the final result should be success.
+        results[0].Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WorkerThrows_FallsBackToLocalForThatTask()
+    {
+        // Network failures / timeouts surface as thrown exceptions.
+        // Dispatcher must swallow, log, and fall back — not fail the job.
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
+        LocalWorkerDispatcher local = NewLocal(executor.Object);
+
+        Mock<IRemoteWorker> flaky = new();
+        flaky.SetupGet(w => w.WorkerId).Returns("flaky");
+        flaky.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, 4, 0));
+        flaky
+            .Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("connection refused"));
+
+        FakeRegistry registry = new([flaky.Object]);
+        RemoteWorkerDispatcher sut = NewRemote(local, registry);
+
+        DispatchResult[] results = await sut.DispatchAsync(
+            [MakeTask("t0")],
+            CancellationToken.None
+        );
+
+        results[0].Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DispatchAsync_MultipleTasks_DistributesAcrossWorkers()
+    {
+        // Two workers with different weights, four tasks. The assigner
+        // load-balances; every task must complete, every worker that
+        // got work must have received its ExecuteTaskAsync call.
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
+        LocalWorkerDispatcher local = NewLocal(executor.Object);
+
+        int beastCalls = 0;
+        int laptopCalls = 0;
+
+        IRemoteWorker beast = MakeDynamicWorker(
+            "beast",
+            8,
+            t =>
+            {
+                Interlocked.Increment(ref beastCalls);
+                return new DispatchResult(
+                    t.TaskId,
+                    true,
+                    $"/beast/{t.TaskId}",
+                    TimeSpan.FromSeconds(1),
+                    WorkerId: "beast"
+                );
+            }
+        );
+        IRemoteWorker laptop = MakeDynamicWorker(
+            "laptop",
+            2,
+            t =>
+            {
+                Interlocked.Increment(ref laptopCalls);
+                return new DispatchResult(
+                    t.TaskId,
+                    true,
+                    $"/laptop/{t.TaskId}",
+                    TimeSpan.FromSeconds(1),
+                    WorkerId: "laptop"
+                );
+            }
+        );
+
+        FakeRegistry registry = new([beast, laptop]);
+        RemoteWorkerDispatcher sut = NewRemote(local, registry);
+
+        EncodeTask[] tasks = Enumerable.Range(0, 4).Select(i => MakeTask($"t{i}")).ToArray();
+
+        DispatchResult[] results = await sut.DispatchAsync(tasks, CancellationToken.None);
+
+        results.Should().HaveCount(4);
         results.Should().AllSatisfy(r => r.Success.Should().BeTrue());
+        (beastCalls + laptopCalls).Should().Be(4);
+        beastCalls.Should().BeGreaterThan(0, "higher-weight worker should see more tasks");
+    }
+
+    [Fact]
+    public async Task DispatchAsync_CancellationPropagates()
+    {
+        Mock<IFfmpegExecutor> executor = MakeExecutor(succeed: true);
+        LocalWorkerDispatcher local = NewLocal(executor.Object);
+
+        Mock<IRemoteWorker> slow = new();
+        slow.SetupGet(w => w.WorkerId).Returns("slow");
+        slow.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, 4, 0));
+        slow.Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .Returns(
+                async (EncodeTask t, CancellationToken ct) =>
+                {
+                    await Task.Delay(Timeout.Infinite, ct);
+                    return new DispatchResult(t.TaskId, true, "", TimeSpan.Zero);
+                }
+            );
+
+        FakeRegistry registry = new([slow.Object]);
+        RemoteWorkerDispatcher sut = NewRemote(local, registry);
+
+        using CancellationTokenSource cts = new();
+        cts.Cancel();
+
+        Func<Task> act = () => sut.DispatchAsync([MakeTask("t0")], cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]
@@ -86,7 +238,24 @@ public class RemoteWorkerDispatcherTests
         IRemoteWorkerRegistry registry
     ) => new(registry, new WorkerAssigner(), local, NullLogger<RemoteWorkerDispatcher>.Instance);
 
-    private static IRemoteWorker MakeRemoteWorker(string id, int slots = 4)
+    private static IRemoteWorker MakeRemoteWorker(string id, int slots = 4) =>
+        MakeRemoteWorkerWithResult(
+            id,
+            slots,
+            new DispatchResult(
+                TaskId: "placeholder",
+                Success: true,
+                OutputPath: $"/remote/{id}/placeholder",
+                Duration: TimeSpan.FromSeconds(1),
+                WorkerId: id
+            )
+        );
+
+    private static IRemoteWorker MakeRemoteWorkerWithResult(
+        string id,
+        int slots,
+        DispatchResult result
+    )
     {
         Mock<IRemoteWorker> mock = new();
         mock.SetupGet(w => w.WorkerId).Returns(id);
@@ -98,6 +267,22 @@ public class RemoteWorkerDispatcherTests
                     GpuUtilization: 0
                 )
             );
+        mock.Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(result);
+        return mock.Object;
+    }
+
+    private static IRemoteWorker MakeDynamicWorker(
+        string id,
+        int slots,
+        Func<EncodeTask, DispatchResult> producer
+    )
+    {
+        Mock<IRemoteWorker> mock = new();
+        mock.SetupGet(w => w.WorkerId).Returns(id);
+        mock.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, slots, 0));
+        mock.Setup(w => w.ExecuteTaskAsync(It.IsAny<EncodeTask>(), It.IsAny<CancellationToken>()))
+            .Returns((EncodeTask t, CancellationToken _) => Task.FromResult(producer(t)));
         return mock.Object;
     }
 

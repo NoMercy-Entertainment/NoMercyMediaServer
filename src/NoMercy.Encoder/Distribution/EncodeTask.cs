@@ -29,5 +29,11 @@ public record DispatchResult(
     bool Success,
     string OutputPath,
     TimeSpan Duration,
-    string? Error = null
+    string? Error = null,
+    /// <summary>
+    /// Which worker executed the task. Null for local dispatch; populated
+    /// for remote workers so the orchestrator can attribute timing + per-
+    /// worker failure stats without re-querying the registry.
+    /// </summary>
+    string? WorkerId = null
 );

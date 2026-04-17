@@ -11,12 +11,12 @@ using NoMercy.Encoder.Jobs;
 /// this means enabling distributed encoding is purely additive; rolling
 /// it out doesn't break single-machine installs.
 ///
-/// The actual network protocol (how a remote worker accepts an encode
-/// task over the wire) is still pending — <see cref="IRemoteWorker"/>
-/// today takes a full <c>EncodingJob</c>, not an <c>EncodeTask</c>.
-/// Once the task-level remote execution interface lands this dispatcher
-/// invokes workers directly; for now the capacity computation + assignment
-/// run so the seam is exercised, but results come from the local fallback.
+/// When workers ARE registered, each task lands on a chosen worker via
+/// <see cref="IRemoteWorker.ExecuteTaskAsync"/>. Worker failures fall
+/// back to the local dispatcher for the affected task (rather than
+/// failing the whole job) so one bad worker doesn't stall the user's
+/// encode. All worker calls run in parallel — the assigner already
+/// balanced the weight so there's no per-worker queuing here.
 /// </summary>
 public class RemoteWorkerDispatcher(
     IRemoteWorkerRegistry registry,
@@ -38,9 +38,6 @@ public class RemoteWorkerDispatcher(
             return await localFallback.DispatchAsync(tasks, ct).ConfigureAwait(false);
         }
 
-        // Wire the capacity + assignment plumbing even though the network
-        // protocol isn't implemented — when IRemoteWorker gains an
-        // ExecuteTaskAsync(EncodeTask) method, this dispatcher fills in.
         List<WorkerCapacity> capacities = remoteWorkers
             .Select(w =>
             {
@@ -55,13 +52,77 @@ public class RemoteWorkerDispatcher(
             .ToList();
 
         Dictionary<string, EncodeTask[]> assignments = assigner.Assign(tasks, capacities);
+
+        // Build a lookup so we can map worker IDs back to concrete workers.
+        Dictionary<string, IRemoteWorker> workerById = remoteWorkers.ToDictionary(w => w.WorkerId);
+
         logger.LogInformation(
-            "Task-level remote execution not wired — computed {Count} assignments across {Workers} workers, running locally",
+            "Dispatching {Count} tasks across {Workers} remote workers",
             tasks.Length,
             remoteWorkers.Count
         );
-        _ = assignments; // Observed for future use.
 
-        return await localFallback.DispatchAsync(tasks, ct).ConfigureAwait(false);
+        // Run every task in parallel — the assigner already decided who
+        // gets what. Each task-worker pair runs via ExecuteTaskAsync; any
+        // failure falls back to the local dispatcher for that task only.
+        Task<DispatchResult>[] dispatches = assignments
+            .SelectMany(kvp =>
+                kvp.Value.Select(task =>
+                    RunOnWorkerWithFallbackAsync(workerById[kvp.Key], task, ct)
+                )
+            )
+            .ToArray();
+
+        DispatchResult[] results = await Task.WhenAll(dispatches).ConfigureAwait(false);
+        return results;
+    }
+
+    private async Task<DispatchResult> RunOnWorkerWithFallbackAsync(
+        IRemoteWorker worker,
+        EncodeTask task,
+        CancellationToken ct
+    )
+    {
+        try
+        {
+            DispatchResult result = await worker.ExecuteTaskAsync(task, ct).ConfigureAwait(false);
+            if (result.Success)
+                return result;
+
+            logger.LogWarning(
+                "Worker {WorkerId} failed task {TaskId} ({Error}) — retrying on local dispatcher",
+                worker.WorkerId,
+                task.TaskId,
+                result.Error
+            );
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Worker {WorkerId} threw on task {TaskId} — retrying on local dispatcher",
+                worker.WorkerId,
+                task.TaskId
+            );
+        }
+
+        // Local fallback for this single task. LocalWorkerDispatcher handles
+        // arrays; wrap in a 1-element array and unwrap the result.
+        DispatchResult[] fallbackResults = await localFallback
+            .DispatchAsync([task], ct)
+            .ConfigureAwait(false);
+        return fallbackResults.Length > 0
+            ? fallbackResults[0]
+            : new DispatchResult(
+                task.TaskId,
+                Success: false,
+                OutputPath: task.OutputPath,
+                Duration: TimeSpan.Zero,
+                Error: "Local fallback returned no result"
+            );
     }
 }
