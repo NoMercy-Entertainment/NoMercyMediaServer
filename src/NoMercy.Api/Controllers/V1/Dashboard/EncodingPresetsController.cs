@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -16,6 +17,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [Route("api/v{version:apiVersion}/dashboard/encoding/presets")]
 public class EncodingPresetsController(
     EncodingPresetRepository presetRepository,
+    IPresetResolver presetResolver,
     IHttpClientFactory httpClientFactory
 ) : BaseController
 {
@@ -137,6 +139,36 @@ public class EncodingPresetsController(
         }
     }
 
+    [HttpGet("{id}/resolve")]
+    public async Task<IActionResult> Resolve(string id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view presets");
+
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid preset id");
+
+        EncodingPreset? leaf = await presetRepository.GetByIdAsync(presetId);
+        if (leaf is null)
+            return NotFoundResponse("Preset not found");
+
+        string? parentName = await ResolveParentNameAsync(leaf.ParentPresetId);
+        PresetResolveRequest request = new(leaf.Name, leaf.ProfileJson, parentName);
+
+        try
+        {
+            EncodingProfile resolved = presetResolver.Resolve(
+                request,
+                new RepositoryPresetLookup(presetRepository)
+            );
+            return Ok(resolved);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse($"Preset could not be resolved: {ex.Message}");
+        }
+    }
+
     [HttpGet("{id}/export")]
     public async Task<IActionResult> Export(string id)
     {
@@ -240,6 +272,15 @@ public class EncodingPresetsController(
         return await Import(export);
     }
 
+    private async Task<string?> ResolveParentNameAsync(Ulid? parentId)
+    {
+        if (parentId is null)
+            return null;
+
+        EncodingPreset? parent = await presetRepository.GetByIdAsync(parentId.Value);
+        return parent?.Name;
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
@@ -272,6 +313,29 @@ public record CreatePresetRequest(
     string? Tags = null,
     Ulid? ParentPresetId = null
 );
+
+/// <summary>
+/// Adapter that lets <see cref="IPresetResolver"/> walk the parent chain by
+/// hitting the database once per ancestor. Synchronous lookup — the resolver
+/// is pure and doesn't await, so the adapter blocks on async repository
+/// calls. Fine for the rare resolve path; optimize if it ever gets called
+/// in a tight loop.
+/// </summary>
+internal sealed class RepositoryPresetLookup(EncodingPresetRepository repository) : IPresetLookup
+{
+    public PresetResolveRequest? FindByName(string name)
+    {
+        EncodingPreset? preset = repository.GetByNameAsync(name).GetAwaiter().GetResult();
+        if (preset is null)
+            return null;
+
+        string? parentName = preset.ParentPresetId is Ulid parentId
+            ? repository.GetByIdAsync(parentId).GetAwaiter().GetResult()?.Name
+            : null;
+
+        return new PresetResolveRequest(preset.Name, preset.ProfileJson, parentName);
+    }
+}
 
 public record PresetExport(
     string Name,
