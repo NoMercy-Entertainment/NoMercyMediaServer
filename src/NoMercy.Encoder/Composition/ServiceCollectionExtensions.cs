@@ -46,6 +46,11 @@ public static class ServiceCollectionExtensions
         configure?.Invoke(opts);
         services.AddSingleton(opts);
 
+        // IHttpClientFactory is needed by the self-registration service and
+        // by HttpRemoteWorker callers. Safe to call multiple times — the
+        // factory registration is idempotent.
+        services.AddHttpClient();
+
         // Infrastructure
         services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<IFileSystem, FileSystemAdapter>();
@@ -224,6 +229,11 @@ public static class ServiceCollectionExtensions
 
         // Signed transport between coordinator and workers.
         services.AddTransient<ITaskSerializer, TaskSerializer>();
+
+        // Self-registration background service — no-ops on standalone
+        // installs (when CoordinatorUrl is not set). Safe to always
+        // register; the service exits cleanly in that case.
+        services.AddHostedService<WorkerSelfRegistrationService>();
         // The remote dispatcher is the public face — it transparently falls
         // back to the local dispatcher when no remote workers are registered,
         // which is the default behavior today.

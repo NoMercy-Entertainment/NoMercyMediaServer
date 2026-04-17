@@ -88,4 +88,36 @@ public class EncoderOptions
             );
         return System.Text.Encoding.UTF8.GetBytes(DistributedEncodingSigningKey);
     }
+
+    /// <summary>
+    /// Coordinator URL this worker should register with on boot. When set,
+    /// the self-registration hosted service POSTs to
+    /// <c>{CoordinatorUrl}/api/v1/dashboard/workers/register</c> on startup
+    /// and sends heartbeats every
+    /// <see cref="WorkerHeartbeatInterval"/>. Null = this process is a
+    /// coordinator (or a standalone server) and shouldn't self-register.
+    /// </summary>
+    public string? CoordinatorUrl { get; set; }
+
+    /// <summary>
+    /// The base URL remote coordinators can reach THIS worker on. Must be
+    /// set when <see cref="CoordinatorUrl"/> is set — the coordinator
+    /// records this URL and POSTs encode tasks to it. Loopback only works
+    /// for same-host-coordinator setups.
+    /// </summary>
+    public string? WorkerSelfBaseUrl { get; set; }
+
+    /// <summary>
+    /// Identifier this worker registers itself under. Defaults to the
+    /// machine name so multi-box setups get stable identities across
+    /// restarts without manual config.
+    /// </summary>
+    public string WorkerId { get; set; } = Environment.MachineName;
+
+    /// <summary>
+    /// How often the self-registration service heartbeats the coordinator.
+    /// Must be noticeably less than the registry's stale threshold (60s
+    /// default) so transient network blips don't evict the worker.
+    /// </summary>
+    public TimeSpan WorkerHeartbeatInterval { get; set; } = TimeSpan.FromSeconds(20);
 }
