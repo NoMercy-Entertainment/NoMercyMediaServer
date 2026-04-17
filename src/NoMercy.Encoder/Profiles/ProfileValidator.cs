@@ -798,6 +798,8 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                 ValidateBitrateLadder(output, encoder, prefix, errors);
                 ValidateBitrateForChannelCount(output, encoder, prefix, errors);
             }
+
+            ValidateCustomArgumentsReservedFlags(output.CustomArguments, prefix, errors);
         }
     }
 
@@ -1224,6 +1226,9 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         for (int i = 0; i < profile.SubtitleOutputs.Length; i++)
         {
             SubtitleOutput output = profile.SubtitleOutputs[i];
+            string prefix = $"SubtitleOutput[{i}]";
+
+            ValidateCustomArgumentsReservedFlags(output.CustomArguments, prefix, errors);
 
             if (output.Mode != SubtitleMode.Extract)
             {

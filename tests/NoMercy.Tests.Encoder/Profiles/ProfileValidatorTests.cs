@@ -854,6 +854,53 @@ public class ProfileValidatorTests
     }
 
     [Fact]
+    public void AudioCustomArguments_ReservedFlag_Errors()
+    {
+        // -b:a is an audio pipeline flag; user CustomArguments can't override it.
+        AudioOutput audio = new(
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: [],
+            CustomArguments: new() { ["-b:a"] = "256k" }
+        );
+        EncodingProfile profile = BuildValidProfile(audioOutputs: [audio]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.IsValid.Should().BeFalse();
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "AudioOutput[0].CustomArguments"
+                && e.Severity == ValidationSeverity.Error
+            );
+    }
+
+    [Fact]
+    public void SubtitleCustomArguments_ReservedFlag_Errors()
+    {
+        SubtitleOutput sub = new(
+            Codec: SubtitleCodecType.WebVtt,
+            Mode: SubtitleMode.Extract,
+            AllowedLanguages: [],
+            CustomArguments: new() { ["-c:s"] = "copy" }
+        );
+        EncodingProfile profile = BuildValidProfile(subtitleOutputs: [sub]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.IsValid.Should().BeFalse();
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "SubtitleOutput[0].CustomArguments"
+                && e.Severity == ValidationSeverity.Error
+            );
+    }
+
+    [Fact]
     public void CustomArguments_SafeFlag_Passes()
     {
         // -metadata is a real case: users tag files with their own metadata.
