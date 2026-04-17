@@ -16,6 +16,43 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Route("api/v{version:apiVersion}/content-segments")]
 public class ContentSegmentsController(ContentSegmentRepository repository) : BaseController
 {
+    /// <summary>
+    /// Paginated overview of every content segment. Handy for the moderator
+    /// dashboard when auditing detector output across the library. Filter by
+    /// <c>type</c> (Intro / Outro / Recap / Credits) to narrow.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> List(
+        [FromQuery] int pageSize = 100,
+        [FromQuery] int pageIndex = 0,
+        [FromQuery] ContentSegmentType? type = null
+    )
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to list content segments");
+
+        pageSize = Math.Clamp(pageSize, 1, 500);
+        if (pageIndex < 0)
+            pageIndex = 0;
+
+        List<ContentSegment> segments = await repository.ListAsync(pageSize, pageIndex, type);
+        int total = await repository.GetTotalCountAsync();
+
+        return Ok(
+            new
+            {
+                data = segments,
+                meta = new
+                {
+                    total,
+                    pageSize,
+                    pageIndex,
+                    totalPages = (int)Math.Ceiling((double)total / pageSize),
+                },
+            }
+        );
+    }
+
     [HttpGet("episode/{episodeId:int}")]
     [ResponseCache(Duration = 60)]
     public async Task<IActionResult> GetByEpisode(int episodeId)

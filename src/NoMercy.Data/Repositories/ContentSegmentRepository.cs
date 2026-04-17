@@ -19,6 +19,34 @@ public class ContentSegmentRepository(MediaContext context)
             .OrderBy(s => s.StartSeconds)
             .ToListAsync();
 
+    /// <summary>
+    /// Paginated listing for the dashboard overview. Filter by type when
+    /// supplied so "show me every detected outro" is a cheap query.
+    /// </summary>
+    public async Task<List<ContentSegment>> ListAsync(
+        int pageSize,
+        int pageIndex,
+        ContentSegmentType? filterType = null
+    )
+    {
+        if (pageSize <= 0)
+            pageSize = 100;
+        if (pageIndex < 0)
+            pageIndex = 0;
+
+        IQueryable<ContentSegment> query = context.ContentSegments.AsNoTracking();
+        if (filterType.HasValue)
+            query = query.Where(s => s.SegmentType == filterType.Value);
+
+        return await query
+            .OrderByDescending(s => s.UpdatedAt)
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    public Task<int> GetTotalCountAsync() => context.ContentSegments.CountAsync();
+
     public Task<List<ContentSegment>> GetForMovieAsync(int movieId) =>
         context
             .ContentSegments.AsNoTracking()
