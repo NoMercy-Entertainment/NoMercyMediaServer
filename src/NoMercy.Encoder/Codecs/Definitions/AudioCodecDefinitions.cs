@@ -46,7 +46,9 @@ public static class AudioCodecDefinitions
 
     // AC3 — "ac3"
     // Lossy. Channels: mono/stereo/5.1 (no 7.1 in AC3). Sample rate: 48 kHz.
-    // Bitrate: 32–640 kbps, default 384 kbps. Dolby Digital — standard for disc/broadcast.
+    // Bitrate: only the 19-step Dolby Digital ladder is accepted; ffmpeg
+    // rounds down silently to the nearest rung for any off-ladder value.
+    // Default 384 kbps — the Dolby sweet spot for 5.1 content.
     private static readonly AudioEncoderInfo Ac3Encoder = new(
         FfmpegName: "ac3",
         CodecType: AudioCodecType.Ac3,
@@ -55,7 +57,29 @@ public static class AudioCodecDefinitions
         MinBitrateKbps: 32,
         MaxBitrateKbps: 640,
         DefaultBitrateKbps: 384,
-        IsLossless: false
+        IsLossless: false,
+        ValidBitrateLadder:
+        [
+            32,
+            40,
+            48,
+            56,
+            64,
+            80,
+            96,
+            112,
+            128,
+            160,
+            192,
+            224,
+            256,
+            320,
+            384,
+            448,
+            512,
+            576,
+            640,
+        ]
     );
 
     // E-AC3 — "eac3"

@@ -971,6 +971,197 @@ public class ProfileValidatorTests
             CustomArguments: customArguments
         );
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // AC3 stepped bitrate ladder — ffmpeg rounds down silently off-ladder
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Ac3_OnLadderBitrate_NoWarning()
+    {
+        AudioOutput audio = new(
+            Codec: AudioCodecType.Ac3,
+            BitrateKbps: 384,
+            Channels: 6,
+            SampleRateHz: 48000,
+            AllowedLanguages: []
+        );
+        EncodingProfile profile = BuildValidProfile(
+            format: OutputFormat.Mkv,
+            audioOutputs: [audio]
+        );
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Where(e => e.Severity == ValidationSeverity.Warning)
+            .Should()
+            .NotContain(e =>
+                e.Field == "AudioOutput[0].BitrateKbps" && e.Message.Contains("ladder")
+            );
+    }
+
+    [Fact]
+    public void Ac3_OffLadderBitrate_WarnsWithNearestValidRungs()
+    {
+        // 100 kbps is between rungs 96 and 112 — ffmpeg rounds to 96 without
+        // warning. Validator must flag it and point at both neighbors.
+        AudioOutput audio = new(
+            Codec: AudioCodecType.Ac3,
+            BitrateKbps: 100,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: []
+        );
+        EncodingProfile profile = BuildValidProfile(
+            format: OutputFormat.Mkv,
+            audioOutputs: [audio]
+        );
+
+        ValidationResult result = _validator.Validate(profile);
+
+        ValidationError warning = result.Errors.Single(e =>
+            e.Field == "AudioOutput[0].BitrateKbps"
+            && e.Severity == ValidationSeverity.Warning
+            && e.Message.Contains("ladder")
+        );
+        warning.Message.Should().Contain("96");
+        warning.Message.Should().Contain("112");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Channel-aware bitrate quality guidance
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Ac3Surround_Below384_WarnsCompressed()
+    {
+        AudioOutput audio = new(
+            Codec: AudioCodecType.Ac3,
+            BitrateKbps: 320, // on-ladder but below Dolby's recommended floor
+            Channels: 6,
+            SampleRateHz: 48000,
+            AllowedLanguages: []
+        );
+        EncodingProfile profile = BuildValidProfile(
+            format: OutputFormat.Mkv,
+            audioOutputs: [audio]
+        );
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "AudioOutput[0].BitrateKbps"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("compressed")
+            );
+    }
+
+    [Fact]
+    public void Ac3Surround_At448_NoCompressionWarning()
+    {
+        AudioOutput audio = new(
+            Codec: AudioCodecType.Ac3,
+            BitrateKbps: 448,
+            Channels: 6,
+            SampleRateHz: 48000,
+            AllowedLanguages: []
+        );
+        EncodingProfile profile = BuildValidProfile(
+            format: OutputFormat.Mkv,
+            audioOutputs: [audio]
+        );
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Message.Contains("compressed"));
+    }
+
+    [Fact]
+    public void AacStereo_Above256_WarnsWastedBandwidth()
+    {
+        AudioOutput audio = new(
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 320,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: []
+        );
+        EncodingProfile profile = BuildValidProfile(audioOutputs: [audio]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "AudioOutput[0].BitrateKbps"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("wasted")
+            );
+    }
+
+    [Fact]
+    public void AacStereo_At192_NoWasteWarning()
+    {
+        // 192 kbps is inside the AAC sweet spot for stereo — no warning.
+        EncodingProfile profile = BuildValidProfile(); // default = 192 kbps AAC stereo
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Message.Contains("wasted"));
+    }
+
+    [Fact]
+    public void AacSurround_Below256_WarnsUnderProvisioned()
+    {
+        AudioOutput audio = new(
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192, // fine for stereo, too low for 5.1
+            Channels: 6,
+            SampleRateHz: 48000,
+            AllowedLanguages: []
+        );
+        EncodingProfile profile = BuildValidProfile(
+            format: OutputFormat.Mkv,
+            audioOutputs: [audio]
+        );
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "AudioOutput[0].BitrateKbps"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("under-provisioned")
+            );
+    }
+
+    [Fact]
+    public void Eac3Surround_Below384_WarnsCompressed()
+    {
+        // Same surround-guidance kicks in for EAC3 as for AC3.
+        AudioOutput audio = new(
+            Codec: AudioCodecType.Eac3,
+            BitrateKbps: 256,
+            Channels: 6,
+            SampleRateHz: 48000,
+            AllowedLanguages: []
+        );
+        EncodingProfile profile = BuildValidProfile(
+            format: OutputFormat.Mkv,
+            audioOutputs: [audio]
+        );
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "AudioOutput[0].BitrateKbps" && e.Message.Contains("compressed")
+            );
+    }
+
     [Fact]
     public void AudioOnly_Profile_Passes()
     {

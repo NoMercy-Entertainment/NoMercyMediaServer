@@ -686,7 +686,114 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                         )
                     );
                 }
+
+                ValidateBitrateLadder(output, encoder, prefix, errors);
+                ValidateBitrateForChannelCount(output, encoder, prefix, errors);
             }
+        }
+    }
+
+    /// <summary>
+    /// Codecs with a strict bitrate ladder (AC3 is the canonical case) round
+    /// down silently when the user supplies an off-ladder value — the output
+    /// file's bitrate ends up lower than configured with no indication. Warn
+    /// so the user picks a valid rung intentionally.
+    /// </summary>
+    private static void ValidateBitrateLadder(
+        AudioOutput output,
+        AudioEncoderInfo encoder,
+        string prefix,
+        List<ValidationError> errors
+    )
+    {
+        if (encoder.ValidBitrateLadder is null || encoder.ValidBitrateLadder.Length == 0)
+            return;
+
+        if (Array.IndexOf(encoder.ValidBitrateLadder, output.BitrateKbps) >= 0)
+            return; // Exact match — nothing to warn about.
+
+        // Find the nearest valid rungs so the message is actionable.
+        int nearestBelow = 0;
+        int nearestAbove = 0;
+        foreach (int rung in encoder.ValidBitrateLadder)
+        {
+            if (rung <= output.BitrateKbps && rung > nearestBelow)
+                nearestBelow = rung;
+            if (rung >= output.BitrateKbps && (nearestAbove == 0 || rung < nearestAbove))
+                nearestAbove = rung;
+        }
+
+        string suggestion =
+            nearestAbove > 0 ? $"{nearestBelow} or {nearestAbove}" : $"{nearestBelow}";
+
+        errors.Add(
+            new ValidationError(
+                $"{prefix}.BitrateKbps",
+                $"{output.Codec} requires an exact bitrate from its ladder. {output.BitrateKbps} "
+                    + $"kbps will be silently rounded down to {nearestBelow} kbps by the encoder. "
+                    + $"Use {suggestion} kbps to get the bitrate you asked for.",
+                ValidationSeverity.Warning
+            )
+        );
+    }
+
+    /// <summary>
+    /// Channel count drives the minimum bitrate needed for acceptable quality.
+    /// 5.1 at 128 kbps is audibly compressed; stereo at 320 kbps AAC is
+    /// wasted bandwidth (plateau is ~192-256). Best-practice guidance, not
+    /// hard blocks — users who know what they're doing can ignore.
+    /// </summary>
+    private static void ValidateBitrateForChannelCount(
+        AudioOutput output,
+        AudioEncoderInfo encoder,
+        string prefix,
+        List<ValidationError> errors
+    )
+    {
+        // Dolby's own guidance for AC3/EAC3 5.1: 384 kbps minimum.
+        bool isSurroundDolby =
+            output.Channels >= 6 && encoder.CodecType is AudioCodecType.Ac3 or AudioCodecType.Eac3;
+        if (isSurroundDolby && output.BitrateKbps < 384)
+        {
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.BitrateKbps",
+                    $"{output.Codec} 5.1/7.1 below 384 kbps produces audibly compressed audio. "
+                        + "Dolby-recommended minimum for surround is 384 kbps; use 448 or 640 for "
+                        + "reference quality. Lower values work but dialog and transients suffer.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
+
+        // AAC stereo plateau: bitrate above 256 gives diminishing returns.
+        bool isStereoAac = output.Channels <= 2 && encoder.CodecType == AudioCodecType.Aac;
+        if (isStereoAac && output.BitrateKbps > 256)
+        {
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.BitrateKbps",
+                    $"AAC stereo at {output.BitrateKbps} kbps is wasted bandwidth — AAC quality "
+                        + "plateaus around 192-256 kbps for stereo. Use FLAC for archival or stay "
+                        + "at 256 kbps for streaming.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
+
+        // AAC 5.1/7.1 below 256 is compressed; libfdk_aac sweet spot is
+        // 256-384 for 5.1.
+        bool isSurroundAac = output.Channels >= 6 && encoder.CodecType == AudioCodecType.Aac;
+        if (isSurroundAac && output.BitrateKbps < 256)
+        {
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.BitrateKbps",
+                    $"AAC {output.Channels}ch at {output.BitrateKbps} kbps is under-provisioned — "
+                        + "recommended minimum for AAC surround is 256 kbps (sweet spot 256-384).",
+                    ValidationSeverity.Warning
+                )
+            );
         }
     }
 
