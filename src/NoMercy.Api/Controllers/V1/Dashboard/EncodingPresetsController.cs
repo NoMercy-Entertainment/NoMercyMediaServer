@@ -342,6 +342,64 @@ public class EncodingPresetsController(
         return parent?.Name;
     }
 
+    [HttpPost("validate")]
+    public IActionResult Validate([FromBody] ValidatePresetRequest request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to validate presets");
+
+        if (string.IsNullOrWhiteSpace(request.ProfileJson))
+            return BadRequestResponse("profile_json is required");
+
+        List<string> errors = [];
+
+        EncodingProfile? profile;
+        try
+        {
+            profile = Newtonsoft.Json.JsonConvert.DeserializeObject<EncodingProfile>(
+                request.ProfileJson
+            );
+        }
+        catch (Exception ex)
+        {
+            return Ok(new { valid = false, errors = new[] { $"JSON parse error: {ex.Message}" } });
+        }
+
+        if (profile is null)
+        {
+            errors.Add("JSON deserialized to null — check the structure");
+            return Ok(new { valid = false, errors });
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.Name))
+            errors.Add("Name is required");
+
+        if (profile.VideoOutputs.Length == 0 && profile.AudioOutputs.Length == 0)
+            errors.Add("Profile needs at least one video output or one audio output");
+
+        foreach (VideoOutput video in profile.VideoOutputs)
+        {
+            if (video.Width <= 0 || video.Height.GetValueOrDefault() <= 0)
+            {
+                errors.Add(
+                    $"VideoOutput with codec {video.Codec}: width and height must be positive"
+                );
+            }
+            if (video.Crf < 0 || video.Crf > 51)
+                errors.Add($"VideoOutput with codec {video.Codec}: CRF must be in 0..51");
+        }
+
+        foreach (AudioOutput audio in profile.AudioOutputs)
+        {
+            if (audio.Channels <= 0)
+                errors.Add($"AudioOutput {audio.Codec}: channels must be positive");
+            if (audio.SampleRateHz <= 0)
+                errors.Add($"AudioOutput {audio.Codec}: sample rate must be positive");
+        }
+
+        return Ok(new { valid = errors.Count == 0, errors });
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
@@ -409,6 +467,8 @@ public record PresetExport(
 public record ImportFromUrlRequest(string Url);
 
 public record ClonePresetRequest(string? Name = null, string? Author = null);
+
+public record ValidatePresetRequest(string ProfileJson);
 
 public record UpdatePresetRequest(
     string? Name = null,
