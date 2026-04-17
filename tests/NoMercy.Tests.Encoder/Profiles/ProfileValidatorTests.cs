@@ -20,7 +20,7 @@ public class ProfileValidatorTests
             Codec: VideoCodecType.H264,
             Width: 1920,
             Height: 1080,
-            BitrateKbps: 4000,
+            BitrateKbps: 0,
             Crf: 23,
             Preset: "medium",
             Profile: "high",
@@ -612,6 +612,364 @@ public class ProfileValidatorTests
 
         result.Errors.Should().NotContain(e => e.Field == "VideoOutput[0].KeyframeIntervalSeconds");
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Level vs dimensions — silent client-incompatibility trap
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void H264Level41_With1080p_Passes()
+    {
+        EncodingProfile profile = BuildValidProfile(); // already L4.1 + 1920x1080
+        ValidationResult result = _validator.Validate(profile);
+        result.Errors.Should().NotContain(e => e.Field.EndsWith(".Level"));
+    }
+
+    [Fact]
+    public void H264Level41_With4K_Errors()
+    {
+        VideoOutput v = BuildVideo(
+            codec: VideoCodecType.H264,
+            width: 3840,
+            height: 2160,
+            level: "4.1"
+        );
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.IsValid.Should().BeFalse();
+        result
+            .Errors.Should()
+            .ContainSingle(e =>
+                e.Field == "VideoOutput[0].Level" && e.Severity == ValidationSeverity.Error
+            );
+    }
+
+    [Fact]
+    public void H264Level51_With4K_Passes()
+    {
+        VideoOutput v = BuildVideo(
+            codec: VideoCodecType.H264,
+            width: 3840,
+            height: 2160,
+            level: "5.1"
+        );
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Field.EndsWith(".Level"));
+    }
+
+    [Fact]
+    public void Hevc_Level40_With4K_Errors()
+    {
+        // HEVC L4.0 caps at 1080p. Requesting 4K at that level is a common
+        // mistake (defaulting to L4.0 for everything).
+        VideoOutput v = BuildVideo(
+            codec: VideoCodecType.H265,
+            width: 3840,
+            height: 2160,
+            level: "4.0",
+            profile: "main10"
+        );
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Field == "VideoOutput[0].Level");
+    }
+
+    [Fact]
+    public void Level_NotSet_SkipsValidation()
+    {
+        // Level is optional — built-in presets leave it null so the encoder
+        // picks the right level from source. Unset level must never trigger
+        // the dimension check.
+        VideoOutput v = BuildVideo(
+            codec: VideoCodecType.H264,
+            width: 3840,
+            height: 2160,
+            level: null
+        );
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Field.EndsWith(".Level"));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // VP9 profile vs TenBit — profile0/1 are 8-bit only
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Vp9_Profile0_TenBit_Errors()
+    {
+        VideoOutput v = BuildVideo(codec: VideoCodecType.Vp9, profile: "profile0", tenBit: true);
+        EncodingProfile profile = BuildValidProfile(format: OutputFormat.Dash, videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Field == "VideoOutput[0].Profile");
+    }
+
+    [Fact]
+    public void Vp9_Profile2_TenBit_Passes()
+    {
+        VideoOutput v = BuildVideo(codec: VideoCodecType.Vp9, profile: "profile2", tenBit: true);
+        EncodingProfile profile = BuildValidProfile(format: OutputFormat.Dash, videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Where(e => e.Severity == ValidationSeverity.Error)
+            .Should()
+            .NotContain(e => e.Field == "VideoOutput[0].Profile");
+    }
+
+    [Fact]
+    public void Vp9_Profile2_EightBit_Warns()
+    {
+        // profile2/3 imply 10-bit — mismatch between profile and TenBit
+        // produces surprising output. Warn, don't hard-block (fix is one tick).
+        VideoOutput v = BuildVideo(codec: VideoCodecType.Vp9, profile: "profile2", tenBit: false);
+        EncodingProfile profile = BuildValidProfile(format: OutputFormat.Dash, videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "VideoOutput[0].Profile" && e.Severity == ValidationSeverity.Warning
+            );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Preset / Profile unknown to codec family — silent fallback warning
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Preset_NvencNativeOnH264_Warns()
+    {
+        // "p4" is NVENC's preset. If the user configured H264 with p4 and
+        // hardware resolves to libx264, resolver falls back to middle preset
+        // silently. Warn the user.
+        VideoOutput v = BuildVideo(codec: VideoCodecType.H264, preset: "p4");
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        // p4 IS in h264_nvenc's preset list — so should NOT warn.
+        result
+            .Errors.Should()
+            .NotContain(e =>
+                e.Field == "VideoOutput[0].Preset" && e.Severity == ValidationSeverity.Warning
+            );
+    }
+
+    [Fact]
+    public void Preset_CompletelyUnknown_Warns()
+    {
+        VideoOutput v = BuildVideo(codec: VideoCodecType.H264, preset: "notarealpreset");
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .ContainSingle(e =>
+                e.Field == "VideoOutput[0].Preset" && e.Severity == ValidationSeverity.Warning
+            );
+    }
+
+    [Fact]
+    public void Profile_UnknownToCodec_Warns()
+    {
+        VideoOutput v = BuildVideo(codec: VideoCodecType.H264, profile: "totally-invalid");
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "VideoOutput[0].Profile" && e.Severity == ValidationSeverity.Warning
+            );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Crf + Bitrate mutually exclusive
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void CrfAndBitrate_BothSet_Warns()
+    {
+        VideoOutput v = BuildVideo(codec: VideoCodecType.H264, crf: 23, bitrateKbps: 4000);
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "VideoOutput[0].RateControl"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("mutually exclusive")
+            );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // CustomArguments reserved flags
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("-c:v")]
+    [InlineData("-preset")]
+    [InlineData("-crf")]
+    [InlineData("-b:v")]
+    [InlineData("-pix_fmt")]
+    [InlineData("-vf")]
+    [InlineData("-init_hw_device")]
+    public void CustomArguments_ReservedFlag_Errors(string flag)
+    {
+        VideoOutput v = BuildVideo(
+            codec: VideoCodecType.H264,
+            customArguments: new() { [flag] = "someValue" }
+        );
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.IsValid.Should().BeFalse();
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "VideoOutput[0].CustomArguments"
+                && e.Severity == ValidationSeverity.Error
+            );
+    }
+
+    [Fact]
+    public void CustomArguments_SafeFlag_Passes()
+    {
+        // -metadata is a real case: users tag files with their own metadata.
+        // Not a pipeline-controlled flag, so it must NOT be rejected.
+        VideoOutput v = BuildVideo(
+            codec: VideoCodecType.H264,
+            customArguments: new() { ["-metadata"] = "author=me" }
+        );
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Field == "VideoOutput[0].CustomArguments");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Duplicate + inverted ladder
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void DuplicateVariants_Warn()
+    {
+        VideoOutput one = BuildVideo(codec: VideoCodecType.H264);
+        VideoOutput two = BuildVideo(codec: VideoCodecType.H264); // identical
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [one, two]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "VideoOutput[1]"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("Duplicate")
+            );
+    }
+
+    [Fact]
+    public void InvertedLadder_Warns()
+    {
+        // 1080p @ 2000 kbps below 720p @ 5000 kbps — broken ABR.
+        VideoOutput low = BuildVideo(
+            codec: VideoCodecType.H264,
+            width: 1920,
+            height: 1080,
+            bitrateKbps: 2000,
+            crf: 0
+        );
+        VideoOutput high = BuildVideo(
+            codec: VideoCodecType.H264,
+            width: 1280,
+            height: 720,
+            bitrateKbps: 5000,
+            crf: 0
+        );
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [low, high]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Message.Contains("inverted") && e.Severity == ValidationSeverity.Warning
+            );
+    }
+
+    [Fact]
+    public void MonotonicLadder_Passes()
+    {
+        VideoOutput a = BuildVideo(
+            codec: VideoCodecType.H264,
+            width: 1280,
+            height: 720,
+            bitrateKbps: 3000,
+            crf: 0
+        );
+        VideoOutput b = BuildVideo(
+            codec: VideoCodecType.H264,
+            width: 1920,
+            height: 1080,
+            bitrateKbps: 6000,
+            crf: 0
+        );
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [a, b]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Message.Contains("inverted"));
+    }
+
+    private static VideoOutput BuildVideo(
+        VideoCodecType codec = VideoCodecType.H264,
+        int width = 1920,
+        int? height = 1080,
+        int bitrateKbps = 0,
+        int crf = 23,
+        string? preset = "medium",
+        string? profile = "high",
+        string? level = "4.1",
+        bool tenBit = false,
+        Dictionary<string, string>? customArguments = null
+    ) =>
+        new(
+            Codec: codec,
+            Width: width,
+            Height: height,
+            BitrateKbps: bitrateKbps,
+            Crf: crf,
+            Preset: preset,
+            Profile: profile,
+            Level: level,
+            ConvertHdrToSdr: false,
+            KeyframeIntervalSeconds: 2,
+            TenBit: tenBit,
+            CustomArguments: customArguments
+        );
 
     [Fact]
     public void AudioOnly_Profile_Passes()

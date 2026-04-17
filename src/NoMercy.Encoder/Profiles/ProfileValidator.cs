@@ -15,6 +15,8 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         ValidateFormatCompatibility(profile, errors);
         ValidateSubtitleCompatibility(profile, errors);
         ValidateHdrPathSafety(profile, errors);
+        ValidateNoDuplicateVariants(profile, errors);
+        ValidateMonotonicLadder(profile, errors);
 
         bool isValid = errors.All(e => e.Severity != ValidationSeverity.Error);
         return new ValidationResult(isValid, [.. errors]);
@@ -127,6 +129,22 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                 );
             }
 
+            if (output.BitrateKbps > 0 && output.Crf > 0)
+            {
+                // CRF and Bitrate are mutually exclusive rate-control modes.
+                // The resolver picks CRF first, silently ignoring the bitrate —
+                // warn so the user knows their "target bitrate" is not honored.
+                errors.Add(
+                    new ValidationError(
+                        $"{prefix}.RateControl",
+                        $"Both Crf={output.Crf} and BitrateKbps={output.BitrateKbps} are set. "
+                            + "These are mutually exclusive — CRF wins, BitrateKbps is ignored. "
+                            + "Set exactly one.",
+                        ValidationSeverity.Warning
+                    )
+                );
+            }
+
             if (output.Crf > 0)
             {
                 ICodecDefinition definition = codecRegistry.GetVideoDefinition(output.Codec);
@@ -161,7 +179,407 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                     )
                 );
             }
+
+            ValidateLevelVsDimensions(output, prefix, errors);
+            ValidateVp9ProfileBitdepth(output, prefix, errors);
+            ValidatePresetKnownToCodec(output, prefix, errors);
+            ValidateProfileKnownToCodec(output, prefix, errors);
+            ValidateCustomArgumentsReservedFlags(output.CustomArguments, prefix, errors);
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Per-output video guards
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// H.264 / H.265 / VP9 levels carry a maximum frame size in luma samples.
+    /// A 4K source at Level 4.1 plays on modern desktop clients but hardware
+    /// decoders (iOS, smart TVs, set-top boxes) reject the stream because the
+    /// declared level doesn't permit the frame size. Fails late and silently —
+    /// validate upfront instead.
+    /// </summary>
+    private static void ValidateLevelVsDimensions(
+        VideoOutput output,
+        string prefix,
+        List<ValidationError> errors
+    )
+    {
+        if (string.IsNullOrWhiteSpace(output.Level) || output.Width <= 0)
+            return;
+
+        int outputHeight = output.Height ?? output.Width * 9 / 16;
+        long pixelsRequested = (long)output.Width * outputHeight;
+
+        long? maxPixels = CodecLevelLimit(output.Codec, output.Level);
+        if (maxPixels is null)
+            return; // Unknown level — handled by ValidateProfileKnownToCodec.
+
+        if (pixelsRequested > maxPixels.Value)
+        {
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.Level",
+                    $"{output.Codec} Level {output.Level} caps at {FormatPixels(maxPixels.Value)} "
+                        + $"but the output is {output.Width}x{outputHeight} "
+                        + $"({FormatPixels(pixelsRequested)}). Hardware decoders (iOS, set-top "
+                        + $"boxes, TVs) reject streams above the declared level. Raise the level "
+                        + $"or drop the resolution.",
+                    ValidationSeverity.Error
+                )
+            );
+        }
+    }
+
+    /// <summary>
+    /// VP9's bit depth is locked to its profile number. profile0/profile1 are
+    /// 8-bit only; profile2/profile3 carry 10-bit (and higher-chroma variants).
+    /// Setting TenBit=true with profile0 or profile1 produces either an 8-bit
+    /// output (silent downgrade) or a malformed stream depending on encoder.
+    /// </summary>
+    private static void ValidateVp9ProfileBitdepth(
+        VideoOutput output,
+        string prefix,
+        List<ValidationError> errors
+    )
+    {
+        if (output.Codec != VideoCodecType.Vp9 || string.IsNullOrWhiteSpace(output.Profile))
+            return;
+
+        bool profileIs8BitOnly =
+            output.Profile.Equals("profile0", StringComparison.OrdinalIgnoreCase)
+            || output.Profile.Equals("profile1", StringComparison.OrdinalIgnoreCase);
+        bool profileIs10Bit =
+            output.Profile.Equals("profile2", StringComparison.OrdinalIgnoreCase)
+            || output.Profile.Equals("profile3", StringComparison.OrdinalIgnoreCase);
+
+        if (output.TenBit && profileIs8BitOnly)
+        {
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.Profile",
+                    $"VP9 {output.Profile} is 8-bit only; TenBit=true produces 8-bit output "
+                        + "or a malformed stream. Use profile2 or profile3 for 10-bit VP9.",
+                    ValidationSeverity.Error
+                )
+            );
+        }
+
+        if (!output.TenBit && profileIs10Bit)
+        {
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.Profile",
+                    $"VP9 {output.Profile} requires 10-bit content; TenBit is false. "
+                        + "Either set TenBit=true or drop to profile0/profile1.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
+    }
+
+    /// <summary>
+    /// A preset like "p4" (NVENC-native) set with codec H.264 makes libx264
+    /// fall back to its middle preset silently — the user gets a different
+    /// encode than configured. Warn when the preset isn't known to any
+    /// encoder in the codec family.
+    /// </summary>
+    private void ValidatePresetKnownToCodec(
+        VideoOutput output,
+        string prefix,
+        List<ValidationError> errors
+    )
+    {
+        if (string.IsNullOrWhiteSpace(output.Preset))
+            return;
+
+        ICodecDefinition definition = codecRegistry.GetVideoDefinition(output.Codec);
+        bool knownPreset = definition.Encoders.Any(e => e.Presets.Contains(output.Preset));
+
+        if (!knownPreset)
+        {
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.Preset",
+                    $"Preset '{output.Preset}' is not recognized by any {output.Codec} encoder. "
+                        + "The resolver will substitute a default — your preset is ignored.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
+    }
+
+    private void ValidateProfileKnownToCodec(
+        VideoOutput output,
+        string prefix,
+        List<ValidationError> errors
+    )
+    {
+        if (string.IsNullOrWhiteSpace(output.Profile))
+            return;
+
+        ICodecDefinition definition = codecRegistry.GetVideoDefinition(output.Codec);
+        bool knownProfile = definition.Encoders.Any(e => e.Profiles.Contains(output.Profile));
+
+        if (!knownProfile)
+        {
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.Profile",
+                    $"Profile '{output.Profile}' is not recognized by any {output.Codec} encoder. "
+                        + "The resolver will fall back to the first declared profile.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
+    }
+
+    // FFmpeg flags the encoder pipeline owns — letting user CustomArguments
+    // override them would silently clobber resolver decisions (hw encoder,
+    // preset, quality, pixel format). The user's edit looks like it works
+    // until the output is wrong in ways they can't debug.
+    private static readonly HashSet<string> ReservedFfmpegFlags = new(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        "-c:v",
+        "-c:a",
+        "-c:s",
+        "-vcodec",
+        "-acodec",
+        "-preset",
+        "-profile:v",
+        "-level",
+        "-crf",
+        "-cq",
+        "-qp",
+        "-global_quality",
+        "-q:v",
+        "-b:v",
+        "-b:a",
+        "-maxrate",
+        "-minrate",
+        "-bufsize",
+        "-s",
+        "-pix_fmt",
+        "-rc",
+        "-vf",
+        "-map",
+        "-f",
+        "-tag:v",
+        "-hls_time",
+        "-hls_segment_filename",
+        "-hls_playlist_type",
+        "-seg_duration",
+        "-init_hw_device",
+        "-filter_hw_device",
+        "-gpu",
+        "-hwaccel",
+    };
+
+    private static void ValidateCustomArgumentsReservedFlags(
+        Dictionary<string, string>? customArgs,
+        string prefix,
+        List<ValidationError> errors
+    )
+    {
+        if (customArgs is null || customArgs.Count == 0)
+            return;
+
+        foreach (string key in customArgs.Keys)
+        {
+            if (ReservedFfmpegFlags.Contains(key))
+            {
+                errors.Add(
+                    new ValidationError(
+                        $"{prefix}.CustomArguments",
+                        $"CustomArguments key '{key}' collides with a flag the encoder pipeline "
+                            + "controls (codec, preset, quality, pixel format, filter chain, "
+                            + "or hardware init). Letting it through would silently override the "
+                            + "resolver's choice. Remove it — the matching profile field is the "
+                            + "supported way to set it.",
+                        ValidationSeverity.Error
+                    )
+                );
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Cross-output guards — duplicates + ladder monotonicity
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static void ValidateNoDuplicateVariants(
+        EncodingProfile profile,
+        List<ValidationError> errors
+    )
+    {
+        if (profile.VideoOutputs.Length < 2)
+            return;
+
+        HashSet<string> seen = [];
+        for (int i = 0; i < profile.VideoOutputs.Length; i++)
+        {
+            VideoOutput v = profile.VideoOutputs[i];
+            int h = v.Height ?? v.Width * 9 / 16;
+            string key = $"{v.Codec}|{v.Width}x{h}|crf={v.Crf}|br={v.BitrateKbps}|tb={v.TenBit}";
+            if (!seen.Add(key))
+            {
+                errors.Add(
+                    new ValidationError(
+                        $"VideoOutput[{i}]",
+                        $"Duplicate variant — same codec, resolution, bitrate, CRF, and bit depth "
+                            + $"as an earlier output. Encoding the same variant twice wastes CPU/GPU "
+                            + $"and produces duplicate files. Remove one.",
+                        ValidationSeverity.Warning
+                    )
+                );
+            }
+        }
+    }
+
+    private static void ValidateMonotonicLadder(
+        EncodingProfile profile,
+        List<ValidationError> errors
+    )
+    {
+        // Only meaningful on multi-variant ABR containers.
+        if (
+            profile.VideoOutputs.Length < 2
+            || (profile.Format != OutputFormat.Hls && profile.Format != OutputFormat.Dash)
+        )
+            return;
+
+        // Rank by resolution; bitrates should be monotonically non-decreasing
+        // with resolution. A 480p variant at higher bitrate than 720p means
+        // the ABR picker has no reason to ever switch up — broken ladder.
+        List<(int Pixels, int Bitrate, int Index)> rungs = [];
+        for (int i = 0; i < profile.VideoOutputs.Length; i++)
+        {
+            VideoOutput v = profile.VideoOutputs[i];
+            if (v.BitrateKbps <= 0)
+                continue;
+            int h = v.Height ?? v.Width * 9 / 16;
+            rungs.Add((v.Width * h, v.BitrateKbps, i));
+        }
+
+        if (rungs.Count < 2)
+            return;
+
+        List<(int Pixels, int Bitrate, int Index)> sorted = rungs.OrderBy(r => r.Pixels).ToList();
+
+        for (int i = 1; i < sorted.Count; i++)
+        {
+            if (sorted[i].Bitrate < sorted[i - 1].Bitrate)
+            {
+                errors.Add(
+                    new ValidationError(
+                        $"VideoOutput[{sorted[i].Index}].BitrateKbps",
+                        $"ABR ladder is inverted — a higher-resolution variant has a LOWER "
+                            + $"bitrate than a smaller one. Players won't switch up to it. "
+                            + $"Ensure bitrate increases with resolution.",
+                        ValidationSeverity.Warning
+                    )
+                );
+                break; // One warning is enough; more would be noise.
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Codec level → max luma-samples-per-frame tables
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static long? CodecLevelLimit(VideoCodecType codec, string level) =>
+        codec switch
+        {
+            VideoCodecType.H264 => H264LevelLimit(level),
+            VideoCodecType.H265 => H265LevelLimit(level),
+            VideoCodecType.Vp9 => Vp9LevelLimit(level),
+            _ => null, // AV1 levels not enforced yet (niche hardware decoders).
+        };
+
+    // H.264 MaxFS × 256 (16x16 macroblock → pixel) per Annex A level table.
+    // Approximate — skip the frame-rate axis and just pin worst-case pixels.
+    private static long? H264LevelLimit(string level) =>
+        level switch
+        {
+            "1" or "1.0" => 99L * 256,
+            "1b" or "1.0b" => 99L * 256,
+            "1.1" => 396L * 256,
+            "1.2" or "1.3" => 396L * 256,
+            "2" or "2.0" => 396L * 256,
+            "2.1" => 792L * 256,
+            "2.2" => 1620L * 256,
+            "3" or "3.0" => 1620L * 256,
+            "3.1" => 3600L * 256,
+            "3.2" => 5120L * 256,
+            "4" or "4.0" => 8192L * 256,
+            "4.1" => 8192L * 256,
+            "4.2" => 8704L * 256,
+            "5" or "5.0" => 22080L * 256,
+            "5.1" => 36864L * 256,
+            "5.2" => 36864L * 256,
+            "6" or "6.0" => 139264L * 256,
+            "6.1" => 139264L * 256,
+            "6.2" => 139264L * 256,
+            _ => null,
+        };
+
+    // H.265 (HEVC) MaxLumaPs per Table A.1 / A.6 (main/main10 profile).
+    private static long? H265LevelLimit(string level) =>
+        level switch
+        {
+            "1" or "1.0" => 36864L,
+            "2" or "2.0" => 122880L,
+            "2.1" => 245760L,
+            "3" or "3.0" => 552960L,
+            "3.1" => 983040L,
+            "4" or "4.0" => 2228224L,
+            "4.1" => 2228224L,
+            "5" or "5.0" => 8912896L,
+            "5.1" => 8912896L,
+            "5.2" => 8912896L,
+            "6" or "6.0" => 35651584L,
+            "6.1" => 35651584L,
+            "6.2" => 35651584L,
+            _ => null,
+        };
+
+    // VP9 Level table (max luma samples per frame).
+    private static long? Vp9LevelLimit(string level) =>
+        level switch
+        {
+            "1" or "1.0" => 36864L,
+            "1.1" => 73728L,
+            "2" or "2.0" => 122880L,
+            "2.1" => 245760L,
+            "3" or "3.0" => 552960L,
+            "3.1" => 983040L,
+            "4" or "4.0" => 2228224L,
+            "4.1" => 2228224L,
+            "5" or "5.0" => 8912896L,
+            "5.1" => 8912896L,
+            "5.2" => 8912896L,
+            "6" or "6.0" => 35651584L,
+            "6.1" => 35651584L,
+            "6.2" => 35651584L,
+            _ => null,
+        };
+
+    private static string FormatPixels(long pixels)
+    {
+        // Best-guess display — prefer familiar resolution labels when the
+        // cap matches a common one; fall back to a pixel count.
+        return pixels switch
+        {
+            >= 33_177_600 => "8K (7680x4320)",
+            >= 8_912_000 => "4K (3840x2160)",
+            >= 2_228_000 => "1080p (1920x1080)",
+            >= 921_000 => "720p (1280x720)",
+            >= 414_000 => "480p (720x480)",
+            _ => $"{pixels:N0} pixels",
+        };
     }
 
     private void ValidateTenBitFeasibility(
