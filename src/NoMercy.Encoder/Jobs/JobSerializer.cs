@@ -21,8 +21,30 @@ public class JobSerializer : IJobSerializer
 
     public EncodingJob? Deserialize(string payload, byte[] signingKey)
     {
-        SignedEnvelope? envelope = JsonConvert.DeserializeObject<SignedEnvelope>(payload);
+        if (string.IsNullOrEmpty(payload))
+            return null;
+
+        SignedEnvelope? envelope;
+        try
+        {
+            envelope = JsonConvert.DeserializeObject<SignedEnvelope>(payload);
+        }
+        catch (JsonException)
+        {
+            // Malformed JSON — reject cleanly instead of surfacing the parse
+            // exception. Remote workers feed arbitrary bytes into this entry
+            // point so parse failures are a normal "rejected" signal, not a
+            // crash.
+            return null;
+        }
+
         if (envelope is null)
+            return null;
+
+        // Null payload/signature means the envelope was deserialized from
+        // partial JSON (e.g. "{}") — treat as rejected. Without this check
+        // the HMAC comparison below would NRE on Encoding.UTF8.GetBytes(null).
+        if (string.IsNullOrEmpty(envelope.Payload) || string.IsNullOrEmpty(envelope.Signature))
             return null;
 
         // Verify HMAC

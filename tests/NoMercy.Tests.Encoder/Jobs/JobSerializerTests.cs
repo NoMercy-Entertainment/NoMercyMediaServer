@@ -66,6 +66,51 @@ public class JobSerializerTests
         result.Should().NotBeNull();
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // Malformed-payload hardening — remote workers deliver arbitrary bytes to
+    // Deserialize; any input must either return a valid job or null, never
+    // throw. Previously a null Signature in the envelope would NRE at
+    // Encoding.UTF8.GetBytes(null).
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Deserialize_Empty_ReturnsNull()
+    {
+        _serializer.Deserialize("", _signingKey).Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_GarbageJson_ReturnsNull()
+    {
+        // Not valid JSON at all — must not throw a parse exception.
+        EncodingJob? result = _serializer.Deserialize("not json at all {{{", _signingKey);
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_EmptyJsonObject_ReturnsNull()
+    {
+        // "{}" deserializes to envelope with null Payload and null Signature —
+        // previously caused NRE in HMAC comparison. Must return null cleanly.
+        _serializer.Deserialize("{}", _signingKey).Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_MissingSignature_ReturnsNull()
+    {
+        // Attacker crafts an envelope with Payload but no Signature field.
+        // The NRE path would let a malicious payload crash the worker.
+        string malicious = "{\"Payload\":\"anything\"}";
+        _serializer.Deserialize(malicious, _signingKey).Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_MissingPayload_ReturnsNull()
+    {
+        string malicious = "{\"Signature\":\"anything\"}";
+        _serializer.Deserialize(malicious, _signingKey).Should().BeNull();
+    }
+
     [Fact]
     public void Serialize_IncludesJobProfile()
     {
