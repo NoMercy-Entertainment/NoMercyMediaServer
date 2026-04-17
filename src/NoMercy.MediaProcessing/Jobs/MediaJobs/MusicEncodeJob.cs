@@ -93,7 +93,10 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                             a.SegmentName,
                             a.PlaylistName,
                             a.AllowedLanguages,
-                            a.CustomArguments
+                            a.CustomArguments,
+                            a.Loudness,
+                            a.Downmix,
+                            a.CustomPanMatrix
                         ))
                         .ToArray(),
                     profile

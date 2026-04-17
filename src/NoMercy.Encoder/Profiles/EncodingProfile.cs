@@ -42,6 +42,8 @@ public record AudioOutput(
     int SampleRateHz,
     string[] AllowedLanguages,
     Audio.LoudnessMode Loudness = Audio.LoudnessMode.None,
+    Audio.DownmixMode Downmix = Audio.DownmixMode.Auto,
+    string? CustomPanMatrix = null,
     string SegmentNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:",
     string PlaylistNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:",
     Dictionary<string, string>? CustomArguments = null

@@ -124,6 +124,8 @@ public static class ProfileMapper
             SampleRateHz: a.SampleRate > 0 ? a.SampleRate : 48000,
             AllowedLanguages: a.AllowedLanguages,
             Loudness: ParseLoudness(a.Loudness),
+            Downmix: ParseDownmix(a.Downmix),
+            CustomPanMatrix: a.CustomPanMatrix,
             SegmentNameTemplate: string.IsNullOrEmpty(a.SegmentName)
                 ? ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 : a.SegmentName,
@@ -132,6 +134,21 @@ public static class ProfileMapper
                 : a.PlaylistName,
             CustomArguments: customArgs
         );
+    }
+
+    private static DownmixMode ParseDownmix(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return DownmixMode.Auto;
+
+        return value.ToLowerInvariant() switch
+        {
+            "stereo" or "stereo_itur128" or "itur128" or "bs775" => DownmixMode.StereoItuR128,
+            "mono" => DownmixMode.Mono,
+            "custom" => DownmixMode.Custom,
+            "auto" or "none" or "off" => DownmixMode.Auto,
+            _ => DownmixMode.Auto,
+        };
     }
 
     private static LoudnessMode ParseLoudness(string? value)

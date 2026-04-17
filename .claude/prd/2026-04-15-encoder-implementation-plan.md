@@ -18,7 +18,7 @@ Pro / B2B features (multi-server distributed encoding, DRM encryption, CENC pack
 
 ## Current Status — 2026-04-16
 
-**Build:** 198 commits ahead of `master` · 0 errors · 0 warnings · 841 encoder tests + 6 repository tests passing (+15 live transcode HTTP surface, +9 IOutputStrategyFactory, +10 LiveFfmpegRunner).
+**Build:** 199 commits ahead of `master` · 0 errors · 0 warnings · 850 encoder tests + 6 repository tests passing (+15 live transcode HTTP surface, +9 IOutputStrategyFactory, +10 LiveFfmpegRunner, +9 pan-matrix downmix).
 
 **What already works today (outside the strategy pattern):**
 - 6-stage pipeline (`Analyze → Validate → Plan → Build → Execute → Finalize`) in [`Pipeline/Encoder.cs`](../../src/NoMercy.Encoder/Pipeline/Encoder.cs) delivering production-grade HLS single-pass
@@ -75,7 +75,7 @@ The phased plan below kept the original phase numbers for continuity. **Executio
 
 ### Tier 3 — nice-to-have, low blast radius
 
-9. **Phase 10.4 — Pan matrix / `amerge` downmix.** `-ac N` covers the common case; explicit matrices are niche.
+9. ✅ **Phase 10.4 — Pan matrix downmix.** Shipped. `DownmixMode` enum (Auto / StereoItuR128 / Mono / Custom) + `CustomPanMatrix` threaded through `IAudioProfile` DB model → `V1AudioProfile` → `AudioOutput` → `PlanStage.BuildAudioFilter`. ITU-R BS.775 5.1 → 2.0 matrix coefficients baked in; pan chains *before* loudnorm so the normalizer measures final channel layout. `amerge` (commentary + main) still parked — requires multi-input pipeline which is a separate design pass.
 10. **Phase 12.1 — Preset library.** `EncoderProfile` already serves as a preset — would need a product design pass before adding richer metadata.
 11. ✅ **Multi-variant 2-pass for MP4 / DASH** — shipped (`08e81101`). DASH inherits multi-variant from `TwoPassStrategyBase` for free; MP4 gets a validator warning when users configure multiple variants (MP4 is single-file; extra variants silently dropped into the container without the warning).
 
@@ -546,6 +546,7 @@ public interface IWorkerDispatcher
 
 - [x] **Step 1 (partial):** `PlanStage` maps `LoudnessMode` to `loudnorm` filter targets (EBU R128 → `I=-16:TP=-1.5:LRA=11`, ReplayGain → `I=-18:TP=-1.5:LRA=11`). All four output strategies emit `-af` when a filter is set and action is Transcode. Downmix is handled by existing `-ac N` emission (FFmpeg auto-downmix). **Pending:** explicit `pan=` matrix for custom downmix, `amerge` for commentary+main mixing.
 - [x] **Step 2:** 4 new `PlanStageAudioFilterTests` cover each `LoudnessMode` branch. Commit: `feat(encoder): audio loudness normalization via loudnorm filter` — merged as `6f26c83`
+- [x] **Step 3:** Phase 10.4 pan-matrix landing — `DownmixMode` (Auto / StereoItuR128 / Mono / Custom) + `CustomPanMatrix` wired from `IAudioProfile` DB JSON → `V1AudioProfile` → `AudioOutput` → `PlanStage.BuildAudioFilter`. Pan chains before loudnorm (measures post-downmix layout). 9 new `PlanStageDownmixTests`. `amerge` deferred (multi-input pipeline).
 
 ---
 

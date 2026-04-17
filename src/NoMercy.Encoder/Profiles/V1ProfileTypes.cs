@@ -31,7 +31,9 @@ public record V1AudioProfile(
     string PlaylistName,
     string[] AllowedLanguages,
     (string key, string Val)[] CustomArguments,
-    string? Loudness = null
+    string? Loudness = null,
+    string? Downmix = null,
+    string? CustomPanMatrix = null
 );
 
 public record V1SubtitleProfile(

@@ -111,7 +111,10 @@ public class VideoEncodeJob : AbstractEncoderJob
                             a.SegmentName,
                             a.PlaylistName,
                             a.AllowedLanguages,
-                            a.CustomArguments
+                            a.CustomArguments,
+                            a.Loudness,
+                            a.Downmix,
+                            a.CustomPanMatrix
                         ))
                         .ToArray(),
                     dbProfile
