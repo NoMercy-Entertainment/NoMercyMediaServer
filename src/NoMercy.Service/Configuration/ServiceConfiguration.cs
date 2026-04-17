@@ -434,6 +434,7 @@ public static class ServiceConfiguration
         services.AddScoped<EncoderRepository>();
         services.AddScoped<EncodingHistoryRepository>();
         services.AddScoped<EncodingPresetRepository>();
+        services.AddScoped<ContentSegmentRepository>();
         services.AddScoped<LibraryRepository>();
         services.AddScoped<MediaProcessingLibraryRepository>();
         services.AddScoped<DeviceRepository>();

@@ -1,0 +1,136 @@
+using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using NoMercy.Data.Repositories;
+using NoMercy.Database.Models.Media;
+using NoMercy.Helpers.Extensions;
+
+namespace NoMercy.Api.Controllers.V1.Media;
+
+[ApiController]
+[Tags("Media Content Segments")]
+[ApiVersion(1.0)]
+[Authorize]
+[Route("api/v{version:apiVersion}/content-segments")]
+public class ContentSegmentsController(ContentSegmentRepository repository) : BaseController
+{
+    [HttpGet("episode/{episodeId:int}")]
+    [ResponseCache(Duration = 60)]
+    public async Task<IActionResult> GetByEpisode(int episodeId)
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view content segments");
+
+        List<ContentSegment> segments = await repository.GetForEpisodeAsync(episodeId);
+        return Ok(new { data = segments });
+    }
+
+    [HttpGet("movie/{movieId:int}")]
+    [ResponseCache(Duration = 60)]
+    public async Task<IActionResult> GetByMovie(int movieId)
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view content segments");
+
+        List<ContentSegment> segments = await repository.GetForMovieAsync(movieId);
+        return Ok(new { data = segments });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateContentSegmentRequest request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to create content segments");
+
+        if (request.EndSeconds <= request.StartSeconds)
+            return BadRequestResponse("end_seconds must be greater than start_seconds");
+
+        if (!request.EpisodeId.HasValue && !request.MovieId.HasValue)
+            return BadRequestResponse("Either episode_id or movie_id must be set");
+
+        if (request.EpisodeId.HasValue && request.MovieId.HasValue)
+            return BadRequestResponse("Provide exactly one of episode_id / movie_id, not both");
+
+        ContentSegment segment = new()
+        {
+            EpisodeId = request.EpisodeId,
+            MovieId = request.MovieId,
+            SegmentType = request.SegmentType,
+            StartSeconds = request.StartSeconds,
+            EndSeconds = request.EndSeconds,
+            Source = request.Source ?? "manual",
+            Confidence = request.Confidence ?? 1.0,
+        };
+
+        ContentSegment saved = await repository.CreateAsync(segment);
+        return Ok(saved);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(
+        string id,
+        [FromBody] UpdateContentSegmentRequest request
+    )
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to update content segments");
+
+        if (!Ulid.TryParse(id, out Ulid segmentId))
+            return BadRequestResponse("Invalid segment id");
+
+        ContentSegment? updated = await repository.UpdateAsync(
+            segmentId,
+            seg =>
+            {
+                if (request.SegmentType.HasValue)
+                    seg.SegmentType = request.SegmentType.Value;
+                if (request.StartSeconds.HasValue)
+                    seg.StartSeconds = request.StartSeconds.Value;
+                if (request.EndSeconds.HasValue)
+                    seg.EndSeconds = request.EndSeconds.Value;
+                if (request.Confidence.HasValue)
+                    seg.Confidence = request.Confidence.Value;
+                // Manual edits flip the source so the next detector run
+                // doesn't clobber the user's correction.
+                seg.Source = "manual";
+            }
+        );
+
+        if (updated is null)
+            return NotFoundResponse("Content segment not found");
+
+        return Ok(updated);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to delete content segments");
+
+        if (!Ulid.TryParse(id, out Ulid segmentId))
+            return BadRequestResponse("Invalid segment id");
+
+        bool deleted = await repository.DeleteAsync(segmentId);
+        return deleted ? NoContent() : NotFoundResponse("Content segment not found");
+    }
+}
+
+public record CreateContentSegmentRequest(
+    [property: JsonProperty("segment_type")] ContentSegmentType SegmentType,
+    [property: JsonProperty("start_seconds")] double StartSeconds,
+    [property: JsonProperty("end_seconds")] double EndSeconds,
+    [property: JsonProperty("episode_id")] int? EpisodeId = null,
+    [property: JsonProperty("movie_id")] int? MovieId = null,
+    [property: JsonProperty("source")] string? Source = null,
+    [property: JsonProperty("confidence")] double? Confidence = null
+);
+
+public record UpdateContentSegmentRequest(
+    [property: JsonProperty("segment_type")] ContentSegmentType? SegmentType = null,
+    [property: JsonProperty("start_seconds")] double? StartSeconds = null,
+    [property: JsonProperty("end_seconds")] double? EndSeconds = null,
+    [property: JsonProperty("confidence")] double? Confidence = null
+);

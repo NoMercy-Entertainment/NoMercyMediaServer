@@ -1,0 +1,78 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+
+namespace NoMercy.Database.Models.Media;
+
+/// <summary>
+/// Kinds of timeline segments the player knows how to handle. The detector
+/// writes <see cref="Intro"/> / <see cref="Outro"/> automatically via
+/// audio fingerprinting; users can also add <see cref="Recap"/> or
+/// <see cref="Credits"/> manually from the dashboard.
+/// </summary>
+public enum ContentSegmentType
+{
+    Intro,
+    Outro,
+    Recap,
+    Credits,
+}
+
+/// <summary>
+/// Annotated timeline range on a piece of media — the payload the player
+/// consumes to show a "Skip Intro" button, auto-advance at credits, etc.
+/// Either <see cref="EpisodeId"/> or <see cref="MovieId"/> is set, never
+/// both.
+/// </summary>
+[PrimaryKey(nameof(Id))]
+[Index(nameof(EpisodeId))]
+[Index(nameof(MovieId))]
+[Index(nameof(EpisodeId), nameof(SegmentType))]
+public class ContentSegment
+{
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [JsonProperty("id")]
+    public Ulid Id { get; set; } = Ulid.NewUlid();
+
+    [JsonProperty("episode_id")]
+    public int? EpisodeId { get; set; }
+    public Episode? Episode { get; set; }
+
+    [JsonProperty("movie_id")]
+    public int? MovieId { get; set; }
+    public Movies.Movie? Movie { get; set; }
+
+    [JsonProperty("segment_type")]
+    public ContentSegmentType SegmentType { get; set; }
+
+    /// <summary>Segment start in seconds from the source timeline.</summary>
+    [JsonProperty("start_seconds")]
+    public double StartSeconds { get; set; }
+
+    /// <summary>Segment end (exclusive) in seconds.</summary>
+    [JsonProperty("end_seconds")]
+    public double EndSeconds { get; set; }
+
+    /// <summary>
+    /// How this segment landed in the database — "detector" for chromaprint
+    /// auto-detection, "manual" for dashboard overrides, "import" for
+    /// community-provided data.
+    /// </summary>
+    [JsonProperty("source")]
+    [MaxLength(32)]
+    public string Source { get; set; } = "detector";
+
+    /// <summary>
+    /// Detector confidence in [0, 1]. Always 1.0 for manual entries.
+    /// Useful for filtering noisy detections in the player UI.
+    /// </summary>
+    [JsonProperty("confidence")]
+    public double Confidence { get; set; } = 1.0;
+
+    [JsonProperty("created_at")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [JsonProperty("updated_at")]
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
