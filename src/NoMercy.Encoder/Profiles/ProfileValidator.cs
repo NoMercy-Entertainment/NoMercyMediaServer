@@ -185,7 +185,115 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             ValidatePresetKnownToCodec(output, prefix, errors);
             ValidateProfileKnownToCodec(output, prefix, errors);
             ValidateCustomArgumentsReservedFlags(output.CustomArguments, prefix, errors);
+            ValidateBitratePerResolution(output, prefix, errors);
+            ValidateCrfQualityFloor(output, prefix, errors);
         }
+    }
+
+    /// <summary>
+    /// Below a codec-specific bitrate floor for a given resolution the output
+    /// gets blocky / smeared regardless of preset. Many users set 4K profiles
+    /// with 2 Mbps thinking they'll save disk space; the result is unwatchable.
+    /// Warn with a rough floor — not a hard block since some encoders
+    /// (slow+slower presets) can get away with less.
+    ///
+    /// Only fires when bitrate rate-control is configured (BitrateKbps > 0).
+    /// CRF mode has no target bitrate so the concept doesn't apply.
+    /// </summary>
+    private static void ValidateBitratePerResolution(
+        VideoOutput output,
+        string prefix,
+        List<ValidationError> errors
+    )
+    {
+        if (output.BitrateKbps <= 0)
+            return;
+
+        int height = output.Height ?? output.Width * 9 / 16;
+
+        int floorKbps = MinBitrateFloor(output.Codec, height);
+        if (floorKbps <= 0)
+            return;
+
+        if (output.BitrateKbps < floorKbps)
+        {
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.BitrateKbps",
+                    $"{output.Codec} at {output.Width}x{height} below {floorKbps} kbps produces "
+                        + "visible blocking and smearing regardless of preset. Typical minimum "
+                        + $"for this resolution is {floorKbps} kbps; raise it or switch to CRF mode.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
+    }
+
+    /// <summary>
+    /// CRF in the 35+ range for H.264 / H.265 produces blocky, smeared output
+    /// that most viewers reject. Warn so the user knows they've configured
+    /// near the bottom of the quality cliff — not a hard error because some
+    /// archival / thumbnail-preview use cases legitimately want tiny files.
+    ///
+    /// Note: in this codebase CRF 0 means "not configured"; the bitrate path
+    /// handles that branch. ffmpeg's actual CRF=0 lossless mode would need
+    /// a separate opt-in field, not an inferred value.
+    /// </summary>
+    private static void ValidateCrfQualityFloor(
+        VideoOutput output,
+        string prefix,
+        List<ValidationError> errors
+    )
+    {
+        if (output.Crf <= 0)
+            return;
+
+        // Barely-watchable territory by codec. Thresholds reflect where the
+        // quality cliff becomes obvious — H.264/H.265 share the 0-51 scale,
+        // AV1 uses 0-63 so its cliff is shifted up proportionally.
+        (int ThresholdCrf, string CodecDescription) floor = output.Codec switch
+        {
+            VideoCodecType.H264 => (35, "H.264"),
+            VideoCodecType.H265 => (35, "H.265"),
+            VideoCodecType.Vp9 => (45, "VP9"),
+            VideoCodecType.Av1 => (50, "AV1"),
+            _ => (0, ""),
+        };
+
+        if (floor.ThresholdCrf > 0 && output.Crf >= floor.ThresholdCrf)
+        {
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.Crf",
+                    $"CRF {output.Crf} on {floor.CodecDescription} produces noticeably blocky, "
+                        + "smeared output. Typical quality range is 18-28 — higher values cut "
+                        + "file size at a sharp quality cliff.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
+    }
+
+    /// <summary>
+    /// Rough bitrate floor per codec × resolution. Values reflect "don't go
+    /// below this unless you know what you're doing" — they're not Netflix-
+    /// quality targets, just the point below which visible artifacts dominate.
+    /// HEVC / AV1 / VP9 get lower floors than H.264 (modern codecs are ~30%
+    /// more efficient).
+    /// </summary>
+    private static int MinBitrateFloor(VideoCodecType codec, int height)
+    {
+        bool modernCodec = codec != VideoCodecType.H264;
+
+        return height switch
+        {
+            >= 2160 => modernCodec ? 8_000 : 12_000,
+            >= 1440 => modernCodec ? 5_000 : 7_500,
+            >= 1080 => modernCodec ? 1_500 : 2_500,
+            >= 720 => modernCodec ? 800 : 1_500,
+            >= 480 => modernCodec ? 500 : 900,
+            _ => 0, // Too small to reliably floor — various content types.
+        };
     }
 
     // ──────────────────────────────────────────────────────────────────────────

@@ -972,6 +972,116 @@ public class ProfileValidatorTests
         );
 
     // ──────────────────────────────────────────────────────────────────────────
+    // Video bitrate-per-resolution floor — "4K at 2 Mbps" disaster prevention
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void H264_4K_BelowBitrateFloor_Warns()
+    {
+        // 4K at 2000 kbps H.264 is famously unwatchable (~12 Mbps floor).
+        VideoOutput v = BuildVideo(
+            codec: VideoCodecType.H264,
+            width: 3840,
+            height: 2160,
+            bitrateKbps: 2000,
+            crf: 0,
+            level: "5.1"
+        );
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "VideoOutput[0].BitrateKbps"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("blocking")
+            );
+    }
+
+    [Fact]
+    public void Hevc_4K_ReasonableBitrate_NoWarning()
+    {
+        // HEVC 4K at 10 Mbps is solid quality — well above the 8 Mbps floor.
+        VideoOutput v = BuildVideo(
+            codec: VideoCodecType.H265,
+            width: 3840,
+            height: 2160,
+            bitrateKbps: 10_000,
+            crf: 0,
+            profile: "main10",
+            level: "5.1"
+        );
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .NotContain(e =>
+                e.Field == "VideoOutput[0].BitrateKbps" && e.Message.Contains("blocking")
+            );
+    }
+
+    [Fact]
+    public void CrfMode_DoesNotTriggerBitrateFloor()
+    {
+        // BitrateKbps=0 + Crf=23 is the normal CRF mode; no bitrate target
+        // means no bitrate-floor check applies.
+        EncodingProfile profile = BuildValidProfile(); // default is CRF 23, bitrate 0
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Message.Contains("blocking"));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // CRF quality floor — CRF 0 = lossless trap, very high CRF = unwatchable
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void VeryHighCrf_H264_Warns()
+    {
+        VideoOutput v = BuildVideo(codec: VideoCodecType.H264, crf: 40);
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result
+            .Errors.Should()
+            .Contain(e =>
+                e.Field == "VideoOutput[0].Crf"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("blocky")
+            );
+    }
+
+    [Fact]
+    public void NormalCrf_H264_NoQualityWarning()
+    {
+        // CRF 23 is the H.264 default — solid quality, no warning expected.
+        EncodingProfile profile = BuildValidProfile();
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Message.Contains("blocky"));
+        result.Errors.Should().NotContain(e => e.Message.Contains("lossless"));
+    }
+
+    [Fact]
+    public void Av1_Crf35_InsideWiderRange_NoWarning()
+    {
+        // AV1 uses 0-63, so CRF 35 is mid-range — NOT in the "unwatchable"
+        // zone (AV1's threshold starts at 50). Avoids cross-codec false
+        // positives from reusing H.264 thresholds.
+        VideoOutput v = BuildVideo(codec: VideoCodecType.Av1, crf: 35, profile: "main");
+        EncodingProfile profile = BuildValidProfile(format: OutputFormat.Dash, videoOutputs: [v]);
+
+        ValidationResult result = _validator.Validate(profile);
+
+        result.Errors.Should().NotContain(e => e.Message.Contains("blocky"));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // AC3 stepped bitrate ladder — ffmpeg rounds down silently off-ladder
     // ──────────────────────────────────────────────────────────────────────────
 
