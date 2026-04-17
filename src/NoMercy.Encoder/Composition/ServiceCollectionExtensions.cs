@@ -81,6 +81,7 @@ public static class ServiceCollectionExtensions
         // Startup — register concrete first so IHostedService resolves same instance
         services.AddSingleton<HardwareInitializationService>();
         services.AddHostedService(sp => sp.GetRequiredService<HardwareInitializationService>());
+        services.AddHostedService<HardwareBenchmarkHostedService>();
 
         // HDR
         services.AddTransient<ITonemapSelector, TonemapSelector>();
