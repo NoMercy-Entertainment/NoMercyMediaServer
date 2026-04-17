@@ -437,6 +437,78 @@ public class ProfileValidatorTests
     }
 
     [Fact]
+    public void TenBitH264_WarnsAboutNoHardwareSupport()
+    {
+        // H264 hardware encoders (NVENC/AMF/QSV/VAAPI/VideoToolbox) all lack
+        // 10-bit support. Without an early warning, users configure a 10-bit
+        // H264 profile expecting hardware acceleration and silently get
+        // either software encoding or an 8-bit downgrade. The validator
+        // surfaces this upfront.
+        VideoOutput tenBitH264 = new VideoOutput(
+            Codec: VideoCodecType.H264,
+            Width: 1920,
+            Height: 1080,
+            BitrateKbps: 4000,
+            Crf: 23,
+            Preset: "medium",
+            Profile: "high10",
+            Level: "4.1",
+            ConvertHdrToSdr: false,
+            KeyframeIntervalSeconds: 2,
+            TenBit: true
+        );
+
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [tenBitH264]);
+        ValidationResult result = _validator.Validate(profile);
+
+        result.IsValid.Should().BeTrue("warning does not block the profile");
+        result
+            .Errors.Should()
+            .ContainSingle(e =>
+                e.Field == "VideoOutput[0].TenBit"
+                && e.Severity == ValidationSeverity.Warning
+                && e.Message.Contains("hardware encoder")
+            );
+    }
+
+    [Fact]
+    public void TenBitH265_DoesNotWarn_HardwareSupportedAcrossVendors()
+    {
+        // HEVC is different from H264 — hevc_nvenc, hevc_amf, hevc_qsv,
+        // hevc_vaapi all declare Supports10Bit=true (via main10 profile).
+        // Only hevc_videotoolbox is 8-bit, which is handled at resolve/plan
+        // time, not profile validation.
+        VideoOutput tenBitH265 = new VideoOutput(
+            Codec: VideoCodecType.H265,
+            Width: 1920,
+            Height: 1080,
+            BitrateKbps: 4000,
+            Crf: 28,
+            Preset: "medium",
+            Profile: "main10",
+            Level: "4.1",
+            ConvertHdrToSdr: false,
+            KeyframeIntervalSeconds: 2,
+            TenBit: true
+        );
+
+        EncodingProfile profile = BuildValidProfile(videoOutputs: [tenBitH265]);
+        ValidationResult result = _validator.Validate(profile);
+
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().NotContain(e => e.Field == "VideoOutput[0].TenBit");
+    }
+
+    [Fact]
+    public void EightBitH264_NoTenBitWarning()
+    {
+        // Default profile is 8-bit H264 — no warning should ever surface.
+        EncodingProfile profile = BuildValidProfile();
+        ValidationResult result = _validator.Validate(profile);
+        result.Errors.Should().NotContain(e => e.Field.EndsWith(".TenBit"));
+    }
+
+    [Fact]
     public void AudioOnly_Profile_Passes()
     {
         // No video outputs — just audio — is valid as long as there is at least one output

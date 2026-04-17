@@ -111,6 +111,11 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                 );
             }
 
+            if (output.TenBit)
+            {
+                ValidateTenBitFeasibility(output, prefix, errors);
+            }
+
             if (output.BitrateKbps <= 0 && output.Crf <= 0)
             {
                 errors.Add(
@@ -156,6 +161,53 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                     )
                 );
             }
+        }
+    }
+
+    private void ValidateTenBitFeasibility(
+        VideoOutput output,
+        string prefix,
+        List<ValidationError> errors
+    )
+    {
+        ICodecDefinition definition = codecRegistry.GetVideoDefinition(output.Codec);
+
+        // Split the codec's encoders into "can do 10-bit" vs "can't". If every
+        // encoder supports 10-bit, nothing to warn. If some can and some can't,
+        // warn that hardware selection may silently downgrade to 8-bit.
+        bool anyHwSupports10Bit = definition
+            .Encoders.Where(e => e.RequiredVendor is not null)
+            .Any(e => e.Supports10Bit);
+        bool allHwLack10Bit = definition
+            .Encoders.Where(e => e.RequiredVendor is not null)
+            .All(e => !e.Supports10Bit);
+
+        if (allHwLack10Bit)
+        {
+            // H264 is the canonical case — every H264 hardware encoder
+            // (NVENC/AMF/QSV/VAAPI/VideoToolbox) rejects 10-bit.
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.TenBit",
+                    $"10-bit {output.Codec} has no hardware encoder support "
+                        + "(every vendor's H.264/HEVC hardware path is 8-bit for this codec). "
+                        + "Output will be software-encoded or silently downgraded to 8-bit.",
+                    ValidationSeverity.Warning
+                )
+            );
+        }
+        else if (!anyHwSupports10Bit)
+        {
+            // Codec has no hardware encoders at all (VP9 on non-Intel, etc.)
+            // — this is a speed/CPU warning, not a correctness issue.
+            errors.Add(
+                new ValidationError(
+                    $"{prefix}.TenBit",
+                    $"10-bit {output.Codec} will be software-encoded (no hardware encoders "
+                        + "available for this codec).",
+                    ValidationSeverity.Warning
+                )
+            );
         }
     }
 
