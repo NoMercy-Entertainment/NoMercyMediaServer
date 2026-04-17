@@ -27,8 +27,6 @@ public class LiveTranscodeController(
     IDbContextFactory<MediaContext> contextFactory
 ) : BaseController
 {
-    private static readonly TimeSpan DefaultTargetSegmentDuration = TimeSpan.FromSeconds(6);
-
     [HttpPost("sessions")]
     public async Task<IActionResult> StartSession(
         [FromBody] StartLiveSessionRequest request,
@@ -93,8 +91,10 @@ public class LiveTranscodeController(
             return ServiceUnavailableResponse(ex.Message);
         }
 
+        // LiveEncoder.StartAsync already registers the session with the
+        // session manager + streaming service. We just re-tag it with the
+        // user id so the per-user session cap works.
         sessionManager.RegisterSession(session, userId.ToString());
-        streamingService.Register(session, DefaultTargetSegmentDuration);
 
         string playlistUrl = $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
 

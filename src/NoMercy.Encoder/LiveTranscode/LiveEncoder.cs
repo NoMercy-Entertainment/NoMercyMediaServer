@@ -7,6 +7,7 @@ using NoMercy.Encoder.Hardware;
 public class LiveEncoder(
     ILiveQualitySelector qualitySelector,
     ISessionManager sessionManager,
+    ILiveStreamingService streamingService,
     ILiveFfmpegRunner runner,
     EncoderOptions options,
     SpeedIndex speedIndex,
@@ -37,6 +38,12 @@ public class LiveEncoder(
         session.SetState(LiveSessionState.Transcoding);
 
         string outputDirectory = Path.Combine(options.ResolvedLiveTranscodeCachePath, sessionId);
+
+        streamingService.Register(
+            session,
+            TimeSpan.FromSeconds(options.DefaultSegmentDurationSeconds),
+            outputDirectory
+        );
 
         LiveRunInput runInput = new(
             InputPath: request.InputPath,

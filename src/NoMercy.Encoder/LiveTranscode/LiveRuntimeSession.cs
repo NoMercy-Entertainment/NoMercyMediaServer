@@ -11,13 +11,19 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
 
     public ILiveSession Session { get; }
     public TimeSpan TargetSegmentDuration { get; }
+    public string? ScratchDirectory { get; }
 
     internal Task? DrainerTask { get; set; }
 
-    public LiveRuntimeSession(ILiveSession session, TimeSpan targetSegmentDuration)
+    public LiveRuntimeSession(
+        ILiveSession session,
+        TimeSpan targetSegmentDuration,
+        string? scratchDirectory = null
+    )
     {
         Session = session;
         TargetSegmentDuration = targetSegmentDuration;
+        ScratchDirectory = scratchDirectory;
     }
 
     public bool IsComplete => Volatile.Read(ref _isComplete) == 1;

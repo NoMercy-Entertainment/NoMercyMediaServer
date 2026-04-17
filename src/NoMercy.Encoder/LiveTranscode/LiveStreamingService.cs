@@ -15,9 +15,13 @@ public class LiveStreamingService(ILogger<LiveStreamingService> logger) : ILiveS
 
     public IReadOnlyCollection<string> ActiveSessionIds => _runtimes.Keys.ToList();
 
-    public void Register(ILiveSession session, TimeSpan targetSegmentDuration)
+    public void Register(
+        ILiveSession session,
+        TimeSpan targetSegmentDuration,
+        string? scratchDirectory = null
+    )
     {
-        LiveRuntimeSession runtime = new(session, targetSegmentDuration);
+        LiveRuntimeSession runtime = new(session, targetSegmentDuration, scratchDirectory);
         if (!_runtimes.TryAdd(session.SessionId, runtime))
         {
             throw new InvalidOperationException(
@@ -40,6 +44,39 @@ public class LiveStreamingService(ILogger<LiveStreamingService> logger) : ILiveS
         {
             logger.LogDebug("Removing live session {SessionId}", sessionId);
             await runtime.DisposeAsync().ConfigureAwait(false);
+
+            if (!string.IsNullOrWhiteSpace(runtime.ScratchDirectory))
+            {
+                TryDeleteScratch(runtime.ScratchDirectory, sessionId);
+            }
+        }
+    }
+
+    private void TryDeleteScratch(string scratchDirectory, string sessionId)
+    {
+        try
+        {
+            if (Directory.Exists(scratchDirectory))
+            {
+                Directory.Delete(scratchDirectory, recursive: true);
+                logger.LogDebug(
+                    "Deleted live session scratch {Dir} for {SessionId}",
+                    scratchDirectory,
+                    sessionId
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            // Best-effort: a segment might still be held open by Windows until
+            // the FFmpeg handle fully releases. The temp dir will be cleaned
+            // up on the next server start or by the OS temp sweep.
+            logger.LogWarning(
+                ex,
+                "Could not delete scratch {Dir} for live session {SessionId}",
+                scratchDirectory,
+                sessionId
+            );
         }
     }
 

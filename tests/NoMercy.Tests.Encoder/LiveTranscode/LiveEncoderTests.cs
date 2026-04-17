@@ -106,6 +106,7 @@ public class LiveEncoderTests
         return new LiveEncoder(
             selector,
             manager,
+            new LiveStreamingService(NullLogger<LiveStreamingService>.Instance),
             new NoOpLiveFfmpegRunner(),
             encoderOptions,
             speedIndex,

@@ -128,6 +128,44 @@ public class LiveStreamingServiceTests
     }
 
     [Fact]
+    public async Task RemoveAsync_DeletesScratchDirectory_WhenProvided()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"live-scratch-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "seg_00000.ts"), "data");
+
+        try
+        {
+            LiveStreamingService svc = NewService();
+            LiveSession session = MakeSession();
+            svc.Register(session, TimeSpan.FromSeconds(6), tempDir);
+
+            await svc.RemoveAsync(session.SessionId);
+
+            Directory.Exists(tempDir).Should().BeFalse();
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RemoveAsync_MissingScratchDirectory_SwallowsError()
+    {
+        string nonExistent = Path.Combine(Path.GetTempPath(), $"live-missing-{Guid.NewGuid():N}");
+
+        LiveStreamingService svc = NewService();
+        LiveSession session = MakeSession();
+        svc.Register(session, TimeSpan.FromSeconds(6), nonExistent);
+
+        Func<Task> act = () => svc.RemoveAsync(session.SessionId);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
     public async Task ActiveSessionIds_ReflectsRegistrationAndRemoval()
     {
         LiveStreamingService svc = NewService();
