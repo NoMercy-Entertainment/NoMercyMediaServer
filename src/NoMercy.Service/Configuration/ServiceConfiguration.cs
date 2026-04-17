@@ -433,6 +433,7 @@ public static class ServiceConfiguration
         services.AddScoped<MusicRepository>();
         services.AddScoped<EncoderRepository>();
         services.AddScoped<EncodingHistoryRepository>();
+        services.AddScoped<EncodingPresetRepository>();
         services.AddScoped<LibraryRepository>();
         services.AddScoped<MediaProcessingLibraryRepository>();
         services.AddScoped<DeviceRepository>();
