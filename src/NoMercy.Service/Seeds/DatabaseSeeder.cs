@@ -275,52 +275,57 @@ public static class DatabaseSeeder
         }
 
         List<string> availableMigrations = context.Database.GetMigrations().ToList();
-        List<string> appliedMigrations = migrationTableExists
-            ? context.Database.GetAppliedMigrations().ToList()
-            : [];
 
-        if (migrationTableExists && appliedMigrations.Count == availableMigrations.Count)
+        // Self-heal: if the migration-history table says a migration has been
+        // applied but its physical tables are missing, EF's GetPendingMigrations()
+        // returns empty and we skip Migrate(). That's how a half-applied
+        // schema gets stuck. Scan the applied list for migrations whose
+        // expected tables don't exist and unstamp them so the next
+        // GetPendingMigrations() reports them as pending.
+        if (migrationTableExists)
+        {
+            UnstampMigrationsMissingTables(context, contextName);
+        }
+
+        // Use pending list as the source of truth — count equality was too
+        // weak (same count by coincidence silently skipped new migrations).
+        List<string> pendingMigrations = migrationTableExists
+            ? context.Database.GetPendingMigrations().ToList()
+            : availableMigrations;
+
+        if (pendingMigrations.Count == 0)
         {
             Logger.Setup(
-                $"{contextName}: Database is up to date. No migrations needed.",
+                $"{contextName}: Database is up to date ({availableMigrations.Count} migrations applied).",
                 LogEventLevel.Verbose
             );
         }
         else
         {
-            List<string> pendingMigrations = context.Database.GetPendingMigrations().ToList();
-
-            if (pendingMigrations.Count > 0)
+            Logger.Setup(
+                $"{contextName}: Applying {pendingMigrations.Count} migration(s): {string.Join(", ", pendingMigrations)}",
+                LogEventLevel.Verbose
+            );
+            try
             {
+                context.Database.Migrate();
                 Logger.Setup(
-                    $"{contextName}: Applying {pendingMigrations.Count} migration(s)...",
+                    $"{contextName}: Migrations applied successfully.",
                     LogEventLevel.Verbose
                 );
-                try
-                {
-                    context.Database.Migrate();
-                    Logger.Setup(
-                        $"{contextName}: Migrations applied successfully.",
-                        LogEventLevel.Verbose
-                    );
-                }
-                catch (Exception ex) when (ex.Message.Contains("already exists"))
-                {
-                    Logger.Setup(
-                        $"{contextName}: Tables already exist. Syncing migration history...",
-                        LogEventLevel.Verbose
-                    );
-                    SyncMigrationHistory(
-                        context,
-                        migrationTableExists,
-                        pendingMigrations,
-                        availableMigrations
-                    );
-                }
             }
-            else
+            catch (Exception ex) when (ex.Message.Contains("already exists"))
             {
-                Logger.Setup($"{contextName}: No pending migrations found.", LogEventLevel.Verbose);
+                Logger.Setup(
+                    $"{contextName}: Tables already exist. Syncing migration history...",
+                    LogEventLevel.Verbose
+                );
+                SyncMigrationHistory(
+                    context,
+                    migrationTableExists,
+                    pendingMigrations,
+                    availableMigrations
+                );
             }
         }
 
@@ -329,6 +334,123 @@ public static class DatabaseSeeder
         context.Database.ExecuteSqlRaw("PRAGMA encoding = 'UTF-8'");
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Detects migrations that are marked as applied in __EFMigrationsHistory
+    /// but whose <c>CREATE TABLE</c> statements never actually ran — the
+    /// physical table is missing. Unstamps those rows so the next
+    /// <c>Migrate()</c> call sees them as pending and applies them.
+    ///
+    /// How this state happens: a prior SyncMigrationHistory call (triggered
+    /// by an "already exists" catch on an unrelated migration) can mark
+    /// every pending migration as applied even though only one of them
+    /// actually ran. Future runs then short-circuit because history says
+    /// "all applied."
+    /// </summary>
+    private static void UnstampMigrationsMissingTables(DbContext context, string contextName)
+    {
+        IReadOnlyDictionary<string, string> migrationTables = GetExpectedTablesPerMigration(
+            context
+        );
+        if (migrationTables.Count == 0)
+            return;
+
+        HashSet<string> existingTables = GetExistingTables(context);
+        List<string> appliedMigrations = context.Database.GetAppliedMigrations().ToList();
+
+        List<string> toUnstamp = [];
+        foreach (string migrationId in appliedMigrations)
+        {
+            if (!migrationTables.TryGetValue(migrationId, out string? expectedTable))
+                continue;
+            if (string.IsNullOrEmpty(expectedTable))
+                continue;
+            if (existingTables.Contains(expectedTable))
+                continue;
+
+            toUnstamp.Add(migrationId);
+        }
+
+        if (toUnstamp.Count == 0)
+            return;
+
+        Logger.Setup(
+            $"{contextName}: Detected {toUnstamp.Count} stamped-but-missing migration(s), "
+                + $"unstamping so they re-apply: {string.Join(", ", toUnstamp)}",
+            LogEventLevel.Warning
+        );
+
+        foreach (string migrationId in toUnstamp)
+        {
+            try
+            {
+                context.Database.ExecuteSqlRaw(
+                    "DELETE FROM __EFMigrationsHistory WHERE MigrationId = {0}",
+                    migrationId
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup(
+                    $"{contextName}: Could not unstamp {migrationId}: {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+        }
+    }
+
+    /// <summary>
+    /// Walks the model snapshot to produce a map of <c>migrationId → primary
+    /// table name</c>. We only need the table name a migration creates;
+    /// if multiple tables land in one migration we track the first one
+    /// (usually enough to detect the "stamped but not run" state).
+    /// </summary>
+    private static IReadOnlyDictionary<string, string> GetExpectedTablesPerMigration(
+        DbContext context
+    )
+    {
+        Dictionary<string, string> result = new();
+
+        // We can't reliably ask EF for the Up/Down operations per migration
+        // without reflection on generated types. Instead keep a small curated
+        // lookup for migrations whose primary table is the failure surface —
+        // this list grows as new tables are added. The fallback is "unknown
+        // migration" which we treat as safe (don't unstamp).
+        result["20260416210105_AddEncodingHistoryTable"] = "EncodingHistory";
+        result["20260417010426_AddEncodingPresetTable"] = "EncodingPresets";
+        result["20260417011900_AddContentSegmentTable"] = "ContentSegments";
+
+        // Context-type filtering: only return entries whose migration name
+        // appears in the context's migration set.
+        HashSet<string> known = context.Database.GetMigrations().ToHashSet();
+        return result
+            .Where(kv => known.Contains(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+    }
+
+    private static HashSet<string> GetExistingTables(DbContext context)
+    {
+        HashSet<string> tables = new(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            System.Data.Common.DbConnection connection = context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+                connection.Open();
+
+            using System.Data.Common.DbCommand command = connection.CreateCommand();
+            command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table'";
+            using System.Data.Common.DbDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+                tables.Add(reader.GetString(0));
+        }
+        catch
+        {
+            // Best-effort — on failure we just skip the self-heal step.
+        }
+
+        return tables;
     }
 
     private static void SyncMigrationHistory(
