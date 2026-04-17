@@ -37,4 +37,13 @@ public class CodecRegistry
 
     public AudioEncoderInfo GetAudioEncoder(AudioCodecType codecType) =>
         AudioCodecDefinitions.GetEncoder(codecType);
+
+    public IEnumerable<(VideoCodecType CodecType, EncoderInfo Encoder)> EnumerateVideoEncoders()
+    {
+        foreach ((VideoCodecType codecType, ICodecDefinition def) in _videoDefinitions)
+        {
+            foreach (EncoderInfo encoder in def.Encoders)
+                yield return (codecType, encoder);
+        }
+    }
 }

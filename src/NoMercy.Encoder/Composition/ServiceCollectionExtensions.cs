@@ -178,8 +178,12 @@ public static class ServiceCollectionExtensions
         ));
         services.AddTransient<ILiveQualitySelector, LiveQualitySelector>();
         services.AddTransient<BufferManager>();
-        services.AddSingleton<SpeedIndex>(
-            new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>())
+        services.AddSingleton<ISpeedIndexStore, JsonSpeedIndexStore>();
+        services.AddSingleton<IHardwareBenchmark, HardwareBenchmark>();
+
+        // Lazy-load cached SpeedIndex from disk (empty when no benchmark has run yet).
+        services.AddSingleton<SpeedIndex>(sp =>
+            sp.GetRequiredService<IHardwareBenchmark>().GetCachedIndex()
         );
         services.AddTransient<ILiveFfmpegRunner, LiveFfmpegRunner>();
         services.AddSingleton<ILiveEncoder, LiveEncoder>();
