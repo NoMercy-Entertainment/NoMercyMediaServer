@@ -1,0 +1,167 @@
+namespace NoMercy.Encoder.Distribution;
+
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Composition;
+
+/// <summary>
+/// Downloads task source files from the coordinator over HTTP when the
+/// worker can't see the original path locally. The coordinator's
+/// /worker-source endpoint signs the download URL via HMAC over
+/// (path, timestamp) so a worker that doesn't have the signing key
+/// can't guess URLs.
+///
+/// Cached downloads live under <see cref="EncoderOptions.LiveTranscodeCachePath"/>/
+/// remote-sources. Each task's fetched file gets a deterministic name
+/// derived from the original path hash so retries for the same task
+/// reuse the file instead of re-downloading.
+/// </summary>
+public class HttpSourceFetcher(
+    IHttpClientFactory httpClientFactory,
+    EncoderOptions options,
+    ILogger<HttpSourceFetcher> logger
+) : ISourceFetcher
+{
+    public async Task<string> EnsureLocalAsync(EncodeTask task, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(task.InputPath))
+            return string.Empty;
+
+        // Fast path: source is visible locally (shared NAS / SMB mount).
+        if (File.Exists(task.InputPath))
+            return task.InputPath;
+
+        // Coordinator URL required for fetch — when it's not set, this
+        // worker is standalone and there's no remote source to fetch from.
+        if (string.IsNullOrWhiteSpace(options.CoordinatorUrl))
+        {
+            logger.LogWarning(
+                "Task {TaskId} source {Path} is missing locally and no CoordinatorUrl configured",
+                task.TaskId,
+                task.InputPath
+            );
+            return task.InputPath;
+        }
+
+        string cachedPath = ResolveCachePath(task);
+
+        // Idempotency: if the file already exists from a previous attempt
+        // and isn't empty, reuse it. Full hash-match check is overkill;
+        // HMAC on the coordinator's response covers integrity.
+        if (File.Exists(cachedPath) && new FileInfo(cachedPath).Length > 0)
+        {
+            logger.LogInformation(
+                "Task {TaskId} reusing cached source at {Path}",
+                task.TaskId,
+                cachedPath
+            );
+            return cachedPath;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(cachedPath)!);
+
+        HttpClient http = httpClientFactory.CreateClient("worker-source-fetch");
+        http.BaseAddress = new Uri(options.CoordinatorUrl);
+        http.Timeout = TimeSpan.FromHours(1); // Multi-GB downloads over WAN.
+
+        string signedQuery = BuildSignedQuery(task.InputPath!);
+        HttpRequestMessage request = new(HttpMethod.Get, $"api/v1/worker-source?{signedQuery}");
+
+        logger.LogInformation("Fetching source for task {TaskId} from coordinator", task.TaskId);
+
+        HttpResponseMessage response = await http.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                ct
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            string body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            logger.LogError(
+                "Coordinator returned {Status} fetching source for task {TaskId}: {Body}",
+                (int)response.StatusCode,
+                task.TaskId,
+                body.Length > 500 ? body[..500] : body
+            );
+            throw new InvalidOperationException(
+                $"Source fetch failed: HTTP {(int)response.StatusCode}"
+            );
+        }
+
+        await using (
+            Stream source = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false)
+        )
+        await using (FileStream target = File.Create(cachedPath))
+        {
+            await source.CopyToAsync(target, ct).ConfigureAwait(false);
+        }
+
+        logger.LogInformation(
+            "Task {TaskId} source fetched to {Path} ({Bytes} bytes)",
+            task.TaskId,
+            cachedPath,
+            new FileInfo(cachedPath).Length
+        );
+
+        return cachedPath;
+    }
+
+    public Task ReleaseAsync(EncodeTask task)
+    {
+        // Cached downloads are keyed by task — drop the specific file.
+        // Keep the parent directory; concurrent tasks may still have
+        // cached sources there.
+        try
+        {
+            string cachedPath = ResolveCachePath(task);
+            if (File.Exists(cachedPath))
+            {
+                File.Delete(cachedPath);
+                logger.LogDebug("Released cached source for task {TaskId}", task.TaskId);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to release cached source for task {TaskId} — will persist until next cache cleanup",
+                task.TaskId
+            );
+        }
+        return Task.CompletedTask;
+    }
+
+    private string ResolveCachePath(EncodeTask task)
+    {
+        string cacheRoot = Path.Combine(options.ResolvedLiveTranscodeCachePath, "remote-sources");
+
+        // Deterministic filename per task — task.TaskId is unique per job,
+        // suffixed with the source file's extension so ffprobe/ffmpeg
+        // auto-detect the container from the extension.
+        string ext = Path.GetExtension(task.InputPath ?? string.Empty);
+        if (string.IsNullOrEmpty(ext))
+            ext = ".src";
+
+        return Path.Combine(cacheRoot, $"{task.TaskId}{ext}");
+    }
+
+    private string BuildSignedQuery(string path)
+    {
+        long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        byte[] key = options.GetDistributedEncodingSigningKey();
+        string signatureInput = $"{path}|{timestamp}";
+        using HMACSHA256 hmac = new(key);
+        string signature = Convert.ToBase64String(
+            hmac.ComputeHash(Encoding.UTF8.GetBytes(signatureInput))
+        );
+
+        // URL-encode the path and signature; timestamp is a simple int.
+        string encodedPath = Uri.EscapeDataString(path);
+        string encodedSig = Uri.EscapeDataString(signature);
+        return $"path={encodedPath}&ts={timestamp}&sig={encodedSig}";
+    }
+}

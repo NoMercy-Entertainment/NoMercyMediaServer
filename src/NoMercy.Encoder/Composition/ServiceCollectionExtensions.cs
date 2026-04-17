@@ -230,6 +230,12 @@ public static class ServiceCollectionExtensions
         // Signed transport between coordinator and workers.
         services.AddTransient<ITaskSerializer, TaskSerializer>();
 
+        // Source fetching: when the worker can't see the task's input
+        // path locally, it downloads from the coordinator via
+        // HttpSourceFetcher. Swapped to NullSourceFetcher when the
+        // install uses shared storage and no fetching is needed.
+        services.AddTransient<ISourceFetcher, HttpSourceFetcher>();
+
         // Self-registration background service — no-ops on standalone
         // installs (when CoordinatorUrl is not set). Safe to always
         // register; the service exits cleanly in that case.

@@ -21,7 +21,16 @@ public record EncodeTask(
     string OutputPath,
     EncodeTaskType Type,
     TimeSpan? TimeRangeStart = null,
-    TimeSpan? TimeRangeDuration = null
+    TimeSpan? TimeRangeDuration = null,
+    /// <summary>
+    /// Absolute path to the source file the task reads from. Set so remote
+    /// workers can detect when the path doesn't exist locally and fall
+    /// back to fetching the source from the coordinator over HTTP. Null
+    /// when the task doesn't carry a file input (synthetic / live sources)
+    /// or when the coordinator + workers share storage and the input path
+    /// is embedded directly in <see cref="Command"/>.
+    /// </summary>
+    string? InputPath = null
 );
 
 public record DispatchResult(
