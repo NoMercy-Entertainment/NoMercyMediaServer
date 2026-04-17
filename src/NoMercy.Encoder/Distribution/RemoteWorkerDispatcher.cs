@@ -12,11 +12,11 @@ using NoMercy.Encoder.Jobs;
 /// it out doesn't break single-machine installs.
 ///
 /// When workers ARE registered, each task lands on a chosen worker via
-/// <see cref="IRemoteWorker.ExecuteTaskAsync"/>. Worker failures fall
-/// back to the local dispatcher for the affected task (rather than
-/// failing the whole job) so one bad worker doesn't stall the user's
-/// encode. All worker calls run in parallel — the assigner already
-/// balanced the weight so there's no per-worker queuing here.
+/// <see cref="IRemoteWorker.ExecuteTaskAsync"/>. Worker failures cascade
+/// through a short retry chain before giving up: the initial worker
+/// picked by the assigner → another active worker not yet tried →
+/// local fallback. All task-level dispatches run in parallel; the
+/// retry chain is per-task.
 /// </summary>
 public class RemoteWorkerDispatcher(
     IRemoteWorkerRegistry registry,
@@ -25,6 +25,12 @@ public class RemoteWorkerDispatcher(
     ILogger<RemoteWorkerDispatcher> logger
 ) : IWorkerDispatcher
 {
+    /// <summary>
+    /// Maximum remote workers to try per task before falling back to local.
+    /// Includes the assigner's initial pick. Value of 2 = one retry.
+    /// </summary>
+    private const int MaxRemoteAttempts = 2;
+
     public int AvailableWorkerCount =>
         Math.Max(localFallback.AvailableWorkerCount, registry.GetActiveWorkers().Count);
 
@@ -62,13 +68,13 @@ public class RemoteWorkerDispatcher(
             remoteWorkers.Count
         );
 
-        // Run every task in parallel — the assigner already decided who
-        // gets what. Each task-worker pair runs via ExecuteTaskAsync; any
-        // failure falls back to the local dispatcher for that task only.
+        // Run every task in parallel. Each task gets its own retry chain
+        // across up to MaxRemoteAttempts distinct workers before the
+        // local fallback kicks in.
         Task<DispatchResult>[] dispatches = assignments
             .SelectMany(kvp =>
                 kvp.Value.Select(task =>
-                    RunOnWorkerWithFallbackAsync(workerById[kvp.Key], task, ct)
+                    RunWithRemoteRetryAsync(workerById[kvp.Key], task, remoteWorkers, ct)
                 )
             )
             .ToArray();
@@ -77,7 +83,74 @@ public class RemoteWorkerDispatcher(
         return results;
     }
 
-    private async Task<DispatchResult> RunOnWorkerWithFallbackAsync(
+    private async Task<DispatchResult> RunWithRemoteRetryAsync(
+        IRemoteWorker initialWorker,
+        EncodeTask task,
+        IReadOnlyList<IRemoteWorker> allWorkers,
+        CancellationToken ct
+    )
+    {
+        HashSet<string> attempted = [];
+        IRemoteWorker? current = initialWorker;
+
+        for (int attempt = 0; attempt < MaxRemoteAttempts && current is not null; attempt++)
+        {
+            attempted.Add(current.WorkerId);
+
+            DispatchResult? attemptResult = await TryWorkerAsync(current, task, ct)
+                .ConfigureAwait(false);
+            if (attemptResult is { Success: true })
+                return attemptResult;
+
+            // Find the next worker we haven't tried yet. Prefer workers
+            // with the most available slots so a transient error on the
+            // first pick doesn't cascade into the weakest worker.
+            current = allWorkers
+                .Where(w => !attempted.Contains(w.WorkerId))
+                .OrderByDescending(w =>
+                {
+                    ResourceBudgetSnapshot b = w.GetAvailableBudget();
+                    return b.AvailableGpuSlots + b.AvailableCpuThreads;
+                })
+                .FirstOrDefault();
+
+            if (current is not null)
+            {
+                logger.LogInformation(
+                    "Task {TaskId} failed on {FailedWorker}; retrying on {NextWorker}",
+                    task.TaskId,
+                    attempted.Last(),
+                    current.WorkerId
+                );
+            }
+        }
+
+        // All remote attempts exhausted — fall back to local for this task.
+        logger.LogWarning(
+            "Task {TaskId} exhausted remote retries ({Attempts} workers tried) — using local dispatcher",
+            task.TaskId,
+            attempted.Count
+        );
+        DispatchResult[] fallbackResults = await localFallback
+            .DispatchAsync([task], ct)
+            .ConfigureAwait(false);
+        return fallbackResults.Length > 0
+            ? fallbackResults[0]
+            : new DispatchResult(
+                task.TaskId,
+                Success: false,
+                OutputPath: task.OutputPath,
+                Duration: TimeSpan.Zero,
+                Error: "Local fallback returned no result"
+            );
+    }
+
+    /// <summary>
+    /// Runs one task on one worker. Returns the result on success,
+    /// null when the worker should be considered failed so the caller
+    /// can try another. Exceptions are caught and treated as failures.
+    /// </summary>
+    private async Task<DispatchResult?> TryWorkerAsync(
         IRemoteWorker worker,
         EncodeTask task,
         CancellationToken ct
@@ -91,11 +164,12 @@ public class RemoteWorkerDispatcher(
                 return result;
 
             logger.LogWarning(
-                "Worker {WorkerId} failed task {TaskId} ({Error}) — retrying on local dispatcher",
+                "Worker {WorkerId} failed task {TaskId} ({Error})",
                 worker.WorkerId,
                 task.TaskId,
                 result.Error
             );
+            return null;
         }
         catch (OperationCanceledException)
         {
@@ -106,26 +180,12 @@ public class RemoteWorkerDispatcher(
             RecordOutcome(worker.WorkerId, success: false);
             logger.LogWarning(
                 ex,
-                "Worker {WorkerId} threw on task {TaskId} — retrying on local dispatcher",
+                "Worker {WorkerId} threw on task {TaskId}",
                 worker.WorkerId,
                 task.TaskId
             );
+            return null;
         }
-
-        // Local fallback for this single task. LocalWorkerDispatcher handles
-        // arrays; wrap in a 1-element array and unwrap the result.
-        DispatchResult[] fallbackResults = await localFallback
-            .DispatchAsync([task], ct)
-            .ConfigureAwait(false);
-        return fallbackResults.Length > 0
-            ? fallbackResults[0]
-            : new DispatchResult(
-                task.TaskId,
-                Success: false,
-                OutputPath: task.OutputPath,
-                Duration: TimeSpan.Zero,
-                Error: "Local fallback returned no result"
-            );
     }
 
     /// <summary>

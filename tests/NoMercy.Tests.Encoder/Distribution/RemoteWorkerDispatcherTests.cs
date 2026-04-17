@@ -121,6 +121,66 @@ public class RemoteWorkerDispatcherTests
     }
 
     [Fact]
+    public async Task DispatchAsync_FirstWorkerFails_RetriesOnAnotherWorker_NotLocal()
+    {
+        // Worker A fails, Worker B succeeds. Dispatcher must reach B
+        // BEFORE giving up to local fallback. Local must not be touched.
+        Mock<IFfmpegExecutor> localExec = MakeExecutor(succeed: true);
+        int localCalls = 0;
+        localExec
+            .Setup(e =>
+                e.ExecuteAsync(
+                    It.IsAny<FfmpegCommand>(),
+                    It.IsAny<TimeSpan>(),
+                    It.IsAny<Action<NoMercy.Encoder.Progress.EncodingProgress>>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Callback(() => Interlocked.Increment(ref localCalls))
+            .ReturnsAsync(
+                new ExecutionResult(
+                    Success: true,
+                    ExitCode: 0,
+                    StdErr: "",
+                    Duration: TimeSpan.FromSeconds(1),
+                    Error: null
+                )
+            );
+        LocalWorkerDispatcher local = NewLocal(localExec.Object);
+
+        IRemoteWorker failing = MakeRemoteWorkerWithResult(
+            "a-broken",
+            slots: 8,
+            result: new DispatchResult("t0", false, "", TimeSpan.Zero, "boom")
+        );
+        IRemoteWorker rescue = MakeRemoteWorkerWithResult(
+            "b-healthy",
+            slots: 2,
+            result: new DispatchResult(
+                "t0",
+                true,
+                "/b/t0",
+                TimeSpan.FromSeconds(2),
+                WorkerId: "b-healthy"
+            )
+        );
+
+        FakeRegistry registry = new([failing, rescue]);
+        RemoteWorkerDispatcher sut = NewRemote(local, registry);
+
+        DispatchResult[] results = await sut.DispatchAsync(
+            [MakeTask("t0")],
+            CancellationToken.None
+        );
+
+        results.Should().HaveCount(1);
+        results[0].Success.Should().BeTrue();
+        results[0].WorkerId.Should().Be("b-healthy", "retry must land on the alternate worker");
+        localCalls.Should().Be(0, "local fallback must not run when a remote retry succeeds");
+    }
+
+    [Fact]
     public async Task DispatchAsync_MultipleTasks_DistributesAcrossWorkers()
     {
         // Two workers with different weights, four tasks. The assigner
