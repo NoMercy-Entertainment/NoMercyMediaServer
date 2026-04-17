@@ -109,15 +109,22 @@ public static class EncodingPresetsSeed
         string? Tags = null
     );
 
-    private static EncodingPreset[] BuildBuiltInPresets()
+    internal static EncodingPreset[] BuildBuiltInPresets()
     {
         // Deterministic Ulids so the seed is idempotent. Same binary layout
         // every run, same rows — upsert maps them to their existing records.
+        // New presets: keep the byte[^1] counter incrementing so history
+        // remains stable across upserts.
         Ulid generalId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
         Ulid webHighId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2 });
         Ulid archivalId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 });
         Ulid animeId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4 });
         Ulid musicId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5 });
+        Ulid chromecast1080pId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6 });
+        Ulid appleTv4KId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7 });
+        Ulid mobileLowId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8 });
+        Ulid uhd4KArchivalId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9 });
+        Ulid animeHevcId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10 });
 
         return
         [
@@ -208,6 +215,251 @@ public static class EncodingPresetsSeed
                                 "Codec": "Aac",
                                 "BitrateKbps": 192,
                                 "Channels": 2,
+                                "SampleRateHz": 48000,
+                                "AllowedLanguages": []
+                            }
+                        ],
+                        "SubtitleOutputs": []
+                    }
+                    """,
+            },
+            // Chromecast devices support H.264 High Profile up to Level 4.1
+            // (1080p) and HE-AAC stereo. Staying on-spec for this target maps
+            // to the widest reach of smart TVs and streamers too.
+            new EncodingPreset
+            {
+                Id = chromecast1080pId,
+                Name = "Chromecast — 1080p",
+                Description =
+                    "Chromecast-compatible HLS at 1080p. H.264 High @ L4.1, AAC stereo, widely supported by smart TVs and older devices.",
+                Author = "NoMercy",
+                Tags = "chromecast,1080p,h264,hls,smarttv",
+                IsBuiltIn = true,
+                ProfileJson = """
+                    {
+                        "Name": "Chromecast 1080p",
+                        "Format": "Hls",
+                        "SegmentDurationSeconds": 6,
+                        "VideoOutputs": [
+                            {
+                                "Codec": "H264",
+                                "Width": 1920,
+                                "Height": 1080,
+                                "BitrateKbps": 0,
+                                "Crf": 22,
+                                "Preset": "medium",
+                                "Profile": "high",
+                                "Level": "4.1",
+                                "ConvertHdrToSdr": true,
+                                "KeyframeIntervalSeconds": 2,
+                                "TenBit": false
+                            }
+                        ],
+                        "AudioOutputs": [
+                            {
+                                "Codec": "Aac",
+                                "BitrateKbps": 192,
+                                "Channels": 2,
+                                "SampleRateHz": 48000,
+                                "AllowedLanguages": []
+                            }
+                        ],
+                        "SubtitleOutputs": [
+                            {
+                                "Codec": "WebVtt",
+                                "Mode": "Extract",
+                                "AllowedLanguages": []
+                            }
+                        ]
+                    }
+                    """,
+            },
+            // Apple TV 4K decodes HEVC Main10 up to Level 5.1 and plays
+            // Dolby Digital Plus (EAC3) for surround. HDR passthrough requires
+            // 10-bit + HEVC + no tonemap. hvc1 tag is set by the encoder
+            // pipeline for videotoolbox.
+            new EncodingPreset
+            {
+                Id = appleTv4KId,
+                Name = "Apple TV 4K — HDR",
+                Description =
+                    "Apple TV 4K profile: HEVC Main10 2160p @ L5.1, EAC3 5.1, HDR passthrough when source is HDR.",
+                Author = "NoMercy",
+                Tags = "appletv,4k,2160p,hevc,hdr,eac3",
+                IsBuiltIn = true,
+                ProfileJson = """
+                    {
+                        "Name": "Apple TV 4K HDR",
+                        "Format": "Hls",
+                        "SegmentDurationSeconds": 6,
+                        "VideoOutputs": [
+                            {
+                                "Codec": "H265",
+                                "Width": 3840,
+                                "Height": 2160,
+                                "BitrateKbps": 0,
+                                "Crf": 22,
+                                "Preset": "medium",
+                                "Profile": "main10",
+                                "Level": "5.1",
+                                "ConvertHdrToSdr": false,
+                                "KeyframeIntervalSeconds": 2,
+                                "TenBit": true
+                            }
+                        ],
+                        "AudioOutputs": [
+                            {
+                                "Codec": "Eac3",
+                                "BitrateKbps": 640,
+                                "Channels": 6,
+                                "SampleRateHz": 48000,
+                                "AllowedLanguages": []
+                            }
+                        ],
+                        "SubtitleOutputs": [
+                            {
+                                "Codec": "WebVtt",
+                                "Mode": "Extract",
+                                "AllowedLanguages": []
+                            }
+                        ]
+                    }
+                    """,
+            },
+            // Mobile / poor-wifi preset: 480p bitrate-capped for a predictable
+            // ceiling. AAC 96k stereo keeps audio reasonable without eating
+            // the bandwidth budget. H.264 Main @ L3.1 plays on every phone
+            // from the last decade.
+            new EncodingPreset
+            {
+                Id = mobileLowId,
+                Name = "Mobile — 480p Low Bandwidth",
+                Description =
+                    "Data-friendly 480p H.264 Main @ L3.1 with AAC 96 kbps stereo. For mobile networks and low-end devices.",
+                Author = "NoMercy",
+                Tags = "mobile,480p,low-bandwidth,h264,hls",
+                IsBuiltIn = true,
+                ProfileJson = """
+                    {
+                        "Name": "Mobile 480p",
+                        "Format": "Hls",
+                        "SegmentDurationSeconds": 6,
+                        "VideoOutputs": [
+                            {
+                                "Codec": "H264",
+                                "Width": 854,
+                                "Height": 480,
+                                "BitrateKbps": 900,
+                                "Crf": 0,
+                                "Preset": "fast",
+                                "Profile": "main",
+                                "Level": "3.1",
+                                "ConvertHdrToSdr": true,
+                                "KeyframeIntervalSeconds": 2,
+                                "TenBit": false
+                            }
+                        ],
+                        "AudioOutputs": [
+                            {
+                                "Codec": "Aac",
+                                "BitrateKbps": 96,
+                                "Channels": 2,
+                                "SampleRateHz": 48000,
+                                "AllowedLanguages": []
+                            }
+                        ],
+                        "SubtitleOutputs": [
+                            {
+                                "Codec": "WebVtt",
+                                "Mode": "Extract",
+                                "AllowedLanguages": []
+                            }
+                        ]
+                    }
+                    """,
+            },
+            // 4K archival: HEVC 10-bit at CRF 18 (visually lossless), FLAC
+            // audio preserved in MKV. Massive files — intended for long-term
+            // storage of source-quality material, not streaming.
+            new EncodingPreset
+            {
+                Id = uhd4KArchivalId,
+                Name = "4K Archival — HEVC + FLAC",
+                Description =
+                    "Long-term archival: HEVC Main10 2160p at CRF 18 (visually lossless), FLAC audio, MKV container. Large files; storage not streaming.",
+                Author = "NoMercy",
+                Tags = "archival,4k,2160p,hevc,10bit,flac,mkv",
+                IsBuiltIn = true,
+                ProfileJson = """
+                    {
+                        "Name": "4K Archival",
+                        "Format": "Mkv",
+                        "VideoOutputs": [
+                            {
+                                "Codec": "H265",
+                                "Width": 3840,
+                                "Height": 2160,
+                                "BitrateKbps": 0,
+                                "Crf": 18,
+                                "Preset": "slow",
+                                "Profile": "main10",
+                                "Level": "5.1",
+                                "ConvertHdrToSdr": false,
+                                "KeyframeIntervalSeconds": 4,
+                                "TenBit": true
+                            }
+                        ],
+                        "AudioOutputs": [
+                            {
+                                "Codec": "Flac",
+                                "BitrateKbps": 0,
+                                "Channels": 6,
+                                "SampleRateHz": 48000,
+                                "AllowedLanguages": []
+                            }
+                        ],
+                        "SubtitleOutputs": []
+                    }
+                    """,
+            },
+            // Anime community standard: HEVC 10-bit preserves color banding
+            // much better than H.264 8-bit on flat-shaded content. Opus
+            // surround gives small high-quality audio. MKV holds ASS
+            // subtitles unchanged (HLS would convert to WebVTT and lose
+            // typesetting).
+            new EncodingPreset
+            {
+                Id = animeHevcId,
+                Name = "Anime — HEVC 10-bit 1080p",
+                Description =
+                    "Anime archival preset: HEVC 10-bit handles flat-color content without banding. Opus 5.1 audio, MKV keeps ASS subtitles intact.",
+                Author = "NoMercy",
+                Tags = "anime,1080p,hevc,10bit,opus,mkv",
+                IsBuiltIn = true,
+                ProfileJson = """
+                    {
+                        "Name": "Anime HEVC 10bit",
+                        "Format": "Mkv",
+                        "VideoOutputs": [
+                            {
+                                "Codec": "H265",
+                                "Width": 1920,
+                                "Height": 1080,
+                                "BitrateKbps": 0,
+                                "Crf": 22,
+                                "Preset": "slow",
+                                "Profile": "main10",
+                                "Level": "4.1",
+                                "ConvertHdrToSdr": false,
+                                "KeyframeIntervalSeconds": 2,
+                                "TenBit": true
+                            }
+                        ],
+                        "AudioOutputs": [
+                            {
+                                "Codec": "Opus",
+                                "BitrateKbps": 256,
+                                "Channels": 6,
                                 "SampleRateHz": 48000,
                                 "AllowedLanguages": []
                             }
