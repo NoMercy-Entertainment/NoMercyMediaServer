@@ -27,15 +27,21 @@ public class HardwareBenchmark(
     ILogger<HardwareBenchmark> logger
 ) : IHardwareBenchmark
 {
-    // Standard benchmark tiers. 2160p reserved for when we know the hardware
-    // can sustain it — otherwise the test becomes a 30-second ordeal on slow
-    // boxes. 4K calibration lands in a follow-up.
+    // Standard benchmark tiers for every target.
     internal static readonly (int Width, int Height)[] DefaultTiers =
     [
         (1920, 1080),
         (1280, 720),
         (854, 480),
     ];
+
+    // 4K tier — added to DefaultTiers for hardware encoders whose GPU has
+    // enough VRAM to sustain 4K encoding (≥6 GB). Software encoders and
+    // low-VRAM GPUs skip this tier: a slow software 4K calibration at
+    // 30 frames still takes tens of seconds, and low-VRAM cards OOM or
+    // fall back to a tiled path that's not representative of real encodes.
+    private const int FourKCapableVramMb = 6_144;
+    private static readonly (int Width, int Height) UhdTier = (3840, 2160);
 
     private const double CalibrationDurationSeconds = 1.0;
     private const double SourceFrameRate = 30.0;
@@ -87,7 +93,7 @@ public class HardwareBenchmark(
 
         foreach (CalibrationTarget target in SelectCandidates())
         {
-            foreach ((int tierWidth, int tierHeight) in DefaultTiers)
+            foreach ((int tierWidth, int tierHeight) in TiersForTarget(target))
             {
                 ct.ThrowIfCancellationRequested();
 
@@ -175,6 +181,24 @@ public class HardwareBenchmark(
                 yield return new CalibrationTarget(codec, encoder, Device: null, VendorIndex: 0);
             }
         }
+    }
+
+    /// <summary>
+    /// Returns the tiers to benchmark for a given target. Hardware targets
+    /// whose GPU has enough VRAM to sustain 4K encoding get the UHD tier
+    /// prepended so the speed index captures their real 4K throughput.
+    /// Low-VRAM GPUs and software targets skip 4K — software calibration
+    /// at 4K is too slow to be practical even capped at 30 frames, and
+    /// low-VRAM cards either OOM or fall back to a tiled encode path that
+    /// doesn't represent real-world throughput.
+    /// </summary>
+    internal static IEnumerable<(int Width, int Height)> TiersForTarget(CalibrationTarget target)
+    {
+        if (target.Device is { VramMb: >= FourKCapableVramMb })
+            yield return UhdTier;
+
+        foreach ((int w, int h) in DefaultTiers)
+            yield return (w, h);
     }
 
     /// <summary>

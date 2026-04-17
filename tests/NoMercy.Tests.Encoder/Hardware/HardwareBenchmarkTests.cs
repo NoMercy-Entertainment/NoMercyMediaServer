@@ -342,6 +342,82 @@ public class HardwareBenchmarkTests
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // TiersForTarget — 4K gating based on VRAM
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void TiersForTarget_SoftwareTarget_SkipsUhd()
+    {
+        // Software targets have no Device — UHD tier must not be included.
+        CalibrationTarget target = SoftwareTarget(MakeSoftwareH264());
+        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+
+        tiers.Should().NotContain((3840, 2160));
+        tiers.Should().Contain((1920, 1080));
+    }
+
+    [Fact]
+    public void TiersForTarget_HighVramGpu_IncludesUhd()
+    {
+        // 16 GB GPU — UHD tier must come FIRST so heavy tier is dispatched
+        // while the benchmark is still warm, not after 3 smaller ones already ran.
+        EncoderInfo nvenc = new(
+            FfmpegName: "h264_nvenc",
+            RequiredVendor: GpuVendor.Nvidia,
+            Presets: ["p4"],
+            Profiles: ["high"],
+            Levels: [],
+            QualityRange: new QualityRange(0, 51, 23),
+            SupportedRateControl: [RateControlMode.Cq],
+            Supports10Bit: false,
+            SupportsHdr: false,
+            MaxConcurrentSessions: 12,
+            PixelFormat10Bit: "",
+            VendorSpecificFlags: new Dictionary<string, string>()
+        );
+        CalibrationTarget target = HardwareTarget(nvenc, "RTX 4080", vendorIndex: 0);
+
+        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+
+        tiers[0].Should().Be((3840, 2160));
+        tiers.Length.Should().Be(4);
+    }
+
+    [Fact]
+    public void TiersForTarget_LowVramGpu_SkipsUhd()
+    {
+        // A card with 4 GB VRAM (below the 6 GB cut-off) should not attempt
+        // 4K — otherwise the probe risks OOM or tiled fallback that
+        // misrepresents real throughput.
+        EncoderInfo qsv = new(
+            FfmpegName: "h264_qsv",
+            RequiredVendor: GpuVendor.Intel,
+            Presets: ["medium"],
+            Profiles: ["high"],
+            Levels: [],
+            QualityRange: new QualityRange(1, 51, 23),
+            SupportedRateControl: [RateControlMode.Icq],
+            Supports10Bit: false,
+            SupportsHdr: false,
+            MaxConcurrentSessions: int.MaxValue,
+            PixelFormat10Bit: "",
+            VendorSpecificFlags: new Dictionary<string, string>()
+        );
+        GpuDevice lowVram = new(
+            Vendor: GpuVendor.Intel,
+            Name: "UHD 630",
+            VramMb: 4_096,
+            MaxEncoderSessions: int.MaxValue,
+            SupportedCodecs: [VideoCodecType.H264]
+        );
+        CalibrationTarget target = new(VideoCodecType.H264, qsv, lowVram, VendorIndex: 0);
+
+        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+
+        tiers.Should().NotContain((3840, 2160));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // CalibrateAsync
     // ──────────────────────────────────────────────────────────────────────────
 
