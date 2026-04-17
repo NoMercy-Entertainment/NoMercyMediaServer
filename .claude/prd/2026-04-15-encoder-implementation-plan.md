@@ -18,7 +18,15 @@ Pro / B2B features (multi-server distributed encoding, DRM encryption, CENC pack
 
 ## Current Status — 2026-04-16
 
-**Build:** 212 commits ahead of `master` · 0 errors · 0 warnings · 895 encoder tests + 6 repository tests passing. Recent blocks: +15 live transcode HTTP · +9 IOutputStrategyFactory · +10 LiveFfmpegRunner · +9 pan-matrix downmix · +2 scratch cleanup · +5 crop wiring · +13 HardwareBenchmark · +5 LocalWorkerDispatcher · +17 AES-128 DRM · +6 PresetResolver · +4 HardwareBenchmark hosted.
+**Build:** 226 commits ahead of `master` · 0 errors · 0 warnings · 910 encoder tests + 38 repository tests passing.
+
+**Dashboard surface for the v3 encoder:**
+- `GET /dashboard/encoding/presets[?tag=…]`, `POST /`, `PUT/DELETE /{id}`, `GET /{id}/resolve`, `POST /{id}/clone`, `GET /{id}/export`, `POST /import`, `POST /import-url`, `POST /validate`, `GET /tags`
+- `GET /dashboard/encoding/history[?pageSize&pageIndex]`, `GET /stats`, `DELETE /{id}`, `POST /purge`
+- `GET /dashboard/hardware/benchmark`, `POST /benchmark/run` (owner-only)
+- `GET /dashboard/content-analysis/crop/{videoFileId}`, `POST /ocr/{videoFileId}`, `POST /transcribe/{videoFileId}`, `POST /intro/{seasonId}` (owner-only)
+- `GET/POST /content-segments/(episode|movie)/{id}`, full CRUD
+- `POST/GET/DELETE /streaming/live/sessions/...`
 
 **What already works today (outside the strategy pattern):**
 - 6-stage pipeline (`Analyze → Validate → Plan → Build → Execute → Finalize`) in [`Pipeline/Encoder.cs`](../../src/NoMercy.Encoder/Pipeline/Encoder.cs) delivering production-grade HLS single-pass
