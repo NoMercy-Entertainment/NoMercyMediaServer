@@ -130,6 +130,7 @@ public static class DatabaseSeeder
             () => ConfigSeed.Init(appDbContext),
             () => LibrariesSeed.Init(mediaDbContext),
             () => EncoderProfilesSeed.Init(mediaDbContext),
+            () => EncodingPresetsSeed.Init(mediaDbContext),
         ];
 
         foreach (Func<Task> seed in offlineSeeds)
