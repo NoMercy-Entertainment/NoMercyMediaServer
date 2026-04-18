@@ -190,10 +190,10 @@ public class EncodingPresetsSeedTests
     }
 
     [Fact]
-    public void MusicPreset_IsAudioOnlyInMp4()
+    public void MusicAacPreset_IsAudioOnlyInMp4()
     {
         EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset music = presets.First(p => p.Name.Contains("Music"));
+        EncodingPreset music = presets.First(p => p.Name.Contains("AAC"));
 
         EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(
             music.ProfileJson
@@ -202,5 +202,39 @@ public class EncodingPresetsSeedTests
         Assert.Empty(profile.SubtitleOutputs);
         Assert.Single(profile.AudioOutputs);
         Assert.Equal(OutputFormat.Mp4, profile.Format);
+        Assert.Equal(AudioCodecType.Aac, profile.AudioOutputs[0].Codec);
+    }
+
+    [Fact]
+    public void MusicMp3Preset_IsAudioOnlyInMp3()
+    {
+        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
+        EncodingPreset music = presets.First(p => p.Name.Contains("MP3"));
+
+        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(
+            music.ProfileJson
+        )!;
+        Assert.Empty(profile.VideoOutputs);
+        Assert.Empty(profile.SubtitleOutputs);
+        Assert.Single(profile.AudioOutputs);
+        Assert.Equal(OutputFormat.Mp3, profile.Format);
+        Assert.Equal(AudioCodecType.Mp3, profile.AudioOutputs[0].Codec);
+        Assert.Equal(320, profile.AudioOutputs[0].BitrateKbps);
+    }
+
+    [Fact]
+    public void MusicFlacPreset_IsAudioOnlyInFlac()
+    {
+        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
+        EncodingPreset music = presets.First(p => p.Name.Contains("FLAC Lossless"));
+
+        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(
+            music.ProfileJson
+        )!;
+        Assert.Empty(profile.VideoOutputs);
+        Assert.Empty(profile.SubtitleOutputs);
+        Assert.Single(profile.AudioOutputs);
+        Assert.Equal(OutputFormat.Flac, profile.Format);
+        Assert.Equal(AudioCodecType.Flac, profile.AudioOutputs[0].Codec);
     }
 }

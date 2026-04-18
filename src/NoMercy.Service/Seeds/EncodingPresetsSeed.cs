@@ -125,6 +125,8 @@ public static class EncodingPresetsSeed
         Ulid mobileLowId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8 });
         Ulid uhd4KArchivalId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9 });
         Ulid animeHevcId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10 });
+        Ulid musicMp3Id = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11 });
+        Ulid musicFlacId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12 });
 
         return
         [
@@ -460,6 +462,60 @@ public static class EncodingPresetsSeed
                                 "Codec": "Opus",
                                 "BitrateKbps": 256,
                                 "Channels": 6,
+                                "SampleRateHz": 48000,
+                                "AllowedLanguages": []
+                            }
+                        ],
+                        "SubtitleOutputs": []
+                    }
+                    """,
+            },
+            new EncodingPreset
+            {
+                Id = musicMp3Id,
+                Name = "Music — MP3 320k",
+                Description =
+                    "MP3 320 kbps stereo output. Legacy-compatible music archival for players that do not handle AAC or FLAC.",
+                Author = "NoMercy",
+                Tags = "music,mp3,audio,legacy",
+                IsBuiltIn = true,
+                ProfileJson = """
+                    {
+                        "Name": "Music MP3 320k",
+                        "Format": "Mp3",
+                        "VideoOutputs": [],
+                        "AudioOutputs": [
+                            {
+                                "Codec": "Mp3",
+                                "BitrateKbps": 320,
+                                "Channels": 2,
+                                "SampleRateHz": 48000,
+                                "AllowedLanguages": []
+                            }
+                        ],
+                        "SubtitleOutputs": []
+                    }
+                    """,
+            },
+            new EncodingPreset
+            {
+                Id = musicFlacId,
+                Name = "Music — FLAC Lossless",
+                Description =
+                    "FLAC lossless stereo output. Bit-perfect archival of music libraries with no quality loss.",
+                Author = "NoMercy",
+                Tags = "music,flac,audio,lossless,archival",
+                IsBuiltIn = true,
+                ProfileJson = """
+                    {
+                        "Name": "Music FLAC Lossless",
+                        "Format": "Flac",
+                        "VideoOutputs": [],
+                        "AudioOutputs": [
+                            {
+                                "Codec": "Flac",
+                                "BitrateKbps": 0,
+                                "Channels": 2,
                                 "SampleRateHz": 48000,
                                 "AllowedLanguages": []
                             }
