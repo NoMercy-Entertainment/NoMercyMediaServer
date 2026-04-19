@@ -67,11 +67,7 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        bool isLolomo = string.Equals(
-            request.Version,
-            "lolomo",
-            StringComparison.OrdinalIgnoreCase
-        );
+        bool isLolomo = request.IsLolomo();
 
         // Run query groups in parallel using separate DbContext instances
         MusicStartPageData data = await _musicRepository.GetMusicStartPageAsync(userId);

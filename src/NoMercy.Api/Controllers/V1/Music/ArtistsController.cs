@@ -52,11 +52,7 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view artists");
 
-        bool isLolomo = string.Equals(
-            request.Version,
-            "lolomo",
-            StringComparison.OrdinalIgnoreCase
-        );
+        bool isLolomo = request.IsLolomo();
 
         List<ArtistCardDto> artistCards = await _musicRepository.GetArtistCardsAsync(
             userId,

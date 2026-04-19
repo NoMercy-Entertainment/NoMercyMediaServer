@@ -71,11 +71,7 @@ public class GenresController : BaseController
 
         string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        bool isLolomo = string.Equals(
-            request.Version,
-            "lolomo",
-            StringComparison.OrdinalIgnoreCase
-        );
+        bool isLolomo = request.IsLolomo();
 
         if (isLolomo)
         {
