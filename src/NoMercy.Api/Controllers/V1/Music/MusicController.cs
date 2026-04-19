@@ -26,6 +26,38 @@ public class MusicController : BaseController
         _musicRepository = musicService;
     }
 
+    // Letters exposed to A-Z browsers. "#" covers all non-alpha names.
+    private static readonly string[] AlphaLetters =
+    [
+        "#",
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
+    ];
+
     [HttpGet]
     [Route("")]
     [Route("start")]
@@ -35,14 +67,20 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        // Run 3 groups of 3 queries in parallel using separate DbContext instances
+        bool isLolomo = string.Equals(
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        // Run query groups in parallel using separate DbContext instances
         MusicStartPageData data = await _musicRepository.GetMusicStartPageAsync(userId);
 
         List<ComponentEnvelope> items = [];
         List<ComponentEnvelope> items2 = [];
 
-        // Add favorite home cards
-        if (data.TopArtist is not null && request.Version != "lolomo")
+        // Add favorite home cards — suppressed in lolomo mode (Android renders its own hero)
+        if (data.TopArtist is not null && !isLolomo)
         {
             TopMusicDto favoriteArtist = new(data.TopArtist);
             items2.Add(
@@ -53,7 +91,7 @@ public class MusicController : BaseController
             );
         }
 
-        if (data.TopAlbum is not null && request.Version != "lolomo")
+        if (data.TopAlbum is not null && !isLolomo)
         {
             TopMusicDto favoriteAlbum = new(data.TopAlbum);
             items2.Add(
@@ -64,7 +102,7 @@ public class MusicController : BaseController
             );
         }
 
-        if (data.TopPlaylist is not null && request.Version != "lolomo")
+        if (data.TopPlaylist is not null && !isLolomo)
         {
             TopMusicDto favoritePlaylist = new(data.TopPlaylist);
             items2.Add(
@@ -77,13 +115,35 @@ public class MusicController : BaseController
 
         items.Add(Component.Container().WithItems(items2));
 
-        // Add carousels
+        // --- lolomo-only rows ---
+        if (isLolomo && data.ContinueListeningAlbums.Count > 0)
+        {
+            items.Add(
+                Component
+                    .Carousel()
+                    .WithId("continue-listening")
+                    .WithTitle("Continue Listening".Localize())
+                    .WithNavigation(null, "favorite-artists")
+                    .WithItems(
+                        data.ContinueListeningAlbums.Select(item =>
+                            Component.MusicCard(new MusicCardData(item))
+                        )
+                    )
+            );
+        }
+
+        // --- shared carousels ---
+        string continueListeningPrevId =
+            isLolomo && data.ContinueListeningAlbums.Count > 0
+                ? "continue-listening"
+                : string.Empty;
+
         items.Add(
             Component
                 .Carousel()
                 .WithId("favorite-artists")
                 .WithTitle("Favorite Artists".Localize())
-                .WithNavigation("", "favorite-albums")
+                .WithNavigation(continueListeningPrevId, "favorite-albums")
                 .WithItems(
                     data.FavoriteArtists.Select(item =>
                         Component.MusicCard(new MusicCardData(item))
@@ -144,11 +204,57 @@ public class MusicController : BaseController
                 .WithId("genres")
                 .WithTitle("Genres".Localize())
                 .WithMoreLink("/music/genres/letter/_")
-                .WithNavigation("albums")
+                .WithNavigation("albums", isLolomo ? "browse-albums" : null)
                 .WithItems(
                     data.LatestGenres.Select(item => Component.MusicCard(new MusicCardData(item)))
                 )
         );
+
+        // --- lolomo-only letter-browser rows ---
+        if (isLolomo)
+        {
+            items.Add(
+                Component
+                    .Carousel()
+                    .WithId("browse-albums")
+                    .WithTitle("Albums A–Z".Localize())
+                    .WithNavigation("genres", "browse-artists")
+                    .WithItems(
+                        AlphaLetters.Select(letter =>
+                            Component.MusicCard(
+                                new MusicCardData
+                                {
+                                    Id = $"albums-{letter}",
+                                    Name = letter,
+                                    Type = "letter",
+                                    Link = $"/music/albums/{Uri.EscapeDataString(letter)}",
+                                }
+                            )
+                        )
+                    )
+            );
+
+            items.Add(
+                Component
+                    .Carousel()
+                    .WithId("browse-artists")
+                    .WithTitle("Artists A–Z".Localize())
+                    .WithNavigation("browse-albums", null)
+                    .WithItems(
+                        AlphaLetters.Select(letter =>
+                            Component.MusicCard(
+                                new MusicCardData
+                                {
+                                    Id = $"artists-{letter}",
+                                    Name = letter,
+                                    Type = "letter",
+                                    Link = $"/music/artists/{Uri.EscapeDataString(letter)}",
+                                }
+                            )
+                        )
+                    )
+            );
+        }
 
         return Ok(ComponentResponse.From(items));
     }
