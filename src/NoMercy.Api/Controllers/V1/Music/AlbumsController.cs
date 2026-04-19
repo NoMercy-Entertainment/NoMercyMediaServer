@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
@@ -43,11 +44,17 @@ public class AlbumsController : BaseController
 
     [HttpGet]
     [Route("/api/v{version:apiVersion}/music/albums/{letter}")]
-    public async Task<IActionResult> Index(string letter)
+    public async Task<IActionResult> Index(string letter, [FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view albums");
+
+        bool isLolomo = string.Equals(
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
+        );
 
         string language = Language();
 
@@ -59,17 +66,28 @@ public class AlbumsController : BaseController
 
         string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        List<ComponentEnvelope> items =
-        [
-            Component.Container(),
-            Component
-                .Carousel()
-                .WithId($"albums-{letter}")
-                .WithTitle($"Albums starting with {displayLetter}".Localize())
-                .WithItems(albumCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
-        ];
+        if (isLolomo)
+        {
+            List<ComponentEnvelope> items =
+            [
+                Component.Container(),
+                Component
+                    .Carousel()
+                    .WithId($"albums-{letter}")
+                    .WithTitle($"Albums starting with {displayLetter}".Localize())
+                    .WithItems(albumCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
+            ];
 
-        return Ok(ComponentResponse.From(items));
+            return Ok(ComponentResponse.From(items));
+        }
+
+        ComponentEnvelope grid = Component
+            .Grid()
+            .WithId($"albums-{letter}")
+            .WithTitle($"Albums starting with {displayLetter}".Localize())
+            .WithItems(albumCards.Select(a => Component.MusicCard(new MusicCardData(a))));
+
+        return Ok(ComponentResponse.From(grid));
     }
 
     [HttpGet]

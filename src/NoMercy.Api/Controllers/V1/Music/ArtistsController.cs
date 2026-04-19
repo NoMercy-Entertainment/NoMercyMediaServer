@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
@@ -45,11 +46,17 @@ public class ArtistsController : BaseController
 
     [HttpGet]
     [Route("/api/v{version:apiVersion}/music/artists/{letter}")]
-    public async Task<IActionResult> Index(string letter)
+    public async Task<IActionResult> Index(string letter, [FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view artists");
+
+        bool isLolomo = string.Equals(
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
+        );
 
         List<ArtistCardDto> artistCards = await _musicRepository.GetArtistCardsAsync(
             userId,
@@ -58,17 +65,28 @@ public class ArtistsController : BaseController
 
         string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        List<ComponentEnvelope> items =
-        [
-            Component.Container(),
-            Component
-                .Carousel()
-                .WithId($"artists-{letter}")
-                .WithTitle($"Artists starting with {displayLetter}".Localize())
-                .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
-        ];
+        if (isLolomo)
+        {
+            List<ComponentEnvelope> items =
+            [
+                Component.Container(),
+                Component
+                    .Carousel()
+                    .WithId($"artists-{letter}")
+                    .WithTitle($"Artists starting with {displayLetter}".Localize())
+                    .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
+            ];
 
-        return Ok(ComponentResponse.From(items));
+            return Ok(ComponentResponse.From(items));
+        }
+
+        ComponentEnvelope grid = Component
+            .Grid()
+            .WithId($"artists-{letter}")
+            .WithTitle($"Artists starting with {displayLetter}".Localize())
+            .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a))));
+
+        return Ok(ComponentResponse.From(grid));
     }
 
     [HttpGet]
