@@ -56,11 +56,19 @@ public class ArtistsController : BaseController
             letter
         );
 
-        ComponentEnvelope response = Component
-            .Grid()
-            .WithItems(artistCards.Select(a => Component.MusicCard(new ArtistsResponseItemDto(a))));
+        string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        return Ok(ComponentResponse.From(response));
+        List<ComponentEnvelope> items =
+        [
+            Component.Container(),
+            Component
+                .Carousel()
+                .WithId($"artists-{letter}")
+                .WithTitle($"Artists starting with {displayLetter}".Localize())
+                .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
+        ];
+
+        return Ok(ComponentResponse.From(items));
     }
 
     [HttpGet]

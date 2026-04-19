@@ -57,14 +57,19 @@ public class AlbumsController : BaseController
             language
         );
 
-        if (albumCards.Count == 0)
-            return NotFoundResponse("Albums not found");
+        string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        ComponentEnvelope response = Component
-            .Grid()
-            .WithItems(albumCards.Select(a => Component.MusicCard(new AlbumsResponseItemDto(a))));
+        List<ComponentEnvelope> items =
+        [
+            Component.Container(),
+            Component
+                .Carousel()
+                .WithId($"albums-{letter}")
+                .WithTitle($"Albums starting with {displayLetter}".Localize())
+                .WithItems(albumCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
+        ];
 
-        return Ok(ComponentResponse.From(response));
+        return Ok(ComponentResponse.From(items));
     }
 
     [HttpGet]
