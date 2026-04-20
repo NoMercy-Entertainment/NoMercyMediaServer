@@ -50,7 +50,11 @@ public class AlbumsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view albums");
 
-        bool isLolomo = request.IsLolomo();
+        bool isLolomo = string.Equals(
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
+        );
 
         string language = Language();
 

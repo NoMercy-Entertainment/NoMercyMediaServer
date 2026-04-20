@@ -1216,7 +1216,7 @@ public class MusicRepository(
         CancellationToken ct = default
     )
     {
-        // Run 4 groups in parallel — each group gets its own DbContext
+        // Run 3 groups in parallel — each group gets its own DbContext
         Task<(TopMusicItemDto?, TopMusicItemDto?, TopMusicItemDto?)> topTask = Task.Run(
             async () =>
             {
@@ -1270,16 +1270,7 @@ public class MusicRepository(
                 ct
             );
 
-        Task<List<AlbumCardDto>> continueListeningTask = Task.Run(
-            async () =>
-            {
-                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-                return await GetContinueListeningAlbumCardsAsync(ctx, userId, 36, ct);
-            },
-            ct
-        );
-
-        await Task.WhenAll(topTask, favoritesTask, latestTask, continueListeningTask);
+        await Task.WhenAll(topTask, favoritesTask, latestTask);
 
         (TopMusicItemDto? topArtist, TopMusicItemDto? topAlbum, TopMusicItemDto? topPlaylist) =
             topTask.Result;
@@ -1305,7 +1296,6 @@ public class MusicRepository(
             LatestArtists = latestArtists,
             LatestGenres = latestGenres,
             LatestAlbums = latestAlbums,
-            ContinueListeningAlbums = continueListeningTask.Result,
         };
     }
 
@@ -1508,63 +1498,6 @@ public class MusicRepository(
             });
     }
 
-    /// <summary>
-    /// Two-step pattern required: SQLite cannot translate APPLY (no First() inside GroupBy/Select).
-    /// Step 1 — get distinct album IDs ordered by most-recent play time.
-    /// Step 2 — fetch album cards by those IDs, then sort in-memory to preserve recency order.
-    /// </summary>
-    private static async Task<List<AlbumCardDto>> GetContinueListeningAlbumCardsAsync(
-        MediaContext ctx,
-        Guid userId,
-        int take = 36,
-        CancellationToken ct = default
-    )
-    {
-        // Step 1: deduplicated album IDs, most-recently-played first
-        List<Guid> albumIds = await ctx
-            .MusicPlays.AsNoTracking()
-            .Where(mp => mp.UserId == userId)
-            .SelectMany(mp => mp.Track.AlbumTrack.Select(at => new { at.AlbumId, mp.CreatedAt }))
-            .GroupBy(x => x.AlbumId)
-            .Select(g => new { AlbumId = g.Key, LastPlayed = g.Max(x => x.CreatedAt) })
-            .OrderByDescending(x => x.LastPlayed)
-            .Take(take)
-            .Select(x => x.AlbumId)
-            .ToListAsync(ct);
-
-        if (albumIds.Count == 0)
-            return [];
-
-        // Step 2: album cards for those IDs
-        List<AlbumCardDto> cards = await ctx
-            .Albums.AsNoTracking()
-            .Where(album => albumIds.Contains(album.Id) && !string.IsNullOrEmpty(album.Cover))
-            .Select(album => new AlbumCardDto
-            {
-                Id = album.Id,
-                Name = album.Name,
-                Cover = album.Cover,
-                Disambiguation = album.Disambiguation,
-                Description = album.Description,
-                ColorPalette = album._colorPalette ?? string.Empty,
-                LibraryId = album.LibraryId,
-                Folder = album.Folder,
-                Year = album.Year,
-                TrackCount = album.AlbumTrack.Count(),
-            })
-            .ToListAsync(ct);
-
-        // Re-apply recency order in memory (DB result order is not guaranteed)
-        Dictionary<Guid, int> orderMap = albumIds
-            .Select((id, index) => new { id, index })
-            .ToDictionary(x => x.id, x => x.index);
-
-        return
-        [
-            .. cards.OrderBy(a => orderMap.TryGetValue(a.Id, out int idx) ? idx : int.MaxValue),
-        ];
-    }
-
     #endregion
 }
 
@@ -1579,12 +1512,6 @@ public class MusicStartPageData
     public List<ArtistCardDto> LatestArtists { get; set; } = [];
     public List<MusicGenreCardDto> LatestGenres { get; set; } = [];
     public List<AlbumCardDto> LatestAlbums { get; set; } = [];
-
-    /// <summary>
-    /// Albums the user has recently played, ordered by most-recent play time.
-    /// Populated by the two-step SQLite-safe query in GetMusicStartPageAsync.
-    /// </summary>
-    public List<AlbumCardDto> ContinueListeningAlbums { get; set; } = [];
 }
 
 public class ArtistCardDto
