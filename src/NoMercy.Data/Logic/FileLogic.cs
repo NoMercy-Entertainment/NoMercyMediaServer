@@ -152,11 +152,14 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
                 Regex regex = SubtitleFileTagsRegex();
                 Match match = regex.Match(subtitleFile);
 
-                if (
-                    match.Groups["type"].Value != "sign"
-                    && match.Groups["type"].Value != "song"
-                    && match.Groups["type"].Value != "full"
-                )
+                if (!match.Success)
+                    continue;
+
+                // Reject binary subtitle formats we can't stream as HLS sidecars;
+                // accept every text format (vtt, ass, srt, ssa, sub, idx, webvtt)
+                // and every variant (sign, full, sdh, alt, ...).
+                string ext = match.Groups["ext"].Value;
+                if (ext == "sup" || ext == "vob")
                     continue;
 
                 subtitles.Add(
@@ -164,7 +167,7 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
                     {
                         Language = match.Groups["lang"].Value,
                         Type = match.Groups["type"].Value,
-                        Ext = match.Groups["ext"].Value,
+                        Ext = ext,
                     }
                 );
             }
@@ -303,7 +306,11 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
         }
     }
 
-    [GeneratedRegex(@"(?<lang>\w{3}).(?<type>\w{3,4}).(?<ext>\w{3})$")]
+    // Match the encoder's subtitle filename scheme: {lang}.{variant}.{ext}
+    // anywhere in the filename tail. 2-3 char lang (ISO 639-1/2), any-length
+    // variant (sign, full, sdh, alt, forced, …), 3-6 char extension (vtt,
+    // ass, srt, ssa, sub, idx, webvtt).
+    [GeneratedRegex(@"(?<lang>[a-zA-Z]{2,3})\.(?<type>\w+)\.(?<ext>\w{3,6})$")]
     private static partial Regex SubtitleFileTagsRegex();
 
     public void Dispose()
