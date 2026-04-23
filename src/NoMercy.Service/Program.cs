@@ -140,10 +140,6 @@ public static class Program
         // immediately so the UI has data before auth completes.
         await DatabaseSeeder.SeedOfflineData();
 
-        // API keys are available without auth, so seed TMDB data (genres,
-        // languages, etc.) now — before any import jobs can run.
-        await DatabaseSeeder.Run();
-
         // Proactively resolve port conflicts before building the host.
         // This avoids the costly build→fail→kill→rebuild cycle and prevents
         // CronWorker "Failed to start database job workers" errors.
@@ -157,6 +153,14 @@ public static class Program
         bool hasCert = Certificate.HasValidCertificate();
 
         WebApplication app = CreateWebApplication(options, forceHttp: !hasCert);
+
+        // API keys are available without auth, so seed TMDB/MusicBrainz data
+        // (genres, languages, etc.) now — before any import jobs can run.
+        // Must run AFTER CreateWebApplication so HttpClientProvider is bound
+        // to the real IHttpClientFactory (otherwise seed HTTP calls fall back
+        // to a bare HttpClient with no registered headers, and MusicBrainz
+        // returns 403 for anonymous UAs).
+        await DatabaseSeeder.Run();
 
         // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).
         // It returns true when interactive auth is required (setup mode).

@@ -134,10 +134,10 @@ public static class ServiceConfiguration
                 client.BaseAddress = new("https://musicbrainz.org/ws/2/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                // MusicBrainz throttles anonymous UAs to 50 req/s shared globally
-                // (effectively a 403). Identifying ourselves drops us to the normal
-                // 1 req/s per-IP limit, which we already enforce via the request queue.
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                // MusicBrainz puts anonymous UAs in a 50 req/s global shared
+                // bucket — fine for our bursty low-traffic use. Deliberate
+                // choice for privacy over the per-IP identified tier.
+                client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
             }
         );
 

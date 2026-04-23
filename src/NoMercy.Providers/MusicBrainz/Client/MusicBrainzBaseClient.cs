@@ -1,4 +1,5 @@
 ﻿using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
@@ -17,13 +18,26 @@ public class MusicBrainzBaseClient : IDisposable
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.MusicBrainz);
         _client.BaseAddress ??= _baseUrl;
+        EnsureUserAgent(_client);
     }
 
     protected MusicBrainzBaseClient(Guid id)
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.MusicBrainz);
         _client.BaseAddress ??= _baseUrl;
+        EnsureUserAgent(_client);
         Id = id;
+    }
+
+    // MusicBrainz refuses anonymous UAs with a 403. The factory-registered UA
+    // only takes effect once HttpClientProvider has been initialized, which
+    // happens after the web app is built. Early seed callers fall back to
+    // `new HttpClient()` with no headers, so apply the UA defensively here.
+    private static void EnsureUserAgent(HttpClient client)
+    {
+        if (client.DefaultRequestHeaders.UserAgent.Count > 0)
+            return;
+        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", Config.UserAgent);
     }
 
     private static Helpers.Queue? _queue;
