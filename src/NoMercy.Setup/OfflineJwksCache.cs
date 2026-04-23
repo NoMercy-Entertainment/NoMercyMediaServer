@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;

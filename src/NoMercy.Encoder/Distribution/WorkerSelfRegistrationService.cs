@@ -2,12 +2,10 @@ namespace NoMercy.Encoder.Distribution;
 
 using System.Net.Http;
 using System.Net.Http.Json;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
-using NoMercy.Encoder.Jobs;
 
 /// <summary>
 /// Background service that self-registers this process as a remote worker

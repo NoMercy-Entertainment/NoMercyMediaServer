@@ -15,7 +15,6 @@ using NoMercy.Providers.Helpers;
 using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
-using NoMercy.Setup;
 using NoMercyQueue.Workers;
 
 namespace NoMercy.Service.Configuration;

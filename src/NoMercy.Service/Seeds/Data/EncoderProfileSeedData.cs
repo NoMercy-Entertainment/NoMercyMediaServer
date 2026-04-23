@@ -1,4 +1,3 @@
-using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 
 namespace NoMercy.Service.Seeds.Data;

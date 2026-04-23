@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NoMercy.Database;
 using NoMercy.NmSystem.Information;
 using NoMercy.Queue.MediaServer.Configuration;
 using NoMercyQueue;

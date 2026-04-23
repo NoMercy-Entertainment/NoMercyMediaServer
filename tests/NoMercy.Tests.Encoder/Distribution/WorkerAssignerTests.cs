@@ -1,6 +1,5 @@
 namespace NoMercy.Tests.Encoder.Distribution;
 
-using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Distribution;
 
 public class WorkerAssignerTests

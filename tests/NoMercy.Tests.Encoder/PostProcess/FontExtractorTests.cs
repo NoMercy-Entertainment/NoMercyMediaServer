@@ -1,6 +1,5 @@
 namespace NoMercy.Tests.Encoder.PostProcess;
 
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.PostProcess;

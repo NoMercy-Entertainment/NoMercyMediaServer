@@ -4,7 +4,6 @@ using System.Net;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 

@@ -1,6 +1,5 @@
 using System.Reflection;
 using NoMercy.Database;
-using NoMercy.Database.Models.Queue;
 using NoMercy.Queue.MediaServer;
 using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;

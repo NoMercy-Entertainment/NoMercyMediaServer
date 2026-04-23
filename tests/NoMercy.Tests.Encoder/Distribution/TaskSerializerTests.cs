@@ -1,7 +1,6 @@
 namespace NoMercy.Tests.Encoder.Distribution;
 
 using System.Text;
-using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Distribution;
 
 public class TaskSerializerTests

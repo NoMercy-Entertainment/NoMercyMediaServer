@@ -2,7 +2,6 @@ namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode;
 

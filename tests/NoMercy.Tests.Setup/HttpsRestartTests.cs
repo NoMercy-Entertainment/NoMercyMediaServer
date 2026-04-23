@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.Setup;

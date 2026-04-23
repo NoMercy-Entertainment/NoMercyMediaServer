@@ -12,7 +12,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
-using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.Helpers.Wallpaper;

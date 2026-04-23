@@ -1,5 +1,4 @@
 using System.Reflection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;

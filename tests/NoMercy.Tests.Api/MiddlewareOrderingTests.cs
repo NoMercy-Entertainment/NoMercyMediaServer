@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 

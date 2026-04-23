@@ -2,11 +2,6 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.Music;
-using NoMercy.Database.Models.TvShows;
-using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Database;

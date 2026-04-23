@@ -3,7 +3,6 @@ namespace NoMercy.Encoder.Output;
 using System.Globalization;
 using System.Text;
 using NoMercy.Encoder.BuildingBlocks;
-using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 
 public class PlaylistGenerator : IPlaylistGenerator

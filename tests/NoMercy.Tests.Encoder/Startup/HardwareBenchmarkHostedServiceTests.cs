@@ -2,7 +2,6 @@ namespace NoMercy.Tests.Encoder.Startup;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Startup;
 

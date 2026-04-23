@@ -2,7 +2,6 @@ namespace NoMercy.Tests.Encoder.Distribution;
 
 using Moq;
 using NoMercy.Encoder.Distribution;
-using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 
 public class InMemoryRemoteWorkerRegistryTests

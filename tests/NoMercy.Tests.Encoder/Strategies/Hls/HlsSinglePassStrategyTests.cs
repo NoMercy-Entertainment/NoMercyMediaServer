@@ -3,7 +3,6 @@ namespace NoMercy.Tests.Encoder.Strategies.Hls;
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
 

@@ -1,6 +1,5 @@
 namespace NoMercy.Tests.Encoder.Profiles;
 
-using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
 
 /// <summary>

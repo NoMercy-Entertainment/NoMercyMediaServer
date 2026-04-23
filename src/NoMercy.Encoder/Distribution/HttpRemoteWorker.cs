@@ -1,13 +1,11 @@
 namespace NoMercy.Encoder.Distribution;
 
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
-using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 
 /// <summary>

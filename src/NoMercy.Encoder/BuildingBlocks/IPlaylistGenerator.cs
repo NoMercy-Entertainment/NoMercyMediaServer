@@ -1,7 +1,6 @@
 namespace NoMercy.Encoder.BuildingBlocks;
 
 using NoMercy.Encoder.Output;
-using NoMercy.Encoder.Pipeline;
 
 public interface IPlaylistGenerator
 {

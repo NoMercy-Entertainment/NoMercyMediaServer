@@ -1,7 +1,6 @@
 namespace NoMercy.Encoder.Distribution;
 
 using Microsoft.Extensions.Logging;
-using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 
 /// <summary>

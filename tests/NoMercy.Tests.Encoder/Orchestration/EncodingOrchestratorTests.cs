@@ -5,7 +5,6 @@ using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
 

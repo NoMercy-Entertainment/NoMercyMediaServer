@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Music;

@@ -3,7 +3,6 @@ namespace NoMercy.Encoder.Pipeline.Stages;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
-using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;

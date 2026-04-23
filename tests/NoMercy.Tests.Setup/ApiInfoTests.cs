@@ -1,7 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Setup;
 using NoMercy.Setup.Dto;
-using ApiData = NoMercy.Setup.Dto.Data;
 
 namespace NoMercy.Tests.Setup;
 

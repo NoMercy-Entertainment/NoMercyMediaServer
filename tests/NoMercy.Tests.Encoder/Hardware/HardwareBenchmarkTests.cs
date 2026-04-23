@@ -3,7 +3,6 @@ namespace NoMercy.Tests.Encoder.Hardware;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 

@@ -2,7 +2,6 @@ namespace NoMercy.Encoder.Strategies;
 
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 
 /// <summary>

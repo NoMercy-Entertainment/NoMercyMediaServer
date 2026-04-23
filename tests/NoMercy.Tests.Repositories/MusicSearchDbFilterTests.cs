@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Tests.Repositories.Infrastructure;

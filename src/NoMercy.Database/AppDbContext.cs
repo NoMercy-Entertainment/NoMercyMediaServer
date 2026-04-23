@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Database;

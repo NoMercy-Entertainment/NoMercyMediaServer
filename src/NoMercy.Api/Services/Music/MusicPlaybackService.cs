@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Database;
-using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Playback;

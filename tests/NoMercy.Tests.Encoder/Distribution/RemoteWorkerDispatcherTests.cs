@@ -5,7 +5,6 @@ using Moq;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Execution;
-using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 
 public class RemoteWorkerDispatcherTests

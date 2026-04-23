@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
-using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Composition;
 
 namespace NoMercy.Api.Controllers.V1.Worker;

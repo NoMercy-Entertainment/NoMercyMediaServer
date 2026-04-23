@@ -2,7 +2,6 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.DTOs.Common;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
 using NoMercy.Helpers.Extensions;

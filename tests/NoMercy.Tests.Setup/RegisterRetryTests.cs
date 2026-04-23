@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace NoMercy.Tests.Setup;
 
 public class RegisterRetryTests

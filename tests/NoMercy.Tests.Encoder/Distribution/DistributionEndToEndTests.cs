@@ -1,16 +1,13 @@
 namespace NoMercy.Tests.Encoder.Distribution;
 
 using System.Net;
-using System.Net.Http.Json;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
-using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Progress;
 
 /// <summary>

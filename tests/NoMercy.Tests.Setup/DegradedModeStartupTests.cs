@@ -4,7 +4,6 @@ using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 using NoMercy.Setup;
 using NoMercy.Setup.Dto;
-using Xunit;
 
 namespace NoMercy.Tests.Setup;
 
