@@ -486,6 +486,15 @@ public static class ServiceConfiguration
             opts.WhisperModelPath = AppFiles.WhisperModelPath;
         });
 
+        // Concrete activity probe for the deferred hardware benchmark —
+        // Encoder's default is a no-op (always idle) so it stays decoupled
+        // from QueueRunner/SessionManager. AddSingleton after AddNoMercyEncoder
+        // overrides the TryAddSingleton the encoder registered.
+        services.AddSingleton<
+            NoMercy.Encoder.Startup.IEncoderActivityProbe,
+            EncoderActivityProbe
+        >();
+
         services.AddHostedService<MediaProcessing.EventHandlers.EncodingNotificationSubscriber>();
         services.AddHostedService<MediaProcessing.EventHandlers.AutoEncodeSubscriber>();
         services.AddHostedService<MediaProcessing.EventHandlers.IntroDetectionSubscriber>();

@@ -93,7 +93,13 @@ public static class ServiceCollectionExtensions
         // Startup — register concrete first so IHostedService resolves same instance
         services.AddSingleton<HardwareInitializationService>();
         services.AddHostedService(sp => sp.GetRequiredService<HardwareInitializationService>());
-        services.AddHostedService<HardwareBenchmarkHostedService>();
+
+        // Hardware benchmark runs lazily — defers past ApplicationStarted, then
+        // waits for the encoder to be idle (no active streams/jobs) before
+        // spawning calibration ffmpeg processes. Startup is never blocked and
+        // user-visible work never shares CPU/GPU with the benchmark.
+        services.TryAddSingleton<IEncoderActivityProbe, NullEncoderActivityProbe>();
+        services.AddHostedService<HardwareBenchmarkBackgroundService>();
 
         // HDR
         services.AddTransient<ITonemapSelector, TonemapSelector>();
