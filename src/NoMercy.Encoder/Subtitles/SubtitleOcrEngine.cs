@@ -105,7 +105,7 @@ public partial class SubtitleOcrEngine(
 
             _ = modelDirectory; // referenced for clarity; filter resolves tessdata via TESSDATA_PREFIX if set
 
-            return new SubtitleTrack(outputPath, language, outputFormat, cues.Count);
+            return new(outputPath, language, outputFormat, cues.Count);
         }
         finally
         {
@@ -165,7 +165,7 @@ public partial class SubtitleOcrEngine(
             {
                 if (currentText is not null)
                 {
-                    cues.Add(new SubtitleCue(currentStart, currentLastSeen, currentText));
+                    cues.Add(new(currentStart, currentLastSeen, currentText));
                     currentText = null;
                 }
                 continue;
@@ -179,7 +179,7 @@ public partial class SubtitleOcrEngine(
             }
             else if (!string.Equals(currentText, text, StringComparison.Ordinal))
             {
-                cues.Add(new SubtitleCue(currentStart, currentLastSeen, currentText));
+                cues.Add(new(currentStart, currentLastSeen, currentText));
                 currentText = text;
                 currentStart = latestPts;
                 currentLastSeen = latestPts;
@@ -192,7 +192,7 @@ public partial class SubtitleOcrEngine(
         }
 
         if (currentText is not null)
-            cues.Add(new SubtitleCue(currentStart, currentLastSeen, currentText));
+            cues.Add(new(currentStart, currentLastSeen, currentText));
 
         return cues;
     }
@@ -268,8 +268,12 @@ public partial class SubtitleOcrEngine(
 
     private static string EscapeFilterPath(string path)
     {
-        // FFmpeg filter args: backslashes and colons need escaping on Windows.
-        return path.Replace('\\', '/').Replace(":", "\\:");
+        // FFmpeg filtergraph has two escaping layers (filterchain + filter-option).
+        // A single \: is consumed at the filterchain level, leaving bare : which
+        // then terminates the file= option.  Double-escape so each layer strips one
+        // backslash: C# "\\\\:" → emitted "\\:" → after filterchain → "\:" → after
+        // filter-option → literal ":".
+        return path.Replace('\\', '/').Replace(":", "\\\\:");
     }
 
     private static string TrimErr(string stdErr)
