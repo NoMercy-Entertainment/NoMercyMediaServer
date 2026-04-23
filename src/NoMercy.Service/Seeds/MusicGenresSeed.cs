@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.MusicBrainz.Client;
+using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;
@@ -11,18 +12,36 @@ public static class MusicGenresSeed
 {
     public static async Task Init(this MediaContext dbContext)
     {
-        bool hasMusicGenres = await dbContext.MusicGenres.AnyAsync();
-        if (hasMusicGenres)
-            return;
-
-        Logger.Setup("Adding Music Genres", LogEventLevel.Verbose);
+        Logger.Setup("Checking Music Genres seed", LogEventLevel.Verbose);
 
         try
         {
             MusicBrainzGenreClient musicBrainzGenreClient = new();
 
-            MusicGenre[] genres = (await musicBrainzGenreClient.All())
-                .ToList()
+            MusicBrainzAllGenres? probe = await musicBrainzGenreClient.Probe();
+            if (probe is null)
+            {
+                Logger.Setup(
+                    "Music genres seed skipped: MusicBrainz probe returned null",
+                    LogEventLevel.Warning
+                );
+                return;
+            }
+
+            long expected = probe.GenreCount;
+            long actual = await dbContext.MusicGenres.LongCountAsync();
+
+            if (actual >= expected)
+                return;
+
+            Logger.Setup(
+                $"Adding Music Genres ({actual}/{expected} present)",
+                LogEventLevel.Verbose
+            );
+
+            List<MusicBrainzGenre> fetched = await musicBrainzGenreClient.All();
+
+            MusicGenre[] genres = fetched
                 .ConvertAll<MusicGenre>(genre => new() { Id = genre.Id, Name = genre.Name })
                 .ToArray();
 
