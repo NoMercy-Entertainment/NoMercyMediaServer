@@ -9,44 +9,61 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
     public MusicBrainzGenreClient()
         : base() { }
 
-    public async Task<List<MusicBrainzGenre>> All(int page = 1)
+    public async Task<List<MusicBrainzGenre>> All()
     {
         List<MusicBrainzGenre> genres = [];
 
-        MusicBrainzAllGenres? data = await Get<MusicBrainzAllGenres>(
+        MusicBrainzAllGenres? firstPage = await Get<MusicBrainzAllGenres>(
             "genre/all",
             new Dictionary<string, string>
             {
-                ["limit"] = 100.ToString(),
-                ["offset"] = (page * 100).ToString(),
+                ["limit"] = "100",
+                ["offset"] = "0",
                 ["fmt"] = "json",
             }
         );
 
-        if (data is null)
+        if (firstPage is null)
             return genres;
 
-        genres.AddRange(data.Genres);
+        genres.AddRange(firstPage.Genres);
 
-        for (int i = 0; i < data.GenreCount / data.Genres.Length; i++)
+        int pageSize = firstPage.Genres.Length;
+
+        if (pageSize == 0)
+            return genres;
+
+        for (long offset = pageSize; offset < firstPage.GenreCount; offset += pageSize)
         {
-            MusicBrainzAllGenres? data2 = await Get<MusicBrainzAllGenres>(
+            MusicBrainzAllGenres? page = await Get<MusicBrainzAllGenres>(
                 "genre/all",
                 new Dictionary<string, string>
                 {
-                    ["limit"] = data.Genres.Length.ToString(),
-                    ["offset"] = (i * data.Genres.Length).ToString(),
+                    ["limit"] = pageSize.ToString(),
+                    ["offset"] = offset.ToString(),
+                    ["fmt"] = "json",
                 }
             );
 
-            if (data2 is null)
+            if (page is null)
                 continue;
 
-            genres.AddRange(data2.Genres);
+            genres.AddRange(page.Genres);
         }
 
         return genres;
     }
+
+    public Task<MusicBrainzAllGenres?> Probe() =>
+        Get<MusicBrainzAllGenres>(
+            "genre/all",
+            new Dictionary<string, string>
+            {
+                ["limit"] = "1",
+                ["offset"] = "0",
+                ["fmt"] = "json",
+            }
+        );
 
     public async Task<MusicBrainzGenre?> SearchGenre(string query)
     {

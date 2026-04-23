@@ -64,8 +64,46 @@ public class MusicBrainzBaseClient : IDisposable
         string? response;
         try
         {
-            response = await GetQueue()
-                .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+            HttpResponseMessage httpResponse = await GetQueue()
+                .Enqueue(() => _client.GetAsync(newUrl), newUrl, priority);
+
+            if (!httpResponse.IsSuccessStatusCode)
+            {
+                string body = await httpResponse.Content.ReadAsStringAsync();
+                string truncated = body.Length > 500 ? body[..500] : body;
+                Logger.App(
+                    $"MusicBrainz non-success {(int)httpResponse.StatusCode} ({newUrl}): {truncated}",
+                    LogEventLevel.Debug
+                );
+
+                int statusCode = (int)httpResponse.StatusCode;
+
+                if (statusCode == 403 && retry < 3)
+                {
+                    int delay = (retry + 1) * 30_000;
+                    Logger.App(
+                        $"MusicBrainz 403 ({newUrl}), retrying in {delay / 1000}s (attempt {retry + 1}/3)",
+                        LogEventLevel.Debug
+                    );
+                    await Task.Delay(delay);
+                    return await Get<T>(url, query, priority, retry + 1);
+                }
+
+                if ((statusCode == 429 || statusCode == 503) && retry < 10)
+                {
+                    int delay = (int)Math.Pow(2, retry + 1) * 1000;
+                    Logger.App(
+                        $"MusicBrainz {statusCode} ({newUrl}), retrying in {delay / 1000}s (attempt {retry + 1}/10)",
+                        LogEventLevel.Debug
+                    );
+                    await Task.Delay(delay);
+                    return await Get<T>(url, query, priority, retry + 1);
+                }
+
+                httpResponse.EnsureSuccessStatusCode();
+            }
+
+            response = await httpResponse.Content.ReadAsStringAsync();
             await CacheController.Write(newUrl, response);
 
             data = response.FromJson<T>();
