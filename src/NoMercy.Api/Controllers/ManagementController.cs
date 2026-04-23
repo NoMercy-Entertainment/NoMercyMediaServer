@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Management;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
+using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
@@ -36,7 +37,8 @@ public class ManagementController(
     IPluginManager pluginManager,
     AppProcessManager appProcessManager,
     SetupState setupState,
-    INetworkDiscovery networkDiscovery
+    INetworkDiscovery networkDiscovery,
+    ISessionManager sessionManager
 ) : BaseController
 {
     [HttpGet("status")]
@@ -175,6 +177,31 @@ public class ManagementController(
         }
     }
 
+    [HttpGet("activity")]
+    [ProducesResponseType(typeof(ManagementActivityDto), StatusCodes.Status200OK)]
+    public IActionResult GetActivity()
+    {
+        int activeStreams = sessionManager.ActiveSessionCount;
+
+        IReadOnlyDictionary<string, Thread> activeThreads = queueRunner.GetActiveWorkerThreads();
+        int activeEncodes = activeThreads.Count(t =>
+            t.Key.StartsWith("encoder", StringComparison.OrdinalIgnoreCase)
+        );
+
+        // All encode jobs in V3 are split/resumable, so killing mid-encode is safe.
+        // Streams are never "safe to interrupt" — stopping one ends playback for that user.
+        bool canInterruptSafely = activeStreams == 0;
+
+        return Ok(
+            new ManagementActivityDto
+            {
+                ActiveStreams = activeStreams,
+                ActiveEncodes = activeEncodes,
+                CanInterruptSafely = canInterruptSafely,
+            }
+        );
+    }
+
     [HttpPost("stop")]
     public IActionResult Stop()
     {
@@ -246,6 +273,8 @@ public class ManagementController(
                         {
                             status = "ok",
                             message = "This is an installer deployment. Use the installer to update.",
+                            use_installer = true,
+                            latest_version = Config.LatestVersion,
                         }
                     );
 

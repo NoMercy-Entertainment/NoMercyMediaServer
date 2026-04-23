@@ -86,6 +86,33 @@ jobs:
           echo "=== Release artifacts ==="
           ls -la ./output/
 
+      - name: Generate SHA-256 checksums and release-info.json
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          VERSION="${{ inputs.version }}"
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Generate .sha256 sidecar files for installer and bare-binary assets
+          for file in ./output/*.exe ./output/*.tar.gz ./output/*.dmg ./output/*.pkg; do
+            [ -f "$file" ] || continue
+            BASENAME=$(basename "$file")
+            sha256sum "$file" | awk '{print $1}' > "./output/${BASENAME}.sha256"
+            echo "Generated SHA-256 for $BASENAME"
+          done
+
+          # Write release-info.json — the launcher can optionally fetch this to verify
+          # which commit a release was built from
+          cat > ./output/release-info.json << EOF
+          {
+            "version": "${VERSION}",
+            "commit_sha": "${SHORT_SHA}",
+            "build_timestamp": "${TIMESTAMP}"
+          }
+          EOF
+
+          echo "=== Release artifacts with checksums ==="
+          ls -la ./output/
+
       - name: Write release notes
         run: |
           VERSION="${{ inputs.version }}"

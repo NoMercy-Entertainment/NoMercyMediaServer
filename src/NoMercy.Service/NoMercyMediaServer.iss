@@ -2,6 +2,10 @@
   #define Version "0.1.0"
 #endif
 
+#ifndef CommitSha
+  #define CommitSha "unknown"
+#endif
+
 [Setup]
 AppName=NoMercy MediaServer
 AppVersion={#Version}
@@ -20,6 +24,8 @@ UninstallDisplayIcon={app}\NoMercyMediaServer.exe
 PrivilegesRequired=admin
 WizardStyle=modern
 MinVersion=10.0
+AppComments=Build: {#CommitSha}
+VersionInfoCopyright=Build {#CommitSha}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -71,7 +77,9 @@ Name: "addtopath"; Description: "Add CLI to system PATH"; GroupDescription: "CLI
 [Run]
 Filename: "sc.exe"; Parameters: "create NoMercyMediaServer binPath= ""{app}\NoMercyMediaServer.exe"" start= auto DisplayName= ""NoMercy MediaServer"""; Flags: runhidden; Tasks: installservice
 Filename: "sc.exe"; Parameters: "start NoMercyMediaServer"; Flags: runhidden; Tasks: installservice
-Filename: "{app}\NoMercyLauncher.exe"; Description: "Launch NoMercy MediaServer"; Flags: nowait postinstall skipifsilent; Components: service
+; skipifsilent is omitted when /LaunchAfterInstall=1 is passed (auto-update with auto-start enabled).
+; The [Code] section handles conditional launch via PostInstall pascal code.
+Filename: "{app}\NoMercyLauncher.exe"; Description: "Launch NoMercy MediaServer"; Flags: nowait postinstall skipifsilent; Components: service; Check: ShouldShowLauncherEntry
 
 [UninstallRun]
 Filename: "sc.exe"; Parameters: "stop NoMercyMediaServer"; Flags: runhidden; Tasks: installservice
@@ -93,4 +101,52 @@ begin
     exit;
   end;
   Result := Pos(';' + Param + ';', ';' + OrigPath + ';') = 0;
+end;
+
+// Returns the /LaunchAfterInstall parameter value (1 = launch, 0 or absent = skip).
+function LaunchAfterInstallParam: Boolean;
+begin
+  Result := ExpandConstant('{param:LaunchAfterInstall|0}') = '1';
+end;
+
+// Returns the /UpdateCacheCleanup parameter value (1 = delete installer, 0 or absent = skip).
+function UpdateCacheCleanupParam: Boolean;
+begin
+  Result := ExpandConstant('{param:UpdateCacheCleanup|0}') = '1';
+end;
+
+// Used by the [Run] entry to decide whether to show the interactive "launch" checkbox.
+// When /LaunchAfterInstall=1 the entry is hidden and we launch from CurStepChanged instead.
+function ShouldShowLauncherEntry: Boolean;
+begin
+  Result := not LaunchAfterInstallParam;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  InstallerPath: string;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    // Delete the installer from the update cache after a successful install.
+    // Only triggered when the Launcher spawned us with /UpdateCacheCleanup=1.
+    if UpdateCacheCleanupParam then
+    begin
+      InstallerPath := ExpandConstant('{srcexe}');
+      if FileExists(InstallerPath) then
+        DeleteFile(InstallerPath);
+      // Also delete the .sha256 sidecar
+      if FileExists(InstallerPath + '.sha256') then
+        DeleteFile(InstallerPath + '.sha256');
+    end;
+
+    // When /LaunchAfterInstall=1 the interactive [Run] entry is suppressed via Check:
+    // ShouldShowLauncherEntry.  We launch the Launcher here unconditionally so it
+    // starts even in /SILENT mode, honouring the user's auto-start preference.
+    if LaunchAfterInstallParam then
+    begin
+      Exec(ExpandConstant('{app}\NoMercyLauncher.exe'), '', '', SW_SHOW,
+           ewNoWait, 0);
+    end;
+  end;
 end;

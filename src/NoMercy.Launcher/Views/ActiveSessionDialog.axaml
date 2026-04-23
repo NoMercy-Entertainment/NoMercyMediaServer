@@ -1,0 +1,64 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="NoMercy.Launcher.Views.ActiveSessionDialog"
+        Title="Update — Active Sessions"
+        Width="460" Height="260"
+        MinWidth="380" MinHeight="220"
+        Background="#0a0a0f"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False">
+
+    <DockPanel Margin="24">
+
+        <!-- Buttons (bottom) -->
+        <StackPanel DockPanel.Dock="Bottom"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="12"
+                    Margin="0,20,0,0">
+
+            <!-- Default: Wait -->
+            <Button x:Name="WaitButton"
+                    Content="Wait — I'll update later"
+                    MinWidth="160"
+                    Background="#2a2a3a"
+                    Foreground="#e0e0e0"
+                    Click="OnWaitClick" />
+
+            <!-- Interrupt -->
+            <Button x:Name="InterruptButton"
+                    MinWidth="160"
+                    Background="#8f00fc"
+                    Foreground="White"
+                    Click="OnInterruptClick">
+                <StackPanel Spacing="2" HorizontalAlignment="Center">
+                    <TextBlock Text="Interrupt &amp; Update Now"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                    <TextBlock x:Name="ResumeNote"
+                               FontSize="11"
+                               Foreground="#CBAFFF"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <!-- Content -->
+        <StackPanel Spacing="12">
+            <TextBlock Text="Server is busy"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       Foreground="#e0e0e0" />
+
+            <TextBlock x:Name="ActivitySummary"
+                       Foreground="#CBAFFF"
+                       FontSize="13"
+                       TextWrapping="Wrap" />
+
+            <TextBlock Text="What would you like to do?"
+                       Foreground="#999999"
+                       FontSize="13" />
+        </StackPanel>
+    </DockPanel>
+</Window>
