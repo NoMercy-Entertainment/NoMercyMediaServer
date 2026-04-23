@@ -1,10 +1,8 @@
-using System.IO;
 using System.Security.Claims;
 using I18N.DotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
@@ -136,7 +134,10 @@ public static class ServiceConfiguration
                 client.BaseAddress = new("https://musicbrainz.org/ws/2/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
+                // MusicBrainz throttles anonymous UAs to 50 req/s shared globally
+                // (effectively a 403). Identifying ourselves drops us to the normal
+                // 1 req/s per-IP limit, which we already enforce via the request queue.
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
             }
         );
 
