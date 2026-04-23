@@ -526,18 +526,15 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
             Regex regex = SubtitleFileRegex();
             Match match = regex.Match(subtitleFile);
 
+            if (!match.Success)
+                continue;
+
             string path = Path.Combine(hostFolder, subtitleFile);
 
-            if (
-                match.Groups["type"].Value != "sign"
-                && match.Groups["type"].Value != "song"
-                && match.Groups["type"].Value != "full"
-            )
-                continue;
-
-            if (match.Groups["ext"].Value == "sup")
-                continue;
-            if (match.Groups["ext"].Value == "vob")
+            // Reject binary subtitle formats we can't stream as HLS sidecars; accept
+            // every text format (vtt, ass, srt, ssa, sub, idx, webvtt).
+            string ext = match.Groups["ext"].Value;
+            if (ext == "sup" || ext == "vob")
                 continue;
 
             subtitles.Add(
@@ -549,7 +546,7 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
                         "/" + Path.Combine("subtitles", Path.GetFileName(path)).Replace("\\", "/"),
                     FileHash = ComputeFileHash(path),
                     FileSize = GetFileSize(path),
-                    Codec = match.Groups["ext"].Value,
+                    Codec = ext,
                 }
             );
         }
@@ -828,16 +825,12 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
             Regex regex = SubtitleFileRegex();
             Match match = regex.Match(subtitleFile);
 
-            if (
-                match.Groups["type"].Value != "sign"
-                && match.Groups["type"].Value != "song"
-                && match.Groups["type"].Value != "full"
-            )
+            if (!match.Success)
                 continue;
 
-            if (match.Groups["ext"].Value == "sup")
-                continue;
-            if (match.Groups["ext"].Value == "vob")
+            // Reject binary subtitle formats; accept every text format.
+            string ext = match.Groups["ext"].Value;
+            if (ext == "sup" || ext == "vob")
                 continue;
 
             subtitles.Add(
@@ -845,7 +838,7 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
                 {
                     Language = match.Groups["lang"].Value,
                     Type = match.Groups["type"].Value,
-                    Ext = match.Groups["ext"].Value,
+                    Ext = ext,
                 }
             );
         }
@@ -932,7 +925,13 @@ public partial class FileManager(IFileRepository fileRepository) : IFileManager
         return hashStringBuilder.ToString();
     }
 
-    [GeneratedRegex(@"(?<lang>\w{3}).(?<type>\w{3,4}).(?<ext>\w{3})$")]
+    // Liberal subtitle filename matcher: 2-3 char language (ISO 639-1 or -3), arbitrary
+    // type (alt, full, sign, song, sdh, forced, commentary, director, ...), 3-6 char
+    // extension (vtt, ass, srt, ssa, sub, idx, sup, vob, webvtt).  Previously the regex
+    // only matched 3-char lang + 3-4 char type + 3-char ext and the consumer methods
+    // further filtered to type in (sign, song, full) — both combined silently dropped
+    // every "alt" / "sdh" / "forced" subtitle file.
+    [GeneratedRegex(@"(?<lang>[a-zA-Z]{2,3})\.(?<type>\w+)\.(?<ext>\w{3,6})$")]
     private static partial Regex SubtitleFileRegex();
 
     [GeneratedRegex(@"#xywh=\d+,\d+,(?<width>\d+),(?<height>\d+)")]
