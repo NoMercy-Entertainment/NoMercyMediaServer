@@ -71,15 +71,15 @@ public class PlaylistGenerator : IPlaylistGenerator
             // Combine video + audio bandwidth for the STREAM-INF (Apple spec section 4.10).
             HlsVariantAnalyzer.VariantMetrics vidMetrics = videoMetrics.GetValueOrDefault(
                 video.MapLabel,
-                new HlsVariantAnalyzer.VariantMetrics(0, 0)
+                new(0, 0)
             );
             HlsVariantAnalyzer.VariantMetrics audMetrics =
                 plan.AudioOutputs.Length > 0
                     ? audioMetrics.GetValueOrDefault(
                         plan.AudioOutputs[0].MapLabel,
-                        new HlsVariantAnalyzer.VariantMetrics(0, 0)
+                        new(0, 0)
                     )
-                    : new HlsVariantAnalyzer.VariantMetrics(0, 0);
+                    : new(0, 0);
 
             int peakBandwidth = vidMetrics.PeakBandwidth + audMetrics.PeakBandwidth;
             int avgBandwidth = vidMetrics.AverageBandwidth + audMetrics.AverageBandwidth;

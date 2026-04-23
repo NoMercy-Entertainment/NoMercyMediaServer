@@ -123,7 +123,7 @@ public class RealEncodeTests : IAsyncLifetime
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 320,
                     Height: 180,
@@ -142,7 +142,7 @@ public class RealEncodeTests : IAsyncLifetime
                 // Use Opus — libopus is available in both the bundled FFmpeg and standard builds.
                 // libfdk_aac is only in the bundled build (nomercy-ffmpeg), so tests that
                 // run with system FFmpeg would fail with "Unknown encoder 'libfdk_aac'".
-                new AudioOutput(
+                new(
                     Codec: AudioCodecType.Opus,
                     BitrateKbps: 64,
                     Channels: 2,
@@ -201,7 +201,7 @@ public class RealEncodeTests : IAsyncLifetime
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 160,
                     Height: null,
@@ -217,7 +217,7 @@ public class RealEncodeTests : IAsyncLifetime
             ],
             AudioOutputs:
             [
-                new AudioOutput(
+                new(
                     Codec: AudioCodecType.Opus,
                     BitrateKbps: 64,
                     Channels: 2,
@@ -282,7 +282,7 @@ public class RealEncodeTests : IAsyncLifetime
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 320,
                     Height: 180,
@@ -295,7 +295,7 @@ public class RealEncodeTests : IAsyncLifetime
                     KeyframeIntervalSeconds: 2,
                     TenBit: false
                 ),
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 160,
                     Height: null,
@@ -311,7 +311,7 @@ public class RealEncodeTests : IAsyncLifetime
             ],
             AudioOutputs:
             [
-                new AudioOutput(
+                new(
                     Codec: AudioCodecType.Opus,
                     BitrateKbps: 64,
                     Channels: 2,
@@ -366,7 +366,7 @@ public class RealEncodeTests : IAsyncLifetime
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 1920,
                     Height: 1080,
@@ -379,7 +379,7 @@ public class RealEncodeTests : IAsyncLifetime
                     KeyframeIntervalSeconds: 2,
                     TenBit: false
                 ),
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 1280,
                     Height: 720,
@@ -395,7 +395,7 @@ public class RealEncodeTests : IAsyncLifetime
             ],
             AudioOutputs:
             [
-                new AudioOutput(
+                new(
                     Codec: AudioCodecType.Opus,
                     BitrateKbps: 128,
                     Channels: 2,
@@ -406,13 +406,13 @@ public class RealEncodeTests : IAsyncLifetime
             ],
             SubtitleOutputs:
             [
-                new SubtitleOutput(
+                new(
                     Codec: SubtitleCodecType.WebVtt,
                     Mode: SubtitleMode.Extract,
                     AllowedLanguages: ["eng"]
                 ),
             ],
-            Thumbnails: new ThumbnailOutput(Width: 320, IntervalSeconds: 10),
+            Thumbnails: new(Width: 320, IntervalSeconds: 10),
             SchemaVersion: 1
         );
 

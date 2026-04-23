@@ -172,7 +172,7 @@ public class SubtitleExtractorTests
 
     private static SubtitleOutputPlan MakePlan(int sourceIndex, string language)
     {
-        return new SubtitleOutputPlan(
+        return new(
             OutputCodec: SubtitleCodecType.WebVtt,
             Action: StreamAction.Extract,
             Language: language,
@@ -183,7 +183,7 @@ public class SubtitleExtractorTests
 
     private static SubtitleStreamInfo MakeStream(int index, string codec, string language)
     {
-        return new SubtitleStreamInfo(
+        return new(
             Index: index,
             Codec: codec,
             Language: language,

@@ -23,7 +23,7 @@ public class HomeServiceConcurrencyTests : IDisposable
     [Fact]
     public async Task GetHomeData_WithParallelQueries_DoesNotThrow()
     {
-        MediaContext mainContext = _factory.CreateDbContext();
+        MediaContext mainContext = await _factory.CreateDbContextAsync();
         HomeRepository homeRepository = new();
         LibraryRepository libraryRepository = new(mainContext);
         HomeService service = new(homeRepository, libraryRepository, mainContext, _factory);
@@ -40,7 +40,7 @@ public class HomeServiceConcurrencyTests : IDisposable
     [Fact]
     public async Task GetHomeData_CalledMultipleTimes_DoesNotThrow()
     {
-        MediaContext mainContext = _factory.CreateDbContext();
+        MediaContext mainContext = await _factory.CreateDbContextAsync();
         HomeRepository homeRepository = new();
         LibraryRepository libraryRepository = new(mainContext);
         HomeService service = new(homeRepository, libraryRepository, mainContext, _factory);

@@ -67,7 +67,7 @@ public static class Certificate
         }
         else
         {
-            db.Configuration.Add(new Configuration { Key = key, SecureValue = value });
+            db.Configuration.Add(new() { Key = key, SecureValue = value });
         }
     }
 
@@ -332,7 +332,7 @@ public static class Certificate
         Logger.Certificate(
             !hasExistingCert ? "SSL Certificate created" : "SSL Certificate renewed"
         );
-        return new CertificateDto();
+        return new();
     }
 
     /// <summary>Sentinel returned by FetchCertificate to indicate a successfully written certificate.</summary>

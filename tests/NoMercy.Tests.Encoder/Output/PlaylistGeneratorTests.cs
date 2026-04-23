@@ -106,11 +106,11 @@ public class PlaylistGeneratorTests
         OutputPlan plan = CreatePlan();
         Dictionary<string, HlsVariantAnalyzer.VariantMetrics> vidMetrics = new()
         {
-            ["[v0]"] = new HlsVariantAnalyzer.VariantMetrics(5_000_000, 3_500_000),
+            ["[v0]"] = new(5_000_000, 3_500_000),
         };
         Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audMetrics = new()
         {
-            ["0:a:0"] = new HlsVariantAnalyzer.VariantMetrics(256_000, 192_000),
+            ["0:a:0"] = new(256_000, 192_000),
         };
 
         string playlist = generator.GenerateMasterPlaylist(
@@ -126,11 +126,11 @@ public class PlaylistGeneratorTests
 
     private static OutputPlan CreatePlan(string encoderName = "libx264", bool tenBit = false)
     {
-        return new OutputPlan(
+        return new(
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     1920,
                     1080,
                     encoderName,
@@ -142,12 +142,12 @@ public class PlaylistGeneratorTests
                     tenBit,
                     tenBit ? "yuv420p10le" : "yuv420p",
                     "[v0]",
-                    new Dictionary<string, string>()
+                    new()
                 ),
             ],
             AudioOutputs:
             [
-                new AudioOutputPlan("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
             SubtitleOutputs: [],
             Thumbnails: null
@@ -156,11 +156,11 @@ public class PlaylistGeneratorTests
 
     private static OutputPlan CreateMultiResPlan()
     {
-        return new OutputPlan(
+        return new(
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     1920,
                     1080,
                     "libx264",
@@ -172,9 +172,9 @@ public class PlaylistGeneratorTests
                     false,
                     "yuv420p",
                     "[v0]",
-                    new Dictionary<string, string>()
+                    new()
                 ),
-                new VideoOutputPlan(
+                new(
                     1280,
                     720,
                     "libx264",
@@ -186,12 +186,12 @@ public class PlaylistGeneratorTests
                     false,
                     "yuv420p",
                     "[v1]",
-                    new Dictionary<string, string>()
+                    new()
                 ),
             ],
             AudioOutputs:
             [
-                new AudioOutputPlan("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
             SubtitleOutputs: [],
             Thumbnails: null

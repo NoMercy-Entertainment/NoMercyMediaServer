@@ -106,7 +106,7 @@ public class ExecutionGraphBuilderTests
             Name: "Test",
             Format: OutputFormat.Hls,
             VideoOutputs: [SingleOutput1080pH264],
-            AudioOutputs: [new AudioOutput(AudioCodecType.Aac, 192, 2, 48000, [])],
+            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
             SubtitleOutputs: []
         );
 
@@ -117,13 +117,13 @@ public class ExecutionGraphBuilderTests
             Presets: ["fast", "medium", "slow"],
             Profiles: [],
             Levels: [],
-            QualityRange: new QualityRange(0, 51, 23),
+            QualityRange: new(0, 51, 23),
             SupportedRateControl: [RateControlMode.Crf],
             Supports10Bit: false,
             SupportsHdr: false,
             MaxConcurrentSessions: isHw ? 12 : int.MaxValue,
             PixelFormat10Bit: "yuv420p10le",
-            VendorSpecificFlags: new Dictionary<string, string>()
+            VendorSpecificFlags: new()
         );
 
     private static ResolvedCodec H264Software =>
@@ -138,7 +138,7 @@ public class ExecutionGraphBuilderTests
         new(
             FfmpegEncoderName: "h264_nvenc",
             EncoderInfo: MakeEncoderInfo("h264_nvenc", true),
-            Device: new GpuDevice(
+            Device: new(
                 GpuVendor.Nvidia,
                 "RTX 4090",
                 24576,
@@ -239,25 +239,25 @@ public class ExecutionGraphBuilderTests
             Name: "HDR Multi",
             Format: OutputFormat.Hls,
             VideoOutputs: [output1080p, output720p, output480p],
-            AudioOutputs: [new AudioOutput(AudioCodecType.Aac, 192, 2, 48000, [])],
+            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
             SubtitleOutputs: []
         );
 
         ResolvedCodec[] resolvedCodecs =
         [
-            new ResolvedCodec(
+            new(
                 "hevc_nvenc",
                 MakeEncoderInfo("hevc_nvenc", true),
                 null,
                 RateControlMode.Cq
             ),
-            new ResolvedCodec(
+            new(
                 "hevc_nvenc",
                 MakeEncoderInfo("hevc_nvenc", true),
                 null,
                 RateControlMode.Cq
             ),
-            new ResolvedCodec(
+            new(
                 "hevc_nvenc",
                 MakeEncoderInfo("hevc_nvenc", true),
                 null,
@@ -284,7 +284,7 @@ public class ExecutionGraphBuilderTests
             Name: "Audio Only",
             Format: OutputFormat.Hls,
             VideoOutputs: [],
-            AudioOutputs: [new AudioOutput(AudioCodecType.Aac, 192, 2, 48000, [])],
+            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
             SubtitleOutputs: []
         );
 
@@ -310,7 +310,7 @@ public class ExecutionGraphBuilderTests
             Name: "Subs",
             Format: OutputFormat.Hls,
             VideoOutputs: [SingleOutput1080pH264],
-            AudioOutputs: [new AudioOutput(AudioCodecType.Aac, 192, 2, 48000, [])],
+            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
             SubtitleOutputs: [subOutput, subOutput]
         );
 
@@ -398,9 +398,9 @@ public class ExecutionGraphBuilderTests
             Name: "Full",
             Format: OutputFormat.Hls,
             VideoOutputs: [SingleOutput1080pH264],
-            AudioOutputs: [new AudioOutput(AudioCodecType.Aac, 192, 2, 48000, [])],
+            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
             SubtitleOutputs: [subOutput, subOutput],
-            Thumbnails: new ThumbnailOutput(320, 10)
+            Thumbnails: new(320, 10)
         );
 
         List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);

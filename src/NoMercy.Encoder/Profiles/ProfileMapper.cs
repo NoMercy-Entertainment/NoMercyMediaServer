@@ -48,7 +48,7 @@ public static class ProfileMapper
 
         EncodeMode mode = ParseEncodeMode(encodeMode);
 
-        return new EncodingProfile(
+        return new(
             Id: id,
             Name: name,
             Format: format,
@@ -85,7 +85,7 @@ public static class ProfileMapper
                 ? v.CustomArguments.ToDictionary(c => c.key, c => c.Val)
                 : null;
 
-        return new VideoOutput(
+        return new(
             Codec: codec,
             Width: v.Width,
             Height: v.Height > 0 ? v.Height : null,
@@ -127,7 +127,7 @@ public static class ProfileMapper
         AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codec);
         int bitrate = encoder.IsLossless ? 0 : encoder.DefaultBitrateKbps;
 
-        return new AudioOutput(
+        return new(
             Codec: codec,
             BitrateKbps: bitrate,
             Channels: a.Channels > 0 ? a.Channels : 2,
@@ -191,7 +191,7 @@ public static class ProfileMapper
                 ? s.CustomArguments.ToDictionary(c => c.key, c => c.Val)
                 : null;
 
-        return new SubtitleOutput(
+        return new(
             Codec: codec,
             Mode: SubtitleMode.Extract,
             AllowedLanguages: s.AllowedLanguages,

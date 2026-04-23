@@ -22,7 +22,7 @@ public class BuildStageTests
             FfmpegPathOverride = "ffmpeg",
             FfprobePathOverride = "ffprobe",
         };
-        _stage = new BuildStage(
+        _stage = new(
             options,
             new FontExtractor(),
             new SubtitleExtractor(),
@@ -36,21 +36,21 @@ public class BuildStageTests
         new(
             Groups:
             [
-                new ExecutionGroup(
+                new(
                     GroupId: "group_0",
                     Nodes:
                     [
-                        new ExecutionNode(
+                        new(
                             "decode_0",
                             OperationType.Decode,
                             [],
-                            new Dictionary<string, string>()
+                            new()
                         ),
-                        new ExecutionNode(
+                        new(
                             "encode_0",
                             OperationType.Encode,
                             ["decode_0"],
-                            new Dictionary<string, string>()
+                            new()
                         ),
                     ],
                     DeviceId: null,
@@ -61,11 +61,11 @@ public class BuildStageTests
                 ),
             ],
             EstimatedTotalDuration: TimeSpan.FromMinutes(90),
-            OutputPlan: new OutputPlan(
+            OutputPlan: new(
                 Format: OutputFormat.Hls,
                 VideoOutputs:
                 [
-                    new VideoOutputPlan(
+                    new(
                         Width: 1920,
                         Height: 1080,
                         EncoderName: "libx264",
@@ -77,12 +77,12 @@ public class BuildStageTests
                         TenBit: false,
                         PixelFormat: "yuv420p",
                         MapLabel: "[v0]",
-                        ExtraFlags: new Dictionary<string, string>()
+                        ExtraFlags: new()
                     ),
                 ],
                 AudioOutputs:
                 [
-                    new AudioOutputPlan(
+                    new(
                         EncoderName: "aac",
                         BitrateKbps: 192,
                         Channels: 2,

@@ -45,7 +45,7 @@ public class HardwareBenchmarkHostedServiceTests
                 {
                     calibrationStarted.TrySetResult(true);
                     return Task.FromResult(
-                        new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>())
+                        new SpeedIndex(new())
                     );
                 }
             );
@@ -83,7 +83,7 @@ public class HardwareBenchmarkHostedServiceTests
                         cancelSeen.TrySetResult(true);
                         throw;
                     }
-                    return new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>());
+                    return new(new());
                 }
             );
 
@@ -102,7 +102,7 @@ public class HardwareBenchmarkHostedServiceTests
     ) =>
         new(
             benchmark,
-            new EncoderOptions
+            new()
             {
                 FfmpegPathOverride = "ffmpeg",
                 FfprobePathOverride = "ffprobe",

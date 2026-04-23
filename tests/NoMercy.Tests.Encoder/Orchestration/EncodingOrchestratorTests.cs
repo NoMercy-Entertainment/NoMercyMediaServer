@@ -122,7 +122,7 @@ public class EncodingOrchestratorTests
         new(
             InputPath: "/media/test.mkv",
             OutputDirectory: "/out",
-            Profile: new EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test",
                 Format: format,
@@ -155,7 +155,7 @@ public class EncodingOrchestratorTests
                     OutputPath: "/out",
                     Duration: TimeSpan.Zero,
                     Error: null,
-                    Metrics: new EncodingMetrics(0, 0, 0, "test", null)
+                    Metrics: new(0, 0, 0, "test", null)
                 )
             );
         return mock;

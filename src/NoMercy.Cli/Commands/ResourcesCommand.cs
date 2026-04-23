@@ -21,7 +21,7 @@ internal static class ResourcesCommand
 
                 if (resources is null)
                 {
-                    Console.Error.WriteLine("Could not retrieve resource information.");
+                    await Console.Error.WriteLineAsync("Could not retrieve resource information.");
                     return 1;
                 }
 

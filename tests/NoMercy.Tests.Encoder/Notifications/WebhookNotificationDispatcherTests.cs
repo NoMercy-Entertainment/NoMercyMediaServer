@@ -16,7 +16,7 @@ public class WebhookNotificationDispatcherTests
         WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
 
         await dispatcher.NotifyStartedAsync(
-            new EncodingStartedNotification(1, "/in", "/out", "HLS"),
+            new(1, "/in", "/out", "HLS"),
             CancellationToken.None
         );
 
@@ -31,7 +31,7 @@ public class WebhookNotificationDispatcherTests
         WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
 
         await dispatcher.NotifyStartedAsync(
-            new EncodingStartedNotification(42, "/in.mkv", "/out", "HLS 1080p"),
+            new(42, "/in.mkv", "/out", "HLS 1080p"),
             CancellationToken.None
         );
 
@@ -49,7 +49,7 @@ public class WebhookNotificationDispatcherTests
         WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
 
         await dispatcher.NotifyCompletedAsync(
-            new EncodingCompletedNotification(7, "/out.mp4", TimeSpan.FromSeconds(120)),
+            new(7, "/out.mp4", TimeSpan.FromSeconds(120)),
             CancellationToken.None
         );
 
@@ -66,7 +66,7 @@ public class WebhookNotificationDispatcherTests
         WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
 
         await dispatcher.NotifyCompletedAsync(
-            new EncodingCompletedNotification(99, "/out.m3u8", TimeSpan.FromSeconds(180)),
+            new(99, "/out.m3u8", TimeSpan.FromSeconds(180)),
             CancellationToken.None
         );
 
@@ -87,7 +87,7 @@ public class WebhookNotificationDispatcherTests
         WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
 
         await dispatcher.NotifyFailedAsync(
-            new EncodingFailedNotification(
+            new(
                 5,
                 "/src.mkv",
                 "ffmpeg crashed",
@@ -116,7 +116,7 @@ public class WebhookNotificationDispatcherTests
         cts.CancelAfter(TimeSpan.FromSeconds(4));
 
         await dispatcher.NotifyStartedAsync(
-            new EncodingStartedNotification(1, "/in", "/out", "HLS"),
+            new(1, "/in", "/out", "HLS"),
             cts.Token
         );
 
@@ -141,7 +141,7 @@ public class WebhookNotificationDispatcherTests
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(6));
         await dispatcher.NotifyStartedAsync(
-            new EncodingStartedNotification(1, "/in", "/out", "HLS"),
+            new(1, "/in", "/out", "HLS"),
             cts.Token
         );
 
@@ -163,7 +163,7 @@ public class WebhookNotificationDispatcherTests
         await cts.CancelAsync();
 
         await dispatcher.NotifyStartedAsync(
-            new EncodingStartedNotification(1, "/in", "/out", "HLS"),
+            new(1, "/in", "/out", "HLS"),
             cts.Token
         );
 
@@ -185,7 +185,7 @@ public class WebhookNotificationDispatcherTests
     )
     {
         HttpClient client = new(handler);
-        return new WebhookNotificationDispatcher(
+        return new(
             options,
             client,
             NullLogger<WebhookNotificationDispatcher>.Instance
@@ -206,7 +206,7 @@ public class WebhookNotificationDispatcherTests
                 ? string.Empty
                 : await request.Content.ReadAsStringAsync(cancellationToken);
             Requests.Add((request.RequestUri!.ToString(), body));
-            return new HttpResponseMessage(StatusCode);
+            return new(StatusCode);
         }
     }
 

@@ -40,29 +40,29 @@ public class PlanStageAutoLadderTests
             .Returns(
                 new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
-                    EncoderInfo: new EncoderInfo(
+                    EncoderInfo: new(
                         FfmpegName: "libx264",
                         RequiredVendor: null,
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new QualityRange(0, 51, 23),
+                        QualityRange: new(0, 51, 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
                         MaxConcurrentSessions: int.MaxValue,
                         PixelFormat10Bit: "yuv420p10le",
-                        VendorSpecificFlags: new Dictionary<string, string>()
+                        VendorSpecificFlags: new()
                     ),
                     Device: null,
                     DefaultRateControl: RateControlMode.Crf
                 )
             );
 
-        _stage = new PlanStage(
-            new ExecutionGraphBuilder(),
-            new GroupingStrategy(),
-            new CostEstimator(),
+        _stage = new(
+            new(),
+            new(),
+            new(),
             _codecResolver.Object,
             _hardware.Object,
             new TonemapSelector(),
@@ -167,7 +167,7 @@ public class PlanStageAutoLadderTests
             FileSizeBytes: 4_000_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: width,

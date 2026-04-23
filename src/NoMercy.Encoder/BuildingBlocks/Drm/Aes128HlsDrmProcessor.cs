@@ -67,7 +67,7 @@ public class Aes128HlsDrmProcessor : IDrmProcessor
             $"{config.KeyUri}\n{keyFileForwardSlash}\n{Convert.ToHexString(iv).ToLowerInvariant()}\n";
         await File.WriteAllTextAsync(keyInfoPath, keyInfoContent, ct).ConfigureAwait(false);
 
-        return new DrmArtifact(
+        return new(
             KeyInfoFilePath: keyInfoPath,
             KeyFilePath: keyFilePath,
             KeyUri: config.KeyUri,

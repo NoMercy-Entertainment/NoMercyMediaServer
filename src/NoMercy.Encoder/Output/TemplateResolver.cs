@@ -27,7 +27,7 @@ public static class TemplateResolver
 
     public static Dictionary<string, string> VideoTokens(int width, int height, bool tenBit)
     {
-        return new Dictionary<string, string>
+        return new()
         {
             ["type"] = "video",
             ["framesize"] = $"{width}x{height}",
@@ -41,7 +41,7 @@ public static class TemplateResolver
         int channels
     )
     {
-        return new Dictionary<string, string>
+        return new()
         {
             ["type"] = "audio",
             ["language"] = language,
@@ -56,7 +56,7 @@ public static class TemplateResolver
         string filename
     )
     {
-        return new Dictionary<string, string>
+        return new()
         {
             ["language"] = language,
             ["variant"] = variant,

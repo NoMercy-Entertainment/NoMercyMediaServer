@@ -380,7 +380,7 @@ public class SpecialsController(
             .Select(si =>
             {
                 if (si.MovieId is not null && si.Movie is not null)
-                    return new SpecialItemResponseDto
+                    return new()
                     {
                         Id = si.Id.ToString(),
                         Order = si.Order,

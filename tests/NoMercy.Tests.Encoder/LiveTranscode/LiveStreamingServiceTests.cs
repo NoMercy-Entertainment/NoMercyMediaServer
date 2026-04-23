@@ -132,7 +132,7 @@ public class LiveStreamingServiceTests
     {
         string tempDir = Path.Combine(Path.GetTempPath(), $"live-scratch-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
-        File.WriteAllText(Path.Combine(tempDir, "seg_00000.ts"), "data");
+        await File.WriteAllTextAsync(Path.Combine(tempDir, "seg_00000.ts"), "data");
 
         try
         {

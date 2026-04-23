@@ -19,7 +19,7 @@ public class CodecRegistry
 
         _videoDefinitions = definitions.ToDictionary(d => d.CodecType);
 
-        _encodersByName = new Dictionary<string, EncoderInfo>();
+        _encodersByName = new();
         foreach (ICodecDefinition def in definitions)
         {
             foreach (EncoderInfo encoder in def.Encoders)

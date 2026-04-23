@@ -63,7 +63,7 @@ internal static partial class LogsCommand
 
                 if (logs is null)
                 {
-                    Console.Error.WriteLine("Could not connect to server.");
+                    await Console.Error.WriteLineAsync("Could not connect to server.");
                     return 1;
                 }
 
@@ -137,7 +137,7 @@ internal static partial class LogsCommand
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"Stream disconnected: {ex.Message}");
+                    await Console.Error.WriteLineAsync($"Stream disconnected: {ex.Message}");
                     return 1;
                 }
 

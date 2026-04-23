@@ -82,7 +82,7 @@ public class EncodingHistoryRepository(MediaContext context)
             .FirstOrDefaultAsync();
 
         return raw is null
-            ? new EncodingHistoryStats(0, 0, 0, 0, 0, 0)
+            ? new(0, 0, 0, 0, 0, 0)
             : new EncodingHistoryStats(
                 TotalEncodes: raw.TotalEncodes,
                 TotalInputBytes: raw.TotalInputBytes,

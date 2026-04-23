@@ -158,12 +158,12 @@ public class Encoder(
             .Select(v => v.EncoderName)
             .FirstOrDefault();
 
-        return new EncodingResult(
+        return new(
             Success: true,
             OutputPath: finalizeOutput.OutputPath,
             Duration: stopwatch.Elapsed,
             Error: null,
-            Metrics: new EncodingMetrics(
+            Metrics: new(
                 OutputSizeBytes: finalizeOutput.OutputSizeBytes,
                 AverageSpeed: execMetrics?.AverageSpeed ?? 0,
                 AverageFps: execMetrics?.AverageFps ?? 0,
@@ -273,11 +273,11 @@ public class Encoder(
             stopwatch.Elapsed
         );
 
-        return new PreviewResult(
+        return new(
             Success: true,
             OutputPath: finalizeOutput.OutputPath,
             Duration: stopwatch.Elapsed,
-            Metrics: new EncodingMetrics(
+            Metrics: new(
                 OutputSizeBytes: finalizeOutput.OutputSizeBytes,
                 AverageSpeed: execMetrics?.AverageSpeed ?? 0,
                 AverageFps: execMetrics?.AverageFps ?? 0,
@@ -291,11 +291,11 @@ public class Encoder(
 
     private static PreviewResult PreviewFail(EncodingError error, TimeSpan elapsed)
     {
-        return new PreviewResult(
+        return new(
             Success: false,
             OutputPath: "",
             Duration: elapsed,
-            Metrics: new EncodingMetrics(0, 0, 0, "", null),
+            Metrics: new(0, 0, 0, "", null),
             OutputSizeBytes: 0,
             Error: error
         );
@@ -308,12 +308,12 @@ public class Encoder(
     )
     {
         progress?.OnError(error);
-        return new EncodingResult(
+        return new(
             Success: false,
             OutputPath: "",
             Duration: elapsed,
             Error: error,
-            Metrics: new EncodingMetrics(0, 0, 0, "", null)
+            Metrics: new(0, 0, 0, "", null)
         );
     }
 }

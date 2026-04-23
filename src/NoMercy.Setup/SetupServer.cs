@@ -526,7 +526,7 @@ public class SetupServer
             // browser open. Both paths run simultaneously — whichever completes first wins.
             if (SetupTerminalUi.IsInteractiveTerminal)
             {
-                _terminalUi ??= new SetupTerminalUi();
+                _terminalUi ??= new();
                 string setupPageUrl = $"http://localhost:{_port}/setup";
                 _terminalUi.Show(
                     deviceData.VerificationUriComplete,

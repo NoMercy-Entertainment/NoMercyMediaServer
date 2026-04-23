@@ -88,7 +88,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
             CpuSnapshot? prev = _previousSnapshots.FirstOrDefault(s => s.Label == curr.Label);
             double util = prev is null ? 0 : Math.Round(CalculatePercent(prev, curr), 1);
 
-            resource.Cpu.Core.Add(new Core { Index = coreIndex, Utilization = util });
+            resource.Cpu.Core.Add(new() { Index = coreIndex, Utilization = util });
             if (util > max)
                 max = util;
             coreIndex++;
@@ -123,7 +123,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
                     continue;
 
                 snapshots.Add(
-                    new CpuSnapshot(
+                    new(
                         Label: parts[0],
                         User: ParseLong(parts, 1),
                         Nice: ParseLong(parts, 2),
@@ -203,7 +203,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
         try
         {
             using Process proc = new();
-            proc.StartInfo = new ProcessStartInfo
+            proc.StartInfo = new()
             {
                 FileName = "nvidia-smi",
                 Arguments =
@@ -231,7 +231,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
                     continue;
 
                 string key = $"gpu/{index}";
-                resource._gpu[key] = new Gpu
+                resource._gpu[key] = new()
                 {
                     Identifier = key,
                     Core = ParseDouble(parts[1]),
@@ -274,7 +274,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
                     continue;
 
                 string key = $"gpu/{index}";
-                resource._gpu[key] = new Gpu
+                resource._gpu[key] = new()
                 {
                     Identifier = key,
                     Core = utilization,

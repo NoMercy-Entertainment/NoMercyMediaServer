@@ -64,7 +64,7 @@ public class SubtitleExtractor : ISubtitleExtractor
         // Relative path — FFmpeg CWD is set to the output directory.
         string outputPath = $"{resolved}.{extension}";
 
-        return new SubtitleOutputInfo(
+        return new(
             OutputPath: outputPath,
             FfmpegCodec: ffmpegCodec,
             Extension: extension,

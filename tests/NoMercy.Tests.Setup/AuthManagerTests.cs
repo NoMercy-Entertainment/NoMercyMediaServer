@@ -24,11 +24,11 @@ public class AuthManagerTests : IDisposable
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
         optionsBuilder.UseSqlite("Data Source=:memory:");
-        _appContext = new AppDbContext(optionsBuilder.Options);
+        _appContext = new(optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new AuthManager(_appContext);
+        _authManager = new(_appContext);
     }
 
     public void Dispose()
@@ -50,7 +50,7 @@ public class AuthManagerTests : IDisposable
         JwtSecurityToken token = new(
             issuer: "https://auth.nomercy.tv/realms/NoMercyTV",
             audience: "nomercy-server",
-            claims: [new Claim("sub", Guid.NewGuid().ToString())],
+            claims: [new("sub", Guid.NewGuid().ToString())],
             notBefore: notBefore,
             expires: validTo
         );
@@ -60,7 +60,7 @@ public class AuthManagerTests : IDisposable
     private async Task SeedSecureValue(string key, string value)
     {
         _appContext.Configuration.Add(
-            new Configuration
+            new()
             {
                 Key = key,
                 Value = string.Empty,

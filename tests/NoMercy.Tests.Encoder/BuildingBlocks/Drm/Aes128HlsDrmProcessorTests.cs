@@ -20,7 +20,7 @@ public class Aes128HlsDrmProcessorTests
             File.Exists(artifact.KeyFilePath).Should().BeTrue();
             File.Exists(artifact.KeyInfoFilePath).Should().BeTrue();
 
-            byte[] onDisk = File.ReadAllBytes(artifact.KeyFilePath);
+            byte[] onDisk = await File.ReadAllBytesAsync(artifact.KeyFilePath);
             onDisk.Should().Equal(artifact.Key);
         }
         finally
@@ -47,7 +47,7 @@ public class Aes128HlsDrmProcessorTests
 
             DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
 
-            string contents = File.ReadAllText(artifact.KeyInfoFilePath);
+            string contents = await File.ReadAllTextAsync(artifact.KeyInfoFilePath);
             string[] lines = contents.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
             lines[0].Should().Be("https://example/k/42");
@@ -73,7 +73,7 @@ public class Aes128HlsDrmProcessorTests
             DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
 
             artifact.Key.Should().Equal(key);
-            byte[] onDisk = File.ReadAllBytes(artifact.KeyFilePath);
+            byte[] onDisk = await File.ReadAllBytesAsync(artifact.KeyFilePath);
             onDisk.Should().Equal(key);
         }
         finally

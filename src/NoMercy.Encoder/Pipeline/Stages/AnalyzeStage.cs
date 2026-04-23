@@ -28,7 +28,7 @@ public class AnalyzeStage(
         if (!fileSystem.FileExists(inputPath))
         {
             return new StageFailure(
-                new EncodingError(
+                new(
                     EncodingErrorKind.InputNotFound,
                     $"Input file not found: {inputPath}",
                     null,
@@ -54,7 +54,7 @@ public class AnalyzeStage(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new StageFailure(
-                new EncodingError(
+                new(
                     EncodingErrorKind.InputCorrupt,
                     $"Failed to analyze: {ex.Message}",
                     null,

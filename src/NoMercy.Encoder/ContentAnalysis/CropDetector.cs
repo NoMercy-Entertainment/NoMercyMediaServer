@@ -69,13 +69,13 @@ public partial class CropDetector(
                 "cropdetect returned exit code {ExitCode}. Skipping crop.",
                 result.ExitCode
             );
-            return new CropResult(0, 0, 0, 0, ShouldCrop: false);
+            return new(0, 0, 0, 0, ShouldCrop: false);
         }
 
         if (observations.Count == 0)
         {
             logger.LogDebug("cropdetect observed no crop values for {Input}", inputPath);
-            return new CropResult(0, 0, 0, 0, ShouldCrop: false);
+            return new(0, 0, 0, 0, ShouldCrop: false);
         }
 
         (string bestCrop, int count) = observations.OrderByDescending(kv => kv.Value).First()
@@ -90,13 +90,13 @@ public partial class CropDetector(
                 bestCrop,
                 count
             );
-            return new CropResult(0, 0, 0, 0, ShouldCrop: false);
+            return new(0, 0, 0, 0, ShouldCrop: false);
         }
 
         // crop=W:H:X:Y — parse the four parts.
         string[] parts = bestCrop.Split(':');
         if (parts.Length != 4)
-            return new CropResult(0, 0, 0, 0, ShouldCrop: false);
+            return new(0, 0, 0, 0, ShouldCrop: false);
 
         if (
             !int.TryParse(parts[0], out int width)
@@ -105,7 +105,7 @@ public partial class CropDetector(
             || !int.TryParse(parts[3], out int y)
         )
         {
-            return new CropResult(0, 0, 0, 0, ShouldCrop: false);
+            return new(0, 0, 0, 0, ShouldCrop: false);
         }
 
         logger.LogInformation(
@@ -120,7 +120,7 @@ public partial class CropDetector(
         // Do not crop when the detected rectangle matches the full frame.
         bool shouldCrop = x > 0 || y > 0;
 
-        return new CropResult(width, height, x, y, shouldCrop);
+        return new(width, height, x, y, shouldCrop);
     }
 
     [GeneratedRegex(@"crop=(?<crop>\d+:\d+:\d+:\d+)")]

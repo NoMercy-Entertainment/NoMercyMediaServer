@@ -78,7 +78,7 @@ public class ProfileMapperAudioBitrateTests
         // default is 384 which is inside every spec. This test proves the
         // mapped profile round-trips cleanly through the validator for
         // every real codec.
-        ProfileValidator validator = new(new CodecRegistry());
+        ProfileValidator validator = new(new());
         string[] codecs = ["aac", "opus", "ac3", "eac3", "mp3", "vorbis", "dts", "flac", "truehd"];
 
         foreach (string codec in codecs)

@@ -117,7 +117,7 @@ public class CodecResolverTests
     {
         List<GpuDevice> gpus = [];
         if (vendor.HasValue)
-            gpus.Add(new GpuDevice(vendor.Value, "Test GPU", 8192, 12, codecs));
+            gpus.Add(new(vendor.Value, "Test GPU", 8192, 12, codecs));
         return new HardwareCapabilities(gpus, 8);
     }
 }

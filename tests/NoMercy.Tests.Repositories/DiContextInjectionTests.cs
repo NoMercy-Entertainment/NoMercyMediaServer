@@ -286,7 +286,7 @@ public class DiContextInjectionTests : IDisposable
             .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
         using TestMediaContext emptyContext = new(options);
-        emptyContext.Database.EnsureCreated();
+        await emptyContext.Database.EnsureCreatedAsync();
 
         MusicRepository repository = new(emptyContext, null!);
 

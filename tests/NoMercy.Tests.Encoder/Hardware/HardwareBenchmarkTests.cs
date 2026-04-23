@@ -82,13 +82,13 @@ public class HardwareBenchmarkTests
             Presets: ["p1", "p2", "p3", "p4", "p5", "p6", "p7"],
             Profiles: ["high"],
             Levels: [],
-            QualityRange: new QualityRange(0, 51, 23),
+            QualityRange: new(0, 51, 23),
             SupportedRateControl: [RateControlMode.Cqp],
             Supports10Bit: false,
             SupportsHdr: false,
             MaxConcurrentSessions: 12,
             PixelFormat10Bit: "",
-            VendorSpecificFlags: new Dictionary<string, string>()
+            VendorSpecificFlags: new()
         );
 
         string[] args = HardwareBenchmark.BuildCalibrationArguments(
@@ -110,13 +110,13 @@ public class HardwareBenchmarkTests
             Presets: ["balanced"],
             Profiles: ["high"],
             Levels: [],
-            QualityRange: new QualityRange(0, 51, 23),
+            QualityRange: new(0, 51, 23),
             SupportedRateControl: [RateControlMode.Cqp],
             Supports10Bit: false,
             SupportsHdr: false,
             MaxConcurrentSessions: int.MaxValue,
             PixelFormat10Bit: "",
-            VendorSpecificFlags: new Dictionary<string, string> { ["-usage"] = "transcoding" }
+            VendorSpecificFlags: new() { ["-usage"] = "transcoding" }
         );
 
         string[] args = HardwareBenchmark.BuildCalibrationArguments(
@@ -191,7 +191,7 @@ public class HardwareBenchmarkTests
         hardware
             .Setup(h => h.Gpus)
             .Returns([
-                new GpuDevice(
+                new(
                     Vendor: GpuVendor.Nvidia,
                     Name: "RTX 4080",
                     VramMb: 16_384,
@@ -215,14 +215,14 @@ public class HardwareBenchmarkTests
         hardware
             .Setup(h => h.Gpus)
             .Returns([
-                new GpuDevice(
+                new(
                     Vendor: GpuVendor.Nvidia,
                     Name: "RTX 4080",
                     VramMb: 16_384,
                     MaxEncoderSessions: 12,
                     SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
                 ),
-                new GpuDevice(
+                new(
                     Vendor: GpuVendor.Nvidia,
                     Name: "RTX 3060",
                     VramMb: 12_288,
@@ -249,21 +249,21 @@ public class HardwareBenchmarkTests
         hardware
             .Setup(h => h.Gpus)
             .Returns([
-                new GpuDevice(
+                new(
                     Vendor: GpuVendor.Nvidia,
                     Name: "RTX 4080",
                     VramMb: 16_384,
                     MaxEncoderSessions: 12,
                     SupportedCodecs: [VideoCodecType.H264]
                 ),
-                new GpuDevice(
+                new(
                     Vendor: GpuVendor.Intel,
                     Name: "Arc A770",
                     VramMb: 16_384,
                     MaxEncoderSessions: 8,
                     SupportedCodecs: [VideoCodecType.H264]
                 ),
-                new GpuDevice(
+                new(
                     Vendor: GpuVendor.Nvidia,
                     Name: "RTX 3060",
                     VramMb: 12_288,
@@ -303,13 +303,13 @@ public class HardwareBenchmarkTests
             Presets: ["p1", "p4", "p7"],
             Profiles: ["high"],
             Levels: [],
-            QualityRange: new QualityRange(0, 51, 23),
+            QualityRange: new(0, 51, 23),
             SupportedRateControl: [RateControlMode.Cqp],
             Supports10Bit: false,
             SupportsHdr: false,
             MaxConcurrentSessions: 12,
             PixelFormat10Bit: "",
-            VendorSpecificFlags: new Dictionary<string, string>()
+            VendorSpecificFlags: new()
         );
 
         string[] args = HardwareBenchmark.BuildCalibrationArguments(
@@ -367,13 +367,13 @@ public class HardwareBenchmarkTests
             Presets: ["p4"],
             Profiles: ["high"],
             Levels: [],
-            QualityRange: new QualityRange(0, 51, 23),
+            QualityRange: new(0, 51, 23),
             SupportedRateControl: [RateControlMode.Cq],
             Supports10Bit: false,
             SupportsHdr: false,
             MaxConcurrentSessions: 12,
             PixelFormat10Bit: "",
-            VendorSpecificFlags: new Dictionary<string, string>()
+            VendorSpecificFlags: new()
         );
         CalibrationTarget target = HardwareTarget(nvenc, "RTX 4080", vendorIndex: 0);
 
@@ -395,13 +395,13 @@ public class HardwareBenchmarkTests
             Presets: ["medium"],
             Profiles: ["high"],
             Levels: [],
-            QualityRange: new QualityRange(1, 51, 23),
+            QualityRange: new(1, 51, 23),
             SupportedRateControl: [RateControlMode.Icq],
             Supports10Bit: false,
             SupportsHdr: false,
             MaxConcurrentSessions: int.MaxValue,
             PixelFormat10Bit: "",
-            VendorSpecificFlags: new Dictionary<string, string>()
+            VendorSpecificFlags: new()
         );
         GpuDevice lowVram = new(
             Vendor: GpuVendor.Intel,
@@ -531,9 +531,9 @@ public class HardwareBenchmarkTests
     {
         Mock<ISpeedIndexStore> store = new();
         SpeedIndex index = new(
-            new Dictionary<SpeedKey, SpeedMeasurement>
+            new()
             {
-                [new SpeedKey(VideoCodecType.H264, "libx264", 1920, null)] = new(
+                [new(VideoCodecType.H264, "libx264", 1920, null)] = new(
                     60,
                     2.0,
                     DateTime.UtcNow.AddDays(-60)
@@ -553,9 +553,9 @@ public class HardwareBenchmarkTests
     {
         Mock<ISpeedIndexStore> store = new();
         SpeedIndex index = new(
-            new Dictionary<SpeedKey, SpeedMeasurement>
+            new()
             {
-                [new SpeedKey(VideoCodecType.H264, "libx264", 1920, null)] = new(
+                [new(VideoCodecType.H264, "libx264", 1920, null)] = new(
                     60,
                     2.0,
                     DateTime.UtcNow.AddDays(-1)
@@ -588,12 +588,12 @@ public class HardwareBenchmarkTests
             processRunner ?? new Mock<IProcessRunner>(MockBehavior.Loose).Object;
         ISpeedIndexStore storeImpl = store ?? new Mock<ISpeedIndexStore>().Object;
 
-        return new HardwareBenchmark(
-            new CodecRegistry(),
+        return new(
+            new(),
             hwImpl,
             runner,
             storeImpl,
-            new EncoderOptions { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
             NullLogger<HardwareBenchmark>.Instance
         );
     }
@@ -605,13 +605,13 @@ public class HardwareBenchmarkTests
             Presets: ["ultrafast", "fast", "medium", "slow", "veryslow"],
             Profiles: ["high"],
             Levels: ["4.1"],
-            QualityRange: new QualityRange(0, 51, 23),
+            QualityRange: new(0, 51, 23),
             SupportedRateControl: [RateControlMode.Crf],
             Supports10Bit: true,
             SupportsHdr: false,
             MaxConcurrentSessions: int.MaxValue,
             PixelFormat10Bit: "yuv420p10le",
-            VendorSpecificFlags: new Dictionary<string, string>()
+            VendorSpecificFlags: new()
         );
 
     private static CalibrationTarget SoftwareTarget(EncoderInfo encoder) =>
@@ -630,6 +630,6 @@ public class HardwareBenchmarkTests
             MaxEncoderSessions: 12,
             SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
         );
-        return new CalibrationTarget(VideoCodecType.H264, encoder, device, vendorIndex);
+        return new(VideoCodecType.H264, encoder, device, vendorIndex);
     }
 }

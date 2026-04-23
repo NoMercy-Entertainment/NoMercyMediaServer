@@ -34,7 +34,7 @@ public class HardwareBenchmarkHostedService(
             return Task.CompletedTask;
         }
 
-        _cts = new CancellationTokenSource();
+        _cts = new();
         // Don't pass CT to Task.Run — if cancellation fires before the task
         // is scheduled, we want RunBenchmarkAsync to still run so it can
         // observe the token and exit cleanly (the catch logs cancellation).
@@ -46,7 +46,7 @@ public class HardwareBenchmarkHostedService(
     {
         try
         {
-            _cts?.Cancel();
+            await _cts?.CancelAsync();
         }
         catch (ObjectDisposedException)
         {

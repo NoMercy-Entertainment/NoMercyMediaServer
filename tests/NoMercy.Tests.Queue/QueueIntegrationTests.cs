@@ -203,7 +203,7 @@ public class QueueIntegrationTests : IDisposable
                 Attempts = 0,
             }
         );
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         // Act 3 - Fix the job and process it successfully
         QueueJobModel? retriedJob = _jobQueue.ReserveJob("failure-test", null);

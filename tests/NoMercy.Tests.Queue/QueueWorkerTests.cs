@@ -43,7 +43,7 @@ public class QueueWorkerTests : IDisposable
         };
 
         _context.QueueJobs.Add(queueJob);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         QueueWorker worker = new(_jobQueue, "test-worker");
         worker.WorkCompleted += (
@@ -102,7 +102,7 @@ public class QueueWorkerTests : IDisposable
         };
 
         _context.QueueJobs.Add(queueJob);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         // Act
         Task workerTask = Task.Run(() =>
@@ -246,7 +246,7 @@ public class QueueWorkerTests : IDisposable
         };
 
         _context.QueueJobs.Add(queueJob);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         // Act — simulate the QueueWorker's processing loop (same logic as QueueWorker.Start)
         await Task.Run(() =>
@@ -301,7 +301,7 @@ public class QueueWorkerTests : IDisposable
         };
 
         _context.QueueJobs.Add(queueJob);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         // Act — simulate QueueWorker processing
         bool jobExecuted = false;

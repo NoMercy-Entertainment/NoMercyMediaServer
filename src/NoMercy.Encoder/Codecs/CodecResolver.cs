@@ -77,6 +77,6 @@ public class CodecResolver(CodecRegistry registry) : ICodecResolver
             : encoder.SupportedRateControl.Contains(RateControlMode.Icq) ? RateControlMode.Icq
             : encoder.SupportedRateControl[0];
 
-        return new ResolvedCodec(encoder.FfmpegName, encoder, device, defaultRc);
+        return new(encoder.FfmpegName, encoder, device, defaultRc);
     }
 }

@@ -23,7 +23,7 @@ public class LiveEncoderTests
             FileSizeBytes: 5_000_000_000L,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: 1920,
@@ -69,7 +69,7 @@ public class LiveEncoderTests
             CanRealtime: true
         );
 
-    private static SpeedIndex MakeSpeedIndex() => new(new Dictionary<SpeedKey, SpeedMeasurement>());
+    private static SpeedIndex MakeSpeedIndex() => new(new());
 
     private static IResourceBudget MakeBudget() => new ResourceBudget(gpuDevices: [], cpuCores: 8);
 
@@ -103,7 +103,7 @@ public class LiveEncoderTests
             LiveTranscodeCachePath = Path.Combine(Path.GetTempPath(), "nomercy-live-tests"),
         };
 
-        return new LiveEncoder(
+        return new(
             selector,
             manager,
             new LiveStreamingService(NullLogger<LiveStreamingService>.Instance),
@@ -154,7 +154,7 @@ public class LiveEncoderTests
     private static ISessionManager CreateUnlimitedSessionManager()
     {
         SessionManager manager = new(
-            new LiveSessionLimits { MaxConcurrentSessions = 100, MaxSessionsPerUser = 100 }
+            new() { MaxConcurrentSessions = 100, MaxSessionsPerUser = 100 }
         );
         return manager;
     }
@@ -281,7 +281,7 @@ public class LiveEncoderTests
     [Fact]
     public async Task StartAsync_SessionIsRegisteredInSessionManager()
     {
-        SessionManager sessionManager = new(new LiveSessionLimits { MaxConcurrentSessions = 10 });
+        SessionManager sessionManager = new(new() { MaxConcurrentSessions = 10 });
         LiveEncoder encoder = BuildEncoder(sessionManager: sessionManager);
         LiveEncodeRequest request = MakeRequest();
 
@@ -309,7 +309,7 @@ public class LiveEncoderTests
     [Fact]
     public async Task StartAsync_ThrowsWhenSessionLimitReached()
     {
-        SessionManager sessionManager = new(new LiveSessionLimits { MaxConcurrentSessions = 1 });
+        SessionManager sessionManager = new(new() { MaxConcurrentSessions = 1 });
         LiveEncoder encoder = BuildEncoder(sessionManager: sessionManager);
 
         // Fill the limit

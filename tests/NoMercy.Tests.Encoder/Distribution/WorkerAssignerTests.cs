@@ -26,8 +26,8 @@ public class WorkerAssignerTests
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             [],
             [
-                new WorkerCapacity("a", SpeedMultiplier: 2.0, AvailableSlots: 4),
-                new WorkerCapacity("b", SpeedMultiplier: 1.0, AvailableSlots: 2),
+                new("a", SpeedMultiplier: 2.0, AvailableSlots: 4),
+                new("b", SpeedMultiplier: 1.0, AvailableSlots: 2),
             ]
         );
 
@@ -51,8 +51,8 @@ public class WorkerAssignerTests
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             tasks,
             [
-                new WorkerCapacity("beast", SpeedMultiplier: 4.0, AvailableSlots: 4),
-                new WorkerCapacity("laptop", SpeedMultiplier: 1.0, AvailableSlots: 2),
+                new("beast", SpeedMultiplier: 4.0, AvailableSlots: 4),
+                new("laptop", SpeedMultiplier: 1.0, AvailableSlots: 2),
             ]
         );
 
@@ -75,8 +75,8 @@ public class WorkerAssignerTests
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             tasks,
             [
-                new WorkerCapacity("a", SpeedMultiplier: 2.0, AvailableSlots: 2),
-                new WorkerCapacity("b", SpeedMultiplier: 2.0, AvailableSlots: 2),
+                new("a", SpeedMultiplier: 2.0, AvailableSlots: 2),
+                new("b", SpeedMultiplier: 2.0, AvailableSlots: 2),
             ]
         );
 
@@ -91,7 +91,7 @@ public class WorkerAssignerTests
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             [MakeTask("t0", EncodeTaskType.QualityVariant)],
-            [new WorkerCapacity("only", SpeedMultiplier: 1.5, AvailableSlots: 0)]
+            [new("only", SpeedMultiplier: 1.5, AvailableSlots: 0)]
         );
 
         result["only"].Should().HaveCount(1);
@@ -113,8 +113,8 @@ public class WorkerAssignerTests
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             tasks,
             [
-                new WorkerCapacity("beast", SpeedMultiplier: 4.0, AvailableSlots: 4),
-                new WorkerCapacity("slow", SpeedMultiplier: 1.0, AvailableSlots: 2),
+                new("beast", SpeedMultiplier: 4.0, AvailableSlots: 4),
+                new("slow", SpeedMultiplier: 1.0, AvailableSlots: 2),
             ]
         );
 
@@ -139,9 +139,9 @@ public class WorkerAssignerTests
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             tasks,
             [
-                new WorkerCapacity("a", 2.0, 4),
-                new WorkerCapacity("b", 1.0, 2),
-                new WorkerCapacity("c", 0.5, 1),
+                new("a", 2.0, 4),
+                new("b", 1.0, 2),
+                new("c", 0.5, 1),
             ]
         );
 
@@ -152,7 +152,7 @@ public class WorkerAssignerTests
     private static EncodeTask MakeTask(string id, EncodeTaskType type) =>
         new(
             TaskId: id,
-            Command: new FfmpegCommand("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: $"/out/{id}",
             Type: type
         );

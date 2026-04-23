@@ -21,7 +21,7 @@ internal static class PluginCommand
 
                 if (plugins is null)
                 {
-                    Console.Error.WriteLine("Could not connect to server.");
+                    await Console.Error.WriteLineAsync("Could not connect to server.");
                     return 1;
                 }
 

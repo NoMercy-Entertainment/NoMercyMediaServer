@@ -233,8 +233,8 @@ public class LiveFfmpegRunnerTests
             FakeProcessRunner runner = new(() =>
             {
                 // Simulate FFmpeg producing two segments during its run
-                File.WriteAllText(Path.Combine(tempDir, "seg_00000.ts"), new string('a', 100));
-                File.WriteAllText(Path.Combine(tempDir, "seg_00001.ts"), new string('a', 100));
+                File.WriteAllText(Path.Combine(tempDir, "seg_00000.ts"), new('a', 100));
+                File.WriteAllText(Path.Combine(tempDir, "seg_00001.ts"), new('a', 100));
                 File.WriteAllText(
                     Path.Combine(tempDir, "index.m3u8"),
                     """
@@ -253,7 +253,7 @@ public class LiveFfmpegRunnerTests
 
             LiveFfmpegRunner sut = new(
                 runner,
-                new EncoderOptions
+                new()
                 {
                     FfmpegPathOverride = "ffmpeg",
                     FfprobePathOverride = "ffprobe",

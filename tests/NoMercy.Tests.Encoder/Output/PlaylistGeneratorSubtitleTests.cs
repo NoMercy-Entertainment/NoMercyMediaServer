@@ -46,7 +46,7 @@ public class PlaylistGeneratorSubtitleTests
             AudioOutputs: [BuildAudio()],
             SubtitleOutputs:
             [
-                new SubtitleOutputPlan(
+                new(
                     OutputCodec: SubtitleCodecType.WebVtt,
                     Action: StreamAction.Drop,
                     Language: "eng",
@@ -72,7 +72,7 @@ public class PlaylistGeneratorSubtitleTests
 
     private static OutputPlan CreatePlanWithoutSubtitles()
     {
-        return new OutputPlan(
+        return new(
             Format: OutputFormat.Hls,
             VideoOutputs: [BuildVideo()],
             AudioOutputs: [BuildAudio()],
@@ -94,7 +94,7 @@ public class PlaylistGeneratorSubtitleTests
             TenBit: false,
             PixelFormat: "yuv420p",
             MapLabel: "[v0]",
-            ExtraFlags: new Dictionary<string, string>()
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudio() =>

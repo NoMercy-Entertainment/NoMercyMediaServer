@@ -55,7 +55,7 @@ public class PlaybackDecisionEngineTests
         List<VideoStreamInfo> videos = video is not null ? [video] : [];
         List<AudioStreamInfo> audios = audio is not null ? [audio] : [];
 
-        return new MediaInfo(
+        return new(
             FilePath: "/media/test.file",
             Format: format,
             Duration: TimeSpan.FromMinutes(90),

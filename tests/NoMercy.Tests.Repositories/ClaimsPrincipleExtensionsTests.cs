@@ -89,7 +89,7 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
                 Manage = false,
             }
         );
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         await ClaimsPrincipleExtensions.RefreshUsersAsync(_context);
 

@@ -13,7 +13,7 @@ public class TesseractModelManagerTests : IDisposable
     public TesseractModelManagerTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"TessTest_{Guid.NewGuid():N}");
-        _options = new EncoderOptions
+        _options = new()
         {
             FfmpegPathOverride = "ffmpeg",
             TesseractModelsDirectory = _tempDir,
@@ -75,7 +75,7 @@ public class TesseractModelManagerTests : IDisposable
     [Fact]
     public async Task Ensure_EmptyLanguage_ThrowsArgumentException()
     {
-        TesseractModelManager manager = BuildManager(new FakeHandler());
+        TesseractModelManager manager = BuildManager(new());
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             manager.EnsureLanguageModelAsync("", CancellationToken.None)
@@ -85,7 +85,7 @@ public class TesseractModelManagerTests : IDisposable
     [Fact]
     public void GetDownloadedLanguages_WhenDirectoryMissing_ReturnsEmpty()
     {
-        TesseractModelManager manager = BuildManager(new FakeHandler());
+        TesseractModelManager manager = BuildManager(new());
 
         IReadOnlyList<string> langs = manager.GetDownloadedLanguages();
 
@@ -100,7 +100,7 @@ public class TesseractModelManagerTests : IDisposable
         await File.WriteAllTextAsync(Path.Combine(_tempDir, "fra.traineddata"), "data");
         await File.WriteAllTextAsync(Path.Combine(_tempDir, "readme.txt"), "not a model");
 
-        TesseractModelManager manager = BuildManager(new FakeHandler());
+        TesseractModelManager manager = BuildManager(new());
 
         IReadOnlyList<string> langs = manager.GetDownloadedLanguages();
 
@@ -129,7 +129,7 @@ public class TesseractModelManagerTests : IDisposable
     private TesseractModelManager BuildManager(FakeHandler handler)
     {
         HttpClient client = new(handler);
-        return new TesseractModelManager(
+        return new(
             _options,
             client,
             NullLogger<TesseractModelManager>.Instance

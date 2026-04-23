@@ -57,7 +57,7 @@ public abstract class SingleFileAudioOutputStrategy : IOutputStrategy
         }
 
         builder.AddOutput(
-            new OutputOptions(
+            new(
                 FilePath: outputPath,
                 AudioCodec: audioCodec,
                 AudioBitrateKbps: audio?.Action == StreamAction.Transcode

@@ -43,7 +43,7 @@ public class HlsSinglePassStrategyTests
                     OutputPath: "/out",
                     Duration: TimeSpan.FromSeconds(1),
                     Error: null,
-                    Metrics: new EncodingMetrics(1024, 2.0, 24.0, "libx264", null)
+                    Metrics: new(1024, 2.0, 24.0, "libx264", null)
                 )
             );
 
@@ -52,7 +52,7 @@ public class HlsSinglePassStrategyTests
         EncodingRequest request = new(
             InputPath: "/media/test.mkv",
             OutputDirectory: "/out",
-            Profile: new EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "HLS 1080p",
                 Format: OutputFormat.Hls,

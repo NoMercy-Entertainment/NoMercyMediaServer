@@ -123,7 +123,7 @@ public class WorkersController(
                 Gpus: request.Gpus ?? [],
                 CpuCores: request.CpuCores
             ),
-            initialBudget: new ResourceBudgetSnapshot(
+            initialBudget: new(
                 AvailableGpuSlots: request.AvailableGpuSlots,
                 AvailableCpuThreads: request.AvailableCpuThreads,
                 GpuUtilization: 0
@@ -166,7 +166,7 @@ public class WorkersController(
             {
                 http.UpdateSnapshot(
                     http.GetCapabilities(),
-                    new ResourceBudgetSnapshot(
+                    new(
                         AvailableGpuSlots: gpu,
                         AvailableCpuThreads: cpu,
                         GpuUtilization: request.GpuUtilization ?? 0
@@ -204,7 +204,7 @@ public class WorkersController(
 
         progressStore.Update(
             taskId,
-            new TaskProgressSnapshot(
+            new(
                 TaskId: taskId,
                 WorkerId: workerId,
                 PercentComplete: update.PercentComplete,

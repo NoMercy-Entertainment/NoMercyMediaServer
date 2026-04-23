@@ -20,9 +20,9 @@ internal sealed class CliClient : IDisposable
         if (!response.IsSuccessStatusCode)
         {
             string body = await response.Content.ReadAsStringAsync(cancellationToken);
-            Console.Error.WriteLine($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+            await Console.Error.WriteLineAsync($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
             if (!string.IsNullOrWhiteSpace(body))
-                Console.Error.WriteLine(body);
+                await Console.Error.WriteLineAsync(body);
             return null;
         }
 
@@ -40,7 +40,7 @@ internal sealed class CliClient : IDisposable
 
         if (!response.IsSuccessStatusCode)
         {
-            Console.Error.WriteLine($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+            await Console.Error.WriteLineAsync($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
             return null;
         }
 
@@ -63,9 +63,9 @@ internal sealed class CliClient : IDisposable
             return true;
 
         string body = await response.Content.ReadAsStringAsync(cancellationToken);
-        Console.Error.WriteLine($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+        await Console.Error.WriteLineAsync($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
         if (!string.IsNullOrWhiteSpace(body))
-            Console.Error.WriteLine(body);
+            await Console.Error.WriteLineAsync(body);
 
         return false;
     }
@@ -86,9 +86,9 @@ internal sealed class CliClient : IDisposable
         if (!response.IsSuccessStatusCode)
         {
             string body = await response.Content.ReadAsStringAsync(cancellationToken);
-            Console.Error.WriteLine($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+            await Console.Error.WriteLineAsync($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
             if (!string.IsNullOrWhiteSpace(body))
-                Console.Error.WriteLine(body);
+                await Console.Error.WriteLineAsync(body);
             return null;
         }
 
@@ -113,9 +113,9 @@ internal sealed class CliClient : IDisposable
             return true;
 
         string body = await response.Content.ReadAsStringAsync(cancellationToken);
-        Console.Error.WriteLine($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+        await Console.Error.WriteLineAsync($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
         if (!string.IsNullOrWhiteSpace(body))
-            Console.Error.WriteLine(body);
+            await Console.Error.WriteLineAsync(body);
 
         return false;
     }

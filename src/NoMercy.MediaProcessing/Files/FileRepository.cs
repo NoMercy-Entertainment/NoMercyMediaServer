@@ -618,7 +618,7 @@ public class FileRepository(MediaContext context) : IFileRepository
         if (overrideTmdbId.HasValue)
         {
             // Resolve directly by TMDB ID — no text search, no ambiguity
-            movie = new TmdbMovie { Id = overrideTmdbId.Value };
+            movie = new() { Id = overrideTmdbId.Value };
         }
         else
         {

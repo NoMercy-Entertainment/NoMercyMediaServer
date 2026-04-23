@@ -65,7 +65,7 @@ public class ProcessResourceMonitorTests
         sut.GetCpuUsagePercent().Should().Be(0);
         sut.GetAvailableMemoryMb().Should().Be(0);
         sut.GetGpuEncodeUtilization(
-                new GpuDevice(
+                new(
                     GpuVendor.Nvidia,
                     "n/a",
                     VramMb: 0,

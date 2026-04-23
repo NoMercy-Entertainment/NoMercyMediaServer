@@ -112,6 +112,6 @@ public class Vp9ArgumentResolverTests
                 MaxEncoderSessions: 12,
                 SupportedCodecs: [VideoCodecType.Vp9]
             );
-        return new ResolvedCodec(ffmpegName, encoder, device, defaultRateControl);
+        return new(ffmpegName, encoder, device, defaultRateControl);
     }
 }

@@ -102,7 +102,7 @@ public class DiscRipper(
 
         if (!result.IsSuccess)
         {
-            return new DiscRipResult(
+            return new(
                 TitleIndex: titleIndex,
                 OutputPath: outputPath,
                 Success: false,
@@ -122,7 +122,7 @@ public class DiscRipper(
             stopwatch.Elapsed
         );
 
-        return new DiscRipResult(
+        return new(
             TitleIndex: titleIndex,
             OutputPath: outputPath,
             Success: true,

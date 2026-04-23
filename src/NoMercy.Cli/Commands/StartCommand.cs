@@ -33,7 +33,7 @@ internal static class StartCommand
 
                 if (startInfo is null)
                 {
-                    Console.Error.WriteLine("Could not find server executable.");
+                    await Console.Error.WriteLineAsync("Could not find server executable.");
                     return 1;
                 }
 
@@ -48,12 +48,12 @@ internal static class StartCommand
                         return 0;
                     }
 
-                    Console.Error.WriteLine("Failed to start server.");
+                    await Console.Error.WriteLineAsync("Failed to start server.");
                     return 1;
                 }
                 catch (Exception e)
                 {
-                    Console.Error.WriteLine($"Failed to start server: {e.Message}");
+                    await Console.Error.WriteLineAsync($"Failed to start server: {e.Message}");
                     return 1;
                 }
             }

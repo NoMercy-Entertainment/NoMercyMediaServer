@@ -138,7 +138,7 @@ public class AbrLadderGeneratorTests
             FileSizeBytes: 4_000_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: width,

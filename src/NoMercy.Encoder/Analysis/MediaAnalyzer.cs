@@ -57,7 +57,7 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
                     break;
                 case "attachment":
                     attachments.Add(
-                        new AttachmentInfo(
+                        new(
                             Index: stream.Value<int>("index"),
                             Codec: stream.Value<string>("codec_name") ?? "unknown",
                             Filename: stream["tags"]?.Value<string>("filename"),
@@ -72,7 +72,7 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
         foreach (JToken chapter in chapters)
         {
             chapterList.Add(
-                new ChapterInfo(
+                new(
                     Start: TimeSpan.FromSeconds(chapter.Value<double>("start_time")),
                     End: TimeSpan.FromSeconds(chapter.Value<double>("end_time")),
                     Title: chapter["tags"]?.Value<string>("title")
@@ -87,7 +87,7 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
 
         DolbyVisionInfo? dolbyVision = ParseDolbyVision(streams);
 
-        return new MediaInfo(
+        return new(
             FilePath: filePath,
             Format: formatName,
             Duration: TimeSpan.FromSeconds(durationSeconds),
@@ -110,7 +110,7 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
         double? avgFrameRate = ParseNullableFrameRate(stream.Value<string>("avg_frame_rate"));
         double? realFrameRate = ParseNullableFrameRate(stream.Value<string>("r_frame_rate"));
 
-        return new VideoStreamInfo(
+        return new(
             Index: stream.Value<int>("index"),
             Codec: stream.Value<string>("codec_name") ?? "unknown",
             Width: stream.Value<int>("width"),
@@ -174,7 +174,7 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
                     _ => DvBlCompatibility.None,
                 };
 
-                return new DolbyVisionInfo(profile, level, hasRpu, hasEl, compat);
+                return new(profile, level, hasRpu, hasEl, compat);
             }
         }
 
@@ -183,7 +183,7 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
 
     private static AudioStreamInfo ParseAudioStream(JToken stream)
     {
-        return new AudioStreamInfo(
+        return new(
             Index: stream.Value<int>("index"),
             Codec: stream.Value<string>("codec_name") ?? "unknown",
             Channels: stream.Value<int>("channels"),
@@ -197,7 +197,7 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
 
     private static SubtitleStreamInfo ParseSubtitleStream(JToken stream)
     {
-        return new SubtitleStreamInfo(
+        return new(
             Index: stream.Value<int>("index"),
             Codec: stream.Value<string>("codec_name") ?? "unknown",
             Language: stream["tags"]?.Value<string>("language"),

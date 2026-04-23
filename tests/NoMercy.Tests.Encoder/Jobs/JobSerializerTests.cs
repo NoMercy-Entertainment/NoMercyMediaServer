@@ -129,7 +129,7 @@ public class JobSerializerTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutput(
+                new(
                     VideoCodecType.H264,
                     1920,
                     1080,
@@ -143,12 +143,12 @@ public class JobSerializerTests
                     false
                 ),
             ],
-            AudioOutputs: [new AudioOutput(AudioCodecType.Aac, 192, 2, 48000, [])],
+            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
             SubtitleOutputs: [],
             Thumbnails: null
         );
 
-        return new EncodingJob(
+        return new(
             JobId: "job-123",
             InputPath: "/media/video.mkv",
             OutputDirectory: "/output/encoded",

@@ -19,7 +19,7 @@ public class BuildStageBurnInTests
     public BuildStageBurnInTests()
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
-        _stage = new BuildStage(
+        _stage = new(
             options,
             new FontExtractor(),
             new SubtitleExtractor(),
@@ -38,7 +38,7 @@ public class BuildStageBurnInTests
             AudioOutputs: [],
             SubtitleOutputs:
             [
-                new SubtitleOutputPlan(
+                new(
                     OutputCodec: SubtitleCodecType.Ass,
                     Action: StreamAction.Transcode,
                     Language: "en",
@@ -66,7 +66,7 @@ public class BuildStageBurnInTests
             AudioOutputs: [],
             SubtitleOutputs:
             [
-                new SubtitleOutputPlan(
+                new(
                     OutputCodec: SubtitleCodecType.Ass,
                     Action: StreamAction.Transcode,
                     Language: "en",
@@ -92,7 +92,7 @@ public class BuildStageBurnInTests
             AudioOutputs: [],
             SubtitleOutputs:
             [
-                new SubtitleOutputPlan(
+                new(
                     OutputCodec: SubtitleCodecType.Ass,
                     Action: StreamAction.Transcode,
                     Language: "en",
@@ -132,7 +132,7 @@ public class BuildStageBurnInTests
             AudioOutputs: [],
             SubtitleOutputs:
             [
-                new SubtitleOutputPlan(
+                new(
                     OutputCodec: SubtitleCodecType.Ass,
                     Action: StreamAction.Transcode,
                     Language: "en",
@@ -163,7 +163,7 @@ public class BuildStageBurnInTests
             AudioOutputs: [],
             SubtitleOutputs:
             [
-                new SubtitleOutputPlan(
+                new(
                     OutputCodec: SubtitleCodecType.WebVtt,
                     Action: StreamAction.Extract,
                     Language: "en",
@@ -207,15 +207,15 @@ public class BuildStageBurnInTests
         new(
             Groups:
             [
-                new ExecutionGroup(
+                new(
                     GroupId: "group_0",
                     Nodes:
                     [
-                        new ExecutionNode(
+                        new(
                             "decode_0",
                             OperationType.Decode,
                             [],
-                            new Dictionary<string, string>()
+                            new()
                         ),
                     ],
                     DeviceId: null,
@@ -238,7 +238,7 @@ public class BuildStageBurnInTests
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: width,
@@ -256,7 +256,7 @@ public class BuildStageBurnInTests
             AudioStreams: [],
             SubtitleStreams:
             [
-                new SubtitleStreamInfo(
+                new(
                     Index: 0,
                     Codec: textBased ? "ass" : "hdmv_pgs_subtitle",
                     Language: "en",
@@ -281,6 +281,6 @@ public class BuildStageBurnInTests
             TenBit: false,
             PixelFormat: "yuv420p",
             MapLabel: mapLabel,
-            ExtraFlags: new Dictionary<string, string>()
+            ExtraFlags: new()
         );
 }

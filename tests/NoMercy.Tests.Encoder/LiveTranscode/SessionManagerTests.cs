@@ -28,7 +28,7 @@ public class SessionManagerTests
     [Fact]
     public void CanStartSession_WhenEmpty_ReturnsTrue()
     {
-        SessionManager manager = new(new LiveSessionLimits { MaxConcurrentSessions = 4 });
+        SessionManager manager = new(new() { MaxConcurrentSessions = 4 });
 
         bool result = manager.CanStartSession();
 
@@ -38,7 +38,7 @@ public class SessionManagerTests
     [Fact]
     public void CanStartSession_WhenAtMaxConcurrent_ReturnsFalse()
     {
-        SessionManager manager = new(new LiveSessionLimits { MaxConcurrentSessions = 2 });
+        SessionManager manager = new(new() { MaxConcurrentSessions = 2 });
         manager.RegisterSession(MakeSession("s1"));
         manager.RegisterSession(MakeSession("s2"));
 
@@ -50,7 +50,7 @@ public class SessionManagerTests
     [Fact]
     public void CanStartSession_WhenUnderMax_ReturnsTrue()
     {
-        SessionManager manager = new(new LiveSessionLimits { MaxConcurrentSessions = 4 });
+        SessionManager manager = new(new() { MaxConcurrentSessions = 4 });
         manager.RegisterSession(MakeSession("s1"));
         manager.RegisterSession(MakeSession("s2"));
 
@@ -67,7 +67,7 @@ public class SessionManagerTests
     public void CanStartSession_WhenUserAtMax_ReturnsFalse()
     {
         SessionManager manager = new(
-            new LiveSessionLimits { MaxConcurrentSessions = 10, MaxSessionsPerUser = 2 }
+            new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 2 }
         );
         manager.RegisterSession(MakeSession("u1-s1"), userId: "user-1");
         manager.RegisterSession(MakeSession("u1-s2"), userId: "user-1");
@@ -81,7 +81,7 @@ public class SessionManagerTests
     public void CanStartSession_DifferentUser_NotAffectedByOtherUserLimit()
     {
         SessionManager manager = new(
-            new LiveSessionLimits { MaxConcurrentSessions = 10, MaxSessionsPerUser = 2 }
+            new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 2 }
         );
         manager.RegisterSession(MakeSession("u1-s1"), userId: "user-1");
         manager.RegisterSession(MakeSession("u1-s2"), userId: "user-1");
@@ -95,7 +95,7 @@ public class SessionManagerTests
     public void CanStartSession_NullUser_NotBoundByPerUserLimit()
     {
         SessionManager manager = new(
-            new LiveSessionLimits { MaxConcurrentSessions = 10, MaxSessionsPerUser = 1 }
+            new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 1 }
         );
         manager.RegisterSession(MakeSession("anon-1"));
         manager.RegisterSession(MakeSession("anon-2"));
@@ -113,7 +113,7 @@ public class SessionManagerTests
     [Fact]
     public void ActiveSessionCount_StartsAtZero()
     {
-        SessionManager manager = new(new LiveSessionLimits());
+        SessionManager manager = new(new());
 
         manager.ActiveSessionCount.Should().Be(0);
     }
@@ -121,7 +121,7 @@ public class SessionManagerTests
     [Fact]
     public void RegisterSession_IncreasesCount()
     {
-        SessionManager manager = new(new LiveSessionLimits());
+        SessionManager manager = new(new());
 
         manager.RegisterSession(MakeSession("s1"));
         manager.RegisterSession(MakeSession("s2"));
@@ -132,7 +132,7 @@ public class SessionManagerTests
     [Fact]
     public void RemoveSession_DecreasesCount()
     {
-        SessionManager manager = new(new LiveSessionLimits());
+        SessionManager manager = new(new());
         manager.RegisterSession(MakeSession("s1"));
         manager.RegisterSession(MakeSession("s2"));
 
@@ -144,7 +144,7 @@ public class SessionManagerTests
     [Fact]
     public void RemoveSession_FreesSlot_AllowsNewSession()
     {
-        SessionManager manager = new(new LiveSessionLimits { MaxConcurrentSessions = 2 });
+        SessionManager manager = new(new() { MaxConcurrentSessions = 2 });
         manager.RegisterSession(MakeSession("s1"));
         manager.RegisterSession(MakeSession("s2"));
         manager.CanStartSession().Should().BeFalse();
@@ -157,7 +157,7 @@ public class SessionManagerTests
     [Fact]
     public void RemoveSession_UnknownId_DoesNotThrow()
     {
-        SessionManager manager = new(new LiveSessionLimits());
+        SessionManager manager = new(new());
 
         Action act = () => manager.RemoveSession("nonexistent");
 
@@ -167,7 +167,7 @@ public class SessionManagerTests
     [Fact]
     public void ActiveSessions_ReflectsRegisteredSessions()
     {
-        SessionManager manager = new(new LiveSessionLimits());
+        SessionManager manager = new(new());
         LiveSession session = MakeSession("s1");
         manager.RegisterSession(session);
 
@@ -177,7 +177,7 @@ public class SessionManagerTests
     [Fact]
     public void RemoveSession_ShouldRemoveFromActiveSessions()
     {
-        SessionManager manager = new(new LiveSessionLimits());
+        SessionManager manager = new(new());
         manager.RegisterSession(MakeSession("s1"));
         manager.RegisterSession(MakeSession("s2"));
 

@@ -51,7 +51,7 @@ public class DistributionEndToEndTests
         // Fake HTTP handler routes /execute-task straight into the worker's
         // controller logic.
         WorkerHandler handler = new(workerLocalDispatcher, _serializer, _sharedKey);
-        HttpClient httpToWorker = new(handler) { BaseAddress = new Uri("http://worker.test/") };
+        HttpClient httpToWorker = new(handler) { BaseAddress = new("http://worker.test/") };
 
         HttpRemoteWorker remoteWorker = new(
             workerId: "end2end-worker",
@@ -59,7 +59,7 @@ public class DistributionEndToEndTests
             serializer: _serializer,
             signingKey: _sharedKey,
             initialCapabilities: new HardwareCapabilities([], 4),
-            initialBudget: new ResourceBudgetSnapshot(0, 4, 0),
+            initialBudget: new(0, 4, 0),
             logger: NullLogger<HttpRemoteWorker>.Instance
         );
 
@@ -107,7 +107,7 @@ public class DistributionEndToEndTests
         );
 
         WorkerHandler handler = new(workerLocal, _serializer, wrongKey);
-        HttpClient httpToWorker = new(handler) { BaseAddress = new Uri("http://worker.test/") };
+        HttpClient httpToWorker = new(handler) { BaseAddress = new("http://worker.test/") };
 
         HttpRemoteWorker remoteWorker = new(
             workerId: "mismatched-key",
@@ -115,7 +115,7 @@ public class DistributionEndToEndTests
             serializer: _serializer,
             signingKey: _sharedKey, // coordinator's key — doesn't match worker's
             initialCapabilities: new HardwareCapabilities([], 4),
-            initialBudget: new ResourceBudgetSnapshot(0, 4, 0),
+            initialBudget: new(0, 4, 0),
             logger: NullLogger<HttpRemoteWorker>.Instance
         );
 
@@ -175,7 +175,7 @@ public class DistributionEndToEndTests
     private static EncodeTask MakeTask(string id) =>
         new(
             TaskId: id,
-            Command: new FfmpegCommand("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: $"/out/{id}",
             Type: EncodeTaskType.QualityVariant
         );
@@ -199,12 +199,12 @@ public class DistributionEndToEndTests
         )
         {
             if (!request.RequestUri!.AbsolutePath.Contains("/worker/execute-task"))
-                return new HttpResponseMessage(HttpStatusCode.NotFound);
+                return new(HttpStatusCode.NotFound);
 
             string body = await request.Content!.ReadAsStringAsync(cancellationToken);
             EncodeTask? task = serializer.Deserialize(body, workerSigningKey);
             if (task is null)
-                return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+                return new(HttpStatusCode.Unauthorized);
 
             ReceivedTaskCount++;
             DispatchResult[] results = await localDispatcher.DispatchAsync(
@@ -214,7 +214,7 @@ public class DistributionEndToEndTests
             DispatchResult result = results[0];
 
             string signed = serializer.SerializeResult(result, workerSigningKey);
-            return new HttpResponseMessage(HttpStatusCode.OK)
+            return new(HttpStatusCode.OK)
             {
                 Content = new StringContent(signed, Encoding.UTF8, "application/json"),
             };

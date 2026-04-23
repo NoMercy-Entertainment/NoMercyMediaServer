@@ -49,7 +49,7 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
     /// </summary>
     public void Register(IRemoteWorker worker)
     {
-        _workers[worker.WorkerId] = new RegisteredWorker(
+        _workers[worker.WorkerId] = new(
             Worker: worker,
             LastSeenUtc: _clock(),
             ConsecutiveFailures: 0,

@@ -156,7 +156,7 @@ public class BuildStageDrmTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     Width: 1280,
                     Height: 720,
                     EncoderName: "libx264",
@@ -168,12 +168,12 @@ public class BuildStageDrmTests
                     TenBit: false,
                     PixelFormat: "yuv420p",
                     MapLabel: "[v0]",
-                    ExtraFlags: new Dictionary<string, string>()
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs:
             [
-                new AudioOutputPlan(
+                new(
                     EncoderName: "aac",
                     BitrateKbps: 192,
                     Channels: 2,
@@ -192,15 +192,15 @@ public class BuildStageDrmTests
         new(
             Groups:
             [
-                new ExecutionGroup(
+                new(
                     GroupId: "group_0",
                     Nodes:
                     [
-                        new ExecutionNode(
+                        new(
                             "decode_0",
                             OperationType.Decode,
                             [],
-                            new Dictionary<string, string>()
+                            new()
                         ),
                     ],
                     DeviceId: null,
@@ -223,7 +223,7 @@ public class BuildStageDrmTests
             FileSizeBytes: 4_000_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: 1920,

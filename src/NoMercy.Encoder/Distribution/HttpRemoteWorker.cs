@@ -94,7 +94,7 @@ public class HttpRemoteWorker : IRemoteWorker
                 task.TaskId,
                 WorkerId
             );
-            return new DispatchResult(
+            return new(
                 TaskId: task.TaskId,
                 Success: false,
                 OutputPath: task.OutputPath,
@@ -114,7 +114,7 @@ public class HttpRemoteWorker : IRemoteWorker
                 task.TaskId,
                 Truncate(body, 500)
             );
-            return new DispatchResult(
+            return new(
                 TaskId: task.TaskId,
                 Success: false,
                 OutputPath: task.OutputPath,
@@ -133,7 +133,7 @@ public class HttpRemoteWorker : IRemoteWorker
                 WorkerId,
                 task.TaskId
             );
-            return new DispatchResult(
+            return new(
                 TaskId: task.TaskId,
                 Success: false,
                 OutputPath: task.OutputPath,
@@ -170,7 +170,7 @@ public class HttpRemoteWorker : IRemoteWorker
                 WorkerId: WorkerId,
                 OutputPath: string.Empty,
                 Duration: TimeSpan.Zero,
-                Error: new EncodingError(
+                Error: new(
                     Kind: EncodingErrorKind.Unknown,
                     Message: "Job-level remote dispatch not supported — use task-level",
                     FfmpegStderr: null,

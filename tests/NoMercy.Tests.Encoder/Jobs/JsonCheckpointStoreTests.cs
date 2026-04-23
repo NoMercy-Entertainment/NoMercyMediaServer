@@ -14,7 +14,7 @@ public class JsonCheckpointStoreTests : IDisposable
         _tempDir = Path.Combine(Path.GetTempPath(), $"CheckpointStore_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
 
-        _store = new JsonCheckpointStore(
+        _store = new(
             new FileSystemAdapter(),
             NullLogger<JsonCheckpointStore>.Instance
         );
@@ -86,7 +86,7 @@ public class JsonCheckpointStoreTests : IDisposable
         DateTime before = DateTime.UtcNow;
         JobCheckpoint checkpoint = Build(_tempDir) with
         {
-            LastUpdated = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            LastUpdated = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
         };
 
         await _store.SaveAsync(checkpoint);

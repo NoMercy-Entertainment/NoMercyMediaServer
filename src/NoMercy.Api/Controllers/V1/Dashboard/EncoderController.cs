@@ -50,7 +50,7 @@ public class EncoderController(EncoderRepository encoderRepository, CodecRegistr
                 Format: OutputFormat.Hls,
                 VideoOutputs:
                 [
-                    new VideoOutput(
+                    new(
                         Codec: VideoCodecType.H264,
                         Width: 1920,
                         Height: null,
@@ -66,7 +66,7 @@ public class EncoderController(EncoderRepository encoderRepository, CodecRegistr
                 ],
                 AudioOutputs:
                 [
-                    new AudioOutput(
+                    new(
                         Codec: AudioCodecType.Aac,
                         BitrateKbps: 192,
                         Channels: 2,
@@ -278,7 +278,7 @@ public class EncoderController(EncoderRepository encoderRepository, CodecRegistr
             },
         ];
 
-        return new ContainerDto
+        return new()
         {
             Label = label,
             Value = value,

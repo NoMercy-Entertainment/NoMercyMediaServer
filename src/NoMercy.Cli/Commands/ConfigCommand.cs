@@ -23,7 +23,7 @@ internal static class ConfigCommand
 
                 if (config is null)
                 {
-                    Console.Error.WriteLine("Could not connect to server.");
+                    await Console.Error.WriteLineAsync("Could not connect to server.");
                     return 1;
                 }
 

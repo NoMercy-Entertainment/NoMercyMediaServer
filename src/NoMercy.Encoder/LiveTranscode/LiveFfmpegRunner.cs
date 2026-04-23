@@ -86,7 +86,7 @@ public class LiveFfmpegRunner(
         {
             try
             {
-                stopPolling.Cancel();
+                await stopPolling.CancelAsync();
                 await pollingTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException)

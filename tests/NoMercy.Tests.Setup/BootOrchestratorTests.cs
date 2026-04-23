@@ -23,13 +23,13 @@ public class BootOrchestratorTests : IDisposable
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
         optionsBuilder.UseSqlite("Data Source=:memory:");
-        _appContext = new AppDbContext(optionsBuilder.Options);
+        _appContext = new(optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new AuthManager(_appContext);
-        _setupState = new SetupState();
-        _orchestrator = new BootOrchestrator(_setupState, _authManager);
+        _authManager = new(_appContext);
+        _setupState = new();
+        _orchestrator = new(_setupState, _authManager);
     }
 
     public void Dispose()

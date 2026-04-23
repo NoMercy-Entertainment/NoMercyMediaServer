@@ -188,7 +188,7 @@ public class PluginRepositoryTests : IDisposable
         string repoFile = Path.Combine(_tempDir, "configurations", "repositories.json");
         File.Exists(repoFile).Should().BeTrue();
 
-        string json = File.ReadAllText(repoFile);
+        string json = await File.ReadAllTextAsync(repoFile);
         json.Should().Contain("persisted");
     }
 
@@ -261,7 +261,7 @@ public class PluginRepositoryTests : IDisposable
                 },
             }
         );
-        File.WriteAllText(Path.Combine(configDir, "repositories.json"), repoConfig);
+        await File.WriteAllTextAsync(Path.Combine(configDir, "repositories.json"), repoConfig);
 
         PluginRepository repo2 = new(client, NullLogger.Instance, _tempDir);
         Func<Task> act = () => repo2.RefreshAsync();

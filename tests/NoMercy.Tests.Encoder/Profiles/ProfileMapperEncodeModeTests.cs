@@ -53,7 +53,7 @@ public class ProfileMapperEncodeModeTests
             container: "m3u8",
             videoProfiles:
             [
-                new V1VideoProfile(
+                new(
                     Codec: "h264",
                     Bitrate: 4000,
                     Width: 1920,

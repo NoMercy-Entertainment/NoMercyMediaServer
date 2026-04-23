@@ -15,7 +15,7 @@ public class GroupingStrategyTests
     private static IHardwareCapabilities MakeGpuCaps(int maxSessions) =>
         new HardwareCapabilities(
             [
-                new GpuDevice(
+                new(
                     GpuVendor.Nvidia,
                     "RTX 4090",
                     24576,
@@ -39,11 +39,11 @@ public class GroupingStrategyTests
     {
         List<ExecutionNode> nodes =
         [
-            new ExecutionNode(
+            new(
                 decodeId,
                 OperationType.Decode,
                 [],
-                new Dictionary<string, string> { ["stream_index"] = "0", ["codec"] = "h264" }
+                new() { ["stream_index"] = "0", ["codec"] = "h264" }
             ),
         ];
 
@@ -51,11 +51,11 @@ public class GroupingStrategyTests
         {
             string scaleId = $"node_scale_{i}";
             nodes.Add(
-                new ExecutionNode(
+                new(
                     scaleId,
                     OperationType.Scale,
                     [decodeId],
-                    new Dictionary<string, string>
+                    new()
                     {
                         ["width"] = "1920",
                         ["height"] = "1080",
@@ -65,11 +65,11 @@ public class GroupingStrategyTests
             );
 
             nodes.Add(
-                new ExecutionNode(
+                new(
                     $"node_encode_{i}",
                     OperationType.Encode,
                     [scaleId],
-                    new Dictionary<string, string>
+                    new()
                     {
                         ["encoder"] = "h264_nvenc",
                         ["crf"] = "22",
@@ -90,11 +90,11 @@ public class GroupingStrategyTests
         for (int i = 0; i < count; i++)
         {
             nodes.Add(
-                new ExecutionNode(
+                new(
                     $"sub_{i}",
                     OperationType.SubtitleExtract,
                     [],
-                    new Dictionary<string, string>
+                    new()
                     {
                         ["stream_index"] = i.ToString(),
                         ["language"] = "eng",
@@ -108,21 +108,21 @@ public class GroupingStrategyTests
 
     private static List<ExecutionNode> ThumbnailNodes() =>
         [
-            new ExecutionNode(
+            new(
                 "thumb_0",
                 OperationType.ThumbnailCapture,
                 [],
-                new Dictionary<string, string> { ["width"] = "320", ["interval"] = "10" }
+                new() { ["width"] = "320", ["interval"] = "10" }
             ),
         ];
 
     private static List<ExecutionNode> ChapterNodes() =>
         [
-            new ExecutionNode(
+            new(
                 "chapter_0",
                 OperationType.ChapterExtract,
                 [],
-                new Dictionary<string, string>()
+                new()
             ),
         ];
 

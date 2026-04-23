@@ -19,11 +19,11 @@ public class CostEstimatorTests
             GroupId: "group_0",
             Nodes:
             [
-                new ExecutionNode(
+                new(
                     "sub_0",
                     OperationType.SubtitleExtract,
                     [],
-                    new Dictionary<string, string>()
+                    new()
                 ),
             ],
             DeviceId: null,
@@ -46,11 +46,11 @@ public class CostEstimatorTests
             GroupId: "group_0",
             Nodes:
             [
-                new ExecutionNode(
+                new(
                     "ch_0",
                     OperationType.ChapterExtract,
                     [],
-                    new Dictionary<string, string>()
+                    new()
                 ),
             ],
             DeviceId: null,
@@ -76,17 +76,17 @@ public class CostEstimatorTests
             GroupId: "group_0",
             Nodes:
             [
-                new ExecutionNode(
+                new(
                     "decode_0",
                     OperationType.Decode,
                     [],
-                    new Dictionary<string, string>()
+                    new()
                 ),
-                new ExecutionNode(
+                new(
                     "encode_0",
                     OperationType.Encode,
                     ["decode_0"],
-                    new Dictionary<string, string>()
+                    new()
                 ),
             ],
             DeviceId: "RTX 4090",
@@ -110,17 +110,17 @@ public class CostEstimatorTests
             GroupId: "group_0",
             Nodes:
             [
-                new ExecutionNode(
+                new(
                     "decode_0",
                     OperationType.Decode,
                     [],
-                    new Dictionary<string, string>()
+                    new()
                 ),
-                new ExecutionNode(
+                new(
                     "encode_0",
                     OperationType.Encode,
                     ["decode_0"],
-                    new Dictionary<string, string>()
+                    new()
                 ),
             ],
             DeviceId: null,
@@ -144,11 +144,11 @@ public class CostEstimatorTests
             GroupId: "group_1",
             Nodes:
             [
-                new ExecutionNode(
+                new(
                     "enc_0",
                     OperationType.Encode,
                     [],
-                    new Dictionary<string, string>()
+                    new()
                 ),
             ],
             DeviceId: "RTX 4090",
@@ -175,15 +175,15 @@ public class CostEstimatorTests
     {
         List<ExecutionGroup> groups =
         [
-            new ExecutionGroup(
+            new(
                 GroupId: "sub",
                 Nodes:
                 [
-                    new ExecutionNode(
+                    new(
                         "sub_0",
                         OperationType.SubtitleExtract,
                         [],
-                        new Dictionary<string, string>()
+                        new()
                     ),
                 ],
                 DeviceId: null,
@@ -192,21 +192,21 @@ public class CostEstimatorTests
                 RequiresGpu: false,
                 Priority: 0
             ),
-            new ExecutionGroup(
+            new(
                 GroupId: "main",
                 Nodes:
                 [
-                    new ExecutionNode(
+                    new(
                         "decode_0",
                         OperationType.Decode,
                         [],
-                        new Dictionary<string, string>()
+                        new()
                     ),
-                    new ExecutionNode(
+                    new(
                         "encode_0",
                         OperationType.Encode,
                         ["decode_0"],
-                        new Dictionary<string, string>()
+                        new()
                     ),
                 ],
                 DeviceId: "RTX 4090",

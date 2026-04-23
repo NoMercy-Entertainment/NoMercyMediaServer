@@ -88,7 +88,7 @@ public class HttpRemoteWorkerTests
         HttpRemoteWorker sut = MakeWorker("w", http);
 
         using CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         Func<Task> act = () => sut.ExecuteTaskAsync(MakeTask("t5"), cts.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -104,7 +104,7 @@ public class HttpRemoteWorkerTests
 
         sut.UpdateSnapshot(
             MakeCapabilities(),
-            new ResourceBudgetSnapshot(
+            new(
                 AvailableGpuSlots: 2,
                 AvailableCpuThreads: 16,
                 GpuUtilization: 0.1
@@ -126,7 +126,7 @@ public class HttpRemoteWorkerTests
             serializer: _serializer,
             signingKey: _signingKey,
             initialCapabilities: MakeCapabilities(),
-            initialBudget: new ResourceBudgetSnapshot(0, 4, 0),
+            initialBudget: new(0, 4, 0),
             logger: NullLogger<HttpRemoteWorker>.Instance
         );
 
@@ -135,7 +135,7 @@ public class HttpRemoteWorkerTests
     private static EncodeTask MakeTask(string id) =>
         new(
             TaskId: id,
-            Command: new FfmpegCommand("ffmpeg", [], null),
+            Command: new("ffmpeg", [], null),
             OutputPath: $"/out/{id}",
             Type: EncodeTaskType.QualityVariant
         );
@@ -150,13 +150,13 @@ public class HttpRemoteWorkerTests
             )
         )
         {
-            BaseAddress = new Uri("http://worker.test/"),
+            BaseAddress = new("http://worker.test/"),
         };
 
     private static HttpClient MakeClientThrowing(Exception ex) =>
         new(new FakeHandler((req, ct) => Task.FromException<HttpResponseMessage>(ex)))
         {
-            BaseAddress = new Uri("http://worker.test/"),
+            BaseAddress = new("http://worker.test/"),
         };
 
     private sealed class FakeHandler(

@@ -88,7 +88,7 @@ public class QueueBehaviorTests : IDisposable
             Attempts = 0,
         };
         _context.QueueJobs.Add(job);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         // Attempt 1: reserve, execute (fail), fail-job
         QueueJobModel? attempt1 = _jobQueue.ReserveJob("retry-loop", null);
@@ -266,7 +266,7 @@ public class QueueBehaviorTests : IDisposable
             Attempts = 0,
         };
         _context.QueueJobs.Add(job);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         // Attempt 1: reserve (Attempts → 1), fail
         QueueJobModel? a1 = jobQueue.ReserveJob("lifecycle", null);
@@ -752,7 +752,7 @@ public class QueueBehaviorTests : IDisposable
             Attempts = 0,
         };
         _context.QueueJobs.Add(job);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         // Act — reserve and deserialize
         QueueJobModel? reserved = _jobQueue.ReserveJob("serde-test", null);

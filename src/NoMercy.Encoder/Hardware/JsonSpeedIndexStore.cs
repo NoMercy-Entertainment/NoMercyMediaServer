@@ -33,12 +33,12 @@ public class JsonSpeedIndexStore(EncoderOptions options, ILogger<JsonSpeedIndexS
             Dictionary<SpeedKey, SpeedMeasurement> map = new();
             foreach (SpeedEntryDto entry in dto.Entries)
             {
-                map[new SpeedKey(entry.Codec, entry.Encoder, entry.Width, entry.DeviceName)] =
-                    new SpeedMeasurement(entry.Fps, entry.SpeedMultiplier, entry.MeasuredAt);
+                map[new(entry.Codec, entry.Encoder, entry.Width, entry.DeviceName)] =
+                    new(entry.Fps, entry.SpeedMultiplier, entry.MeasuredAt);
             }
 
             _lastCalibratedAt = dto.CalibratedAt;
-            return new SpeedIndex(map);
+            return new(map);
         }
         catch (Exception ex)
         {

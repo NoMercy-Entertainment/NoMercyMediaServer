@@ -47,7 +47,7 @@ public class DashOutputStrategy : IOutputStrategy
         }
 
         builder.AddOutput(
-            new OutputOptions(
+            new(
                 FilePath: mpdPath,
                 VideoCodec: primaryVideo?.EncoderName,
                 AudioCodec: primaryAudio?.Action == StreamAction.Copy

@@ -51,7 +51,7 @@ public class GroupingStrategy
                 // All fit in one group
                 List<ExecutionNode> mainNodes = [.. videoChain, .. audioNodes];
                 groups.Add(
-                    new ExecutionGroup(
+                    new(
                         GroupId: $"group_{groupId++}",
                         Nodes: mainNodes.ToArray(),
                         DeviceId: hardware.HasGpu ? hardware.Gpus[0].Name : null,
@@ -80,7 +80,7 @@ public class GroupingStrategy
                         i == 0 ? [.. sharedNodes, .. batch, .. audioNodes] : [.. batch];
 
                     groups.Add(
-                        new ExecutionGroup(
+                        new(
                             GroupId: $"group_{groupId++}",
                             Nodes: groupNodes.ToArray(),
                             DeviceId: hardware.HasGpu ? hardware.Gpus[0].Name : null,
@@ -98,7 +98,7 @@ public class GroupingStrategy
         if (subtitleNodes.Count > 0)
         {
             groups.Add(
-                new ExecutionGroup(
+                new(
                     GroupId: $"group_{groupId++}",
                     Nodes: subtitleNodes.ToArray(),
                     DeviceId: null,
@@ -113,7 +113,7 @@ public class GroupingStrategy
         if (chapterNodes.Count > 0)
         {
             groups.Add(
-                new ExecutionGroup(
+                new(
                     GroupId: $"group_{groupId++}",
                     Nodes: chapterNodes.ToArray(),
                     DeviceId: null,
@@ -128,7 +128,7 @@ public class GroupingStrategy
         if (thumbnailNodes.Count > 0)
         {
             groups.Add(
-                new ExecutionGroup(
+                new(
                     GroupId: $"group_{groupId++}",
                     Nodes: thumbnailNodes.ToArray(),
                     DeviceId: null,

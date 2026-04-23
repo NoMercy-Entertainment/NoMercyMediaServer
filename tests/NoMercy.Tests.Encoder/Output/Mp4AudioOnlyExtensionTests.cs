@@ -38,7 +38,7 @@ public class Mp4AudioOnlyExtensionTests : IDisposable
             VideoOutputs: [],
             AudioOutputs:
             [
-                new AudioOutputPlan(
+                new(
                     EncoderName: "libfdk_aac",
                     BitrateKbps: 192,
                     Channels: 2,
@@ -69,7 +69,7 @@ public class Mp4AudioOnlyExtensionTests : IDisposable
             Format: OutputFormat.Mp4,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     Width: 1920,
                     Height: 1080,
                     EncoderName: "libx264",
@@ -81,7 +81,7 @@ public class Mp4AudioOnlyExtensionTests : IDisposable
                     TenBit: false,
                     PixelFormat: "yuv420p",
                     MapLabel: "[v0]",
-                    ExtraFlags: new Dictionary<string, string>()
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs: [],

@@ -19,13 +19,13 @@ public class ResourceBudget : IResourceBudget
     {
         _monitor = monitor;
         _logger = logger;
-        _cpuSemaphore = new SemaphoreSlim(cpuCores, cpuCores);
+        _cpuSemaphore = new(cpuCores, cpuCores);
 
-        _gpuSemaphores = new ConcurrentDictionary<GpuDevice, SemaphoreSlim>();
+        _gpuSemaphores = new();
 
         foreach (GpuDevice device in gpuDevices)
         {
-            _gpuSemaphores[device] = new SemaphoreSlim(
+            _gpuSemaphores[device] = new(
                 device.MaxEncoderSessions,
                 device.MaxEncoderSessions
             );
@@ -79,7 +79,7 @@ public class ResourceBudget : IResourceBudget
 
         _logger?.LogDebug("Lease {LeaseId} granted", leaseId);
 
-        return new ResourceLease(
+        return new(
             leaseId,
             requirement.GpuDevice,
             requirement.GpuSlots,
@@ -162,7 +162,7 @@ public class ResourceBudget : IResourceBudget
 
         _logger?.LogDebug("Lease {LeaseId} granted via TryAcquire", leaseId);
 
-        return new ResourceLease(
+        return new(
             leaseId,
             requirement.GpuDevice,
             requirement.GpuSlots,

@@ -294,8 +294,8 @@ public class TvShowRepositoryTests : IDisposable
             $"Expected multiple split queries, got {interceptor.CapturedSql.Count}"
         );
 
-        ctx.Database.EnsureDeleted();
-        ctx.Dispose();
+        await ctx.Database.EnsureDeletedAsync();
+        await ctx.DisposeAsync();
     }
 
     #endregion

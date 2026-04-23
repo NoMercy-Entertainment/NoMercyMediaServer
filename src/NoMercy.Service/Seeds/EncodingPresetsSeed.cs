@@ -130,7 +130,7 @@ public static class EncodingPresetsSeed
 
         return
         [
-            new EncodingPreset
+            new()
             {
                 Id = generalId,
                 Name = "General — 1080p Fast",
@@ -146,7 +146,7 @@ public static class EncodingPresetsSeed
                     preset: "medium"
                 ),
             },
-            new EncodingPreset
+            new()
             {
                 Id = webHighId,
                 Name = "Web — 720p",
@@ -162,7 +162,7 @@ public static class EncodingPresetsSeed
                     preset: "fast"
                 ),
             },
-            new EncodingPreset
+            new()
             {
                 Id = archivalId,
                 Name = "Archival — H.265 1080p",
@@ -180,7 +180,7 @@ public static class EncodingPresetsSeed
                     codec: "H265"
                 ),
             },
-            new EncodingPreset
+            new()
             {
                 Id = animeId,
                 Name = "Anime — 1080p",
@@ -198,7 +198,7 @@ public static class EncodingPresetsSeed
                     tune: "animation"
                 ),
             },
-            new EncodingPreset
+            new()
             {
                 Id = musicId,
                 Name = "Music — AAC 192k",
@@ -228,7 +228,7 @@ public static class EncodingPresetsSeed
             // Chromecast devices support H.264 High Profile up to Level 4.1
             // (1080p) and HE-AAC stereo. Staying on-spec for this target maps
             // to the widest reach of smart TVs and streamers too.
-            new EncodingPreset
+            new()
             {
                 Id = chromecast1080pId,
                 Name = "Chromecast — 1080p",
@@ -280,7 +280,7 @@ public static class EncodingPresetsSeed
             // Dolby Digital Plus (EAC3) for surround. HDR passthrough requires
             // 10-bit + HEVC + no tonemap. hvc1 tag is set by the encoder
             // pipeline for videotoolbox.
-            new EncodingPreset
+            new()
             {
                 Id = appleTv4KId,
                 Name = "Apple TV 4K — HDR",
@@ -332,7 +332,7 @@ public static class EncodingPresetsSeed
             // ceiling. AAC 96k stereo keeps audio reasonable without eating
             // the bandwidth budget. H.264 Main @ L3.1 plays on every phone
             // from the last decade.
-            new EncodingPreset
+            new()
             {
                 Id = mobileLowId,
                 Name = "Mobile — 480p Low Bandwidth",
@@ -383,7 +383,7 @@ public static class EncodingPresetsSeed
             // 4K archival: HEVC 10-bit at CRF 18 (visually lossless), FLAC
             // audio preserved in MKV. Massive files — intended for long-term
             // storage of source-quality material, not streaming.
-            new EncodingPreset
+            new()
             {
                 Id = uhd4KArchivalId,
                 Name = "4K Archival — HEVC + FLAC",
@@ -429,7 +429,7 @@ public static class EncodingPresetsSeed
             // surround gives small high-quality audio. MKV holds ASS
             // subtitles unchanged (HLS would convert to WebVTT and lose
             // typesetting).
-            new EncodingPreset
+            new()
             {
                 Id = animeHevcId,
                 Name = "Anime — HEVC 10-bit 1080p",
@@ -470,7 +470,7 @@ public static class EncodingPresetsSeed
                     }
                     """,
             },
-            new EncodingPreset
+            new()
             {
                 Id = musicMp3Id,
                 Name = "Music — MP3 320k",
@@ -497,7 +497,7 @@ public static class EncodingPresetsSeed
                     }
                     """,
             },
-            new EncodingPreset
+            new()
             {
                 Id = musicFlacId,
                 Name = "Music — FLAC Lossless",

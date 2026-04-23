@@ -85,7 +85,7 @@ internal static class ColorQuantizer
                 byte qg = (byte)(pixel.G & QuantizationMask);
                 byte qb = (byte)(pixel.B & QuantizationMask);
 
-                pixels.Add(new QuantizedColor(qr, qg, qb, pixel.R, pixel.G, pixel.B));
+                pixels.Add(new(qr, qg, qb, pixel.R, pixel.G, pixel.B));
             }
         }
 
@@ -95,7 +95,7 @@ internal static class ColorQuantizer
 
     private static List<ColorSwatch> MedianCutQuantize(List<QuantizedColor> pixels)
     {
-        List<ColorBox> boxes = [new ColorBox(pixels)];
+        List<ColorBox> boxes = [new(pixels)];
 
         while (boxes.Count < MaxSwatches)
         {
@@ -209,7 +209,7 @@ internal static class ColorQuantizer
         ColorSwatch? muted = assigned.GetValueOrDefault("Muted");
         ColorSwatch primarySwatch = vibrant ?? muted ?? dominantSwatch;
 
-        return new PaletteColors
+        return new()
         {
             Dominant = SwatchToHex(dominantSwatch),
             Primary = SwatchToHex(primarySwatch),
@@ -230,7 +230,7 @@ internal static class ColorQuantizer
 
     private static PaletteColors EmptyPalette()
     {
-        return new PaletteColors
+        return new()
         {
             Dominant = "#808080FF",
             Primary = "#808080FF",
@@ -422,7 +422,7 @@ internal static class ColorQuantizer
             List<QuantizedColor> leftPixels = _pixels.GetRange(0, median);
             List<QuantizedColor> rightPixels = _pixels.GetRange(median, _pixels.Count - median);
 
-            return (new ColorBox(leftPixels), new ColorBox(rightPixels));
+            return (new(leftPixels), new(rightPixels));
         }
 
         public ColorSwatch ToSwatch()
@@ -444,7 +444,7 @@ internal static class ColorQuantizer
 
             (double saturation, double luminance) = GetHsl(avgR, avgG, avgB);
 
-            return new ColorSwatch(avgR, avgG, avgB, _pixels.Count, saturation, luminance);
+            return new(avgR, avgG, avgB, _pixels.Count, saturation, luminance);
         }
 
         private enum Channel

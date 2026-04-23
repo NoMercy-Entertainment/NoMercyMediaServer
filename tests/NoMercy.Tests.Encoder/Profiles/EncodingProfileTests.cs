@@ -8,7 +8,7 @@ public class EncodingProfileTests
     [Fact]
     public void EncodingProfile_RoundTrips_AllFields()
     {
-        VideoOutput video = new VideoOutput(
+        VideoOutput video = new(
             Codec: VideoCodecType.H264,
             Width: 1920,
             Height: 1080,
@@ -22,7 +22,7 @@ public class EncodingProfileTests
             TenBit: false
         );
 
-        AudioOutput audio = new AudioOutput(
+        AudioOutput audio = new(
             Codec: AudioCodecType.Aac,
             BitrateKbps: 192,
             Channels: 2,
@@ -30,17 +30,17 @@ public class EncodingProfileTests
             AllowedLanguages: ["en"]
         );
 
-        SubtitleOutput subtitle = new SubtitleOutput(
+        SubtitleOutput subtitle = new(
             Codec: SubtitleCodecType.WebVtt,
             Mode: SubtitleMode.Extract,
             AllowedLanguages: ["en"]
         );
 
-        ThumbnailOutput thumbnail = new ThumbnailOutput(Width: 320, IntervalSeconds: 10);
+        ThumbnailOutput thumbnail = new(Width: 320, IntervalSeconds: 10);
 
         Ulid profileId = Ulid.NewUlid();
 
-        EncodingProfile profile = new EncodingProfile(
+        EncodingProfile profile = new(
             Id: profileId,
             Name: "Test Profile",
             Format: OutputFormat.Hls,
@@ -83,7 +83,7 @@ public class EncodingProfileTests
     [Fact]
     public void EncodingProfile_AudioOnly_EmptyVideoArray_IsValid()
     {
-        AudioOutput audio = new AudioOutput(
+        AudioOutput audio = new(
             Codec: AudioCodecType.Flac,
             BitrateKbps: 0,
             Channels: 2,
@@ -91,7 +91,7 @@ public class EncodingProfileTests
             AllowedLanguages: []
         );
 
-        EncodingProfile profile = new EncodingProfile(
+        EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "Audio Only",
             Format: OutputFormat.Mkv,
@@ -108,7 +108,7 @@ public class EncodingProfileTests
     [Fact]
     public void EncodingProfile_MultipleVideoOutputs_AllRoundTrip()
     {
-        VideoOutput output1080p = new VideoOutput(
+        VideoOutput output1080p = new(
             Codec: VideoCodecType.H264,
             Width: 1920,
             Height: 1080,
@@ -122,7 +122,7 @@ public class EncodingProfileTests
             TenBit: false
         );
 
-        VideoOutput output720p = new VideoOutput(
+        VideoOutput output720p = new(
             Codec: VideoCodecType.H264,
             Width: 1280,
             Height: 720,
@@ -136,7 +136,7 @@ public class EncodingProfileTests
             TenBit: false
         );
 
-        VideoOutput output480p = new VideoOutput(
+        VideoOutput output480p = new(
             Codec: VideoCodecType.H264,
             Width: 854,
             Height: 480,
@@ -150,7 +150,7 @@ public class EncodingProfileTests
             TenBit: false
         );
 
-        EncodingProfile profile = new EncodingProfile(
+        EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "Multi-Resolution HLS",
             Format: OutputFormat.Hls,
@@ -171,7 +171,7 @@ public class EncodingProfileTests
     [Fact]
     public void EncodingProfile_ThumbnailOutput_IsOptional_DefaultsToNull()
     {
-        EncodingProfile profile = new EncodingProfile(
+        EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "No Thumbnails",
             Format: OutputFormat.Mp4,
@@ -186,7 +186,7 @@ public class EncodingProfileTests
     [Fact]
     public void EncodingProfile_MultipleAudioOutputs_DifferentLanguages()
     {
-        AudioOutput englishAudio = new AudioOutput(
+        AudioOutput englishAudio = new(
             Codec: AudioCodecType.Aac,
             BitrateKbps: 192,
             Channels: 2,
@@ -194,7 +194,7 @@ public class EncodingProfileTests
             AllowedLanguages: ["en"]
         );
 
-        AudioOutput spanishAudio = new AudioOutput(
+        AudioOutput spanishAudio = new(
             Codec: AudioCodecType.Aac,
             BitrateKbps: 192,
             Channels: 2,
@@ -202,7 +202,7 @@ public class EncodingProfileTests
             AllowedLanguages: ["es"]
         );
 
-        AudioOutput frenchAudio = new AudioOutput(
+        AudioOutput frenchAudio = new(
             Codec: AudioCodecType.Aac,
             BitrateKbps: 192,
             Channels: 2,
@@ -210,7 +210,7 @@ public class EncodingProfileTests
             AllowedLanguages: ["fr"]
         );
 
-        EncodingProfile profile = new EncodingProfile(
+        EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "Multi-Language",
             Format: OutputFormat.Hls,
@@ -239,7 +239,7 @@ public class EncodingProfileTests
     [Fact]
     public void VideoOutput_HeightIsNullable_MaintainsAspectRatio()
     {
-        VideoOutput output = new VideoOutput(
+        VideoOutput output = new(
             Codec: VideoCodecType.H265,
             Width: 1920,
             Height: null,
@@ -264,7 +264,7 @@ public class EncodingProfileTests
     [Fact]
     public void AudioOutput_AllowedLanguages_EmptyMeansAllLanguages()
     {
-        AudioOutput audio = new AudioOutput(
+        AudioOutput audio = new(
             Codec: AudioCodecType.Opus,
             BitrateKbps: 128,
             Channels: 2,
@@ -278,19 +278,19 @@ public class EncodingProfileTests
     [Fact]
     public void SubtitleOutput_AllSubtitleModes_AreUsable()
     {
-        SubtitleOutput extract = new SubtitleOutput(
+        SubtitleOutput extract = new(
             Codec: SubtitleCodecType.WebVtt,
             Mode: SubtitleMode.Extract,
             AllowedLanguages: []
         );
 
-        SubtitleOutput burnIn = new SubtitleOutput(
+        SubtitleOutput burnIn = new(
             Codec: SubtitleCodecType.Ass,
             Mode: SubtitleMode.BurnIn,
             AllowedLanguages: ["en"]
         );
 
-        SubtitleOutput passThrough = new SubtitleOutput(
+        SubtitleOutput passThrough = new(
             Codec: SubtitleCodecType.Srt,
             Mode: SubtitleMode.PassThrough,
             AllowedLanguages: ["en", "es"]

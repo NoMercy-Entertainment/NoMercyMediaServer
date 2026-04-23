@@ -173,7 +173,7 @@ public class PresetResolverTests
 
         public void Replace(string name, string json, string? parent = null)
         {
-            _map[name] = new Entry(name, json, parent);
+            _map[name] = new(name, json, parent);
         }
     }
 

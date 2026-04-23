@@ -84,7 +84,7 @@ public class ChromaprintFingerprinter(
         uint[] hashes = ParseRawOutput(result.StdOut);
         TimeSpan startTime = window?.Start ?? TimeSpan.Zero;
 
-        return new AudioFingerprint(hashes, ChromaprintFrameDuration, startTime);
+        return new(hashes, ChromaprintFrameDuration, startTime);
     }
 
     /// <summary>

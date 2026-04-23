@@ -18,7 +18,7 @@ public class HlsVariantAnalyzer : IHlsVariantAnalyzer
     public VariantMetrics Measure(string playlistPath)
     {
         if (!File.Exists(playlistPath))
-            return new VariantMetrics(0, 0);
+            return new(0, 0);
 
         string playlistDir = Path.GetDirectoryName(playlistPath) ?? ".";
         string[] lines = File.ReadAllLines(playlistPath);
@@ -64,7 +64,7 @@ public class HlsVariantAnalyzer : IHlsVariantAnalyzer
 
         int averageBandwidth = totalDuration > 0 ? (int)(totalBytes * 8.0 / totalDuration) : 0;
 
-        return new VariantMetrics(
+        return new(
             PeakBandwidth: (int)peakBitrate,
             AverageBandwidth: averageBandwidth
         );

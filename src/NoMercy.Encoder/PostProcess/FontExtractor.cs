@@ -30,7 +30,7 @@ public class FontExtractor : IFontExtractor
             "-",
         ];
 
-        return new FfmpegCommand(ffmpegPath, args, fontDir);
+        return new(ffmpegPath, args, fontDir);
     }
 
     public async Task WriteFontManifestAsync(string outputDirectory, CancellationToken ct)

@@ -17,7 +17,7 @@ public class ValidateStageTests
 
     public ValidateStageTests()
     {
-        _stage = new ValidateStage(_validator.Object, NullLogger<ValidateStage>.Instance);
+        _stage = new(_validator.Object, NullLogger<ValidateStage>.Instance);
     }
 
     private static MediaInfo BuildMediaInfo() =>
@@ -29,7 +29,7 @@ public class ValidateStageTests
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: 1920,
@@ -56,7 +56,7 @@ public class ValidateStageTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 1920,
                     Height: 1080,
@@ -72,7 +72,7 @@ public class ValidateStageTests
             ],
             AudioOutputs:
             [
-                new AudioOutput(
+                new(
                     Codec: AudioCodecType.Aac,
                     BitrateKbps: 192,
                     Channels: 2,
@@ -118,8 +118,8 @@ public class ValidateStageTests
         ValidationResult validationResult = new(
             false,
             [
-                new ValidationError("Name", "Name is required", ValidationSeverity.Error),
-                new ValidationError(
+                new("Name", "Name is required", ValidationSeverity.Error),
+                new(
                     "VideoOutput[0].Width",
                     "Width must be positive",
                     ValidationSeverity.Error
@@ -152,7 +152,7 @@ public class ValidateStageTests
         ValidationResult validationResult = new(
             true,
             [
-                new ValidationError(
+                new(
                     "VideoOutput[0].Codec",
                     "VP9 in MP4 is non-standard",
                     ValidationSeverity.Warning
@@ -181,8 +181,8 @@ public class ValidateStageTests
         ValidationResult validationResult = new(
             false,
             [
-                new ValidationError("Name", "Name is required", ValidationSeverity.Error),
-                new ValidationError(
+                new("Name", "Name is required", ValidationSeverity.Error),
+                new(
                     "VideoOutput[0].Codec",
                     "Non-standard combination",
                     ValidationSeverity.Warning

@@ -15,7 +15,7 @@ public class JobCheckpointTests
             InputPath: "/media/source/movie.mkv",
             OutputDirectory: "/output/movie",
             CompletedGroupIndices: [0, 1, 2],
-            LastUpdated: new DateTime(2026, 1, 15, 10, 30, 0, DateTimeKind.Utc)
+            LastUpdated: new(2026, 1, 15, 10, 30, 0, DateTimeKind.Utc)
         );
 
         string json = JsonConvert.SerializeObject(checkpoint);
@@ -28,7 +28,7 @@ public class JobCheckpointTests
         deserialized.CompletedGroupIndices.Should().BeEquivalentTo(new[] { 0, 1, 2 });
         deserialized
             .LastUpdated.Should()
-            .Be(new DateTime(2026, 1, 15, 10, 30, 0, DateTimeKind.Utc));
+            .Be(new(2026, 1, 15, 10, 30, 0, DateTimeKind.Utc));
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class JobCheckpointTests
             InputPath: "/media/source/movie.mkv",
             OutputDirectory: "/output/hls/movie",
             CompletedGroupIndices: [0],
-            LastUpdated: new DateTime(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc)
+            LastUpdated: new(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc)
         );
 
         EncodingProfile profile = new(

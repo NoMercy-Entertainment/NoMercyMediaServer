@@ -16,7 +16,7 @@ public class CostEstimator
         if (!hasVideoEncode)
         {
             // Subtitle/chapter/thumbnail extraction is nearly instant
-            return new CostEstimate(
+            return new(
                 EstimatedDuration: TimeSpan.FromSeconds(10),
                 GpuUtilization: 0,
                 CpuUtilization: 0.1,
@@ -34,7 +34,7 @@ public class CostEstimator
         // GPU utilization as fraction of max encoder sessions (assume 12 slots as reference)
         double gpuUtil = group.RequiresGpu ? (double)group.GpuSlotsRequired / 12 : 0;
 
-        return new CostEstimate(
+        return new(
             EstimatedDuration: estimated,
             GpuUtilization: gpuUtil,
             CpuUtilization: group.RequiresGpu ? 0.2 : 0.8,

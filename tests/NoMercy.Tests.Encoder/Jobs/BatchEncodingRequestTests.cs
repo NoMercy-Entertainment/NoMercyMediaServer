@@ -30,7 +30,7 @@ public class BatchEncodingRequestTests
             BuildRequest("/media/c.mkv"),
         ];
 
-        BatchEncodingRequest request = new(Items: items, Options: new BatchOptions());
+        BatchEncodingRequest request = new(Items: items, Options: new());
 
         request.Items.Should().HaveCount(3);
         request.Items.Should().Contain(r => r.InputPath == "/media/a.mkv");
@@ -60,7 +60,7 @@ public class BatchEncodingRequestTests
     public void BatchEncodingRequest_WithEmptyItems_IsConstructable()
     {
         // Empty items array is constructable — caller validation is responsibility of the consumer
-        BatchEncodingRequest request = new(Items: [], Options: new BatchOptions());
+        BatchEncodingRequest request = new(Items: [], Options: new());
 
         request.Items.Should().BeEmpty();
     }
@@ -69,7 +69,7 @@ public class BatchEncodingRequestTests
     public void BatchEncodingRequest_EmptyItems_ShouldBeRejected_ByConsumer()
     {
         // Demonstrate that a caller validating for empty items can detect it
-        BatchEncodingRequest request = new(Items: [], Options: new BatchOptions());
+        BatchEncodingRequest request = new(Items: [], Options: new());
 
         bool isRejected = request.Items.Length == 0;
         isRejected.Should().BeTrue();

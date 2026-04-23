@@ -41,7 +41,7 @@ public class FormatStrategiesTests
     public static TheoryData<IEncodingStrategy, OutputFormat, EncodeMode> StrategyExpectations()
     {
         IEncoder encoder = BuildMockEncoder();
-        return new TheoryData<IEncodingStrategy, OutputFormat, EncodeMode>
+        return new()
         {
             { new MkvStrategy(encoder), OutputFormat.Mkv, EncodeMode.SinglePass },
             { new Mp4SinglePassStrategy(encoder), OutputFormat.Mp4, EncodeMode.SinglePass },
@@ -52,7 +52,7 @@ public class FormatStrategiesTests
     public static TheoryData<IEncodingStrategy> Strategies()
     {
         IEncoder encoder = BuildMockEncoder();
-        return new TheoryData<IEncodingStrategy>
+        return new()
         {
             new MkvStrategy(encoder),
             new Mp4SinglePassStrategy(encoder),
@@ -76,7 +76,7 @@ public class FormatStrategiesTests
                     OutputPath: "/out",
                     Duration: TimeSpan.Zero,
                     Error: null,
-                    Metrics: new EncodingMetrics(0, 0, 0, "test", null)
+                    Metrics: new(0, 0, 0, "test", null)
                 )
             );
         return mock.Object;
@@ -86,7 +86,7 @@ public class FormatStrategiesTests
         new(
             InputPath: "/media/test.mkv",
             OutputDirectory: "/out",
-            Profile: new NoMercy.Encoder.Profiles.EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test",
                 Format: OutputFormat.Hls,

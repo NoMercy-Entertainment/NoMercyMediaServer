@@ -88,7 +88,7 @@ public class DiscScannerTests
             ))
             .ToArray();
 
-        return new DiscTitle(
+        return new(
             Index: index,
             Name: name,
             Duration: duration,
@@ -212,7 +212,7 @@ public class DiscScannerTests
             VideoStreams: [interlacedVideo],
             AudioStreams:
             [
-                new AudioStreamInfo(
+                new(
                     Index: 1,
                     Codec: "ac3",
                     Channels: 6,
@@ -225,7 +225,7 @@ public class DiscScannerTests
             ],
             Subtitles:
             [
-                new SubtitleStreamInfo(
+                new(
                     Index: 2,
                     Codec: "dvd_subtitle",
                     Language: "eng",
@@ -377,7 +377,7 @@ public class DiscScannerTests
         FakeDiscScanner scanner = new();
 
         using CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         // FakeDiscScanner returns empty for unknown paths — does not observe cancellation
         // but the contract signature accepts it correctly.

@@ -30,7 +30,7 @@ public class DriveMonitor(ILogger<DriveMonitor> logger) : IDriveMonitor
             string label = ready ? drive.VolumeLabel : string.Empty;
             OpticalDiscType type = ready ? ClassifyDisc(drive) : OpticalDiscType.None;
 
-            drives.Add(new DiscDrive(drive.Name, label, ready, type));
+            drives.Add(new(drive.Name, label, ready, type));
         }
         return drives;
     }
@@ -61,15 +61,15 @@ public class DriveMonitor(ILogger<DriveMonitor> logger) : IDriveMonitor
             // Drives added since last poll.
             foreach (DiscDrive added in current.Values.Where(d => !previous.ContainsKey(d.Path)))
             {
-                yield return new DriveEvent(DriveEventType.DriveAdded, added);
+                yield return new(DriveEventType.DriveAdded, added);
                 if (added.HasDisc)
-                    yield return new DriveEvent(DriveEventType.DiscInserted, added);
+                    yield return new(DriveEventType.DiscInserted, added);
             }
 
             // Drives removed since last poll.
             foreach (DiscDrive removed in previous.Values.Where(d => !current.ContainsKey(d.Path)))
             {
-                yield return new DriveEvent(DriveEventType.DriveRemoved, removed);
+                yield return new(DriveEventType.DriveRemoved, removed);
             }
 
             // Disc state changes on known drives.
@@ -80,7 +80,7 @@ public class DriveMonitor(ILogger<DriveMonitor> logger) : IDriveMonitor
                 if (before.HasDisc == now.HasDisc)
                     continue;
 
-                yield return new DriveEvent(
+                yield return new(
                     now.HasDisc ? DriveEventType.DiscInserted : DriveEventType.DiscEjected,
                     now
                 );

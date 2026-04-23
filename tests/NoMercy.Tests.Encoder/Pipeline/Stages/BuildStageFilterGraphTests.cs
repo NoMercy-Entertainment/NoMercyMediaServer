@@ -18,7 +18,7 @@ public class BuildStageFilterGraphTests
     public BuildStageFilterGraphTests()
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
-        _stage = new BuildStage(
+        _stage = new(
             options,
             new FontExtractor(),
             new SubtitleExtractor(),
@@ -36,15 +36,15 @@ public class BuildStageFilterGraphTests
         new(
             Groups:
             [
-                new ExecutionGroup(
+                new(
                     GroupId: "group_0",
                     Nodes:
                     [
-                        new ExecutionNode(
+                        new(
                             "decode_0",
                             OperationType.Decode,
                             [],
-                            new Dictionary<string, string>()
+                            new()
                         ),
                     ],
                     DeviceId: null,
@@ -67,7 +67,7 @@ public class BuildStageFilterGraphTests
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: width,
@@ -105,7 +105,7 @@ public class BuildStageFilterGraphTests
             TenBit: false,
             PixelFormat: "yuv420p",
             MapLabel: mapLabel,
-            ExtraFlags: new Dictionary<string, string>()
+            ExtraFlags: new()
         );
 
     private static AudioOutputPlan BuildAudioOutput() =>

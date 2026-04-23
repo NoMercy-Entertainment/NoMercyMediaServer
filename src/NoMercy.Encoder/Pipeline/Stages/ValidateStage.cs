@@ -37,7 +37,7 @@ public class ValidateStage(IProfileValidator validator, ILogger<ValidateStage> l
 
             return Task.FromResult<StageResult>(
                 new StageFailure(
-                    new EncodingError(
+                    new(
                         EncodingErrorKind.ProfileInvalid,
                         $"Profile validation failed: {errors}",
                         null,

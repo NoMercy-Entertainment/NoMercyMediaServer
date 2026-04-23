@@ -53,7 +53,7 @@ public class BuildStage(
                 if (string.IsNullOrWhiteSpace(input.StatsFilePath))
                 {
                     return new StageFailure(
-                        new EncodingError(
+                        new(
                             EncodingErrorKind.Unknown,
                             "Pass 1 requires StatsFilePath to be set.",
                             null,
@@ -66,7 +66,7 @@ public class BuildStage(
                 if (input.Plan.OutputPlan.VideoOutputs.Length == 0)
                 {
                     return new StageFailure(
-                        new EncodingError(
+                        new(
                             EncodingErrorKind.Unknown,
                             "2-pass requires at least one video output.",
                             null,
@@ -82,7 +82,7 @@ public class BuildStage(
                 )
                 {
                     return new StageFailure(
-                        new EncodingError(
+                        new(
                             EncodingErrorKind.Unknown,
                             $"Pass1VariantIndex {input.Pass1VariantIndex} is out of range for "
                                 + $"profile with {input.Plan.OutputPlan.VideoOutputs.Length} variants.",
@@ -126,7 +126,7 @@ public class BuildStage(
             }
 
             FfmpegCommandBuilder builder = new();
-            builder.AddInput(new InputOptions(input.InputPath, Duration: input.DurationLimit));
+            builder.AddInput(new(input.InputPath, Duration: input.DurationLimit));
 
             string? filterGraph = BuildFilterGraph(
                 input.Plan.OutputPlan,
@@ -154,10 +154,10 @@ public class BuildStage(
                 ThumbnailOutputPlan thumbs = input.Plan.OutputPlan.Thumbnails;
 
                 builder.AddOutput(
-                    new OutputOptions(
+                    new(
                         FilePath: $"thumbs_{thumbs.Width}x{thumbs.Height}.webp",
                         MapStreams: ["[thumbs]"],
-                        ExtraFlags: new Dictionary<string, string>
+                        ExtraFlags: new()
                         {
                             ["-f"] = "spritevtt",
                             ["-vtt_filename"] = $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
@@ -223,7 +223,7 @@ public class BuildStage(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new StageFailure(
-                new EncodingError(
+                new(
                     EncodingErrorKind.Unknown,
                     $"Command build failed: {ex.Message}",
                     null,
@@ -324,7 +324,7 @@ public class BuildStage(
 
             // FFmpeg gets the relative path (CWD = output directory)
             builder.AddOutput(
-                new OutputOptions(
+                new(
                     FilePath: info.OutputPath,
                     SubtitleCodec: info.FfmpegCodec,
                     MapStreams: [$"0:s:{info.SourceIndex}"]
@@ -385,14 +385,14 @@ public class BuildStage(
             string outputPath = Path.ChangeExtension(info.OutputPath, ".mks");
 
             FfmpegCommand cmd = new FfmpegCommandBuilder()
-                .WithGlobalOptions(new GlobalOptions(ProgressPipe: false, Overwrite: true))
-                .AddInput(new InputOptions(inputPath))
+                .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
+                .AddInput(new(inputPath))
                 .AddOutput(
-                    new OutputOptions(
+                    new(
                         FilePath: outputPath,
                         SubtitleCodec: "copy",
                         MapStreams: [$"0:s:{info.SourceIndex}"],
-                        ExtraFlags: new Dictionary<string, string> { ["-f"] = "matroska" }
+                        ExtraFlags: new() { ["-f"] = "matroska" }
                     )
                 )
                 .Build(ffmpegPath, outputDirectory);
@@ -459,7 +459,7 @@ public class BuildStage(
         VideoOutputPlan video = plan.VideoOutputs[variantIndex];
 
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions(inputPath));
+        builder.AddInput(new(inputPath));
 
         // Pass 1 analyzes the single target variant — strip the other variants,
         // audio, subtitles, and thumbnails so the filter graph only produces
@@ -487,7 +487,7 @@ public class BuildStage(
         };
 
         builder.AddOutput(
-            new OutputOptions(
+            new(
                 FilePath: "-",
                 VideoCodec: video.EncoderName,
                 VideoBitrateKbps: video.BitrateKbps > 0 ? video.BitrateKbps : null,

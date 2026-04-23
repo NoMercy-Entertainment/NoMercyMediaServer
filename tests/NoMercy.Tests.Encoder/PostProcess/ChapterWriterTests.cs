@@ -42,7 +42,7 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new ChapterInfo(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: "Opening"),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: "Opening"),
         ];
 
         await _writer.WriteChaptersAsync(_tempDir, chapters, default);
@@ -60,8 +60,8 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new ChapterInfo(Start: TimeSpan.Zero, End: TimeSpan.FromSeconds(90), Title: "Part 1"),
-            new ChapterInfo(
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromSeconds(90), Title: "Part 1"),
+            new(
                 Start: TimeSpan.FromSeconds(90),
                 End: TimeSpan.FromMinutes(30),
                 Title: "Part 2"
@@ -85,12 +85,12 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new ChapterInfo(
+            new(
                 Start: TimeSpan.Zero,
                 End: TimeSpan.FromMinutes(5),
                 Title: "Opening Credits"
             ),
-            new ChapterInfo(
+            new(
                 Start: TimeSpan.FromMinutes(5),
                 End: TimeSpan.FromMinutes(60),
                 Title: "Main Feature"
@@ -114,7 +114,7 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new ChapterInfo(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: null),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: null),
         ];
 
         await _writer.WriteChaptersAsync(_tempDir, chapters, default);
@@ -132,9 +132,9 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new ChapterInfo(TimeSpan.Zero, TimeSpan.FromMinutes(10), "One"),
-            new ChapterInfo(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(20), "Two"),
-            new ChapterInfo(TimeSpan.FromMinutes(20), TimeSpan.FromMinutes(30), "Three"),
+            new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "One"),
+            new(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(20), "Two"),
+            new(TimeSpan.FromMinutes(20), TimeSpan.FromMinutes(30), "Three"),
         ];
 
         await _writer.WriteChaptersAsync(_tempDir, chapters, default);
@@ -155,7 +155,7 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new ChapterInfo(
+            new(
                 Start: TimeSpan.FromHours(1) + TimeSpan.FromMinutes(30),
                 End: TimeSpan.FromHours(2),
                 Title: "Act 3"
@@ -175,7 +175,7 @@ public class ChapterWriterTests : IDisposable
     [Fact]
     public async Task WriteChaptersAsync_CreatesFileAtCorrectPath()
     {
-        ChapterInfo[] chapters = [new ChapterInfo(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Intro")];
+        ChapterInfo[] chapters = [new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Intro")];
 
         await _writer.WriteChaptersAsync(_tempDir, chapters, default);
 

@@ -57,7 +57,7 @@ public class HardwareBenchmark(
     // change real throughput noticeably.
     private static readonly TimeSpan RecalibrationInterval = TimeSpan.FromDays(30);
 
-    private SpeedIndex _cache = new(new Dictionary<SpeedKey, SpeedMeasurement>());
+    private SpeedIndex _cache = new(new());
 
     public SpeedIndex GetCachedIndex()
     {
@@ -173,12 +173,12 @@ public class HardwareBenchmark(
                     continue; // Vendor not installed — skip encoder entirely.
 
                 foreach ((GpuDevice device, int vendorIndex) in matchingGpus)
-                    yield return new CalibrationTarget(codec, encoder, device, vendorIndex);
+                    yield return new(codec, encoder, device, vendorIndex);
             }
             else
             {
                 // Software encoder — no device, no index.
-                yield return new CalibrationTarget(codec, encoder, Device: null, VendorIndex: 0);
+                yield return new(codec, encoder, Device: null, VendorIndex: 0);
             }
         }
     }
@@ -273,7 +273,7 @@ public class HardwareBenchmark(
             return null;
 
         double multiplier = observedFps / SourceFrameRate;
-        return new SpeedMeasurement(
+        return new(
             Fps: observedFps,
             SpeedMultiplier: multiplier,
             MeasuredAt: DateTime.UtcNow

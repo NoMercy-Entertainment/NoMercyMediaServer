@@ -230,7 +230,7 @@ public partial class PlatformHardwareDetector(
             maxSessions
         );
 
-        return new GpuDevice(vendor.Value, name, vramMb, maxSessions, supportedCodecs);
+        return new(vendor.Value, name, vramMb, maxSessions, supportedCodecs);
     }
 
     private List<VideoCodecType> DetectSupportedCodecs(GpuVendor vendor)

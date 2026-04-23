@@ -181,7 +181,7 @@ public class LiveTranscodeController(
 
     private static ClientCapabilities ToClientCapabilities(ClientCapabilitiesDto dto)
     {
-        return new ClientCapabilities(
+        return new(
             SupportedVideoCodecs: dto.VideoCodecs ?? [],
             SupportedAudioCodecs: dto.AudioCodecs ?? [],
             SupportedContainers: dto.Containers ?? [],
@@ -218,7 +218,7 @@ public class LiveTranscodeController(
             return null;
 
         string inputPath = Path.Combine(file.HostFolder, file.Filename);
-        return new AuthorizedFile(file, inputPath);
+        return new(file, inputPath);
     }
 
     private static async Task<bool> UserHasAccessAsync(

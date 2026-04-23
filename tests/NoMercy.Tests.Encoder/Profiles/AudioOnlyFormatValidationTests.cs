@@ -10,7 +10,7 @@ using NoMercy.Encoder.Profiles;
 /// </summary>
 public class AudioOnlyFormatValidationTests
 {
-    private readonly ProfileValidator _validator = new(new CodecRegistry());
+    private readonly ProfileValidator _validator = new(new());
 
     [Fact]
     public void Mp3_WithMp3Codec_Passes()

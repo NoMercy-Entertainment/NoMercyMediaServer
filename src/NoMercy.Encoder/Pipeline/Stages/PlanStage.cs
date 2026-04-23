@@ -104,7 +104,7 @@ public class PlanStage(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new StageFailure(
-                new EncodingError(
+                new(
                     EncodingErrorKind.Unknown,
                     $"Planning failed: {ex.Message}",
                     null,
@@ -297,7 +297,7 @@ public class PlanStage(
                 );
 
                 audioPlans.Add(
-                    new AudioOutputPlan(
+                    new(
                         EncoderName: encoderName,
                         BitrateKbps: audioProfile.BitrateKbps,
                         Channels: audioProfile.Channels,
@@ -343,7 +343,7 @@ public class PlanStage(
 
                 claimedStreams.Add(si);
                 subtitlePlans.Add(
-                    new SubtitleOutputPlan(
+                    new(
                         OutputCodec: subProfile.Codec,
                         Action: subProfile.Mode == SubtitleMode.BurnIn
                             ? StreamAction.Transcode
@@ -376,7 +376,7 @@ public class PlanStage(
                 )
             );
 
-            thumbPlan = new ThumbnailOutputPlan(
+            thumbPlan = new(
                 thumbConfig.Width,
                 thumbHeight,
                 thumbConfig.IntervalSeconds
@@ -411,7 +411,7 @@ public class PlanStage(
             );
         }
 
-        return new OutputPlan(
+        return new(
             profile.Format,
             videoPlan,
             audioPlan,

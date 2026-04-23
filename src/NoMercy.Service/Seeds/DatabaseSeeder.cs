@@ -234,7 +234,7 @@ public static class DatabaseSeeder
 
             foreach (Library library in unassigned)
             {
-                mediaContext.LibraryUser.Add(new LibraryUser(library.Id, owner.Id));
+                mediaContext.LibraryUser.Add(new(library.Id, owner.Id));
             }
 
             await mediaContext.SaveChangesAsync();

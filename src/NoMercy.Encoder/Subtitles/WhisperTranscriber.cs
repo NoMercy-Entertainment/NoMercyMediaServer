@@ -112,7 +112,7 @@ public class WhisperTranscriber(
             outputPath
         );
 
-        return new SubtitleTrack(outputPath, language, SubtitleCodecType.Srt, cueCount);
+        return new(outputPath, language, SubtitleCodecType.Srt, cueCount);
     }
 
     private static int CountCuesIn(string srtPath)

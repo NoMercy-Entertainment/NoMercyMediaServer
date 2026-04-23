@@ -22,7 +22,7 @@ internal static class AutoStartCommand
 
                 if (response is null)
                 {
-                    Console.Error.WriteLine("Could not retrieve autostart status.");
+                    await Console.Error.WriteLineAsync("Could not retrieve autostart status.");
                     return 1;
                 }
 

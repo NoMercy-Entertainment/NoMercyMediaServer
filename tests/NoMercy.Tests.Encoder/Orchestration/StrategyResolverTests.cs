@@ -86,7 +86,7 @@ public class StrategyResolverTests
                     OutputPath: "/out",
                     Duration: TimeSpan.Zero,
                     Error: null,
-                    Metrics: new EncodingMetrics(0, 0, 0, "test", null)
+                    Metrics: new(0, 0, 0, "test", null)
                 )
             );
         return mock.Object;

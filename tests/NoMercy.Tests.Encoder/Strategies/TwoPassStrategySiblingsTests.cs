@@ -43,7 +43,7 @@ public class TwoPassStrategySiblingsTests : IDisposable
     {
         Mock<IEncoder> encoder = new();
         Mock<ICheckpointStore> store = new();
-        return new TheoryData<IEncodingStrategy, OutputFormat>
+        return new()
         {
             {
                 new HlsTwoPassStrategy(
@@ -160,7 +160,7 @@ public class TwoPassStrategySiblingsTests : IDisposable
                     OutputPath: "/out",
                     Duration: TimeSpan.FromSeconds(1),
                     Error: null,
-                    Metrics: new EncodingMetrics(1024, 2.0, 24.0, "libx264", null)
+                    Metrics: new(1024, 2.0, 24.0, "libx264", null)
                 )
             );
     }
@@ -185,7 +185,7 @@ public class TwoPassStrategySiblingsTests : IDisposable
         new(
             InputPath: "/media/src.mkv",
             OutputDirectory: _outputDir,
-            Profile: new EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: $"{format} 2-pass",
                 Format: format,

@@ -40,10 +40,10 @@ public class PlanStageMapLabelTests
             )
             .Returns(BuildSoftwareH264Codec());
 
-        _stage = new PlanStage(
-            new ExecutionGraphBuilder(),
-            new GroupingStrategy(),
-            new CostEstimator(),
+        _stage = new(
+            new(),
+            new(),
+            new(),
             _codecResolver.Object,
             _hardware.Object,
             new TonemapSelector(),
@@ -57,19 +57,19 @@ public class PlanStageMapLabelTests
     private static ResolvedCodec BuildSoftwareH264Codec() =>
         new(
             FfmpegEncoderName: "libx264",
-            EncoderInfo: new EncoderInfo(
+            EncoderInfo: new(
                 FfmpegName: "libx264",
                 RequiredVendor: null,
                 Presets: ["slow", "medium", "fast"],
                 Profiles: ["high"],
                 Levels: ["4.1"],
-                QualityRange: new QualityRange(0, 51, 23),
+                QualityRange: new(0, 51, 23),
                 SupportedRateControl: [RateControlMode.Crf, RateControlMode.Cbr],
                 Supports10Bit: false,
                 SupportsHdr: false,
                 MaxConcurrentSessions: int.MaxValue,
                 PixelFormat10Bit: "yuv420p10le",
-                VendorSpecificFlags: new Dictionary<string, string>()
+                VendorSpecificFlags: new()
             ),
             Device: null,
             DefaultRateControl: RateControlMode.Crf
@@ -84,7 +84,7 @@ public class PlanStageMapLabelTests
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: width,
@@ -101,7 +101,7 @@ public class PlanStageMapLabelTests
             ],
             AudioStreams:
             [
-                new AudioStreamInfo(
+                new(
                     Index: 1,
                     Codec: "aac",
                     Channels: 2,
@@ -131,7 +131,7 @@ public class PlanStageMapLabelTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 1920,
                     Height: 1080,
@@ -147,7 +147,7 @@ public class PlanStageMapLabelTests
             ],
             AudioOutputs:
             [
-                new AudioOutput(
+                new(
                     Codec: AudioCodecType.Aac,
                     BitrateKbps: 192,
                     Channels: 2,
@@ -182,7 +182,7 @@ public class PlanStageMapLabelTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 1920,
                     Height: 1080,
@@ -195,7 +195,7 @@ public class PlanStageMapLabelTests
                     KeyframeIntervalSeconds: 2,
                     TenBit: false
                 ),
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 1280,
                     Height: 720,
@@ -211,7 +211,7 @@ public class PlanStageMapLabelTests
             ],
             AudioOutputs:
             [
-                new AudioOutput(
+                new(
                     Codec: AudioCodecType.Aac,
                     BitrateKbps: 192,
                     Channels: 2,

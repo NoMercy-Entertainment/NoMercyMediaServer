@@ -185,6 +185,6 @@ public class Av1ArgumentResolverTests
                 MaxEncoderSessions: 12,
                 SupportedCodecs: [VideoCodecType.Av1]
             );
-        return new ResolvedCodec(ffmpegName, encoder, device, defaultRateControl);
+        return new(ffmpegName, encoder, device, defaultRateControl);
     }
 }

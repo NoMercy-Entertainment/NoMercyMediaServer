@@ -82,7 +82,7 @@ public class LocalWorkerDispatcherTests
                     callOrder.Add($"start:{corrId}");
                     await Task.Delay(20);
                     callOrder.Add($"end:{corrId}");
-                    return new ExecutionResult(
+                    return new(
                         Success: true,
                         ExitCode: 0,
                         StdErr: "",
@@ -186,7 +186,7 @@ public class LocalWorkerDispatcherTests
         ];
 
         using CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         Func<Task> act = () => dispatcher.DispatchAsync(tasks, cts.Token);
 
@@ -207,7 +207,7 @@ public class LocalWorkerDispatcherTests
     private static EncodeTask MakeTask(string id, string outputPath) =>
         new(
             TaskId: id,
-            Command: new FfmpegCommand("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: outputPath,
             Type: EncodeTaskType.QualityVariant
         );

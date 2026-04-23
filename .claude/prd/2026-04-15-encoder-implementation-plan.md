@@ -685,3 +685,7 @@ After all phases:
 - [ ] Dashboard shows correct progress for all strategy types
 - [ ] Plugin test: register mock strategy, verify it's called
 - [ ] Distribution test: quality split across 2 workers (can be local processes)
+
+### TODO:
+- [ ] Make all the container strategies
+- [ ] Implement al current codecs in the new strategy format (NVENC, QSV, AMF, software)

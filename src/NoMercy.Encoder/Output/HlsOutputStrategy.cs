@@ -65,7 +65,7 @@ public class HlsOutputStrategy : IOutputStrategy
                 extraFlags["-tag:v"] = "dvh1";
 
             builder.AddOutput(
-                new OutputOptions(
+                new(
                     FilePath: playlistPath,
                     VideoCodec: video.EncoderName,
                     Crf: video.Crf > 0 ? video.Crf : null,
@@ -130,7 +130,7 @@ public class HlsOutputStrategy : IOutputStrategy
                 string audioCodec = audio.Action == StreamAction.Copy ? "copy" : audio.EncoderName;
 
                 builder.AddOutput(
-                    new OutputOptions(
+                    new(
                         FilePath: playlistPath,
                         AudioCodec: audioCodec,
                         AudioBitrateKbps: audio.Action == StreamAction.Transcode

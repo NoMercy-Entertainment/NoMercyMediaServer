@@ -27,7 +27,7 @@ internal static class UpdateCommand
 
                 if (downloadResponse is null || downloadResponse.Status != "ok")
                 {
-                    Console.Error.WriteLine(
+                    await Console.Error.WriteLineAsync(
                         downloadResponse?.Message ?? "Failed to download update."
                     );
                     return 1;
@@ -40,7 +40,7 @@ internal static class UpdateCommand
                 bool stopped = await client.PostAsync("/manage/stop", null, ct);
                 if (!stopped)
                 {
-                    Console.Error.WriteLine("Failed to send stop command.");
+                    await Console.Error.WriteLineAsync("Failed to send stop command.");
                     return 1;
                 }
 
@@ -54,7 +54,7 @@ internal static class UpdateCommand
 
                 if (!File.Exists(tempPath))
                 {
-                    Console.Error.WriteLine("No staged update file found.");
+                    await Console.Error.WriteLineAsync("No staged update file found.");
                     return 1;
                 }
 

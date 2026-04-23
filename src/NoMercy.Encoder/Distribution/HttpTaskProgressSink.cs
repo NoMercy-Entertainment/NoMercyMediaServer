@@ -47,7 +47,7 @@ public class HttpTaskProgressSink(
         try
         {
             HttpClient http = httpClientFactory.CreateClient("worker-progress-push");
-            http.BaseAddress = new Uri(options.CoordinatorUrl!);
+            http.BaseAddress = new(options.CoordinatorUrl!);
             http.Timeout = TimeSpan.FromSeconds(5);
 
             object payload = new

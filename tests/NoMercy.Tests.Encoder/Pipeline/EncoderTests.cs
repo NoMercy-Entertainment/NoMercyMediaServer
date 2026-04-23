@@ -52,9 +52,9 @@ public class EncoderTests
             NullLogger<ValidateStage>.Instance
         );
         PlanStage planStage = new(
-            new ExecutionGraphBuilder(),
-            new GroupingStrategy(),
-            new CostEstimator(),
+            new(),
+            new(),
+            new(),
             _codecResolver.Object,
             _hardware.Object,
             new TonemapSelector(),
@@ -88,7 +88,7 @@ public class EncoderTests
             NullLogger<FinalizeStage>.Instance
         );
 
-        _encoder = new Encoder(
+        _encoder = new(
             analyzeStage,
             validateStage,
             planStage,
@@ -123,19 +123,19 @@ public class EncoderTests
             .Returns(
                 new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
-                    EncoderInfo: new EncoderInfo(
+                    EncoderInfo: new(
                         FfmpegName: "libx264",
                         RequiredVendor: null,
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new QualityRange(0, 51, 23),
+                        QualityRange: new(0, 51, 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
                         MaxConcurrentSessions: int.MaxValue,
                         PixelFormat10Bit: "yuv420p10le",
-                        VendorSpecificFlags: new Dictionary<string, string>()
+                        VendorSpecificFlags: new()
                     ),
                     Device: null,
                     DefaultRateControl: RateControlMode.Crf
@@ -152,7 +152,7 @@ public class EncoderTests
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: 1920,
@@ -169,7 +169,7 @@ public class EncoderTests
             ],
             AudioStreams:
             [
-                new AudioStreamInfo(
+                new(
                     Index: 1,
                     Codec: "aac",
                     Channels: 2,
@@ -191,7 +191,7 @@ public class EncoderTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H264,
                     Width: 1920,
                     Height: 1080,
@@ -207,7 +207,7 @@ public class EncoderTests
             ],
             AudioOutputs:
             [
-                new AudioOutput(
+                new(
                     Codec: AudioCodecType.Aac,
                     BitrateKbps: 192,
                     Channels: 2,
@@ -384,7 +384,7 @@ public class EncoderTests
                     ExitCode: 1,
                     StdErr: "encoder error: resource exhausted",
                     Duration: TimeSpan.FromSeconds(5),
-                    Error: new EncodingError(
+                    Error: new(
                         EncodingErrorKind.ResourceExhausted,
                         "Resource exhausted",
                         "encoder error: resource exhausted",

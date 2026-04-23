@@ -17,7 +17,7 @@ public class AnalyzeStageTests
 
     public AnalyzeStageTests()
     {
-        _stage = new AnalyzeStage(
+        _stage = new(
             _analyzer.Object,
             _fileSystem.Object,
             NullLogger<AnalyzeStage>.Instance
@@ -33,7 +33,7 @@ public class AnalyzeStageTests
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: 1920,
@@ -50,7 +50,7 @@ public class AnalyzeStageTests
             ],
             AudioStreams:
             [
-                new AudioStreamInfo(
+                new(
                     Index: 1,
                     Codec: "aac",
                     Channels: 2,
@@ -138,7 +138,7 @@ public class AnalyzeStageTests
             .Setup(a => a.AnalyzeAsync("/movies/test.mkv", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        CancellationToken ct = new CancellationToken(true);
+        CancellationToken ct = new(true);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
             _stage.ExecuteAsync("/movies/test.mkv", _context, ct)

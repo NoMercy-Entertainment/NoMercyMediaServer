@@ -126,6 +126,6 @@ public class HevcArgumentResolverTests
                 MaxEncoderSessions: 12,
                 SupportedCodecs: [VideoCodecType.H265]
             );
-        return new ResolvedCodec(ffmpegName, encoder, device, defaultRateControl);
+        return new(ffmpegName, encoder, device, defaultRateControl);
     }
 }

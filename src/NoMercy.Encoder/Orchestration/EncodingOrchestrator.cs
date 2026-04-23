@@ -32,12 +32,12 @@ public class EncodingOrchestrator(IStrategyResolver resolver, ILogger<EncodingOr
                 Recoverable: false
             );
             progress?.OnError(error);
-            return new EncodingResult(
+            return new(
                 Success: false,
                 OutputPath: string.Empty,
                 Duration: TimeSpan.Zero,
                 Error: error,
-                Metrics: new EncodingMetrics(0, 0, 0, string.Empty, null)
+                Metrics: new(0, 0, 0, string.Empty, null)
             );
         }
 

@@ -392,7 +392,7 @@ public class EndToEndMiddlewareFlowTests
         dbContext.Database.EnsureCreated();
 
         AuthManager authManager = new(dbContext);
-        return new SetupEndpoints(state, authManager);
+        return new(state, authManager);
     }
 
     private static SetupModeMiddleware CreateMiddleware(

@@ -18,7 +18,7 @@ public class BuildStageTwoPassTests
     public BuildStageTwoPassTests()
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
-        _stage = new BuildStage(
+        _stage = new(
             options,
             new FontExtractor(),
             new SubtitleExtractor(),
@@ -155,15 +155,15 @@ public class BuildStageTwoPassTests
         new(
             Groups:
             [
-                new ExecutionGroup(
+                new(
                     GroupId: "group_0",
                     Nodes:
                     [
-                        new ExecutionNode(
+                        new(
                             "decode_0",
                             OperationType.Decode,
                             [],
-                            new Dictionary<string, string>()
+                            new()
                         ),
                     ],
                     DeviceId: null,
@@ -199,7 +199,7 @@ public class BuildStageTwoPassTests
             TenBit: false,
             PixelFormat: "yuv420p",
             MapLabel: mapLabel,
-            ExtraFlags: new Dictionary<string, string>()
+            ExtraFlags: new()
         );
 
     private static MediaInfo BuildMediaInfo(int width, int height) =>
@@ -211,7 +211,7 @@ public class BuildStageTwoPassTests
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: width,

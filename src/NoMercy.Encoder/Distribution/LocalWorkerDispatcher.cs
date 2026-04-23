@@ -76,7 +76,7 @@ public class LocalWorkerDispatcher(
                     ct
                 );
 
-                results[i] = new DispatchResult(
+                results[i] = new(
                     TaskId: task.TaskId,
                     Success: exec.Success,
                     OutputPath: task.OutputPath,
@@ -100,7 +100,7 @@ public class LocalWorkerDispatcher(
             catch (Exception ex)
             {
                 logger.LogError(ex, "Local task {TaskId} threw", task.TaskId);
-                results[i] = new DispatchResult(
+                results[i] = new(
                     TaskId: task.TaskId,
                     Success: false,
                     OutputPath: task.OutputPath,

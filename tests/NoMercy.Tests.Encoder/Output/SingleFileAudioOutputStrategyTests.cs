@@ -34,7 +34,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     {
         Mp3OutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.flac"));
+        builder.AddInput(new("/input.flac"));
 
         strategy.ConfigureOutput(builder, Plan(OutputFormat.Mp3, "libmp3lame"), _outputDir);
 
@@ -70,7 +70,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     {
         FlacOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.wav"));
+        builder.AddInput(new("/input.wav"));
 
         strategy.ConfigureOutput(builder, Plan(OutputFormat.Flac, "flac"), _outputDir);
 
@@ -103,7 +103,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     {
         OggOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.wav"));
+        builder.AddInput(new("/input.wav"));
 
         strategy.ConfigureOutput(builder, Plan(OutputFormat.Ogg, "libvorbis"), _outputDir);
 
@@ -118,7 +118,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     {
         OggOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.wav"));
+        builder.AddInput(new("/input.wav"));
 
         strategy.ConfigureOutput(builder, Plan(OutputFormat.Ogg, "libopus"), _outputDir);
 
@@ -134,7 +134,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     {
         Mp3OutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.flac"));
+        builder.AddInput(new("/input.flac"));
 
         strategy.ConfigureOutput(builder, Plan(OutputFormat.Mp3, "libmp3lame"), _outputDir);
 
@@ -158,7 +158,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
             VideoOutputs: [],
             AudioOutputs:
             [
-                new AudioOutputPlan(
+                new(
                     EncoderName: encoder,
                     BitrateKbps: 192,
                     Channels: 2,

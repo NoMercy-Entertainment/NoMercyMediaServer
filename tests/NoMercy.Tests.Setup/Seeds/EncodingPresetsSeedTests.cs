@@ -16,7 +16,7 @@ namespace NoMercy.Tests.Setup.Seeds;
 /// </summary>
 public class EncodingPresetsSeedTests
 {
-    private readonly ProfileValidator _validator = new(new CodecRegistry());
+    private readonly ProfileValidator _validator = new(new());
 
     [Fact]
     public void AllBuiltInPresets_HaveStableIds_AndAreMarkedBuiltIn()

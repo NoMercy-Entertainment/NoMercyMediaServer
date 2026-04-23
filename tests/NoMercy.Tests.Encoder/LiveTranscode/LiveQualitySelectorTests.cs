@@ -11,7 +11,7 @@ public class LiveQualitySelectorTests
         new HardwareCapabilities(
             Gpus:
             [
-                new GpuDevice(
+                new(
                     Vendor: GpuVendor.Nvidia,
                     Name: "RTX 4090",
                     VramMb: 24576,
@@ -29,12 +29,12 @@ public class LiveQualitySelectorTests
         new ResourceBudget(hardware.Gpus, hardware.CpuCores);
 
     private readonly LiveQualitySelector _gpuSelector = new(
-        new CodecResolver(new CodecRegistry()),
+        new CodecResolver(new()),
         MakeGpuHardware()
     );
 
     private readonly LiveQualitySelector _softwareSelector = new(
-        new CodecResolver(new CodecRegistry()),
+        new CodecResolver(new()),
         MakeSoftwareHardware()
     );
 
@@ -51,7 +51,7 @@ public class LiveQualitySelectorTests
             FileSizeBytes: 10_000_000_000L,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: width,
@@ -85,25 +85,25 @@ public class LiveQualitySelectorTests
 
     private static SpeedIndex MakeFastGpuSpeedIndex() =>
         new(
-            new Dictionary<SpeedKey, SpeedMeasurement>
+            new()
             {
                 // Client supports H264+H265; selector prefers H265 → resolves hevc_nvenc on NVIDIA
-                [new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 3840, "RTX 4090")] = new(
+                [new(VideoCodecType.H265, "hevc_nvenc", 3840, "RTX 4090")] = new(
                     100.0,
                     4.0,
                     DateTime.UtcNow
                 ),
-                [new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4090")] = new(
+                [new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4090")] = new(
                     180.0,
                     7.5,
                     DateTime.UtcNow
                 ),
-                [new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 1280, "RTX 4090")] = new(
+                [new(VideoCodecType.H265, "hevc_nvenc", 1280, "RTX 4090")] = new(
                     240.0,
                     10.0,
                     DateTime.UtcNow
                 ),
-                [new SpeedKey(VideoCodecType.H265, "hevc_nvenc", 854, "RTX 4090")] = new(
+                [new(VideoCodecType.H265, "hevc_nvenc", 854, "RTX 4090")] = new(
                     300.0,
                     12.5,
                     DateTime.UtcNow
@@ -112,7 +112,7 @@ public class LiveQualitySelectorTests
         );
 
     private static SpeedIndex MakeEmptySpeedIndex() =>
-        new(new Dictionary<SpeedKey, SpeedMeasurement>());
+        new(new());
 
     // ──────────────────────────────────────────────────────────────────────────
     // GetAvailableQualities

@@ -37,11 +37,11 @@ public class MkvOutputStrategy : IOutputStrategy
             && !string.IsNullOrEmpty(primaryAudio.AudioFilter)
         )
         {
-            extraFlags = new Dictionary<string, string> { ["-af"] = primaryAudio.AudioFilter };
+            extraFlags = new() { ["-af"] = primaryAudio.AudioFilter };
         }
 
         builder.AddOutput(
-            new OutputOptions(
+            new(
                 FilePath: outputPath,
                 VideoCodec: primaryVideo?.EncoderName,
                 AudioCodec: primaryAudio?.Action == StreamAction.Copy

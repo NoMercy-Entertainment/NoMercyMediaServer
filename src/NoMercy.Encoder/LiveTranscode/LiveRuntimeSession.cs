@@ -64,7 +64,7 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     {
         try
         {
-            _drainerCts.Cancel();
+            await _drainerCts.CancelAsync();
         }
         catch (ObjectDisposedException)
         {

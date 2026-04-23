@@ -12,7 +12,7 @@ public class HlsOutputStrategyTests
     {
         HlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan();
 
         strategy.ConfigureOutput(builder, plan, "/output");
@@ -41,7 +41,7 @@ public class HlsOutputStrategyTests
     {
         HlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan();
 
         strategy.ConfigureOutput(builder, plan, "/output");
@@ -54,11 +54,11 @@ public class HlsOutputStrategyTests
 
     private static OutputPlan CreateSimplePlan()
     {
-        return new OutputPlan(
+        return new(
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     Width: 1920,
                     Height: 1080,
                     EncoderName: "libx264",
@@ -70,14 +70,14 @@ public class HlsOutputStrategyTests
                     TenBit: false,
                     PixelFormat: "yuv420p",
                     MapLabel: "[v0]",
-                    ExtraFlags: new Dictionary<string, string>(),
+                    ExtraFlags: new(),
                     SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
                     PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
                 ),
             ],
             AudioOutputs:
             [
-                new AudioOutputPlan(
+                new(
                     EncoderName: "aac",
                     BitrateKbps: 192,
                     Channels: 2,

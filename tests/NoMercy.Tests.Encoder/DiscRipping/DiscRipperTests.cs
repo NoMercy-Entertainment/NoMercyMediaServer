@@ -57,7 +57,7 @@ public class DiscRipperTests : IDisposable
         RipRequest request = Request(
             drivePath: "bluray:/dev/sr0",
             titles: [0],
-            audioTracks: [new AudioTrackSelection(0, true)],
+            audioTracks: [new(0, true)],
             subtitles: []
         );
 
@@ -81,7 +81,7 @@ public class DiscRipperTests : IDisposable
         RipRequest request = Request(
             drivePath: "D:\\",
             titles: [0],
-            audioTracks: [new AudioTrackSelection(0, true)],
+            audioTracks: [new(0, true)],
             subtitles: []
         );
 
@@ -100,9 +100,9 @@ public class DiscRipperTests : IDisposable
             titles: [0],
             audioTracks:
             [
-                new AudioTrackSelection(0, true),
-                new AudioTrackSelection(1, false),
-                new AudioTrackSelection(2, true),
+                new(0, true),
+                new(1, false),
+                new(2, true),
             ],
             subtitles: []
         );
@@ -123,11 +123,11 @@ public class DiscRipperTests : IDisposable
         RipRequest request = Request(
             drivePath: "bluray:/dev/sr0",
             titles: [0],
-            audioTracks: [new AudioTrackSelection(0, true)],
+            audioTracks: [new(0, true)],
             subtitles:
             [
-                new SubtitleSelection(0, true, SubtitleMode.PassThrough),
-                new SubtitleSelection(1, false, SubtitleMode.PassThrough),
+                new(0, true, SubtitleMode.PassThrough),
+                new(1, false, SubtitleMode.PassThrough),
             ]
         );
 
@@ -145,7 +145,7 @@ public class DiscRipperTests : IDisposable
         RipRequest request = Request(
             drivePath: "D:\\",
             titles: [0],
-            audioTracks: [new AudioTrackSelection(0, true)],
+            audioTracks: [new(0, true)],
             subtitles: []
         );
 
@@ -164,7 +164,7 @@ public class DiscRipperTests : IDisposable
         RipRequest request = Request(
             drivePath: "bluray:/dev/sr0",
             titles: [3, 7],
-            audioTracks: [new AudioTrackSelection(0, true)],
+            audioTracks: [new(0, true)],
             subtitles: []
         );
 
@@ -198,7 +198,7 @@ public class DiscRipperTests : IDisposable
         RipRequest request = Request(
             drivePath: "bluray:/dev/sr0",
             titles: [0],
-            audioTracks: [new AudioTrackSelection(0, true)],
+            audioTracks: [new(0, true)],
             subtitles: []
         );
 
@@ -216,13 +216,13 @@ public class DiscRipperTests : IDisposable
     public async Task RipAsync_CancellationToken_StopsLoopBetweenTitles()
     {
         using CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         DiscRipper ripper = BuildRipper();
         RipRequest request = Request(
             drivePath: "bluray:/dev/sr0",
             titles: [0, 1, 2],
-            audioTracks: [new AudioTrackSelection(0, true)],
+            audioTracks: [new(0, true)],
             subtitles: []
         );
 

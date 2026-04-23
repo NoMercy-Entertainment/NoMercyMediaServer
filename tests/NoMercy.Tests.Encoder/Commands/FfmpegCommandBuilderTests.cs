@@ -8,9 +8,9 @@ public class FfmpegCommandBuilderTests
     public void SimpleH264Encode_ProducesCorrectArgs()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .AddInput(new InputOptions("/input/video.mkv"))
+            .AddInput(new("/input/video.mkv"))
             .AddOutput(
-                new OutputOptions(
+                new(
                     FilePath: "/output/video.mp4",
                     VideoCodec: "libx264",
                     AudioCodec: "aac",
@@ -35,13 +35,13 @@ public class FfmpegCommandBuilderTests
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
             .AddInput(
-                new InputOptions(
+                new(
                     "/input/video.mkv",
                     HwAccelDevice: "cuda",
                     HwAccelOutputFormat: "cuda"
                 )
             )
-            .AddOutput(new OutputOptions(FilePath: "/output/video.mp4", VideoCodec: "h264_nvenc"))
+            .AddOutput(new(FilePath: "/output/video.mp4", VideoCodec: "h264_nvenc"))
             .Build("ffmpeg");
 
         cmd.Arguments.Should().ContainInConsecutiveOrder("-hwaccel", "cuda");
@@ -52,10 +52,10 @@ public class FfmpegCommandBuilderTests
     public void FilterComplex_IncludedInArgs()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .AddInput(new InputOptions("/input.mkv"))
+            .AddInput(new("/input.mkv"))
             .WithFilterComplex("[0:v]scale=1920:1080[v0]")
             .AddOutput(
-                new OutputOptions(
+                new(
                     FilePath: "/output.mp4",
                     VideoCodec: "libx264",
                     MapStreams: ["[v0]"]
@@ -72,9 +72,9 @@ public class FfmpegCommandBuilderTests
     public void MultipleOutputs_AllIncluded()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .AddInput(new InputOptions("/input.mkv"))
-            .AddOutput(new OutputOptions(FilePath: "/out1.mp4", VideoCodec: "libx264"))
-            .AddOutput(new OutputOptions(FilePath: "/out2.mp4", VideoCodec: "libx265"))
+            .AddInput(new("/input.mkv"))
+            .AddOutput(new(FilePath: "/out1.mp4", VideoCodec: "libx264"))
+            .AddOutput(new(FilePath: "/out2.mp4", VideoCodec: "libx265"))
             .Build("ffmpeg");
 
         cmd.Arguments.Should().Contain("/out1.mp4");
@@ -87,13 +87,13 @@ public class FfmpegCommandBuilderTests
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
             .AddInput(
-                new InputOptions(
+                new(
                     "/input.mkv",
                     SeekTo: TimeSpan.FromSeconds(30.5),
                     Duration: TimeSpan.FromSeconds(10)
                 )
             )
-            .AddOutput(new OutputOptions(FilePath: "/output.mp4"))
+            .AddOutput(new(FilePath: "/output.mp4"))
             .Build("ffmpeg");
 
         cmd.Arguments.Should().ContainInConsecutiveOrder("-ss", "30.500");
@@ -104,9 +104,9 @@ public class FfmpegCommandBuilderTests
     public void GlobalOptions_ThreadsAndProbesize()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new GlobalOptions(Threads: 4, ProbeSizeBytes: 5000000))
-            .AddInput(new InputOptions("/input.mkv"))
-            .AddOutput(new OutputOptions(FilePath: "/output.mp4"))
+            .WithGlobalOptions(new(Threads: 4, ProbeSizeBytes: 5000000))
+            .AddInput(new("/input.mkv"))
+            .AddOutput(new(FilePath: "/output.mp4"))
             .Build("ffmpeg");
 
         cmd.Arguments.Should().ContainInConsecutiveOrder("-threads", "4");
@@ -117,12 +117,12 @@ public class FfmpegCommandBuilderTests
     public void ExtraFlags_Included()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .AddInput(new InputOptions("/input.mkv"))
+            .AddInput(new("/input.mkv"))
             .AddOutput(
-                new OutputOptions(
+                new(
                     FilePath: "/output.mp4",
                     VideoCodec: "hevc_videotoolbox",
-                    ExtraFlags: new Dictionary<string, string> { ["-tag:v"] = "hvc1" }
+                    ExtraFlags: new() { ["-tag:v"] = "hvc1" }
                 )
             )
             .Build("ffmpeg");
@@ -143,8 +143,8 @@ public class FfmpegCommandBuilderTests
     public void ProgressPipe_EnabledByDefault()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .AddInput(new InputOptions("/input.mkv"))
-            .AddOutput(new OutputOptions(FilePath: "/output.mp4"))
+            .AddInput(new("/input.mkv"))
+            .AddOutput(new(FilePath: "/output.mp4"))
             .Build("ffmpeg");
 
         cmd.Arguments.Should().ContainInConsecutiveOrder("-progress", "pipe:1");

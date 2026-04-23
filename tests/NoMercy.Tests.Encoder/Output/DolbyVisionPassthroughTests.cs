@@ -18,7 +18,7 @@ public class DolbyVisionPassthroughTests
     {
         Mp4OutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
         strategy.ConfigureOutput(builder, Plan(preserveDv: true), "/output");
 
@@ -31,7 +31,7 @@ public class DolbyVisionPassthroughTests
     {
         Mp4OutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
         strategy.ConfigureOutput(builder, Plan(preserveDv: false), "/output");
 
@@ -44,7 +44,7 @@ public class DolbyVisionPassthroughTests
     {
         HlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
         strategy.ConfigureOutput(
             builder,
@@ -64,7 +64,7 @@ public class DolbyVisionPassthroughTests
     {
         HlsOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
         // DV only rides HEVC. H.264 variants in the same ladder must not
         // inherit the dvh1 tag or the MP4 header becomes invalid.
@@ -83,7 +83,7 @@ public class DolbyVisionPassthroughTests
             Format: OutputFormat.Mp4,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     Width: 3840,
                     Height: 2160,
                     EncoderName: "libx265",
@@ -95,12 +95,12 @@ public class DolbyVisionPassthroughTests
                     TenBit: true,
                     PixelFormat: "yuv420p10le",
                     MapLabel: "[v0]",
-                    ExtraFlags: new Dictionary<string, string>()
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs:
             [
-                new AudioOutputPlan(
+                new(
                     EncoderName: "libfdk_aac",
                     BitrateKbps: 192,
                     Channels: 2,
@@ -120,7 +120,7 @@ public class DolbyVisionPassthroughTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     Width: 3840,
                     Height: 2160,
                     EncoderName: encoderName,
@@ -132,7 +132,7 @@ public class DolbyVisionPassthroughTests
                     TenBit: true,
                     PixelFormat: "yuv420p10le",
                     MapLabel: "[v0]",
-                    ExtraFlags: new Dictionary<string, string>()
+                    ExtraFlags: new()
                 ),
             ],
             AudioOutputs: [],

@@ -228,7 +228,7 @@ public class AuthManager
     {
         _pendingCodeVerifier = codeVerifier;
         _pendingState = state;
-        _pkceCompletionSource = new TaskCompletionSource<bool>();
+        _pkceCompletionSource = new();
     }
 
     public static Task<bool>? GetPkceBrowserTask() => _pkceCompletionSource?.Task;
@@ -436,7 +436,7 @@ public class AuthManager
         else
         {
             _appContext.Configuration.Add(
-                new Configuration
+                new()
                 {
                     Key = key,
                     Value = string.Empty,

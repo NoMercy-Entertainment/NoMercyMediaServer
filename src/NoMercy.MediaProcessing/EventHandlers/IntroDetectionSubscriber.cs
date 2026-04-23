@@ -149,7 +149,7 @@ public class IntroDetectionSubscriber(
             {
                 AudioFingerprint introPrint = await fingerprinter.FingerprintAsync(
                     inputPath,
-                    new FingerprintWindow(TimeSpan.Zero, IntroScanWindow),
+                    new(TimeSpan.Zero, IntroScanWindow),
                     ct
                 );
 
@@ -161,7 +161,7 @@ public class IntroDetectionSubscriber(
 
                 AudioFingerprint outroPrint = await fingerprinter.FingerprintAsync(
                     inputPath,
-                    new FingerprintWindow(outroStart, OutroScanWindow),
+                    new(outroStart, OutroScanWindow),
                     ct
                 );
 
@@ -192,7 +192,7 @@ public class IntroDetectionSubscriber(
             if (introMarker is not null)
             {
                 segments.Add(
-                    new ContentSegment
+                    new()
                     {
                         SegmentType = ContentSegmentType.Intro,
                         StartSeconds = introMarker.Start.TotalSeconds,
@@ -204,7 +204,7 @@ public class IntroDetectionSubscriber(
             if (outroMarker is not null)
             {
                 segments.Add(
-                    new ContentSegment
+                    new()
                     {
                         SegmentType = ContentSegmentType.Outro,
                         StartSeconds = outroMarker.Start.TotalSeconds,

@@ -168,7 +168,7 @@ public class HttpSourceFetcherTests
     private static EncodeTask MakeTask(string inputPath, string taskId = "task") =>
         new(
             TaskId: taskId,
-            Command: new FfmpegCommand("ffmpeg", ["-i", inputPath, "out.ts"], null),
+            Command: new("ffmpeg", ["-i", inputPath, "out.ts"], null),
             OutputPath: "/out/" + taskId,
             Type: EncodeTaskType.QualityVariant,
             InputPath: inputPath
@@ -183,7 +183,7 @@ public class HttpSourceFetcherTests
             LiveTranscodeCachePath = tempDir,
         };
 
-        handler = new FakeHandler();
+        handler = new();
         FakeHandler capturedHandler = handler;
 
         ServiceCollection services = new();
@@ -196,7 +196,7 @@ public class HttpSourceFetcherTests
 
         ServiceProvider provider = services.BuildServiceProvider();
 
-        return new HttpSourceFetcher(
+        return new(
             provider.GetRequiredService<IHttpClientFactory>(),
             options,
             NullLogger<HttpSourceFetcher>.Instance
@@ -231,7 +231,7 @@ public class HttpSourceFetcherTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             lock (_requests)
-                _requests.Add(new RequestSnapshot(request.RequestUri!.Query));
+                _requests.Add(new(request.RequestUri!.Query));
 
             return Task.FromResult(
                 new HttpResponseMessage(_status) { Content = new ByteArrayContent(_body) }

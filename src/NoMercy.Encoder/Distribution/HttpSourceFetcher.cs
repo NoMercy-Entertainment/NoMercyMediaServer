@@ -63,7 +63,7 @@ public class HttpSourceFetcher(
         Directory.CreateDirectory(Path.GetDirectoryName(cachedPath)!);
 
         HttpClient http = httpClientFactory.CreateClient("worker-source-fetch");
-        http.BaseAddress = new Uri(options.CoordinatorUrl);
+        http.BaseAddress = new(options.CoordinatorUrl);
         http.Timeout = TimeSpan.FromHours(1); // Multi-GB downloads over WAN.
 
         string signedQuery = BuildSignedQuery(task.InputPath!);

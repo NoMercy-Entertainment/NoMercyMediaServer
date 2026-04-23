@@ -40,7 +40,7 @@ public class WorkerSelfRegistrationServiceTests
         {
             if (req.RequestUri!.ToString().Contains("register"))
                 registerSeen.TrySetResult();
-            return new HttpResponseMessage(HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
 
         WorkerSelfRegistrationService sut = MakeService(
@@ -61,7 +61,7 @@ public class WorkerSelfRegistrationServiceTests
         // Deterministic wait: signal fires when register is observed.
         await registerSeen.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        cts.Cancel();
+        await cts.CancelAsync();
         await sut.StopAsync(CancellationToken.None);
 
         handler.RequestLog.Should().Contain(r => r.Path.Contains("register"));
@@ -75,7 +75,7 @@ public class WorkerSelfRegistrationServiceTests
         {
             if (req.RequestUri!.ToString().Contains("register") && req.Method == HttpMethod.Post)
                 registerSeen.TrySetResult();
-            return new HttpResponseMessage(HttpStatusCode.OK);
+            return new(HttpStatusCode.OK);
         });
 
         WorkerSelfRegistrationService sut = MakeService(
@@ -118,11 +118,11 @@ public class WorkerSelfRegistrationServiceTests
                 int n = Interlocked.Increment(ref registerCount);
                 if (n >= 2)
                     secondRegister.TrySetResult();
-                return new HttpResponseMessage(HttpStatusCode.OK);
+                return new(HttpStatusCode.OK);
             }
             if (req.RequestUri.ToString().Contains("heartbeat"))
-                return new HttpResponseMessage(HttpStatusCode.NotFound);
-            return new HttpResponseMessage(HttpStatusCode.OK);
+                return new(HttpStatusCode.NotFound);
+            return new(HttpStatusCode.OK);
         });
 
         WorkerSelfRegistrationService sut = MakeService(
@@ -141,7 +141,7 @@ public class WorkerSelfRegistrationServiceTests
         await sut.StartAsync(cts.Token);
         await secondRegister.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        cts.Cancel();
+        await cts.CancelAsync();
         await sut.StopAsync(CancellationToken.None);
 
         Volatile
@@ -171,7 +171,7 @@ public class WorkerSelfRegistrationServiceTests
 
         ServiceProvider provider = services.BuildServiceProvider();
 
-        return new WorkerSelfRegistrationService(
+        return new(
             provider.GetRequiredService<IHardwareCapabilities>(),
             opts,
             provider.GetRequiredService<IHttpClientFactory>(),
@@ -185,7 +185,7 @@ public class WorkerSelfRegistrationServiceTests
         private readonly List<(HttpMethod Method, string Path)> _log = [];
 
         public RecordingHandler(HashSet<string>? okOn = null)
-            : this(req => new HttpResponseMessage(
+            : this(req => new(
                 ShouldOk(req, okOn) ? HttpStatusCode.OK : HttpStatusCode.NotFound
             )) { }
 

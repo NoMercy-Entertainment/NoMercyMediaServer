@@ -241,7 +241,7 @@ public class HlsMultiVariantTwoPassTests : IDisposable
             OutputPath: "/out",
             Duration: TimeSpan.FromSeconds(1),
             Error: null,
-            Metrics: new EncodingMetrics(1024, 2.0, 24.0, "libx264", null)
+            Metrics: new(1024, 2.0, 24.0, "libx264", null)
         );
 
     private static EncodingResult Fail(string message) =>
@@ -249,14 +249,14 @@ public class HlsMultiVariantTwoPassTests : IDisposable
             Success: false,
             OutputPath: string.Empty,
             Duration: TimeSpan.Zero,
-            Error: new NoMercy.Encoder.Errors.EncodingError(
+            Error: new(
                 NoMercy.Encoder.Errors.EncodingErrorKind.ProcessCrashed,
                 message,
                 null,
                 "Pass1",
                 false
             ),
-            Metrics: new EncodingMetrics(0, 0, 0, string.Empty, null)
+            Metrics: new(0, 0, 0, string.Empty, null)
         );
 
     private HlsTwoPassStrategy BuildStrategy() =>
@@ -266,7 +266,7 @@ public class HlsMultiVariantTwoPassTests : IDisposable
         new(
             InputPath: "/media/src.mkv",
             OutputDirectory: _outputDir,
-            Profile: new EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: $"HLS 2-pass {variantCount}-variant",
                 Format: OutputFormat.Hls,

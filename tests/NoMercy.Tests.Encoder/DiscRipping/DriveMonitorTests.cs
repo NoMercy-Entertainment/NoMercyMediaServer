@@ -52,7 +52,7 @@ public class DriveMonitorTests
         DriveMonitor monitor = new(NullLogger<DriveMonitor>.Instance);
 
         using CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         List<DriveEvent> events = [];
         DateTime start = DateTime.UtcNow;

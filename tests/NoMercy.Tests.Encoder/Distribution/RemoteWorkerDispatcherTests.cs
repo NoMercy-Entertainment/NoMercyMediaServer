@@ -38,7 +38,7 @@ public class RemoteWorkerDispatcherTests
         IRemoteWorker beast = MakeRemoteWorkerWithResult(
             "beast",
             slots: 8,
-            result: new DispatchResult(
+            result: new(
                 TaskId: "t0",
                 Success: true,
                 OutputPath: "/remote/out/t0",
@@ -73,7 +73,7 @@ public class RemoteWorkerDispatcherTests
         IRemoteWorker brokenWorker = MakeRemoteWorkerWithResult(
             "broken",
             slots: 4,
-            result: new DispatchResult(
+            result: new(
                 TaskId: "t0",
                 Success: false,
                 OutputPath: "",
@@ -152,12 +152,12 @@ public class RemoteWorkerDispatcherTests
         IRemoteWorker failing = MakeRemoteWorkerWithResult(
             "a-broken",
             slots: 8,
-            result: new DispatchResult("t0", false, "", TimeSpan.Zero, "boom")
+            result: new("t0", false, "", TimeSpan.Zero, "boom")
         );
         IRemoteWorker rescue = MakeRemoteWorkerWithResult(
             "b-healthy",
             slots: 2,
-            result: new DispatchResult(
+            result: new(
                 "t0",
                 true,
                 "/b/t0",
@@ -198,7 +198,7 @@ public class RemoteWorkerDispatcherTests
             t =>
             {
                 Interlocked.Increment(ref beastCalls);
-                return new DispatchResult(
+                return new(
                     t.TaskId,
                     true,
                     $"/beast/{t.TaskId}",
@@ -213,7 +213,7 @@ public class RemoteWorkerDispatcherTests
             t =>
             {
                 Interlocked.Increment(ref laptopCalls);
-                return new DispatchResult(
+                return new(
                     t.TaskId,
                     true,
                     $"/laptop/{t.TaskId}",
@@ -250,7 +250,7 @@ public class RemoteWorkerDispatcherTests
                 async (EncodeTask t, CancellationToken ct) =>
                 {
                     await Task.Delay(Timeout.Infinite, ct);
-                    return new DispatchResult(t.TaskId, true, "", TimeSpan.Zero);
+                    return new(t.TaskId, true, "", TimeSpan.Zero);
                 }
             );
 
@@ -258,7 +258,7 @@ public class RemoteWorkerDispatcherTests
         RemoteWorkerDispatcher sut = NewRemote(local, registry);
 
         using CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         Func<Task> act = () => sut.DispatchAsync([MakeTask("t0")], cts.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -302,7 +302,7 @@ public class RemoteWorkerDispatcherTests
         MakeRemoteWorkerWithResult(
             id,
             slots,
-            new DispatchResult(
+            new(
                 TaskId: "placeholder",
                 Success: true,
                 OutputPath: $"/remote/{id}/placeholder",
@@ -373,7 +373,7 @@ public class RemoteWorkerDispatcherTests
     private static EncodeTask MakeTask(string id) =>
         new(
             TaskId: id,
-            Command: new FfmpegCommand("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
             OutputPath: $"/out/{id}",
             Type: EncodeTaskType.QualityVariant
         );

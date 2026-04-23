@@ -61,7 +61,7 @@ public class DiscScanner(
                 result.ExitCode,
                 TrimStderr(result.StdErr)
             );
-            return new DiscInfo(discType, null, [], null, TimeSpan.Zero);
+            return new(discType, null, [], null, TimeSpan.Zero);
         }
 
         try
@@ -71,7 +71,7 @@ public class DiscScanner(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to parse disc scan output for {Drive}", drivePath);
-            return new DiscInfo(discType, null, [], null, TimeSpan.Zero);
+            return new(discType, null, [], null, TimeSpan.Zero);
         }
     }
 
@@ -158,7 +158,7 @@ public class DiscScanner(
             IsMainFeature: true
         );
 
-        return new DiscInfo(discType, discLabel, [singleTitle], null, duration);
+        return new(discType, discLabel, [singleTitle], null, duration);
     }
 
     private static VideoStreamInfo ParseVideo(JsonElement stream) =>
@@ -192,7 +192,7 @@ public class DiscScanner(
             language = lang.GetString();
         }
 
-        return new AudioStreamInfo(
+        return new(
             Index: stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
             Codec: stream.TryGetProperty("codec_name", out JsonElement c)
                 ? (c.GetString() ?? "")
@@ -220,7 +220,7 @@ public class DiscScanner(
             language = lang.GetString();
         }
 
-        return new SubtitleStreamInfo(
+        return new(
             Index: stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
             Codec: stream.TryGetProperty("codec_name", out JsonElement c)
                 ? (c.GetString() ?? "")
@@ -269,7 +269,7 @@ public class DiscScanner(
             title = t.GetString();
         }
 
-        return new ChapterInfo(TimeSpan.FromSeconds(start), TimeSpan.FromSeconds(end), title);
+        return new(TimeSpan.FromSeconds(start), TimeSpan.FromSeconds(end), title);
     }
 
     private static string TrimStderr(string stdErr)

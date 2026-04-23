@@ -266,7 +266,7 @@ public class VideoEncodeJob : AbstractEncoderJob
                     : 0;
 
             context.EncodingHistory.Add(
-                new EncodingHistory
+                new()
                 {
                     InputPath = inputPath,
                     OutputPath = result.OutputPath,

@@ -15,7 +15,7 @@ public class FfmpegExecutorTests
 
     public FfmpegExecutorTests()
     {
-        _executor = new FfmpegExecutor(_processRunner.Object, NullLogger<FfmpegExecutor>.Instance);
+        _executor = new(_processRunner.Object, NullLogger<FfmpegExecutor>.Instance);
     }
 
     [Fact]
@@ -167,6 +167,6 @@ public class FfmpegExecutorTests
 
     private static FfmpegCommand BuildSimpleCommand()
     {
-        return new FfmpegCommand("ffmpeg", ["-i", "/input.mkv", "/output.mp4"], null);
+        return new("ffmpeg", ["-i", "/input.mkv", "/output.mp4"], null);
     }
 }

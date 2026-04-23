@@ -136,7 +136,7 @@ public class RemoteWorkerDispatcher(
             .ConfigureAwait(false);
         return fallbackResults.Length > 0
             ? fallbackResults[0]
-            : new DispatchResult(
+            : new(
                 task.TaskId,
                 Success: false,
                 OutputPath: task.OutputPath,

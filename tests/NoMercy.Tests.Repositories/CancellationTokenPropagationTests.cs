@@ -20,7 +20,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         MovieRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US", cts.Token)
@@ -32,7 +32,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         MovieRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetMovieAvailableAsync(SeedConstants.UserId, 129, cts.Token)
@@ -44,7 +44,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         MovieRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetMoviePlaylistAsync(SeedConstants.UserId, 129, "en", "US", cts.Token)
@@ -56,7 +56,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         MovieRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.DeleteAsync(999999, cts.Token)
@@ -68,7 +68,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         TvShowRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetTvAvailableAsync(SeedConstants.UserId, 1396, cts.Token)
@@ -80,7 +80,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         TvShowRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.DeleteAsync(999999, cts.Token)
@@ -92,7 +92,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         LibraryRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetLibraries(SeedConstants.UserId, cts.Token)
@@ -104,7 +104,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         LibraryRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetLibraryMovieCardsAsync(
@@ -123,7 +123,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         LibraryRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetLibraryTvCardsAsync(
@@ -142,7 +142,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         CollectionRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetCollectionsListAsync(SeedConstants.UserId, "en", "US", 10, 0, cts.Token)
@@ -154,7 +154,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         GenreRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetGenresWithCountsAsync(SeedConstants.UserId, "en", 10, 0, cts.Token)
@@ -166,7 +166,7 @@ public class CancellationTokenPropagationTests : IDisposable
     {
         SpecialRepository repository = new(_context);
         CancellationTokenSource cts = new();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             repository.GetSpecialsAsync(SeedConstants.UserId, "en", 10, 0, cts.Token)

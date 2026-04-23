@@ -75,13 +75,13 @@ public class FinalizeStage(
                 .Sum(f => new FileInfo(f).Length);
 
             return new StageSuccess<FinalizeOutput>(
-                new FinalizeOutput(input.OutputDirectory, totalSize)
+                new(input.OutputDirectory, totalSize)
             );
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new StageFailure(
-                new EncodingError(
+                new(
                     EncodingErrorKind.Unknown,
                     $"Finalization failed: {ex.Message}",
                     null,

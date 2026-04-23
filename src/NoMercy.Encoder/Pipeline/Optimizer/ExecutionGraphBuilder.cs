@@ -21,11 +21,11 @@ public class ExecutionGraphBuilder
             // 1. Decode
             string decodeId = $"node_{nodeId++}";
             nodes.Add(
-                new ExecutionNode(
+                new(
                     decodeId,
                     OperationType.Decode,
                     [],
-                    new Dictionary<string, string>
+                    new()
                     {
                         ["stream_index"] = "0",
                         ["codec"] = media.VideoStreams[0].Codec,
@@ -43,11 +43,11 @@ public class ExecutionGraphBuilder
             {
                 string tonemapId = $"node_{nodeId++}";
                 nodes.Add(
-                    new ExecutionNode(
+                    new(
                         tonemapId,
                         OperationType.Tonemap,
                         [lastVideoNode],
-                        new Dictionary<string, string> { ["algorithm"] = "hable" }
+                        new() { ["algorithm"] = "hable" }
                     )
                 );
                 lastVideoNode = tonemapId;
@@ -58,11 +58,11 @@ public class ExecutionGraphBuilder
             {
                 string splitId = $"node_{nodeId++}";
                 nodes.Add(
-                    new ExecutionNode(
+                    new(
                         splitId,
                         OperationType.Split,
                         [lastVideoNode],
-                        new Dictionary<string, string>
+                        new()
                         {
                             ["count"] = profile.VideoOutputs.Length.ToString(),
                         }
@@ -83,11 +83,11 @@ public class ExecutionGraphBuilder
 
                     string scaleId = $"node_{nodeId++}";
                     nodes.Add(
-                        new ExecutionNode(
+                        new(
                             scaleId,
                             OperationType.Scale,
                             [splitId],
-                            new Dictionary<string, string>
+                            new()
                             {
                                 ["width"] = output.Width.ToString(),
                                 ["height"] = height.ToString(),
@@ -98,11 +98,11 @@ public class ExecutionGraphBuilder
 
                     string encodeId = $"node_{nodeId++}";
                     nodes.Add(
-                        new ExecutionNode(
+                        new(
                             encodeId,
                             OperationType.Encode,
                             [scaleId],
-                            new Dictionary<string, string>
+                            new()
                             {
                                 ["encoder"] = resolvedVideoCodecs[i].FfmpegEncoderName,
                                 ["crf"] = output.Crf.ToString(),
@@ -130,11 +130,11 @@ public class ExecutionGraphBuilder
                 {
                     string scaleId = $"node_{nodeId++}";
                     nodes.Add(
-                        new ExecutionNode(
+                        new(
                             scaleId,
                             OperationType.Scale,
                             [lastVideoNode],
-                            new Dictionary<string, string>
+                            new()
                             {
                                 ["width"] = output.Width.ToString(),
                                 ["height"] = height.ToString(),
@@ -146,11 +146,11 @@ public class ExecutionGraphBuilder
 
                 string encodeId = $"node_{nodeId++}";
                 nodes.Add(
-                    new ExecutionNode(
+                    new(
                         encodeId,
                         OperationType.Encode,
                         [lastVideoNode],
-                        new Dictionary<string, string>
+                        new()
                         {
                             ["encoder"] = resolvedVideoCodecs[0].FfmpegEncoderName,
                             ["crf"] = output.Crf.ToString(),
@@ -168,11 +168,11 @@ public class ExecutionGraphBuilder
         {
             string audioDecodeId = $"node_{nodeId++}";
             nodes.Add(
-                new ExecutionNode(
+                new(
                     audioDecodeId,
                     OperationType.AudioDecode,
                     [],
-                    new Dictionary<string, string>
+                    new()
                     {
                         ["stream_index"] = media.AudioStreams[i].Index.ToString(),
                     }
@@ -181,11 +181,11 @@ public class ExecutionGraphBuilder
 
             string audioEncodeId = $"node_{nodeId++}";
             nodes.Add(
-                new ExecutionNode(
+                new(
                     audioEncodeId,
                     OperationType.AudioEncode,
                     [audioDecodeId],
-                    new Dictionary<string, string>
+                    new()
                     {
                         ["codec"] = profile.AudioOutputs[i].Codec.ToString(),
                         ["bitrate"] = profile.AudioOutputs[i].BitrateKbps.ToString(),
@@ -201,11 +201,11 @@ public class ExecutionGraphBuilder
         {
             string subExtractId = $"node_{nodeId++}";
             nodes.Add(
-                new ExecutionNode(
+                new(
                     subExtractId,
                     OperationType.SubtitleExtract,
                     [],
-                    new Dictionary<string, string>
+                    new()
                     {
                         ["stream_index"] = media.SubtitleStreams[i].Index.ToString(),
                         ["language"] = media.SubtitleStreams[i].Language ?? "und",
@@ -219,11 +219,11 @@ public class ExecutionGraphBuilder
         {
             string chapterId = $"node_{nodeId++}";
             nodes.Add(
-                new ExecutionNode(
+                new(
                     chapterId,
                     OperationType.ChapterExtract,
                     [],
-                    new Dictionary<string, string>()
+                    new()
                 )
             );
         }
@@ -233,11 +233,11 @@ public class ExecutionGraphBuilder
         {
             string thumbId = $"node_{nodeId++}";
             nodes.Add(
-                new ExecutionNode(
+                new(
                     thumbId,
                     OperationType.ThumbnailCapture,
                     [],
-                    new Dictionary<string, string>
+                    new()
                     {
                         ["width"] = profile.Thumbnails.Width.ToString(),
                         ["interval"] = profile.Thumbnails.IntervalSeconds.ToString(),

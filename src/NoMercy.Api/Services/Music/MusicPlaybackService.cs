@@ -50,7 +50,7 @@ public class MusicPlaybackService
 
     private SemaphoreSlim GetStateLock(Guid userId)
     {
-        return _stateLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+        return _stateLocks.GetOrAdd(userId, _ => new(1, 1));
     }
 
     internal void StartPlaybackTimer(User user)

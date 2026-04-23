@@ -944,7 +944,7 @@ internal sealed class RepositoryPresetLookup(EncodingPresetRepository repository
             ? repository.GetByIdAsync(parentId).GetAwaiter().GetResult()?.Name
             : null;
 
-        return new PresetResolveRequest(preset.Name, preset.ProfileJson, parentName);
+        return new(preset.Name, preset.ProfileJson, parentName);
     }
 }
 

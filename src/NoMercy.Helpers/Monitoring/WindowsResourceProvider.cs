@@ -72,7 +72,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         // Fall back to "% Processor Time" if "Processor Information" is unavailable.
         try
         {
-            _cpuTotal = new PerformanceCounter(
+            _cpuTotal = new(
                 "Processor Information",
                 "% Processor Utility",
                 "_Total",
@@ -84,7 +84,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             // Fall back to the standard busy/idle counter if the preferred one is absent
             try
             {
-                _cpuTotal = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
+                _cpuTotal = new("Processor", "% Processor Time", "_Total", true);
             }
             catch
             {
@@ -176,7 +176,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
                         instance,
                         true
                     );
-                    result.Add(new GpuCounterEntry(luid, engType, counter));
+                    result.Add(new(luid, engType, counter));
                 }
                 catch
                 {
@@ -303,13 +303,13 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             try
             {
                 double util = Math.Clamp(Math.Round(_cpuCores[i].NextValue(), 1), 0, 100);
-                resource.Cpu.Core.Add(new Core { Index = i, Utilization = util });
+                resource.Cpu.Core.Add(new() { Index = i, Utilization = util });
                 if (util > max)
                     max = util;
             }
             catch
             {
-                resource.Cpu.Core.Add(new Core { Index = i, Utilization = 0 });
+                resource.Cpu.Core.Add(new() { Index = i, Utilization = 0 });
             }
         }
 

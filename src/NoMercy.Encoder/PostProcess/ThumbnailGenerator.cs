@@ -18,13 +18,13 @@ public class ThumbnailGenerator : IThumbnailGenerator
         string thumbDir = Path.Combine(outputDirectory, $"thumbs_{plan.Width}");
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new GlobalOptions(ProgressPipe: false, Overwrite: true))
-            .AddInput(new InputOptions(inputPath))
+            .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
+            .AddInput(new(inputPath))
             .AddOutput(
-                new OutputOptions(
+                new(
                     FilePath: Path.Combine(thumbDir, "thumb_%04d.jpg"),
                     MapStreams: ["0:v:0"],
-                    ExtraFlags: new Dictionary<string, string>
+                    ExtraFlags: new()
                     {
                         ["-vf"] = $"fps=1/{plan.IntervalSeconds},scale={plan.Width}:-2",
                         ["-q:v"] = "5",
@@ -48,12 +48,12 @@ public class ThumbnailGenerator : IThumbnailGenerator
         string spriteFile = Path.Combine(outputDirectory, $"thumbs_{plan.Width}.webp");
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new GlobalOptions(ProgressPipe: false, Overwrite: true))
-            .AddInput(new InputOptions(Path.Combine(thumbDir, "thumb_%04d.jpg")))
+            .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
+            .AddInput(new(Path.Combine(thumbDir, "thumb_%04d.jpg")))
             .AddOutput(
-                new OutputOptions(
+                new(
                     FilePath: spriteFile,
-                    ExtraFlags: new Dictionary<string, string>
+                    ExtraFlags: new()
                     {
                         ["-filter_complex"] = $"tile={gridWidth}x{gridHeight}",
                     }

@@ -109,7 +109,7 @@ public class WorkerExecutionController(
             DispatchResult result =
                 results.Length > 0
                     ? results[0]
-                    : new DispatchResult(
+                    : new(
                         TaskId: task.TaskId,
                         Success: false,
                         OutputPath: task.OutputPath,

@@ -327,7 +327,7 @@ public class MusicSearchDbFilterTests : IDisposable
             .Options;
 
         using TestMediaContext context = new(options);
-        context.Database.EnsureCreated();
+        await context.Database.EnsureCreatedAsync();
 
         MusicRepository repository = new(context, null!);
         interceptor.Clear();

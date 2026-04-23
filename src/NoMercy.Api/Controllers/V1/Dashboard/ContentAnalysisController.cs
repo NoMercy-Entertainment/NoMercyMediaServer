@@ -252,7 +252,7 @@ public class ContentAnalysisController(
             {
                 AudioFingerprint introPrint = await fingerprinter.FingerprintAsync(
                     path,
-                    new FingerprintWindow(TimeSpan.Zero, TimeSpan.FromMinutes(3)),
+                    new(TimeSpan.Zero, TimeSpan.FromMinutes(3)),
                     ct
                 );
                 intros.Add(introPrint);
@@ -267,7 +267,7 @@ public class ContentAnalysisController(
 
                 AudioFingerprint outroPrint = await fingerprinter.FingerprintAsync(
                     path,
-                    new FingerprintWindow(outroStart, TimeSpan.FromMinutes(3)),
+                    new(outroStart, TimeSpan.FromMinutes(3)),
                     ct
                 );
                 outros.Add(outroPrint);

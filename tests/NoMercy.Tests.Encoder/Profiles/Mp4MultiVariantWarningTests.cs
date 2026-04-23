@@ -11,7 +11,7 @@ using NoMercy.Encoder.Profiles;
 /// </summary>
 public class Mp4MultiVariantWarningTests
 {
-    private readonly ProfileValidator _validator = new(new CodecRegistry());
+    private readonly ProfileValidator _validator = new(new());
 
     [Fact]
     public void Mp4_SingleVariant_NoWarning()
@@ -83,7 +83,7 @@ public class Mp4MultiVariantWarningTests
             AllowedLanguages: ["en"]
         );
 
-        return new EncodingProfile(
+        return new(
             Id: Ulid.NewUlid(),
             Name: "Test",
             Format: format ?? OutputFormat.Mp4,

@@ -157,7 +157,7 @@ public class TaskProgressTests
 
         EncodeTask task = new(
             TaskId: "progress-task",
-            Command: new FfmpegCommand("ffmpeg", [], null),
+            Command: new("ffmpeg", [], null),
             OutputPath: "/out",
             Type: EncodeTaskType.QualityVariant
         );
@@ -216,7 +216,7 @@ public class TaskProgressTests
 
         EncodeTask task = new(
             TaskId: "survivor",
-            Command: new FfmpegCommand("ffmpeg", [], null),
+            Command: new("ffmpeg", [], null),
             OutputPath: "/out",
             Type: EncodeTaskType.QualityVariant
         );

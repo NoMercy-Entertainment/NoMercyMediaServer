@@ -296,7 +296,7 @@ public static class ServiceConfiguration
     {
         services
             .AddDataProtection()
-            .PersistKeysToFileSystem(new DirectoryInfo(AppFiles.DataProtectionKeysDir))
+            .PersistKeysToFileSystem(new(AppFiles.DataProtectionKeysDir))
             .SetApplicationName("NoMercyMediaServer");
 
         // Setup state and services — singletons shared between middleware and setup flow
@@ -310,7 +310,7 @@ public static class ServiceConfiguration
             IServiceScope authScope = scopeFactory.CreateScope();
             AppDbContext authDbContext =
                 authScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            return new AuthManager(authDbContext);
+            return new(authDbContext);
         });
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();

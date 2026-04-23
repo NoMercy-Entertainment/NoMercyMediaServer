@@ -50,7 +50,7 @@ public class MusicHub : ConnectionHub
 
     private static SemaphoreSlim GetUserLock(Guid userId)
     {
-        return CommandLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+        return CommandLocks.GetOrAdd(userId, _ => new(1, 1));
     }
 
     public async Task StartPlaybackCommand(string type, Guid listId, Guid trackId)

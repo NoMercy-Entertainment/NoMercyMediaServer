@@ -12,7 +12,7 @@ public class MkvOutputStrategyTests
     {
         MkvOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
         strategy.ConfigureOutput(builder, CreateSimplePlan(OutputFormat.Mkv), "/output");
 
@@ -25,7 +25,7 @@ public class MkvOutputStrategyTests
     {
         MkvOutputStrategy strategy = new();
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new InputOptions("/input.mkv"));
+        builder.AddInput(new("/input.mkv"));
 
         strategy.ConfigureOutput(builder, CreateSimplePlan(OutputFormat.Mkv), "/output");
 
@@ -47,7 +47,7 @@ public class MkvOutputStrategyTests
             Format: format,
             VideoOutputs:
             [
-                new VideoOutputPlan(
+                new(
                     1920,
                     1080,
                     "libx264",
@@ -59,12 +59,12 @@ public class MkvOutputStrategyTests
                     false,
                     "yuv420p",
                     "[v0]",
-                    new Dictionary<string, string>()
+                    new()
                 ),
             ],
             AudioOutputs:
             [
-                new AudioOutputPlan("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
             ],
             SubtitleOutputs: [],
             Thumbnails: null

@@ -185,6 +185,6 @@ public class FfmpegCommandBuilder
             args.Add(output.FilePath);
         }
 
-        return new FfmpegCommand(ffmpegPath, args.ToArray(), workingDirectory);
+        return new(ffmpegPath, args.ToArray(), workingDirectory);
     }
 }

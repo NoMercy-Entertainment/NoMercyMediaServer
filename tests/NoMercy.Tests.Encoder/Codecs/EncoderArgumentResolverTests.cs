@@ -275,7 +275,7 @@ public class EncoderArgumentResolverTests
                 MaxEncoderSessions: 12,
                 SupportedCodecs: [VideoCodecType.H264]
             );
-        return new ResolvedCodec(ffmpegName, encoder, device, defaultRateControl);
+        return new(ffmpegName, encoder, device, defaultRateControl);
     }
 
     private static VideoOutput MakeVideoOutput(int width, int? height = null) =>

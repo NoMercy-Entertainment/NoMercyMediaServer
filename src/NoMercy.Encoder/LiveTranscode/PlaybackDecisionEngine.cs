@@ -14,9 +14,9 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
         if (!media.HasVideo)
         {
             if (media.HasAudio && IsAudioCompatible(media.AudioStreams[0], client))
-                return new PlaybackDecision(PlaybackAction.DirectPlay, null, null);
+                return new(PlaybackAction.DirectPlay, null, null);
 
-            return new PlaybackDecision(
+            return new(
                 PlaybackAction.TranscodeAudio,
                 "Audio codec not supported",
                 null
@@ -40,12 +40,12 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
                     ? $"Resolution {video.Width}x{video.Height} exceeds client max {client.MaxWidth}x{client.MaxHeight}"
                 : "Client doesn't support HDR";
 
-            return new PlaybackDecision(PlaybackAction.TranscodeVideo, reason, null);
+            return new(PlaybackAction.TranscodeVideo, reason, null);
         }
 
         // Video codec OK, but audio needs transcode
         if (!audioCodecOk)
-            return new PlaybackDecision(
+            return new(
                 PlaybackAction.TranscodeAudio,
                 "Audio codec not supported by client",
                 null
@@ -53,7 +53,7 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
 
         // Video + audio OK, but container wrong → remux
         if (!containerOk)
-            return new PlaybackDecision(
+            return new(
                 PlaybackAction.Remux,
                 $"Container '{media.Format}' not supported, remuxing",
                 null
@@ -61,13 +61,13 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
 
         // Everything else OK but bitrate too high → transcode to reduce
         if (!bitrateOk)
-            return new PlaybackDecision(
+            return new(
                 PlaybackAction.TranscodeVideo,
                 "Bitrate exceeds client limit",
                 null
             );
 
-        return new PlaybackDecision(PlaybackAction.DirectPlay, null, null);
+        return new(PlaybackAction.DirectPlay, null, null);
     }
 
     private static bool IsVideoCodecCompatible(VideoStreamInfo video, ClientCapabilities client)

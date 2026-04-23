@@ -201,12 +201,12 @@ public class HomeService
                 libraries.Count == 0
                     ? Component
                         .EmptyState(
-                            new EmptyStateData
+                            new()
                             {
                                 Title = "No libraries yet",
                                 Message = "Create your first library to get started.",
                                 Icon = "library",
-                                Action = new EmptyStateActionData
+                                Action = new()
                                 {
                                     Label = "Add library",
                                     Route = "/dashboard/libraries",
@@ -216,7 +216,7 @@ public class HomeService
                         .Build()
                     : Component
                         .EmptyState(
-                            new EmptyStateData
+                            new()
                             {
                                 Title = "Scanning your libraries",
                                 Message =

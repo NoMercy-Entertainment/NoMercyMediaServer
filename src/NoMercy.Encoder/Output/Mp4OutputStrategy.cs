@@ -45,7 +45,7 @@ public class Mp4OutputStrategy : IOutputStrategy
         }
 
         builder.AddOutput(
-            new OutputOptions(
+            new(
                 FilePath: outputPath,
                 VideoCodec: primaryVideo?.EncoderName,
                 AudioCodec: primaryAudio?.Action == StreamAction.Copy

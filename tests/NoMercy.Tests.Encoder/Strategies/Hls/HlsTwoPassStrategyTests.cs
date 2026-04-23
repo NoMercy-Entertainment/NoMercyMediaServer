@@ -300,7 +300,7 @@ public class HlsTwoPassStrategyTests : IDisposable
             OutputPath: "/out",
             Duration: TimeSpan.FromSeconds(1),
             Error: null,
-            Metrics: new EncodingMetrics(1024, 2.0, 24.0, "libx264", null)
+            Metrics: new(1024, 2.0, 24.0, "libx264", null)
         );
 
     private static EncodingResult Fail(string message) =>
@@ -308,14 +308,14 @@ public class HlsTwoPassStrategyTests : IDisposable
             Success: false,
             OutputPath: string.Empty,
             Duration: TimeSpan.Zero,
-            Error: new EncodingError(
+            Error: new(
                 EncodingErrorKind.ProcessCrashed,
                 message,
                 null,
                 "Pass1",
                 false
             ),
-            Metrics: new EncodingMetrics(0, 0, 0, string.Empty, null)
+            Metrics: new(0, 0, 0, string.Empty, null)
         );
 
     private HlsTwoPassStrategy BuildStrategy() =>
@@ -325,7 +325,7 @@ public class HlsTwoPassStrategyTests : IDisposable
         new(
             InputPath: "/media/src.mkv",
             OutputDirectory: _outputDir,
-            Profile: new EncodingProfile(
+            Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "HLS 2-pass 1080p",
                 Format: OutputFormat.Hls,

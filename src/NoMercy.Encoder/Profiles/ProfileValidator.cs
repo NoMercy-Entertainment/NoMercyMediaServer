@@ -21,7 +21,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         ValidateAudioLanguageFilterOverlap(profile, errors);
 
         bool isValid = errors.All(e => e.Severity != ValidationSeverity.Error);
-        return new ValidationResult(isValid, [.. errors]);
+        return new(isValid, [.. errors]);
     }
 
     /// <summary>
@@ -45,7 +45,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         )
         {
             errors.Add(
-                new ValidationError(
+                new(
                     "AudioOutputs",
                     $"{profile.Format} profile has video but no audio outputs. iOS and many smart-"
                         + "TV clients refuse to play streams with no audio track. Add at least one "
@@ -92,7 +92,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                     continue;
 
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"AudioOutput[{j}].AllowedLanguages",
                         $"AudioOutput[{i}] and AudioOutput[{j}] have the same codec "
                             + $"({a.Codec} {a.Channels}ch) and overlapping language filters — "
@@ -121,7 +121,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (string.IsNullOrWhiteSpace(profile.Name))
         {
             errors.Add(
-                new ValidationError(
+                new(
                     "Name",
                     "Profile must have a non-empty name.",
                     ValidationSeverity.Error
@@ -151,7 +151,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (path.Contains("..", StringComparison.Ordinal))
         {
             errors.Add(
-                new ValidationError(
+                new(
                     field,
                     $"{field} must not contain path traversal sequences ('..').",
                     ValidationSeverity.Error
@@ -163,7 +163,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (Path.IsPathRooted(path))
         {
             errors.Add(
-                new ValidationError(
+                new(
                     field,
                     $"{field} must not be an absolute path.",
                     ValidationSeverity.Error
@@ -180,7 +180,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (profile.VideoOutputs.Length == 0 && profile.AudioOutputs.Length == 0)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     "Outputs",
                     "Profile must have at least one video or audio output.",
                     ValidationSeverity.Error
@@ -199,7 +199,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (output.Width <= 0)
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"{prefix}.Width",
                         "Width must be greater than 0.",
                         ValidationSeverity.Error
@@ -215,7 +215,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (output.BitrateKbps <= 0 && output.Crf <= 0)
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"{prefix}.RateControl",
                         "Video output must specify either BitrateKbps > 0 or Crf > 0.",
                         ValidationSeverity.Error
@@ -229,7 +229,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                 // The resolver picks CRF first, silently ignoring the bitrate —
                 // warn so the user knows their "target bitrate" is not honored.
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"{prefix}.RateControl",
                         $"Both Crf={output.Crf} and BitrateKbps={output.BitrateKbps} are set. "
                             + "These are mutually exclusive — CRF wins, BitrateKbps is ignored. "
@@ -253,7 +253,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                     if (output.Crf < range.Min || output.Crf > range.Max)
                     {
                         errors.Add(
-                            new ValidationError(
+                            new(
                                 $"{prefix}.Crf",
                                 $"Crf value {output.Crf} is outside the valid range [{range.Min}, {range.Max}] for {output.Codec}.",
                                 ValidationSeverity.Error
@@ -266,7 +266,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (output.KeyframeIntervalSeconds < 0)
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"{prefix}.KeyframeIntervalSeconds",
                         "KeyframeIntervalSeconds must be >= 0.",
                         ValidationSeverity.Error
@@ -312,7 +312,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (output.BitrateKbps < floorKbps)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.BitrateKbps",
                     $"{output.Codec} at {output.Width}x{height} below {floorKbps} kbps produces "
                         + "visible blocking and smearing regardless of preset. Typical minimum "
@@ -357,7 +357,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (floor.ThresholdCrf > 0 && output.Crf >= floor.ThresholdCrf)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.Crf",
                     $"CRF {output.Crf} on {floor.CodecDescription} produces noticeably blocky, "
                         + "smeared output. Typical quality range is 18-28 — higher values cut "
@@ -420,7 +420,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (pixelsRequested > maxPixels.Value)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.Level",
                     $"{output.Codec} Level {output.Level} caps at {FormatPixels(maxPixels.Value)} "
                         + $"but the output is {output.Width}x{outputHeight} "
@@ -458,7 +458,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (output.TenBit && profileIs8BitOnly)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.Profile",
                     $"VP9 {output.Profile} is 8-bit only; TenBit=true produces 8-bit output "
                         + "or a malformed stream. Use profile2 or profile3 for 10-bit VP9.",
@@ -470,7 +470,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (!output.TenBit && profileIs10Bit)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.Profile",
                     $"VP9 {output.Profile} requires 10-bit content; TenBit is false. "
                         + "Either set TenBit=true or drop to profile0/profile1.",
@@ -501,7 +501,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (!knownPreset)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.Preset",
                     $"Preset '{output.Preset}' is not recognized by any {output.Codec} encoder. "
                         + "The resolver will substitute a default — your preset is ignored.",
@@ -526,7 +526,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (!knownProfile)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.Profile",
                     $"Profile '{output.Profile}' is not recognized by any {output.Codec} encoder. "
                         + "The resolver will fall back to the first declared profile.",
@@ -593,7 +593,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (ReservedFfmpegFlags.Contains(key))
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"{prefix}.CustomArguments",
                         $"CustomArguments key '{key}' collides with a flag the encoder pipeline "
                             + "controls (codec, preset, quality, pixel format, filter chain, "
@@ -628,7 +628,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (!seen.Add(key))
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"VideoOutput[{i}]",
                         $"Duplicate variant — same codec, resolution, bitrate, CRF, and bit depth "
                             + $"as an earlier output. Encoding the same variant twice wastes CPU/GPU "
@@ -675,7 +675,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (sorted[i].Bitrate < sorted[i - 1].Bitrate)
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"VideoOutput[{sorted[i].Index}].BitrateKbps",
                         $"ABR ladder is inverted — a higher-resolution variant has a LOWER "
                             + $"bitrate than a smaller one. Players won't switch up to it. "
@@ -807,7 +807,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             // H264 is the canonical case — every H264 hardware encoder
             // (NVENC/AMF/QSV/VAAPI/VideoToolbox) rejects 10-bit.
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.TenBit",
                     $"10-bit {output.Codec} has no hardware encoder support "
                         + "(every vendor's H.264/HEVC hardware path is 8-bit for this codec). "
@@ -821,7 +821,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             // Codec has no hardware encoders at all (VP9 on non-Intel, etc.)
             // — this is a speed/CPU warning, not a correctness issue.
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.TenBit",
                     $"10-bit {output.Codec} will be software-encoded (no hardware encoders "
                         + "available for this codec).",
@@ -843,7 +843,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (!encoder.IsLossless && output.BitrateKbps <= 0)
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"{prefix}.BitrateKbps",
                         $"BitrateKbps must be > 0 for lossy codec {output.Codec}.",
                         ValidationSeverity.Error
@@ -854,7 +854,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (!encoder.Channels.Contains(output.Channels))
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"{prefix}.Channels",
                         $"{output.Channels} channels is not supported by {output.Codec}. Supported: [{string.Join(", ", encoder.Channels)}].",
                         ValidationSeverity.Error
@@ -865,7 +865,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (!encoder.SampleRates.Contains(output.SampleRateHz))
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"{prefix}.SampleRateHz",
                         $"Sample rate {output.SampleRateHz} Hz is not supported by {output.Codec}. Supported: [{string.Join(", ", encoder.SampleRates)}].",
                         ValidationSeverity.Error
@@ -881,7 +881,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                 )
                 {
                     errors.Add(
-                        new ValidationError(
+                        new(
                             $"{prefix}.BitrateKbps",
                             $"BitrateKbps {output.BitrateKbps} is outside the valid range [{encoder.MinBitrateKbps}, {encoder.MaxBitrateKbps}] for {output.Codec}.",
                             ValidationSeverity.Error
@@ -931,7 +931,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             nearestAbove > 0 ? $"{nearestBelow} or {nearestAbove}" : $"{nearestBelow}";
 
         errors.Add(
-            new ValidationError(
+            new(
                 $"{prefix}.BitrateKbps",
                 $"{output.Codec} requires an exact bitrate from its ladder. {output.BitrateKbps} "
                     + $"kbps will be silently rounded down to {nearestBelow} kbps by the encoder. "
@@ -960,7 +960,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (isSurroundDolby && output.BitrateKbps < 384)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.BitrateKbps",
                     $"{output.Codec} 5.1/7.1 below 384 kbps produces audibly compressed audio. "
                         + "Dolby-recommended minimum for surround is 384 kbps; use 448 or 640 for "
@@ -975,7 +975,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (isStereoAac && output.BitrateKbps > 256)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.BitrateKbps",
                     $"AAC stereo at {output.BitrateKbps} kbps is wasted bandwidth — AAC quality "
                         + "plateaus around 192-256 kbps for stereo. Use FLAC for archival or stay "
@@ -991,7 +991,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (isSurroundAac && output.BitrateKbps < 256)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     $"{prefix}.BitrateKbps",
                     $"AAC {output.Channels}ch at {output.BitrateKbps} kbps is under-provisioned — "
                         + "recommended minimum for AAC surround is 256 kbps (sweet spot 256-384).",
@@ -1061,7 +1061,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (segmentSeconds % keyInt != 0)
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"VideoOutput[{i}].KeyframeIntervalSeconds",
                         $"KeyframeIntervalSeconds ({keyInt}s) does not evenly divide "
                             + $"SegmentDurationSeconds ({segmentSeconds}s). Segments may start "
@@ -1083,7 +1083,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (profile.VideoOutputs.Length > 0)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     "VideoOutputs",
                     $"{profile.Format} is an audio-only container; video outputs are not supported.",
                     ValidationSeverity.Error
@@ -1094,7 +1094,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (profile.SubtitleOutputs.Length > 0)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     "SubtitleOutputs",
                     $"{profile.Format} has no subtitle support; drop the subtitle outputs.",
                     ValidationSeverity.Error
@@ -1105,7 +1105,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (profile.AudioOutputs.Length == 0)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     "AudioOutputs",
                     $"{profile.Format} requires exactly one audio output.",
                     ValidationSeverity.Error
@@ -1115,7 +1115,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         else if (profile.AudioOutputs.Length > 1)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     "AudioOutputs",
                     $"{profile.Format} produces a single file; additional audio outputs are ignored.",
                     ValidationSeverity.Warning
@@ -1129,7 +1129,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (codec != AudioCodecType.Mp3)
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         "AudioOutputs[0].Codec",
                         $"MP3 container requires the MP3 codec; got {codec}.",
                         ValidationSeverity.Error
@@ -1144,7 +1144,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (codec != AudioCodecType.Flac)
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         "AudioOutputs[0].Codec",
                         $"FLAC container requires the FLAC codec; got {codec}.",
                         ValidationSeverity.Error
@@ -1165,7 +1165,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (Array.IndexOf(allowed, codec) < 0)
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         "AudioOutputs[0].Codec",
                         $"Ogg container accepts Vorbis, Opus, or FLAC; got {codec}.",
                         ValidationSeverity.Error
@@ -1200,7 +1200,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (!allowedVideoCodecs.Contains(output.Codec))
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"VideoOutput[{i}].Codec",
                         $"{output.Codec} is not supported in HLS. Allowed: H264, H265, AV1.",
                         ValidationSeverity.Error
@@ -1215,7 +1215,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (!allowedAudioCodecs.Contains(output.Codec))
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"AudioOutput[{i}].Codec",
                         $"{output.Codec} is not supported in HLS. Allowed: AAC, AC3, EAC3, Opus.",
                         ValidationSeverity.Error
@@ -1237,7 +1237,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (output.Codec == VideoCodecType.Vp9)
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"VideoOutput[{i}].Codec",
                         "VP9 in MP4 container is non-standard and may have limited player support.",
                         ValidationSeverity.Warning
@@ -1252,7 +1252,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         if (profile.VideoOutputs.Length > 1)
         {
             errors.Add(
-                new ValidationError(
+                new(
                     "VideoOutputs",
                     "MP4 is a single-file format; only the first video output is muxed. Use HLS or DASH for multi-variant ladders.",
                     ValidationSeverity.Warning
@@ -1287,7 +1287,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (!allowedVideoCodecs.Contains(output.Codec))
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"VideoOutput[{i}].Codec",
                         $"{output.Codec} is not supported in DASH. Allowed: H264, H265, AV1, VP9.",
                         ValidationSeverity.Error
@@ -1302,7 +1302,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             if (!allowedAudioCodecs.Contains(output.Codec))
             {
                 errors.Add(
-                    new ValidationError(
+                    new(
                         $"AudioOutput[{i}].Codec",
                         $"{output.Codec} is not supported in DASH. Allowed: AAC, Opus, AC3, EAC3.",
                         ValidationSeverity.Error
@@ -1340,7 +1340,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                     else if (output.Codec == SubtitleCodecType.Ass)
                     {
                         errors.Add(
-                            new ValidationError(
+                            new(
                                 $"SubtitleOutput[{i}].Codec",
                                 "ASS subtitles in HLS Extract mode will be converted to WebVTT, losing styling.",
                                 ValidationSeverity.Warning
@@ -1350,7 +1350,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                     else
                     {
                         errors.Add(
-                            new ValidationError(
+                            new(
                                 $"SubtitleOutput[{i}].Codec",
                                 $"{output.Codec} is not supported in HLS Extract mode. Use WebVTT.",
                                 ValidationSeverity.Error
@@ -1366,7 +1366,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                     )
                     {
                         errors.Add(
-                            new ValidationError(
+                            new(
                                 $"SubtitleOutput[{i}].Codec",
                                 $"{output.Codec} is not supported in MP4 Extract mode. Use WebVTT or SRT.",
                                 ValidationSeverity.Error

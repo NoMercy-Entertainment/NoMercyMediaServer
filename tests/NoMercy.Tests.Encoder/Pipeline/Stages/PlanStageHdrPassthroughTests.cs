@@ -41,29 +41,29 @@ public class PlanStageHdrPassthroughTests
             .Returns(
                 new ResolvedCodec(
                     FfmpegEncoderName: "libx265",
-                    EncoderInfo: new EncoderInfo(
+                    EncoderInfo: new(
                         FfmpegName: "libx265",
                         RequiredVendor: null,
                         Presets: ["medium"],
                         Profiles: ["main10"],
                         Levels: ["5.1"],
-                        QualityRange: new QualityRange(0, 51, 28),
+                        QualityRange: new(0, 51, 28),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: true,
                         SupportsHdr: true,
                         MaxConcurrentSessions: int.MaxValue,
                         PixelFormat10Bit: "yuv420p10le",
-                        VendorSpecificFlags: new Dictionary<string, string>()
+                        VendorSpecificFlags: new()
                     ),
                     Device: null,
                     DefaultRateControl: RateControlMode.Crf
                 )
             );
 
-        _stage = new PlanStage(
-            new ExecutionGraphBuilder(),
-            new GroupingStrategy(),
-            new CostEstimator(),
+        _stage = new(
+            new(),
+            new(),
+            new(),
             _codecResolver.Object,
             _hardware.Object,
             new TonemapSelector(),
@@ -159,7 +159,7 @@ public class PlanStageHdrPassthroughTests
             FileSizeBytes: 30_000_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "hevc",
                     Width: 3840,
@@ -188,7 +188,7 @@ public class PlanStageHdrPassthroughTests
             FileSizeBytes: 4_000_000_000,
             VideoStreams:
             [
-                new VideoStreamInfo(
+                new(
                     Index: 0,
                     Codec: "h264",
                     Width: 1920,
@@ -215,7 +215,7 @@ public class PlanStageHdrPassthroughTests
             Format: OutputFormat.Hls,
             VideoOutputs:
             [
-                new VideoOutput(
+                new(
                     Codec: VideoCodecType.H265,
                     Width: 3840,
                     Height: 2160,

@@ -158,7 +158,7 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                     metrics.AverageFps
                 );
 
-                return new ExecutionResult(
+                return new(
                     Success: true,
                     ExitCode: 0,
                     StdErr: result.StdErr,
@@ -177,7 +177,7 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 result.StdErr
             );
 
-            return new ExecutionResult(
+            return new(
                 Success: false,
                 ExitCode: result.ExitCode,
                 StdErr: result.StdErr,
@@ -210,7 +210,7 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
             _ => EncodingErrorKind.ProcessCrashed,
         };
 
-        return new EncodingError(
+        return new(
             Kind: kind,
             Message: $"FFmpeg exited with code {exitCode}",
             FfmpegStderr: stderr.Length > 2000 ? stderr[^2000..] : stderr,

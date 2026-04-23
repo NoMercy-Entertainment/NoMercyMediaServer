@@ -103,7 +103,7 @@ public class ChromaprintIntroDetector : IIntroDetector
         // let future refinements weight tail matches differently.
         _ = fromTail;
 
-        return new IntroMarker(start, end, confidence);
+        return new(start, end, confidence);
     }
 
     /// <summary>

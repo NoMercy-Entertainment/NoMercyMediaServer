@@ -9,7 +9,7 @@ public class ResourceAllocatorTests
     private static IHardwareCapabilities MakeGpuCaps() =>
         new HardwareCapabilities(
             [
-                new GpuDevice(
+                new(
                     GpuVendor.Nvidia,
                     "RTX 4090",
                     24576,
@@ -26,12 +26,12 @@ public class ResourceAllocatorTests
     {
         ExecutionNode[] nodes =
         [
-            new ExecutionNode("node_0", OperationType.Decode, [], new Dictionary<string, string>()),
-            new ExecutionNode(
+            new("node_0", OperationType.Decode, [], new()),
+            new(
                 "node_1",
                 OperationType.Encode,
                 ["node_0"],
-                new Dictionary<string, string>()
+                new()
             ),
         ];
 
@@ -40,18 +40,18 @@ public class ResourceAllocatorTests
         for (int i = 0; i < encodeCount; i++)
         {
             allNodes.Add(
-                new ExecutionNode(
+                new(
                     $"encode_{i}",
                     OperationType.Encode,
                     ["node_0"],
-                    new Dictionary<string, string>()
+                    new()
                 )
             );
         }
 
         return
         [
-            new ExecutionGroup(
+            new(
                 GroupId: "group_0",
                 Nodes: allNodes.ToArray(),
                 DeviceId: requiresGpu ? "RTX 4090" : null,
@@ -117,15 +117,15 @@ public class ResourceAllocatorTests
 
         List<ExecutionGroup> groups =
         [
-            new ExecutionGroup(
+            new(
                 GroupId: "group_0",
                 Nodes:
                 [
-                    new ExecutionNode(
+                    new(
                         "sub_0",
                         OperationType.SubtitleExtract,
                         [],
-                        new Dictionary<string, string>()
+                        new()
                     ),
                 ],
                 DeviceId: null,

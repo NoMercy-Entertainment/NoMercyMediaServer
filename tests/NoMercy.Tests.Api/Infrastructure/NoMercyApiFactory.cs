@@ -103,7 +103,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         ServiceCollection tokenServices = new();
         tokenServices
             .AddDataProtection()
-            .PersistKeysToFileSystem(new DirectoryInfo(AppFiles.DataProtectionKeysDir))
+            .PersistKeysToFileSystem(new(AppFiles.DataProtectionKeysDir))
             .SetApplicationName("NoMercyMediaServer");
         ServiceProvider tokenProvider = tokenServices.BuildServiceProvider();
         TokenStore.Initialize(tokenProvider);

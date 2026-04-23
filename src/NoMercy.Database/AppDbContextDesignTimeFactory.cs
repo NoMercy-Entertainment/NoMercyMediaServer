@@ -9,6 +9,6 @@ public class AppDbContextDesignTimeFactory : IDesignTimeDbContextFactory<AppDbCo
     {
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
         optionsBuilder.UseSqlite("Data Source=app.db");
-        return new AppDbContext(optionsBuilder.Options);
+        return new(optionsBuilder.Options);
     }
 }

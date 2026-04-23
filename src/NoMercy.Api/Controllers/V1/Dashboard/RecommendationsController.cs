@@ -45,7 +45,7 @@ public class RecommendationsController(
             .Grid()
             .WithId("recommendations-movies")
             .WithTitle("Recommended Movies")
-            .WithItems(recommendations.Select(rec => Component.Card().WithData(new CardData(rec))));
+            .WithItems(recommendations.Select(rec => Component.Card().WithData(new(rec))));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -73,7 +73,7 @@ public class RecommendationsController(
             .Grid()
             .WithId("recommendations-tv")
             .WithTitle("Recommended TV Shows")
-            .WithItems(recommendations.Select(rec => Component.Card().WithData(new CardData(rec))));
+            .WithItems(recommendations.Select(rec => Component.Card().WithData(new(rec))));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -101,7 +101,7 @@ public class RecommendationsController(
             .Grid()
             .WithId("recommendations-anime")
             .WithTitle("Recommended Anime")
-            .WithItems(recommendations.Select(rec => Component.Card().WithData(new CardData(rec))));
+            .WithItems(recommendations.Select(rec => Component.Card().WithData(new(rec))));
 
         return Ok(ComponentResponse.From(response));
     }
