@@ -18,17 +18,17 @@ public static class MusicGenresSeed
         {
             MusicBrainzGenreClient musicBrainzGenreClient = new();
 
-            MusicBrainzAllGenres? probe = await musicBrainzGenreClient.Probe();
-            if (probe is null)
+            MusicBrainzAllGenres? firstPage = await musicBrainzGenreClient.FirstPage();
+            if (firstPage is null)
             {
                 Logger.Setup(
-                    "Music genres seed skipped: MusicBrainz probe returned null",
+                    "Music genres seed skipped: MusicBrainz first-page fetch returned null",
                     LogEventLevel.Warning
                 );
                 return;
             }
 
-            long expected = probe.GenreCount;
+            long expected = firstPage.GenreCount;
             long actual = await dbContext.MusicGenres.LongCountAsync();
 
             if (actual >= expected)
@@ -39,7 +39,8 @@ public static class MusicGenresSeed
                 LogEventLevel.Verbose
             );
 
-            List<MusicBrainzGenre> fetched = await musicBrainzGenreClient.All();
+            List<MusicBrainzGenre> fetched = [.. firstPage.Genres];
+            fetched.AddRange(await musicBrainzGenreClient.RemainingPages(firstPage));
 
             MusicGenre[] genres = fetched
                 .ConvertAll<MusicGenre>(genre => new() { Id = genre.Id, Name = genre.Name })

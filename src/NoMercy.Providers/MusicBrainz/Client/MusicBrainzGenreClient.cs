@@ -9,11 +9,8 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
     public MusicBrainzGenreClient()
         : base() { }
 
-    public async Task<List<MusicBrainzGenre>> All()
-    {
-        List<MusicBrainzGenre> genres = [];
-
-        MusicBrainzAllGenres? firstPage = await Get<MusicBrainzAllGenres>(
+    public Task<MusicBrainzAllGenres?> FirstPage() =>
+        Get<MusicBrainzAllGenres>(
             "genre/all",
             new Dictionary<string, string>
             {
@@ -23,11 +20,9 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
             }
         );
 
-        if (firstPage is null)
-            return genres;
-
-        genres.AddRange(firstPage.Genres);
-
+    public async Task<List<MusicBrainzGenre>> RemainingPages(MusicBrainzAllGenres firstPage)
+    {
+        List<MusicBrainzGenre> genres = [];
         int pageSize = firstPage.Genres.Length;
 
         if (pageSize == 0)
@@ -54,16 +49,16 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
         return genres;
     }
 
-    public Task<MusicBrainzAllGenres?> Probe() =>
-        Get<MusicBrainzAllGenres>(
-            "genre/all",
-            new Dictionary<string, string>
-            {
-                ["limit"] = "1",
-                ["offset"] = "0",
-                ["fmt"] = "json",
-            }
-        );
+    public async Task<List<MusicBrainzGenre>> All()
+    {
+        MusicBrainzAllGenres? firstPage = await FirstPage();
+        if (firstPage is null)
+            return [];
+
+        List<MusicBrainzGenre> genres = [.. firstPage.Genres];
+        genres.AddRange(await RemainingPages(firstPage));
+        return genres;
+    }
 
     public async Task<MusicBrainzGenre?> SearchGenre(string query)
     {
