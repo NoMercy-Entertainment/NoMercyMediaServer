@@ -203,6 +203,26 @@ public static class Logger
 
     public static void SetLogLevel(LogEventLevel level) => _maxLogLevel = level;
 
+    /// <summary>
+    /// Holds a mutual-exclusion lock while writing every line of a multi-line banner.
+    /// Callers supply (logType, message, level) tuples; all lines are written under
+    /// a single lock so no other thread can interleave a log entry between them.
+    /// </summary>
+    private static readonly object BannerLock = new();
+
+    public static void WriteBanner(
+        IEnumerable<(string LogType, string Message, LogEventLevel Level)> lines
+    )
+    {
+        lock (BannerLock)
+        {
+            foreach ((string logType, string message, LogEventLevel level) in lines)
+            {
+                Log(logType, message, level);
+            }
+        }
+    }
+
     private static void Log<T>(string logType, T message, LogEventLevel? level = null)
         where T : class
     {
