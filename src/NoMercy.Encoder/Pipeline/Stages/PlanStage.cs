@@ -29,7 +29,8 @@ public class PlanStage(
     IFfmpegCapabilities ffmpegCapabilities,
     IAbrLadderGenerator abrLadderGenerator,
     ContentAnalysis.ICropDetector cropDetector,
-    ILogger<PlanStage> logger
+    ILogger<PlanStage> logger,
+    IQualityScalerResolver? qualityScalerResolver = null
 ) : IPipelineStage<ValidateInput, ExecutionPlan>, IPlanStage
 {
     public string Name => "Plan";
@@ -88,7 +89,8 @@ public class PlanStage(
                 profile,
                 input.Media,
                 resolvedCodecs,
-                cropFilter
+                cropFilter,
+                context
             );
 
             logger.LogInformation(
@@ -164,7 +166,8 @@ public class PlanStage(
         EncodingProfile profile,
         MediaInfo media,
         ResolvedCodec[] resolvedCodecs,
-        string? cropFilter
+        string? cropFilter,
+        EncodingContext context
     )
     {
         // Resolve tonemap strategy once — shared across all video outputs that need HDR→SDR
@@ -193,8 +196,47 @@ public class PlanStage(
                             Dictionary<string, string> extraFlags = new(
                                 encoder.VendorSpecificFlags
                             );
-                            int crf = EncoderArgumentResolver.ResolveQuality(
+
+                            // Translate the profile CRF to the encoder-native quality value.
+                            // The scaler knows each encoder's quirks (CQ range, inverted q:v,
+                            // QSV's zero-disables-CRF bug, etc.) so PlanStage stays generic.
+                            string encoderHandle = resolved.FfmpegEncoderName;
+                            IQualityScaler scaler =
+                                qualityScalerResolver?.For(encoderHandle)
+                                ?? new LinearQualityScaler();
+
+                            QualityRange nativeRange = encoder.QualityRange;
+                            int referenceMax = encoderHandle.Contains(
+                                "av1",
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                                ? 63
+                                : 51;
+
+                            CodecHint hint = new(encoderHandle, v.Codec);
+                            int translatedCrf = scaler.Translate(
                                 v.Crf,
+                                referenceMax,
+                                nativeRange.Max,
+                                hint
+                            );
+
+                            context.DecisionsOrNoOp.Add(
+                                new DecisionLog(
+                                    "plan",
+                                    "plan.crf_translated",
+                                    $"CRF {v.Crf} → {encoderHandle} quality {translatedCrf}",
+                                    new
+                                    {
+                                        handle = encoderHandle,
+                                        source = v.Crf,
+                                        translated = translatedCrf,
+                                    }
+                                )
+                            );
+
+                            int crf = EncoderArgumentResolver.ResolveQuality(
+                                translatedCrf,
                                 resolved,
                                 extraFlags
                             );

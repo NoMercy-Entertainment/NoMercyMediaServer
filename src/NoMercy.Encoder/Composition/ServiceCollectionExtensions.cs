@@ -67,6 +67,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<CodecRegistry>();
         services.AddSingleton<ICodecResolver, CodecResolver>();
 
+        // Quality scalers — specific encoders first, LinearQualityScaler last
+        // (it is the unconditional fallback: Supports always returns true).
+        services.AddSingleton<IQualityScaler, NvencQualityScaler>();
+        services.AddSingleton<IQualityScaler, QsvQualityScaler>();
+        services.AddSingleton<IQualityScaler, VideoToolboxQualityScaler>();
+        services.AddSingleton<IQualityScaler, AmfAv1QualityScaler>();
+        services.AddSingleton<IQualityScaler, SvtAv1QualityScaler>();
+        services.AddSingleton<IQualityScaler, LinearQualityScaler>();
+        services.AddSingleton<IQualityScalerResolver, QualityScalerResolver>();
+
         // Hardware
         services.AddSingleton<IHardwareDetector, PlatformHardwareDetector>();
         services.AddSingleton<FfmpegCapabilities>();
