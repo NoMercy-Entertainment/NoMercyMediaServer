@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
 /// <summary>
 /// Rips optical-disc titles to intermediate MKV files on disk. Each title
@@ -19,6 +20,7 @@ using NoMercy.Encoder.Infrastructure;
 public class DiscRipper(
     EncoderOptions options,
     IProcessRunner processRunner,
+    IStorage storage,
     ILogger<DiscRipper> logger
 ) : IDiscRipper
 {
@@ -28,7 +30,7 @@ public class DiscRipper(
         CancellationToken ct
     )
     {
-        Directory.CreateDirectory(outputDirectory);
+        storage.CreateDirectory(outputDirectory);
 
         List<DiscRipResult> results = [];
         foreach (int titleIndex in request.SelectedTitleIndices)
@@ -89,7 +91,11 @@ public class DiscRipper(
         // read-speed rather than encode-speed time.
         args.Add("-c");
         args.Add("copy");
-        args.Add(outputPath);
+
+        // Lease the output path through IStorage so remote drivers can
+        // stage it locally for ffmpeg and clean up on dispose.
+        await using LocalPathLease outputLease = storage.AcquireLocalPath(outputPath);
+        args.Add(outputLease.Path);
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         ProcessResult result = await processRunner.RunAsync(
@@ -112,7 +118,7 @@ public class DiscRipper(
             );
         }
 
-        long size = File.Exists(outputPath) ? new FileInfo(outputPath).Length : 0;
+        long size = storage.SizeOrZero(outputPath);
         logger.LogInformation(
             "Ripped title {Index} from {Drive} → {Path} ({Bytes} bytes, {Duration:c})",
             titleIndex,

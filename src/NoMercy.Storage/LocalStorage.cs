@@ -166,6 +166,104 @@ public sealed class LocalStorage : IStorage
         return Task.FromResult(new LocalPathLease(safe));
     }
 
+    // --- Sync companions ----------------------------------------------------
+
+    public bool Exists(string path)
+    {
+        string safe = _guard.Validate(path);
+        return _backend.FileExists(safe) || _backend.DirectoryExists(safe);
+    }
+
+    public long SizeOrZero(string path)
+    {
+        string safe = _guard.Validate(path);
+        return _backend.FileExists(safe) ? _backend.GetFileSize(safe) : 0L;
+    }
+
+    public long Size(string path)
+    {
+        string safe = _guard.Validate(path);
+        return _backend.GetFileSize(safe);
+    }
+
+    public DateTimeOffset LastModified(string path)
+    {
+        string safe = _guard.Validate(path);
+        return new DateTimeOffset(_backend.GetLastWriteTimeUtc(safe), TimeSpan.Zero);
+    }
+
+    public void CreateDirectory(string path)
+    {
+        string safe = _guard.Validate(path);
+        _backend.CreateDirectory(safe);
+    }
+
+    public void Delete(string path)
+    {
+        string safe = _guard.Validate(path);
+        if (_backend.FileExists(safe))
+            _backend.DeleteFile(safe);
+    }
+
+    public void DeleteDirectory(string path, bool recursive)
+    {
+        string safe = _guard.Validate(path);
+        if (_backend.DirectoryExists(safe))
+            _backend.DeleteDirectory(safe, recursive);
+    }
+
+    public byte[] Read(string path)
+    {
+        string safe = _guard.Validate(path);
+        using Stream stream = _backend.OpenRead(safe);
+        using MemoryStream ms = new();
+        stream.CopyTo(ms);
+        return ms.ToArray();
+    }
+
+    public Stream OpenRead(string path)
+    {
+        string safe = _guard.Validate(path);
+        return _backend.OpenRead(safe);
+    }
+
+    public Stream OpenWrite(string path, bool overwrite)
+    {
+        string safe = _guard.Validate(path);
+        EnsureParentDirectory(safe);
+        return _backend.OpenWrite(safe, overwrite);
+    }
+
+    public void Write(string path, byte[] bytes)
+    {
+        string safe = _guard.Validate(path);
+        EnsureParentDirectory(safe);
+        using Stream stream = _backend.OpenWrite(safe, overwrite: true);
+        stream.Write(bytes, 0, bytes.Length);
+    }
+
+    public void Move(string from, string to)
+    {
+        string safeFrom = _guard.Validate(from);
+        string safeTo = _guard.Validate(to);
+        EnsureParentDirectory(safeTo);
+        _backend.MoveFile(safeFrom, safeTo);
+    }
+
+    public void Copy(string from, string to)
+    {
+        string safeFrom = _guard.Validate(from);
+        string safeTo = _guard.Validate(to);
+        EnsureParentDirectory(safeTo);
+        _backend.CopyFile(safeFrom, safeTo, overwrite: true);
+    }
+
+    public LocalPathLease AcquireLocalPath(string path)
+    {
+        string safe = _guard.Validate(path);
+        return new LocalPathLease(safe);
+    }
+
     private void EnsureParentDirectory(string path)
     {
         string? parent = Path.GetDirectoryName(path);

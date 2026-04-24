@@ -6,6 +6,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Storage;
 
 /// <summary>
 /// Verifies the FFmpeg command <see cref="DiscRipper"/> builds for each
@@ -98,12 +99,7 @@ public class DiscRipperTests : IDisposable
         RipRequest request = Request(
             drivePath: "bluray:/dev/sr0",
             titles: [0],
-            audioTracks:
-            [
-                new(0, true),
-                new(1, false),
-                new(2, true),
-            ],
+            audioTracks: [new(0, true), new(1, false), new(2, true)],
             subtitles: []
         );
 
@@ -233,8 +229,17 @@ public class DiscRipperTests : IDisposable
         _capturedArgs.Should().BeEmpty();
     }
 
-    private DiscRipper BuildRipper() =>
-        new(_options, _processRunner.Object, NullLogger<DiscRipper>.Instance);
+    private DiscRipper BuildRipper()
+    {
+        SystemIoStorageBackend backend = new();
+        LocalStorage storage = new(backend, new StoragePathGuard([], backend));
+        return new DiscRipper(
+            _options,
+            _processRunner.Object,
+            storage,
+            NullLogger<DiscRipper>.Instance
+        );
+    }
 
     private static RipRequest Request(
         string drivePath,

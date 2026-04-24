@@ -53,4 +53,46 @@ public interface IStorage
     /// drivers stage to a temp file and clean up on dispose.
     /// </summary>
     Task<LocalPathLease> AcquireLocalPathAsync(string path, CancellationToken ct);
+
+    // --- Sync companions ----------------------------------------------------
+    //
+    // The async surface above is the forward-compatible API — remote
+    // drivers (SMB / NFS / S3 / R2) will do real I/O during these calls.
+    // The sync companions below exist for call sites where the op is a
+    // one-shot string/metadata check and async buys nothing. LocalStorage
+    // executes them directly on the backend; remote drivers will block on
+    // their own thread.
+
+    bool Exists(string path);
+
+    /// <summary>
+    /// File size in bytes, or 0 when the file does not exist. Replaces
+    /// the <c>(await Exists) ? await Size : 0</c> double-await pattern at
+    /// call sites that only need the size for logging / reporting.
+    /// </summary>
+    long SizeOrZero(string path);
+
+    long Size(string path);
+
+    DateTimeOffset LastModified(string path);
+
+    void CreateDirectory(string path);
+
+    void Delete(string path);
+
+    void DeleteDirectory(string path, bool recursive);
+
+    byte[] Read(string path);
+
+    Stream OpenRead(string path);
+
+    Stream OpenWrite(string path, bool overwrite);
+
+    void Write(string path, byte[] bytes);
+
+    void Move(string from, string to);
+
+    void Copy(string from, string to);
+
+    LocalPathLease AcquireLocalPath(string path);
 }
