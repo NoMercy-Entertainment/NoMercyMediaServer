@@ -2,9 +2,11 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
+using AnalysisMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
 
@@ -12,7 +14,10 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/encoder/profiles")]
-public class EncoderProfilesController(IProfileValidator profileValidator) : BaseController
+public class EncoderProfilesController(
+    IProfileValidator profileValidator,
+    IMediaAnalyzer mediaAnalyzer
+) : BaseController
 {
     /// <summary>
     /// Validates an encoding profile and returns a structured envelope with
@@ -79,26 +84,177 @@ public class EncoderProfilesController(IProfileValidator profileValidator) : Bas
     }
 
     /// <summary>
-    /// Placeholder for Phase 1.8 — per-stream plan + encode estimates.
-    /// Returns 501 until that phase lands.
+    /// Returns a per-stream action plan and source-level warnings for the
+    /// given profile applied to the given source file.
+    ///
+    /// <para>Always returns 200 when the source is accessible — warnings surface in the
+    /// body as <c>source_warnings</c> chips, never as HTTP error codes.</para>
+    /// <para>Returns 404 when the source file cannot be read (via
+    /// <see cref="RuntimeErrors.SourceNotAccessible"/>).</para>
     /// </summary>
     [HttpPost("{id}/preview")]
-    public IActionResult Preview(string id)
+    public async Task<IActionResult> Preview(
+        string id,
+        [FromBody] PreviewEncoderProfileRequest request,
+        CancellationToken ct
+    )
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to preview encodes");
 
-        EncoderErrorShape shape = new(
-            "not_implemented",
-            "Preview is not yet implemented.",
-            "Phase 1.8 will land the per-stream plan and encode estimates. Use POST /api/v1/dashboard/encoding/presets/preview in the interim.",
-            new { phase = "1.8", profile_id = id }
+        if (string.IsNullOrWhiteSpace(request.ProfileJson))
+        {
+            PreviewResponse emptyResponse = new(
+                ProfileId: id,
+                SourceVideoFileId: request.SourcePath ?? string.Empty,
+                SourceAnalysis: new SourceAnalysisDto(
+                    string.Empty,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    false,
+                    null,
+                    null,
+                    null
+                ),
+                PerStreamPlan: new PerStreamPlan([], [], []),
+                SourceWarnings:
+                [
+                    new EncoderRule(
+                        EncoderRuleId.ProfileNameMissing,
+                        EncoderRuleSeverity.Error,
+                        "profile_json",
+                        "profile_json is required.",
+                        "Supply the full profile JSON in the profile_json field."
+                    ),
+                ],
+                EstimatedFps: 0,
+                EstimatedDurationSeconds: 0,
+                EncoderHandle: "auto"
+            );
+            return Ok(emptyResponse);
+        }
+
+        EncodingProfile? profile;
+        try
+        {
+            profile = JsonConvert.DeserializeObject<EncodingProfile>(request.ProfileJson);
+        }
+        catch (JsonException ex)
+        {
+            PreviewResponse parseErrorResponse = new(
+                ProfileId: id,
+                SourceVideoFileId: request.SourcePath ?? string.Empty,
+                SourceAnalysis: new SourceAnalysisDto(
+                    string.Empty,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    false,
+                    null,
+                    null,
+                    null
+                ),
+                PerStreamPlan: new PerStreamPlan([], [], []),
+                SourceWarnings:
+                [
+                    new EncoderRule(
+                        EncoderRuleId.ProfileNameMissing,
+                        EncoderRuleSeverity.Error,
+                        "profile_json",
+                        $"Profile JSON is malformed: {ex.Message}",
+                        "Fix the JSON syntax error and resubmit."
+                    ),
+                ],
+                EstimatedFps: 0,
+                EstimatedDurationSeconds: 0,
+                EncoderHandle: "auto"
+            );
+            return Ok(parseErrorResponse);
+        }
+
+        if (profile is null)
+        {
+            PreviewResponse nullResponse = new(
+                ProfileId: id,
+                SourceVideoFileId: request.SourcePath ?? string.Empty,
+                SourceAnalysis: new SourceAnalysisDto(
+                    string.Empty,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    false,
+                    null,
+                    null,
+                    null
+                ),
+                PerStreamPlan: new PerStreamPlan([], [], []),
+                SourceWarnings:
+                [
+                    new EncoderRule(
+                        EncoderRuleId.ProfileNameMissing,
+                        EncoderRuleSeverity.Error,
+                        "profile_json",
+                        "Profile JSON deserialized to null — check the outer object is present.",
+                        "Ensure the JSON root is an object, not null or an array."
+                    ),
+                ],
+                EstimatedFps: 0,
+                EstimatedDurationSeconds: 0,
+                EncoderHandle: "auto"
+            );
+            return Ok(nullResponse);
+        }
+
+        string sourcePath = request.SourcePath ?? string.Empty;
+
+        AnalysisMediaInfo mediaInfo;
+        try
+        {
+            mediaInfo = await mediaAnalyzer.AnalyzeAsync(sourcePath, ct);
+        }
+        catch
+        {
+            throw RuntimeErrors.SourceNotAccessible(sourcePath);
+        }
+
+        PreviewResult result = PreviewEngine.Analyze(profile, mediaInfo);
+
+        PreviewResponse response = new(
+            ProfileId: id,
+            SourceVideoFileId: sourcePath,
+            SourceAnalysis: result.SourceAnalysis,
+            PerStreamPlan: result.Plan,
+            SourceWarnings: result.SourceWarnings,
+            EstimatedFps: result.EstimatedFps,
+            EstimatedDurationSeconds: result.EstimatedDurationSeconds,
+            EncoderHandle: result.EncoderHandle
         );
 
-        return StatusCode(501, shape);
+        return Ok(response);
     }
 }
 
 public record ValidateEncoderProfileRequest(
     [property: JsonProperty("profile_json")] string ProfileJson
+);
+
+public record PreviewEncoderProfileRequest(
+    [property: JsonProperty("profile_json")] string ProfileJson,
+    [property: JsonProperty("source_path")] string? SourcePath
 );
