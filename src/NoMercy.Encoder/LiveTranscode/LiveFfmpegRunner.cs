@@ -5,11 +5,13 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
 public class LiveFfmpegRunner(
     IProcessRunner processRunner,
     EncoderOptions options,
-    ILogger<LiveFfmpegRunner> logger
+    ILogger<LiveFfmpegRunner> logger,
+    IStorage storage
 ) : ILiveFfmpegRunner
 {
     private const string PlaylistFileName = "index.m3u8";

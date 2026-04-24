@@ -94,11 +94,7 @@ public class GroupingStrategyTests
                     $"sub_{i}",
                     OperationType.SubtitleExtract,
                     [],
-                    new()
-                    {
-                        ["stream_index"] = i.ToString(),
-                        ["language"] = "eng",
-                    }
+                    new() { ["stream_index"] = i.ToString(), ["language"] = "eng" }
                 )
             );
         }
@@ -117,14 +113,7 @@ public class GroupingStrategyTests
         ];
 
     private static List<ExecutionNode> ChapterNodes() =>
-        [
-            new(
-                "chapter_0",
-                OperationType.ChapterExtract,
-                [],
-                new()
-            ),
-        ];
+        [new("chapter_0", OperationType.ChapterExtract, [], new())];
 
     // ------------------------------------------------------------------
     // Tests

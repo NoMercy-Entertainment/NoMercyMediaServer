@@ -17,15 +17,7 @@ public class CostEstimatorTests
     {
         ExecutionGroup group = new(
             GroupId: "group_0",
-            Nodes:
-            [
-                new(
-                    "sub_0",
-                    OperationType.SubtitleExtract,
-                    [],
-                    new()
-                ),
-            ],
+            Nodes: [new("sub_0", OperationType.SubtitleExtract, [], new())],
             DeviceId: null,
             GpuSlotsRequired: 0,
             CpuThreadsRequired: 1,
@@ -44,15 +36,7 @@ public class CostEstimatorTests
     {
         ExecutionGroup group = new(
             GroupId: "group_0",
-            Nodes:
-            [
-                new(
-                    "ch_0",
-                    OperationType.ChapterExtract,
-                    [],
-                    new()
-                ),
-            ],
+            Nodes: [new("ch_0", OperationType.ChapterExtract, [], new())],
             DeviceId: null,
             GpuSlotsRequired: 0,
             CpuThreadsRequired: 1,
@@ -76,18 +60,8 @@ public class CostEstimatorTests
             GroupId: "group_0",
             Nodes:
             [
-                new(
-                    "decode_0",
-                    OperationType.Decode,
-                    [],
-                    new()
-                ),
-                new(
-                    "encode_0",
-                    OperationType.Encode,
-                    ["decode_0"],
-                    new()
-                ),
+                new("decode_0", OperationType.Decode, [], new()),
+                new("encode_0", OperationType.Encode, ["decode_0"], new()),
             ],
             DeviceId: "RTX 4090",
             GpuSlotsRequired: 1,
@@ -110,18 +84,8 @@ public class CostEstimatorTests
             GroupId: "group_0",
             Nodes:
             [
-                new(
-                    "decode_0",
-                    OperationType.Decode,
-                    [],
-                    new()
-                ),
-                new(
-                    "encode_0",
-                    OperationType.Encode,
-                    ["decode_0"],
-                    new()
-                ),
+                new("decode_0", OperationType.Decode, [], new()),
+                new("encode_0", OperationType.Encode, ["decode_0"], new()),
             ],
             DeviceId: null,
             GpuSlotsRequired: 0,
@@ -142,15 +106,7 @@ public class CostEstimatorTests
     {
         ExecutionGroup group1Slot = new(
             GroupId: "group_1",
-            Nodes:
-            [
-                new(
-                    "enc_0",
-                    OperationType.Encode,
-                    [],
-                    new()
-                ),
-            ],
+            Nodes: [new("enc_0", OperationType.Encode, [], new())],
             DeviceId: "RTX 4090",
             GpuSlotsRequired: 1,
             CpuThreadsRequired: 0,
@@ -177,15 +133,7 @@ public class CostEstimatorTests
         [
             new(
                 GroupId: "sub",
-                Nodes:
-                [
-                    new(
-                        "sub_0",
-                        OperationType.SubtitleExtract,
-                        [],
-                        new()
-                    ),
-                ],
+                Nodes: [new("sub_0", OperationType.SubtitleExtract, [], new())],
                 DeviceId: null,
                 GpuSlotsRequired: 0,
                 CpuThreadsRequired: 1,
@@ -196,18 +144,8 @@ public class CostEstimatorTests
                 GroupId: "main",
                 Nodes:
                 [
-                    new(
-                        "decode_0",
-                        OperationType.Decode,
-                        [],
-                        new()
-                    ),
-                    new(
-                        "encode_0",
-                        OperationType.Encode,
-                        ["decode_0"],
-                        new()
-                    ),
+                    new("decode_0", OperationType.Decode, [], new()),
+                    new("encode_0", OperationType.Encode, ["decode_0"], new()),
                 ],
                 DeviceId: "RTX 4090",
                 GpuSlotsRequired: 1,

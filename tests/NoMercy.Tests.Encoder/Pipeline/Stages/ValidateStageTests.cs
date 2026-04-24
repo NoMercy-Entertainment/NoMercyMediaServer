@@ -119,11 +119,7 @@ public class ValidateStageTests
             false,
             [
                 new("Name", "Name is required", ValidationSeverity.Error),
-                new(
-                    "VideoOutput[0].Width",
-                    "Width must be positive",
-                    ValidationSeverity.Error
-                ),
+                new("VideoOutput[0].Width", "Width must be positive", ValidationSeverity.Error),
             ]
         );
 
@@ -151,13 +147,7 @@ public class ValidateStageTests
 
         ValidationResult validationResult = new(
             true,
-            [
-                new(
-                    "VideoOutput[0].Codec",
-                    "VP9 in MP4 is non-standard",
-                    ValidationSeverity.Warning
-                ),
-            ]
+            [new("VideoOutput[0].Codec", "VP9 in MP4 is non-standard", ValidationSeverity.Warning)]
         );
 
         _validator.Setup(v => v.Validate(profile)).Returns(validationResult);
@@ -182,11 +172,7 @@ public class ValidateStageTests
             false,
             [
                 new("Name", "Name is required", ValidationSeverity.Error),
-                new(
-                    "VideoOutput[0].Codec",
-                    "Non-standard combination",
-                    ValidationSeverity.Warning
-                ),
+                new("VideoOutput[0].Codec", "Non-standard combination", ValidationSeverity.Warning),
             ]
         );
 

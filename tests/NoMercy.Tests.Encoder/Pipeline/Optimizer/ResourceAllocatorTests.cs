@@ -27,26 +27,14 @@ public class ResourceAllocatorTests
         ExecutionNode[] nodes =
         [
             new("node_0", OperationType.Decode, [], new()),
-            new(
-                "node_1",
-                OperationType.Encode,
-                ["node_0"],
-                new()
-            ),
+            new("node_1", OperationType.Encode, ["node_0"], new()),
         ];
 
         // Build a group with `encodeCount` Encode nodes
         List<ExecutionNode> allNodes = [nodes[0]];
         for (int i = 0; i < encodeCount; i++)
         {
-            allNodes.Add(
-                new(
-                    $"encode_{i}",
-                    OperationType.Encode,
-                    ["node_0"],
-                    new()
-                )
-            );
+            allNodes.Add(new($"encode_{i}", OperationType.Encode, ["node_0"], new()));
         }
 
         return
@@ -119,15 +107,7 @@ public class ResourceAllocatorTests
         [
             new(
                 GroupId: "group_0",
-                Nodes:
-                [
-                    new(
-                        "sub_0",
-                        OperationType.SubtitleExtract,
-                        [],
-                        new()
-                    ),
-                ],
+                Nodes: [new("sub_0", OperationType.SubtitleExtract, [], new())],
                 DeviceId: null,
                 GpuSlotsRequired: 0,
                 CpuThreadsRequired: 1,

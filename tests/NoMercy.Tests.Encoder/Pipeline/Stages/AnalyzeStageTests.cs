@@ -17,11 +17,7 @@ public class AnalyzeStageTests
 
     public AnalyzeStageTests()
     {
-        _stage = new(
-            _analyzer.Object,
-            _fileSystem.Object,
-            NullLogger<AnalyzeStage>.Instance
-        );
+        _stage = new(_analyzer.Object, _fileSystem.Object, NullLogger<AnalyzeStage>.Instance);
     }
 
     private static MediaInfo BuildMediaInfo() =>

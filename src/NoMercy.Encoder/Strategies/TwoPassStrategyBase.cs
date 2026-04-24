@@ -5,6 +5,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
+using NoMercy.Storage;
 
 /// <summary>
 /// Shared 2-pass orchestration: pass 1 video-only analysis → checkpoint →
@@ -25,7 +26,8 @@ using NoMercy.Encoder.Progress;
 public abstract class TwoPassStrategyBase(
     IEncoder encoder,
     ICheckpointStore checkpointStore,
-    ILogger logger
+    ILogger logger,
+    IStorage storage
 ) : IEncodingStrategy
 {
     public abstract OutputFormat Format { get; }
@@ -123,15 +125,15 @@ public abstract class TwoPassStrategyBase(
         progress?.OnStageCompleted("Pass 2", pass2Result.Duration);
 
         await checkpointStore.DeleteAsync(request.OutputDirectory, ct);
-        DeleteStatsFiles(statsFilePath);
+        DeleteStatsFiles(statsFilePath, storage);
 
         return pass2Result;
     }
 
-    private static string ResolveStatsFilePath(EncodingRequest request)
+    private string ResolveStatsFilePath(EncodingRequest request)
     {
         string statsDir = Path.Combine(request.OutputDirectory, ".2pass");
-        Directory.CreateDirectory(statsDir);
+        storage.CreateDirectory(statsDir);
         return Path.Combine(statsDir, "x264");
     }
 
@@ -155,26 +157,25 @@ public abstract class TwoPassStrategyBase(
         await checkpointStore.SaveAsync(checkpoint, ct);
     }
 
-    private static void DeleteStatsFiles(string statsFilePath)
+    private void DeleteStatsFiles(string statsFilePath, IStorage stor)
     {
         string? dir = Path.GetDirectoryName(statsFilePath);
-        if (dir is null || !Directory.Exists(dir))
+        if (dir is null || !stor.Exists(dir))
             return;
 
         string baseName = Path.GetFileName(statsFilePath);
         // Covers every variant's output — x264 writes {base}_v{i}-0.log and
         // {base}_v{i}-0.log.mbtree. `{baseName}_v*` matches all of them.
         foreach (
-            string file in Directory.EnumerateFiles(
-                dir,
-                $"{baseName}_v*",
-                SearchOption.TopDirectoryOnly
-            )
+            string file in stor
+                .List(dir, $"{baseName}_v*", recursive: false)
+                .Where(e => !e.IsDirectory)
+                .Select(e => e.Path)
         )
         {
             try
             {
-                File.Delete(file);
+                stor.Delete(file);
             }
             catch
             {
@@ -188,13 +189,13 @@ public abstract class TwoPassStrategyBase(
     /// Missing any one forces the whole pass 1 to re-run for consistency;
     /// mixing fresh and stale stats across variants gives unreliable quality.
     /// </summary>
-    private static bool AllVariantStatsPresent(string basePath, int variantCount)
+    private bool AllVariantStatsPresent(string basePath, int variantCount)
     {
         for (int i = 0; i < variantCount; i++)
         {
             string variantBase = $"{basePath}_v{i}";
             // x264 writes {variantBase}-0.log — that's the signal we look for.
-            if (!File.Exists($"{variantBase}-0.log"))
+            if (!storage.Exists($"{variantBase}-0.log"))
                 return false;
         }
         return true;

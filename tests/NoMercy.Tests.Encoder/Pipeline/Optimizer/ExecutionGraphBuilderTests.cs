@@ -245,24 +245,9 @@ public class ExecutionGraphBuilderTests
 
         ResolvedCodec[] resolvedCodecs =
         [
-            new(
-                "hevc_nvenc",
-                MakeEncoderInfo("hevc_nvenc", true),
-                null,
-                RateControlMode.Cq
-            ),
-            new(
-                "hevc_nvenc",
-                MakeEncoderInfo("hevc_nvenc", true),
-                null,
-                RateControlMode.Cq
-            ),
-            new(
-                "hevc_nvenc",
-                MakeEncoderInfo("hevc_nvenc", true),
-                null,
-                RateControlMode.Cq
-            ),
+            new("hevc_nvenc", MakeEncoderInfo("hevc_nvenc", true), null, RateControlMode.Cq),
+            new("hevc_nvenc", MakeEncoderInfo("hevc_nvenc", true), null, RateControlMode.Cq),
+            new("hevc_nvenc", MakeEncoderInfo("hevc_nvenc", true), null, RateControlMode.Cq),
         ];
 
         MediaInfo media = MakeMedia(video: [Hdr4K]);

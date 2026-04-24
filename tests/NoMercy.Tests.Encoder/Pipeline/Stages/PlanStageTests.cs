@@ -276,11 +276,7 @@ public class PlanStageTests
             SubtitleOutputs: []
         );
 
-        StageResult result = await _stage.ExecuteAsync(
-            new(media, profile),
-            _context,
-            default
-        );
+        StageResult result = await _stage.ExecuteAsync(new(media, profile), _context, default);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
         plan.OutputPlan.VideoOutputs[0].TenBit.Should().BeFalse("encoder doesn't support 10-bit");
@@ -355,11 +351,7 @@ public class PlanStageTests
             SubtitleOutputs: []
         );
 
-        StageResult result = await _stage.ExecuteAsync(
-            new(media, profile),
-            _context,
-            default
-        );
+        StageResult result = await _stage.ExecuteAsync(new(media, profile), _context, default);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
         plan.OutputPlan.VideoOutputs[0].TenBit.Should().BeTrue();
