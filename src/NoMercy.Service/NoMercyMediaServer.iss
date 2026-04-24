@@ -125,6 +125,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   InstallerPath: string;
+  ExecResultCode: Integer;
 begin
   if CurStep = ssPostInstall then
   begin
@@ -146,7 +147,7 @@ begin
     if LaunchAfterInstallParam then
     begin
       Exec(ExpandConstant('{app}\NoMercyLauncher.exe'), '', '', SW_SHOW,
-           ewNoWait, 0);
+           ewNoWait, ExecResultCode);
     end;
   end;
 end;
