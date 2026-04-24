@@ -4,13 +4,14 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Tests.Encoder.Storage;
 
 public class DashOutputStrategyTests
 {
     [Fact]
     public void ConfigureOutput_HasDashFormat()
     {
-        DashOutputStrategy strategy = new();
+        DashOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
@@ -24,7 +25,7 @@ public class DashOutputStrategyTests
     [Fact]
     public void ConfigureOutput_HasAdaptationSets()
     {
-        DashOutputStrategy strategy = new();
+        DashOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
@@ -38,7 +39,7 @@ public class DashOutputStrategyTests
     [Fact]
     public void ConfigureOutput_ProducesMpdOutput()
     {
-        DashOutputStrategy strategy = new();
+        DashOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
@@ -68,10 +69,7 @@ public class DashOutputStrategyTests
                     new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );

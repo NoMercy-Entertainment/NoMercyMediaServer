@@ -1,13 +1,15 @@
 namespace NoMercy.Encoder.Output;
 
 using System.Globalization;
+using System.Text;
 using NoMercy.Encoder.BuildingBlocks;
+using NoMercy.Storage;
 
 /// <summary>
 /// Parses an HLS variant playlist (.m3u8) and its segment files
 /// to calculate actual bitrate metrics for the master playlist.
 /// </summary>
-public class HlsVariantAnalyzer : IHlsVariantAnalyzer
+public class HlsVariantAnalyzer(IStorage storage) : IHlsVariantAnalyzer
 {
     public record VariantMetrics(int PeakBandwidth, int AverageBandwidth);
 
@@ -17,11 +19,11 @@ public class HlsVariantAnalyzer : IHlsVariantAnalyzer
     /// </summary>
     public VariantMetrics Measure(string playlistPath)
     {
-        if (!File.Exists(playlistPath))
+        if (!storage.Exists(playlistPath))
             return new(0, 0);
 
         string playlistDir = Path.GetDirectoryName(playlistPath) ?? ".";
-        string[] lines = File.ReadAllLines(playlistPath);
+        string[] lines = Encoding.UTF8.GetString(storage.Read(playlistPath)).Split('\n');
 
         long totalBytes = 0;
         double totalDuration = 0;
@@ -49,10 +51,10 @@ public class HlsVariantAnalyzer : IHlsVariantAnalyzer
                 continue;
 
             string segmentPath = Path.Combine(playlistDir, segmentFile);
-            if (!File.Exists(segmentPath))
+            if (!storage.Exists(segmentPath))
                 continue;
 
-            long segmentBytes = new FileInfo(segmentPath).Length;
+            long segmentBytes = storage.Size(segmentPath);
             totalBytes += segmentBytes;
             totalDuration += segDuration;
 
@@ -64,9 +66,6 @@ public class HlsVariantAnalyzer : IHlsVariantAnalyzer
 
         int averageBandwidth = totalDuration > 0 ? (int)(totalBytes * 8.0 / totalDuration) : 0;
 
-        return new(
-            PeakBandwidth: (int)peakBitrate,
-            AverageBandwidth: averageBandwidth
-        );
+        return new(PeakBandwidth: (int)peakBitrate, AverageBandwidth: averageBandwidth);
     }
 }

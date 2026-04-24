@@ -4,13 +4,14 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Tests.Encoder.Storage;
 
 public class HlsOutputStrategyTests
 {
     [Fact]
     public void ConfigureOutput_AddsHlsFlags()
     {
-        HlsOutputStrategy strategy = new();
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan();
@@ -27,7 +28,7 @@ public class HlsOutputStrategyTests
     [Fact]
     public void GetOutputSubdirectories_ReturnsTemplateResolvedDirs()
     {
-        HlsOutputStrategy strategy = new();
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         OutputPlan plan = CreateSimplePlan();
 
         string[] dirs = strategy.GetOutputSubdirectories(plan);
@@ -39,7 +40,7 @@ public class HlsOutputStrategyTests
     [Fact]
     public void ConfigureOutput_UsesTemplateForNaming()
     {
-        HlsOutputStrategy strategy = new();
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
         OutputPlan plan = CreateSimplePlan();

@@ -1,6 +1,7 @@
 namespace NoMercy.Tests.Encoder.Output;
 
 using NoMercy.Encoder.Output;
+using NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// HlsVariantAnalyzer reads a variant's .m3u8 and segment files to
@@ -19,7 +20,7 @@ using NoMercy.Encoder.Output;
 /// </summary>
 public class HlsVariantAnalyzerTests
 {
-    private readonly HlsVariantAnalyzer _analyzer = new();
+    private readonly HlsVariantAnalyzer _analyzer = new(TestStorageFactory.CreateLocal());
 
     [Fact]
     public void MissingPlaylist_ReturnsZeros()

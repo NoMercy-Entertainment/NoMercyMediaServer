@@ -3,6 +3,7 @@ namespace NoMercy.Tests.Encoder.Output;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// Verifies Phase 13 audio single-file output — when an MP4 encode has no
@@ -29,7 +30,7 @@ public class Mp4AudioOnlyExtensionTests : IDisposable
     [Fact]
     public async Task Finalize_AudioOnlyPlan_RenamesToM4a()
     {
-        Mp4OutputStrategy strategy = new();
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         string sourcePath = Path.Combine(_outputDir, "output.mp4");
         await File.WriteAllBytesAsync(sourcePath, [0x00, 0x01]);
 
@@ -61,7 +62,7 @@ public class Mp4AudioOnlyExtensionTests : IDisposable
     [Fact]
     public async Task Finalize_VideoPlan_StaysMp4()
     {
-        Mp4OutputStrategy strategy = new();
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         string sourcePath = Path.Combine(_outputDir, "output.mp4");
         await File.WriteAllBytesAsync(sourcePath, [0x00, 0x01]);
 

@@ -4,13 +4,14 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Tests.Encoder.Storage;
 
 public class MkvOutputStrategyTests
 {
     [Fact]
     public void ConfigureOutput_ProducesOutputMkv()
     {
-        MkvOutputStrategy strategy = new();
+        MkvOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
@@ -23,7 +24,7 @@ public class MkvOutputStrategyTests
     [Fact]
     public void ConfigureOutput_MapsAllStreams()
     {
-        MkvOutputStrategy strategy = new();
+        MkvOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
@@ -38,7 +39,7 @@ public class MkvOutputStrategyTests
     [Fact]
     public void GetOutputSubdirectories_ReturnsEmpty()
     {
-        MkvOutputStrategy strategy = new();
+        MkvOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         strategy.GetOutputSubdirectories(CreateSimplePlan(OutputFormat.Mkv)).Should().BeEmpty();
     }
 
@@ -62,10 +63,7 @@ public class MkvOutputStrategyTests
                     new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );

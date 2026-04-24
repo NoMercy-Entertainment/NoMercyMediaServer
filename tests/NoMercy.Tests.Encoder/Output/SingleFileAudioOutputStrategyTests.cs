@@ -4,6 +4,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// Covers Phase 13 remaining audio-only containers — mp3, flac, ogg.
@@ -32,7 +33,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public void Mp3_Configure_ForcesLameEncoderAndMuxer()
     {
-        Mp3OutputStrategy strategy = new();
+        Mp3OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.flac"));
 
@@ -48,7 +49,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public async Task Mp3_Finalize_RenamesToMediaTitle()
     {
-        Mp3OutputStrategy strategy = new();
+        Mp3OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         string sourcePath = Path.Combine(_outputDir, "output.mp3");
         await File.WriteAllBytesAsync(sourcePath, [0xFF, 0xFB]);
 
@@ -68,7 +69,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public void Flac_Configure_ForcesFlacCodec()
     {
-        FlacOutputStrategy strategy = new();
+        FlacOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.wav"));
 
@@ -83,7 +84,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public async Task Flac_Finalize_RenamesToMediaTitle()
     {
-        FlacOutputStrategy strategy = new();
+        FlacOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         await File.WriteAllBytesAsync(Path.Combine(_outputDir, "output.flac"), [0x66, 0x4C]);
 
         await strategy.FinalizeAsync(
@@ -101,7 +102,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public void Ogg_Configure_UsesOggMuxer()
     {
-        OggOutputStrategy strategy = new();
+        OggOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.wav"));
 
@@ -116,7 +117,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public void Ogg_Configure_PreservesPlannerCodecChoice_Opus()
     {
-        OggOutputStrategy strategy = new();
+        OggOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.wav"));
 
@@ -132,7 +133,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public void AudioOnly_Configure_NoVideoCodecEmitted()
     {
-        Mp3OutputStrategy strategy = new();
+        Mp3OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.flac"));
 
@@ -148,7 +149,7 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public void AudioOnly_NoSubdirectories_AreProduced()
     {
-        Mp3OutputStrategy strategy = new();
+        Mp3OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         strategy.GetOutputSubdirectories(Plan(OutputFormat.Mp3, "libmp3lame")).Should().BeEmpty();
     }
 

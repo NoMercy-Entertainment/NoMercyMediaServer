@@ -1,10 +1,12 @@
 namespace NoMercy.Encoder.Output;
 
+using System.Text;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Storage;
 
-public class HlsOutputStrategy : IOutputStrategy
+public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 {
     public OutputFormat Format => OutputFormat.Hls;
 
@@ -155,7 +157,7 @@ public class HlsOutputStrategy : IOutputStrategy
     {
         // Measure actual bitrates from the encoded variant playlists.
         // These are the real values — not estimates from profile settings.
-        HlsVariantAnalyzer analyzer = new();
+        HlsVariantAnalyzer analyzer = new(storage);
         Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics = [];
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
@@ -202,7 +204,7 @@ public class HlsOutputStrategy : IOutputStrategy
             audioMetrics
         );
         string masterPath = Path.Combine(outputDirectory, $"{mediaTitle}.m3u8");
-        await File.WriteAllTextAsync(masterPath, masterPlaylist, ct);
+        await storage.WriteAsync(masterPath, Encoding.UTF8.GetBytes(masterPlaylist), ct);
     }
 
     public string[] GetOutputSubdirectories(OutputPlan plan)

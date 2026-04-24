@@ -3,6 +3,7 @@ namespace NoMercy.Tests.Encoder.Output;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
+using NoMercy.Tests.Encoder.Storage;
 
 public class OutputStrategyFactoryTests
 {
@@ -17,13 +18,13 @@ public class OutputStrategyFactoryTests
     public void Resolve_BuiltInFormat_ReturnsMatchingStrategy(OutputFormat format, Type expected)
     {
         OutputStrategyFactory factory = new([
-            new HlsOutputStrategy(),
-            new MkvOutputStrategy(),
-            new Mp4OutputStrategy(),
-            new DashOutputStrategy(),
-            new Mp3OutputStrategy(),
-            new FlacOutputStrategy(),
-            new OggOutputStrategy(),
+            new HlsOutputStrategy(TestStorageFactory.CreateLocal()),
+            new MkvOutputStrategy(TestStorageFactory.CreateLocal()),
+            new Mp4OutputStrategy(TestStorageFactory.CreateLocal()),
+            new DashOutputStrategy(TestStorageFactory.CreateLocal()),
+            new Mp3OutputStrategy(TestStorageFactory.CreateLocal()),
+            new FlacOutputStrategy(TestStorageFactory.CreateLocal()),
+            new OggOutputStrategy(TestStorageFactory.CreateLocal()),
         ]);
 
         IOutputStrategy resolved = factory.Resolve(format);
@@ -34,7 +35,9 @@ public class OutputStrategyFactoryTests
     [Fact]
     public void Resolve_UnknownFormat_Throws()
     {
-        OutputStrategyFactory factory = new([new HlsOutputStrategy()]);
+        OutputStrategyFactory factory = new([
+            new HlsOutputStrategy(TestStorageFactory.CreateLocal()),
+        ]);
 
         Action act = () => factory.Resolve((OutputFormat)99);
 
@@ -47,7 +50,10 @@ public class OutputStrategyFactoryTests
         // Last-registration-wins: plugin HLS strategy registered after built-in
         // should be preferred by the factory.
         FakeHlsStrategy pluginOverride = new();
-        OutputStrategyFactory factory = new([new HlsOutputStrategy(), pluginOverride]);
+        OutputStrategyFactory factory = new([
+            new HlsOutputStrategy(TestStorageFactory.CreateLocal()),
+            pluginOverride,
+        ]);
 
         IOutputStrategy resolved = factory.Resolve(OutputFormat.Hls);
 

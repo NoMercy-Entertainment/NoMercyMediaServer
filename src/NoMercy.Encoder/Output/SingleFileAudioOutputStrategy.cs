@@ -3,6 +3,7 @@ namespace NoMercy.Encoder.Output;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Storage;
 
 /// <summary>
 /// Shared pipeline for single-file audio-only containers (mp3 / flac / ogg).
@@ -14,7 +15,7 @@ using NoMercy.Encoder.Pipeline;
 /// <see cref="NoMercy.Encoder.Profiles.ProfileValidator"/> catches this
 /// earlier so we never land here with unsupported input.
 /// </summary>
-public abstract class SingleFileAudioOutputStrategy : IOutputStrategy
+public abstract class SingleFileAudioOutputStrategy(IStorage storage) : IOutputStrategy
 {
     public abstract OutputFormat Format { get; }
 
@@ -79,8 +80,11 @@ public abstract class SingleFileAudioOutputStrategy : IOutputStrategy
         string sourcePath = Path.Combine(outputDirectory, $"output{Extension}");
         string targetPath = Path.Combine(outputDirectory, $"{mediaTitle}{Extension}");
 
-        if (File.Exists(sourcePath) && sourcePath != targetPath)
-            File.Move(sourcePath, targetPath, overwrite: true);
+        if (storage.Exists(sourcePath) && sourcePath != targetPath)
+        {
+            storage.Delete(targetPath);
+            storage.Move(sourcePath, targetPath);
+        }
 
         return Task.CompletedTask;
     }
@@ -97,7 +101,7 @@ public abstract class SingleFileAudioOutputStrategy : IOutputStrategy
     }
 }
 
-public class Mp3OutputStrategy : SingleFileAudioOutputStrategy
+public class Mp3OutputStrategy(IStorage storage) : SingleFileAudioOutputStrategy(storage)
 {
     public override OutputFormat Format => OutputFormat.Mp3;
     protected override string Extension => ".mp3";
@@ -109,7 +113,7 @@ public class Mp3OutputStrategy : SingleFileAudioOutputStrategy
     protected override string? ForcedCodec => "libmp3lame";
 }
 
-public class FlacOutputStrategy : SingleFileAudioOutputStrategy
+public class FlacOutputStrategy(IStorage storage) : SingleFileAudioOutputStrategy(storage)
 {
     public override OutputFormat Format => OutputFormat.Flac;
     protected override string Extension => ".flac";
@@ -117,7 +121,7 @@ public class FlacOutputStrategy : SingleFileAudioOutputStrategy
     protected override string? ForcedCodec => "flac";
 }
 
-public class OggOutputStrategy : SingleFileAudioOutputStrategy
+public class OggOutputStrategy(IStorage storage) : SingleFileAudioOutputStrategy(storage)
 {
     public override OutputFormat Format => OutputFormat.Ogg;
     protected override string Extension => ".ogg";

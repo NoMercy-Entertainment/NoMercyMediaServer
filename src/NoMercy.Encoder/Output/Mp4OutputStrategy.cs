@@ -3,8 +3,9 @@ namespace NoMercy.Encoder.Output;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Storage;
 
-public class Mp4OutputStrategy : IOutputStrategy
+public class Mp4OutputStrategy(IStorage storage) : IOutputStrategy
 {
     public OutputFormat Format => OutputFormat.Mp4;
 
@@ -81,8 +82,11 @@ public class Mp4OutputStrategy : IOutputStrategy
         string sourcePath = Path.Combine(outputDirectory, "output.mp4");
         string targetPath = Path.Combine(outputDirectory, $"{mediaTitle}{extension}");
 
-        if (File.Exists(sourcePath) && sourcePath != targetPath)
-            File.Move(sourcePath, targetPath, overwrite: true);
+        if (storage.Exists(sourcePath) && sourcePath != targetPath)
+        {
+            storage.Delete(targetPath);
+            storage.Move(sourcePath, targetPath);
+        }
 
         return Task.CompletedTask;
     }

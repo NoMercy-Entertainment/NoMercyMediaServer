@@ -4,6 +4,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// Verifies that the container-specific Dolby Vision tags land in the
@@ -16,7 +17,7 @@ public class DolbyVisionPassthroughTests
     [Fact]
     public void Mp4_PreserveDv_AddsDvh1CodecTag()
     {
-        Mp4OutputStrategy strategy = new();
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
@@ -29,7 +30,7 @@ public class DolbyVisionPassthroughTests
     [Fact]
     public void Mp4_NoDv_UsesDefaultTag()
     {
-        Mp4OutputStrategy strategy = new();
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
@@ -42,7 +43,7 @@ public class DolbyVisionPassthroughTests
     [Fact]
     public void Hls_PreserveDv_HevcVariant_OverridesHvc1WithDvh1()
     {
-        HlsOutputStrategy strategy = new();
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
@@ -62,7 +63,7 @@ public class DolbyVisionPassthroughTests
     [Fact]
     public void Hls_PreserveDv_H264Variant_NoDvTag()
     {
-        HlsOutputStrategy strategy = new();
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 

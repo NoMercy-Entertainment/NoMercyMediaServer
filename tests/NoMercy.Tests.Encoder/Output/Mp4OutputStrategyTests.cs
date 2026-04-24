@@ -4,13 +4,14 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Tests.Encoder.Storage;
 
 public class Mp4OutputStrategyTests
 {
     [Fact]
     public void ConfigureOutput_HasFaststart()
     {
-        Mp4OutputStrategy strategy = new();
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
@@ -24,7 +25,7 @@ public class Mp4OutputStrategyTests
     [Fact]
     public void ConfigureOutput_ProducesMp4Output()
     {
-        Mp4OutputStrategy strategy = new();
+        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
         builder.AddInput(new("/input.mkv"));
 
@@ -54,10 +55,7 @@ public class Mp4OutputStrategyTests
                     new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
