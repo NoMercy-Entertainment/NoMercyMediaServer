@@ -155,6 +155,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IThumbnailGenerator, ThumbnailGenerator>();
         services.AddTransient<IHlsVariantAnalyzer, HlsVariantAnalyzer>();
         services.AddTransient<IAbrLadderGenerator, AbrLadderGenerator>();
+        services.AddSingleton<ILadderGenerator, LadderGenerator>();
 
         // DRM processors — plugins can register additional processors for
         // custom schemes. IEnumerable<IDrmProcessor> resolution picks the
