@@ -368,4 +368,42 @@ public class QueueRunner
     {
         return _activeWorkerThreads;
     }
+
+    /// <summary>
+    /// Counts worker instances that are *currently processing a job*
+    /// (i.e. <see cref="QueueWorker.IsProcessingJob"/> is true) under
+    /// queue names matched by <paramref name="namePredicate"/>.
+    ///
+    /// <para>This is what callers asking "is the queue busy?" actually
+    /// want — <see cref="GetActiveWorkerThreads"/> reports every spawned
+    /// thread for its lifetime, including workers blocked on
+    /// <c>queue.ReserveJob</c> waiting for the next item, which over-
+    /// counts dramatically.</para>
+    /// </summary>
+    public int CountWorkersProcessingJob(Func<string, bool> namePredicate)
+    {
+        int count = 0;
+        lock (_workersLock)
+        {
+            foreach (
+                KeyValuePair<
+                    string,
+                    (
+                        int count,
+                        List<QueueWorker> workerInstances,
+                        CancellationTokenSource _,
+                        bool isUpdating
+                    )
+                > entry in _workers
+            )
+            {
+                if (!namePredicate(entry.Key))
+                    continue;
+                foreach (QueueWorker worker in entry.Value.workerInstances)
+                    if (worker.IsProcessingJob)
+                        count++;
+            }
+        }
+        return count;
+    }
 }

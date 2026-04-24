@@ -21,6 +21,19 @@ public class QueueWorker(
 
     private int CurrentIndex => runner?.GetWorkerIndex(name, this) ?? -1;
 
+    /// <summary>
+    /// True while this worker holds a reserved job (between
+    /// <c>queue.ReserveJob</c> and <c>queue.DeleteJob</c>). False when
+    /// the worker thread is alive but waiting for the next job — a
+    /// spawned worker is not the same as a busy worker.
+    ///
+    /// <para>Consumed by the encoder's hardware-benchmark deferral
+    /// (see <c>EncoderActivityProbe</c>) so calibration runs only when
+    /// the queue is genuinely idle, not just whenever a worker thread
+    /// happens to exist.</para>
+    /// </summary>
+    public bool IsProcessingJob => _currentJobId is not null;
+
     public event WorkCompletedEventHandler WorkCompleted = delegate { };
 
     public void Start()
