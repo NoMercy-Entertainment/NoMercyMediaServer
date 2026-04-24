@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
+using NoMercy.Storage;
 
 /// <summary>
 /// Downloads task source files from the coordinator over HTTP when the
@@ -21,7 +22,8 @@ using NoMercy.Encoder.Composition;
 public class HttpSourceFetcher(
     IHttpClientFactory httpClientFactory,
     EncoderOptions options,
-    ILogger<HttpSourceFetcher> logger
+    ILogger<HttpSourceFetcher> logger,
+    IStorage storage
 ) : ISourceFetcher
 {
     public async Task<string> EnsureLocalAsync(EncodeTask task, CancellationToken ct)
@@ -30,7 +32,7 @@ public class HttpSourceFetcher(
             return string.Empty;
 
         // Fast path: source is visible locally (shared NAS / SMB mount).
-        if (File.Exists(task.InputPath))
+        if (storage.Exists(task.InputPath))
             return task.InputPath;
 
         // Coordinator URL required for fetch — when it's not set, this
@@ -50,7 +52,7 @@ public class HttpSourceFetcher(
         // Idempotency: if the file already exists from a previous attempt
         // and isn't empty, reuse it. Full hash-match check is overkill;
         // HMAC on the coordinator's response covers integrity.
-        if (File.Exists(cachedPath) && new FileInfo(cachedPath).Length > 0)
+        if (storage.Exists(cachedPath) && storage.SizeOrZero(cachedPath) > 0)
         {
             logger.LogInformation(
                 "Task {TaskId} reusing cached source at {Path}",
@@ -60,7 +62,7 @@ public class HttpSourceFetcher(
             return cachedPath;
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(cachedPath)!);
+        storage.CreateDirectory(Path.GetDirectoryName(cachedPath)!);
 
         HttpClient http = httpClientFactory.CreateClient("worker-source-fetch");
         http.BaseAddress = new(options.CoordinatorUrl);
@@ -95,7 +97,7 @@ public class HttpSourceFetcher(
         await using (
             Stream source = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false)
         )
-        await using (FileStream target = File.Create(cachedPath))
+        await using (Stream target = await storage.OpenWriteAsync(cachedPath, overwrite: true, ct))
         {
             await source.CopyToAsync(target, ct).ConfigureAwait(false);
         }
@@ -104,7 +106,7 @@ public class HttpSourceFetcher(
             "Task {TaskId} source fetched to {Path} ({Bytes} bytes)",
             task.TaskId,
             cachedPath,
-            new FileInfo(cachedPath).Length
+            storage.SizeOrZero(cachedPath)
         );
 
         return cachedPath;
@@ -118,11 +120,8 @@ public class HttpSourceFetcher(
         try
         {
             string cachedPath = ResolveCachePath(task);
-            if (File.Exists(cachedPath))
-            {
-                File.Delete(cachedPath);
-                logger.LogDebug("Released cached source for task {TaskId}", task.TaskId);
-            }
+            storage.Delete(cachedPath);
+            logger.LogDebug("Released cached source for task {TaskId}", task.TaskId);
         }
         catch (Exception ex)
         {

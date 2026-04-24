@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
+using NoMercy.Tests.Encoder.Storage;
 
 public class HttpSourceFetcherTests
 {
@@ -198,7 +199,8 @@ public class HttpSourceFetcherTests
         return new(
             provider.GetRequiredService<IHttpClientFactory>(),
             options,
-            NullLogger<HttpSourceFetcher>.Instance
+            NullLogger<HttpSourceFetcher>.Instance,
+            TestStorageFactory.CreateLocal()
         );
     }
 
