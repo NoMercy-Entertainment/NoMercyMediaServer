@@ -78,7 +78,7 @@ public class MusicBrainzBaseClient : IDisposable
         string? response;
         try
         {
-            HttpResponseMessage httpResponse = await GetQueue()
+            using HttpResponseMessage httpResponse = await GetQueue()
                 .Enqueue(() => _client.GetAsync(newUrl), newUrl, priority);
 
             if (!httpResponse.IsSuccessStatusCode)
