@@ -116,6 +116,28 @@ public class EncodingPresetsController(
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid preset id");
 
+        // Guard: load the row first so we can return a structured 422 for
+        // built-in presets instead of the generic ConflictResponse the repo
+        // would otherwise produce via InvalidOperationException.
+        EncodingPreset? existing = await presetRepository.GetByIdAsync(presetId);
+        if (existing is null)
+            return NotFoundResponse("Preset not found");
+
+        if (existing.IsBuiltIn)
+        {
+            NoMercy.Encoder.Errors.ValidationEnvelope envelope =
+                NoMercy.Encoder.Errors.ValidationEnvelope.FromRules([
+                    new NoMercy.Encoder.Errors.EncoderRule(
+                        NoMercy.Encoder.Errors.EncoderRuleId.ProfileBuiltinReadonly,
+                        NoMercy.Encoder.Errors.EncoderRuleSeverity.Error,
+                        "id",
+                        "Built-in presets are read-only — clone the preset to edit it.",
+                        $"POST /api/v1/dashboard/encoding/presets/{id}/clone to make an editable copy."
+                    ),
+                ]);
+            return UnprocessableEntity(envelope);
+        }
+
         try
         {
             EncodingPreset? updated = await presetRepository.UpdateAsync(

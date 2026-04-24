@@ -268,6 +268,11 @@ public static class ServiceCollectionExtensions
         );
         services.AddTransient<ITaskProgressSink, HttpTaskProgressSink>();
 
+        // Built-in preset seeder — upserts the 12 shipping presets into
+        // EncodingPresets on every start. Skips rows where IsBuiltIn was
+        // deliberately cleared by the user to avoid clobbering their data.
+        services.AddHostedService<BuiltinPresetSeeder>();
+
         // Self-registration background service — no-ops on standalone
         // installs (when CoordinatorUrl is not set). Safe to always
         // register; the service exits cleanly in that case.
