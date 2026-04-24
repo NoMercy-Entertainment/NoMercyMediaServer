@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
 /// <summary>
 /// Detects black-bar cropping by running FFmpeg's <c>cropdetect</c> filter on a
@@ -16,6 +17,7 @@ using NoMercy.Encoder.Infrastructure;
 public partial class CropDetector(
     EncoderOptions options,
     IProcessRunner processRunner,
+    IStorage storage,
     ILogger<CropDetector> logger
 ) : ICropDetector
 {
@@ -28,13 +30,14 @@ public partial class CropDetector(
 
     public async Task<CropResult> DetectAsync(string inputPath, CancellationToken ct)
     {
+        await using LocalPathLease inputLease = storage.AcquireLocalPath(inputPath);
         string[] args =
         [
             "-hide_banner",
             "-ss",
             "120", // skip intro/logos
             "-i",
-            inputPath,
+            inputLease.Path,
             "-t",
             ((int)ScanDuration.TotalSeconds).ToString(),
             "-vf",

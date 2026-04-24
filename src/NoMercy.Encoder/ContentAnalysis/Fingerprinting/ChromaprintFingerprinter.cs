@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
 /// <summary>
 /// FFmpeg-backed fingerprinter. Invokes ffmpeg with the chromaprint muxer
@@ -20,6 +21,7 @@ using NoMercy.Encoder.Infrastructure;
 public class ChromaprintFingerprinter(
     EncoderOptions options,
     IProcessRunner processRunner,
+    IStorage storage,
     ILogger<ChromaprintFingerprinter> logger
 ) : IAudioFingerprinter
 {
@@ -35,6 +37,7 @@ public class ChromaprintFingerprinter(
         CancellationToken ct
     )
     {
+        await using LocalPathLease inputLease = storage.AcquireLocalPath(filePath);
         List<string> args = ["-v", "error", "-nostdin"];
 
         if (window is not null)
@@ -48,7 +51,7 @@ public class ChromaprintFingerprinter(
         // Drop video, downmix to mono at chromaprint's preferred sample rate.
         args.AddRange([
             "-i",
-            filePath,
+            inputLease.Path,
             "-vn",
             "-sn",
             "-dn",

@@ -4,6 +4,7 @@ using System.IO;
 using Moq;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Tests.Encoder.Storage;
 
 public class MediaAnalyzerTests
 {
@@ -253,7 +254,7 @@ public class MediaAnalyzerTests
             )
             .ReturnsAsync(new ProcessResult(0, json, "", TimeSpan.FromMilliseconds(50)));
 
-        MediaAnalyzer analyzer = new(mockRunner.Object);
+        MediaAnalyzer analyzer = new(mockRunner.Object, TestStorageFactory.CreateLocal());
         MediaInfo info = await analyzer.AnalyzeAsync("/media/test.mkv");
 
         info.VideoStreams.Should().HaveCount(1);
@@ -265,7 +266,7 @@ public class MediaAnalyzerTests
                 r.RunAsync(
                     "ffprobe",
                     It.Is<string[]>(args =>
-                        args[args.Length - 1] == "/media/test.mkv"
+                        args[args.Length - 1].EndsWith("test.mkv")
                         && args.Contains("-show_streams")
                         && args.Contains("-show_format")
                         && args.Contains("-show_chapters")
@@ -294,7 +295,7 @@ public class MediaAnalyzerTests
                 new ProcessResult(1, "", "No such file or directory", TimeSpan.FromMilliseconds(10))
             );
 
-        MediaAnalyzer analyzer = new(mockRunner.Object);
+        MediaAnalyzer analyzer = new(mockRunner.Object, TestStorageFactory.CreateLocal());
 
         Func<Task> act = async () => await analyzer.AnalyzeAsync("/nonexistent.mkv");
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*ffprobe failed*");

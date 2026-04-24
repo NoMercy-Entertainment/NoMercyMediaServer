@@ -5,6 +5,7 @@ using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// The chromaprint-backed fingerprinter parses ffmpeg stdout; these tests
@@ -83,6 +84,7 @@ public class ChromaprintFingerprinterTests
         ChromaprintFingerprinter fp = new(
             _options,
             runner.Object,
+            TestStorageFactory.CreateLocal(),
             NullLogger<ChromaprintFingerprinter>.Instance
         );
 
@@ -122,6 +124,7 @@ public class ChromaprintFingerprinterTests
         ChromaprintFingerprinter fp = new(
             _options,
             runner.Object,
+            TestStorageFactory.CreateLocal(),
             NullLogger<ChromaprintFingerprinter>.Instance
         );
 

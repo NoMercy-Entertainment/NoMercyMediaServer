@@ -2,8 +2,9 @@ namespace NoMercy.Encoder.Analysis;
 
 using Newtonsoft.Json.Linq;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
-public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
+public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage) : IMediaAnalyzer
 {
     private static readonly string[] FfprobeArgs =
     [
@@ -18,7 +19,8 @@ public class MediaAnalyzer(IProcessRunner processRunner) : IMediaAnalyzer
 
     public async Task<MediaInfo> AnalyzeAsync(string filePath, CancellationToken ct = default)
     {
-        string[] arguments = [.. FfprobeArgs, filePath];
+        await using LocalPathLease inputLease = storage.AcquireLocalPath(filePath);
+        string[] arguments = [.. FfprobeArgs, inputLease.Path];
         ProcessResult result = await processRunner.RunAsync("ffprobe", arguments, null, ct);
 
         if (!result.IsSuccess)

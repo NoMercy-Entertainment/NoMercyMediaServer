@@ -5,6 +5,7 @@ using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Tests.Encoder.Storage;
 
 public class CropDetectorTests
 {
@@ -28,6 +29,7 @@ public class CropDetectorTests
         CropDetector detector = new(
             _options,
             _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
             NullLogger<CropDetector>.Instance
         );
 
@@ -49,6 +51,7 @@ public class CropDetectorTests
         CropDetector detector = new(
             _options,
             _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
             NullLogger<CropDetector>.Instance
         );
 
@@ -68,6 +71,7 @@ public class CropDetectorTests
         CropDetector detector = new(
             _options,
             _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
             NullLogger<CropDetector>.Instance
         );
 
@@ -83,6 +87,7 @@ public class CropDetectorTests
         CropDetector detector = new(
             _options,
             _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
             NullLogger<CropDetector>.Instance
         );
 
@@ -113,6 +118,7 @@ public class CropDetectorTests
         CropDetector detector = new(
             _options,
             _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
             NullLogger<CropDetector>.Instance
         );
 
