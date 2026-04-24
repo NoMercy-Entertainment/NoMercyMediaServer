@@ -237,6 +237,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<BufferManager>();
         services.AddSingleton<ISpeedIndexStore, JsonSpeedIndexStore>();
         services.AddSingleton<IHardwareBenchmark, HardwareBenchmark>();
+        services.AddSingleton<IBenchmarkJobTracker, BenchmarkJobTracker>();
 
         // Lazy-load cached SpeedIndex from disk (empty when no benchmark has run yet).
         services.AddSingleton<SpeedIndex>(sp =>

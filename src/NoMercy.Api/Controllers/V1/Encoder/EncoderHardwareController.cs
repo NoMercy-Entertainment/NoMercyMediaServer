@@ -1,0 +1,113 @@
+using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Hardware;
+using NoMercy.Helpers.Extensions;
+
+namespace NoMercy.Api.Controllers.V1.Encoder;
+
+/// <summary>
+/// Endpoints for triggering on-demand hardware benchmarks and polling their
+/// results. All operations require the requesting user to be a moderator
+/// (owner or manager).
+///
+/// NOTE: The underlying <see cref="IHardwareBenchmark.CalibrateAsync"/> does
+/// not currently accept codec or resolution filters — the engine always
+/// calibrates every available codec. The <c>codecs</c> and <c>resolutions</c>
+/// fields in the request body are recorded in the job status for
+/// observability and will drive actual filtering once the benchmark engine
+/// is extended.
+/// </summary>
+[ApiController]
+[Tags("Encoder Hardware")]
+[ApiVersion(1.0)]
+[Authorize]
+[Route("api/v{version:apiVersion}/encoder/hardware")]
+public class EncoderHardwareController(IBenchmarkJobTracker tracker) : BaseController
+{
+    /// <summary>
+    /// Starts a new benchmark calibration run asynchronously.
+    /// Returns 202 Accepted immediately with a job_id for polling.
+    /// Invalid codec names produce 422.
+    /// </summary>
+    [HttpPost("benchmark")]
+    public IActionResult StartBenchmark([FromBody] StartBenchmarkRequest? request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse(
+                "You do not have permission to trigger a hardware benchmark"
+            );
+
+        List<VideoCodecType> codecs = [];
+
+        if (request?.Codecs is { Length: > 0 } rawCodecs)
+        {
+            foreach (string name in rawCodecs)
+            {
+                if (!Enum.TryParse(name, ignoreCase: true, out VideoCodecType parsed))
+                {
+                    return UnprocessableEntity(
+                        new
+                        {
+                            error = "benchmark.invalid_codec",
+                            message = $"Unknown codec name '{name}'.",
+                            suggestion = $"Valid values are: {string.Join(", ", Enum.GetNames<VideoCodecType>())}.",
+                        }
+                    );
+                }
+
+                codecs.Add(parsed);
+            }
+        }
+
+        List<int> resolutions = request?.Resolutions?.ToList() ?? [];
+
+        BenchmarkJobStatus job = tracker.Start(codecs, resolutions);
+
+        return Accepted(new { job_id = job.JobId, status = job.Status });
+    }
+
+    /// <summary>
+    /// Returns the current status of a benchmark job.
+    /// Poll this endpoint until <c>status</c> is "completed", "failed", or
+    /// "cancelled".
+    /// </summary>
+    [HttpGet("benchmark/{jobId}")]
+    public IActionResult GetBenchmark(string jobId)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse(
+                "You do not have permission to view hardware benchmark status"
+            );
+
+        BenchmarkJobStatus? job = tracker.Get(jobId);
+        if (job is null)
+            return NotFoundResponse($"No benchmark job with id '{jobId}' found");
+
+        return Ok(job);
+    }
+
+    /// <summary>
+    /// Returns all known benchmark jobs for this process lifetime.
+    /// History is lost on server restart; the durable SpeedIndex is
+    /// available at GET /api/v1/dashboard/hardware/benchmark.
+    /// </summary>
+    [HttpGet("benchmark")]
+    public IActionResult ListBenchmarks()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse(
+                "You do not have permission to list hardware benchmark jobs"
+            );
+
+        return Ok(new { data = tracker.List() });
+    }
+}
+
+public record StartBenchmarkRequest(
+    [property: JsonProperty("codecs")] string[]? Codecs,
+    [property: JsonProperty("resolutions")] int[]? Resolutions
+);
