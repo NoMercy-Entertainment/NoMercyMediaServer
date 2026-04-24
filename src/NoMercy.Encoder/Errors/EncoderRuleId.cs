@@ -76,6 +76,10 @@ public static class EncoderRuleId
     public const string ImportPublisherUntrusted = "import.publisher_untrusted";
     public const string ImportUnsignedRequiresFlag = "import.unsigned_requires_flag";
 
+    // ---- Trusted publisher keys ------------------------------------------
+    public const string TrustedPublisherPublicKeyInvalid = "trusted_publisher.public_key_invalid";
+    public const string TrustedPublisherAlreadyTrusted = "trusted_publisher.already_trusted";
+
     // ---- Hardware --------------------------------------------------------
     public const string HardwareForcedButUnavailable = "hardware.forced_but_unavailable";
     public const string HardwareGpuTelemetryUnsupported = "hardware.gpu_telemetry_unsupported";
