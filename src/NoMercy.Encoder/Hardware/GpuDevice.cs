@@ -7,5 +7,6 @@ public record GpuDevice(
     string Name,
     long VramMb,
     int MaxEncoderSessions,
-    IReadOnlyList<VideoCodecType> SupportedCodecs
+    IReadOnlyList<VideoCodecType> SupportedCodecs,
+    string? DriverVersion = null
 );

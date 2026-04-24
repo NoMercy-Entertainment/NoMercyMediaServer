@@ -81,6 +81,8 @@ public static class ServiceCollectionExtensions
 
         // Hardware
         services.AddSingleton<IHardwareDetector, PlatformHardwareDetector>();
+        services.AddSingleton<IDriverFingerprintStore, JsonDriverFingerprintStore>();
+        services.AddSingleton<IDriverChangeDetector, DriverChangeDetector>();
         services.AddSingleton<FfmpegCapabilities>();
         services.AddSingleton<IFfmpegCapabilities>(sp =>
             sp.GetRequiredService<FfmpegCapabilities>()

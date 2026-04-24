@@ -2,11 +2,14 @@ namespace NoMercy.Encoder.Startup;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 
 public class HardwareInitializationService(
     IHardwareDetector hardwareDetector,
     FfmpegCapabilities ffmpegCapabilities,
+    IDriverChangeDetector driverChangeDetector,
+    IBenchmarkJobTracker benchmarkJobTracker,
     ILogger<HardwareInitializationService> logger
 ) : IHostedService
 {
@@ -50,6 +53,37 @@ public class HardwareInitializationService(
             Capabilities = new HardwareCapabilities(gpus, cpuCores);
             IsReady = true;
             logger.LogInformation("Hardware detection complete. Encoder ready.");
+
+            // Driver change detection — runs after detection so fingerprint sees real GPU data.
+            // First boot: HardwareBenchmarkBackgroundService handles initial calibration.
+            // Subsequent boots with a changed driver: queue recalibration immediately.
+            DriverChangeResult driverResult = await driverChangeDetector.DetectAndPersistAsync(
+                cancellationToken
+            );
+
+            if (driverResult.IsFirstBoot)
+            {
+                logger.LogInformation(
+                    "Driver fingerprint: first boot (hash {Hash}) — initial calibration deferred to benchmark service",
+                    driverResult.CurrentHash
+                );
+            }
+            else if (driverResult.Changed)
+            {
+                logger.LogWarning(
+                    "GPU driver change detected (prev={Prev}, curr={Curr}) — queuing benchmark recalibration",
+                    driverResult.PreviousHash,
+                    driverResult.CurrentHash
+                );
+                benchmarkJobTracker.Start(Array.Empty<VideoCodecType>(), Array.Empty<int>());
+            }
+            else
+            {
+                logger.LogInformation(
+                    "Driver fingerprint unchanged (hash {Hash})",
+                    driverResult.CurrentHash
+                );
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

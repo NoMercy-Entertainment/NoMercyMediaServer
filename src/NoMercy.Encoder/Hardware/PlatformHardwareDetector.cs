@@ -51,7 +51,13 @@ public partial class PlatformHardwareDetector(
     {
         ProcessResult result = await processRunner.RunAsync(
             "wmic",
-            ["path", "Win32_VideoController", "get", "Name,AdapterRAM", "/format:csv"],
+            [
+                "path",
+                "Win32_VideoController",
+                "get",
+                "Name,AdapterRAM,DriverVersion",
+                "/format:csv",
+            ],
             null,
             ct
         );
@@ -64,30 +70,69 @@ public partial class PlatformHardwareDetector(
 
         List<GpuDevice> devices = [];
 
+        // Track header column positions from first non-empty header line
+        int nameIndex = -1;
+        int ramIndex = -1;
+        int driverIndex = -1;
+        bool headerParsed = false;
+
         foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
             string trimmed = line.Trim();
-            if (
-                string.IsNullOrWhiteSpace(trimmed)
-                || trimmed.StartsWith("Node", StringComparison.Ordinal)
-            )
+            if (string.IsNullOrWhiteSpace(trimmed))
                 continue;
 
-            // CSV format: Node,AdapterRAM,Name
             string[] parts = trimmed.Split(',');
-            if (parts.Length < 3)
+
+            if (!headerParsed)
+            {
+                // Header row: Node,AdapterRAM,DriverVersion,Name (order varies by wmic version)
+                for (int i = 0; i < parts.Length; i++)
+                {
+                    string col = parts[i].Trim();
+                    if (col.Equals("Name", StringComparison.OrdinalIgnoreCase))
+                        nameIndex = i;
+                    else if (col.Equals("AdapterRAM", StringComparison.OrdinalIgnoreCase))
+                        ramIndex = i;
+                    else if (col.Equals("DriverVersion", StringComparison.OrdinalIgnoreCase))
+                        driverIndex = i;
+                }
+
+                if (nameIndex >= 0 && ramIndex >= 0)
+                {
+                    headerParsed = true;
+                }
+                else if (trimmed.StartsWith("Node", StringComparison.Ordinal))
+                {
+                    // Old-style header without column discovery — fall back to positional
+                    // CSV format: Node,AdapterRAM,DriverVersion,Name
+                    ramIndex = 1;
+                    driverIndex = 2;
+                    nameIndex = 3;
+                    headerParsed = true;
+                }
+
+                continue;
+            }
+
+            if (parts.Length <= nameIndex || parts.Length <= ramIndex)
                 continue;
 
-            string adapterRamStr = parts[1].Trim();
-            string name = string.Join(",", parts[2..]).Trim();
+            string adapterRamStr = parts[ramIndex].Trim();
+            string name = parts[nameIndex].Trim();
+            string? driverVersion =
+                driverIndex >= 0 && driverIndex < parts.Length ? parts[driverIndex].Trim() : null;
 
             if (string.IsNullOrWhiteSpace(name))
                 continue;
 
+            if (string.IsNullOrWhiteSpace(driverVersion))
+                driverVersion = null;
+
             _ = long.TryParse(adapterRamStr, out long adapterRamBytes);
             long vramMb = adapterRamBytes / (1024 * 1024);
 
-            GpuDevice? device = BuildGpuDevice(name, vramMb);
+            GpuDevice? device = BuildGpuDevice(name, vramMb, driverVersion);
             if (device is not null)
                 devices.Add(device);
         }
@@ -202,7 +247,7 @@ public partial class PlatformHardwareDetector(
         return devices;
     }
 
-    private GpuDevice? BuildGpuDevice(string name, long vramMb)
+    private GpuDevice? BuildGpuDevice(string name, long vramMb, string? driverVersion = null)
     {
         GpuVendor? vendor = ClassifyVendor(name);
         if (vendor is null)
@@ -224,15 +269,16 @@ public partial class PlatformHardwareDetector(
         int maxSessions = ResolveMaxSessions(vendor.Value, name);
 
         logger.LogInformation(
-            "Detected GPU: {Vendor} {Name} ({VramMb}MB, {CodecCount} codecs, max {Sessions} sessions)",
+            "Detected GPU: {Vendor} {Name} ({VramMb}MB, {CodecCount} codecs, max {Sessions} sessions, driver {Driver})",
             vendor.Value,
             name,
             vramMb,
             supportedCodecs.Count,
-            maxSessions
+            maxSessions,
+            driverVersion ?? "unknown"
         );
 
-        return new(vendor.Value, name, vramMb, maxSessions, supportedCodecs);
+        return new(vendor.Value, name, vramMb, maxSessions, supportedCodecs, driverVersion);
     }
 
     private List<VideoCodecType> DetectSupportedCodecs(GpuVendor vendor)
