@@ -65,18 +65,7 @@ public enum EncodingPass
     Two,
 }
 
-public record EncodingResult(
-    bool Success,
-    string OutputPath,
-    TimeSpan Duration,
-    EncodingError? Error,
-    EncodingMetrics Metrics
-);
-
-public record EncodingMetrics(
-    long OutputSizeBytes,
-    double AverageSpeed,
-    double AverageFps,
-    string EncoderUsed,
-    string? GpuUsed
-);
+// EncodingResult and EncodingMetrics are defined in
+// Orchestration/EncodingResult.cs (namespace NoMercy.Encoder.Pipeline)
+// so both the pipeline and orchestration layers share the same type
+// without a circular reference.

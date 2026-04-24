@@ -7,10 +7,12 @@ using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
+using NoMercy.Storage;
 
 public class EncodingOrchestratorTests
 {
     private readonly Mock<IStrategyResolver> _resolver = new();
+    private readonly Mock<IStorage> _storage = new();
 
     [Fact]
     public async Task EncodeAsync_DispatchesToResolvedStrategy()
@@ -28,6 +30,7 @@ public class EncodingOrchestratorTests
 
         EncodingOrchestrator orchestrator = new(
             _resolver.Object,
+            _storage.Object,
             NullLogger<EncodingOrchestrator>.Instance
         );
 
@@ -55,6 +58,7 @@ public class EncodingOrchestratorTests
 
         EncodingOrchestrator orchestrator = new(
             _resolver.Object,
+            _storage.Object,
             NullLogger<EncodingOrchestrator>.Instance
         );
 
@@ -78,6 +82,7 @@ public class EncodingOrchestratorTests
         Mock<IProgressObserver> progress = new();
         EncodingOrchestrator orchestrator = new(
             _resolver.Object,
+            _storage.Object,
             NullLogger<EncodingOrchestrator>.Instance
         );
 
@@ -105,6 +110,7 @@ public class EncodingOrchestratorTests
 
         EncodingOrchestrator orchestrator = new(
             _resolver.Object,
+            _storage.Object,
             NullLogger<EncodingOrchestrator>.Instance
         );
 
