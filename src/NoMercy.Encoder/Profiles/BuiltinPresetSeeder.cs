@@ -1,5 +1,6 @@
 namespace NoMercy.Encoder.Profiles;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -17,12 +18,23 @@ using NoMercy.Database.Models.Media;
 ///                           because the seeder never touches navigation props).
 ///   - Present + !IsBuiltIn → skip. A user removed the flag deliberately;
 ///                            never clobber their row.
+///
+/// <para>Takes <see cref="IServiceScopeFactory"/> rather than
+/// <c>MediaContext</c> directly because DbContext is scoped and this
+/// hosted service runs as a singleton — mixing the two trips the
+/// container's lifetime validator. Each StartAsync call opens its own
+/// scope, drains the work, and disposes.</para>
 /// </summary>
-public sealed class BuiltinPresetSeeder(MediaContext context, ILogger<BuiltinPresetSeeder> logger)
-    : IHostedService
+public sealed class BuiltinPresetSeeder(
+    IServiceScopeFactory scopeFactory,
+    ILogger<BuiltinPresetSeeder> logger
+) : IHostedService
 {
     public async Task StartAsync(CancellationToken ct)
     {
+        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+        MediaContext context = scope.ServiceProvider.GetRequiredService<MediaContext>();
+
         IReadOnlyList<EncodingProfile> presets = BuiltinPresets.All();
 
         int inserted = 0;
