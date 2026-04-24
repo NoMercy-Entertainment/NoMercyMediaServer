@@ -289,6 +289,13 @@ public static class ServiceCollectionExtensions
         );
         services.AddTransient<ITaskProgressSink, HttpTaskProgressSink>();
 
+        // Capability probe — deferred 5 s after ApplicationStarted.
+        // Checks fpcalc, Whisper model, Tesseract eng.traineddata, and
+        // validates required FFmpeg filters/muxers. Reuses FfmpegCapabilities
+        // for filters/protocols to avoid duplicate shell calls.
+        services.AddSingleton<IFfmpegCapabilityProbe, FfmpegCapabilityProbe>();
+        services.AddHostedService<FfmpegCapabilityProbeBackgroundService>();
+
         // Built-in preset seeder — upserts the 12 shipping presets into
         // EncodingPresets on every start. Skips rows where IsBuiltIn was
         // deliberately cleared by the user to avoid clobbering their data.

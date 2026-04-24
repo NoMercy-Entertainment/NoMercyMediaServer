@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
+using NoMercy.Encoder.Startup;
 using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
@@ -31,7 +32,8 @@ public class EncoderHardwareController(
     IBenchmarkJobTracker tracker,
     IResourceMonitor monitor,
     IEncoderProcessRegistry registry,
-    IHardwareCapabilities hardware
+    IHardwareCapabilities hardware,
+    IFfmpegCapabilityProbe probe
 ) : BaseController
 {
     /// <summary>
@@ -133,6 +135,30 @@ public class EncoderHardwareController(
         );
 
         return Ok(snap);
+    }
+
+    /// <summary>
+    /// Returns the cached FFmpeg capability report: protocol support (BluRay,
+    /// DVD), available encoders, missing filters and muxers, and optional-tool
+    /// presence (fpcalc, Whisper model, Tesseract eng.traineddata).
+    /// Returns <c>probe_pending</c> if the background probe has not yet completed.
+    /// </summary>
+    [HttpGet("/api/v{version:apiVersion}/encoder/capabilities")]
+    public IActionResult GetCapabilities()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view encoder capabilities");
+
+        CapabilityReport? report = probe.GetCachedReport();
+        return report is null
+            ? Ok(
+                new
+                {
+                    status = "probe_pending",
+                    message = "Capability probe has not completed yet.",
+                }
+            )
+            : Ok(report);
     }
 }
 
