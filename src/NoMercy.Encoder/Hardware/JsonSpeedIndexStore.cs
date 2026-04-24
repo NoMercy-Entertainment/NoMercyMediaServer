@@ -1,17 +1,22 @@
 namespace NoMercy.Encoder.Hardware;
 
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
+using NoMercy.Storage;
 
 /// <summary>
 /// Persists <see cref="SpeedIndex"/> measurements to a single JSON file at
 /// <see cref="EncoderOptions.SpeedIndexCachePath"/>. Corrupt / missing files
 /// are logged and treated as "no cache" so the benchmark simply recalibrates.
 /// </summary>
-public class JsonSpeedIndexStore(EncoderOptions options, ILogger<JsonSpeedIndexStore> logger)
-    : ISpeedIndexStore
+public class JsonSpeedIndexStore(
+    EncoderOptions options,
+    ILogger<JsonSpeedIndexStore> logger,
+    IStorage storage
+) : ISpeedIndexStore
 {
     private DateTime? _lastCalibratedAt;
 
@@ -20,12 +25,12 @@ public class JsonSpeedIndexStore(EncoderOptions options, ILogger<JsonSpeedIndexS
     public SpeedIndex? Load()
     {
         string? path = options.SpeedIndexCachePath;
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        if (string.IsNullOrWhiteSpace(path) || !storage.Exists(path))
             return null;
 
         try
         {
-            string json = File.ReadAllText(path);
+            string json = Encoding.UTF8.GetString(storage.Read(path));
             SpeedIndexDto? dto = JsonConvert.DeserializeObject<SpeedIndexDto>(json);
             if (dto is null)
                 return null;
@@ -33,8 +38,11 @@ public class JsonSpeedIndexStore(EncoderOptions options, ILogger<JsonSpeedIndexS
             Dictionary<SpeedKey, SpeedMeasurement> map = new();
             foreach (SpeedEntryDto entry in dto.Entries)
             {
-                map[new(entry.Codec, entry.Encoder, entry.Width, entry.DeviceName)] =
-                    new(entry.Fps, entry.SpeedMultiplier, entry.MeasuredAt);
+                map[new(entry.Codec, entry.Encoder, entry.Width, entry.DeviceName)] = new(
+                    entry.Fps,
+                    entry.SpeedMultiplier,
+                    entry.MeasuredAt
+                );
             }
 
             _lastCalibratedAt = dto.CalibratedAt;
@@ -62,7 +70,7 @@ public class JsonSpeedIndexStore(EncoderOptions options, ILogger<JsonSpeedIndexS
 
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            storage.CreateDirectory(Path.GetDirectoryName(path)!);
 
             DateTime now = DateTime.UtcNow;
             SpeedIndexDto dto = new(
@@ -81,10 +89,13 @@ public class JsonSpeedIndexStore(EncoderOptions options, ILogger<JsonSpeedIndexS
             );
 
             string tmp = path + ".tmp";
-            File.WriteAllText(tmp, JsonConvert.SerializeObject(dto, Formatting.Indented));
-            if (File.Exists(path))
-                File.Delete(path);
-            File.Move(tmp, path);
+            storage.Write(
+                tmp,
+                Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(dto, Formatting.Indented))
+            );
+            if (storage.Exists(path))
+                storage.Delete(path);
+            storage.Move(tmp, path);
 
             _lastCalibratedAt = now;
         }

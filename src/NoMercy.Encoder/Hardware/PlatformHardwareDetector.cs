@@ -5,11 +5,13 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
 public partial class PlatformHardwareDetector(
     IProcessRunner processRunner,
     IFfmpegCapabilities ffmpegCapabilities,
-    ILogger<PlatformHardwareDetector> logger
+    ILogger<PlatformHardwareDetector> logger,
+    IStorage storage
 ) : IHardwareDetector
 {
     private const int DefaultMaxSessions = 8;
@@ -96,7 +98,7 @@ public partial class PlatformHardwareDetector(
     private async Task<IReadOnlyList<GpuDevice>> DetectLinuxGpusAsync(CancellationToken ct)
     {
         // Check for render nodes first — no /dev/dri means no GPU acceleration
-        bool hasDri = Directory.Exists("/dev/dri");
+        bool hasDri = storage.Exists("/dev/dri");
         if (!hasDri)
         {
             logger.LogInformation("No /dev/dri found — no GPU acceleration available");

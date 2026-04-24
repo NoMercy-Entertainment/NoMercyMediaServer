@@ -6,6 +6,7 @@ using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Tests.Encoder.Storage;
 
 public class PlatformHardwareDetectorTests
 {
@@ -14,7 +15,12 @@ public class PlatformHardwareDetectorTests
     private readonly Mock<ILogger<PlatformHardwareDetector>> _logger = new();
 
     private PlatformHardwareDetector CreateDetector() =>
-        new(_processRunner.Object, _capabilities.Object, _logger.Object);
+        new(
+            _processRunner.Object,
+            _capabilities.Object,
+            _logger.Object,
+            TestStorageFactory.CreateLocal()
+        );
 
     [Fact]
     public async Task DetectCpuCoreCount_ReturnsProcessorCount()

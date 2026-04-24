@@ -34,7 +34,7 @@ public class BuildStageDrmTests
                 new FontExtractor(TestStorageFactory.CreateLocal()),
                 new SubtitleExtractor(),
                 OutputStrategyFactoryTestHelper.Create(),
-                [new Aes128HlsDrmProcessor()],
+                [new Aes128HlsDrmProcessor(TestStorageFactory.CreateLocal())],
                 NullLogger<BuildStage>.Instance
             );
 
@@ -85,7 +85,7 @@ public class BuildStageDrmTests
                 new FontExtractor(TestStorageFactory.CreateLocal()),
                 new SubtitleExtractor(),
                 OutputStrategyFactoryTestHelper.Create(),
-                [new Aes128HlsDrmProcessor()],
+                [new Aes128HlsDrmProcessor(TestStorageFactory.CreateLocal())],
                 NullLogger<BuildStage>.Instance
             );
 

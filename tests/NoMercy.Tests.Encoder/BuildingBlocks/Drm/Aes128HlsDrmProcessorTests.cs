@@ -1,6 +1,7 @@
 namespace NoMercy.Tests.Encoder.BuildingBlocks.Drm;
 
 using NoMercy.Encoder.BuildingBlocks.Drm;
+using NoMercy.Tests.Encoder.Storage;
 
 public class Aes128HlsDrmProcessorTests
 {
@@ -10,7 +11,7 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new();
+            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
             DrmConfig config = new(DrmMethod.Aes128, KeyUri: "https://example/key/abc");
 
             DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
@@ -35,7 +36,7 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new();
+            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
             byte[] fixedKey = Enumerable.Range(0, 16).Select(i => (byte)i).ToArray();
             byte[] fixedIv = Enumerable.Range(16, 16).Select(i => (byte)i).ToArray();
             DrmConfig config = new(
@@ -66,7 +67,7 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new();
+            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
             byte[] key = Enumerable.Range(0, 16).Select(i => (byte)(0xA0 + i)).ToArray();
             DrmConfig config = new(DrmMethod.Aes128, KeyUri: "http://k", Key: key);
 
@@ -88,7 +89,7 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new();
+            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
             DrmConfig config = new(
                 DrmMethod.Aes128,
                 KeyUri: "http://k",
@@ -112,7 +113,7 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new();
+            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
             DrmConfig config = new(DrmMethod.None, KeyUri: "http://k");
 
             Func<Task> act = () => sut.PrepareAsync(dir, config, CancellationToken.None);
@@ -132,7 +133,7 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new();
+            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
             DrmConfig config = new(DrmMethod.Aes128, KeyUri: "");
 
             Func<Task> act = () => sut.PrepareAsync(dir, config, CancellationToken.None);
@@ -148,7 +149,9 @@ public class Aes128HlsDrmProcessorTests
 
     [Fact]
     public void Method_IsAes128() =>
-        new Aes128HlsDrmProcessor().Method.Should().Be(DrmMethod.Aes128);
+        new Aes128HlsDrmProcessor(TestStorageFactory.CreateLocal())
+            .Method.Should()
+            .Be(DrmMethod.Aes128);
 
     private static string NewTempDir()
     {

@@ -1,6 +1,8 @@
 namespace NoMercy.Encoder.BuildingBlocks.Drm;
 
 using System.Security.Cryptography;
+using System.Text;
+using NoMercy.Storage;
 
 /// <summary>
 /// AES-128 HLS encryption. Writes a <c>key</c> file containing the raw
@@ -17,7 +19,7 @@ using System.Security.Cryptography;
 /// <c>#EXT-X-KEY:METHOD=AES-128,URI="&lt;uri&gt;",IV=0x&lt;iv&gt;</c>
 /// into the playlist automatically.
 /// </summary>
-public class Aes128HlsDrmProcessor : IDrmProcessor
+public class Aes128HlsDrmProcessor(IStorage storage) : IDrmProcessor
 {
     private const string KeyFileName = "drm.key";
     private const string KeyInfoFileName = "drm_keyinfo.txt";
@@ -39,7 +41,7 @@ public class Aes128HlsDrmProcessor : IDrmProcessor
         if (string.IsNullOrWhiteSpace(config.KeyUri))
             throw new ArgumentException("DrmConfig.KeyUri is required", nameof(config));
 
-        Directory.CreateDirectory(outputDirectory);
+        storage.CreateDirectory(outputDirectory);
 
         byte[] key = config.Key ?? RandomNumberGenerator.GetBytes(16);
         if (key.Length != 16)
@@ -58,14 +60,16 @@ public class Aes128HlsDrmProcessor : IDrmProcessor
         string keyFilePath = Path.Combine(outputDirectory, KeyFileName);
         string keyInfoPath = Path.Combine(outputDirectory, KeyInfoFileName);
 
-        await File.WriteAllBytesAsync(keyFilePath, key, ct).ConfigureAwait(false);
+        await storage.WriteAsync(keyFilePath, key, ct).ConfigureAwait(false);
 
         // ffmpeg accepts forward slashes everywhere; normalizing keeps tests
         // stable on Windows where Path.Combine yields backslashes.
         string keyFileForwardSlash = keyFilePath.Replace('\\', '/');
         string keyInfoContent =
             $"{config.KeyUri}\n{keyFileForwardSlash}\n{Convert.ToHexString(iv).ToLowerInvariant()}\n";
-        await File.WriteAllTextAsync(keyInfoPath, keyInfoContent, ct).ConfigureAwait(false);
+        await storage
+            .WriteAsync(keyInfoPath, Encoding.UTF8.GetBytes(keyInfoContent), ct)
+            .ConfigureAwait(false);
 
         return new(
             KeyInfoFilePath: keyInfoPath,
