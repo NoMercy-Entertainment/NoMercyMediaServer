@@ -114,6 +114,7 @@ public static class ServiceCollectionExtensions
         // Profiles
         services.AddTransient<IProfileValidator, ProfileValidator>();
         services.AddTransient<IPresetResolver, PresetResolver>();
+        services.AddSingleton<IProfileResolver, ProfileResolver>();
 
         // Execution
         services.AddTransient<IFfmpegExecutor, FfmpegExecutor>();
