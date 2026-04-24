@@ -18,12 +18,13 @@ using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
+using NoMercy.Storage;
 using NoMercy.Tests.Encoder.Storage;
 
 public class EncoderTests
 {
     private readonly Mock<IMediaAnalyzer> _analyzer = new();
-    private readonly Mock<IFileSystem> _fileSystem = new();
+    private readonly Mock<IStorage> _storage = new();
     private readonly Mock<IProfileValidator> _profileValidator = new();
     private readonly Mock<IFfmpegExecutor> _ffmpegExecutor = new();
     private readonly Mock<ICodecResolver> _codecResolver = new();
@@ -44,7 +45,7 @@ public class EncoderTests
 
         AnalyzeStage analyzeStage = new(
             _analyzer.Object,
-            _fileSystem.Object,
+            _storage.Object,
             NullLogger<AnalyzeStage>.Instance
         );
         ValidateStage validateStage = new(
@@ -224,7 +225,7 @@ public class EncoderTests
     {
         MediaInfo media = BuildMediaInfo();
 
-        _fileSystem.Setup(fs => fs.FileExists(inputPath)).Returns(true);
+        _storage.Setup(s => s.Exists(inputPath)).Returns(true);
         _analyzer
             .Setup(a => a.AnalyzeAsync(inputPath, It.IsAny<CancellationToken>()))
             .ReturnsAsync(media);
@@ -313,7 +314,7 @@ public class EncoderTests
     [Fact]
     public async Task AnalyzeFailure_FileMissing_ReturnsFalseWithError()
     {
-        _fileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
 
         EncodingRequest request = new(
             InputPath: "/missing/file.mkv",
@@ -331,7 +332,7 @@ public class EncoderTests
     [Fact]
     public async Task AnalyzeFailure_DoesNotCallExecutor()
     {
-        _fileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
 
         EncodingRequest request = new(
             InputPath: "/missing/file.mkv",
@@ -363,7 +364,7 @@ public class EncoderTests
     {
         MediaInfo media = BuildMediaInfo();
 
-        _fileSystem.Setup(fs => fs.FileExists("/movies/test.mkv")).Returns(true);
+        _storage.Setup(s => s.Exists("/movies/test.mkv")).Returns(true);
         _analyzer
             .Setup(a => a.AnalyzeAsync("/movies/test.mkv", It.IsAny<CancellationToken>()))
             .ReturnsAsync(media);
@@ -436,7 +437,7 @@ public class EncoderTests
     [Fact]
     public async Task ProgressObserver_OnError_CalledOnFailure()
     {
-        _fileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
 
         Mock<IProgressObserver> progressMock = new();
         EncodingRequest request = new(

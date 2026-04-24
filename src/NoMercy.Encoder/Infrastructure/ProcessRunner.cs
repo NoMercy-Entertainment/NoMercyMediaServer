@@ -81,7 +81,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            WorkingDirectory = workingDirectory ?? Directory.GetCurrentDirectory(),
+            WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory,
         };
 
         foreach (string arg in arguments)

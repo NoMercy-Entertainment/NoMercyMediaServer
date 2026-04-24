@@ -4,20 +4,20 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
-using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
+using NoMercy.Storage;
 
 public class AnalyzeStageTests
 {
     private readonly Mock<IMediaAnalyzer> _analyzer = new();
-    private readonly Mock<IFileSystem> _fileSystem = new();
+    private readonly Mock<IStorage> _storage = new();
     private readonly AnalyzeStage _stage;
     private readonly EncodingContext _context = EncodingContext.Create();
 
     public AnalyzeStageTests()
     {
-        _stage = new(_analyzer.Object, _fileSystem.Object, NullLogger<AnalyzeStage>.Instance);
+        _stage = new(_analyzer.Object, _storage.Object, NullLogger<AnalyzeStage>.Instance);
     }
 
     private static MediaInfo BuildMediaInfo() =>
@@ -69,7 +69,7 @@ public class AnalyzeStageTests
     public async Task FileExists_AnalysisSucceeds_ReturnsMediaInfo()
     {
         MediaInfo expected = BuildMediaInfo();
-        _fileSystem.Setup(fs => fs.FileExists("/movies/test.mkv")).Returns(true);
+        _storage.Setup(s => s.Exists("/movies/test.mkv")).Returns(true);
         _analyzer
             .Setup(a => a.AnalyzeAsync("/movies/test.mkv", It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
@@ -90,7 +90,7 @@ public class AnalyzeStageTests
     [Fact]
     public async Task FileMissing_ReturnsInputNotFoundFailure()
     {
-        _fileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(false);
+        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
 
         StageResult result = await _stage.ExecuteAsync("/missing/file.mkv", _context, default);
 
@@ -108,7 +108,7 @@ public class AnalyzeStageTests
     [Fact]
     public async Task AnalyzerThrows_ReturnsInputCorruptFailure()
     {
-        _fileSystem.Setup(fs => fs.FileExists("/corrupt.mkv")).Returns(true);
+        _storage.Setup(s => s.Exists("/corrupt.mkv")).Returns(true);
         _analyzer
             .Setup(a => a.AnalyzeAsync("/corrupt.mkv", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("ffprobe failed: invalid data"));
@@ -129,7 +129,7 @@ public class AnalyzeStageTests
     [Fact]
     public async Task Cancellation_Propagates()
     {
-        _fileSystem.Setup(fs => fs.FileExists("/movies/test.mkv")).Returns(true);
+        _storage.Setup(s => s.Exists("/movies/test.mkv")).Returns(true);
         _analyzer
             .Setup(a => a.AnalyzeAsync("/movies/test.mkv", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());

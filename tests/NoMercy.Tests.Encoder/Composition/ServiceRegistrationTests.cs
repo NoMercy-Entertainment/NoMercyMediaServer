@@ -14,6 +14,7 @@ using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Startup;
+using NoMercy.Storage;
 
 public class ServiceRegistrationTests
 {
@@ -104,12 +105,12 @@ public class ServiceRegistrationTests
     }
 
     [Fact]
-    public void AddNoMercyEncoder_IFileSystem_Resolves()
+    public void AddNoMercyEncoder_IStorage_Resolves()
     {
         ServiceProvider provider = BuildProvider();
-        IFileSystem fileSystem = provider.GetRequiredService<IFileSystem>();
-        fileSystem.Should().NotBeNull();
-        fileSystem.Should().BeOfType<FileSystemAdapter>();
+        IStorage storage = provider.GetRequiredService<IStorage>();
+        storage.Should().NotBeNull();
+        storage.Should().BeOfType<LocalStorage>();
     }
 
     [Fact]

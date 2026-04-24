@@ -71,8 +71,8 @@ public class TesseractModelManager(
                 await remote.CopyToAsync(file, ct);
             }
 
-            // Move overwrites the destination — Storage.Move uses underlying File.Move
-            // which on .NET 10+ supports overwrite via a single primitive.
+            // Atomic-ish swap: delete any prior model then move the
+            // freshly downloaded temp into its final place.
             storage.Delete(localPath);
             storage.Move(tempPath, localPath);
         }

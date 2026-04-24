@@ -61,7 +61,6 @@ public static class ServiceCollectionExtensions
         services.AddNoMercyStorage();
 
         services.AddSingleton<IProcessRunner, ProcessRunner>();
-        services.AddSingleton<IFileSystem, FileSystemAdapter>();
         services.AddSingleton<IMediaAnalyzer, MediaAnalyzer>();
 
         // Codecs

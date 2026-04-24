@@ -3,13 +3,10 @@ namespace NoMercy.Encoder.Pipeline.Stages;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
-using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
-public class AnalyzeStage(
-    IMediaAnalyzer analyzer,
-    IFileSystem fileSystem,
-    ILogger<AnalyzeStage> logger
-) : IPipelineStage<string, MediaInfo>
+public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<AnalyzeStage> logger)
+    : IPipelineStage<string, MediaInfo>
 {
     public string Name => "Analyze";
 
@@ -25,7 +22,7 @@ public class AnalyzeStage(
             inputPath
         );
 
-        if (!fileSystem.FileExists(inputPath))
+        if (!storage.Exists(inputPath))
         {
             return new StageFailure(
                 new(
