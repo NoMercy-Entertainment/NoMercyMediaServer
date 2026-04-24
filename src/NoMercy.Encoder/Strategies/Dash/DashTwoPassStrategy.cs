@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Storage;
 
 /// <summary>
 /// DASH 2-pass strategy — produces a segmented MPEG-DASH output with the
@@ -14,8 +15,9 @@ using NoMercy.Encoder.Pipeline;
 public class DashTwoPassStrategy(
     IEncoder encoder,
     ICheckpointStore checkpointStore,
-    ILogger<DashTwoPassStrategy> logger
-) : TwoPassStrategyBase(encoder, checkpointStore, logger)
+    ILogger<DashTwoPassStrategy> logger,
+    IStorage storage
+) : TwoPassStrategyBase(encoder, checkpointStore, logger, storage)
 {
     public override OutputFormat Format => OutputFormat.Dash;
 }

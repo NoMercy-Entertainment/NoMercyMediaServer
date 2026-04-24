@@ -167,8 +167,7 @@ public abstract class TwoPassStrategyBase(
         // Covers every variant's output — x264 writes {base}_v{i}-0.log and
         // {base}_v{i}-0.log.mbtree. `{baseName}_v*` matches all of them.
         foreach (
-            string file in stor
-                .List(dir, $"{baseName}_v*", recursive: false)
+            string file in stor.List(dir, $"{baseName}_v*", recursive: false)
                 .Where(e => !e.IsDirectory)
                 .Select(e => e.Path)
         )

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Storage;
 
 /// <summary>
 /// MP4 2-pass strategy — pass 1 / pass 2 pattern produces a single faststart
@@ -14,8 +15,9 @@ using NoMercy.Encoder.Pipeline;
 public class Mp4TwoPassStrategy(
     IEncoder encoder,
     ICheckpointStore checkpointStore,
-    ILogger<Mp4TwoPassStrategy> logger
-) : TwoPassStrategyBase(encoder, checkpointStore, logger)
+    ILogger<Mp4TwoPassStrategy> logger,
+    IStorage storage
+) : TwoPassStrategyBase(encoder, checkpointStore, logger, storage)
 {
     public override OutputFormat Format => OutputFormat.Mp4;
 }

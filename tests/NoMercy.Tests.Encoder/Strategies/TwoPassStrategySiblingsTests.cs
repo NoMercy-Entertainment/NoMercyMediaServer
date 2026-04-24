@@ -10,6 +10,7 @@ using NoMercy.Encoder.Strategies;
 using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Encoder.Strategies.Mp4;
+using NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// Covers the MP4 / DASH siblings that share <see cref="TwoPassStrategyBase"/>
@@ -47,7 +48,8 @@ public class TwoPassStrategySiblingsTests : IDisposable
                 new HlsTwoPassStrategy(
                     encoder.Object,
                     store.Object,
-                    NullLogger<HlsTwoPassStrategy>.Instance
+                    NullLogger<HlsTwoPassStrategy>.Instance,
+                    TestStorageFactory.CreateLocal()
                 ),
                 OutputFormat.Hls
             },
@@ -55,7 +57,8 @@ public class TwoPassStrategySiblingsTests : IDisposable
                 new Mp4TwoPassStrategy(
                     encoder.Object,
                     store.Object,
-                    NullLogger<Mp4TwoPassStrategy>.Instance
+                    NullLogger<Mp4TwoPassStrategy>.Instance,
+                    TestStorageFactory.CreateLocal()
                 ),
                 OutputFormat.Mp4
             },
@@ -63,7 +66,8 @@ public class TwoPassStrategySiblingsTests : IDisposable
                 new DashTwoPassStrategy(
                     encoder.Object,
                     store.Object,
-                    NullLogger<DashTwoPassStrategy>.Instance
+                    NullLogger<DashTwoPassStrategy>.Instance,
+                    TestStorageFactory.CreateLocal()
                 ),
                 OutputFormat.Dash
             },
@@ -169,12 +173,14 @@ public class TwoPassStrategySiblingsTests : IDisposable
             OutputFormat.Mp4 => new Mp4TwoPassStrategy(
                 _encoder.Object,
                 _checkpointStore.Object,
-                NullLogger<Mp4TwoPassStrategy>.Instance
+                NullLogger<Mp4TwoPassStrategy>.Instance,
+                TestStorageFactory.CreateLocal()
             ),
             OutputFormat.Dash => new DashTwoPassStrategy(
                 _encoder.Object,
                 _checkpointStore.Object,
-                NullLogger<DashTwoPassStrategy>.Instance
+                NullLogger<DashTwoPassStrategy>.Instance,
+                TestStorageFactory.CreateLocal()
             ),
             _ => throw new ArgumentException($"No 2-pass sibling for {format}"),
         };

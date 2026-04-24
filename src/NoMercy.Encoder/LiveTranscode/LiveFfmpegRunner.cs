@@ -20,7 +20,9 @@ public class LiveFfmpegRunner(
 
     public async Task RunAsync(LiveRunInput input, LiveSession session, CancellationToken ct)
     {
-        Directory.CreateDirectory(input.OutputDirectory);
+        storage.CreateDirectory(input.OutputDirectory);
+
+        await using LocalPathLease outputLease = storage.AcquireLocalPath(input.OutputDirectory);
 
         string[] arguments = BuildArguments(input);
 
@@ -57,7 +59,7 @@ public class LiveFfmpegRunner(
                 arguments,
                 OnStdOut,
                 null,
-                input.OutputDirectory,
+                outputLease.Path,
                 ct
             );
 
@@ -217,7 +219,7 @@ public class LiveFfmpegRunner(
     private void PushNewSegments(LiveRunInput input, LiveSession session, HashSet<int> seen)
     {
         string playlistPath = Path.Combine(input.OutputDirectory, PlaylistFileName);
-        if (!File.Exists(playlistPath))
+        if (!storage.Exists(playlistPath))
             return;
 
         IReadOnlyList<(int Index, TimeSpan Duration)> entries = ParsePlaylist(playlistPath);
@@ -236,7 +238,7 @@ public class LiveFfmpegRunner(
                 continue;
             }
 
-            if (!File.Exists(segmentFile))
+            if (!storage.Exists(segmentFile))
             {
                 // The m3u8 can reference a segment before the file has finished
                 // its atomic rename — wait for the next poll.
@@ -247,7 +249,7 @@ public class LiveFfmpegRunner(
             long size = 0;
             try
             {
-                size = new FileInfo(segmentFile).Length;
+                size = storage.Size(segmentFile);
             }
             catch
             {
@@ -261,14 +263,19 @@ public class LiveFfmpegRunner(
         }
     }
 
-    internal static IReadOnlyList<(int Index, TimeSpan Duration)> ParsePlaylist(string playlistPath)
+    internal IReadOnlyList<(int Index, TimeSpan Duration)> ParsePlaylist(string playlistPath)
     {
         List<(int Index, TimeSpan Duration)> entries = [];
 
         string[] lines;
         try
         {
-            lines = File.ReadAllLines(playlistPath);
+            using Stream stream = storage.OpenRead(playlistPath);
+            using StreamReader reader = new(stream, System.Text.Encoding.UTF8);
+            List<string> lineList = [];
+            while (reader.ReadLine() is string rawLine)
+                lineList.Add(rawLine);
+            lines = [.. lineList];
         }
         catch (IOException)
         {
@@ -276,6 +283,12 @@ public class LiveFfmpegRunner(
             return entries;
         }
 
+        return ParsePlaylistLines(lines);
+    }
+
+    internal static IReadOnlyList<(int Index, TimeSpan Duration)> ParsePlaylistLines(string[] lines)
+    {
+        List<(int Index, TimeSpan Duration)> entries = [];
         TimeSpan? pendingDuration = null;
 
         foreach (string raw in lines)

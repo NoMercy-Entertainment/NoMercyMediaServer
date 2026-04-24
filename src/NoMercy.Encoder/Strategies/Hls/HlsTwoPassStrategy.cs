@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Storage;
 
 /// <summary>
 /// HLS 2-pass strategy. Pass 1 performs video-only analysis to a stats file,
@@ -14,8 +15,9 @@ using NoMercy.Encoder.Pipeline;
 public class HlsTwoPassStrategy(
     IEncoder encoder,
     ICheckpointStore checkpointStore,
-    ILogger<HlsTwoPassStrategy> logger
-) : TwoPassStrategyBase(encoder, checkpointStore, logger)
+    ILogger<HlsTwoPassStrategy> logger,
+    IStorage storage
+) : TwoPassStrategyBase(encoder, checkpointStore, logger, storage)
 {
     public override OutputFormat Format => OutputFormat.Hls;
 }
