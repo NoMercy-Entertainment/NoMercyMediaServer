@@ -6,6 +6,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Progress;
+using NoMercy.Storage;
 
 public record FinalizeInput(
     ExecutionResult[] Results,
@@ -21,7 +22,8 @@ public class FinalizeStage(
     IChapterWriter chapterWriter,
     IFontExtractor fontExtractor,
     IOutputStrategyFactory outputStrategyFactory,
-    ILogger<FinalizeStage> logger
+    ILogger<FinalizeStage> logger,
+    IStorage storage
 ) : IPipelineStage<FinalizeInput, FinalizeOutput>
 {
     public string Name => "Finalize";
@@ -36,7 +38,7 @@ public class FinalizeStage(
 
         try
         {
-            Directory.CreateDirectory(input.OutputDirectory);
+            storage.CreateDirectory(input.OutputDirectory);
 
             IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.Format);
 
@@ -70,13 +72,12 @@ public class FinalizeStage(
             // Thumbnail sprite + VTT are produced by the spritevtt muxer
             // in the main FFmpeg command — no post-processing needed.
 
-            long totalSize = Directory
-                .GetFiles(input.OutputDirectory, "*", SearchOption.AllDirectories)
-                .Sum(f => new FileInfo(f).Length);
+            long totalSize = storage
+                .List(input.OutputDirectory, "*", recursive: true)
+                .Where(e => !e.IsDirectory)
+                .Sum(e => e.SizeBytes);
 
-            return new StageSuccess<FinalizeOutput>(
-                new(input.OutputDirectory, totalSize)
-            );
+            return new StageSuccess<FinalizeOutput>(new(input.OutputDirectory, totalSize));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

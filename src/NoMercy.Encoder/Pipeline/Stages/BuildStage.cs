@@ -9,6 +9,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Storage;
 
 public record BuildInput(
     ExecutionPlan Plan,
@@ -27,7 +28,8 @@ public class BuildStage(
     ISubtitleExtractor subtitleExtractor,
     IOutputStrategyFactory outputStrategyFactory,
     IEnumerable<BuildingBlocks.Drm.IDrmProcessor> drmProcessors,
-    ILogger<BuildStage> logger
+    ILogger<BuildStage> logger,
+    IStorage storage
 ) : IPipelineStage<BuildInput, FfmpegCommand[]>
 {
     public string Name => "Build";
@@ -112,16 +114,16 @@ public class BuildStage(
             IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.OutputPlan.Format);
 
             // Ensure output subdirectories exist before FFmpeg runs
-            Directory.CreateDirectory(input.OutputDirectory);
+            storage.CreateDirectory(input.OutputDirectory);
             foreach (string subDir in strategy.GetOutputSubdirectories(input.Plan.OutputPlan))
             {
-                Directory.CreateDirectory(Path.Combine(input.OutputDirectory, subDir));
+                storage.CreateDirectory(Path.Combine(input.OutputDirectory, subDir));
             }
 
             // Ensure subtitles/ directory exists
             if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0)
             {
-                Directory.CreateDirectory(Path.Combine(input.OutputDirectory, "subtitles"));
+                storage.CreateDirectory(Path.Combine(input.OutputDirectory, "subtitles"));
             }
 
             FfmpegCommandBuilder builder = new();
@@ -176,7 +178,8 @@ public class BuildStage(
                     context.MediaInfo,
                     input.OutputDirectory,
                     input.MediaTitle,
-                    subtitleExtractor
+                    subtitleExtractor,
+                    storage
                 );
 
                 bitmapSubCommands = BuildBitmapSubtitleCommands(
@@ -186,7 +189,8 @@ public class BuildStage(
                     context.MediaInfo,
                     input.OutputDirectory,
                     input.MediaTitle,
-                    subtitleExtractor
+                    subtitleExtractor,
+                    storage
                 );
             }
 
@@ -208,7 +212,7 @@ public class BuildStage(
             if (context.MediaInfo is not null && context.MediaInfo.HasAttachments)
             {
                 string fontDir = Path.Combine(input.OutputDirectory, "fonts");
-                Directory.CreateDirectory(fontDir);
+                storage.CreateDirectory(fontDir);
                 FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
                     options.FfmpegPath,
                     input.InputPath,
@@ -288,7 +292,8 @@ public class BuildStage(
         MediaInfo mediaInfo,
         string outputDirectory,
         string mediaTitle,
-        ISubtitleExtractor subtitleExtractor
+        ISubtitleExtractor subtitleExtractor,
+        IStorage storage
     )
     {
         foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
@@ -319,7 +324,7 @@ public class BuildStage(
             string absolutePath = Path.Combine(outputDirectory, info.OutputPath);
             string? parentDir = Path.GetDirectoryName(absolutePath);
             if (parentDir is not null)
-                Directory.CreateDirectory(parentDir);
+                storage.CreateDirectory(parentDir);
 
             // FFmpeg gets the relative path (CWD = output directory)
             builder.AddOutput(
@@ -344,7 +349,8 @@ public class BuildStage(
         MediaInfo mediaInfo,
         string outputDirectory,
         string mediaTitle,
-        ISubtitleExtractor subtitleExtractor
+        ISubtitleExtractor subtitleExtractor,
+        IStorage storage
     )
     {
         List<FfmpegCommand> commands = [];
@@ -377,7 +383,7 @@ public class BuildStage(
             string absolutePath = Path.Combine(outputDirectory, info.OutputPath);
             string? parentDir = Path.GetDirectoryName(absolutePath);
             if (parentDir is not null)
-                Directory.CreateDirectory(parentDir);
+                storage.CreateDirectory(parentDir);
 
             // Use MKS (Matroska) container for bitmap subs.
             // Must specify -f matroska explicitly — FFmpeg doesn't auto-detect .mks.

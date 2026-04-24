@@ -35,7 +35,8 @@ public class BuildStageDrmTests
                 new SubtitleExtractor(),
                 OutputStrategyFactoryTestHelper.Create(),
                 [new Aes128HlsDrmProcessor(TestStorageFactory.CreateLocal())],
-                NullLogger<BuildStage>.Instance
+                NullLogger<BuildStage>.Instance,
+                TestStorageFactory.CreateLocal()
             );
 
             DrmConfig drm = new(DrmMethod.Aes128, KeyUri: "https://example/keys/1");
@@ -86,7 +87,8 @@ public class BuildStageDrmTests
                 new SubtitleExtractor(),
                 OutputStrategyFactoryTestHelper.Create(),
                 [new Aes128HlsDrmProcessor(TestStorageFactory.CreateLocal())],
-                NullLogger<BuildStage>.Instance
+                NullLogger<BuildStage>.Instance,
+                TestStorageFactory.CreateLocal()
             );
 
             OutputPlan plan = BuildPlan(drm: null);
@@ -130,7 +132,8 @@ public class BuildStageDrmTests
                 new SubtitleExtractor(),
                 OutputStrategyFactoryTestHelper.Create(),
                 [],
-                NullLogger<BuildStage>.Instance
+                NullLogger<BuildStage>.Instance,
+                TestStorageFactory.CreateLocal()
             );
 
             DrmConfig drm = new(DrmMethod.Aes128, KeyUri: "https://example/keys/1");

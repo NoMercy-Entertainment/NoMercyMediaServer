@@ -78,14 +78,16 @@ public class EncoderTests
             new SubtitleExtractor(),
             outputFactory,
             [],
-            NullLogger<BuildStage>.Instance
+            NullLogger<BuildStage>.Instance,
+            TestStorageFactory.CreateLocal()
         );
         ExecuteStage executeStage = new(_ffmpegExecutor.Object, NullLogger<ExecuteStage>.Instance);
         FinalizeStage finalizeStage = new(
             new ChapterWriter(TestStorageFactory.CreateLocal()),
             new FontExtractor(TestStorageFactory.CreateLocal()),
             outputFactory,
-            NullLogger<FinalizeStage>.Instance
+            NullLogger<FinalizeStage>.Instance,
+            TestStorageFactory.CreateLocal()
         );
 
         _encoder = new(

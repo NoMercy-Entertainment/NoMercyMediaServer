@@ -25,7 +25,8 @@ public class BuildStageFilterGraphTests
             new SubtitleExtractor(),
             OutputStrategyFactoryTestHelper.Create(),
             [],
-            NullLogger<BuildStage>.Instance
+            NullLogger<BuildStage>.Instance,
+            TestStorageFactory.CreateLocal()
         );
     }
 
