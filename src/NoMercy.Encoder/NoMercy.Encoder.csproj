@@ -19,4 +19,8 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Ulid" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NoMercy.Storage\NoMercy.Storage.csproj" />
+  </ItemGroup>
 </Project>

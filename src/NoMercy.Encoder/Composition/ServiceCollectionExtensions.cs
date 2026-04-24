@@ -33,6 +33,7 @@ using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Encoder.Strategies.Mkv;
 using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.Storage;
 
 public static class ServiceCollectionExtensions
 {
@@ -52,6 +53,13 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient();
 
         // Infrastructure
+        // IStorage is the cross-project filesystem abstraction. Registered
+        // via TryAdd inside AddNoMercyStorage so a host that already
+        // configured allowed roots (or swapped in a non-local backend)
+        // wins. Empty allowed-roots list keeps the path guard permissive
+        // until consumers populate it during the encoder Phase 0.2 sweep.
+        services.AddNoMercyStorage();
+
         services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<IFileSystem, FileSystemAdapter>();
         services.AddSingleton<IMediaAnalyzer, MediaAnalyzer>();
