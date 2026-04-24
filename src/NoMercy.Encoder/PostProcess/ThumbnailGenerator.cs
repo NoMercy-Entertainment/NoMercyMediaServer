@@ -4,8 +4,9 @@ using System.Text;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
+using NoMercy.Storage;
 
-public class ThumbnailGenerator : IThumbnailGenerator
+public class ThumbnailGenerator(IStorage storage) : IThumbnailGenerator
 {
     public FfmpegCommand BuildCaptureCommand(
         string ffmpegPath,
@@ -53,10 +54,7 @@ public class ThumbnailGenerator : IThumbnailGenerator
             .AddOutput(
                 new(
                     FilePath: spriteFile,
-                    ExtraFlags: new()
-                    {
-                        ["-filter_complex"] = $"tile={gridWidth}x{gridHeight}",
-                    }
+                    ExtraFlags: new() { ["-filter_complex"] = $"tile={gridWidth}x{gridHeight}" }
                 )
             )
             .Build(ffmpegPath);
@@ -100,15 +98,15 @@ public class ThumbnailGenerator : IThumbnailGenerator
             sb.AppendLine();
         }
 
-        await File.WriteAllTextAsync(vttFile, sb.ToString(), ct);
+        await storage.WriteAsync(vttFile, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
     public void CleanupIndividualThumbnails(string outputDirectory, ThumbnailOutputPlan plan)
     {
         string thumbDir = Path.Combine(outputDirectory, $"thumbs_{plan.Width}");
 
-        if (Directory.Exists(thumbDir))
-            Directory.Delete(thumbDir, true);
+        if (storage.Exists(thumbDir))
+            storage.DeleteDirectory(thumbDir, recursive: true);
     }
 
     public static (int Width, int Height) ComputeGrid(int imageCount)

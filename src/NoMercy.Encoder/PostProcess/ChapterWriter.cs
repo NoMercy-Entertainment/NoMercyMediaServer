@@ -3,8 +3,9 @@ namespace NoMercy.Encoder.PostProcess;
 using System.Text;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
+using NoMercy.Storage;
 
-public class ChapterWriter : IChapterWriter
+public class ChapterWriter(IStorage storage) : IChapterWriter
 {
     public async Task WriteChaptersAsync(
         string outputDirectory,
@@ -29,7 +30,7 @@ public class ChapterWriter : IChapterWriter
         }
 
         string chaptersFile = Path.Combine(outputDirectory, "chapters.vtt");
-        await File.WriteAllTextAsync(chaptersFile, sb.ToString(), ct);
+        await storage.WriteAsync(chaptersFile, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
     private static string FormatVttTime(TimeSpan ts) =>

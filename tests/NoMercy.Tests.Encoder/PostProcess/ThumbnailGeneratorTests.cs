@@ -3,10 +3,11 @@ namespace NoMercy.Tests.Encoder.PostProcess;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
+using NoMercy.Tests.Encoder.Storage;
 
 public class ThumbnailGeneratorTests : IDisposable
 {
-    private readonly ThumbnailGenerator _gen = new();
+    private readonly ThumbnailGenerator _gen = new(TestStorageFactory.CreateLocal());
     private readonly string _tempDir;
 
     public ThumbnailGeneratorTests()

@@ -11,6 +11,7 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
+using NoMercy.Tests.Encoder.Storage;
 
 public class BuildStageDrmTests
 {
@@ -30,7 +31,7 @@ public class BuildStageDrmTests
 
             BuildStage stage = new(
                 options,
-                new FontExtractor(),
+                new FontExtractor(TestStorageFactory.CreateLocal()),
                 new SubtitleExtractor(),
                 OutputStrategyFactoryTestHelper.Create(),
                 [new Aes128HlsDrmProcessor()],
@@ -81,7 +82,7 @@ public class BuildStageDrmTests
 
             BuildStage stage = new(
                 options,
-                new FontExtractor(),
+                new FontExtractor(TestStorageFactory.CreateLocal()),
                 new SubtitleExtractor(),
                 OutputStrategyFactoryTestHelper.Create(),
                 [new Aes128HlsDrmProcessor()],
@@ -125,7 +126,7 @@ public class BuildStageDrmTests
             // registered to handle it. Build should warn + continue.
             BuildStage stage = new(
                 options,
-                new FontExtractor(),
+                new FontExtractor(TestStorageFactory.CreateLocal()),
                 new SubtitleExtractor(),
                 OutputStrategyFactoryTestHelper.Create(),
                 [],
@@ -194,15 +195,7 @@ public class BuildStageDrmTests
             [
                 new(
                     GroupId: "group_0",
-                    Nodes:
-                    [
-                        new(
-                            "decode_0",
-                            OperationType.Decode,
-                            [],
-                            new()
-                        ),
-                    ],
+                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
                     DeviceId: null,
                     GpuSlotsRequired: 0,
                     CpuThreadsRequired: 4,

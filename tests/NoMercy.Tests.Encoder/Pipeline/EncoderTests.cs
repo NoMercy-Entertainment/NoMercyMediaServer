@@ -18,6 +18,7 @@ using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
+using NoMercy.Tests.Encoder.Storage;
 
 public class EncoderTests
 {
@@ -73,7 +74,7 @@ public class EncoderTests
         ]);
         BuildStage buildStage = new(
             options,
-            new FontExtractor(),
+            new FontExtractor(TestStorageFactory.CreateLocal()),
             new SubtitleExtractor(),
             outputFactory,
             [],
@@ -81,8 +82,8 @@ public class EncoderTests
         );
         ExecuteStage executeStage = new(_ffmpegExecutor.Object, NullLogger<ExecuteStage>.Instance);
         FinalizeStage finalizeStage = new(
-            new ChapterWriter(),
-            new FontExtractor(),
+            new ChapterWriter(TestStorageFactory.CreateLocal()),
+            new FontExtractor(TestStorageFactory.CreateLocal()),
             outputFactory,
             NullLogger<FinalizeStage>.Instance
         );

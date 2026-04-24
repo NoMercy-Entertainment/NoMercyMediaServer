@@ -8,6 +8,7 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
+using NoMercy.Tests.Encoder.Storage;
 
 public class BuildStageTests
 {
@@ -23,7 +24,7 @@ public class BuildStageTests
         };
         _stage = new(
             options,
-            new FontExtractor(),
+            new FontExtractor(TestStorageFactory.CreateLocal()),
             new SubtitleExtractor(),
             OutputStrategyFactoryTestHelper.Create(),
             [],
@@ -39,18 +40,8 @@ public class BuildStageTests
                     GroupId: "group_0",
                     Nodes:
                     [
-                        new(
-                            "decode_0",
-                            OperationType.Decode,
-                            [],
-                            new()
-                        ),
-                        new(
-                            "encode_0",
-                            OperationType.Encode,
-                            ["decode_0"],
-                            new()
-                        ),
+                        new("decode_0", OperationType.Decode, [], new()),
+                        new("encode_0", OperationType.Encode, ["decode_0"], new()),
                     ],
                     DeviceId: null,
                     GpuSlotsRequired: 0,

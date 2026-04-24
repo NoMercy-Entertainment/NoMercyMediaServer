@@ -3,10 +3,11 @@ namespace NoMercy.Tests.Encoder.PostProcess;
 using Newtonsoft.Json.Linq;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.PostProcess;
+using NoMercy.Tests.Encoder.Storage;
 
 public class FontExtractorTests : IDisposable
 {
-    private readonly FontExtractor _extractor = new();
+    private readonly FontExtractor _extractor = new(TestStorageFactory.CreateLocal());
     private readonly string _tempDir;
 
     public FontExtractorTests()

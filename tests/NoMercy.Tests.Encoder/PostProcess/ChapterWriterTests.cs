@@ -2,10 +2,11 @@ namespace NoMercy.Tests.Encoder.PostProcess;
 
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.PostProcess;
+using NoMercy.Tests.Encoder.Storage;
 
 public class ChapterWriterTests : IDisposable
 {
-    private readonly ChapterWriter _writer = new();
+    private readonly ChapterWriter _writer = new(TestStorageFactory.CreateLocal());
     private readonly string _tempDir;
 
     public ChapterWriterTests()
@@ -61,11 +62,7 @@ public class ChapterWriterTests : IDisposable
         ChapterInfo[] chapters =
         [
             new(Start: TimeSpan.Zero, End: TimeSpan.FromSeconds(90), Title: "Part 1"),
-            new(
-                Start: TimeSpan.FromSeconds(90),
-                End: TimeSpan.FromMinutes(30),
-                Title: "Part 2"
-            ),
+            new(Start: TimeSpan.FromSeconds(90), End: TimeSpan.FromMinutes(30), Title: "Part 2"),
         ];
 
         await _writer.WriteChaptersAsync(_tempDir, chapters, default);
@@ -85,11 +82,7 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new(
-                Start: TimeSpan.Zero,
-                End: TimeSpan.FromMinutes(5),
-                Title: "Opening Credits"
-            ),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: "Opening Credits"),
             new(
                 Start: TimeSpan.FromMinutes(5),
                 End: TimeSpan.FromMinutes(60),

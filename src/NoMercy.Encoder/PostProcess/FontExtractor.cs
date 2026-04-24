@@ -1,10 +1,12 @@
 namespace NoMercy.Encoder.PostProcess;
 
+using System.Text;
 using Newtonsoft.Json;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
+using NoMercy.Storage;
 
-public class FontExtractor : IFontExtractor
+public class FontExtractor(IStorage storage) : IFontExtractor
 {
     // FFmpeg dumps attachments via -dump_attachment:t "" which is a pre-input flag.
     // The standard builder does not model pre-input attachment flags, so we build
@@ -37,26 +39,33 @@ public class FontExtractor : IFontExtractor
     {
         string fontDir = Path.Combine(outputDirectory, "fonts");
 
-        if (!Directory.Exists(fontDir))
+        if (!storage.Exists(fontDir))
             return;
 
-        string[] fontFiles = Directory.GetFiles(fontDir);
+        IReadOnlyList<StorageEntry> fontFiles = storage
+            .List(fontDir, "*", recursive: false)
+            .Where(e => !e.IsDirectory)
+            .ToList();
 
-        if (fontFiles.Length == 0)
+        if (fontFiles.Count == 0)
         {
-            Directory.Delete(fontDir);
+            storage.DeleteDirectory(fontDir, recursive: false);
             return;
         }
 
         List<FontEntry> entries = fontFiles
             .Select(f => new FontEntry(
-                File: $"fonts/{Path.GetFileName(f)}",
-                MimeType: GetFontMimeType(f)
+                File: $"fonts/{Path.GetFileName(f.Path)}",
+                MimeType: GetFontMimeType(f.Path)
             ))
             .ToList();
 
         string json = JsonConvert.SerializeObject(entries, Formatting.Indented);
-        await File.WriteAllTextAsync(Path.Combine(outputDirectory, "fonts.json"), json, ct);
+        await storage.WriteAsync(
+            Path.Combine(outputDirectory, "fonts.json"),
+            Encoding.UTF8.GetBytes(json),
+            ct
+        );
     }
 
     private static string GetFontMimeType(string path) =>
