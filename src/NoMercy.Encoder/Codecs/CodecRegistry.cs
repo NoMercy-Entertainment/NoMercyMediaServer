@@ -46,4 +46,19 @@ public class CodecRegistry
                 yield return (codecType, encoder);
         }
     }
+
+    /// <summary>
+    /// Returns true when the encoder handle is a hardware-accelerated encoder.
+    /// Detection is based on well-known vendor suffixes rather than the registry
+    /// because callers may supply handles that are not yet registered
+    /// (e.g. from FfmpegCapabilities probes).
+    /// </summary>
+    public static bool IsHardware(string ffmpegEncoderName)
+    {
+        return ffmpegEncoderName.Contains("_nvenc", StringComparison.OrdinalIgnoreCase)
+            || ffmpegEncoderName.Contains("_qsv", StringComparison.OrdinalIgnoreCase)
+            || ffmpegEncoderName.Contains("_amf", StringComparison.OrdinalIgnoreCase)
+            || ffmpegEncoderName.Contains("_videotoolbox", StringComparison.OrdinalIgnoreCase)
+            || ffmpegEncoderName.Contains("_vaapi", StringComparison.OrdinalIgnoreCase);
+    }
 }

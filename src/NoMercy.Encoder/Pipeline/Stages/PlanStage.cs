@@ -30,7 +30,9 @@ public class PlanStage(
     IAbrLadderGenerator abrLadderGenerator,
     ContentAnalysis.ICropDetector cropDetector,
     ILogger<PlanStage> logger,
-    IQualityScalerResolver? qualityScalerResolver = null
+    IQualityScalerResolver? qualityScalerResolver = null,
+    IHardwarePreferenceResolver? hardwarePreferenceResolver = null,
+    SpeedIndex? speedIndex = null
 ) : IPipelineStage<ValidateInput, ExecutionPlan>, IPlanStage
 {
     public string Name => "Plan";
@@ -53,27 +55,101 @@ public class PlanStage(
                 ct
             );
 
-            // Resolve codecs with hardware session awareness — once we've filled
-            // all GPU sessions, overflow outputs fall back to software encoding.
+            // Resolve codecs honouring profile.HardwarePreference.
+            // When HardwarePreferenceResolver is available, it is the single source of
+            // truth for encoder selection and emits a decision log entry per output.
+            // The GPU session cap (maxHwSessions) is still enforced: outputs that would
+            // exceed it are demoted to ForceSoftware regardless of the profile setting.
             int maxHwSessions = hardware.HasGpu ? hardware.Gpus.Min(g => g.MaxEncoderSessions) : 0;
             int hwSessionsUsed = 0;
 
-            ResolvedCodec[] resolvedCodecs = profile
-                .VideoOutputs.Select(v =>
-                {
-                    EncoderPreference preference =
-                        hwSessionsUsed < maxHwSessions
-                            ? EncoderPreference.PreferHardware
-                            : EncoderPreference.ForceSoftware;
+            ResolvedCodec[] resolvedCodecs;
 
-                    ResolvedCodec resolved = codecResolver.Resolve(v.Codec, hardware, preference);
+            if (hardwarePreferenceResolver is not null)
+            {
+                SpeedIndex effectiveSpeedIndex =
+                    speedIndex ?? new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>());
+
+                List<string> availableEncoderNames =
+                    ffmpegCapabilities.AvailableEncoders?.ToList() ?? [];
+
+                List<ResolvedCodec> codecList = [];
+
+                foreach (VideoOutput v in profile.VideoOutputs)
+                {
+                    // Clamp to ForceSoftware when the GPU session cap is exhausted.
+                    HardwarePreference effectivePreference =
+                        hwSessionsUsed >= maxHwSessions && maxHwSessions > 0
+                            ? HardwarePreference.ForceSoftware
+                            : profile.HardwarePreference;
+
+                    HardwareResolutionResult resolution = hardwarePreferenceResolver.Resolve(
+                        v.Codec,
+                        effectivePreference,
+                        availableEncoderNames,
+                        effectiveSpeedIndex,
+                        context.DecisionsOrNoOp
+                    );
+
+                    if (resolution.Failure is not null)
+                    {
+                        return new StageFailure(
+                            new(
+                                EncodingErrorKind.HardwareUnavailable,
+                                resolution.Failure.Shape.Message,
+                                null,
+                                Name,
+                                false
+                            )
+                        );
+                    }
+
+                    // Fall through to ICodecResolver using the preference the resolver chose —
+                    // it owns the EncoderInfo/GpuDevice lookup that the rest of the pipeline needs.
+                    EncoderPreference legacyPreference = CodecRegistry.IsHardware(
+                        resolution.EncoderHandle!
+                    )
+                        ? EncoderPreference.PreferHardware
+                        : EncoderPreference.ForceSoftware;
+
+                    ResolvedCodec resolved = codecResolver.Resolve(
+                        v.Codec,
+                        hardware,
+                        legacyPreference
+                    );
 
                     if (resolved.Device is not null)
                         hwSessionsUsed++;
 
-                    return resolved;
-                })
-                .ToArray();
+                    codecList.Add(resolved);
+                }
+
+                resolvedCodecs = codecList.ToArray();
+            }
+            else
+            {
+                // Legacy path — no resolver injected (e.g. older test suites).
+                resolvedCodecs = profile
+                    .VideoOutputs.Select(v =>
+                    {
+                        EncoderPreference preference =
+                            hwSessionsUsed < maxHwSessions
+                                ? EncoderPreference.PreferHardware
+                                : EncoderPreference.ForceSoftware;
+
+                        ResolvedCodec resolved = codecResolver.Resolve(
+                            v.Codec,
+                            hardware,
+                            preference
+                        );
+
+                        if (resolved.Device is not null)
+                            hwSessionsUsed++;
+
+                        return resolved;
+                    })
+                    .ToArray();
+            }
 
             List<ExecutionNode> nodes = graphBuilder.BuildGraph(
                 input.Media,
