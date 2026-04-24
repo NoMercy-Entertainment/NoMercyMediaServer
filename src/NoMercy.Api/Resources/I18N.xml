@@ -531,6 +531,10 @@
   </Entry>
   <Entry>
     <Key>Artists starting with #</Key>
-    <Value lang="nl">Artists starting with #</Value>
+    <Value lang="nl">Artiesten beginnend met #</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums starting with #</Key>
+    <Value lang="nl">Albums beginnend met #</Value>
   </Entry>
 </I18N>
