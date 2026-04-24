@@ -246,6 +246,8 @@ public class ManagementController(
                         {
                             status = "ok",
                             message = "This is an installer deployment. Use the installer to update.",
+                            use_installer = true,
+                            latest_version = Config.LatestVersion,
                         }
                     );
 

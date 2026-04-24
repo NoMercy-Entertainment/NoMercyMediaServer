@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using NoMercy.Launcher.Models;
 using NoMercy.Launcher.Services;
 using NoMercy.NmSystem.Extensions;
@@ -168,6 +169,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
         }
     }
 
+    private readonly InstallerUpdater _installerUpdater;
+
     public ServerControlViewModel(
         ServerConnection serverConnection,
         ServerProcessLauncher processLauncher
@@ -175,6 +178,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
     {
         _serverConnection = serverConnection;
         _processLauncher = processLauncher;
+        _installerUpdater = new(serverConnection);
     }
 
     public async Task RefreshStatusAsync(CancellationToken cancellationToken = default)
@@ -318,7 +322,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
             return;
 
         IsActionInProgress = true;
-        ActionStatus = "Downloading update...";
+        ActionStatus = "Checking for update...";
         LauncherLog.Info("Update started: requesting server to download update");
 
         try
@@ -337,58 +341,44 @@ public class ServerControlViewModel : INotifyPropertyChanged
                 return;
             }
 
-            ActionStatus = "Stopping server...";
-            LauncherLog.Info("Sending stop command");
-            bool stopSent = await _serverConnection.PostAsync("/manage/stop");
-            if (!stopSent)
+            UpdateCheckResult? result = null;
+            if (!string.IsNullOrEmpty(downloadBody))
             {
-                LauncherLog.Error("Failed to send stop command via IPC");
-                ActionStatus = "Failed to send stop command";
-                return;
+                try
+                {
+                    result = Newtonsoft.Json.JsonConvert.DeserializeObject<UpdateCheckResult>(
+                        downloadBody
+                    );
+                }
+                catch
+                {
+                    // Ignore parse errors — old server, fall through to binary-swap
+                }
             }
 
-            ActionStatus = "Waiting for server to exit...";
-            LauncherLog.Info("Waiting for server process to exit (30s timeout)");
-            bool exited = await _processLauncher.WaitForServerExitAsync(TimeSpan.FromSeconds(30));
-            if (!exited)
+            bool useInstaller =
+                result?.UseInstaller == true
+                && RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                && await _installerUpdater.IsInstallerDeploymentAsync();
+
+            if (useInstaller)
             {
-                LauncherLog.Error("Server did not exit within 30 seconds — force killing");
-                ActionStatus = "Server did not stop gracefully — force killing...";
-                await _processLauncher.ForceKillServerAsync();
-                await Task.Delay(1000);
+                await ApplyInstallerUpdateAsync(result!.LatestVersion ?? LatestVersion);
             }
-
-            LauncherLog.Info("Server process exited");
-            _serverConnection.IsConnected = false;
-
-            ActionStatus = "Applying update...";
-            LauncherLog.Info("Applying staged update binary");
-            await _processLauncher.ApplyUpdateIfStagedAsync();
-            LauncherLog.Info("Binary replacement complete");
-
-            ActionStatus = "Starting updated server...";
-            string updateExtraArgs = LauncherSettings.Load().StartupArguments;
-            LauncherLog.Info($"Starting server with args: {updateExtraArgs}");
-            bool started = await _processLauncher.StartServerAsync(updateExtraArgs);
-            if (!started)
+            else
             {
-                LauncherLog.Error("Failed to start server process after update");
-                ActionStatus = "Failed to start server";
-                return;
+                await ApplyBinarySwapUpdateAsync();
             }
-
-            ActionStatus = "Waiting for server to come back up...";
-            LauncherLog.Info("Waiting for server to become ready (30s timeout)");
-            await WaitForServerReadyAsync(TimeSpan.FromSeconds(30));
-
-            LauncherLog.Info("Update complete");
-            ActionStatus = "Update complete";
-            await RefreshStatusAsync();
         }
         catch (FileNotFoundException ex)
         {
             LauncherLog.Error("No staged update file found", ex);
             ActionStatus = "No staged update file found";
+        }
+        catch (InvalidDataException ex)
+        {
+            LauncherLog.Error("Installer integrity check failed", ex);
+            ActionStatus = $"Update aborted: {ex.Message}";
         }
         catch (Exception ex)
         {
@@ -399,6 +389,85 @@ public class ServerControlViewModel : INotifyPropertyChanged
         {
             IsActionInProgress = false;
         }
+    }
+
+    // Installer path (Windows installer deployment only)
+    private async Task ApplyInstallerUpdateAsync(string version)
+    {
+        LauncherLog.Info($"Using installer update path for version {version}");
+
+        ActionStatus = "Downloading installer...";
+
+        Progress<double> progress = new(pct =>
+        {
+            ActionStatus = $"Downloading installer... {pct:P0}";
+        });
+
+        TraySettings settings = LauncherSettings.Load();
+        bool autoStart = settings.AutoStart;
+
+        await _installerUpdater.DoUpdateAsync(
+            version,
+            autoStart,
+            _serverConnection,
+            _processLauncher,
+            progress
+        );
+
+        // DoUpdateAsync calls Environment.Exit(0) after spawning the installer,
+        // so execution never reaches here in normal flow.
+    }
+
+    // Binary-swap path (Linux, macOS, standalone Windows)
+    private async Task ApplyBinarySwapUpdateAsync()
+    {
+        ActionStatus = "Stopping server...";
+        LauncherLog.Info("Sending stop command");
+        bool stopSent = await _serverConnection.PostAsync("/manage/stop");
+        if (!stopSent)
+        {
+            LauncherLog.Error("Failed to send stop command via IPC");
+            ActionStatus = "Failed to send stop command";
+            return;
+        }
+
+        ActionStatus = "Waiting for server to exit...";
+        LauncherLog.Info("Waiting for server process to exit (30s timeout)");
+        bool exited = await _processLauncher.WaitForServerExitAsync(TimeSpan.FromSeconds(30));
+        if (!exited)
+        {
+            LauncherLog.Error("Server did not exit within 30 seconds — force killing");
+            ActionStatus = "Server did not stop gracefully — force killing...";
+            await _processLauncher.ForceKillServerAsync();
+            await Task.Delay(1000);
+        }
+
+        LauncherLog.Info("Server process exited");
+        _serverConnection.IsConnected = false;
+
+        ActionStatus = "Applying update...";
+        LauncherLog.Info("Applying staged update binary");
+        await _processLauncher.ApplyUpdateIfStagedAsync();
+        LauncherLog.Info("Binary replacement complete");
+
+        ActionStatus = "Starting updated server...";
+        string updateExtraArgs = LauncherSettings.Load().StartupArguments;
+        LauncherLog.Info($"Starting server with args: {updateExtraArgs}");
+        bool started = await _processLauncher.StartServerAsync(updateExtraArgs);
+        if (!started)
+        {
+            LauncherLog.Error("Failed to start server process after update");
+            ActionStatus = "Failed to start server";
+            return;
+        }
+
+        ActionStatus = "Waiting for server to come back up...";
+        LauncherLog.Info("Waiting for server to become ready (30s timeout)");
+        await WaitForServerReadyAsync(TimeSpan.FromSeconds(30));
+
+        LauncherLog.Info("Update complete");
+        ActionStatus = "Update complete";
+        await RefreshStatusAsync();
     }
 
     private static string? ExtractMessage(string? json)

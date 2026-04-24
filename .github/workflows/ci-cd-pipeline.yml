@@ -62,6 +62,7 @@ jobs:
     secrets: inherit
     with:
       version: ${{ needs.version_management.outputs.version }}
+      commit-sha: ${{ github.sha != '' && github.sha || 'unknown' }}
 
   # Step 5: Build and push Docker images to ghcr.io (reuses linux binary from build_executables)
   build_docker_images:

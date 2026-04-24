@@ -1,7 +1,9 @@
 using System.Security.Claims;
+using System.Text;
 using System.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
@@ -75,8 +77,14 @@ public class AccessLogMiddleware
             }
 
             Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (No GUID)");
-            context.Response.StatusCode = 401;
-            await context.Response.WriteAsync("Unauthorized (No GUID)");
+            await WriteProblemAsync(
+                context,
+                statusCode: 401,
+                type: "https://nomercy.tv/problems/no-token",
+                title: "Authentication required",
+                detail: "No bearer token was provided. Include a valid JWT in the Authorization header.",
+                authError: "NO_TOKEN"
+            );
             return;
         }
 
@@ -90,8 +98,14 @@ public class AccessLogMiddleware
             }
 
             Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (Empty GUID)");
-            context.Response.StatusCode = 401;
-            await context.Response.WriteAsync("Unauthorized (Empty GUID)");
+            await WriteProblemAsync(
+                context,
+                statusCode: 401,
+                type: "https://nomercy.tv/problems/invalid-token",
+                title: "Invalid token",
+                detail: "The token subject (sub) resolved to an empty GUID. The token may be malformed.",
+                authError: "INVALID_TOKEN"
+            );
             return;
         }
 
@@ -117,13 +131,44 @@ public class AccessLogMiddleware
         if (user is null)
         {
             Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (User not found)");
-            context.Response.StatusCode = 401;
-            await context.Response.WriteAsync("Unauthorized (User not found)");
+            await WriteProblemAsync(
+                context,
+                statusCode: 401,
+                type: "https://nomercy.tv/problems/user-not-found",
+                title: "User not found",
+                detail: "The authenticated user is not registered on this server. Ask the server owner to add your account.",
+                authError: "USER_NOT_FOUND"
+            );
             return;
         }
 
         Logger.Http($"{user.Name}: {path}");
 
         await _next(context);
+    }
+
+    private static async Task WriteProblemAsync(
+        HttpContext context,
+        int statusCode,
+        string type,
+        string title,
+        string detail,
+        string authError
+    )
+    {
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/problem+json";
+
+        object body = new
+        {
+            type,
+            title,
+            status = statusCode,
+            detail,
+            instance = context.Request.Path.Value,
+            authError,
+        };
+
+        await context.Response.WriteAsync(JsonConvert.SerializeObject(body), Encoding.UTF8);
     }
 }

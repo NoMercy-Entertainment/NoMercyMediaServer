@@ -9,42 +9,54 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
     public MusicBrainzGenreClient()
         : base() { }
 
-    public async Task<List<MusicBrainzGenre>> All(int page = 1)
-    {
-        List<MusicBrainzGenre> genres = [];
-
-        MusicBrainzAllGenres? data = await Get<MusicBrainzAllGenres>(
+    public Task<MusicBrainzAllGenres?> FirstPage() =>
+        Get<MusicBrainzAllGenres>(
             "genre/all",
             new Dictionary<string, string>
             {
-                ["limit"] = 100.ToString(),
-                ["offset"] = (page * 100).ToString(),
+                ["limit"] = "100",
+                ["offset"] = "0",
                 ["fmt"] = "json",
             }
         );
 
-        if (data is null)
+    public async Task<List<MusicBrainzGenre>> RemainingPages(MusicBrainzAllGenres firstPage)
+    {
+        List<MusicBrainzGenre> genres = [];
+        int pageSize = firstPage.Genres.Length;
+
+        if (pageSize == 0)
             return genres;
 
-        genres.AddRange(data.Genres);
-
-        for (int i = 0; i < data.GenreCount / data.Genres.Length; i++)
+        for (long offset = pageSize; offset < firstPage.GenreCount; offset += pageSize)
         {
-            MusicBrainzAllGenres? data2 = await Get<MusicBrainzAllGenres>(
+            MusicBrainzAllGenres? page = await Get<MusicBrainzAllGenres>(
                 "genre/all",
                 new Dictionary<string, string>
                 {
-                    ["limit"] = data.Genres.Length.ToString(),
-                    ["offset"] = (i * data.Genres.Length).ToString(),
+                    ["limit"] = pageSize.ToString(),
+                    ["offset"] = offset.ToString(),
+                    ["fmt"] = "json",
                 }
             );
 
-            if (data2 is null)
+            if (page is null)
                 continue;
 
-            genres.AddRange(data2.Genres);
+            genres.AddRange(page.Genres);
         }
 
+        return genres;
+    }
+
+    public async Task<List<MusicBrainzGenre>> All()
+    {
+        MusicBrainzAllGenres? firstPage = await FirstPage();
+        if (firstPage is null)
+            return [];
+
+        List<MusicBrainzGenre> genres = [.. firstPage.Genres];
+        genres.AddRange(await RemainingPages(firstPage));
         return genres;
     }
 

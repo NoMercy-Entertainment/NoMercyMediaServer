@@ -135,6 +135,9 @@ public static class ServiceConfiguration
                 client.BaseAddress = new("https://musicbrainz.org/ws/2/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                // MusicBrainz puts anonymous UAs in a 50 req/s global shared
+                // bucket — fine for our bursty low-traffic use. Deliberate
+                // choice for privacy over the per-IP identified tier.
                 client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
             }
         );

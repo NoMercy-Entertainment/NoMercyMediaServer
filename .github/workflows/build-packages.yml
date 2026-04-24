@@ -12,6 +12,11 @@ on:
         description: 'Package version'
         required: true
         type: string
+      commit-sha:
+        description: '7-char commit SHA to embed in installers'
+        required: false
+        type: string
+        default: 'unknown'
     secrets:
       GPG_PRIVATE_KEY:
         description: 'GPG private key for signing'
@@ -76,6 +81,7 @@ jobs:
         uses: ./.github/actions/build-windows-installer
         with:
           version: ${{ inputs.version }}
+          commit-sha: ${{ inputs.commit-sha }}
           app-repo-token: ${{ secrets.APP_REPO_TOKEN }}
 
       - name: Build macOS installer

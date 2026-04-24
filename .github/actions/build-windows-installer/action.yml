@@ -4,6 +4,10 @@ inputs:
   version:
     description: 'Package version'
     required: true
+  commit-sha:
+    description: '7-char git commit SHA to embed in the installer VersionInfo'
+    required: false
+    default: 'unknown'
   dotnet-version:
     description: '.NET version to use'
     required: false
@@ -53,12 +57,13 @@ runs:
       shell: pwsh
       run: |
         $Version = "${{ inputs.version }}"
+        $CommitSha = "${{ inputs.commit-sha }}"
         $IssFile = "./src/NoMercy.Service/NoMercyMediaServer.iss"
         $InnoCompiler = "C:\InnoSetup\ISCC.exe"
 
         New-Item -ItemType Directory -Force -Path "./packages/windows" | Out-Null
 
-        & $InnoCompiler "/DVersion=$Version" "/O./packages/windows" $IssFile
+        & $InnoCompiler "/DVersion=$Version" "/DCommitSha=$CommitSha" "/O./packages/windows" $IssFile
 
         if ($LASTEXITCODE -ne 0) {
           Write-Error "Inno Setup compilation failed with exit code $LASTEXITCODE"

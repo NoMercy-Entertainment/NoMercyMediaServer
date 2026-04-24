@@ -2,6 +2,7 @@ using System.Text;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Pastel;
+using Serilog.Events;
 
 namespace NoMercy.Setup;
 
@@ -18,33 +19,32 @@ public abstract class ConsoleMessages
 
         ConsoleExtensions.Enable();
 
-        Logger.Setup(("╔" + Repeat("═", 46) + "╗").Pastel("#00a10d"));
-        Logger.Setup(
-            $"{_("#00a10d")}".Pastel("#00a10d")
-                + "     "
-                + "Secure Server running: on port:".Pastel("#5ffa71")
-                + $" {Config.InternalServerPort}     ".Pastel("#ffffff")
+        string visitLine = Config.IsDev
+            ? $"{_("#00a10d")}".Pastel("#00a10d")
+                + "      "
+                + "  visit:".Pastel("#cccccc")
+                + $"  {Config.AppBaseUrl}   ".Pastel("#ffffff")
                 + $"{_("#00a10d")}".Pastel("#00a10d")
-        );
+            : $"{_("#00a10d")}".Pastel("#00a10d")
+                + "      "
+                + "  visit:".Pastel("#cccccc")
+                + $"  {Config.AppBaseUrl}       ".Pastel("#ffffff")
+                + $"{_("#00a10d")}".Pastel("#00a10d");
 
-        if (Config.IsDev)
-            Logger.Setup(
+        Logger.WriteBanner([
+            ("setup", ("╔" + Repeat("═", 46) + "╗").Pastel("#00a10d"), LogEventLevel.Information),
+            (
+                "setup",
                 $"{_("#00a10d")}".Pastel("#00a10d")
-                    + "      "
-                    + "  visit:".Pastel("#cccccc")
-                    + $"  {Config.AppBaseUrl}   ".Pastel("#ffffff")
-                    + $"{_("#00a10d")}".Pastel("#00a10d")
-            );
-        else
-            Logger.Setup(
-                $"{_("#00a10d")}".Pastel("#00a10d")
-                    + "      "
-                    + "  visit:".Pastel("#cccccc")
-                    + $"  {Config.AppBaseUrl}       ".Pastel("#ffffff")
-                    + $"{_("#00a10d")}".Pastel("#00a10d")
-            );
-
-        Logger.Setup(("╚" + Repeat("═", 46) + "╝").Pastel("#00a10d"));
+                    + "     "
+                    + "Secure Server running: on port:".Pastel("#5ffa71")
+                    + $" {Config.InternalServerPort}     ".Pastel("#ffffff")
+                    + $"{_("#00a10d")}".Pastel("#00a10d"),
+                LogEventLevel.Information
+            ),
+            ("setup", visitLine, LogEventLevel.Information),
+            ("setup", ("╚" + Repeat("═", 46) + "╝").Pastel("#00a10d"), LogEventLevel.Information),
+        ]);
 
         return Task.CompletedTask;
     }

@@ -42,6 +42,7 @@ public class BootOrchestrator
 
         // Phase 2: Authentication
         Logger.Setup("Phase 2: Authentication...");
+        await CheckKeycloakReachabilityAsync();
         bool authSucceeded = await _authManager.InitializeAsync();
 
         if (authSucceeded)
@@ -161,6 +162,57 @@ public class BootOrchestrator
         catch (Exception ex)
         {
             Logger.Setup($"Device code flow error: {ex.Message}", LogEventLevel.Warning);
+        }
+    }
+
+    /// <summary>
+    /// Probes the Keycloak well-known config endpoint and logs an explicit error when it is
+    /// unreachable AND no cached JWKS key is available. Failures are never swallowed silently.
+    /// </summary>
+    private async Task CheckKeycloakReachabilityAsync()
+    {
+        string wellKnown = $"{Config.AuthBaseUrl}.well-known/openid-configuration";
+
+        try
+        {
+            using HttpClient client = new();
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+
+            using HttpResponseMessage response = await client.GetAsync(wellKnown);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Logger.Setup($"Keycloak reachable at {Config.AuthBaseUrl}");
+            }
+            else
+            {
+                Logger.Setup(
+                    $"Keycloak returned {(int)response.StatusCode} from {wellKnown} — auth may degrade",
+                    LogEventLevel.Warning
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            bool hasCachedKey = OfflineJwksCache.CachedSigningKey is not null;
+
+            if (hasCachedKey)
+            {
+                Logger.Setup(
+                    $"Keycloak unreachable ({ex.Message}) — offline JWKS cache is present; JWT validation will use cached keys",
+                    LogEventLevel.Warning
+                );
+            }
+            else
+            {
+                Logger.Setup(
+                    $"BOOT FAILURE: Keycloak unreachable at {Config.AuthBaseUrl} and no cached JWKS key found. "
+                        + $"Cause: {ex.Message}. "
+                        + $"The server cannot validate JWTs. Complete setup at /setup or ensure Keycloak is reachable before restarting.",
+                    LogEventLevel.Error
+                );
+            }
         }
     }
 
