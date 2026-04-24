@@ -29,6 +29,7 @@ public class EncodingPresetsController(
     IHttpClientFactory httpClientFactory
 ) : BaseController
 {
+    [Obsolete("Use GET /api/v1/encoder/profiles")]
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] int pageSize = 100,
@@ -61,6 +62,7 @@ public class EncodingPresetsController(
         );
     }
 
+    [Obsolete("Use GET /api/v1/encoder/profiles/{id}")]
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id)
     {
@@ -77,6 +79,7 @@ public class EncodingPresetsController(
         return Ok(preset);
     }
 
+    [Obsolete("Use POST /api/v1/encoder/profiles")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreatePresetRequest request)
     {
@@ -107,6 +110,7 @@ public class EncodingPresetsController(
         return Ok(saved);
     }
 
+    [Obsolete("Use PUT /api/v1/encoder/profiles/{id}")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(string id, [FromBody] UpdatePresetRequest request)
     {
@@ -170,6 +174,7 @@ public class EncodingPresetsController(
         }
     }
 
+    [Obsolete("Use GET /api/v1/encoder/profiles/tags")]
     [HttpGet("tags")]
     public async Task<IActionResult> ListAllTags()
     {
@@ -180,6 +185,7 @@ public class EncodingPresetsController(
         return Ok(new { data = tags });
     }
 
+    [Obsolete("Use POST /api/v1/encoder/profiles/{id}/clone")]
     [HttpPost("{id}/clone")]
     public async Task<IActionResult> Clone(string id, [FromBody] ClonePresetRequest request)
     {
@@ -230,6 +236,7 @@ public class EncodingPresetsController(
         return candidate;
     }
 
+    [Obsolete("Use GET /api/v1/encoder/profiles/{id}/resolve")]
     [HttpGet("{id}/resolve")]
     public async Task<IActionResult> Resolve(string id)
     {
@@ -260,6 +267,7 @@ public class EncodingPresetsController(
         }
     }
 
+    [Obsolete("Use GET /api/v1/encoder/profiles/{id}/export")]
     [HttpGet("{id}/export")]
     public async Task<IActionResult> Export(string id)
     {
@@ -284,6 +292,7 @@ public class EncodingPresetsController(
         return Ok(export);
     }
 
+    [Obsolete("Use POST /api/v1/encoder/profiles/import")]
     [HttpPost("import")]
     public async Task<IActionResult> Import([FromBody] PresetExport import)
     {
@@ -319,6 +328,7 @@ public class EncodingPresetsController(
         return Ok(saved);
     }
 
+    [Obsolete("Use POST /api/v1/encoder/profiles/import")]
     [HttpPost("import-url")]
     public async Task<IActionResult> ImportFromUrl(
         [FromBody] ImportFromUrlRequest request,
@@ -485,6 +495,7 @@ public class EncodingPresetsController(
     /// combinations that aren't in our output set still work, we just
     /// transcode them automatically.
     /// </summary>
+    [Obsolete("Use POST /api/v1/encoder/profiles/{id}/preview")]
     [HttpPost("preview")]
     public async Task<IActionResult> Preview(
         [FromBody] PreviewRequest request,
@@ -925,6 +936,7 @@ public class EncodingPresetsController(
         };
     }
 
+    [Obsolete("Use DELETE /api/v1/encoder/profiles/{id}")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {

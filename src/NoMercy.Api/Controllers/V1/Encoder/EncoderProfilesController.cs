@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -14,7 +15,14 @@ using AnalysisMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
 
+/// <summary>
+/// Phase 2 primary controller — supersedes the legacy
+/// /api/v1/dashboard/encoding/presets controller. The dashboard should migrate
+/// to these routes. Legacy endpoints remain operational but carry
+/// <c>[Obsolete]</c> markers.
+/// </summary>
 [ApiController]
+[Tags("Encoder Profiles")]
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/encoder/profiles")]
@@ -27,6 +35,201 @@ public class EncoderProfilesController(
     EncodingPresetRepository presetRepository
 ) : BaseController
 {
+    /// <summary>
+    /// Returns a paginated list of encoding profiles, built-in rows first
+    /// then user-created alphabetically. Optionally filtered by <paramref name="tag"/>.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Index(
+        [FromQuery] int pageSize = 100,
+        [FromQuery] int pageIndex = 0,
+        [FromQuery] string? tag = null
+    )
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view profiles");
+
+        pageSize = Math.Clamp(pageSize, 1, 500);
+        if (pageIndex < 0)
+            pageIndex = 0;
+
+        List<EncodingPreset> presets = await presetRepository.ListAsync(pageSize, pageIndex, tag);
+        int total = await presetRepository.GetTotalCountAsync();
+
+        return Ok(
+            new
+            {
+                data = presets,
+                meta = new
+                {
+                    total,
+                    pageSize,
+                    pageIndex,
+                    totalPages = (int)Math.Ceiling((double)total / pageSize),
+                },
+            }
+        );
+    }
+
+    /// <summary>
+    /// Returns a single encoding profile by its <see cref="Ulid"/> id.
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<IActionResult> Get(string id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view profiles");
+
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid profile id");
+
+        EncodingPreset? preset = await presetRepository.GetByIdAsync(presetId);
+        if (preset is null)
+            return NotFoundResponse("Profile not found");
+
+        return Ok(preset);
+    }
+
+    /// <summary>
+    /// Creates a new user-owned encoding profile. <c>IsBuiltIn</c> is always
+    /// stamped <c>false</c> regardless of what the caller sends.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateEncoderProfileRequest request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to create profiles");
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequestResponse("name is required");
+        if (string.IsNullOrWhiteSpace(request.ProfileJson))
+            return BadRequestResponse("profile_json is required");
+
+        EncodingPreset? existing = await presetRepository.GetByNameAsync(request.Name);
+        if (existing is not null)
+            return ConflictResponse($"A profile named '{request.Name}' already exists");
+
+        EncodingPreset preset = new()
+        {
+            Name = request.Name,
+            Description = request.Description,
+            Author = request.Author,
+            Tags = request.Tags,
+            ProfileJson = request.ProfileJson,
+            ParentPresetId = request.ParentPresetId,
+            IsBuiltIn = false,
+        };
+
+        EncodingPreset saved = await presetRepository.CreateAsync(preset);
+        return Ok(saved);
+    }
+
+    /// <summary>
+    /// Returns the distinct set of tags in use across all profiles, sorted
+    /// alphabetically. Tags are stored as comma-separated values on each row.
+    /// </summary>
+    [HttpGet("tags")]
+    public async Task<IActionResult> Tags()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view profiles");
+
+        IReadOnlyList<string> tags = await presetRepository.GetAllTagsAsync();
+        return Ok(new { data = tags });
+    }
+
+    /// <summary>
+    /// Resolves a profile by walking its parent chain via
+    /// <see cref="IPresetResolver"/>, returning the fully-merged
+    /// <see cref="EncodingProfile"/>. This is distinct from the new
+    /// <c>IProfileResolver</c> — the preset resolver expands inheritance,
+    /// the profile resolver walks the V3 parent-id graph.
+    /// </summary>
+    [HttpGet("{id}/resolve")]
+    public async Task<IActionResult> Resolve(
+        string id,
+        [FromServices] IPresetResolver presetResolver
+    )
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view profiles");
+
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid profile id");
+
+        EncodingPreset? leaf = await presetRepository.GetByIdAsync(presetId);
+        if (leaf is null)
+            return NotFoundResponse("Profile not found");
+
+        string? parentName = null;
+        if (leaf.ParentPresetId is Ulid parentId)
+        {
+            EncodingPreset? parent = await presetRepository.GetByIdAsync(parentId);
+            parentName = parent?.Name;
+        }
+
+        PresetResolveRequest resolveRequest = new(leaf.Name, leaf.ProfileJson, parentName);
+
+        try
+        {
+            EncodingProfile resolved = presetResolver.Resolve(
+                resolveRequest,
+                new EncoderProfilesPresetLookup(presetRepository)
+            );
+            return Ok(resolved);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse($"Profile could not be resolved: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Permanently deletes a user-created profile. Returns HTTP 422 with a
+    /// structured <see cref="ValidationEnvelope"/> when called on a built-in
+    /// profile — built-ins are seeded and cannot be deleted.
+    /// </summary>
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to delete profiles");
+
+        if (!Ulid.TryParse(id, out Ulid presetId))
+            return BadRequestResponse("Invalid profile id");
+
+        EncodingPreset? existing = await presetRepository.GetByIdAsync(presetId);
+        if (existing is null)
+            return NotFoundResponse("Profile not found");
+
+        if (existing.IsBuiltIn)
+        {
+            ValidationEnvelope envelope = ValidationEnvelope.FromRules([
+                new EncoderRule(
+                    EncoderRuleId.ProfileBuiltinReadonly,
+                    EncoderRuleSeverity.Error,
+                    "id",
+                    "Built-in profiles cannot be deleted — clone the profile to make an editable copy.",
+                    $"POST /api/v1/encoder/profiles/{id}/clone to create an editable copy, then delete that."
+                ),
+            ]);
+            return UnprocessableEntity(envelope);
+        }
+
+        try
+        {
+            bool removed = await presetRepository.DeleteAsync(presetId);
+            if (!removed)
+                return NotFoundResponse("Profile not found");
+
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ConflictResponse(ex.Message);
+        }
+    }
+
     /// <summary>
     /// Validates an encoding profile and returns a structured envelope with
     /// errors (blocking) and warnings (non-blocking) bucketed separately.
@@ -599,6 +802,15 @@ public class EncoderProfilesController(
     }
 }
 
+public record CreateEncoderProfileRequest(
+    [property: JsonProperty("name")] string Name,
+    [property: JsonProperty("profile_json")] string ProfileJson,
+    [property: JsonProperty("description")] string? Description = null,
+    [property: JsonProperty("author")] string? Author = null,
+    [property: JsonProperty("tags")] string? Tags = null,
+    [property: JsonProperty("parent_preset_id")] Ulid? ParentPresetId = null
+);
+
 public record ValidateEncoderProfileRequest(
     [property: JsonProperty("profile_json")] string ProfileJson
 );
@@ -618,3 +830,26 @@ public record ImportProfileRequest(
     [property: JsonProperty("profile_json")] string? ProfileJson,
     [property: JsonProperty("url")] string? Url
 );
+
+/// <summary>
+/// Adapter that lets <see cref="IPresetResolver"/> walk the parent chain by
+/// hitting the database once per ancestor. Synchronous lookup — the resolver
+/// is pure and doesn't await, so the adapter blocks on async repository
+/// calls.
+/// </summary>
+internal sealed class EncoderProfilesPresetLookup(EncodingPresetRepository repository)
+    : IPresetLookup
+{
+    public PresetResolveRequest? FindByName(string name)
+    {
+        EncodingPreset? preset = repository.GetByNameAsync(name).GetAwaiter().GetResult();
+        if (preset is null)
+            return null;
+
+        string? parentName = preset.ParentPresetId is Ulid parentId
+            ? repository.GetByIdAsync(parentId).GetAwaiter().GetResult()?.Name
+            : null;
+
+        return new(preset.Name, preset.ProfileJson, parentName);
+    }
+}
