@@ -139,6 +139,38 @@ public class LocalStorageSyncTests
     }
 
     [Fact]
+    public void List_returns_entries_with_metadata()
+    {
+        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
+        string root = Path.Combine(Path.GetTempPath(), "nm-listing-sync");
+        string fileA = Path.Combine(root, "a.txt");
+        string subDir = Path.Combine(root, "sub");
+
+        backend
+            .Setup(b =>
+                b.EnumerateFileSystemEntries(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<SearchOption>()
+                )
+            )
+            .Returns([fileA, subDir]);
+        backend.Setup(b => b.DirectoryExists(fileA)).Returns(false);
+        backend.Setup(b => b.DirectoryExists(subDir)).Returns(true);
+        backend.Setup(b => b.GetFileSize(fileA)).Returns(42);
+        backend.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(DateTime.UtcNow);
+
+        IReadOnlyList<StorageEntry> entries = storage.List(root, "*", recursive: false);
+
+        entries.Should().HaveCount(2);
+        entries[0].Path.Should().Be(fileA);
+        entries[0].IsDirectory.Should().BeFalse();
+        entries[0].SizeBytes.Should().Be(42);
+        entries[1].IsDirectory.Should().BeTrue();
+        entries[1].SizeBytes.Should().Be(0);
+    }
+
+    [Fact]
     public void Sync_methods_route_through_path_guard()
     {
         (LocalStorage storage, Mock<IStorageBackend> backend) = Build();

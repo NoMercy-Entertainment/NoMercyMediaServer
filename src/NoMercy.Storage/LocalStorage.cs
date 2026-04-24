@@ -258,6 +258,29 @@ public sealed class LocalStorage : IStorage
         _backend.CopyFile(safeFrom, safeTo, overwrite: true);
     }
 
+    public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
+    {
+        string safe = _guard.Validate(path);
+        SearchOption option = recursive
+            ? SearchOption.AllDirectories
+            : SearchOption.TopDirectoryOnly;
+        string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
+
+        List<StorageEntry> entries = [];
+        foreach (
+            string entry in _backend.EnumerateFileSystemEntries(safe, effectivePattern, option)
+        )
+        {
+            bool isDir = _backend.DirectoryExists(entry);
+            long size = isDir ? 0L : _backend.GetFileSize(entry);
+            DateTime utc = _backend.GetLastWriteTimeUtc(entry);
+            entries.Add(
+                new StorageEntry(entry, isDir, size, new DateTimeOffset(utc, TimeSpan.Zero))
+            );
+        }
+        return entries;
+    }
+
     public LocalPathLease AcquireLocalPath(string path)
     {
         string safe = _guard.Validate(path);

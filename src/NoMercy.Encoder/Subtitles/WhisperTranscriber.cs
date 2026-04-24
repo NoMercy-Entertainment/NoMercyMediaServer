@@ -5,6 +5,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
+using NoMercy.Storage;
 
 /// <summary>
 /// Produces a WebVTT or SRT subtitle file by running FFmpeg's <c>whisper</c>
@@ -14,6 +15,7 @@ using NoMercy.Encoder.Progress;
 public class WhisperTranscriber(
     EncoderOptions options,
     IProcessRunner processRunner,
+    IStorage storage,
     ILogger<WhisperTranscriber> logger
 ) : IWhisperTranscriber
 {
@@ -33,7 +35,7 @@ public class WhisperTranscriber(
                 "WhisperModelPath is not configured on EncoderOptions and no override supplied."
             );
 
-        if (!File.Exists(modelPath))
+        if (!storage.Exists(modelPath))
         {
             throw new FileNotFoundException(
                 $"Whisper model not found at {modelPath}. Configure EncoderOptions.WhisperModelPath.",
@@ -51,7 +53,13 @@ public class WhisperTranscriber(
 
         // Ensure a stable run location for the whisper filter — it resolves
         // destination= relative to CWD.
-        Directory.CreateDirectory(outputDirectory);
+        storage.CreateDirectory(outputDirectory);
+
+        // Lease every path we hand to ffmpeg so future remote drivers can
+        // stage them locally + clean up on dispose.
+        await using LocalPathLease inputLease = storage.AcquireLocalPath(inputPath);
+        await using LocalPathLease modelLease = storage.AcquireLocalPath(modelPath);
+        await using LocalPathLease outputLease = storage.AcquireLocalPath(outputPath);
 
         // Filter layout matches V1: select audio, apply whisper with model/
         // language/queue/destination/format, discard video output.
@@ -59,15 +67,15 @@ public class WhisperTranscriber(
         int translate = options_?.TranslateToEnglish == true ? 1 : 0;
 
         string whisperFilter =
-            $"whisper=model={EscapeFilterPath(modelPath)}:language={language}"
-            + $":queue={queue}:destination={EscapeFilterPath(outputPath)}:format={format}"
+            $"whisper=model={EscapeFilterPath(modelLease.Path)}:language={language}"
+            + $":queue={queue}:destination={EscapeFilterPath(outputLease.Path)}:format={format}"
             + (translate == 1 ? ":translate=1" : "");
 
         string[] args =
         [
             "-hide_banner",
             "-i",
-            inputPath,
+            inputLease.Path,
             "-map",
             $"0:a:{audioStreamIndex}",
             "-vn",
@@ -94,7 +102,7 @@ public class WhisperTranscriber(
             );
         }
 
-        if (!File.Exists(outputPath))
+        if (!storage.Exists(outputPath))
         {
             throw new InvalidOperationException(
                 $"Whisper filter produced no output at {outputPath}."
@@ -115,10 +123,12 @@ public class WhisperTranscriber(
         return new(outputPath, language, SubtitleCodecType.Srt, cueCount);
     }
 
-    private static int CountCuesIn(string srtPath)
+    private int CountCuesIn(string srtPath)
     {
         int count = 0;
-        foreach (string line in File.ReadLines(srtPath))
+        using Stream stream = storage.OpenRead(srtPath);
+        using StreamReader reader = new(stream);
+        while (reader.ReadLine() is { } line)
         {
             if (line.Contains("-->", StringComparison.Ordinal))
                 count++;

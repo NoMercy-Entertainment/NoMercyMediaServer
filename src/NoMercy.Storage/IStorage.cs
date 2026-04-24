@@ -94,5 +94,7 @@ public interface IStorage
 
     void Copy(string from, string to);
 
+    IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive);
+
     LocalPathLease AcquireLocalPath(string path);
 }

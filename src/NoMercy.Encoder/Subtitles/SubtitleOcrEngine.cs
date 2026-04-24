@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
 /// <summary>
 /// Converts bitmap subtitle tracks (PGS / VobSub / DVB) into text subtitle files
@@ -18,6 +19,7 @@ public partial class SubtitleOcrEngine(
     EncoderOptions options,
     IProcessRunner processRunner,
     ITesseractModelManager modelManager,
+    IStorage storage,
     ILogger<SubtitleOcrEngine> logger
 ) : ISubtitleOcrEngine
 {
@@ -40,22 +42,27 @@ public partial class SubtitleOcrEngine(
         // interleaved stdout. Write it to a unique temp file per run so
         // concurrent OCR jobs can't collide.
         string tempDirectory = Path.Combine(Path.GetTempPath(), "nm-ocr");
-        Directory.CreateDirectory(tempDirectory);
+        storage.CreateDirectory(tempDirectory);
         string ocrOutput = Path.Combine(tempDirectory, $"ocr-{Guid.NewGuid():N}.txt");
 
         try
         {
+            // Lease every path handed to ffmpeg so future remote drivers can
+            // stage them locally and clean up on dispose.
+            await using LocalPathLease inputLease = storage.AcquireLocalPath(inputPath);
+            await using LocalPathLease ocrLease = storage.AcquireLocalPath(ocrOutput);
+
             string[] args =
             [
                 "-hide_banner",
                 "-i",
-                inputPath,
+                inputLease.Path,
                 "-f",
                 "lavfi",
                 "-i",
                 "color=black:s=hd720",
                 "-filter_complex",
-                $"[0:s:{streamIndex}]ocr=language={language},metadata=print:key=lavfi.ocr.text:file={EscapeFilterPath(ocrOutput)}",
+                $"[0:s:{streamIndex}]ocr=language={language},metadata=print:key=lavfi.ocr.text:file={EscapeFilterPath(ocrLease.Path)}",
                 "-an",
                 "-f",
                 "null",
@@ -78,14 +85,15 @@ public partial class SubtitleOcrEngine(
                 );
             }
 
-            if (!File.Exists(ocrOutput))
+            if (!storage.Exists(ocrOutput))
             {
                 throw new InvalidOperationException(
                     "OCR produced no output file — check the subtitle stream index and language model."
                 );
             }
 
-            List<SubtitleCue> cues = ParseOcrOutput(await File.ReadAllTextAsync(ocrOutput, ct));
+            byte[] ocrBytes = await storage.ReadAsync(ocrOutput, ct);
+            List<SubtitleCue> cues = ParseOcrOutput(Encoding.UTF8.GetString(ocrBytes));
             string outputPath = Path.ChangeExtension(
                 Path.Combine(Path.GetDirectoryName(inputPath)!, $"{language}_ocr"),
                 outputFormat == SubtitleCodecType.Srt ? ".srt" : ".vtt"
@@ -109,16 +117,13 @@ public partial class SubtitleOcrEngine(
         }
         finally
         {
-            if (File.Exists(ocrOutput))
+            try
             {
-                try
-                {
-                    File.Delete(ocrOutput);
-                }
-                catch (IOException ex)
-                {
-                    logger.LogWarning(ex, "Could not delete OCR temp file {Path}", ocrOutput);
-                }
+                storage.Delete(ocrOutput);
+            }
+            catch (IOException ex)
+            {
+                logger.LogWarning(ex, "Could not delete OCR temp file {Path}", ocrOutput);
             }
         }
     }
@@ -197,7 +202,7 @@ public partial class SubtitleOcrEngine(
         return cues;
     }
 
-    private static async Task WriteWebVttAsync(
+    private async Task WriteWebVttAsync(
         string path,
         IEnumerable<SubtitleCue> cues,
         CancellationToken ct
@@ -217,10 +222,10 @@ public partial class SubtitleOcrEngine(
             index++;
         }
 
-        await File.WriteAllTextAsync(path, sb.ToString(), ct);
+        await storage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
-    private static async Task WriteSrtAsync(
+    private async Task WriteSrtAsync(
         string path,
         IEnumerable<SubtitleCue> cues,
         CancellationToken ct
@@ -237,7 +242,7 @@ public partial class SubtitleOcrEngine(
             index++;
         }
 
-        await File.WriteAllTextAsync(path, sb.ToString(), ct);
+        await storage.WriteAsync(path, Encoding.UTF8.GetBytes(sb.ToString()), ct);
     }
 
     private static string FormatVttTime(double seconds)

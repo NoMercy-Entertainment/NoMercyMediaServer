@@ -4,6 +4,7 @@ using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.Storage;
 
 public class TesseractModelManagerTests : IDisposable
 {
@@ -129,11 +130,9 @@ public class TesseractModelManagerTests : IDisposable
     private TesseractModelManager BuildManager(FakeHandler handler)
     {
         HttpClient client = new(handler);
-        return new(
-            _options,
-            client,
-            NullLogger<TesseractModelManager>.Instance
-        );
+        SystemIoStorageBackend backend = new();
+        LocalStorage storage = new(backend, new StoragePathGuard([], backend));
+        return new(_options, client, storage, NullLogger<TesseractModelManager>.Instance);
     }
 
     private sealed class FakeHandler : HttpMessageHandler
