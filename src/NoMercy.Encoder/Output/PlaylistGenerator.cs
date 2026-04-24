@@ -4,9 +4,36 @@ using System.Globalization;
 using System.Text;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Profiles;
 
 public class PlaylistGenerator : IPlaylistGenerator
 {
+    /// <summary>
+    /// Returns the minimum HLS version number required for the given combination
+    /// of active features. The caller takes the max of all that apply.
+    ///
+    /// Rules (per the HLS specification):
+    ///   v3 — baseline MPEG-TS (no subtitles group, no fMP4, no chapter date-ranges).
+    ///   v6 — at least one EXT-X-MEDIA:TYPE=SUBTITLES group in the master playlist.
+    ///   v7 — any variant uses fMP4 segments (hls_segment_type fmp4).
+    ///   v8 — EXT-X-DATERANGE entries driven by chapter data (Phase 4.5).
+    /// </summary>
+    internal static int ComputeMasterVersion(
+        bool hasSubsGroup,
+        bool hasFmp4,
+        bool hasChapterDateRanges
+    )
+    {
+        int version = 3;
+        if (hasSubsGroup)
+            version = Math.Max(version, 6);
+        if (hasFmp4)
+            version = Math.Max(version, 7);
+        if (hasChapterDateRanges)
+            version = Math.Max(version, 8);
+        return version;
+    }
+
     public string GenerateMasterPlaylist(
         OutputPlan plan,
         string mediaTitle,
@@ -14,10 +41,27 @@ public class PlaylistGenerator : IPlaylistGenerator
         Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics
     )
     {
+        HlsOptions hlsOptions = plan.HlsOptions ?? new HlsOptions();
+
+        bool hasFmp4 = hlsOptions.SegmentType.Equals("fmp4", StringComparison.OrdinalIgnoreCase);
+        bool hasSubsGroup = plan.SubtitleOutputs.Any(s =>
+            s.Action is StreamAction.Extract or StreamAction.Copy
+        );
+
+        // hasChapterDateRanges is wired by Phase 4.5; default false until then.
+        bool hasChapterDateRanges = false;
+
+        int version = ComputeMasterVersion(hasSubsGroup, hasFmp4, hasChapterDateRanges);
+
         StringBuilder sb = new();
         sb.AppendLine("#EXTM3U");
-        sb.AppendLine("#EXT-X-VERSION:6");
-        sb.AppendLine("#EXT-X-INDEPENDENT-SEGMENTS");
+        sb.AppendLine($"#EXT-X-VERSION:{version}");
+
+        // Emit #EXT-X-INDEPENDENT-SEGMENTS when the option is on OR when fMP4
+        // segments are used (fMP4 requires independent segments per the spec).
+        if (hlsOptions.IndependentSegments || hasFmp4)
+            sb.AppendLine("#EXT-X-INDEPENDENT-SEGMENTS");
+
         sb.AppendLine();
 
         // Audio groups — keyed by codec for GROUP-ID
@@ -74,10 +118,7 @@ public class PlaylistGenerator : IPlaylistGenerator
             );
             HlsVariantAnalyzer.VariantMetrics audMetrics =
                 plan.AudioOutputs.Length > 0
-                    ? audioMetrics.GetValueOrDefault(
-                        plan.AudioOutputs[0].MapLabel,
-                        new(0, 0)
-                    )
+                    ? audioMetrics.GetValueOrDefault(plan.AudioOutputs[0].MapLabel, new(0, 0))
                     : new(0, 0);
 
             int peakBandwidth = vidMetrics.PeakBandwidth + audMetrics.PeakBandwidth;

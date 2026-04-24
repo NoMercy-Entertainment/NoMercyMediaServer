@@ -68,6 +68,13 @@ public record EncodingProfile(
 
     /// <summary>Arbitrary extra FFmpeg arguments appended after all generated arguments.</summary>
     public Dictionary<string, string>? CustomArguments { get; init; }
+
+    /// <summary>
+    /// HLS muxer options (playlist type, segment container, independent-segments flag).
+    /// Only meaningful when <see cref="Format"/> is <see cref="OutputFormat.Hls"/>.
+    /// Null means use defaults (vod / mpegts / IndependentSegments=false).
+    /// </summary>
+    public HlsOptions? HlsOptions { get; init; }
 }
 
 public record VideoOutput(

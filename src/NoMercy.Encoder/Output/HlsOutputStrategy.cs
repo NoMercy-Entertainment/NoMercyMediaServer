@@ -4,6 +4,7 @@ using System.Text;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Storage;
 
 public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
@@ -17,6 +18,11 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
     )
     {
         int segmentDuration = plan.SegmentDurationSeconds;
+        HlsOptions hlsOptions = plan.HlsOptions ?? new HlsOptions();
+
+        // Hoist segment-type derived values; both video and audio loops need them.
+        bool isFmp4 = hlsOptions.SegmentType.Equals("fmp4", StringComparison.OrdinalIgnoreCase);
+        string segmentExtension = isFmp4 ? ".m4s" : ".ts";
 
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
@@ -47,16 +53,26 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 
             int gopCeiling = (int)Math.Ceiling(video.FrameRate * segmentDuration * 2);
 
+            // Build hls_flags: always include independent_segments (existing behaviour).
+            // When HlsOptions.IndependentSegments is true the flag is still included —
+            // future phases may add additional flags joined with '+' here.
+            string hlsFlags = "independent_segments";
+
             Dictionary<string, string> extraFlags = new(video.ExtraFlags)
             {
                 ["-f"] = "hls",
                 ["-hls_time"] = segmentDuration.ToString(),
-                ["-hls_playlist_type"] = "vod",
-                ["-hls_flags"] = "independent_segments",
-                ["-hls_segment_filename"] = $"{segmentDir}/{segmentFile}_%05d.ts",
+                ["-hls_playlist_type"] = hlsOptions.PlaylistType,
+                ["-hls_segment_type"] = hlsOptions.SegmentType,
+                ["-hls_flags"] = hlsFlags,
+                ["-hls_segment_filename"] = $"{segmentDir}/{segmentFile}_%05d{segmentExtension}",
                 ["-force_key_frames"] = $"expr:gte(t,n_forced*{segmentDuration})",
                 ["-forced-idr"] = "1",
             };
+
+            // fMP4 requires an init segment with a deterministic name alongside the playlist.
+            if (isFmp4)
+                extraFlags["-hls_fmp4_init_filename"] = "init.mp4";
 
             if (isHevc)
                 extraFlags["-tag:v"] = "hvc1";
@@ -116,9 +132,11 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                 {
                     ["-f"] = "hls",
                     ["-hls_time"] = segmentDuration.ToString(),
-                    ["-hls_playlist_type"] = "vod",
+                    ["-hls_playlist_type"] = hlsOptions.PlaylistType,
+                    ["-hls_segment_type"] = hlsOptions.SegmentType,
                     ["-hls_flags"] = "independent_segments",
-                    ["-hls_segment_filename"] = $"{segmentDir}/{segmentFile}_%05d.ts",
+                    ["-hls_segment_filename"] =
+                        $"{segmentDir}/{segmentFile}_%05d{segmentExtension}",
                 };
 
                 if (

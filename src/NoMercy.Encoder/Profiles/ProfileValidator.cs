@@ -86,6 +86,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
         ValidateMonotonicLadder(profile, sink);
         ValidateVideoWithoutAudioForStreaming(profile, sink);
         ValidateAudioLanguageFilterOverlap(profile, sink);
+        ValidateHlsFmp4CodecCompatibility(profile, sink);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -876,6 +877,49 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                     + "available for this codec).",
                 $"Accept software encoding for `{prefix}.TenBit`, or switch to a codec with hardware 10-bit support."
             );
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // HLS fMP4 codec compatibility
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// When the profile targets HLS with fMP4 segments, only codecs that map
+    /// cleanly into an ISO BMFF (fMP4) box are valid on the video side.
+    /// H.264, HEVC, and AV1 all have registered codec boxes; VP9 does not —
+    /// ffmpeg will produce a non-compliant or unplayable stream.
+    /// </summary>
+    private static void ValidateHlsFmp4CodecCompatibility(EncodingProfile profile, RuleSink sink)
+    {
+        if (profile.Format != OutputFormat.Hls)
+            return;
+
+        string? segmentType = profile.HlsOptions?.SegmentType;
+        if (segmentType is null || !segmentType.Equals("fmp4", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        for (int i = 0; i < profile.VideoOutputs.Length; i++)
+        {
+            VideoOutput output = profile.VideoOutputs[i];
+
+            bool supported =
+                output.Codec == VideoCodecType.H264
+                || output.Codec == VideoCodecType.H265
+                || output.Codec == VideoCodecType.Av1;
+
+            if (!supported)
+            {
+                sink.Add(
+                    EncoderRuleId.HlsFmp4CodecMismatch,
+                    EncoderRuleSeverity.Error,
+                    $"video_outputs[{i}].codec",
+                    $"{output.Codec} cannot be muxed into fMP4 HLS segments. fMP4 only supports "
+                        + "H.264, HEVC, or AV1 — VP9 has no registered ISO BMFF codec box and "
+                        + "produces a non-compliant or unplayable stream.",
+                    "fMP4 segments only support H.264, HEVC, or AV1 — switch to mpegts segments or pick a supported codec."
+                );
+            }
         }
     }
 

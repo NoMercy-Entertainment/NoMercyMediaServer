@@ -21,7 +21,10 @@ public record OutputPlan(
     // resulting `-hls_key_info_file` path into each video output's extra
     // flags so ffmpeg encrypts segments inline and emits EXT-X-KEY tags
     // in the playlist automatically.
-    NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig? Drm = null
+    NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig? Drm = null,
+    // HLS muxer options forwarded from the profile. Controls playlist type,
+    // segment container format, and independent-segments signaling.
+    NoMercy.Encoder.Profiles.HlsOptions? HlsOptions = null
 );
 
 public record VideoOutputPlan(

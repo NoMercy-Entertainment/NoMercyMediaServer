@@ -23,6 +23,8 @@ public record HlsOptions
     /// <summary>
     /// When true, adds the #EXT-X-INDEPENDENT-SEGMENTS tag to the playlist, indicating
     /// every segment can be decoded without reference to any prior segment.
+    /// Default: true — this tag is correct and safe for all VOD HLS output and was
+    /// always emitted by the strategy before HlsOptions was introduced.
     /// </summary>
-    public bool IndependentSegments { get; init; }
+    public bool IndependentSegments { get; init; } = true;
 }

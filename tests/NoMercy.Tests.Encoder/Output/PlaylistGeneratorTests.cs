@@ -35,7 +35,9 @@ public class PlaylistGeneratorTests
         string playlist = Generate(CreatePlan());
 
         playlist.Should().StartWith("#EXTM3U");
-        playlist.Should().Contain("#EXT-X-VERSION:6");
+        // Version is computed from active features. Basic mpegts with no subtitles
+        // group, no fMP4, and no chapter date-ranges requires version 3.
+        playlist.Should().Contain("#EXT-X-VERSION:3");
     }
 
     [Fact]
@@ -145,10 +147,7 @@ public class PlaylistGeneratorTests
                     new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
@@ -189,10 +188,7 @@ public class PlaylistGeneratorTests
                     new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
