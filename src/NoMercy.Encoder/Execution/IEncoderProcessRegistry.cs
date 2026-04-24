@@ -15,6 +15,14 @@ public interface IEncoderProcessRegistry
     void Register(int jobId, int processId);
 
     /// <summary>
+    /// Record that <paramref name="processId"/> is running for <paramref name="jobId"/>
+    /// with the given ffmpeg argument list. The argv is used by
+    /// <see cref="CountConcurrentNvencSessions"/> to determine whether the process
+    /// is using an NVENC codec variant.
+    /// </summary>
+    void RegisterWithArgv(int jobId, int processId, string[] argv);
+
+    /// <summary>
     /// Remove a single process mapping. Call when the process exits.
     /// </summary>
     void Unregister(int jobId, int processId);
@@ -34,4 +42,13 @@ public interface IEncoderProcessRegistry
     /// All registered job ids currently known to the registry.
     /// </summary>
     IReadOnlyCollection<int> ActiveJobIds { get; }
+
+    /// <summary>
+    /// Returns the number of currently registered ffmpeg processes whose argv
+    /// contains an NVENC codec flag (<c>h264_nvenc</c>, <c>hevc_nvenc</c>, or
+    /// <c>av1_nvenc</c>). Only processes registered via
+    /// <see cref="RegisterWithArgv"/> are counted — processes registered via
+    /// the argv-less <see cref="Register"/> overload are not counted.
+    /// </summary>
+    int CountConcurrentNvencSessions();
 }

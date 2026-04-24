@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Helpers.Extensions;
 
@@ -11,8 +12,8 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 
 /// <summary>
 /// Endpoints for triggering on-demand hardware benchmarks and polling their
-/// results. All operations require the requesting user to be a moderator
-/// (owner or manager).
+/// results, and for querying live resource utilization. All operations require
+/// the requesting user to be a moderator (owner or manager).
 ///
 /// NOTE: The underlying <see cref="IHardwareBenchmark.CalibrateAsync"/> does
 /// not currently accept codec or resolution filters — the engine always
@@ -26,7 +27,12 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/encoder/hardware")]
-public class EncoderHardwareController(IBenchmarkJobTracker tracker) : BaseController
+public class EncoderHardwareController(
+    IBenchmarkJobTracker tracker,
+    IResourceMonitor monitor,
+    IEncoderProcessRegistry registry,
+    IHardwareCapabilities hardware
+) : BaseController
 {
     /// <summary>
     /// Starts a new benchmark calibration run asynchronously.
@@ -105,9 +111,44 @@ public class EncoderHardwareController(IBenchmarkJobTracker tracker) : BaseContr
 
         return Ok(new { data = tracker.List() });
     }
+
+    /// <summary>
+    /// Returns a live snapshot of host resource utilization: CPU load, available
+    /// memory, per-process GPU encoder samples (empty when no vendor telemetry
+    /// plugin is installed), and the count of concurrent NVENC sessions currently
+    /// tracked by the process registry.
+    /// </summary>
+    [HttpGet("utilization")]
+    public IActionResult GetUtilization()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view hardware utilization");
+
+        UtilizationSnapshot snap = new(
+            CpuUsagePercent: monitor.GetCpuUsagePercent(),
+            AvailableMemoryMb: monitor.GetAvailableMemoryMb(),
+            GpuSamples: monitor.SampleGpu(),
+            ConcurrentNvencSessions: registry.CountConcurrentNvencSessions(),
+            Gpus: hardware.Gpus
+        );
+
+        return Ok(snap);
+    }
 }
 
 public record StartBenchmarkRequest(
     [property: JsonProperty("codecs")] string[]? Codecs,
     [property: JsonProperty("resolutions")] int[]? Resolutions
+);
+
+/// <summary>
+/// Point-in-time resource utilization snapshot returned by
+/// <c>GET /api/v1/encoder/hardware/utilization</c>.
+/// </summary>
+public record UtilizationSnapshot(
+    [property: JsonProperty("cpu_usage_percent")] double CpuUsagePercent,
+    [property: JsonProperty("available_memory_mb")] long AvailableMemoryMb,
+    [property: JsonProperty("gpu_samples")] IReadOnlyList<GpuProcessSample> GpuSamples,
+    [property: JsonProperty("concurrent_nvenc_sessions")] int ConcurrentNvencSessions,
+    [property: JsonProperty("gpus")] IReadOnlyList<GpuDevice> Gpus
 );

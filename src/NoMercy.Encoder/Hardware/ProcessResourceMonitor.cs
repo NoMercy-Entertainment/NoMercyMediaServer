@@ -1,6 +1,8 @@
 namespace NoMercy.Encoder.Hardware;
 
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Errors;
 
 /// <summary>
 /// Cross-platform <see cref="IResourceMonitor"/> that reads CPU and memory
@@ -17,6 +19,9 @@ public class ProcessResourceMonitor : IResourceMonitor
     private DateTime _lastSnapshotAt = DateTime.UtcNow;
     private TimeSpan _lastCpuTime = TimeSpan.Zero;
     private readonly Lock _snapshotLock = new();
+
+    private readonly ILogger<ProcessResourceMonitor>? _logger;
+    private bool _gpuWarningLogged;
 
     public double GetCpuUsagePercent()
     {
@@ -41,7 +46,33 @@ public class ProcessResourceMonitor : IResourceMonitor
         }
     }
 
+    public ProcessResourceMonitor(ILogger<ProcessResourceMonitor>? logger = null)
+    {
+        _logger = logger;
+    }
+
     public double GetGpuEncodeUtilization(GpuDevice device) => 0.0;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Always returns an empty list — GPU telemetry requires a vendor-specific
+    /// sampler such as <c>NvmlGpuSampler</c>. The unsupported warning is logged
+    /// once at startup (rule <c>hardware.gpu_telemetry_unsupported</c>).
+    /// </remarks>
+    public IReadOnlyList<GpuProcessSample> SampleGpu()
+    {
+        if (!_gpuWarningLogged)
+        {
+            _gpuWarningLogged = true;
+            _logger?.LogWarning(
+                "[{RuleId}] GPU process telemetry is not available on this platform. "
+                    + "Install a vendor-specific sampler (e.g. NvmlGpuSampler) to enable live GPU utilization.",
+                EncoderRuleId.HardwareGpuTelemetryUnsupported
+            );
+        }
+
+        return [];
+    }
 
     public long GetAvailableMemoryMb()
     {
@@ -68,4 +99,6 @@ public sealed class NullResourceMonitor : IResourceMonitor
     public double GetGpuEncodeUtilization(GpuDevice device) => 0;
 
     public long GetAvailableMemoryMb() => 0;
+
+    public IReadOnlyList<GpuProcessSample> SampleGpu() => [];
 }

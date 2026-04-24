@@ -101,6 +101,12 @@ public static class ServiceCollectionExtensions
         // nvidia-smi / rocm-smi / intel_gpu_top.
         services.AddSingleton<IResourceMonitor, ProcessResourceMonitor>();
 
+        // NVENC session cap — enforced at dispatch time in EncodingOrchestrator
+        // before ffmpeg is spawned. Consumer NVIDIA GPUs cap at 3 concurrent sessions;
+        // pro cards report int.MaxValue (no cap). NvencSessionCap reads the limit from
+        // IHardwareCapabilities.Gpus[*].MaxEncoderSessions.
+        services.AddSingleton<INvencSessionCap, NvencSessionCap>();
+
         // IResourceBudget — built from IHardwareCapabilities after detection completes
         services.AddSingleton<IResourceBudget>(sp =>
         {
