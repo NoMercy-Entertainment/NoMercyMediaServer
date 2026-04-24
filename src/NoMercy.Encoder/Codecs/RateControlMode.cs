@@ -12,4 +12,5 @@ public enum RateControlMode
     Hqvbr,
     Hqcbr,
     QualityLevel,
+    CrfCapped,
 }
