@@ -111,6 +111,8 @@
     <PackageVersion Include="System.CommandLine" Version="2.0.5" />
     <PackageVersion Include="System.Management" Version="10.0.7" />
     <PackageVersion Include="Ulid" Version="1.4.1" />
+    <!-- Cryptography -->
+    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.5.1" />
     <!-- Security pins for transitive deps (clears GHSA-37gx-xxp4-5rgx, GHSA-w3x6-4m5h-cxqf, GHSA-xrw6-gwf8-vvr9) -->
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.7" />
     <PackageVersion Include="Tmds.DBus.Protocol" Version="0.92.0" />

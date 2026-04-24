@@ -303,4 +303,5 @@ public class MediaContext : DbContext
     public virtual DbSet<MusicGenreReleaseGroup> MusicGenreReleaseGroup { get; init; }
 
     public virtual DbSet<PlaybackPreference> PlaybackPreferences { get; init; }
+    public virtual DbSet<TrustedPublisherKey> TrustedPublisherKeys { get; init; }
 }
