@@ -253,11 +253,23 @@ public class PlanStage(
         EncodingContext context
     )
     {
-        // Resolve tonemap strategy once — shared across all video outputs that need HDR→SDR
+        // Resolve tonemap strategy once — shared across all video outputs that need HDR→SDR.
+        // When HdrPolicy is AlwaysPreserve, skip tonemapping entirely regardless of source.
         bool sourceIsHdr = media.VideoStreams.Count > 0 && media.VideoStreams[0].IsHdr;
-        TonemapStrategy? tonemap = sourceIsHdr
-            ? tonemapSelector.SelectBest(hardware, ffmpegCapabilities)
-            : null;
+        bool tonemapSuppressed = profile.HdrPolicy == HdrPolicy.AlwaysPreserve;
+
+        TonemapStrategy? tonemap =
+            sourceIsHdr && !tonemapSuppressed
+                ? tonemapSelector.SelectBest(hardware, ffmpegCapabilities)
+                : null;
+
+        // Per-profile plan: resolves algorithm + nits + optional LUT from HdrOptions /
+        // profile.TonemapAlgorithm with a clear precedence chain.
+        TonemapPlan tonemapPlan = tonemapSelector.Build(
+            profile.HdrOptions,
+            profile.TonemapAlgorithm,
+            context.DecisionsOrNoOp
+        );
 
         // Audio-only: skip video planning entirely when source has no video streams
         VideoOutputPlan[] videoPlan =
@@ -432,8 +444,10 @@ public class PlanStage(
                                 SegmentNameTemplate: v.SegmentNameTemplate,
                                 PlaylistNameTemplate: v.PlaylistNameTemplate,
                                 ConvertHdrToSdr: v.ConvertHdrToSdr && sourceIsHdr,
-                                TonemapFilterChain: v.ConvertHdrToSdr && tonemap is not null
-                                    ? tonemap.FfmpegFilterChain
+                                TonemapFilterChain: v.ConvertHdrToSdr
+                                && sourceIsHdr
+                                && !tonemapSuppressed
+                                    ? tonemapPlan.FilterStringFragment
                                     : null,
                                 CropFilter: cropFilter
                             );
@@ -562,25 +576,50 @@ public class PlanStage(
         if (media.Duration.TotalSeconds > 0 && media.Duration.TotalSeconds < segmentDuration)
             segmentDuration = Math.Max(1, (int)Math.Ceiling(media.Duration.TotalSeconds));
 
-        // Dolby Vision passthrough: the RPU metadata survives when the output
-        // stays HEVC 10-bit and we don't tonemap. MP4 / HLS additionally need
-        // the "dvh1" codec tag; MKV carries DV in the bitstream unchanged.
-        // Transcoding or 8-bit output silently strips the RPU — log a warning
-        // so the user knows DV will be gone in the output.
-        bool preserveDv =
-            media.DolbyVision is not null
-            && profile.Format is OutputFormat.Hls or OutputFormat.Mp4 or OutputFormat.Mkv
-            && profile.VideoOutputs.Any(v =>
-                v.Codec == VideoCodecType.H265 && v.TenBit && !v.ConvertHdrToSdr
-            );
+        // Dolby Vision passthrough gate (Phase 3.5).
+        // DolbyVisionGate is the single source of truth for whether the RPU
+        // survives. It evaluates codec, bit-depth, container, and HdrPolicy in
+        // one place and merges any container-specific extra flags into the first
+        // video output's ExtraFlags dictionary.
+        //
+        // Per-output bit-depth: we evaluate using the first video output because
+        // DV RPU is a stream-level property — all outputs either preserve or strip.
+        // The gate checks the most-capable output to avoid false strips when a
+        // ladder has mixed bit-depths.
+        VideoOutput? primaryVideo =
+            profile.VideoOutputs.Length > 0 ? profile.VideoOutputs[0] : null;
 
-        if (media.DolbyVision is not null && !preserveDv)
+        int primaryBitDepth = primaryVideo?.BitDepth ?? (primaryVideo?.TenBit == true ? 10 : 8);
+
+        // Codec type lives on the profile VideoOutput — ResolvedCodec only
+        // carries the ffmpeg encoder name, not the VideoCodecType enum.
+        VideoCodecType primaryCodec = primaryVideo?.Codec ?? VideoCodecType.H264;
+
+        DolbyVisionDecision dvDecision = DolbyVisionGate.Resolve(
+            media.DolbyVision,
+            primaryCodec,
+            primaryBitDepth,
+            profile.Format,
+            profile.HdrPolicy,
+            context.DecisionsOrNoOp,
+            profile.HlsOptions
+        );
+
+        // Merge DV container flags into the first video output's ExtraFlags.
+        // videoPlan is already built at this point so we patch via LINQ index.
+        if (dvDecision.Preserved && dvDecision.ExtraFlags.Count > 0 && videoPlan.Length > 0)
+        {
+            foreach ((string key, string value) in dvDecision.ExtraFlags)
+                videoPlan[0].ExtraFlags[key] = value;
+        }
+
+        if (media.DolbyVision is not null && !dvDecision.Preserved)
         {
             logger.LogWarning(
-                "Source has Dolby Vision (profile {Profile}.{Level}) but the output profile can't preserve it — "
-                    + "RPU will be stripped. Keep HEVC 10-bit in an HLS/MP4/MKV output without tonemapping to retain DV.",
+                "Source has Dolby Vision (profile {Profile}.{Level}) but DV will be stripped — {Reason}",
                 media.DolbyVision.Profile,
-                media.DolbyVision.Level
+                media.DolbyVision.Level,
+                dvDecision.Reason
             );
         }
 
@@ -591,7 +630,7 @@ public class PlanStage(
             subtitlePlan,
             thumbPlan,
             segmentDuration,
-            PreserveDolbyVision: preserveDv,
+            PreserveDolbyVision: dvDecision.Preserved,
             Drm: profile.Drm
         );
     }
