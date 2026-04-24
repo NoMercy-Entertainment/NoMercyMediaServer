@@ -67,6 +67,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<CodecRegistry>();
         services.AddSingleton<ICodecResolver, CodecResolver>();
         services.AddSingleton<IHardwarePreferenceResolver, HardwarePreferenceResolver>();
+        services.AddSingleton<IBitDepthPolicyResolver, BitDepthPolicyResolver>();
 
         // Quality scalers — specific encoders first, LinearQualityScaler last
         // (it is the unconditional fallback: Supports always returns true).

@@ -32,7 +32,8 @@ public class PlanStage(
     ILogger<PlanStage> logger,
     IQualityScalerResolver? qualityScalerResolver = null,
     IHardwarePreferenceResolver? hardwarePreferenceResolver = null,
-    SpeedIndex? speedIndex = null
+    SpeedIndex? speedIndex = null,
+    IBitDepthPolicyResolver? bitDepthPolicyResolver = null
 ) : IPipelineStage<ValidateInput, ExecutionPlan>, IPlanStage
 {
     public string Name => "Plan";
@@ -178,6 +179,12 @@ public class PlanStage(
 
             ExecutionPlan plan = new(groups.ToArray(), totalEstimate, outputPlan);
             return new StageSuccess<ExecutionPlan>(plan);
+        }
+        catch (EncoderRuntimeException rte)
+        {
+            return new StageFailure(
+                new(EncodingErrorKind.HardwareUnavailable, rte.Shape.Message, null, Name, false)
+            );
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -331,36 +338,94 @@ public class PlanStage(
                                 extraFlags["-color_range"] = "tv";
                             }
 
-                            // 10-bit downgrade guard: some hardware encoders (h264_nvenc,
-                            // h264_amf, h264_qsv, h264_vaapi, h264_videotoolbox,
-                            // hevc_videotoolbox) don't support 10-bit. If the profile asked
-                            // for 10-bit but the resolved encoder can't deliver, silently
-                            // downgrade to 8-bit — otherwise PlanStage would emit an empty
-                            // pixel format string and ffmpeg picks something random (or
-                            // fails). Log at Warning so the user understands why the
-                            // output isn't 10-bit.
-                            bool outputTenBit = v.TenBit && encoder.Supports10Bit;
-                            if (v.TenBit && !encoder.Supports10Bit)
+                            // 10-bit / bit-depth policy resolution.
+                            // When IBitDepthPolicyResolver is injected (Phase 3.3) it is the
+                            // single source of truth and honours profile.BitDepthPolicy.
+                            // Without the resolver the legacy inline guard is preserved so
+                            // existing tests (TenBitRequested_EncoderLacks10Bit_DowngradedTo8Bit)
+                            // continue to pass unchanged.
+                            int requestedDepth = v.BitDepth ?? (v.TenBit ? 10 : 8);
+                            bool outputTenBit;
+                            string outputPixelFormat;
+                            string outputEncoderName = resolved.FfmpegEncoderName;
+
+                            if (bitDepthPolicyResolver is not null)
                             {
-                                logger.LogWarning(
-                                    "Profile requests 10-bit video_{Index} but encoder {Encoder} "
-                                        + "does not support 10-bit. Downgrading to 8-bit output.",
-                                    i,
-                                    encoder.FfmpegName
+                                BitDepthResolutionResult bdResult = bitDepthPolicyResolver.Resolve(
+                                    requestedDepth,
+                                    profile.BitDepthPolicy,
+                                    v.Codec,
+                                    resolved,
+                                    context.DecisionsOrNoOp,
+                                    codecType =>
+                                        codecResolver.Resolve(
+                                            codecType,
+                                            hardware,
+                                            EncoderPreference.ForceSoftware
+                                        )
                                 );
+
+                                if (bdResult.Failure is not null)
+                                {
+                                    // Surface Strict violation as a StageFailure — throw so
+                                    // the outer catch re-wraps it, or return early by throwing.
+                                    throw bdResult.Failure;
+                                }
+
+                                if (bdResult.SwitchedToEncoder is not null)
+                                {
+                                    // PreferSoftware swapped the encoder — adopt the SW codec.
+                                    outputEncoderName = bdResult.SwitchedToEncoder;
+                                    resolved = codecResolver.Resolve(
+                                        v.Codec,
+                                        hardware,
+                                        EncoderPreference.ForceSoftware
+                                    );
+                                    encoder = resolved.EncoderInfo;
+                                }
+
+                                if (bdResult.Warning is not null)
+                                {
+                                    logger.LogWarning(
+                                        "Bit-depth policy [{Id}]: {Message}",
+                                        bdResult.Warning.Id,
+                                        bdResult.Warning.Message
+                                    );
+                                }
+
+                                outputTenBit = bdResult.FinalBitDepth == 10;
+                                outputPixelFormat = bdResult.PixelFormat ?? "yuv420p";
+                            }
+                            else
+                            {
+                                // Legacy path — preserve existing behaviour exactly.
+                                outputTenBit = v.TenBit && encoder.Supports10Bit;
+                                if (v.TenBit && !encoder.Supports10Bit)
+                                {
+                                    logger.LogWarning(
+                                        "Profile requests 10-bit video_{Index} but encoder {Encoder} "
+                                            + "does not support 10-bit. Downgrading to 8-bit output.",
+                                        i,
+                                        encoder.FfmpegName
+                                    );
+                                }
+
+                                outputPixelFormat = outputTenBit
+                                    ? encoder.PixelFormat10Bit
+                                    : "yuv420p";
                             }
 
                             return new VideoOutputPlan(
                                 Width: outputWidth,
                                 Height: outputHeight,
-                                EncoderName: resolved.FfmpegEncoderName,
+                                EncoderName: outputEncoderName,
                                 Crf: crf,
                                 BitrateKbps: v.BitrateKbps,
                                 Preset: EncoderArgumentResolver.ResolvePreset(v.Preset, encoder),
                                 Profile: EncoderArgumentResolver.ResolveProfile(v.Profile, encoder),
                                 Level: v.Level,
                                 TenBit: outputTenBit,
-                                PixelFormat: outputTenBit ? encoder.PixelFormat10Bit : "yuv420p",
+                                PixelFormat: outputPixelFormat,
                                 MapLabel: $"[v{i}]",
                                 ExtraFlags: extraFlags,
                                 FrameRate: media.VideoStreams[0].FrameRate,
