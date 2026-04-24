@@ -122,6 +122,7 @@ public static class ApplicationConfiguration
         }
 
         app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+        app.UseMiddleware<EncoderRuntimeExceptionMiddleware>();
 
         if (Certificate.HasValidCertificate())
         {

@@ -368,6 +368,14 @@ public class EncodingPresetsController(
     /// be what you want" cases (preset mismatch, inverted ABR ladder,
     /// segment-keyframe misalignment, etc).
     /// </summary>
+    /// <summary>
+    /// Validates an encoding profile.
+    /// </summary>
+    /// <remarks>
+    /// Deprecated: Use POST /api/v1/encoder/profiles/validate for the richer
+    /// <see cref="NoMercy.Encoder.Errors.ValidationEnvelope"/> shape with stable rule IDs and fix hints.
+    /// </remarks>
+    [Obsolete("Use POST /api/v1/encoder/profiles/validate")]
     [HttpPost("validate")]
     public IActionResult Validate([FromBody] ValidatePresetRequest request)
     {
@@ -420,21 +428,24 @@ public class EncodingPresetsController(
             );
         }
 
-        ValidationResult result = profileValidator.Validate(profile);
+        // Forward to the new envelope-producing path, then project back to the
+        // legacy (IsValid, ValidationError[]) shape so existing dashboard
+        // clients keep working without modification.
+        NoMercy.Encoder.Errors.ValidationEnvelope envelope = profileValidator.ValidateAsEnvelope(
+            profile
+        );
 
-        object[] errors = result
-            .Errors.Where(e => e.Severity == ValidationSeverity.Error)
-            .Select(e => (object)new { field = e.Field, message = e.Message })
+        object[] errors = envelope
+            .Errors.Select(e => (object)new { field = e.Field, message = e.Message })
             .ToArray();
-        object[] warnings = result
-            .Errors.Where(e => e.Severity == ValidationSeverity.Warning)
-            .Select(e => (object)new { field = e.Field, message = e.Message })
+        object[] warnings = envelope
+            .Warnings.Select(e => (object)new { field = e.Field, message = e.Message })
             .ToArray();
 
         return Ok(
             new
             {
-                valid = result.IsValid,
+                valid = envelope.Valid,
                 errors,
                 warnings,
             }
