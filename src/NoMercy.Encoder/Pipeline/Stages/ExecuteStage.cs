@@ -13,7 +13,8 @@ public record ExecuteInput(
 );
 
 public class ExecuteStage(IFfmpegExecutor executor, ILogger<ExecuteStage> logger)
-    : IPipelineStage<ExecuteInput, ExecutionResult[]>
+    : IPipelineStage<ExecuteInput, ExecutionResult[]>,
+        IExecutionStage
 {
     public string Name => "Execute";
 

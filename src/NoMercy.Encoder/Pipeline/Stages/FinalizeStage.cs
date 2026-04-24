@@ -24,7 +24,7 @@ public class FinalizeStage(
     IOutputStrategyFactory outputStrategyFactory,
     ILogger<FinalizeStage> logger,
     IStorage storage
-) : IPipelineStage<FinalizeInput, FinalizeOutput>
+) : IPipelineStage<FinalizeInput, FinalizeOutput>, IFinalizeStage
 {
     public string Name => "Finalize";
 

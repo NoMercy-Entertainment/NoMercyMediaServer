@@ -30,7 +30,7 @@ public class PlanStage(
     IAbrLadderGenerator abrLadderGenerator,
     ContentAnalysis.ICropDetector cropDetector,
     ILogger<PlanStage> logger
-) : IPipelineStage<ValidateInput, ExecutionPlan>
+) : IPipelineStage<ValidateInput, ExecutionPlan>, IPlanStage
 {
     public string Name => "Plan";
 
@@ -104,13 +104,7 @@ public class PlanStage(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new StageFailure(
-                new(
-                    EncodingErrorKind.Unknown,
-                    $"Planning failed: {ex.Message}",
-                    null,
-                    Name,
-                    false
-                )
+                new(EncodingErrorKind.Unknown, $"Planning failed: {ex.Message}", null, Name, false)
             );
         }
     }
@@ -376,11 +370,7 @@ public class PlanStage(
                 )
             );
 
-            thumbPlan = new(
-                thumbConfig.Width,
-                thumbHeight,
-                thumbConfig.IntervalSeconds
-            );
+            thumbPlan = new(thumbConfig.Width, thumbHeight, thumbConfig.IntervalSeconds);
         }
 
         // Clamp segment duration to input length for very short files.

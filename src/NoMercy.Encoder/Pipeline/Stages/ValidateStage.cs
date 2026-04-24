@@ -8,7 +8,8 @@ using NoMercy.Encoder.Profiles;
 public record ValidateInput(MediaInfo Media, EncodingProfile Profile);
 
 public class ValidateStage(IProfileValidator validator, ILogger<ValidateStage> logger)
-    : IPipelineStage<ValidateInput, ValidateInput>
+    : IPipelineStage<ValidateInput, ValidateInput>,
+        IValidationStage
 {
     public string Name => "Validate";
 

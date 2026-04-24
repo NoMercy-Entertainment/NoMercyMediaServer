@@ -30,7 +30,7 @@ public class BuildStage(
     IEnumerable<BuildingBlocks.Drm.IDrmProcessor> drmProcessors,
     ILogger<BuildStage> logger,
     IStorage storage
-) : IPipelineStage<BuildInput, FfmpegCommand[]>
+) : IPipelineStage<BuildInput, FfmpegCommand[]>, IBuildStage
 {
     public string Name => "Build";
 

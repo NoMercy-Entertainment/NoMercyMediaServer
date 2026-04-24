@@ -6,7 +6,8 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Storage;
 
 public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<AnalyzeStage> logger)
-    : IPipelineStage<string, MediaInfo>
+    : IPipelineStage<string, MediaInfo>,
+        IAnalysisStage
 {
     public string Name => "Analyze";
 

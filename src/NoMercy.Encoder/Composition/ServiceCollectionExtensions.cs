@@ -171,13 +171,21 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IOutputStrategy, OggOutputStrategy>();
         services.AddTransient<IOutputStrategyFactory, OutputStrategyFactory>();
 
-        // Pipeline stages
+        // Pipeline stages — each concrete stage is also reachable via its
+        // named role interface so strategies can resolve by role without
+        // coupling to the concrete class.
         services.AddTransient<AnalyzeStage>();
+        services.AddTransient<IAnalysisStage>(sp => sp.GetRequiredService<AnalyzeStage>());
         services.AddTransient<ValidateStage>();
+        services.AddTransient<IValidationStage>(sp => sp.GetRequiredService<ValidateStage>());
         services.AddTransient<PlanStage>();
+        services.AddTransient<IPlanStage>(sp => sp.GetRequiredService<PlanStage>());
         services.AddTransient<BuildStage>();
+        services.AddTransient<IBuildStage>(sp => sp.GetRequiredService<BuildStage>());
         services.AddTransient<ExecuteStage>();
+        services.AddTransient<IExecutionStage>(sp => sp.GetRequiredService<ExecuteStage>());
         services.AddTransient<FinalizeStage>();
+        services.AddTransient<IFinalizeStage>(sp => sp.GetRequiredService<FinalizeStage>());
 
         // Optimizer
         services.AddTransient<ExecutionGraphBuilder>();

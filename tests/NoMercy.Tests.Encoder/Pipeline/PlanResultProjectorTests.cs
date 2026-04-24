@@ -3,6 +3,7 @@ namespace NoMercy.Tests.Encoder.Pipeline;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
@@ -188,7 +189,7 @@ public class PlanResultProjectorTests
     public void AsPlanResult_OnFailure_ReturnsNull()
     {
         StageResult result = new StageFailure(
-            new(Encoder.Errors.EncodingErrorKind.Unknown, "boom", null, "Plan", false)
+            new(EncodingErrorKind.Unknown, "boom", null, "Plan", false)
         );
         EncodingContext ctx = EncodingContext.Create();
 
@@ -243,9 +244,11 @@ public class PlanResultProjectorTests
         variants.Should().HaveCount(2);
 
         // Each variant has VariantId, Video, Audio
-        variants[0].Should().HaveElement("VariantId");
-        variants[0].Should().HaveElement("Video");
-        variants[0].Should().HaveElement("Audio");
+        ((JObject)variants[0])
+            .Should()
+            .ContainKey("VariantId");
+        ((JObject)variants[0]).Should().ContainKey("Video");
+        ((JObject)variants[0]).Should().ContainKey("Audio");
 
         // First variant audio has 2 tracks (all audio on each variant)
         JArray audio0 = (JArray)variants[0]["Audio"]!;
