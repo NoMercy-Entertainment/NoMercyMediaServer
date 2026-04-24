@@ -1,0 +1,28 @@
+namespace NoMercy.Encoder.Pipeline;
+
+using NoMercy.Encoder.Pipeline.Stages;
+
+/// <summary>
+/// Extension methods for <see cref="StageResult"/> that produce the
+/// dashboard-facing <see cref="PlanResult"/> without changing the
+/// <see cref="PlanStage.ExecuteAsync"/> return type. The orchestrator
+/// and future API controllers call <see cref="AsPlanResult"/> when they
+/// need the spec shape; all existing consumers of
+/// <see cref="StageSuccess{T}"/> are unaffected.
+/// </summary>
+public static class PlanStageExtensions
+{
+    /// <summary>
+    /// Returns a <see cref="PlanResult"/> when <paramref name="result"/>
+    /// is a <see cref="StageSuccess{ExecutionPlan}"/>; otherwise null.
+    /// </summary>
+    public static PlanResult? AsPlanResult(this StageResult result, EncodingContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (result is StageSuccess<ExecutionPlan> success)
+            return PlanResultProjector.FromExecutionPlan(success.Value, context);
+
+        return null;
+    }
+}
