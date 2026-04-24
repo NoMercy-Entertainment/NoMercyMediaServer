@@ -1,15 +1,16 @@
 namespace NoMercy.Encoder.Jobs;
 
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
 /// <summary>
 /// Persists job checkpoints as JSON files next to the encode output.
 /// File location: {OutputDirectory}/.checkpoint.json — one per output. Resume
 /// reads this; on success the caller deletes it.
 /// </summary>
-public class JsonCheckpointStore(IFileSystem fileSystem, ILogger<JsonCheckpointStore> logger)
+public class JsonCheckpointStore(IStorage storage, ILogger<JsonCheckpointStore> logger)
     : ICheckpointStore
 {
     private const string FileName = ".checkpoint.json";
@@ -21,12 +22,12 @@ public class JsonCheckpointStore(IFileSystem fileSystem, ILogger<JsonCheckpointS
 
     public async Task SaveAsync(JobCheckpoint checkpoint, CancellationToken ct = default)
     {
-        Directory.CreateDirectory(checkpoint.OutputDirectory);
+        storage.CreateDirectory(checkpoint.OutputDirectory);
         string path = Path.Combine(checkpoint.OutputDirectory, FileName);
 
         JobCheckpoint toWrite = checkpoint with { LastUpdated = DateTime.UtcNow };
         string json = JsonSerializer.Serialize(toWrite, SerializerOptions);
-        await File.WriteAllTextAsync(path, json, ct);
+        await storage.WriteAsync(path, Encoding.UTF8.GetBytes(json), ct);
 
         logger.LogDebug("Checkpoint saved: {JobId} → {Path}", checkpoint.JobId, path);
     }
@@ -37,12 +38,12 @@ public class JsonCheckpointStore(IFileSystem fileSystem, ILogger<JsonCheckpointS
     )
     {
         string path = Path.Combine(outputDirectory, FileName);
-        if (!fileSystem.FileExists(path))
+        if (!storage.Exists(path))
             return null;
 
         try
         {
-            await using FileStream stream = File.OpenRead(path);
+            await using Stream stream = await storage.OpenReadAsync(path, ct);
             return await JsonSerializer.DeserializeAsync<JobCheckpoint>(
                 stream,
                 SerializerOptions,
@@ -59,9 +60,9 @@ public class JsonCheckpointStore(IFileSystem fileSystem, ILogger<JsonCheckpointS
     public Task DeleteAsync(string outputDirectory, CancellationToken ct = default)
     {
         string path = Path.Combine(outputDirectory, FileName);
-        if (File.Exists(path))
+        if (storage.Exists(path))
         {
-            File.Delete(path);
+            storage.Delete(path);
             logger.LogDebug("Checkpoint deleted at {Path}", path);
         }
 

@@ -1,8 +1,8 @@
 namespace NoMercy.Tests.Encoder.Jobs;
 
 using Microsoft.Extensions.Logging.Abstractions;
-using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Jobs;
+using NoMercy.Tests.Encoder.Storage;
 
 public class JsonCheckpointStoreTests : IDisposable
 {
@@ -14,10 +14,7 @@ public class JsonCheckpointStoreTests : IDisposable
         _tempDir = Path.Combine(Path.GetTempPath(), $"CheckpointStore_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
 
-        _store = new(
-            new FileSystemAdapter(),
-            NullLogger<JsonCheckpointStore>.Instance
-        );
+        _store = new(TestStorageFactory.CreateLocal(), NullLogger<JsonCheckpointStore>.Instance);
     }
 
     public void Dispose()
