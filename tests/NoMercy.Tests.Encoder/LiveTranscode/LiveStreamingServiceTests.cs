@@ -3,6 +3,7 @@ namespace NoMercy.Tests.Encoder.LiveTranscode;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Tests.Encoder.Storage;
 
 public class LiveStreamingServiceTests
 {
@@ -23,7 +24,7 @@ public class LiveStreamingServiceTests
     private static LiveSession MakeSession(string id = "sess-001") => new(id, MakeQuality());
 
     private static LiveStreamingService NewService() =>
-        new(NullLogger<LiveStreamingService>.Instance);
+        new(NullLogger<LiveStreamingService>.Instance, TestStorageFactory.CreateLocal());
 
     [Fact]
     public void Register_StoresRuntimeReachableViaTryGet()

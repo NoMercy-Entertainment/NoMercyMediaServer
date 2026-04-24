@@ -8,6 +8,7 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
+using NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// Covers the multi-variant 2-pass path added in Tier 1.3 — pass 1 runs once
@@ -260,7 +261,12 @@ public class HlsMultiVariantTwoPassTests : IDisposable
         );
 
     private HlsTwoPassStrategy BuildStrategy() =>
-        new(_encoder.Object, _checkpointStore.Object, NullLogger<HlsTwoPassStrategy>.Instance);
+        new(
+            _encoder.Object,
+            _checkpointStore.Object,
+            NullLogger<HlsTwoPassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
     private EncodingRequest BuildRequest(int variantCount) =>
         new(

@@ -8,6 +8,7 @@ using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
+using NoMercy.Tests.Encoder.Storage;
 
 public class HlsTwoPassStrategyTests : IDisposable
 {
@@ -307,18 +308,17 @@ public class HlsTwoPassStrategyTests : IDisposable
             Success: false,
             OutputPath: string.Empty,
             Duration: TimeSpan.Zero,
-            Error: new(
-                EncodingErrorKind.ProcessCrashed,
-                message,
-                null,
-                "Pass1",
-                false
-            ),
+            Error: new(EncodingErrorKind.ProcessCrashed, message, null, "Pass1", false),
             Metrics: new(0, 0, 0, string.Empty, null)
         );
 
     private HlsTwoPassStrategy BuildStrategy() =>
-        new(_encoder.Object, _checkpointStore.Object, NullLogger<HlsTwoPassStrategy>.Instance);
+        new(
+            _encoder.Object,
+            _checkpointStore.Object,
+            NullLogger<HlsTwoPassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
     private EncodingRequest BuildRequest() =>
         new(

@@ -4,9 +4,18 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Tests.Encoder.Storage;
 
 public class LiveFfmpegRunnerTests
 {
+    private static LiveFfmpegRunner MakeRunner(IProcessRunner? processRunner = null) =>
+        new(
+            processRunner ?? new FakeProcessRunner(() => { }),
+            new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            NullLogger<LiveFfmpegRunner>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
+
     private static LiveQuality MakeQuality(
         int width = 1920,
         int height = 1080,
@@ -164,9 +173,7 @@ public class LiveFfmpegRunnerTests
             """
         );
 
-        IReadOnlyList<(int Index, TimeSpan Duration)> entries = LiveFfmpegRunner.ParsePlaylist(
-            path
-        );
+        IReadOnlyList<(int Index, TimeSpan Duration)> entries = MakeRunner().ParsePlaylist(path);
 
         entries.Should().HaveCount(3);
         entries[0].Index.Should().Be(0);
@@ -191,9 +198,7 @@ public class LiveFfmpegRunnerTests
             """
         );
 
-        IReadOnlyList<(int Index, TimeSpan Duration)> entries = LiveFfmpegRunner.ParsePlaylist(
-            path
-        );
+        IReadOnlyList<(int Index, TimeSpan Duration)> entries = MakeRunner().ParsePlaylist(path);
 
         entries.Should().HaveCount(1);
         entries[0].Index.Should().Be(0);
@@ -202,9 +207,10 @@ public class LiveFfmpegRunnerTests
     [Fact]
     public void ParsePlaylist_MissingFile_ReturnsEmpty()
     {
-        IReadOnlyList<(int Index, TimeSpan Duration)> entries = LiveFfmpegRunner.ParsePlaylist(
-            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), "index.m3u8")
-        );
+        IReadOnlyList<(int Index, TimeSpan Duration)> entries = MakeRunner()
+            .ParsePlaylist(
+                Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), "index.m3u8")
+            );
 
         entries.Should().BeEmpty();
     }
@@ -252,12 +258,9 @@ public class LiveFfmpegRunnerTests
 
             LiveFfmpegRunner sut = new(
                 runner,
-                new()
-                {
-                    FfmpegPathOverride = "ffmpeg",
-                    FfprobePathOverride = "ffprobe",
-                },
-                NullLogger<LiveFfmpegRunner>.Instance
+                new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+                NullLogger<LiveFfmpegRunner>.Instance,
+                TestStorageFactory.CreateLocal()
             );
 
             LiveSession session = new("sess", MakeQuality());

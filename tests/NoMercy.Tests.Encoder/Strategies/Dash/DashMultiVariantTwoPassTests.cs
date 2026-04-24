@@ -8,6 +8,7 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Dash;
+using NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// DASH adaptive ladders need the same multi-variant 2-pass treatment as HLS:
@@ -151,7 +152,12 @@ public class DashMultiVariantTwoPassTests : IDisposable
         );
 
     private DashTwoPassStrategy BuildStrategy() =>
-        new(_encoder.Object, _checkpointStore.Object, NullLogger<DashTwoPassStrategy>.Instance);
+        new(
+            _encoder.Object,
+            _checkpointStore.Object,
+            NullLogger<DashTwoPassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
     private EncodingRequest BuildRequest(int variantCount) =>
         new(

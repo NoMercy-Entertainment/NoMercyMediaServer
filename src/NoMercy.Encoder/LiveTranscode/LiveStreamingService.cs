@@ -2,6 +2,7 @@ namespace NoMercy.Encoder.LiveTranscode;
 
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using NoMercy.Storage;
 
 /// <summary>
 /// Singleton that holds live transcode runtime state — maps a session id to
@@ -9,7 +10,8 @@ using Microsoft.Extensions.Logging;
 /// segment stream into an indexed buffer so the HTTP layer can serve any
 /// requested segment id without re-enumerating the source channel.
 /// </summary>
-public class LiveStreamingService(ILogger<LiveStreamingService> logger) : ILiveStreamingService
+public class LiveStreamingService(ILogger<LiveStreamingService> logger, IStorage storage)
+    : ILiveStreamingService
 {
     private readonly ConcurrentDictionary<string, LiveRuntimeSession> _runtimes = new();
 
@@ -56,9 +58,9 @@ public class LiveStreamingService(ILogger<LiveStreamingService> logger) : ILiveS
     {
         try
         {
-            if (Directory.Exists(scratchDirectory))
+            if (storage.Exists(scratchDirectory))
             {
-                Directory.Delete(scratchDirectory, recursive: true);
+                storage.DeleteDirectory(scratchDirectory, recursive: true);
                 logger.LogDebug(
                     "Deleted live session scratch {Dir} for {SessionId}",
                     scratchDirectory,

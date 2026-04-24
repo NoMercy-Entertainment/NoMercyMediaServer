@@ -7,6 +7,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Tests.Encoder.Storage;
 
 public class LiveEncoderTests
 {
@@ -106,7 +107,10 @@ public class LiveEncoderTests
         return new(
             selector,
             manager,
-            new LiveStreamingService(NullLogger<LiveStreamingService>.Instance),
+            new LiveStreamingService(
+                NullLogger<LiveStreamingService>.Instance,
+                TestStorageFactory.CreateLocal()
+            ),
             new NoOpLiveFfmpegRunner(),
             encoderOptions,
             speedIndex,
