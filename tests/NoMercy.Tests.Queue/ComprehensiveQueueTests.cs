@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
@@ -607,6 +608,7 @@ public class ComprehensiveQueueTests
             _sqliteContext.Dispose();
             _efAdapter.Dispose();
             _efDbContext.Dispose();
+            SqliteConnection.ClearAllPools();
             if (File.Exists(_sqliteDbPath))
                 File.Delete(_sqliteDbPath);
         }
@@ -1119,6 +1121,7 @@ public class ComprehensiveQueueTests
         public void Dispose()
         {
             _context.Dispose();
+            SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath))
                 File.Delete(_dbPath);
         }
