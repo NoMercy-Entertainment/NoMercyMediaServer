@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
 
 /// <summary>
@@ -18,7 +19,8 @@ public partial class CropDetector(
     EncoderOptions options,
     IProcessRunner processRunner,
     IStorage storage,
-    ILogger<CropDetector> logger
+    ILogger<CropDetector> logger,
+    IAnalysisProgressObserver? progress = null
 ) : ICropDetector
 {
     // Minimum number of observations before we trust a crop value. Protects
@@ -65,6 +67,10 @@ public partial class CropDetector(
 
         Dictionary<string, int> observations = [];
 
+        string jobId = sourceVideoFileId?.ToString("N") ?? Guid.NewGuid().ToString("N");
+        IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
+        observer.Report(jobId, "crop", 0, "scanning");
+
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
             args,
@@ -81,6 +87,8 @@ public partial class CropDetector(
             workingDirectory: null,
             cancellationToken: ct
         );
+
+        observer.Report(jobId, "crop", 100, "done");
 
         int totalObservations = observations.Values.Sum();
 

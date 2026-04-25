@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
 
 /// <summary>
@@ -20,7 +21,8 @@ public partial class SubtitleOcrEngine(
     IProcessRunner processRunner,
     ITesseractModelManager modelManager,
     IStorage storage,
-    ILogger<SubtitleOcrEngine> logger
+    ILogger<SubtitleOcrEngine> logger,
+    IAnalysisProgressObserver? progress = null
 ) : ISubtitleOcrEngine
 {
     public async Task<SubtitleTrack> OcrAsync(
@@ -44,6 +46,10 @@ public partial class SubtitleOcrEngine(
         string tempDirectory = Path.Combine(Path.GetTempPath(), "nm-ocr");
         storage.CreateDirectory(tempDirectory);
         string ocrOutput = Path.Combine(tempDirectory, $"ocr-{Guid.NewGuid():N}.txt");
+
+        string jobId = Guid.NewGuid().ToString("N");
+        IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
+        observer.Report(jobId, "ocr", 0, $"starting ocr ({language})");
 
         try
         {
@@ -110,6 +116,8 @@ public partial class SubtitleOcrEngine(
                 language,
                 outputPath
             );
+
+            observer.Report(jobId, "ocr", 100, "done");
 
             _ = modelDirectory; // referenced for clarity; filter resolves tessdata via TESSDATA_PREFIX if set
 

@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
 
 /// <summary>
@@ -22,7 +23,8 @@ public class ChromaprintFingerprinter(
     EncoderOptions options,
     IProcessRunner processRunner,
     IStorage storage,
-    ILogger<ChromaprintFingerprinter> logger
+    ILogger<ChromaprintFingerprinter> logger,
+    IAnalysisProgressObserver? progress = null
 ) : IAudioFingerprinter
 {
     // chromaprint advances one fingerprint frame every 2048 samples at
@@ -37,6 +39,10 @@ public class ChromaprintFingerprinter(
         CancellationToken ct
     )
     {
+        string jobId = Guid.NewGuid().ToString("N");
+        IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
+        observer.Report(jobId, "fingerprint", 0, "fingerprinting");
+
         await using LocalPathLease inputLease = storage.AcquireLocalPath(filePath);
         List<string> args = ["-v", "error", "-nostdin"];
 
@@ -81,12 +87,14 @@ public class ChromaprintFingerprinter(
                 result.ExitCode,
                 result.StdErr
             );
+            observer.Report(jobId, "fingerprint", 100, "failed");
             return Empty(window);
         }
 
         uint[] hashes = ParseRawOutput(result.StdOut);
         TimeSpan startTime = window?.Start ?? TimeSpan.Zero;
 
+        observer.Report(jobId, "fingerprint", 100, "done");
         return new(hashes, ChromaprintFrameDuration, startTime);
     }
 

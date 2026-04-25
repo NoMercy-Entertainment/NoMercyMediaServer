@@ -5,6 +5,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Encoder.Progress;
 
 /// <summary>
 /// Runs short calibration encodes to populate <see cref="SpeedIndex"/>.
@@ -24,7 +25,8 @@ public class HardwareBenchmark(
     IProcessRunner processRunner,
     ISpeedIndexStore store,
     EncoderOptions options,
-    ILogger<HardwareBenchmark> logger
+    ILogger<HardwareBenchmark> logger,
+    IAnalysisProgressObserver? progress = null
 ) : IHardwareBenchmark
 {
     // Standard benchmark tiers for every target.
@@ -91,59 +93,83 @@ public class HardwareBenchmark(
     {
         Dictionary<SpeedKey, SpeedMeasurement> results = new();
 
-        foreach (CalibrationTarget target in SelectCandidates())
+        IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
+        string jobId = Guid.NewGuid().ToString("N");
+
+        // Enumerate all (target, tier) pairs once upfront so we can compute
+        // percent-complete as each probe finishes.
+        List<(CalibrationTarget Target, int Width, int Height)> allWork = [];
+        foreach (CalibrationTarget candidate in SelectCandidates())
         {
-            foreach ((int tierWidth, int tierHeight) in TiersForTarget(target))
+            foreach ((int w, int h) in TiersForTarget(candidate))
+                allWork.Add((candidate, w, h));
+        }
+
+        int total = allWork.Count;
+        int completed = 0;
+
+        observer.Report(jobId, "benchmark", 0, "starting");
+
+        foreach ((CalibrationTarget target, int tierWidth, int tierHeight) in allWork)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            try
             {
-                ct.ThrowIfCancellationRequested();
+                SpeedMeasurement? measured = await MeasureAsync(
+                    target,
+                    tierWidth,
+                    tierHeight,
+                    ct
+                );
 
-                try
-                {
-                    SpeedMeasurement? measured = await MeasureAsync(
-                        target,
-                        tierWidth,
-                        tierHeight,
-                        ct
-                    );
+                if (measured is null)
+                    continue;
 
-                    if (measured is null)
-                        continue;
+                SpeedKey key = new(
+                    target.Codec,
+                    target.Encoder.FfmpegName,
+                    tierWidth,
+                    target.Device?.Name
+                );
+                results[key] = measured;
 
-                    SpeedKey key = new(
-                        target.Codec,
-                        target.Encoder.FfmpegName,
-                        tierWidth,
-                        target.Device?.Name
-                    );
-                    results[key] = measured;
-
-                    logger.LogInformation(
-                        "Benchmarked {Encoder}{DeviceTag} @ {W}x{H}: {Fps:F1} fps ({Speed:F2}x)",
-                        target.Encoder.FfmpegName,
-                        target.Device is null ? " (CPU)" : $" on {target.Device.Name}",
-                        tierWidth,
-                        tierHeight,
-                        measured.Fps,
-                        measured.SpeedMultiplier
-                    );
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(
-                        ex,
-                        "Benchmark failed for {Encoder}{DeviceTag} @ {W}x{H} — skipping",
-                        target.Encoder.FfmpegName,
-                        target.Device is null ? "" : $" on {target.Device.Name}",
-                        tierWidth,
-                        tierHeight
-                    );
-                }
+                logger.LogInformation(
+                    "Benchmarked {Encoder}{DeviceTag} @ {W}x{H}: {Fps:F1} fps ({Speed:F2}x)",
+                    target.Encoder.FfmpegName,
+                    target.Device is null ? " (CPU)" : $" on {target.Device.Name}",
+                    tierWidth,
+                    tierHeight,
+                    measured.Fps,
+                    measured.SpeedMultiplier
+                );
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Benchmark failed for {Encoder}{DeviceTag} @ {W}x{H} — skipping",
+                    target.Encoder.FfmpegName,
+                    target.Device is null ? "" : $" on {target.Device.Name}",
+                    tierWidth,
+                    tierHeight
+                );
+            }
+            finally
+            {
+                completed++;
+                double pct = total > 0 ? (double)completed / total * 100.0 : 100.0;
+                string stage =
+                    $"{target.Encoder.FfmpegName} {tierWidth}x{tierHeight}";
+                observer.Report(jobId, "benchmark", pct, stage);
             }
         }
+
+        observer.Report(jobId, "benchmark", 100, "done");
 
         SpeedIndex index = new(results);
         store.Save(index);
