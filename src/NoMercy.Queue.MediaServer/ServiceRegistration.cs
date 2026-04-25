@@ -37,6 +37,12 @@ public static class ServiceRegistration
         });
         services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
 
+        // Phase 4.14 — orphan job recovery on boot. Runs before QueueRunner
+        // resets reserved jobs, so we can distinguish first-time orphans
+        // (which deserve one retry) from repeat offenders (which get
+        // moved to FailedJobs).
+        services.AddHostedService<OrphanJobRecoveryHostedService>();
+
         return services;
     }
 }

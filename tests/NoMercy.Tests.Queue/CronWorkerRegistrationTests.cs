@@ -141,6 +141,8 @@ public class CronWorkerRegistrationTests
 
         public void ResetAllReservedJobs() { }
 
+        public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) => [];
+
         public void AddFailedJob(FailedJobModel failedJob) { }
 
         public void RemoveFailedJob(FailedJobModel failedJob) { }

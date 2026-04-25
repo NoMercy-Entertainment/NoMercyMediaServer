@@ -57,6 +57,11 @@ public class TestQueueContextAdapter : IQueueContext
         }
     }
 
+    public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc)
+    {
+        return Jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
+    }
+
     public void AddFailedJob(FailedJobModel failedJob)
     {
         failedJob.Id = _nextFailedJobId++;

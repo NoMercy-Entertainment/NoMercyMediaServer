@@ -11,6 +11,7 @@ public interface IQueueContext : IDisposable
     bool JobExists(string payload);
     void UpdateJob(QueueJobModel job);
     void ResetAllReservedJobs();
+    IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc);
 
     void AddFailedJob(FailedJobModel failedJob);
     void RemoveFailedJob(FailedJobModel failedJob);

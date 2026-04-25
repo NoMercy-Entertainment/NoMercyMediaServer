@@ -118,6 +118,26 @@ public class SqliteQueueContext : IQueueContext
         SaveAndClear();
     }
 
+    public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc)
+    {
+        return _context
+            .QueueJobs.AsNoTracking()
+            .Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc)
+            .ToList()
+            .Select(e => new QueueJobModel
+            {
+                Id = (int)e.Id,
+                Priority = e.Priority,
+                Queue = e.Queue,
+                Payload = e.Payload,
+                Attempts = e.Attempts,
+                ReservedAt = e.ReservedAt,
+                AvailableAt = e.AvailableAt,
+                CreatedAt = e.CreatedAt,
+            })
+            .ToList();
+    }
+
     public void AddFailedJob(FailedJobModel failedJob)
     {
         FailedJobEntity entity = new()

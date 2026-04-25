@@ -194,6 +194,23 @@ public class EfQueueContextAdapter : IQueueContext
         }
     }
 
+    public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc)
+    {
+        QueueContext context = AcquireContext();
+        try
+        {
+            List<QueueJob> rows = context
+                .QueueJobs.AsNoTracking()
+                .Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc)
+                .ToList();
+            return rows.Select(ToModel).ToList();
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
+    }
+
     public void AddFailedJob(FailedJobModel failedJob)
     {
         QueueContext context = AcquireContext();
