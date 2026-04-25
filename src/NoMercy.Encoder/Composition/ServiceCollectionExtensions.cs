@@ -32,6 +32,7 @@ using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Encoder.Strategies.Mkv;
 using NoMercy.Encoder.Strategies.Mp4;
+using NoMercy.Encoder.Subscribers;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
 
@@ -338,6 +339,19 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IDiscScanner, DiscScanner>();
         services.AddSingleton<IDriveMonitor, DriveMonitor>();
         services.AddTransient<IDiscRipper, DiscRipper>();
+
+        // V3 event-bus subscribers — registered as singletons so the activator
+        // can resolve them once at start-up (their constructors subscribe to
+        // the event bus). Coexists with the legacy MediaProcessing subscribers
+        // — V3 AutoEncode is dormant until EncoderOptions.WatchedFolderProfiles
+        // is populated, so default installs see no behaviour change. Each
+        // subscriber has its own opt-out flag on EncoderOptions for hard
+        // disable.
+        services.AddSingleton<AutoEncodeSubscriber>();
+        services.AddSingleton<IntroDetectSubscriber>();
+        services.AddSingleton<OcrPostEncodeSubscriber>();
+        services.AddSingleton<CropDetectSubscriber>();
+        services.AddHostedService<V3SubscriberActivator>();
 
         return services;
     }
