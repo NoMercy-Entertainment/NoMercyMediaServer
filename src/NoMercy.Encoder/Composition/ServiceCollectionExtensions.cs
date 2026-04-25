@@ -207,6 +207,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IOutputStrategy, Mp3OutputStrategy>();
         services.AddTransient<IOutputStrategy, FlacOutputStrategy>();
         services.AddTransient<IOutputStrategy, OggOutputStrategy>();
+        services.AddTransient<IOutputStrategy, AudioHlsOutputStrategy>();
         services.AddTransient<IOutputStrategyFactory, OutputStrategyFactory>();
 
         // Pipeline stages — each concrete stage is also reachable via its
@@ -247,6 +248,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IEncodingStrategy, Mp3Strategy>();
         services.AddTransient<IEncodingStrategy, FlacStrategy>();
         services.AddTransient<IEncodingStrategy, OggStrategy>();
+        services.AddTransient<IEncodingStrategy, AudioHlsStrategy>();
         services.AddTransient<IStrategyResolver, StrategyResolver>();
         services.AddTransient<IEncodingOrchestrator, EncodingOrchestrator>();
 
