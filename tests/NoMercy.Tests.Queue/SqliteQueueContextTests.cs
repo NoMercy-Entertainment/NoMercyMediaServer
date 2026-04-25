@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 using NoMercyQueue.Sqlite;
@@ -469,6 +470,7 @@ public class SqliteQueueContextTests : IDisposable
         }
         finally
         {
+            SqliteConnection.ClearAllPools();
             if (File.Exists(path))
                 File.Delete(path);
         }
@@ -485,6 +487,7 @@ public class SqliteQueueContextTests : IDisposable
         }
         finally
         {
+            SqliteConnection.ClearAllPools();
             if (File.Exists(path))
                 File.Delete(path);
         }
