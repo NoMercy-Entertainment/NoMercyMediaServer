@@ -39,6 +39,80 @@ public abstract class TwoPassStrategyBase(
         CancellationToken ct
     )
     {
+        try
+        {
+            return await EncodeInternalAsync(request, progress, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // User cancelled — delete the checkpoint so there is no stale
+            // resume point. Also remove any partial output the encode wrote.
+            // Both operations are best-effort: log and continue on error.
+            await DeleteCheckpointOnCancelAsync(request.OutputDirectory);
+            DeletePartialOutput(request.OutputDirectory);
+            throw;
+        }
+    }
+
+    private async Task DeleteCheckpointOnCancelAsync(string outputDirectory)
+    {
+        try
+        {
+            await checkpointStore.DeleteAsync(outputDirectory);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to delete checkpoint after cancellation for {OutputDirectory}",
+                outputDirectory
+            );
+        }
+    }
+
+    private void DeletePartialOutput(string outputDirectory)
+    {
+        try
+        {
+            if (!storage.Exists(outputDirectory))
+                return;
+
+            foreach (
+                NoMercy.Storage.StorageEntry entry in storage
+                    .List(outputDirectory, "*", recursive: true)
+                    .Where(e => !e.IsDirectory)
+            )
+            {
+                try
+                {
+                    storage.Delete(entry.Path);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Failed to delete partial output file {File} after cancellation",
+                        entry.Path
+                    );
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to enumerate partial output for deletion after cancellation in {OutputDirectory}",
+                outputDirectory
+            );
+        }
+    }
+
+    private async Task<EncodingResult> EncodeInternalAsync(
+        EncodingRequest request,
+        IProgressObserver? progress,
+        CancellationToken ct
+    )
+    {
         string statsFilePath = ResolveStatsFilePath(request);
         int variantCount = Math.Max(1, request.Profile.VideoOutputs.Length);
 

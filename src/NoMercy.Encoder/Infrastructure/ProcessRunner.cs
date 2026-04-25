@@ -190,12 +190,9 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         }
         catch (OperationCanceledException)
         {
-            try
-            {
-                process.Kill(entireProcessTree: true);
-            }
-            catch (InvalidOperationException) { }
-
+            // User-initiated cancellation: attempt a graceful shutdown first,
+            // then force-kill if FFmpeg does not exit within the grace period.
+            await KillGracefullyAsync(process, executable, logger);
             throw;
         }
         finally
@@ -224,5 +221,72 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         );
 
         return result;
+    }
+
+    /// <summary>
+    /// Attempts a graceful shutdown before resorting to force-kill.
+    /// On Windows: <c>CloseMainWindow()</c> sends WM_CLOSE (analogous to
+    /// Ctrl+C for console apps); if the process does not exit within 5 s,
+    /// falls back to <c>Kill(entireProcessTree: true)</c>.
+    /// On Linux/macOS: <c>Kill(false)</c> sends SIGTERM; same 5 s grace,
+    /// then <c>Kill(true)</c> (SIGKILL).
+    /// </summary>
+    private static async Task KillGracefullyAsync(
+        Process process,
+        string executable,
+        ILogger logger
+    )
+    {
+        if (process.HasExited)
+            return;
+
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                // CloseMainWindow sends WM_CLOSE to the console window;
+                // FFmpeg treats this like Ctrl+C and flushes output before exiting.
+                process.CloseMainWindow();
+            }
+            else
+            {
+                // SIGTERM — FFmpeg catches this and exits cleanly.
+                process.Kill(entireProcessTree: false);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            return; // already exited
+        }
+
+        // Wait up to 5 s for graceful exit.
+        try
+        {
+            using CancellationTokenSource graceCts = new(TimeSpan.FromSeconds(5));
+            await process.WaitForExitAsync(graceCts.Token);
+            logger.LogDebug(
+                "Process exited gracefully after cancel signal: {Executable}",
+                executable
+            );
+            return;
+        }
+        catch
+        {
+            // Grace period expired or wait failed — fall through to force-kill.
+        }
+
+        // Force-kill the entire process tree.
+        try
+        {
+            if (!process.HasExited)
+            {
+                logger.LogDebug(
+                    "Grace period expired — force-killing process tree: {Executable}",
+                    executable
+                );
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (InvalidOperationException) { }
     }
 }
