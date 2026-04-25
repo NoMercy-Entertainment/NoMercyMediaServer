@@ -19,8 +19,21 @@ using NoMercy.Encoder.Distribution;
 ///
 /// Progress-push path is exempt (spec: anonymous):
 ///   /api/v1/distribution/workers/{id}/tasks/{id}/progress
+///
+/// Remote-worker token introspection (Phase 4.9)
+/// ──────────────────────────────────────────────
+/// When a request carries X-NoMercy-WorkerToken the middleware first
+/// checks whether that token is active via
+/// <see cref="ILicenseTokenClient.IntrospectAsync"/>.  If active the
+/// token's secret is used to verify the HMAC; if not the request is
+/// rejected with 401.  The introspect result is cached for 30 s inside
+/// the client — this path does not block on network I/O for every request.
 /// </summary>
-public class HmacValidationMiddleware(RequestDelegate next, IOptions<EncoderOptions> encoderOptions)
+public class HmacValidationMiddleware(
+    RequestDelegate next,
+    IOptions<EncoderOptions> encoderOptions,
+    ILicenseTokenClient? licenseTokenClient = null
+)
 {
     private static readonly TimeSpan ReplayWindow = TimeSpan.FromMinutes(5);
 
@@ -50,7 +63,35 @@ public class HmacValidationMiddleware(RequestDelegate next, IOptions<EncoderOpti
             return;
         }
 
-        string? secret = encoderOptions.Value.DistributedEncodingSigningKey;
+        // Determine the signing secret.
+        // Remote-worker path: X-NoMercy-WorkerToken is present → introspect it.
+        string? workerToken = context.Request.Headers["X-NoMercy-WorkerToken"].ToString();
+        string? secret;
+
+        if (!string.IsNullOrWhiteSpace(workerToken) && licenseTokenClient is not null)
+        {
+            IntrospectResult introspect = await licenseTokenClient
+                .IntrospectAsync(workerToken, context.RequestAborted)
+                .ConfigureAwait(false);
+
+            if (!introspect.Active)
+            {
+                await WriteHmacError(
+                    context,
+                    "worker_token_invalid",
+                    introspect.Message ?? "Worker token is not active"
+                );
+                return;
+            }
+
+            // The worker token IS the secret used for HMAC on this request.
+            secret = workerToken;
+        }
+        else
+        {
+            secret = encoderOptions.Value.DistributedEncodingSigningKey;
+        }
+
         if (string.IsNullOrWhiteSpace(secret))
         {
             // Distributed encoding not configured — pass through; other auth

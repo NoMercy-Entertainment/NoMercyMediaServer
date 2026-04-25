@@ -1,0 +1,281 @@
+namespace NoMercy.Encoder.Distribution;
+
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+
+/// <summary>
+/// Short-lived HMAC secret issued by api.nomercy.tv for a paid licensed
+/// install. Workers rotate this token before expiry so signing keys stay
+/// fresh without operator intervention.
+/// </summary>
+public sealed record ClusterToken(string Secret, DateTime ExpiresAt, IReadOnlyList<string> Scopes);
+
+/// <summary>
+/// Discriminated failure reason returned when a token request does not
+/// succeed, so callers can apply the right recovery strategy without
+/// parsing error strings.
+/// </summary>
+public enum LicenseFailureKind
+{
+    /// <summary>Network error or unexpected HTTP status.</summary>
+    NetworkError,
+
+    /// <summary>
+    /// The coordinator rejected our credentials (401) — HMAC key may be
+    /// wrong or the device cert is not yet trusted.
+    /// </summary>
+    Unauthenticated,
+
+    /// <summary>
+    /// The license has been revoked or the plan does not include distributed
+    /// encoding (403). The worker must stop re-registering.
+    /// </summary>
+    EntitlementRevoked,
+}
+
+/// <summary>
+/// Result of a token request.  Token is non-null on success;
+/// Failure + Message are set on every error path.
+/// </summary>
+public sealed record ClusterTokenResult(
+    ClusterToken? Token,
+    LicenseFailureKind? Failure,
+    string? Message
+);
+
+/// <summary>
+/// Result of an introspect call. Active == true means the token is still
+/// valid for its stated scopes.
+/// </summary>
+public sealed record IntrospectResult(bool Active, IReadOnlyList<string> Scopes, string? Message);
+
+public interface ILicenseTokenClient
+{
+    /// <summary>
+    /// Requests a short-lived cluster token from api.nomercy.tv.
+    /// Returns a failed result — never throws — so callers can act on the
+    /// failure kind without try/catch overhead.
+    /// </summary>
+    Task<ClusterTokenResult> RequestAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Checks whether a token issued to a remote worker is still active.
+    /// Result is cached for 30 s to avoid coordinator fan-out on busy
+    /// middleware paths.
+    /// </summary>
+    Task<IntrospectResult> IntrospectAsync(string token, CancellationToken ct);
+}
+
+/// <summary>
+/// HTTP implementation of <see cref="ILicenseTokenClient"/>.
+///
+/// Design notes
+/// ────────────
+/// • Does NOT depend on AppFiles or Globals — those live in NmSystem which
+///   the encoder test project deliberately excludes.  Callers (composition
+///   root / DI factory) inject the cert/token strings at construction time.
+/// • The HttpClient is injected so tests can swap in a fake handler without
+///   hitting the network.
+/// • Introspect responses are cached in a simple in-memory dictionary keyed
+///   on the raw token string with a 30-second TTL.
+/// </summary>
+public sealed class LicenseTokenClient : ILicenseTokenClient
+{
+    private const string TokenEndpoint = "cluster/token";
+    private const string IntrospectEndpoint = "cluster/token/introspect";
+    private static readonly TimeSpan IntrospectCacheTtl = TimeSpan.FromSeconds(30);
+
+    private readonly HttpClient _http;
+    private readonly Func<string?> _accessTokenProvider;
+    private readonly string? _certPem;
+    private readonly string? _keyPem;
+
+    // Introspect cache: token → (result, cachedAt)
+    private readonly Dictionary<
+        string,
+        (IntrospectResult Result, DateTime CachedAt)
+    > _introspectCache = new(StringComparer.Ordinal);
+
+    private readonly object _cacheLock = new();
+
+    /// <param name="http">
+    ///   HttpClient whose BaseAddress is already pointed at api.nomercy.tv.
+    /// </param>
+    /// <param name="accessTokenProvider">
+    ///   Returns the current Keycloak access token (may be null when auth is
+    ///   not yet ready — the request will fail gracefully).
+    /// </param>
+    /// <param name="certPem">PEM-encoded device certificate (optional).</param>
+    /// <param name="keyPem">PEM-encoded device private key (optional).</param>
+    public LicenseTokenClient(
+        HttpClient http,
+        Func<string?> accessTokenProvider,
+        string? certPem = null,
+        string? keyPem = null
+    )
+    {
+        _http = http;
+        _accessTokenProvider = accessTokenProvider;
+        _certPem = certPem;
+        _keyPem = keyPem;
+    }
+
+    public async Task<ClusterTokenResult> RequestAsync(CancellationToken ct)
+    {
+        try
+        {
+            HttpRequestMessage request = BuildRequest(HttpMethod.Post, TokenEndpoint);
+            request.Content = JsonContent.Create(
+                new TokenRequestBody(CertPem: _certPem, KeyPem: _keyPem)
+            );
+
+            HttpResponseMessage response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+
+            return response.StatusCode switch
+            {
+                HttpStatusCode.OK => await ParseSuccessAsync(response, ct).ConfigureAwait(false),
+                HttpStatusCode.Unauthorized => new(
+                    null,
+                    LicenseFailureKind.Unauthenticated,
+                    $"401 from coordinator"
+                ),
+                HttpStatusCode.Forbidden => new(
+                    null,
+                    LicenseFailureKind.EntitlementRevoked,
+                    $"403 from coordinator"
+                ),
+                _ => new(
+                    null,
+                    LicenseFailureKind.NetworkError,
+                    $"Unexpected {(int)response.StatusCode} from coordinator"
+                ),
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(null, LicenseFailureKind.NetworkError, ex.Message);
+        }
+    }
+
+    public async Task<IntrospectResult> IntrospectAsync(string token, CancellationToken ct)
+    {
+        // Check cache first.
+        lock (_cacheLock)
+        {
+            if (
+                _introspectCache.TryGetValue(
+                    token,
+                    out (IntrospectResult Result, DateTime CachedAt) entry
+                )
+                && DateTime.UtcNow - entry.CachedAt < IntrospectCacheTtl
+            )
+                return entry.Result;
+        }
+
+        IntrospectResult result;
+
+        try
+        {
+            HttpRequestMessage request = BuildRequest(HttpMethod.Post, IntrospectEndpoint);
+            request.Content = JsonContent.Create(new IntrospectRequestBody(Token: token));
+
+            HttpResponseMessage response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                TokenIntrospectResponse? body =
+                    await response.Content.ReadFromJsonAsync<TokenIntrospectResponse>(
+                        cancellationToken: ct
+                    );
+                result = new(
+                    Active: body?.Active ?? false,
+                    Scopes: body?.Scopes ?? [],
+                    Message: null
+                );
+            }
+            else
+            {
+                result = new(
+                    Active: false,
+                    Scopes: [],
+                    Message: $"Introspect returned {(int)response.StatusCode}"
+                );
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            result = new(Active: false, Scopes: [], Message: ex.Message);
+        }
+
+        lock (_cacheLock)
+            _introspectCache[token] = (result, DateTime.UtcNow);
+
+        return result;
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private HttpRequestMessage BuildRequest(HttpMethod method, string endpoint)
+    {
+        HttpRequestMessage request = new(method, endpoint);
+        string? accessToken = _accessTokenProvider();
+        if (!string.IsNullOrWhiteSpace(accessToken))
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        return request;
+    }
+
+    private static async Task<ClusterTokenResult> ParseSuccessAsync(
+        HttpResponseMessage response,
+        CancellationToken ct
+    )
+    {
+        TokenResponse? body = await response
+            .Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct)
+            .ConfigureAwait(false);
+
+        if (body is null || string.IsNullOrWhiteSpace(body.Secret))
+            return new(
+                null,
+                LicenseFailureKind.NetworkError,
+                "Coordinator returned empty token body"
+            );
+
+        ClusterToken token = new(
+            Secret: body.Secret,
+            ExpiresAt: body.ExpiresAt,
+            Scopes: body.Scopes ?? []
+        );
+        return new(token, null, null);
+    }
+
+    // ── Wire-format DTOs (private — not part of the public API) ─────────────
+
+    private sealed record TokenRequestBody(
+        [property: JsonPropertyName("cert_pem")] string? CertPem,
+        [property: JsonPropertyName("key_pem")] string? KeyPem
+    );
+
+    private sealed record IntrospectRequestBody([property: JsonPropertyName("token")] string Token);
+
+    private sealed record TokenResponse(
+        [property: JsonPropertyName("secret")] string? Secret,
+        [property: JsonPropertyName("expires_at")] DateTime ExpiresAt,
+        [property: JsonPropertyName("scopes")] List<string>? Scopes
+    );
+
+    private sealed record TokenIntrospectResponse(
+        [property: JsonPropertyName("active")] bool Active,
+        [property: JsonPropertyName("scopes")] List<string>? Scopes
+    );
+}

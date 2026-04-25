@@ -171,6 +171,10 @@ public static class ServiceCollectionExtensions
         // webhooks for Discord/Slack/email/etc.
         services.AddSingleton<INotificationDispatcher, WebhookNotificationDispatcher>();
 
+        // Subtitle burn-in filter builders
+        services.AddTransient<AssBurnInFilterBuilder>();
+        services.AddTransient<PgsBurnInFilterBuilder>();
+
         // Building blocks
         services.AddTransient<IFilterGraphBuilder, FilterGraphBuilder>();
         services.AddTransient<IPlaylistGenerator, PlaylistGenerator>();
@@ -260,6 +264,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILiveEncoder, LiveEncoder>();
         services.AddSingleton<ILiveStreamingService, LiveStreamingService>();
         services.AddTransient<ILivePlaylistBuilder, LivePlaylistBuilder>();
+
+        // At startup: delete any lts-* orphan dirs left by a previous crash.
+        services.AddHostedService<LiveTranscodeOrphanSweeper>();
+
+        // Every 30 s: evict sessions with no playlist/segment hit in the last N minutes.
+        services.AddHostedService<LiveSessionIdleReaper>();
 
         // Distribution — LocalWorkerDispatcher is the default; remote workers
         // land as a follow-up behind a feature flag. Plugins can register a

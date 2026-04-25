@@ -22,14 +22,46 @@ using NoMercy.Encoder.Hardware;
 /// and retries on the next heartbeat interval. The coordinator's
 /// registry evicts stale workers after 60s of silence, so a brief
 /// outage self-heals when the worker comes back.
+///
+/// License-gated token rotation (Phase 4.9)
+/// ─────────────────────────────────────────
+/// On every heartbeat tick the service checks whether the cached
+/// <see cref="ClusterToken"/> is within 60 s of expiry.  If so it calls
+/// <see cref="ILicenseTokenClient.RequestAsync"/> to rotate.
+///
+/// Failure handling:
+///   • 401 from token endpoint → retry with exponential backoff (1–60 s).
+///   • 403 from token endpoint → entitlement revoked; service stops
+///     re-registering, sets <see cref="ClusterTokenHolder.IsRevoked"/>.
+///   • Free-tier (no signing key AND first 403) → service shuts down cleanly.
 /// </summary>
 public class WorkerSelfRegistrationService(
     IHardwareCapabilities capabilities,
     EncoderOptions options,
     IHttpClientFactory httpClientFactory,
-    ILogger<WorkerSelfRegistrationService> logger
+    ILogger<WorkerSelfRegistrationService> logger,
+    ClusterTokenHolder? tokenHolder = null,
+    ILicenseTokenClient? licenseTokenClient = null
 ) : BackgroundService
 {
+    // Token is considered "near expiry" when it has less than this left.
+    private static readonly TimeSpan TokenRefreshLeadTime = TimeSpan.FromSeconds(60);
+
+    // Backoff sequence for repeated 401s (doubles each step, capped at 60 s).
+    private static readonly TimeSpan[] BackoffSequence =
+    [
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(4),
+        TimeSpan.FromSeconds(8),
+        TimeSpan.FromSeconds(16),
+        TimeSpan.FromSeconds(32),
+        TimeSpan.FromSeconds(60),
+    ];
+
+    // Tracks consecutive 401 failures for backoff index.
+    private int _consecutiveAuthFailures;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!ShouldRun())
@@ -44,6 +76,10 @@ public class WorkerSelfRegistrationService(
         http.BaseAddress = new(options.CoordinatorUrl!);
         http.Timeout = TimeSpan.FromSeconds(10);
 
+        // Perform initial token fetch before registering so heartbeats
+        // carry the live cluster secret from the first request onward.
+        await TryRefreshTokenAsync(stoppingToken).ConfigureAwait(false);
+
         if (!await TryRegisterAsync(http, stoppingToken).ConfigureAwait(false))
         {
             logger.LogWarning(
@@ -54,6 +90,14 @@ public class WorkerSelfRegistrationService(
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            // Check for license revocation before sleeping — avoids one extra
+            // heartbeat after a 403 is observed during the initial token fetch.
+            if (tokenHolder?.IsRevoked == true)
+            {
+                logger.LogInformation("License revoked — worker self-registration stopped");
+                return;
+            }
+
             try
             {
                 await Task.Delay(options.WorkerHeartbeatInterval, stoppingToken)
@@ -62,6 +106,16 @@ public class WorkerSelfRegistrationService(
             catch (OperationCanceledException)
             {
                 break;
+            }
+
+            // Rotate cluster token if it is near expiry.
+            await MaybeRefreshTokenAsync(stoppingToken).ConfigureAwait(false);
+
+            // Stop after revocation that was detected during token refresh.
+            if (tokenHolder?.IsRevoked == true)
+            {
+                logger.LogInformation("License revoked — worker self-registration stopped");
+                return;
             }
 
             bool alive = await TryHeartbeatAsync(http, stoppingToken).ConfigureAwait(false);
@@ -81,6 +135,106 @@ public class WorkerSelfRegistrationService(
         !string.IsNullOrWhiteSpace(options.CoordinatorUrl)
         && !string.IsNullOrWhiteSpace(options.WorkerSelfBaseUrl)
         && options.IsDistributedEncodingEnabled;
+
+    // ── Token rotation ────────────────────────────────────────────────────────
+
+    private async Task TryRefreshTokenAsync(CancellationToken ct)
+    {
+        if (licenseTokenClient is null || tokenHolder is null)
+            return;
+
+        ClusterTokenResult result = await licenseTokenClient.RequestAsync(ct).ConfigureAwait(false);
+
+        if (result.Token is not null)
+        {
+            tokenHolder.Update(result.Token);
+            _consecutiveAuthFailures = 0;
+            logger.LogDebug(
+                "Cluster token refreshed, expires {ExpiresAt:O}",
+                result.Token.ExpiresAt
+            );
+            return;
+        }
+
+        await HandleTokenFailureAsync(result, ct).ConfigureAwait(false);
+    }
+
+    private async Task MaybeRefreshTokenAsync(CancellationToken ct)
+    {
+        if (licenseTokenClient is null || tokenHolder is null)
+            return;
+
+        ClusterToken? current = tokenHolder.Current;
+        bool nearExpiry =
+            current is null || current.ExpiresAt - DateTime.UtcNow < TokenRefreshLeadTime;
+
+        if (!nearExpiry)
+            return;
+
+        await TryRefreshTokenAsync(ct).ConfigureAwait(false);
+    }
+
+    private async Task HandleTokenFailureAsync(ClusterTokenResult result, CancellationToken ct)
+    {
+        if (tokenHolder is null)
+            return;
+
+        switch (result.Failure)
+        {
+            case LicenseFailureKind.EntitlementRevoked:
+                // Free-tier: no signing key was ever set AND we got 403 → just
+                // shut down quietly without marking "revoked" in UI.
+                if (!options.IsDistributedEncodingEnabled)
+                {
+                    logger.LogInformation(
+                        "Free-tier install received 403 from token endpoint — distributed encoding not available"
+                    );
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Distributed encoding license revoked (403 from coordinator) — "
+                            + "worker will stop re-registering. Resolve the license issue and restart."
+                    );
+                    tokenHolder.IsRevoked = true;
+                }
+
+                return;
+
+            case LicenseFailureKind.Unauthenticated:
+                _consecutiveAuthFailures++;
+                int backoffIndex = Math.Min(
+                    _consecutiveAuthFailures - 1,
+                    BackoffSequence.Length - 1
+                );
+                TimeSpan delay = BackoffSequence[backoffIndex];
+                logger.LogWarning(
+                    "Token request returned 401 (failure #{Count}) — backing off {Delay} before next attempt",
+                    _consecutiveAuthFailures,
+                    delay
+                );
+                try
+                {
+                    await Task.Delay(delay, ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Service is stopping — let it fall through.
+                }
+
+                return;
+
+            default:
+                logger.LogDebug(
+                    "Token request failed ({Failure}): {Message}",
+                    result.Failure,
+                    result.Message
+                );
+                return;
+        }
+    }
+
+    // ── Registration / heartbeat / unregister ─────────────────────────────────
 
     private async Task<bool> TryRegisterAsync(HttpClient http, CancellationToken ct)
     {
