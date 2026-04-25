@@ -3,9 +3,20 @@ namespace NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Subtitles;
 
 public class StreamActionResolver
 {
+    private readonly ISubtitleRouter _subtitleRouter;
+
+    public StreamActionResolver()
+        : this(new SubtitleRouter()) { }
+
+    public StreamActionResolver(ISubtitleRouter subtitleRouter)
+    {
+        _subtitleRouter = subtitleRouter;
+    }
+
     // Maps AudioCodecType enum values to the ffprobe codec_name strings that
     // ffprobe returns in stream.codec_name.  A type may map to multiple names
     // (e.g. DTS has two aliases).
@@ -115,32 +126,35 @@ public class StreamActionResolver
         OutputFormat format
     )
     {
-        // BurnIn is a video filter — callers treat this as Transcode.
-        if (profile.Mode == SubtitleMode.BurnIn)
-        {
-            return StreamAction.Transcode;
-        }
+        SubtitleSourceType sourceType = source.IsTextBased
+            ? SubtitleSourceType.Text
+            : SubtitleSourceType.Bitmap;
 
-        if (source.IsTextBased)
-        {
-            return format switch
-            {
-                OutputFormat.Mkv => StreamAction.Copy,
-                OutputFormat.Hls => StreamAction.Extract,
-                OutputFormat.Mp4 => StreamAction.Extract,
-                OutputFormat.Dash => StreamAction.Extract,
-                _ => StreamAction.Extract,
-            };
-        }
+        SubtitleRouting routing = _subtitleRouter.Resolve(sourceType, format, profile.Mode);
 
-        // Bitmap subtitle.
-        return format switch
+        return MapToStreamAction(routing.Action);
+    }
+
+    // SubtitleRouter speaks the granular Phase 4 vocabulary (ExtractVtt /
+    // ExtractVttSidecar / MovText / Ocr / OcrSidecar / BurnIn / Copy / None).
+    // Legacy callers (PreviewEngine, the per-stream plan emitter) still consume
+    // the three-value StreamAction enum, so we collapse the rich routing back
+    // to {Copy, Extract, Transcode}. Anything that produces a separate output
+    // file is Extract; anything that requires re-encoding the source bytes
+    // (BurnIn, OCR, Ocr-sidecar) is Transcode.
+    private static StreamAction MapToStreamAction(SubtitleAction action) =>
+        action switch
         {
-            OutputFormat.Mkv => StreamAction.Copy,
-            // Bitmap subs cannot be embedded in HLS/MP4/DASH; burn in.
+            SubtitleAction.Copy => StreamAction.Copy,
+            SubtitleAction.None => StreamAction.Copy,
+            SubtitleAction.ExtractVtt => StreamAction.Extract,
+            SubtitleAction.ExtractVttSidecar => StreamAction.Extract,
+            SubtitleAction.MovText => StreamAction.Extract,
+            SubtitleAction.Ocr => StreamAction.Transcode,
+            SubtitleAction.OcrSidecar => StreamAction.Transcode,
+            SubtitleAction.BurnIn => StreamAction.Transcode,
             _ => StreamAction.Transcode,
         };
-    }
 
     // -------------------------------------------------------------------------
     // Video passthrough (remux only — rare)
