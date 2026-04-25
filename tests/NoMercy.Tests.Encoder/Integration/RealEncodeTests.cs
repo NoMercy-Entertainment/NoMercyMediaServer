@@ -437,6 +437,112 @@ public class RealEncodeTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task EncodeAsync_HlsTwoPassProfile_ProducesValidPlaylist()
+    {
+        // Two-pass encodes are slower — give them a longer timeout.
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
+
+        string outputDir = Path.Combine(_testDir, "output-twopass");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "test-hls-twopass-180p",
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                new(
+                    Codec: VideoCodecType.H264,
+                    Width: 320,
+                    Height: 180,
+                    BitrateKbps: 500,
+                    Crf: 40,
+                    Preset: "ultrafast",
+                    Profile: "baseline",
+                    Level: "3.0",
+                    ConvertHdrToSdr: false,
+                    KeyframeIntervalSeconds: 2,
+                    TenBit: false
+                ),
+            ],
+            AudioOutputs:
+            [
+                new(
+                    Codec: AudioCodecType.Opus,
+                    BitrateKbps: 64,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["und"],
+                    Loudness: LoudnessMode.None
+                ),
+            ],
+            SubtitleOutputs: [],
+            EncodeMode: EncodeMode.TwoPass
+        );
+
+        EncodingRequest request = new(
+            InputPath: _inputFile,
+            OutputDirectory: outputDir,
+            Profile: profile
+        );
+
+        TestProgressObserver observer = new();
+        IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
+
+        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"Two-pass encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+        result.OutputPath.Should().NotBeNullOrWhiteSpace();
+        result.Duration.Should().BeGreaterThan(TimeSpan.Zero);
+
+        // Verify HLS output: at least one playlist and at least one segment
+        string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);
+        string[] segments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+
+        playlists
+            .Should()
+            .NotBeEmpty("two-pass HLS output should contain at least one .m3u8 playlist");
+        segments.Should().NotBeEmpty("two-pass HLS output should contain at least one .ts segment");
+
+        // Verify all referenced segments actually exist on disk
+        foreach (string playlist in playlists)
+        {
+            string playlistDir = Path.GetDirectoryName(playlist)!;
+            string[] lines = await File.ReadAllLinesAsync(playlist, cts.Token);
+            IEnumerable<string> segmentRefs = lines.Where(l =>
+                !l.StartsWith('#') && (l.EndsWith(".ts") || l.EndsWith(".mp4"))
+            );
+
+            foreach (string segRef in segmentRefs)
+            {
+                string segPath = Path.IsPathRooted(segRef)
+                    ? segRef
+                    : Path.Combine(playlistDir, segRef);
+                File.Exists(segPath)
+                    .Should()
+                    .BeTrue(
+                        $"segment '{segRef}' referenced in '{Path.GetFileName(playlist)}' should exist on disk"
+                    );
+            }
+        }
+
+        // Verify pass-1 stats files are cleaned up after successful two-pass encode
+        string statsDir = Path.Combine(outputDir, ".2pass");
+        bool anyStatsRemaining =
+            Directory.Exists(statsDir)
+            && Directory.GetFiles(statsDir, "*.log", SearchOption.AllDirectories).Length > 0;
+        anyStatsRemaining
+            .Should()
+            .BeFalse(
+                "pass-1 .log stats files should be deleted after a successful two-pass encode"
+            );
+    }
+
+    [Fact]
     public void SeedProfiles_DeserializeToValidEncodingProfiles()
     {
         IReadOnlyList<EncodingProfile> profiles = BuiltinPresets.All();
