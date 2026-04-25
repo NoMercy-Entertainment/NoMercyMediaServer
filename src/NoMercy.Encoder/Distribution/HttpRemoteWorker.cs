@@ -11,7 +11,7 @@ using NoMercy.Encoder.Progress;
 
 /// <summary>
 /// HTTP-based remote worker. Posts signed <see cref="EncodeTask"/>
-/// payloads to the worker's /api/v1/worker/execute-task endpoint and
+/// payloads to the worker's /api/v1/worker/tasks endpoint and
 /// unwraps the signed <see cref="DispatchResult"/> response. Capabilities
 /// and budget snapshots are cached in memory from the last handshake /
 /// heartbeat — the caller (registry / heartbeat service) refreshes them
@@ -81,7 +81,7 @@ public class HttpRemoteWorker : IRemoteWorker
         HttpContent content = new ByteArrayContent(bodyBytes);
         content.Headers.ContentType = new("application/json") { CharSet = "utf-8" };
 
-        const string path = "api/v1/worker/execute-task";
+        const string path = "api/v1/worker/tasks";
         HttpRequestMessage request = new(HttpMethod.Post, path) { Content = content };
 
         if (_hmacSigner is not null)

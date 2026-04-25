@@ -119,6 +119,12 @@ public class EncoderOptions
     /// </summary>
     public Dictionary<string, EncodingProfile> WatchedFolderProfiles { get; } = [];
 
+    /// <summary>
+    /// Blu-ray / AACS / BD+ specific overrides.
+    /// All fields are optional — the bundled nomercy-ffmpeg defaults apply when unset.
+    /// </summary>
+    public BluRayOptions? BluRay { get; set; }
+
     public byte[] GetDistributedEncodingSigningKey()
     {
         if (string.IsNullOrWhiteSpace(DistributedEncodingSigningKey))
@@ -131,7 +137,7 @@ public class EncoderOptions
     /// <summary>
     /// Coordinator URL this worker should register with on boot. When set,
     /// the self-registration hosted service POSTs to
-    /// <c>{CoordinatorUrl}/api/v1/dashboard/workers/register</c> on startup
+    /// <c>{CoordinatorUrl}/api/v1/distribution/workers/register</c> on startup
     /// and sends heartbeats every
     /// <see cref="WorkerHeartbeatInterval"/>. Null = this process is a
     /// coordinator (or a standalone server) and shouldn't self-register.
@@ -159,4 +165,37 @@ public class EncoderOptions
     /// default) so transient network blips don't evict the worker.
     /// </summary>
     public TimeSpan WorkerHeartbeatInterval { get; set; } = TimeSpan.FromSeconds(20);
+}
+
+/// <summary>
+/// Blu-ray decryption path overrides. All fields are optional — when unset,
+/// libaacs and libbdplus fall back to their standard search paths and the
+/// KEYDB baked into nomercy-ffmpeg at build time.
+///
+/// <para>
+/// Environment variable mapping (forwarded to the ffmpeg child process):
+/// <list type="bullet">
+///   <item><term>LIBAACS_KEY_DB</term><description>Absolute path to a KEYDB.cfg file.</description></item>
+///   <item><term>LIBBDPLUS_DATABASE</term><description>Absolute path to the BD+ converter database directory.</description></item>
+/// </list>
+/// Variable names sourced from the libaacs source (src/libaacs/aacs.c) and
+/// libbdplus source (src/libbdplus/bdplus.c) — assumed correct; update here
+/// if a future libaacs/libbdplus release changes them.
+/// </para>
+/// </summary>
+public sealed record BluRayOptions
+{
+    /// <summary>
+    /// Absolute path to a KEYDB.cfg file. When set, the encoder forwards
+    /// this as <c>LIBAACS_KEY_DB</c> to every ffmpeg/ffprobe child process
+    /// that opens a bluray: URL. Leave null to use the bundled KEYDB.
+    /// </summary>
+    public string? KeyDbOverridePath { get; init; }
+
+    /// <summary>
+    /// Absolute path to the BD+ converter database directory. When set,
+    /// forwarded as <c>LIBBDPLUS_DATABASE</c> to child processes. Leave null
+    /// to use the database bundled with nomercy-ffmpeg.
+    /// </summary>
+    public string? AacsKeysOverridePath { get; init; }
 }

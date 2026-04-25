@@ -195,7 +195,11 @@ public class DistributionEndToEndTests
             CancellationToken cancellationToken
         )
         {
-            if (!request.RequestUri!.AbsolutePath.Contains("/worker/execute-task"))
+            string absolutePath = request.RequestUri!.AbsolutePath;
+            if (
+                !absolutePath.Contains("/worker/tasks")
+                && !absolutePath.Contains("/worker/execute-task")
+            )
                 return new(HttpStatusCode.NotFound);
 
             string body = await request.Content!.ReadAsStringAsync(cancellationToken);

@@ -10,7 +10,7 @@ using NoMercy.Storage;
 /// <summary>
 /// Downloads task source files from the coordinator over HTTP when the
 /// worker can't see the original path locally. The coordinator's
-/// /worker-source endpoint signs the download URL via HMAC over
+/// /worker/source endpoint signs the download URL via HMAC over
 /// (path, timestamp) so a worker that doesn't have the signing key
 /// can't guess URLs.
 ///
@@ -69,14 +69,14 @@ public class HttpSourceFetcher(
         http.Timeout = TimeSpan.FromHours(1); // Multi-GB downloads over WAN.
 
         string signedQuery = BuildSignedQuery(task.InputPath!);
-        string requestPath = $"api/v1/worker-source?{signedQuery}";
+        string requestPath = $"api/v1/worker/source?{signedQuery}";
         HttpRequestMessage request = new(HttpMethod.Get, requestPath);
 
         if (options.IsDistributedEncodingEnabled)
         {
             HmacSigner hmacSigner = new(options.DistributedEncodingSigningKey!);
             long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            string signature = hmacSigner.Sign("GET", "/" + "api/v1/worker-source", timestamp, []);
+            string signature = hmacSigner.Sign("GET", "/" + "api/v1/worker/source", timestamp, []);
             request.Headers.Add("X-NoMercy-Timestamp", timestamp.ToString());
             request.Headers.Add("X-NoMercy-Signature", signature);
         }

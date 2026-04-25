@@ -37,6 +37,7 @@ public class WorkerExecutionController(
     ILogger<WorkerExecutionController> logger
 ) : BaseController
 {
+    [HttpPost("tasks")]
     [HttpPost("execute-task")]
     public async Task<IActionResult> ExecuteTask(CancellationToken ct)
     {

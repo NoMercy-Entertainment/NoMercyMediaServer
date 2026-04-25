@@ -251,7 +251,7 @@ public class WorkerSelfRegistrationService(
             };
 
             HttpResponseMessage response = await http.PostAsJsonAsync(
-                    "api/v1/dashboard/workers/register",
+                    "api/v1/distribution/workers/register",
                     payload,
                     ct
                 )
@@ -292,7 +292,7 @@ public class WorkerSelfRegistrationService(
             };
 
             HttpResponseMessage response = await http.PostAsJsonAsync(
-                    $"api/v1/dashboard/workers/{options.WorkerId}/heartbeat",
+                    $"api/v1/distribution/workers/{options.WorkerId}/heartbeat",
                     payload,
                     ct
                 )
@@ -312,7 +312,7 @@ public class WorkerSelfRegistrationService(
         try
         {
             using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-            await http.DeleteAsync($"api/v1/dashboard/workers/{options.WorkerId}", cts.Token)
+            await http.DeleteAsync($"api/v1/distribution/workers/{options.WorkerId}", cts.Token)
                 .ConfigureAwait(false);
             logger.LogInformation("Unregistered worker {WorkerId} on shutdown", options.WorkerId);
         }

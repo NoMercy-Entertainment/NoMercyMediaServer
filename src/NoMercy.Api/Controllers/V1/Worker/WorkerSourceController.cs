@@ -33,6 +33,10 @@ namespace NoMercy.Api.Controllers.V1.Worker;
 [Tags("Worker Source")]
 [ApiVersion(1.0)]
 [AllowAnonymous]
+// Primary route per the encoder spec.
+[Route("api/v{version:apiVersion}/worker/source")]
+// Legacy alias — kept for backwards compatibility with workers on older builds.
+[Obsolete("Use /api/v{version}/worker/source — kept for backwards compatibility")]
 [Route("api/v{version:apiVersion}/worker-source")]
 public class WorkerSourceController(
     IDbContextFactory<MediaContext> contextFactory,

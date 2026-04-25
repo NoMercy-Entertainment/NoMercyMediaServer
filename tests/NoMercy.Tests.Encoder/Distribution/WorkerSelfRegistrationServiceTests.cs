@@ -98,7 +98,7 @@ public class WorkerSelfRegistrationServiceTests
         handler
             .RequestLog.Should()
             .Contain(r =>
-                r.Method == HttpMethod.Delete && r.Path.Contains("/dashboard/workers/tw")
+                r.Method == HttpMethod.Delete && r.Path.Contains("/distribution/workers/tw")
             );
     }
 

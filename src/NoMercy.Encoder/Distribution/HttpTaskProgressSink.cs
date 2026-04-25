@@ -9,7 +9,7 @@ using NoMercy.Encoder.Progress;
 
 /// <summary>
 /// Pushes per-task progress to the coordinator's
-/// /api/v1/dashboard/workers/{id}/tasks/{taskId}/progress endpoint. Fire-
+/// /api/v1/distribution/workers/{id}/tasks/{taskId}/progress endpoint. Fire-
 /// and-forget — the sink never awaits an HTTP response, so ffmpeg's
 /// progress thread is never blocked by a slow coordinator.
 ///
@@ -66,7 +66,7 @@ public class HttpTaskProgressSink(
             };
 
             HttpResponseMessage response = await http.PostAsJsonAsync(
-                $"api/v1/dashboard/workers/{options.WorkerId}/tasks/{taskId}/progress",
+                $"api/v1/distribution/workers/{options.WorkerId}/tasks/{taskId}/progress",
                 payload
             );
 

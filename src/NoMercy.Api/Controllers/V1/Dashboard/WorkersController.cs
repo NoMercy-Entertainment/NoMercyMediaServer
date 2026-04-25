@@ -21,9 +21,14 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 /// set — single-machine installs return 503 and the registry stays empty.
 /// </summary>
 [ApiController]
-[Tags("Dashboard Workers")]
+[Tags("Distribution Workers")]
 [ApiVersion(1.0)]
 [Authorize]
+// Primary route per the encoder spec.
+[Route("api/v{version:apiVersion}/distribution/workers")]
+// Legacy alias — kept for backwards compatibility with self-hosted users on
+// older builds. Drop after a deprecation window.
+[Obsolete("Use /api/v{version}/distribution/workers — kept for backwards compatibility")]
 [Route("api/v{version:apiVersion}/dashboard/workers")]
 public class WorkersController(
     InMemoryRemoteWorkerRegistry registry,
