@@ -3,6 +3,7 @@ namespace NoMercy.Encoder.Output;
 using System.Globalization;
 using System.Text;
 using NoMercy.Encoder.BuildingBlocks;
+using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 
@@ -155,7 +156,8 @@ public class PlaylistGenerator : IPlaylistGenerator
             string videoRange = video.TenBit ? "PQ" : "SDR";
             string frameRate = video.FrameRate.ToString("F3", CultureInfo.InvariantCulture);
 
-            string subsAttr = activeSubs.Length > 0 ? ",SUBTITLES=\"subs\"" : "";
+            string subsAttr =
+                activeSubs.Length > 0 ? ",SUBTITLES=\"subs\"" : ",CLOSED-CAPTIONS=NONE";
 
             sb.AppendLine(
                 $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate},CODECS=\"{codecTag}{audioCodecTag}\",VIDEO-RANGE={videoRange},AUDIO=\"{audioGroupId}\"{subsAttr}"
@@ -229,42 +231,16 @@ public class PlaylistGenerator : IPlaylistGenerator
         };
     }
 
-    private static string GetVideoCodecTag(VideoOutputPlan video)
-    {
-        string encoder = video.EncoderName.ToLowerInvariant();
+    private static string GetVideoCodecTag(VideoOutputPlan video) =>
+        HlsCodecsStringBuilder.VideoCodecString(
+            video.EncoderName,
+            video.Profile,
+            video.Level,
+            video.TenBit
+        );
 
-        if (encoder.Contains("264") || encoder.Contains("x264"))
-        {
-            return video.Level switch
-            {
-                "4.0" => "avc1.640028",
-                "4.1" => "avc1.640029",
-                "5.0" => "avc1.640032",
-                "5.1" => "avc1.640033",
-                _ => "avc1.640028",
-            };
-        }
-
-        if (encoder.Contains("265") || encoder.Contains("hevc"))
-            return video.TenBit ? "hvc1.2.4.L153.B0" : "hvc1.1.6.L93.B0";
-
-        if (encoder.Contains("av1") || encoder.Contains("svtav1") || encoder.Contains("aom"))
-            return video.TenBit ? "av01.0.15M.10" : "av01.0.15M.08";
-
-        return "avc1.640028";
-    }
-
-    private static string GetAudioCodecTag(AudioOutputPlan audio)
-    {
-        return audio.EncoderName.ToLowerInvariant() switch
-        {
-            "aac" or "libfdk_aac" => "mp4a.40.2",
-            "ac3" => "ac-3",
-            "eac3" => "ec-3",
-            "libopus" or "opus" => "opus",
-            _ => "mp4a.40.2",
-        };
-    }
+    private static string GetAudioCodecTag(AudioOutputPlan audio) =>
+        HlsCodecsStringBuilder.AudioCodecString(audio.EncoderName);
 
     private static string YesNo(bool value) => value ? "YES" : "NO";
 

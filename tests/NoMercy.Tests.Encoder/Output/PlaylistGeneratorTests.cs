@@ -78,9 +78,14 @@ public class PlaylistGeneratorTests
     [Fact]
     public void MasterPlaylist_Av1_10bit_CorrectCodecTag()
     {
+        // Plan fixture declares Level="4.0" (Av1 spec table A.1 → index 8)
+        // and tenBit=true → expect av01.0.08M.10. Phase 4.17 introduced the
+        // spec-accurate HlsCodecsStringBuilder which derives the level index
+        // from the plan instead of hard-coding 5.3 (index 15) like the legacy
+        // generator did.
         string playlist = Generate(CreatePlan(encoderName: "libsvtav1", tenBit: true));
 
-        playlist.Should().Contain("av01.0.15M.10");
+        playlist.Should().Contain("av01.0.08M.10");
     }
 
     [Fact]
