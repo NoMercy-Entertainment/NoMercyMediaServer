@@ -403,6 +403,73 @@ public class TasksController(
         );
     }
 
+    /// <summary>
+    /// Reorder pending items in a named queue to match the supplied ordered list of job IDs.
+    /// Running items (ReservedAt != null) are never moved. IDs not found in the queue are
+    /// silently ignored. Queue items whose IDs were not supplied are appended after the
+    /// reordered block, preserving their relative order.
+    /// </summary>
+    [HttpPost]
+    [Route("reorder")]
+    public async Task<IActionResult> ReorderQueue([FromBody] ReorderQueueDto request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to reorder the queue");
+
+        await using QueueContext queueContext = new();
+
+        bool queueExists = await queueContext.QueueJobs.AnyAsync(j => j.Queue == request.QueueName);
+
+        if (!queueExists)
+            return BadRequestResponse($"Queue '{request.QueueName}' does not exist");
+
+        // Load ALL jobs for this queue so we can compute priorities without a second trip.
+        List<QueueJob> allJobs = await queueContext
+            .QueueJobs.Where(j => j.Queue == request.QueueName)
+            .OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
+            .ToListAsync();
+
+        // Split into running (reserved) and pending.
+        List<QueueJob> runningJobs = allJobs.Where(j => j.ReservedAt != null).ToList();
+        List<QueueJob> pendingJobs = allJobs.Where(j => j.ReservedAt == null).ToList();
+
+        // Build ordered list: requested IDs first (in request order), then the rest.
+        HashSet<int> requestedSet = request.OrderedJobIds.ToHashSet();
+
+        List<QueueJob> reordered =
+        [
+            .. request
+                .OrderedJobIds.Select(id => pendingJobs.FirstOrDefault(j => j.Id == id))
+                .Where(j => j is not null)
+                .Cast<QueueJob>(),
+            .. pendingJobs.Where(j => !requestedSet.Contains(j.Id)),
+        ];
+
+        // Assign descending priority values so the first item is dispatched first.
+        // Start high enough to not collide with running jobs.
+        int basePriority = reordered.Count;
+        for (int i = 0; i < reordered.Count; i++)
+            reordered[i].Priority = basePriority - i;
+
+        await queueContext.SaveChangesAsync();
+
+        // Return the new ordering of ALL jobs for the queue.
+        List<QueueJob> resultJobs = [.. runningJobs, .. reordered];
+
+        QueueJobDto[] result = resultJobs
+            .Select(j => new QueueJobDto
+            {
+                Id = j.Id,
+                Priority = j.Priority,
+                PayloadId = string.Empty,
+                Status = j.ReservedAt != null ? "running" : "pending",
+            })
+            .ToArray();
+
+        return Ok(new DataResponseDto<QueueJobDto[]> { Data = result });
+    }
+
     [HttpPost]
     [Route("failed/retry")]
     [Route("failed/retry/{id:long?}")]
@@ -479,4 +546,13 @@ public class PatchQueueItemDto
 {
     [JsonProperty("priority")]
     public int Priority { get; set; }
+}
+
+public class ReorderQueueDto
+{
+    [JsonProperty("queue_name")]
+    public string QueueName { get; set; } = string.Empty;
+
+    [JsonProperty("ordered_job_ids")]
+    public List<int> OrderedJobIds { get; set; } = [];
 }
