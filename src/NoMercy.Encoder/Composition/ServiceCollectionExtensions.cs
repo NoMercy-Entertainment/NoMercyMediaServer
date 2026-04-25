@@ -162,6 +162,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddTransient<ITesseractModelManager, TesseractModelManager>();
         services.AddTransient<ISubtitleOcrEngine, SubtitleOcrEngine>();
+        services.AddSingleton<ISubtitleRouter, SubtitleRouter>();
         services.AddTransient<IWhisperTranscriber, WhisperTranscriber>();
         services.AddTransient<ICropDetector, CropDetector>();
         services.AddTransient<IAudioFingerprinter, ChromaprintFingerprinter>();
