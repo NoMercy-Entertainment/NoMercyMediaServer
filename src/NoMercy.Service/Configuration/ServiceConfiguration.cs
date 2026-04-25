@@ -388,6 +388,14 @@ public static class ServiceConfiguration
         services.AddSingleton<StorageMonitor>();
         services.AddSingleton<ChromeCast>();
         services.AddSingleton<DriveMonitor>();
+
+        // Encoder-layer optical drive monitor + SignalR bridge
+        services.AddSingleton<
+            NoMercy.Encoder.DiscRipping.IDriveMonitor,
+            NoMercy.Encoder.DiscRipping.DriveMonitor
+        >();
+        services.AddHostedService<NoMercy.Service.Workers.DriveMonitorWorker>();
+
         services.AddWallpaperService();
 
         // Add DbContexts

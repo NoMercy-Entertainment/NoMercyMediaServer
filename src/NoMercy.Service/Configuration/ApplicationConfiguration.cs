@@ -169,6 +169,7 @@ public static class ApplicationConfiguration
         app.UseMiddleware<TokenParamAuthMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseMiddleware<HmacValidationMiddleware>();
         app.UseMiddleware<AccessLogMiddleware>();
         app.UseMiddleware<DynamicStaticFilesMiddleware>();
 
@@ -245,6 +246,16 @@ public static class ApplicationConfiguration
 
             endpoints.MapHub<RipperHub>(
                 "/ripperHub",
+                options =>
+                {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.CloseOnAuthenticationExpiration = true;
+                }
+            );
+
+            endpoints.MapHub<DrivesHub>(
+                "/drivesHub",
                 options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
