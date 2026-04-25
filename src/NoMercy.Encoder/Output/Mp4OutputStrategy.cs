@@ -1,11 +1,15 @@
 namespace NoMercy.Encoder.Output;
 
+using System.Text;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
+using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
 
-public class Mp4OutputStrategy(IStorage storage) : IOutputStrategy
+public class Mp4OutputStrategy(IStorage storage, IFfmpegExecutor? ffmpegExecutor = null)
+    : IOutputStrategy
 {
     public OutputFormat Format => OutputFormat.Mp4;
 
@@ -68,7 +72,7 @@ public class Mp4OutputStrategy(IStorage storage) : IOutputStrategy
         );
     }
 
-    public Task FinalizeAsync(
+    public async Task FinalizeAsync(
         string outputDirectory,
         OutputPlan plan,
         string mediaTitle,
@@ -88,7 +92,84 @@ public class Mp4OutputStrategy(IStorage storage) : IOutputStrategy
             storage.Move(sourcePath, targetPath);
         }
 
-        return Task.CompletedTask;
+        // Embed chapter metadata when chapters are present and an executor is available.
+        if (plan.Chapters is { Count: > 0 } chapters && ffmpegExecutor is not null)
+        {
+            await EmbedChaptersAsync(outputDirectory, targetPath, chapters, ct);
+        }
+    }
+
+    /// <summary>
+    /// Writes a .chapters.ffmeta file and re-muxes the MP4 to embed chapter
+    /// metadata via ffmpeg's ffmetadata input.
+    /// </summary>
+    private async Task EmbedChaptersAsync(
+        string outputDirectory,
+        string mp4Path,
+        IReadOnlyList<ChapterInfo> chapters,
+        CancellationToken ct
+    )
+    {
+        string ffmetaPath = Path.Combine(outputDirectory, ".chapters.ffmeta");
+        string tempPath = mp4Path + ".chapters.tmp.mp4";
+
+        // Build ffmetadata content
+        StringBuilder sb = new();
+        sb.AppendLine(";FFMETADATA1");
+        sb.AppendLine();
+
+        for (int i = 0; i < chapters.Count; i++)
+        {
+            ChapterInfo chapter = chapters[i];
+            int startMs = (int)chapter.Start.TotalMilliseconds;
+            int endMs =
+                i + 1 < chapters.Count
+                    ? (int)chapters[i + 1].Start.TotalMilliseconds
+                    : (int)chapter.End.TotalMilliseconds;
+
+            sb.AppendLine("[CHAPTER]");
+            sb.AppendLine("TIMEBASE=1/1000");
+            sb.AppendLine($"START={startMs}");
+            sb.AppendLine($"END={endMs}");
+            sb.AppendLine($"title={chapter.Title ?? $"Chapter {i + 1}"}");
+            sb.AppendLine();
+        }
+
+        await storage.WriteAsync(ffmetaPath, Encoding.UTF8.GetBytes(sb.ToString()), ct);
+
+        // Re-mux: copy all streams + inject chapter metadata from ffmeta file
+        FfmpegCommand remuxCmd = new(
+            Executable: "ffmpeg",
+            Arguments:
+            [
+                "-y",
+                "-i",
+                mp4Path,
+                "-i",
+                ffmetaPath,
+                "-map_metadata",
+                "1",
+                "-metadata_header_padding",
+                "1024",
+                "-c",
+                "copy",
+                tempPath,
+            ],
+            WorkingDirectory: outputDirectory
+        );
+
+        await ffmpegExecutor!.ExecuteAsync(remuxCmd, TimeSpan.Zero, ct: ct);
+
+        // Swap temp → final
+        if (storage.Exists(tempPath))
+        {
+            storage.Delete(mp4Path);
+            storage.Move(tempPath, mp4Path);
+        }
+
+        // Clean up ffmeta sidecar
+        if (storage.Exists(ffmetaPath))
+            storage.Delete(ffmetaPath);
     }
 
     public string[] GetOutputSubdirectories(OutputPlan plan) => [];

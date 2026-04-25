@@ -48,8 +48,7 @@ public class PlaylistGenerator : IPlaylistGenerator
             s.Action is StreamAction.Extract or StreamAction.Copy
         );
 
-        // hasChapterDateRanges is wired by Phase 4.5; default false until then.
-        bool hasChapterDateRanges = false;
+        bool hasChapterDateRanges = plan.Chapters is { Count: > 0 };
 
         int version = ComputeMasterVersion(hasSubsGroup, hasFmp4, hasChapterDateRanges);
 
@@ -162,6 +161,41 @@ public class PlaylistGenerator : IPlaylistGenerator
                 $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate},CODECS=\"{codecTag}{audioCodecTag}\",VIDEO-RANGE={videoRange},AUDIO=\"{audioGroupId}\"{subsAttr}"
             );
             sb.AppendLine($"{subDir}/{playlistFile}.m3u8");
+        }
+
+        // Emit EXT-X-DATERANGE chapter markers (HLS v8).
+        // START-DATE is a UTC ISO 8601 instant derived from epoch + chapter offset,
+        // so players can render a chapter timeline without decoding position.
+        if (plan.Chapters is { Count: > 0 } chapters)
+        {
+            DateTimeOffset epoch = DateTimeOffset.UnixEpoch;
+
+            for (int i = 0; i < chapters.Count; i++)
+            {
+                NoMercy.Encoder.Analysis.ChapterInfo chapter = chapters[i];
+                double startSeconds = chapter.Start.TotalSeconds;
+                double endSeconds =
+                    i + 1 < chapters.Count
+                        ? chapters[i + 1].Start.TotalSeconds
+                        : chapter.End.TotalSeconds;
+                double durationSeconds = endSeconds - startSeconds;
+
+                DateTimeOffset startDate = epoch.AddSeconds(startSeconds);
+                string startDateIso = startDate.ToString(
+                    "yyyy-MM-ddTHH:mm:ss.fffZ",
+                    CultureInfo.InvariantCulture
+                );
+                string title = chapter.Title ?? $"Chapter {i + 1}";
+                string escapedTitle = title.Replace("\"", "\\\"");
+                string durationFormatted = durationSeconds.ToString(
+                    "F3",
+                    CultureInfo.InvariantCulture
+                );
+
+                sb.AppendLine(
+                    $"#EXT-X-DATERANGE:ID=\"ch{i}\",START-DATE=\"{startDateIso}\",DURATION={durationFormatted},X-COM-NOMERCY-CHAPTER-TITLE=\"{escapedTitle}\""
+                );
+            }
         }
 
         return sb.ToString();

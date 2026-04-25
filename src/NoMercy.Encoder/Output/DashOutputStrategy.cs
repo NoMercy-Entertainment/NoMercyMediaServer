@@ -1,5 +1,7 @@
 namespace NoMercy.Encoder.Output;
 
+using System.Text;
+using System.Xml.Linq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
@@ -70,7 +72,7 @@ public class DashOutputStrategy(IStorage storage) : IOutputStrategy
         );
     }
 
-    public Task FinalizeAsync(
+    public async Task FinalizeAsync(
         string outputDirectory,
         OutputPlan plan,
         string mediaTitle,
@@ -87,7 +89,68 @@ public class DashOutputStrategy(IStorage storage) : IOutputStrategy
             storage.Move(sourcePath, targetPath);
         }
 
-        return Task.CompletedTask;
+        // Post-process MPD to inject <EventStream> chapter cues when chapters present
+        if (plan.Chapters is { Count: > 0 } chapters && storage.Exists(targetPath))
+        {
+            await InjectChapterEventStreamAsync(targetPath, chapters, ct);
+        }
+    }
+
+    /// <summary>
+    /// Parses the MPD XML and injects a chapter <c>&lt;EventStream&gt;</c> element
+    /// into every <c>&lt;Period&gt;</c>.  Uses timescale=1000 (milliseconds).
+    /// </summary>
+    private async Task InjectChapterEventStreamAsync(
+        string mpdPath,
+        IReadOnlyList<NoMercy.Encoder.Analysis.ChapterInfo> chapters,
+        CancellationToken ct
+    )
+    {
+        byte[] rawBytes = await storage.ReadAsync(mpdPath, ct);
+
+        // Use XDocument.Load from a MemoryStream so the XML reader handles any
+        // BOM (UTF-8, UTF-16) automatically — XDocument.Parse on a raw string
+        // produced by Encoding.UTF8.GetString fails when the file starts with a BOM.
+        XDocument doc;
+        using (MemoryStream ms = new(rawBytes))
+            doc = XDocument.Load(ms);
+        XNamespace ns = doc.Root?.Name.Namespace ?? XNamespace.None;
+
+        XElement eventStream = new(
+            ns + "EventStream",
+            new XAttribute("schemeIdUri", "urn:nomercy:chapters"),
+            new XAttribute("timescale", "1000")
+        );
+
+        for (int i = 0; i < chapters.Count; i++)
+        {
+            NoMercy.Encoder.Analysis.ChapterInfo chapter = chapters[i];
+            long startMs = (long)chapter.Start.TotalMilliseconds;
+            long endMs =
+                i + 1 < chapters.Count
+                    ? (long)chapters[i + 1].Start.TotalMilliseconds
+                    : (long)chapter.End.TotalMilliseconds;
+            long durationMs = endMs - startMs;
+            string title = chapter.Title ?? $"Chapter {i + 1}";
+
+            eventStream.Add(
+                new XElement(
+                    ns + "Event",
+                    new XAttribute("presentationTime", startMs),
+                    new XAttribute("duration", durationMs),
+                    new XAttribute("id", i),
+                    new XText(title)
+                )
+            );
+        }
+
+        // Inject into every Period element
+        IEnumerable<XElement> periods = doc.Descendants(ns + "Period");
+        foreach (XElement period in periods)
+            period.AddFirst(eventStream);
+
+        byte[] updated = Encoding.UTF8.GetBytes(doc.ToString());
+        await storage.WriteAsync(mpdPath, updated, ct);
     }
 
     public string[] GetOutputSubdirectories(OutputPlan plan) => [];
