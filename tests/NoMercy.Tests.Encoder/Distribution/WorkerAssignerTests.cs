@@ -151,4 +151,77 @@ public class WorkerAssignerTests
             OutputPath: $"/out/{id}",
             Type: type
         );
+
+    private static EncodeTask MakeGpuTask(
+        string id,
+        bool requiresGpu,
+        int cost = 1,
+        string variantId = ""
+    ) =>
+        new(
+            TaskId: id,
+            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            OutputPath: $"/out/{id}",
+            Type: EncodeTaskType.QualityVariant,
+            VariantId: variantId,
+            EstimatedCostUnits: cost,
+            RequiresGpu: requiresGpu
+        );
+
+    [Fact]
+    public void Assign_GpuTask_RoutesToGpuWorker()
+    {
+        WorkerAssigner sut = new();
+
+        Dictionary<string, EncodeTask[]> result = sut.Assign(
+            [MakeGpuTask("gpu-task", requiresGpu: true)],
+            [
+                new("cpu-only", SpeedMultiplier: 4.0, AvailableSlots: 8, HasGpu: false),
+                new("gpu-box", SpeedMultiplier: 2.0, AvailableSlots: 2, HasGpu: true),
+            ]
+        );
+
+        result["gpu-box"].Select(t => t.TaskId).Should().Contain("gpu-task");
+        result["cpu-only"].Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Assign_GpuTask_FallsBackToAnyWorkerWhenNoGpuAvailable()
+    {
+        WorkerAssigner sut = new();
+
+        Dictionary<string, EncodeTask[]> result = sut.Assign(
+            [MakeGpuTask("gpu-task", requiresGpu: true)],
+            [new("cpu-only", SpeedMultiplier: 1.0, AvailableSlots: 4, HasGpu: false)]
+        );
+
+        result["cpu-only"].Select(t => t.TaskId).Should().Contain("gpu-task");
+    }
+
+    [Fact]
+    public void Assign_HighCostTask_DrainsCapacityFaster()
+    {
+        WorkerAssigner sut = new();
+
+        Dictionary<string, EncodeTask[]> result = sut.Assign(
+            [
+                MakeGpuTask("heavy", requiresGpu: false, cost: 8),
+                MakeGpuTask("a", requiresGpu: false, cost: 1),
+                MakeGpuTask("b", requiresGpu: false, cost: 1),
+                MakeGpuTask("c", requiresGpu: false, cost: 1),
+            ],
+            [
+                new("fast", SpeedMultiplier: 2.0, AvailableSlots: 2, HasGpu: false),
+                new("slow", SpeedMultiplier: 1.0, AvailableSlots: 2, HasGpu: false),
+            ]
+        );
+
+        // The heavy task drains "fast"'s effective weight on first pass; the
+        // following light tasks land on "slow" which still has full capacity.
+        result["fast"].Select(t => t.TaskId).Should().Contain("heavy");
+        result["slow"]
+            .Select(t => t.TaskId)
+            .Should()
+            .Contain(id => id == "a" || id == "b" || id == "c");
+    }
 }

@@ -30,7 +30,29 @@ public record EncodeTask(
     /// or when the coordinator + workers share storage and the input path
     /// is embedded directly in <see cref="Command"/>.
     /// </summary>
-    string? InputPath = null
+    string? InputPath = null,
+    /// <summary>
+    /// Identifier of the variant this task produces (e.g. "1080p", "720p").
+    /// Used by the orchestrator to group results from time-chunked encodes
+    /// back into a single variant ladder. Empty when the task is not part
+    /// of a multi-variant ladder.
+    /// </summary>
+    string VariantId = "",
+    /// <summary>
+    /// Relative compute weight used by <c>WorkerAssigner</c> when balancing
+    /// tasks across workers. Higher values pull more capable workers; the
+    /// scale is unitless (compare across tasks, not against a wall-clock).
+    /// Defaults to 1 — strategies override for known-heavy work
+    /// (e.g. 4K HEVC two-pass = 8, 1080p H.264 single-pass = 1).
+    /// </summary>
+    int EstimatedCostUnits = 1,
+    /// <summary>
+    /// True when the task requires a GPU encoder slot. Lets the assigner
+    /// route GPU jobs to workers with available NVENC/QSV/VideoToolbox
+    /// sessions and CPU jobs to whichever worker has spare CPU threads
+    /// even if its GPU is saturated.
+    /// </summary>
+    bool RequiresGpu = false
 );
 
 public record DispatchResult(

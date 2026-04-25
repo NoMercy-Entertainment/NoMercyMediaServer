@@ -51,11 +51,22 @@ public class WorkerAssigner : IWorkerAssigner
 
         foreach (EncodeTask task in ordered)
         {
-            string chosen = PickHeaviestRemainingWorker(workers, remainingWeight);
+            // GPU-required tasks must land on a worker that has a GPU.
+            // Falls back to the unconstrained pick if no GPU worker exists
+            // — strict enforcement is the dispatcher's job, not ours.
+            IReadOnlyList<WorkerCapacity> eligible = task.RequiresGpu
+                ? [.. workers.Where(w => w.HasGpu)]
+                : workers;
+            if (eligible.Count == 0)
+                eligible = workers;
+
+            string chosen = PickHeaviestRemainingWorker(eligible, remainingWeight);
             buckets[chosen].Add(task);
 
-            // Each assigned task consumes one unit of effective multiplier —
-            // keeps a single fast box from swallowing every task.
+            // Each assigned task consumes capacity weighted by its declared
+            // cost units — heavy 4K HEVC two-pass tasks (cost ~8) drain a
+            // worker faster than 1080p H.264 single-pass (cost 1). The
+            // EncodeTaskType variant/chunk multiplier still applies.
             remainingWeight[chosen] = Math.Max(
                 0,
                 remainingWeight[chosen] - GetConsumedWeight(task)
@@ -89,6 +100,12 @@ public class WorkerAssigner : IWorkerAssigner
 
     // Quality variants are "full encodes" and consume one full slot of
     // weight. Time chunks are subset work and consume proportionally less.
-    private static double GetConsumedWeight(EncodeTask task) =>
-        task.Type == EncodeTaskType.QualityVariant ? 1.0 : 0.5;
+    // Cost units (default 1) scale the consumed weight so heavy tasks pull
+    // more capacity from a worker than light ones.
+    private static double GetConsumedWeight(EncodeTask task)
+    {
+        double typeFactor = task.Type == EncodeTaskType.QualityVariant ? 1.0 : 0.5;
+        double costFactor = Math.Max(1, task.EstimatedCostUnits);
+        return typeFactor * costFactor;
+    }
 }
