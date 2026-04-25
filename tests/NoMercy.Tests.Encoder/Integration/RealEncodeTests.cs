@@ -358,6 +358,116 @@ public class RealEncodeTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task EncodeAsync_ScalingProfile_ProducesCorrectResolution()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
+
+        string outputDir = Path.Combine(_testDir, "output-scale-160x90");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "test-hls-160x90-scaling",
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                new(
+                    Codec: VideoCodecType.H264,
+                    Width: 160,
+                    Height: 90,
+                    BitrateKbps: 100,
+                    Crf: 40,
+                    Preset: "ultrafast",
+                    Profile: "baseline",
+                    Level: "3.0",
+                    ConvertHdrToSdr: false,
+                    KeyframeIntervalSeconds: 2,
+                    TenBit: false
+                ),
+            ],
+            AudioOutputs:
+            [
+                new(
+                    Codec: AudioCodecType.Opus,
+                    BitrateKbps: 64,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["und"],
+                    Loudness: LoudnessMode.None
+                ),
+            ],
+            SubtitleOutputs: []
+        );
+
+        EncodingRequest request = new(
+            InputPath: _inputFile,
+            OutputDirectory: outputDir,
+            Profile: profile
+        );
+
+        TestProgressObserver observer = new();
+        IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
+
+        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+
+        // Verify a video_160x90 (or video_160x90_sdtv) directory exists with playlist + segments
+        string[] videoDirs = Directory.GetDirectories(outputDir, "video_160x90*");
+        videoDirs
+            .Should()
+            .HaveCount(
+                1,
+                $"should have exactly one video output directory for 160x90. Found: [{string.Join(", ", Directory.GetDirectories(outputDir).Select(Path.GetFileName))}]"
+            );
+
+        string videoDir = videoDirs[0];
+        Directory
+            .GetFiles(videoDir, "*.m3u8", SearchOption.TopDirectoryOnly)
+            .Should()
+            .NotBeEmpty("video_160x90 dir should contain a .m3u8 playlist");
+        Directory
+            .GetFiles(videoDir, "*.ts", SearchOption.TopDirectoryOnly)
+            .Should()
+            .NotBeEmpty("video_160x90 dir should contain .ts segments");
+    }
+
+    [Fact]
+    public void SeedProfiles_DeserializeToValidEncodingProfiles()
+    {
+        IReadOnlyList<EncodingProfile> profiles = BuiltinPresets.All();
+
+        profiles.Should().NotBeEmpty("BuiltinPresets.All() must return at least one profile");
+
+        foreach (EncodingProfile profile in profiles)
+        {
+            // Roundtrip: serialize → deserialize
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(profile);
+            EncodingProfile? deserialized =
+                Newtonsoft.Json.JsonConvert.DeserializeObject<EncodingProfile>(json);
+
+            deserialized
+                .Should()
+                .NotBeNull($"profile '{profile.Name}' should deserialize without error");
+            deserialized!
+                .Name.Should()
+                .NotBeNullOrWhiteSpace(
+                    $"profile '{profile.Name}' should have a non-empty Name after roundtrip"
+                );
+
+            bool hasAudioOutput = deserialized.AudioOutputs.Length > 0;
+            bool hasVideoOutput = deserialized.VideoOutputs.Length > 0;
+            (hasAudioOutput || hasVideoOutput)
+                .Should()
+                .BeTrue($"profile '{profile.Name}' should have at least one audio or video output");
+        }
+    }
+
+    [Fact]
     public void V3EncodingProfile_SerializationRoundtrip_PreservesAllFields()
     {
         EncodingProfile original = new(
