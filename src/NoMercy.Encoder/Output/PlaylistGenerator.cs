@@ -101,7 +101,26 @@ public class PlaylistGenerator : IPlaylistGenerator
             );
         }
 
-        sb.AppendLine();
+        // Subtitle groups
+        SubtitleOutputPlan[] activeSubs = plan
+            .SubtitleOutputs.Where(s => s.Action is StreamAction.Extract or StreamAction.Copy)
+            .ToArray();
+
+        if (activeSubs.Length > 0)
+        {
+            foreach (SubtitleOutputPlan sub in activeSubs)
+            {
+                string lang = sub.Language ?? "und";
+                string displayName = GetSubtitleDisplayName(lang);
+                string subsUri = GetSubtitlePlaylistUri(sub);
+
+                sb.AppendLine(
+                    $"#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"{displayName}\",LANGUAGE=\"{lang}\",DEFAULT=NO,AUTOSELECT=YES,FORCED=NO,URI=\"{subsUri}\""
+                );
+            }
+
+            sb.AppendLine();
+        }
 
         // Video variants with measured bandwidth
         foreach (VideoOutputPlan video in plan.VideoOutputs)
@@ -137,8 +156,10 @@ public class PlaylistGenerator : IPlaylistGenerator
             string videoRange = video.TenBit ? "PQ" : "SDR";
             string frameRate = video.FrameRate.ToString("F3", CultureInfo.InvariantCulture);
 
+            string subsAttr = activeSubs.Length > 0 ? ",SUBTITLES=\"subs\"" : "";
+
             sb.AppendLine(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate},CODECS=\"{codecTag}{audioCodecTag}\",VIDEO-RANGE={videoRange},AUDIO=\"{audioGroupId}\""
+                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate},CODECS=\"{codecTag}{audioCodecTag}\",VIDEO-RANGE={videoRange},AUDIO=\"{audioGroupId}\"{subsAttr}"
             );
             sb.AppendLine($"{subDir}/{playlistFile}.m3u8");
         }
@@ -212,4 +233,108 @@ public class PlaylistGenerator : IPlaylistGenerator
     }
 
     private static string YesNo(bool value) => value ? "YES" : "NO";
+
+    // ------------------------------------------------------------------
+    // Subtitle helpers
+    // ------------------------------------------------------------------
+
+    private static string GetSubtitleDisplayName(string language)
+    {
+        return language.ToUpperInvariant() switch
+        {
+            "ENG" => "English",
+            "FRE" or "FRA" => "French",
+            "GER" or "DEU" => "German",
+            "SPA" => "Spanish",
+            "ITA" => "Italian",
+            "DUT" or "NLD" => "Dutch",
+            "JPN" or "JAP" => "Japanese",
+            "KOR" => "Korean",
+            "CHI" or "ZHO" => "Chinese",
+            "RUS" => "Russian",
+            "POR" => "Portuguese",
+            "ARA" => "Arabic",
+            "HIN" => "Hindi",
+            "SWE" => "Swedish",
+            "NOR" => "Norwegian",
+            "DAN" => "Danish",
+            "FIN" => "Finnish",
+            "POL" => "Polish",
+            "TUR" => "Turkish",
+            "UND" => "Unknown",
+            _ => language,
+        };
+    }
+
+    /// <summary>
+    /// Derives the subtitle playlist URI from the plan's
+    /// <see cref="SubtitleOutputPlan.PlaylistNameTemplate"/>.
+    /// The template tokens are :filename: (replaced with "subs") and
+    /// :language:/:variant: (replaced with the language / codec).
+    /// </summary>
+    internal static string GetSubtitlePlaylistUri(SubtitleOutputPlan sub)
+    {
+        string lang = sub.Language ?? "und";
+        string codec = sub.OutputCodec.ToString().ToLowerInvariant();
+
+        // Use a simple derivation: subs_<lang>.m3u8 in the subtitles/ dir,
+        // which matches the default PlaylistNameTemplate shape and keeps
+        // the master playlist short.
+        return $"subs_{lang}.m3u8";
+    }
+
+    /// <summary>
+    /// Emits the per-subtitle media playlist (.m3u8) referencing the WebVTT
+    /// segments produced by <see cref="WebVttSegmenter"/>.
+    /// </summary>
+    public static string GenerateSubtitleMediaPlaylist(
+        SubtitleOutputPlan sub,
+        IReadOnlyList<NoMercy.Encoder.Subtitles.WebVttSegment> segments,
+        int segmentDurationSeconds,
+        string segmentUriPrefix = ""
+    )
+    {
+        System.Text.StringBuilder sb = new();
+        sb.AppendLine("#EXTM3U");
+        sb.AppendLine("#EXT-X-VERSION:3");
+        sb.AppendLine($"#EXT-X-TARGETDURATION:{segmentDurationSeconds}");
+        sb.AppendLine("#EXT-X-PLAYLIST-TYPE:VOD");
+
+        foreach (NoMercy.Encoder.Subtitles.WebVttSegment seg in segments)
+        {
+            double actualDuration = (seg.EndTime - seg.StartTime).TotalSeconds;
+            string uri = string.IsNullOrEmpty(segmentUriPrefix)
+                ? $"subs_{sub.Language ?? "und"}_{seg.Index:D5}.vtt"
+                : $"{segmentUriPrefix}/subs_{sub.Language ?? "und"}_{seg.Index:D5}.vtt";
+
+            sb.AppendLine($"#EXTINF:{actualDuration:F3},");
+            sb.AppendLine(uri);
+        }
+
+        sb.AppendLine("#EXT-X-ENDLIST");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Emits a minimal media playlist for a sidecar .ass file (single entry,
+    /// no segmentation). The NoMercy player loads the .ass directly via
+    /// libass-wasm; the m3u8 is the HLS hook that advertises it.
+    /// </summary>
+    public static string GenerateAssMediaPlaylist(
+        SubtitleOutputPlan sub,
+        string assFileName,
+        int segmentDurationSeconds
+    )
+    {
+        string lang = sub.Language ?? "und";
+        System.Text.StringBuilder sb = new();
+        sb.AppendLine("#EXTM3U");
+        sb.AppendLine("#EXT-X-VERSION:3");
+        sb.AppendLine($"#EXT-X-TARGETDURATION:{segmentDurationSeconds}");
+        sb.AppendLine("#EXT-X-PLAYLIST-TYPE:VOD");
+        sb.AppendLine($"#EXTINF:{segmentDurationSeconds}.000,");
+        sb.AppendLine(assFileName);
+        sb.AppendLine("#EXT-X-ENDLIST");
+        return sb.ToString();
+    }
 }

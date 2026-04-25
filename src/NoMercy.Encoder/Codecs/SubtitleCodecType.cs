@@ -5,4 +5,5 @@ public enum SubtitleCodecType
     WebVtt,
     Srt,
     Ass,
+    Pgs,
 }
