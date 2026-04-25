@@ -9,6 +9,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
 
 public record BuildInput(
@@ -29,7 +30,9 @@ public class BuildStage(
     IOutputStrategyFactory outputStrategyFactory,
     IEnumerable<BuildingBlocks.Drm.IDrmProcessor> drmProcessors,
     ILogger<BuildStage> logger,
-    IStorage storage
+    IStorage storage,
+    AssBurnInFilterBuilder? assBurnInFilterBuilder = null,
+    PgsBurnInFilterBuilder? pgsBurnInFilterBuilder = null
 ) : IPipelineStage<BuildInput, FfmpegCommand[]>, IBuildStage
 {
     public string Name => "Build";
@@ -129,11 +132,61 @@ public class BuildStage(
             FfmpegCommandBuilder builder = new();
             builder.AddInput(new(input.InputPath, Duration: input.DurationLimit));
 
-            string? filterGraph = BuildFilterGraph(
-                input.Plan.OutputPlan,
-                context.MediaInfo,
-                input.InputPath
+            // Resolve burn-in mode first so we can emit the decision log
+            // entry and choose between the ASS filter path and the PGS
+            // overlay path before building the filter graph.
+            SubtitleOutputPlan? burnInPlan = input.Plan.OutputPlan.SubtitleOutputs.FirstOrDefault(
+                s => s.Mode == SubtitleMode.BurnIn
             );
+
+            if (burnInPlan is not null)
+            {
+                context.DecisionsOrNoOp.Add(
+                    new DecisionLog(
+                        Stage: Name,
+                        Key: EncoderRuleId.SubtitlesBurnInPermanent,
+                        Message: "Subtitle stream will be burned permanently into video frames. "
+                            + "The resulting output cannot be toggled off by the client.",
+                        Data: new { SourceIndex = burnInPlan.SourceIndex }
+                    )
+                );
+            }
+
+            // For PGS burn-in: build a -filter_complex overlay chain that
+            // composites the bitmap subtitle stream onto the video. The chain
+            // bypasses the normal FilterGraphBuilder path so we set it directly.
+            bool isPgsBurnIn =
+                burnInPlan is not null
+                && context.MediaInfo is not null
+                && burnInPlan.SourceIndex < context.MediaInfo.SubtitleStreams.Count
+                && !context.MediaInfo.SubtitleStreams[burnInPlan.SourceIndex].IsTextBased;
+
+            string? filterGraph;
+
+            if (isPgsBurnIn)
+            {
+                PgsBurnInFilterChain chain = pgsBurnInFilterBuilder.Build(
+                    videoStreamIndex: 0,
+                    subtitleStreamIndex: burnInPlan!.SourceIndex
+                );
+                filterGraph = chain.FilterComplex;
+                // Override the video map label in every video output to [burned].
+                OutputPlan pgsRemapped = RemapVideoToBurnedLabel(
+                    input.Plan.OutputPlan,
+                    chain.MapLabel
+                );
+                input = input with { Plan = input.Plan with { OutputPlan = pgsRemapped } };
+            }
+            else
+            {
+                filterGraph = BuildFilterGraph(
+                    input.Plan.OutputPlan,
+                    context.MediaInfo,
+                    input.InputPath,
+                    assBurnInFilterBuilder
+                );
+            }
+
             if (filterGraph is not null)
                 builder.WithFilterComplex(filterGraph);
 
@@ -477,7 +530,13 @@ public class BuildStage(
             SubtitleOutputs = [],
             Thumbnails = null,
         };
-        string? filterGraph = BuildFilterGraph(videoOnly, mediaInfo, inputPath);
+        // Pass 1 never burns subtitles — no builder needed.
+        string? filterGraph = BuildFilterGraph(
+            videoOnly,
+            mediaInfo,
+            inputPath,
+            assBurnInFilterBuilder: null
+        );
         if (filterGraph is not null)
             builder.WithFilterComplex(filterGraph);
 
@@ -508,7 +567,12 @@ public class BuildStage(
         return builder.Build(ffmpegPath, outputDirectory);
     }
 
-    private static string? BuildFilterGraph(OutputPlan plan, MediaInfo? mediaInfo, string inputPath)
+    private static string? BuildFilterGraph(
+        OutputPlan plan,
+        MediaInfo? mediaInfo,
+        string inputPath,
+        AssBurnInFilterBuilder? assBurnInFilterBuilder
+    )
     {
         VideoOutputPlan[] videoOutputs = plan.VideoOutputs;
 
@@ -525,8 +589,14 @@ public class BuildStage(
         bool sourceIs10Bit = mediaInfo.VideoStreams[0].BitDepth > 8;
         bool hasThumbnails = plan.Thumbnails is not null;
 
-        // First subtitle output with BurnIn mode (at most one burns per encode).
-        string? burnInExpr = ResolveBurnInExpression(plan.SubtitleOutputs, inputPath);
+        // First text-based subtitle output with BurnIn mode (PGS burn-in uses
+        // the overlay path handled before this method is called).
+        string? burnInExpr = ResolveBurnInExpression(
+            plan.SubtitleOutputs,
+            mediaInfo,
+            inputPath,
+            assBurnInFilterBuilder
+        );
 
         FilterGraphBuilder fg = new();
 
@@ -689,21 +759,73 @@ public class BuildStage(
     }
 
     /// <summary>
-    /// Resolves the first burn-in subtitle output into an FFmpeg subtitles filter
-    /// expression that reads from the input file + stream index. Returns null when
-    /// no burn-in subtitle is requested.
+    /// Resolves the first text-based burn-in subtitle output into an FFmpeg
+    /// filter expression. Returns null when no burn-in subtitle is requested
+    /// or when the first burn-in track is bitmap-based (PGS/DVD — those use
+    /// the overlay path handled separately before <see cref="BuildFilterGraph"/>
+    /// is called).
+    ///
+    /// <para>For ASS/SSA sources the expression uses libass via the
+    /// <c>ass=</c> filter routed through <see cref="AssBurnInFilterBuilder"/>,
+    /// which applies correct filter-graph escaping and threads the
+    /// <c>fontsdir</c> hint when present. All other text codecs fall back to
+    /// the generic <c>subtitles=</c> filter with stream-index selection.</para>
     /// </summary>
-    private static string? ResolveBurnInExpression(SubtitleOutputPlan[] subs, string inputPath)
+    private static string? ResolveBurnInExpression(
+        SubtitleOutputPlan[] subs,
+        MediaInfo mediaInfo,
+        string inputPath,
+        AssBurnInFilterBuilder? assBurnInFilterBuilder
+    )
     {
         SubtitleOutputPlan? burnIn = subs.FirstOrDefault(s => s.Mode == SubtitleMode.BurnIn);
         if (burnIn is null)
             return null;
 
-        // FFmpeg subtitle filter path escaping: single-quote the path, escape
-        // colons and backslashes. Forward slashes are accepted on all platforms.
+        // Only text-based codecs here — bitmap (PGS/DVD) uses the overlay path.
+        if (burnIn.SourceIndex < mediaInfo.SubtitleStreams.Count)
+        {
+            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[burnIn.SourceIndex];
+            if (!stream.IsTextBased)
+                return null;
+
+            // ASS/SSA: route through dedicated builder for libass + fontsdir.
+            if (
+                assBurnInFilterBuilder is not null
+                && (
+                    stream.Codec.Equals("ass", StringComparison.OrdinalIgnoreCase)
+                    || stream.Codec.Equals("ssa", StringComparison.OrdinalIgnoreCase)
+                )
+            )
+            {
+                return assBurnInFilterBuilder.Build(inputPath);
+            }
+        }
+
+        // Generic text subtitle fallback: subtitles= filter with stream-index.
+        // FFmpeg filter path escaping: normalise separators, then escape colons.
         string normalized = inputPath.Replace('\\', '/');
         string escaped = normalized.Replace(":", "\\:");
 
         return $"subtitles='{escaped}':si={burnIn.SourceIndex}";
+    }
+
+    /// <summary>
+    /// Returns a copy of <paramref name="plan"/> with every video output's
+    /// <see cref="VideoOutputPlan.MapLabel"/> replaced by
+    /// <paramref name="burnedLabel"/>. Used for PGS burn-in where the
+    /// <c>overlay</c> filter emits a single composited output pad that all
+    /// video encoders must read from.
+    /// </summary>
+    private static OutputPlan RemapVideoToBurnedLabel(OutputPlan plan, string burnedLabel)
+    {
+        VideoOutputPlan[] remapped = plan
+            .VideoOutputs.Select(v => v with { MapLabel = burnedLabel })
+            .ToArray();
+
+        return plan with
+        {
+            VideoOutputs = remapped,
+        };
     }
 }
