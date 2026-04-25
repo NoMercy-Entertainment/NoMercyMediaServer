@@ -2,6 +2,7 @@ namespace NoMercy.Encoder.LiveTranscode;
 
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Storage;
 
 /// <summary>
@@ -33,6 +34,19 @@ public class LiveStreamingService(ILogger<LiveStreamingService> logger, IStorage
 
         runtime.DrainerTask = Task.Run(() => DrainAsync(runtime));
         logger.LogDebug("Registered live session {SessionId}", session.SessionId);
+    }
+
+    public void StampRequestContext(
+        string sessionId,
+        MediaInfo mediaInfo,
+        ClientCapabilities client
+    )
+    {
+        if (_runtimes.TryGetValue(sessionId, out LiveRuntimeSession? runtime))
+        {
+            runtime.CachedMediaInfo = mediaInfo;
+            runtime.ClientCapabilities = client;
+        }
     }
 
     public bool TryGetRuntime(string sessionId, out LiveRuntimeSession runtime)

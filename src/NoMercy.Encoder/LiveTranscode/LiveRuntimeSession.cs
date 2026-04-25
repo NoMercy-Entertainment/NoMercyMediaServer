@@ -1,6 +1,7 @@
 namespace NoMercy.Encoder.LiveTranscode;
 
 using System.Collections.Concurrent;
+using NoMercy.Encoder.Analysis;
 
 public sealed class LiveRuntimeSession : IAsyncDisposable
 {
@@ -13,6 +14,19 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     public ILiveSession Session { get; }
     public TimeSpan TargetSegmentDuration { get; }
     public string? ScratchDirectory { get; }
+
+    /// <summary>
+    /// The media info originally analyzed for this session. Retained so the
+    /// quality-change endpoint can enumerate available qualities without
+    /// re-probing the file.
+    /// </summary>
+    public MediaInfo? CachedMediaInfo { get; internal set; }
+
+    /// <summary>
+    /// The client capabilities supplied when the session was started. Retained
+    /// alongside <see cref="CachedMediaInfo"/> for the same reason.
+    /// </summary>
+    public ClientCapabilities? ClientCapabilities { get; internal set; }
 
     internal Task? DrainerTask { get; set; }
 
@@ -32,8 +46,7 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     /// <summary>
     /// UTC time of the last playlist or segment access. Used by the idle reaper.
     /// </summary>
-    public DateTime LastAccess =>
-        new(Interlocked.Read(ref _lastAccessTicks), DateTimeKind.Utc);
+    public DateTime LastAccess => new(Interlocked.Read(ref _lastAccessTicks), DateTimeKind.Utc);
 
     /// <summary>
     /// Updates <see cref="LastAccess"/> to now. Called from playlist and segment

@@ -114,10 +114,55 @@ public class LiveSession : ILiveSession
         }
     }
 
-    public Task ChangeQualityAsync(string qualityId, CancellationToken ct)
+    public async Task ChangeQualityAsync(
+        string qualityId,
+        LiveQuality newQuality,
+        CancellationToken ct
+    )
     {
-        Volatile.Write(ref _state, (int)LiveSessionState.ChangingQuality);
-        return Task.CompletedTask;
+        await _seekLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            Volatile.Write(ref _state, (int)LiveSessionState.ChangingQuality);
+
+            // Tear down existing runner
+            CancellationTokenSource oldCts = _runnerCts;
+            try
+            {
+                await oldCts.CancelAsync().ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Already disposed
+            }
+            finally
+            {
+                oldCts.Dispose();
+            }
+
+            // Update quality before spawning so the factory closure picks it up
+            CurrentQuality = newQuality;
+
+            // Create a new CTS for the replacement runner, linked to session lifetime
+            _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
+
+            // Spawn new runner if a factory is wired up
+            if (_runnerFactory is not null)
+            {
+                Volatile.Write(ref _state, (int)LiveSessionState.Transcoding);
+
+                // Keep same playback position — quality change doesn't rewind
+                TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
+                _ = Task.Run(
+                    () => _runnerFactory(resumePosition, _runnerCts.Token),
+                    CancellationToken.None
+                );
+            }
+        }
+        finally
+        {
+            _seekLock.Release();
+        }
     }
 
     public void Suspend()

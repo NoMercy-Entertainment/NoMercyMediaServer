@@ -1,5 +1,7 @@
 namespace NoMercy.Encoder.LiveTranscode;
 
+using NoMercy.Encoder.Analysis;
+
 public interface ILiveStreamingService
 {
     /// <summary>
@@ -14,6 +16,13 @@ public interface ILiveStreamingService
         TimeSpan targetSegmentDuration,
         string? scratchDirectory = null
     );
+
+    /// <summary>
+    /// Stores the original media analysis context on an already-registered
+    /// runtime so the quality-change endpoint can enumerate available qualities
+    /// without re-probing the file.
+    /// </summary>
+    void StampRequestContext(string sessionId, MediaInfo mediaInfo, ClientCapabilities client);
 
     bool TryGetRuntime(string sessionId, out LiveRuntimeSession runtime);
 

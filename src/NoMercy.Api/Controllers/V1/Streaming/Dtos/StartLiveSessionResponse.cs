@@ -41,3 +41,26 @@ public record ReportPositionResponse(
     [property: JsonProperty("position_seconds")] double PositionSeconds,
     [property: JsonProperty("is_paused")] bool IsPaused
 );
+
+/// <summary>
+/// Request body for the in-session quality change endpoint.
+/// </summary>
+public record ChangeQualityRequest([property: JsonProperty("quality_id")] string QualityId);
+
+/// <summary>
+/// Response body returned after a successful quality change.
+/// </summary>
+public record ChangeQualityResponse(
+    [property: JsonProperty("quality_id")] string QualityId,
+    [property: JsonProperty("quality_label")] string QualityLabel
+);
+
+/// <summary>
+/// Request body for the in-session seek endpoint.
+/// </summary>
+public record SeekRequest([property: JsonProperty("position_seconds")] double PositionSeconds);
+
+/// <summary>
+/// Response body returned after a successful seek.
+/// </summary>
+public record SeekResponse([property: JsonProperty("position_seconds")] double PositionSeconds);

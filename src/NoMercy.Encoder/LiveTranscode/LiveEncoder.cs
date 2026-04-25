@@ -45,15 +45,19 @@ public class LiveEncoder(
             outputDirectory
         );
 
-        // Build the run-input factory so SeekAsync can restart the runner from
-        // any position without coupling LiveSession to LiveFfmpegRunner directly.
+        streamingService.StampRequestContext(sessionId, request.CachedInfo, request.Client);
+
+        // Build the run-input factory so SeekAsync / ChangeQualityAsync can
+        // restart the runner without coupling LiveSession to LiveFfmpegRunner.
+        // Quality is read from session.CurrentQuality at spawn time so that a
+        // quality change performed before the factory fires uses the new value.
         async Task SpawnRunner(TimeSpan startPosition, CancellationToken runnerCt)
         {
             LiveRunInput runInput = new(
                 InputPath: request.InputPath,
                 OutputDirectory: outputDirectory,
                 StartPosition: startPosition,
-                Quality: quality,
+                Quality: session.CurrentQuality,
                 SegmentDurationSeconds: options.DefaultSegmentDurationSeconds
             );
 
@@ -67,11 +71,7 @@ public class LiveEncoder(
             }
             catch (Exception ex)
             {
-                logger.LogError(
-                    ex,
-                    "Live runner task faulted for session {SessionId}",
-                    sessionId
-                );
+                logger.LogError(ex, "Live runner task faulted for session {SessionId}", sessionId);
             }
         }
 

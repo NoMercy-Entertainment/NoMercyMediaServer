@@ -16,7 +16,13 @@ public interface ILiveSession : IAsyncDisposable
     /// new runner is dispatched; segment flow resumes asynchronously.
     /// </summary>
     Task SeekAsync(TimeSpan position, CancellationToken ct);
-    Task ChangeQualityAsync(string qualityId, CancellationToken ct);
+
+    /// <summary>
+    /// Tears down the current FFmpeg runner and spawns a new one using
+    /// <paramref name="newQuality"/>. Resumes from the current playback
+    /// position so the viewer does not jump backward.
+    /// </summary>
+    Task ChangeQualityAsync(string qualityId, LiveQuality newQuality, CancellationToken ct);
     void Suspend();
     void Resume();
     void ReportPlaybackPosition(TimeSpan position);

@@ -8,6 +8,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
+using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Helpers.Extensions;
 using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
@@ -25,6 +26,9 @@ public class LiveTranscodeController(
     ILivePlaylistBuilder playlistBuilder,
     ISessionManager sessionManager,
     IMediaAnalyzer mediaAnalyzer,
+    ILiveQualitySelector qualitySelector,
+    SpeedIndex speedIndex,
+    IResourceBudget budget,
     IDbContextFactory<MediaContext> contextFactory,
     LiveSessionLimits sessionLimits
 ) : BaseController
@@ -115,12 +119,7 @@ public class LiveTranscodeController(
         );
 
         return Ok(
-            new StartLiveSessionResponse(
-                session.SessionId,
-                playlistUrl,
-                quality.Id,
-                quality.Label
-            )
+            new StartLiveSessionResponse(session.SessionId, playlistUrl, quality.Id, quality.Label)
             {
                 SelectedVariant = selectedVariant,
                 ExpiresAt = expiresAt,
@@ -191,6 +190,67 @@ public class LiveTranscodeController(
         bool isPaused = runtime.Session.State == LiveSessionState.Buffered;
 
         return Ok(new ReportPositionResponse(clampedSeconds, isPaused));
+    }
+
+    [HttpPost("sessions/{sessionId}/quality")]
+    public async Task<IActionResult> ChangeQuality(
+        string sessionId,
+        [FromBody] ChangeQualityRequest request,
+        CancellationToken ct = default
+    )
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to stream media");
+
+        if (string.IsNullOrWhiteSpace(request.QualityId))
+            return BadRequestResponse("quality_id is required");
+
+        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+            return NotFoundResponse("Live session not found");
+
+        if (runtime.CachedMediaInfo is null || runtime.ClientCapabilities is null)
+            return ServiceUnavailableResponse("Session context not available for quality change");
+
+        LiveQuality[] available = qualitySelector.GetAvailableQualities(
+            runtime.CachedMediaInfo,
+            runtime.ClientCapabilities,
+            speedIndex,
+            budget
+        );
+
+        LiveQuality? newQuality = available.FirstOrDefault(q => q.Id == request.QualityId);
+        if (newQuality is null)
+            return NotFoundResponse(
+                $"Quality '{request.QualityId}' is not available for this session"
+            );
+
+        await runtime.Session.ChangeQualityAsync(request.QualityId, newQuality, ct);
+
+        runtime.TouchLastAccess();
+
+        return Ok(new ChangeQualityResponse(newQuality.Id, newQuality.Label));
+    }
+
+    [HttpPost("sessions/{sessionId}/seek")]
+    public async Task<IActionResult> Seek(
+        string sessionId,
+        [FromBody] SeekRequest request,
+        CancellationToken ct = default
+    )
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to stream media");
+
+        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+            return NotFoundResponse("Live session not found");
+
+        double clampedSeconds = Math.Max(0, request.PositionSeconds);
+
+        await runtime.Session.SeekAsync(TimeSpan.FromSeconds(clampedSeconds), ct);
+
+        runtime.TouchLastAccess();
+
+        return Ok(new SeekResponse(clampedSeconds));
     }
 
     [HttpDelete("sessions/{sessionId}")]
