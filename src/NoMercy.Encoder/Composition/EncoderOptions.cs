@@ -26,6 +26,64 @@ public class EncoderOptions
         ?? throw new InvalidOperationException(
             "FfprobePathOverride not configured. Set it via AddNoMercyEncoder()."
         );
+
+    /// <summary>
+    /// Override path to the shaka-packager binary. When null, resolution falls
+    /// back to a binary named <c>packager</c> (or <c>packager.exe</c> on Windows)
+    /// alongside the configured <see cref="FfmpegPathOverride"/>, and then to
+    /// the system PATH. Set explicitly during startup via
+    /// <c>AddNoMercyEncoder(opts => opts.ShakaPackagerPathOverride = ...)</c>.
+    /// </summary>
+    public string? ShakaPackagerPathOverride { get; set; }
+
+    /// <summary>
+    /// Resolved shaka-packager path. Resolution order:
+    ///   1. <see cref="ShakaPackagerPathOverride"/> (explicit config)
+    ///   2. Sibling of <see cref="FfmpegPathOverride"/> named <c>packager[.exe]</c>
+    ///   3. <c>packager</c> on the system PATH (checked via <c>which</c>/<c>where</c>)
+    /// Throws <see cref="InvalidOperationException"/> when nothing is found.
+    /// </summary>
+    public string GetShakaPackagerPath()
+    {
+        if (!string.IsNullOrWhiteSpace(ShakaPackagerPathOverride))
+            return ShakaPackagerPathOverride;
+
+        // Try sibling of ffmpeg binary
+        if (!string.IsNullOrWhiteSpace(FfmpegPathOverride))
+        {
+            string dir = Path.GetDirectoryName(FfmpegPathOverride) ?? string.Empty;
+            string siblingName = OperatingSystem.IsWindows() ? "packager.exe" : "packager";
+            string sibling = Path.Combine(dir, siblingName);
+            if (File.Exists(sibling))
+                return sibling;
+        }
+
+        // Fall back to system PATH
+        string pathEnv = OperatingSystem.IsWindows() ? "packager.exe" : "packager";
+        string? onPath = FindOnPath(pathEnv);
+        if (onPath is not null)
+            return onPath;
+
+        throw new InvalidOperationException(
+            "shaka-packager binary not found. Bundle it alongside ffmpeg or set "
+                + "ShakaPackagerPathOverride in AddNoMercyEncoder()."
+        );
+    }
+
+    private static string? FindOnPath(string binaryName)
+    {
+        string pathVar = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        char sep = OperatingSystem.IsWindows() ? ';' : ':';
+        foreach (string dir in pathVar.Split(sep, StringSplitOptions.RemoveEmptyEntries))
+        {
+            string full = Path.Combine(dir.Trim(), binaryName);
+            if (File.Exists(full))
+                return full;
+        }
+
+        return null;
+    }
+
     public int DefaultSegmentDurationSeconds { get; set; } = 4;
     public int MaxBufferAheadSeconds { get; set; } = 30;
     public int MinBufferAheadSeconds { get; set; } = 15;

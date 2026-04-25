@@ -196,6 +196,10 @@ public static class ServiceCollectionExtensions
         // custom schemes. IEnumerable<IDrmProcessor> resolution picks the
         // one whose Method matches the profile's DrmConfig.
         services.AddTransient<IDrmProcessor, Aes128HlsDrmProcessor>();
+        // CENC processor handles DASH raw-key packaging via shaka-packager.
+        // PrepareAsync is a no-op for CENC (post-encode); callers that need
+        // CENC packaging resolve CencDrmProcessor directly and call PackageAsync.
+        services.AddTransient<CencDrmProcessor>();
 
         // Output strategies — resolved via IOutputStrategyFactory from DI.
         // Plugins can register additional IOutputStrategy impls and the factory
