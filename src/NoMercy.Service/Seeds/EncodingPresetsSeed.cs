@@ -5,6 +5,7 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -143,7 +144,15 @@ public static class EncodingPresetsSeed
             EncodingProfile? profile;
             try
             {
-                profile = JsonConvert.DeserializeObject<EncodingProfile>(preset.ProfileJson);
+                // Must pass JsonHelper.Settings explicitly: it carries the
+                // StringEnumConverter so that "Format": "Hls" deserializes
+                // to OutputFormat.Hls. Default JsonConvert settings would
+                // throw on every preset and the Folder picker would silently
+                // miss every materialized row.
+                profile = JsonConvert.DeserializeObject<EncodingProfile>(
+                    preset.ProfileJson,
+                    JsonHelper.Settings
+                );
             }
             catch (Exception ex)
             {
