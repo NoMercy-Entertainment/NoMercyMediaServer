@@ -18,7 +18,14 @@ public record RipRequest(
     string? EncodingProfileId,
     AudioTrackSelection[] AudioTracks,
     SubtitleSelection[] Subtitles,
-    RipMode Mode = RipMode.RipAndEncode
+    RipMode Mode = RipMode.RipAndEncode,
+    /// <summary>
+    /// Volume UUID of the disc's filesystem. When the OS can provide this it
+    /// is used as the lock key so the same physical disc is recognised even if
+    /// the device path changes. Falls back to <see cref="DrivePath"/> when
+    /// <c>null</c> or empty.
+    /// </summary>
+    string? VolumeUuid = null
 );
 
 public record CustomMetadata(string Title, int? Year, MediaType Type, string? PosterUrl);

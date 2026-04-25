@@ -3,6 +3,7 @@ namespace NoMercy.Encoder.DiscRipping;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Storage;
 
@@ -21,10 +22,36 @@ public class DiscRipper(
     EncoderOptions options,
     IProcessRunner processRunner,
     IStorage storage,
+    DriveLockRegistry driveLockRegistry,
     ILogger<DiscRipper> logger
 ) : IDiscRipper
 {
     public async Task<DiscRipResult[]> RipAsync(
+        RipRequest request,
+        string outputDirectory,
+        CancellationToken ct
+    )
+    {
+        string lockKey = string.IsNullOrWhiteSpace(request.VolumeUuid)
+            ? request.DrivePath
+            : request.VolumeUuid;
+
+        if (!driveLockRegistry.TryAcquire(lockKey, out DriveLock? driveLock))
+        {
+            throw new DiscDriveBusyException(lockKey);
+        }
+
+        try
+        {
+            return await RipInternalAsync(request, outputDirectory, ct);
+        }
+        finally
+        {
+            driveLock!.Dispose();
+        }
+    }
+
+    private async Task<DiscRipResult[]> RipInternalAsync(
         RipRequest request,
         string outputDirectory,
         CancellationToken ct

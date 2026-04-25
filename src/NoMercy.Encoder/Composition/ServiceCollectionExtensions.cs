@@ -336,8 +336,13 @@ public static class ServiceCollectionExtensions
 
         // Disc ripping — DriveMonitor is Singleton because its polling loop
         // holds state (last-seen drives) across MonitorAsync() enumerations.
+        // DriveLockRegistry is Singleton so all callers share the same set of
+        // per-drive locks; it prevents two simultaneous rips on the same
+        // physical drive regardless of how many DiscRipper transient instances
+        // are active concurrently.
         services.AddTransient<IDiscScanner, DiscScanner>();
         services.AddSingleton<IDriveMonitor, DriveMonitor>();
+        services.AddSingleton<DriveLockRegistry>();
         services.AddTransient<IDiscRipper, DiscRipper>();
 
         // V3 event-bus subscribers — registered as singletons so the activator
