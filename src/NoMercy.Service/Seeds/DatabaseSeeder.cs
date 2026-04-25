@@ -131,6 +131,7 @@ public static class DatabaseSeeder
             () => LibrariesSeed.Init(mediaDbContext),
             () => EncoderProfilesSeed.Init(mediaDbContext),
             () => EncodingPresetsSeed.Init(mediaDbContext),
+            () => EncodingPresetsSeed.MaterializePresetsAsync(mediaDbContext),
         ];
 
         foreach (Func<Task> seed in offlineSeeds)

@@ -202,6 +202,141 @@ public static class ProfileMapper
         );
     }
 
+    /// <summary>
+    /// Maps a V3 <see cref="EncodingProfile"/> to the V1 database row shape
+    /// (<see cref="NoMercy.Database.Models.Media.EncoderProfile"/>-compatible
+    /// field values) so built-in V3 presets appear in the Folder picker.
+    ///
+    /// Only the four columns that the picker reads are populated; navigation
+    /// properties (EncoderProfileFolder) are left empty so the caller's
+    /// upsert never touches folder assignments already in the database.
+    /// </summary>
+    public static (
+        Ulid Id,
+        string Name,
+        string Container,
+        string VideoProfilesJson,
+        string AudioProfilesJson,
+        string SubtitleProfilesJson
+    ) ToV1Fields(EncodingProfile profile)
+    {
+        string container = profile.Format switch
+        {
+            OutputFormat.Hls => "m3u8",
+            OutputFormat.AudioHls => "m3u8",
+            OutputFormat.Mkv => "mkv",
+            OutputFormat.Mp4 => "mp4",
+            OutputFormat.Dash => "mpd",
+            OutputFormat.Mp3 => "mp3",
+            OutputFormat.Flac => "flac",
+            OutputFormat.Ogg => "ogg",
+            _ => "m3u8",
+        };
+
+        // V3 VideoOutput → V1 IVideoProfile (anonymous-object shape that
+        // EncoderProfile._videoProfiles deserializes back into IVideoProfile[]).
+        object[] videoProfiles = profile
+            .VideoOutputs.Select(v =>
+                (object)
+                    new
+                    {
+                        Codec = v.Codec.ToString().ToLowerInvariant(),
+                        Width = v.Width,
+                        Height = v.Height ?? 0,
+                        Bitrate = v.BitrateKbps,
+                        Crf = v.Crf,
+                        Preset = v.Preset ?? string.Empty,
+                        Profile = v.Profile ?? string.Empty,
+                        Level = v.Level ?? string.Empty,
+                        Tune = v.Tune ?? string.Empty,
+                        ColorSpace = v.ColorSpace ?? (v.TenBit ? "yuv420p10le" : "yuv420p"),
+                        ConvertHdrToSdr = v.ConvertHdrToSdr,
+                        KeyInt = v.KeyframeIntervalSeconds,
+                        SegmentName = v.SegmentNameTemplate,
+                        PlaylistName = v.PlaylistNameTemplate,
+                        CustomArguments = Array.Empty<object>(),
+                    }
+            )
+            .ToArray();
+
+        object[] audioProfiles = profile
+            .AudioOutputs.Select(a =>
+                (object)
+                    new
+                    {
+                        Codec = AudioCodecToV1String(a.Codec),
+                        Channels = a.Channels,
+                        SampleRate = a.SampleRateHz,
+                        Bitrate = a.BitrateKbps,
+                        Loudness = (string?)null,
+                        Downmix = (string?)null,
+                        CustomPanMatrix = (string?)null,
+                        AllowedLanguages = a.AllowedLanguages,
+                        SegmentName = a.SegmentNameTemplate,
+                        PlaylistName = a.PlaylistNameTemplate,
+                        CustomArguments = Array.Empty<object>(),
+                    }
+            )
+            .ToArray();
+
+        object[] subtitleProfiles = profile
+            .SubtitleOutputs.Select(s =>
+                (object)
+                    new
+                    {
+                        Codec = SubtitleCodecToV1String(s.Codec),
+                        AllowedLanguages = s.AllowedLanguages,
+                        PlaylistName = s.PlaylistNameTemplate,
+                        CustomArguments = Array.Empty<object>(),
+                    }
+            )
+            .ToArray();
+
+        string videoJson = Newtonsoft.Json.JsonConvert.SerializeObject(videoProfiles);
+        string audioJson = Newtonsoft.Json.JsonConvert.SerializeObject(audioProfiles);
+        string subtitleJson = Newtonsoft.Json.JsonConvert.SerializeObject(subtitleProfiles);
+
+        return (profile.Id, profile.Name, container, videoJson, audioJson, subtitleJson);
+    }
+
+    internal static string ContainerFromFormat(OutputFormat format) =>
+        format switch
+        {
+            OutputFormat.Hls => "m3u8",
+            OutputFormat.AudioHls => "m3u8",
+            OutputFormat.Mkv => "mkv",
+            OutputFormat.Mp4 => "mp4",
+            OutputFormat.Dash => "mpd",
+            OutputFormat.Mp3 => "mp3",
+            OutputFormat.Flac => "flac",
+            OutputFormat.Ogg => "ogg",
+            _ => "m3u8",
+        };
+
+    private static string AudioCodecToV1String(AudioCodecType codec) =>
+        codec switch
+        {
+            AudioCodecType.Aac => "aac",
+            AudioCodecType.Mp3 => "libmp3lame",
+            AudioCodecType.Opus => "libopus",
+            AudioCodecType.Flac => "flac",
+            AudioCodecType.Vorbis => "libvorbis",
+            AudioCodecType.Ac3 => "ac3",
+            AudioCodecType.Eac3 => "eac3",
+            AudioCodecType.TrueHd => "truehd",
+            AudioCodecType.Dts => "dts",
+            _ => "aac",
+        };
+
+    private static string SubtitleCodecToV1String(SubtitleCodecType codec) =>
+        codec switch
+        {
+            SubtitleCodecType.WebVtt => "webvtt",
+            SubtitleCodecType.Ass => "ass",
+            SubtitleCodecType.Srt => "srt",
+            _ => "webvtt",
+        };
+
     private static VideoCodecType ParseVideoCodec(string codec)
     {
         string lower = codec.ToLowerInvariant();

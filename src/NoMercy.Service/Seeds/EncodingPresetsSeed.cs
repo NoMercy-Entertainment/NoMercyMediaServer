@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Profiles;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -97,6 +99,108 @@ public static class EncodingPresetsSeed
                 LogEventLevel.Warning
             );
             return [];
+        }
+    }
+
+    /// <summary>
+    /// For every <see cref="EncodingPreset"/> row that carries a parseable
+    /// <c>ProfileJson</c>, materializes a corresponding <see cref="EncoderProfile"/>
+    /// row so V3 presets appear in the Folder picker alongside V1 profiles.
+    ///
+    /// Rules that match <see cref="BuiltinPresetSeeder"/>:
+    ///   - Uses the preset's Id as the EncoderProfile Id (stable, no duplicates).
+    ///   - Never touches EncoderProfileFolder rows — folder assignments survive re-seed.
+    ///   - Unparseable ProfileJson is skipped with a warning; one bad preset must
+    ///     not block the rest.
+    /// </summary>
+    public static async Task MaterializePresetsAsync(MediaContext context)
+    {
+        Logger.Setup(
+            "Materializing V3 EncodingPresets into EncoderProfiles",
+            LogEventLevel.Verbose
+        );
+
+        List<EncodingPreset> presets = await context.EncodingPresets.AsNoTracking().ToListAsync();
+
+        List<EncoderProfile> materialized = [];
+
+        foreach (EncodingPreset preset in presets)
+        {
+            if (string.IsNullOrWhiteSpace(preset.ProfileJson))
+                continue;
+
+            EncodingProfile? profile;
+            try
+            {
+                profile = JsonConvert.DeserializeObject<EncodingProfile>(preset.ProfileJson);
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup(
+                    $"MaterializePresets: could not deserialize ProfileJson for preset '{preset.Name}' ({preset.Id}): {ex.Message}",
+                    LogEventLevel.Warning
+                );
+                continue;
+            }
+
+            if (profile is null)
+                continue;
+
+            (
+                Ulid id,
+                string name,
+                string container,
+                string videoJson,
+                string audioJson,
+                string subtitleJson
+            ) = ProfileMapper.ToV1Fields(profile with { Id = preset.Id, Name = preset.Name });
+
+            materialized.Add(
+                new()
+                {
+                    Id = id,
+                    Name = name,
+                    Container = container,
+                    _videoProfiles = videoJson,
+                    _audioProfiles = audioJson,
+                    _subtitleProfiles = subtitleJson,
+                    _thumbnailProfile = string.Empty,
+                    EncoderProfileFolder = [],
+                }
+            );
+        }
+
+        if (materialized.Count == 0)
+            return;
+
+        try
+        {
+            await context
+                .EncoderProfiles.UpsertRange(materialized)
+                .On(v => new { v.Id })
+                .WhenMatched(
+                    (existing, incoming) =>
+                        new()
+                        {
+                            Id = incoming.Id,
+                            Name = incoming.Name,
+                            Container = incoming.Container,
+                            _videoProfiles = incoming._videoProfiles,
+                            _audioProfiles = incoming._audioProfiles,
+                            _subtitleProfiles = incoming._subtitleProfiles,
+                            _thumbnailProfile = incoming._thumbnailProfile,
+                        }
+                )
+                .RunAsync();
+
+            Logger.Setup(
+                $"MaterializePresets: upserted {materialized.Count} EncoderProfile row(s) from EncodingPresets",
+                LogEventLevel.Verbose
+            );
+        }
+        catch (Exception e)
+        {
+            Logger.Setup($"MaterializePresets: upsert failed: {e.Message}", LogEventLevel.Fatal);
         }
     }
 
