@@ -132,4 +132,89 @@ public class JobCheckpointTests
         deserialized!.Checkpoint.Should().NotBeNull();
         deserialized.Checkpoint!.CompletedGroupIndices.Should().Equal(0);
     }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Phase 4.13 — resume / cancel fields. Pipeline integration (write on
+    // ffmpeg crash, resume seek-to-keyframe, finalize cleanup, cancellation
+    // SIGTERM/SIGKILL grace) lands as a follow-up; this set guarantees the
+    // record itself preserves the new shape end-to-end.
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void JobCheckpoint_NewFields_DefaultToSafeValues()
+    {
+        JobCheckpoint cp = new(
+            JobId: "j-1",
+            InputPath: "/in/source.mkv",
+            OutputDirectory: "/out/j-1",
+            CompletedGroupIndices: [],
+            LastUpdated: DateTime.UtcNow
+        );
+
+        cp.VariantId.Should().BeEmpty();
+        cp.LastProgressMs.Should().Be(0);
+        cp.LastFfmpegStderrTail.Should().BeEmpty();
+        cp.FailedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void JobCheckpoint_NewFields_RoundTripThroughJson()
+    {
+        DateTime failedAt = new(2026, 4, 25, 12, 34, 56, DateTimeKind.Utc);
+        JobCheckpoint original = new(
+            JobId: "j-1",
+            InputPath: "/in/source.mkv",
+            OutputDirectory: "/out/j-1",
+            CompletedGroupIndices: [0, 1, 2],
+            LastUpdated: DateTime.UtcNow,
+            VariantId: "1080p",
+            LastProgressMs: 12_345,
+            LastFfmpegStderrTail: "frame=890 fps=42 time=00:00:30 bitrate=4500kbits/s",
+            FailedAt: failedAt
+        );
+
+        string json = JsonConvert.SerializeObject(original);
+        JobCheckpoint? roundTripped = JsonConvert.DeserializeObject<JobCheckpoint>(json);
+
+        roundTripped.Should().NotBeNull();
+        roundTripped!.VariantId.Should().Be("1080p");
+        roundTripped.LastProgressMs.Should().Be(12_345);
+        roundTripped.LastFfmpegStderrTail.Should().Contain("frame=890");
+        roundTripped.FailedAt.Should().Be(failedAt);
+    }
+
+    [Fact]
+    public void JobCheckpoint_LegacyJson_LoadsWithDefaultedNewFields()
+    {
+        // Simulates a checkpoint written by a pre-Phase-4.13 build. Older
+        // self-hosted servers must keep resuming jobs after upgrade —
+        // missing fields take the record's positional defaults.
+        const string legacyJson = """
+            {
+                "JobId": "legacy-1",
+                "InputPath": "/in/source.mkv",
+                "OutputDirectory": "/out/legacy-1",
+                "CompletedGroupIndices": [0, 1],
+                "LastUpdated": "2026-04-20T12:00:00Z",
+                "Pass1Completed": true,
+                "LastCompletedSegment": 5,
+                "EncodeMode": "two-pass"
+            }
+            """;
+
+        JobCheckpoint? loaded = JsonConvert.DeserializeObject<JobCheckpoint>(legacyJson);
+
+        loaded.Should().NotBeNull();
+        loaded!.JobId.Should().Be("legacy-1");
+        loaded.LastCompletedSegment.Should().Be(5);
+        loaded.EncodeMode.Should().Be("two-pass");
+        // Newtonsoft.Json populates string fields not present in the JSON
+        // payload as null instead of running the record's positional
+        // default. The store treats null + empty as equivalent for the
+        // resume path; both signal "no data carried over from before."
+        (loaded.VariantId ?? string.Empty).Should().BeEmpty();
+        loaded.LastProgressMs.Should().Be(0);
+        (loaded.LastFfmpegStderrTail ?? string.Empty).Should().BeEmpty();
+        loaded.FailedAt.Should().BeNull();
+    }
 }
