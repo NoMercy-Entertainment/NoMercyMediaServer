@@ -64,3 +64,22 @@ public record SeekRequest([property: JsonProperty("position_seconds")] double Po
 /// Response body returned after a successful seek.
 /// </summary>
 public record SeekResponse([property: JsonProperty("position_seconds")] double PositionSeconds);
+
+/// <summary>
+/// Admin-safe view of a single live session returned by GET /sessions.
+/// Does not include internal cancellation tokens or scratch paths.
+/// </summary>
+public record LiveSessionDto(
+    [property: JsonProperty("session_id")] string SessionId,
+    [property: JsonProperty("state")] string State,
+    [property: JsonProperty("quality_id")] string QualityId,
+    [property: JsonProperty("quality_label")] string QualityLabel,
+    [property: JsonProperty("width")] int Width,
+    [property: JsonProperty("height")] int Height,
+    [property: JsonProperty("bitrate_kbps")] int BitrateKbps,
+    [property: JsonProperty("position_seconds")] double PositionSeconds,
+    [property: JsonProperty("buffer_ahead_seconds")] double BufferAheadSeconds,
+    [property: JsonProperty("segment_count")] int SegmentCount,
+    [property: JsonProperty("is_complete")] bool IsComplete,
+    [property: JsonProperty("last_access")] DateTime LastAccess
+);

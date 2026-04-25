@@ -54,6 +54,34 @@ public class LiveStreamingService(ILogger<LiveStreamingService> logger, IStorage
         return _runtimes.TryGetValue(sessionId, out runtime!);
     }
 
+    public IReadOnlyList<LiveSessionSnapshot> GetActiveSessions()
+    {
+        List<LiveSessionSnapshot> snapshots = [];
+
+        foreach (KeyValuePair<string, LiveRuntimeSession> kv in _runtimes)
+        {
+            ILiveSession session = kv.Value.Session;
+            snapshots.Add(
+                new LiveSessionSnapshot(
+                    SessionId: session.SessionId,
+                    State: session.State,
+                    QualityId: session.CurrentQuality.Id,
+                    QualityLabel: session.CurrentQuality.Label,
+                    Width: session.CurrentQuality.Width,
+                    Height: session.CurrentQuality.Height,
+                    BitrateKbps: session.CurrentQuality.BitrateKbps,
+                    PositionSeconds: session.TranscodedPosition.TotalSeconds,
+                    BufferAheadSeconds: session.BufferAhead.TotalSeconds,
+                    SegmentCount: kv.Value.HighestSegmentIndex + 1,
+                    IsComplete: kv.Value.IsComplete,
+                    LastAccess: kv.Value.LastAccess
+                )
+            );
+        }
+
+        return snapshots;
+    }
+
     public async Task RemoveAsync(string sessionId)
     {
         if (_runtimes.TryRemove(sessionId, out LiveRuntimeSession? runtime))

@@ -29,4 +29,11 @@ public interface ILiveStreamingService
     Task RemoveAsync(string sessionId);
 
     IReadOnlyCollection<string> ActiveSessionIds { get; }
+
+    /// <summary>
+    /// Returns a point-in-time snapshot of all currently registered live sessions.
+    /// Safe to call concurrently — enumerates the underlying dictionary under a
+    /// consistent view and projects each runtime into an immutable snapshot record.
+    /// </summary>
+    IReadOnlyList<LiveSessionSnapshot> GetActiveSessions();
 }

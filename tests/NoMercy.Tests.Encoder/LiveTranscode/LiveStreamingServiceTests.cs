@@ -167,6 +167,53 @@ public class LiveStreamingServiceTests
     }
 
     [Fact]
+    public void GetActiveSessions_NoSessions_ReturnsEmpty()
+    {
+        LiveStreamingService svc = NewService();
+
+        IReadOnlyList<LiveSessionSnapshot> result = svc.GetActiveSessions();
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetActiveSessions_WithRegisteredSession_ReturnsIt()
+    {
+        LiveStreamingService svc = NewService();
+        LiveSession session = MakeSession("snap-001");
+        svc.Register(session, TimeSpan.FromSeconds(6));
+
+        IReadOnlyList<LiveSessionSnapshot> result = svc.GetActiveSessions();
+
+        result.Should().HaveCount(1);
+        LiveSessionSnapshot snap = result[0];
+        snap.SessionId.Should().Be("snap-001");
+        snap.QualityId.Should().Be("720p");
+        snap.Width.Should().Be(1280);
+        snap.Height.Should().Be(720);
+        snap.BitrateKbps.Should().Be(3000);
+        snap.IsComplete.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetActiveSessions_AfterRemoval_ExcludesRemoved()
+    {
+        LiveStreamingService svc = NewService();
+        LiveSession s1 = MakeSession("remove-a");
+        LiveSession s2 = MakeSession("remove-b");
+
+        svc.Register(s1, TimeSpan.FromSeconds(6));
+        svc.Register(s2, TimeSpan.FromSeconds(6));
+
+        await svc.RemoveAsync("remove-a");
+
+        IReadOnlyList<LiveSessionSnapshot> result = svc.GetActiveSessions();
+
+        result.Should().HaveCount(1);
+        result[0].SessionId.Should().Be("remove-b");
+    }
+
+    [Fact]
     public async Task ActiveSessionIds_ReflectsRegistrationAndRemoval()
     {
         LiveStreamingService svc = NewService();

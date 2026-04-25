@@ -33,6 +33,32 @@ public class LiveTranscodeController(
     LiveSessionLimits sessionLimits
 ) : BaseController
 {
+    [HttpGet("sessions")]
+    public IActionResult ListSessions()
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view live sessions");
+
+        IReadOnlyList<LiveSessionSnapshot> snapshots = streamingService.GetActiveSessions();
+
+        IEnumerable<LiveSessionDto> dtos = snapshots.Select(s => new LiveSessionDto(
+            SessionId: s.SessionId,
+            State: s.State.ToString(),
+            QualityId: s.QualityId,
+            QualityLabel: s.QualityLabel,
+            Width: s.Width,
+            Height: s.Height,
+            BitrateKbps: s.BitrateKbps,
+            PositionSeconds: s.PositionSeconds,
+            BufferAheadSeconds: s.BufferAheadSeconds,
+            SegmentCount: s.SegmentCount,
+            IsComplete: s.IsComplete,
+            LastAccess: s.LastAccess
+        ));
+
+        return Ok(dtos);
+    }
+
     [HttpPost("sessions")]
     public async Task<IActionResult> StartSession(
         [FromBody] StartLiveSessionRequest request,
