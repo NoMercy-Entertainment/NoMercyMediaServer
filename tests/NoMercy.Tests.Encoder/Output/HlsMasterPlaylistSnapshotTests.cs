@@ -319,6 +319,148 @@ public class HlsMasterPlaylistSnapshotTests
     }
 
     // -----------------------------------------------------------------------
+    // 3-variant ladder with subtitles — alignment plan item 722
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void MasterPlaylist_ThreeVariantLadderWithSubs_MatchesExpectedAttributes()
+    {
+        // Build a 3-video / 1-audio / 1-ASS-sub OutputPlan.
+        // Metrics are empty (no encoded files on disk) so BANDWIDTH=0 / AVERAGE-BANDWIDTH=0
+        // is intentional — this isolates attribute shape from measured bitrate.
+        OutputPlan plan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                new(
+                    Width: 854,
+                    Height: 480,
+                    EncoderName: "libx264",
+                    Crf: 23,
+                    BitrateKbps: 0,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "3.1",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: "[v0]",
+                    ExtraFlags: new(),
+                    FrameRate: 30.0
+                ),
+                new(
+                    Width: 1280,
+                    Height: 720,
+                    EncoderName: "libx264",
+                    Crf: 23,
+                    BitrateKbps: 0,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.0",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: "[v1]",
+                    ExtraFlags: new(),
+                    FrameRate: 30.0
+                ),
+                new(
+                    Width: 1920,
+                    Height: 1080,
+                    EncoderName: "libx264",
+                    Crf: 23,
+                    BitrateKbps: 0,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.0",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: "[v2]",
+                    ExtraFlags: new(),
+                    FrameRate: 30.0
+                ),
+            ],
+            AudioOutputs:
+            [
+                new(
+                    EncoderName: "aac",
+                    BitrateKbps: 128,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: "eng",
+                    MapLabel: "0:a:0"
+                ),
+            ],
+            SubtitleOutputs:
+            [
+                new(
+                    OutputCodec: SubtitleCodecType.Ass,
+                    Action: StreamAction.Extract,
+                    Language: "eng",
+                    SourceIndex: 0,
+                    MapLabel: "0:s:0"
+                ),
+            ],
+            Thumbnails: null
+        );
+
+        PlaylistGenerator generator = new();
+        string m3u8 = generator.GenerateMasterPlaylist(plan, MediaTitle, EmptyVideo, EmptyAudio);
+
+        // --- Header ---
+        Assert.StartsWith("#EXTM3U", m3u8);
+        // Subtitle group present → must be at least v6
+        Assert.Contains("#EXT-X-VERSION:6", m3u8);
+        Assert.Contains("#EXT-X-INDEPENDENT-SEGMENTS", m3u8);
+
+        // --- Subtitle EXT-X-MEDIA ---
+        Assert.Contains(
+            "#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"English\",LANGUAGE=\"eng\"",
+            m3u8
+        );
+
+        // --- Three STREAM-INF lines ---
+        string[] streamInfLines = m3u8.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Where(l => l.StartsWith("#EXT-X-STREAM-INF:"))
+            .ToArray();
+
+        Assert.Equal(3, streamInfLines.Length);
+
+        // Helper: assert all required attributes are present on every variant line.
+        // BANDWIDTH / AVERAGE-BANDWIDTH are 0 because no encoded files exist (expected).
+        foreach (string line in streamInfLines)
+        {
+            Assert.Contains("BANDWIDTH=0", line);
+            Assert.Contains("AVERAGE-BANDWIDTH=0", line);
+            Assert.Contains("FRAME-RATE=30.000", line);
+            Assert.Contains("VIDEO-RANGE=SDR", line);
+            Assert.Contains("SUBTITLES=\"subs\"", line);
+            // CLOSED-CAPTIONS=NONE must NOT appear when a subs group is declared
+            Assert.DoesNotContain("CLOSED-CAPTIONS=NONE", line);
+            // CODECS must contain an h264 avc1 tag AND mp4a.40.2
+            Assert.Contains("avc1.", line);
+            Assert.Contains("mp4a.40.2", line);
+        }
+
+        // --- Per-variant RESOLUTION and codec tag ---
+        string line480 = streamInfLines.First(l => l.Contains("RESOLUTION=854x480"));
+        Assert.Contains("avc1.64001F", line480); // high/3.1 → 0x64 0x00 0x1F
+
+        string line720 = streamInfLines.First(l => l.Contains("RESOLUTION=1280x720"));
+        Assert.Contains("avc1.640028", line720); // high/4.0 → 0x64 0x00 0x28
+
+        string line1080 = streamInfLines.First(l => l.Contains("RESOLUTION=1920x1080"));
+        Assert.Contains("avc1.640028", line1080); // high/4.0 → 0x64 0x00 0x28
+
+        // --- Variants appear in declaration order (480 → 720 → 1080) ---
+        int idx480 = m3u8.IndexOf("RESOLUTION=854x480", StringComparison.Ordinal);
+        int idx720 = m3u8.IndexOf("RESOLUTION=1280x720", StringComparison.Ordinal);
+        int idx1080 = m3u8.IndexOf("RESOLUTION=1920x1080", StringComparison.Ordinal);
+
+        Assert.True(idx480 < idx720, "480p variant must precede 720p variant");
+        Assert.True(idx720 < idx1080, "720p variant must precede 1080p variant");
+    }
+
+    // -----------------------------------------------------------------------
     // Factories
     // -----------------------------------------------------------------------
 
