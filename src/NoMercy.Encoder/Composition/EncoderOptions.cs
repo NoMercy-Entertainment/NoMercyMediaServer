@@ -1,3 +1,5 @@
+using NoMercy.Encoder.Profiles;
+
 namespace NoMercy.Encoder.Composition;
 
 public class EncoderOptions
@@ -79,6 +81,43 @@ public class EncoderOptions
     /// </summary>
     public bool IsDistributedEncodingEnabled =>
         !string.IsNullOrWhiteSpace(DistributedEncodingSigningKey);
+
+    // ── Background-subscriber toggles ──────────────────────────────────────
+
+    /// <summary>
+    /// When true (default), <c>AutoEncodeSubscriber</c> fires an encode job
+    /// whenever new media files land in a folder mapped by
+    /// <see cref="WatchedFolderProfiles"/>.
+    /// </summary>
+    public bool EnableAutoEncodeSubscriber { get; set; } = true;
+
+    /// <summary>
+    /// When true (default), <c>IntroDetectSubscriber</c> runs chromaprint
+    /// fingerprinting + intro/outro detection after a library scan completes.
+    /// </summary>
+    public bool EnableIntroDetectSubscriber { get; set; } = true;
+
+    /// <summary>
+    /// When true (default), <c>OcrPostEncodeSubscriber</c> dispatches an OCR
+    /// follow-up job when an encode that contains bitmap subtitle streams
+    /// (PGS / VOBSUB) targeting HLS or DASH finishes.
+    /// </summary>
+    public bool EnableOcrPostEncodeSubscriber { get; set; } = true;
+
+    /// <summary>
+    /// When true (default), crop detection runs as part of the PlanStage
+    /// (see <c>CropDetectSubscriber</c> for details — the live wiring lives
+    /// inside the pipeline, not as a separate post-process event).
+    /// </summary>
+    public bool EnableCropDetectSubscriber { get; set; } = true;
+
+    /// <summary>
+    /// Maps absolute folder paths to the <see cref="EncodingProfile"/> that
+    /// should be applied when new files are detected in that folder.
+    /// Used by <c>AutoEncodeSubscriber</c>. Empty by default — auto-encode
+    /// is effectively disabled until at least one mapping is added.
+    /// </summary>
+    public Dictionary<string, EncodingProfile> WatchedFolderProfiles { get; } = [];
 
     public byte[] GetDistributedEncodingSigningKey()
     {
