@@ -648,3 +648,7 @@ docs/superpowers/
 .claude/memories/
 .claude/scheduled_tasks.lock
 .superpowers/
+
+# Encoder runtime fingerprint cache (written next to app at startup when no path configured)
+src/NoMercy.Service/driver_fingerprint.json
+src/NoMercy.Service/speed_index.json
