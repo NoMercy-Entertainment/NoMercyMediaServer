@@ -1,10 +1,14 @@
+using System.Reflection;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Api.Controllers.V1.Dashboard;
+using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
+using NoMercy.Helpers.Extensions;
 using Xunit;
 
 namespace NoMercy.Tests.Api;
@@ -17,8 +21,12 @@ namespace NoMercy.Tests.Api;
 /// </summary>
 public class WorkersController_RegisterHttpsTests
 {
+    private static readonly Guid OwnerUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
     private static WorkersController BuildController()
     {
+        SeedOwnerInClaimsExtensions();
+
         EncoderOptions opts = new() { DistributedEncodingSigningKey = "0123456789abcdef" };
         InMemoryRemoteWorkerRegistry registry = new();
         Mock<ITaskSerializer> serializer = new();
@@ -38,17 +46,43 @@ public class WorkersController_RegisterHttpsTests
             workerLogger: NullLogger<HttpRemoteWorker>.Instance
         );
 
-        // Stand up an HttpContext with an "owner" claim so the IsOwner() guard
-        // doesn't short-circuit the test before reaching URL validation.
+        // Stand up an HttpContext whose principal carries the owner's user id
+        // as ClaimTypes.NameIdentifier — that's what IsOwner() actually checks
+        // against the seeded static _users list.
         DefaultHttpContext httpContext = new();
-        httpContext.User = new System.Security.Claims.ClaimsPrincipal(
-            new System.Security.Claims.ClaimsIdentity(
-                [new System.Security.Claims.Claim("server_owner", "true")],
+        httpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(
+                [new Claim(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
                 "test"
             )
         );
         controller.ControllerContext = new() { HttpContext = httpContext };
         return controller;
+    }
+
+    /// <summary>
+    /// IsOwner() checks the private static <c>_users</c> list inside
+    /// <see cref="ClaimsPrincipleExtensions"/> — there is no public seeding
+    /// API, so reflect into the field once per test class load and inject a
+    /// fake owner user that matches <see cref="OwnerUserId"/>.
+    /// </summary>
+    private static void SeedOwnerInClaimsExtensions()
+    {
+        FieldInfo field = typeof(ClaimsPrincipleExtensions).GetField(
+            "_users",
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+        List<User> users = (List<User>)field.GetValue(null)!;
+        if (users.Any(u => u.Id == OwnerUserId))
+            return;
+        users.Add(
+            new()
+            {
+                Id = OwnerUserId,
+                Owner = true,
+                Email = "test-owner@local",
+            }
+        );
     }
 
     [Theory]
