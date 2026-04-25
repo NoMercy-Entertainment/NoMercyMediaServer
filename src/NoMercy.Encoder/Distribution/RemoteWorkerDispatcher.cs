@@ -194,7 +194,14 @@ public class RemoteWorkerDispatcher(
     /// </summary>
     private void RecordOutcome(string workerId, bool success)
     {
-        if (registry is InMemoryRemoteWorkerRegistry healthTracking)
-            healthTracking.RecordTaskOutcome(workerId, success);
+        switch (registry)
+        {
+            case JsonRemoteWorkerRegistry json:
+                json.RecordTaskOutcome(workerId, success);
+                break;
+            case InMemoryRemoteWorkerRegistry mem:
+                mem.RecordTaskOutcome(workerId, success);
+                break;
+        }
     }
 }

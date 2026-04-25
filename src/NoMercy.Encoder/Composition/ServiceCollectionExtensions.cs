@@ -290,14 +290,31 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IWorkerAssigner, WorkerAssigner>();
 
         // Registry is a singleton so registrations accumulate across the
-        // process lifetime. InMemoryRemoteWorkerRegistry replaces the
-        // empty default so runtime worker registration actually takes
-        // effect — callers can still swap this out for a SignalR-backed
-        // registry later.
+        // process lifetime. InMemoryRemoteWorkerRegistry is always registered
+        // as the runtime backing store. In coordinator mode (signing key set
+        // + no CoordinatorUrl) we wrap it with JsonRemoteWorkerRegistry so
+        // worker identities survive a coordinator restart. Worker mode and
+        // standalone installs use the in-memory registry directly.
         services.AddSingleton<InMemoryRemoteWorkerRegistry>();
         services.AddSingleton<IRemoteWorkerRegistry>(sp =>
-            sp.GetRequiredService<InMemoryRemoteWorkerRegistry>()
-        );
+        {
+            EncoderOptions encoderOpts = sp.GetRequiredService<EncoderOptions>();
+
+            if (encoderOpts.IsCoordinatorMode)
+            {
+                string persistPath = encoderOpts.WorkerRegistryPath;
+                return new JsonRemoteWorkerRegistry(
+                    inner: sp.GetRequiredService<InMemoryRemoteWorkerRegistry>(),
+                    filePath: persistPath,
+                    httpClientFactory: sp.GetRequiredService<IHttpClientFactory>(),
+                    serializer: sp.GetRequiredService<ITaskSerializer>(),
+                    signingKey: encoderOpts.GetDistributedEncodingSigningKey(),
+                    logger: sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<JsonRemoteWorkerRegistry>>()
+                );
+            }
+
+            return sp.GetRequiredService<InMemoryRemoteWorkerRegistry>();
+        });
 
         // Signed transport between coordinator and workers.
         services.AddTransient<ITaskSerializer, TaskSerializer>();

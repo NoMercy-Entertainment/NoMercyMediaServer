@@ -140,6 +140,34 @@ public class EncoderOptions
     public bool IsDistributedEncodingEnabled =>
         !string.IsNullOrWhiteSpace(DistributedEncodingSigningKey);
 
+    /// <summary>
+    /// Absolute path to the workers.json file used by
+    /// <see cref="JsonRemoteWorkerRegistry"/> to persist worker registrations
+    /// across coordinator restarts. Defaults to
+    /// <c>%LOCALAPPDATA%/NoMercy/distribution/workers.json</c> (or the
+    /// XDG-equivalent on Linux/macOS). Set this via
+    /// <c>AddNoMercyEncoder(opts =&gt; opts.WorkerRegistryPath = ...)</c> to
+    /// redirect persistence to a different location (e.g. alongside the
+    /// media.db when the host configures a custom data root).
+    /// </summary>
+    public string WorkerRegistryPath { get; set; } =
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "NoMercy",
+            "distribution",
+            "workers.json"
+        );
+
+    /// <summary>
+    /// True when this server is acting as a coordinator (not a worker).
+    /// A coordinator has a signing key set and no <see cref="CoordinatorUrl"/>
+    /// pointing to another host. In coordinator mode the
+    /// <see cref="JsonRemoteWorkerRegistry"/> is registered so worker
+    /// identities survive coordinator restarts.
+    /// </summary>
+    public bool IsCoordinatorMode =>
+        IsDistributedEncodingEnabled && string.IsNullOrWhiteSpace(CoordinatorUrl);
+
     // ── Background-subscriber toggles ──────────────────────────────────────
 
     /// <summary>

@@ -36,6 +36,13 @@ public class HttpRemoteWorker : IRemoteWorker
 
     public string WorkerId { get; }
 
+    /// <summary>
+    /// The base URL this worker was registered with. Used by
+    /// <see cref="JsonRemoteWorkerRegistry"/> to persist and rehydrate
+    /// the worker entry across coordinator restarts.
+    /// </summary>
+    public string BaseUrl => _http.BaseAddress?.ToString() ?? string.Empty;
+
     public HttpRemoteWorker(
         string workerId,
         HttpClient http,
