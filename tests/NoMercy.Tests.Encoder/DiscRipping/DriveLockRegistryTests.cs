@@ -94,7 +94,11 @@ public class DriveLockRegistryTests
 
     private static IDiscRipper BuildRipper(DriveLockRegistry registry, IProcessRunner processRunner)
     {
-        EncoderOptions opts = new() { FfmpegPath = "ffmpeg" };
+        EncoderOptions opts = new()
+        {
+            FfmpegPathOverride = "ffmpeg",
+            FfprobePathOverride = "ffprobe",
+        };
 
         Mock<IStorage> storageMock = new();
         storageMock.Setup(s => s.CreateDirectory(It.IsAny<string>()));

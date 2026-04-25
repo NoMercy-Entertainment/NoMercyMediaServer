@@ -59,6 +59,27 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         );
     }
 
+    public Task<ProcessResult> RunAsync(
+        string executable,
+        string[] arguments,
+        IReadOnlyDictionary<string, string>? extraEnv,
+        string? workingDirectory = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return RunCoreAsync(
+            executable,
+            arguments,
+            onStdOut: null,
+            onStdErr: null,
+            workingDirectory,
+            cancellationToken,
+            killSignal: default,
+            onProcessStarted: null,
+            extraEnv: extraEnv
+        );
+    }
+
     private async Task<ProcessResult> RunCoreAsync(
         string executable,
         string[] arguments,
@@ -67,7 +88,8 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         string? workingDirectory,
         CancellationToken cancellationToken,
         CancellationToken killSignal,
-        Action<int>? onProcessStarted = null
+        Action<int>? onProcessStarted = null,
+        IReadOnlyDictionary<string, string>? extraEnv = null
     )
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -83,6 +105,12 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             RedirectStandardError = true,
             WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory,
         };
+
+        if (extraEnv is { Count: > 0 })
+        {
+            foreach (KeyValuePair<string, string> kv in extraEnv)
+                startInfo.Environment[kv.Key] = kv.Value;
+        }
 
         foreach (string arg in arguments)
         {

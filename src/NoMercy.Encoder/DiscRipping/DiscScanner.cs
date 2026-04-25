@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Infrastructure;
 
 /// <summary>
@@ -33,6 +34,33 @@ public class DiscScanner(
         )
             ? OpticalDiscType.BluRay
             : OpticalDiscType.Dvd;
+
+        // For Blu-ray drives, run a 1-second ffprobe pre-scan to detect AACS /
+        // BD+ failures before attempting the full (potentially slow) scan.
+        if (discType == OpticalDiscType.BluRay)
+        {
+            using CancellationTokenSource probeCts =
+                CancellationTokenSource.CreateLinkedTokenSource(ct);
+            probeCts.CancelAfter(TimeSpan.FromSeconds(1));
+
+            try
+            {
+                ProcessResult preProbe = await processRunner.RunAsync(
+                    options.FfprobePath,
+                    ["-v", "quiet", "-show_format", drivePath],
+                    workingDirectory: null,
+                    cancellationToken: probeCts.Token
+                );
+
+                if (!preProbe.IsSuccess)
+                    ClassifyBluRayStderr(drivePath, preProbe.StdErr);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // 1-second timeout expired — process still running means the disc
+                // responded (just slowly). Let the real scan proceed.
+            }
+        }
 
         string[] args =
         [
@@ -270,6 +298,71 @@ public class DiscScanner(
         }
 
         return new(TimeSpan.FromSeconds(start), TimeSpan.FromSeconds(end), title);
+    }
+
+    /// <summary>
+    /// Inspects ffprobe stderr from a Blu-ray pre-probe and throws the
+    /// appropriate <see cref="EncoderRuntimeException"/> when a known
+    /// decryption failure pattern is detected.
+    /// </summary>
+    internal static void ClassifyBluRayStderr(string drivePath, string stderr)
+    {
+        if (string.IsNullOrEmpty(stderr))
+            return;
+
+        // libaacs emits this when KEYDB.cfg has no entry for the disc's volume ID.
+        // Pattern observed in libaacs src/libaacs/aacs.c:
+        //   "aacs: no matching certificate"  (older builds)
+        //   "AACS: no matching certificate"  (case varies by build)
+        if (
+            stderr.Contains("no matching certificate", StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains("aacs:", StringComparison.OrdinalIgnoreCase)
+                && stderr.Contains("certificate", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            string volumeId = ExtractVolumeId(stderr) ?? drivePath;
+            throw RuntimeErrors.DiscAacsCertMissing(volumeId);
+        }
+
+        // libbdplus emits this when the converter database has no entry for the disc.
+        // Pattern from libbdplus src/libbdplus/bdplus.c:
+        //   "bdplus: no matching converter"
+        if (stderr.Contains("no matching converter", StringComparison.OrdinalIgnoreCase))
+        {
+            string volumeId = ExtractVolumeId(stderr) ?? drivePath;
+            throw RuntimeErrors.DiscBdplusConverterMissing(volumeId);
+        }
+
+        // Any other protocol-level read failure.
+        if (
+            stderr.Contains("Protocol not found", StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains("No such file or directory", StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains("Input/output error", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            throw RuntimeErrors.DiscReadError(drivePath, TrimStderr(stderr));
+        }
+    }
+
+    /// <summary>
+    /// Attempts to extract a volume/disc ID from ffprobe / libaacs stderr lines.
+    /// libaacs typically logs the volume ID as a hex string on the error line.
+    /// Returns null when no candidate is found.
+    /// </summary>
+    private static string? ExtractVolumeId(string stderr)
+    {
+        foreach (string line in stderr.Split('\n'))
+        {
+            // Look for a line containing a 32-char hex string — the AACS volume ID.
+            System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(
+                line,
+                @"[0-9A-Fa-f]{32}"
+            );
+            if (m.Success)
+                return m.Value.ToUpperInvariant();
+        }
+
+        return null;
     }
 
     private static string TrimStderr(string stdErr)

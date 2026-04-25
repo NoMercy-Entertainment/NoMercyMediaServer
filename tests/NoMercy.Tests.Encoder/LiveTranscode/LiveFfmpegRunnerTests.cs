@@ -354,5 +354,16 @@ public class LiveFfmpegRunnerTests
                 new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
         }
+
+        public Task<ProcessResult> RunAsync(
+            string executable,
+            string[] arguments,
+            IReadOnlyDictionary<string, string>? extraEnv,
+            string? workingDirectory = null,
+            CancellationToken cancellationToken = default
+        ) =>
+            Task.FromResult(
+                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+            );
     }
 }

@@ -124,17 +124,48 @@ public class DiscRipper(
         await using LocalPathLease outputLease = storage.AcquireLocalPath(outputPath);
         args.Add(outputLease.Path);
 
+        // Forward AACS / BD+ database overrides into the child process environment
+        // when the caller has configured them.  The host process environment is
+        // never mutated — we pass a separate dict to the process runner.
+        //
+        // Variable names sourced from libaacs src/libaacs/aacs.c (LIBAACS_KEY_DB)
+        // and libbdplus src/libbdplus/bdplus.c (LIBBDPLUS_DATABASE).
+        // Assumption: names are stable; documented here in case a future upstream
+        // release renames them.
+        Dictionary<string, string>? envOverrides = BuildBluRayEnvOverrides(request.DrivePath);
+
         Stopwatch stopwatch = Stopwatch.StartNew();
-        ProcessResult result = await processRunner.RunAsync(
-            options.FfmpegPath,
-            args.ToArray(),
-            workingDirectory: outputDirectory,
-            cancellationToken: ct
-        );
+        ProcessResult result = envOverrides is { Count: > 0 }
+            ? await processRunner.RunAsync(
+                options.FfmpegPath,
+                args.ToArray(),
+                envOverrides,
+                workingDirectory: outputDirectory,
+                cancellationToken: ct
+            )
+            : await processRunner.RunAsync(
+                options.FfmpegPath,
+                args.ToArray(),
+                workingDirectory: outputDirectory,
+                cancellationToken: ct
+            );
         stopwatch.Stop();
 
         if (!result.IsSuccess)
         {
+            // Surface structured AACS / BD+ errors when the rip fails mid-stream.
+            if (request.DrivePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    DiscScanner.ClassifyBluRayStderr(request.DrivePath, result.StdErr);
+                }
+                catch (EncoderRuntimeException)
+                {
+                    throw; // Structured error — let it propagate to the caller.
+                }
+            }
+
             return new(
                 TitleIndex: titleIndex,
                 OutputPath: outputPath,
@@ -163,5 +194,30 @@ public class DiscRipper(
             OutputSizeBytes: size,
             Error: null
         );
+    }
+
+    /// <summary>
+    /// Builds the environment-variable overrides to pass to the ffmpeg child
+    /// process for Blu-ray disc paths. Returns null / empty when no overrides
+    /// are configured (DVD paths also return null — they don't use libaacs).
+    /// </summary>
+    private Dictionary<string, string>? BuildBluRayEnvOverrides(string drivePath)
+    {
+        if (!drivePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        BluRayOptions? bluRay = options.BluRay;
+        if (bluRay is null)
+            return null;
+
+        Dictionary<string, string> env = [];
+
+        if (!string.IsNullOrWhiteSpace(bluRay.KeyDbOverridePath))
+            env["LIBAACS_KEY_DB"] = bluRay.KeyDbOverridePath;
+
+        if (!string.IsNullOrWhiteSpace(bluRay.AacsKeysOverridePath))
+            env["LIBBDPLUS_DATABASE"] = bluRay.AacsKeysOverridePath;
+
+        return env.Count > 0 ? env : null;
     }
 }

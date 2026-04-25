@@ -237,6 +237,7 @@ public class DiscRipperTests : IDisposable
             _options,
             _processRunner.Object,
             storage,
+            new DriveLockRegistry(),
             NullLogger<DiscRipper>.Instance
         );
     }

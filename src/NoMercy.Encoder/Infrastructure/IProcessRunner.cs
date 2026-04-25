@@ -33,4 +33,18 @@ public interface IProcessRunner
         CancellationToken killSignal,
         Action<int>? onProcessStarted = null
     );
+
+    /// <summary>
+    /// Runs a process with additional environment variables merged into the
+    /// child process environment. Used by disc-ripping to forward
+    /// <c>LIBAACS_KEY_DB</c> / <c>LIBBDPLUS_DATABASE</c> overrides without
+    /// touching the host process environment.
+    /// </summary>
+    Task<ProcessResult> RunAsync(
+        string executable,
+        string[] arguments,
+        IReadOnlyDictionary<string, string>? extraEnv,
+        string? workingDirectory = null,
+        CancellationToken cancellationToken = default
+    );
 }
