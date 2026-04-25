@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="NoMercy.Tests.Events" />
+    <InternalsVisibleTo Include="NoMercy.Tests.Api" />
   </ItemGroup>
 
   <ItemGroup>
