@@ -117,17 +117,28 @@ public static class EncodingPresetsSeed
     {
         Logger.Setup(
             "Materializing V3 EncodingPresets into EncoderProfiles",
-            LogEventLevel.Verbose
+            LogEventLevel.Information
         );
 
         List<EncodingPreset> presets = await context.EncodingPresets.AsNoTracking().ToListAsync();
 
+        Logger.Setup(
+            $"MaterializePresets: scanned {presets.Count} EncodingPreset row(s)",
+            LogEventLevel.Information
+        );
+
         List<EncoderProfile> materialized = [];
+        int skippedEmpty = 0;
+        int skippedDeserializeNull = 0;
+        int deserializeFailures = 0;
 
         foreach (EncodingPreset preset in presets)
         {
             if (string.IsNullOrWhiteSpace(preset.ProfileJson))
+            {
+                skippedEmpty++;
                 continue;
+            }
 
             EncodingProfile? profile;
             try
@@ -136,6 +147,7 @@ public static class EncodingPresetsSeed
             }
             catch (Exception ex)
             {
+                deserializeFailures++;
                 Logger.Setup(
                     $"MaterializePresets: could not deserialize ProfileJson for preset '{preset.Name}' ({preset.Id}): {ex.Message}",
                     LogEventLevel.Warning
@@ -144,7 +156,14 @@ public static class EncodingPresetsSeed
             }
 
             if (profile is null)
+            {
+                skippedDeserializeNull++;
+                Logger.Setup(
+                    $"MaterializePresets: deserialize returned null for preset '{preset.Name}' ({preset.Id})",
+                    LogEventLevel.Warning
+                );
                 continue;
+            }
 
             (
                 Ulid id,
@@ -171,7 +190,18 @@ public static class EncodingPresetsSeed
         }
 
         if (materialized.Count == 0)
+        {
+            Logger.Setup(
+                $"MaterializePresets: 0 rows materialized "
+                    + $"(scanned={presets.Count} empty={skippedEmpty} "
+                    + $"deserializeFailures={deserializeFailures} "
+                    + $"deserializeNull={skippedDeserializeNull}). "
+                    + "Folder picker will only show V1-seeded EncoderProfile rows. "
+                    + "Check the warnings above for the failure cause.",
+                LogEventLevel.Warning
+            );
             return;
+        }
 
         try
         {
@@ -194,8 +224,11 @@ public static class EncodingPresetsSeed
                 .RunAsync();
 
             Logger.Setup(
-                $"MaterializePresets: upserted {materialized.Count} EncoderProfile row(s) from EncodingPresets",
-                LogEventLevel.Verbose
+                $"MaterializePresets: upserted {materialized.Count} EncoderProfile row(s) from EncodingPresets "
+                    + $"(scanned={presets.Count} empty={skippedEmpty} "
+                    + $"deserializeFailures={deserializeFailures} "
+                    + $"deserializeNull={skippedDeserializeNull})",
+                LogEventLevel.Information
             );
         }
         catch (Exception e)

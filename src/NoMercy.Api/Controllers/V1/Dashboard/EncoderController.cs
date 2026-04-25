@@ -30,7 +30,7 @@ public class EncoderController(EncoderRepository encoderRepository, CodecRegistr
 
         List<EncoderProfile> encoderProfiles = await encoderRepository.GetEncoderProfilesAsync();
 
-        return Ok(encoderProfiles);
+        return Ok(new { data = encoderProfiles });
     }
 
     [HttpPost]
