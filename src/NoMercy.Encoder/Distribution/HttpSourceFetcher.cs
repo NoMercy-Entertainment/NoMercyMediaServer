@@ -69,7 +69,17 @@ public class HttpSourceFetcher(
         http.Timeout = TimeSpan.FromHours(1); // Multi-GB downloads over WAN.
 
         string signedQuery = BuildSignedQuery(task.InputPath!);
-        HttpRequestMessage request = new(HttpMethod.Get, $"api/v1/worker-source?{signedQuery}");
+        string requestPath = $"api/v1/worker-source?{signedQuery}";
+        HttpRequestMessage request = new(HttpMethod.Get, requestPath);
+
+        if (options.IsDistributedEncodingEnabled)
+        {
+            HmacSigner hmacSigner = new(options.DistributedEncodingSigningKey!);
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string signature = hmacSigner.Sign("GET", "/" + "api/v1/worker-source", timestamp, []);
+            request.Headers.Add("X-NoMercy-Timestamp", timestamp.ToString());
+            request.Headers.Add("X-NoMercy-Signature", signature);
+        }
 
         logger.LogInformation("Fetching source for task {TaskId} from coordinator", task.TaskId);
 

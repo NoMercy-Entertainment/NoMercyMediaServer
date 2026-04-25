@@ -3,6 +3,7 @@ namespace NoMercy.Encoder.Distribution;
 using System.Net.Http;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
@@ -26,6 +27,7 @@ public class HttpRemoteWorker : IRemoteWorker
     private readonly HttpClient _http;
     private readonly ITaskSerializer _serializer;
     private readonly byte[] _signingKey;
+    private readonly HmacSigner? _hmacSigner;
     private readonly ILogger<HttpRemoteWorker> _logger;
 
     // Mutable: registry / heartbeat service pushes the latest values.
@@ -41,7 +43,8 @@ public class HttpRemoteWorker : IRemoteWorker
         byte[] signingKey,
         IHardwareCapabilities initialCapabilities,
         ResourceBudgetSnapshot initialBudget,
-        ILogger<HttpRemoteWorker> logger
+        ILogger<HttpRemoteWorker> logger,
+        EncoderOptions? encoderOptions = null
     )
     {
         WorkerId = workerId;
@@ -51,6 +54,9 @@ public class HttpRemoteWorker : IRemoteWorker
         _capabilities = initialCapabilities;
         _budget = initialBudget;
         _logger = logger;
+
+        if (encoderOptions?.IsDistributedEncodingEnabled == true)
+            _hmacSigner = new HmacSigner(encoderOptions.DistributedEncodingSigningKey!);
     }
 
     /// <summary>
@@ -71,14 +77,25 @@ public class HttpRemoteWorker : IRemoteWorker
     public async Task<DispatchResult> ExecuteTaskAsync(EncodeTask task, CancellationToken ct)
     {
         string payload = _serializer.Serialize(task, _signingKey);
-        HttpContent content = new StringContent(payload, Encoding.UTF8, "application/json");
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(payload);
+        HttpContent content = new ByteArrayContent(bodyBytes);
+        content.Headers.ContentType = new("application/json") { CharSet = "utf-8" };
+
+        const string path = "api/v1/worker/execute-task";
+        HttpRequestMessage request = new(HttpMethod.Post, path) { Content = content };
+
+        if (_hmacSigner is not null)
+        {
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string signature = _hmacSigner.Sign("POST", "/" + path, timestamp, bodyBytes);
+            request.Headers.Add("X-NoMercy-Timestamp", timestamp.ToString());
+            request.Headers.Add("X-NoMercy-Signature", signature);
+        }
 
         HttpResponseMessage response;
         try
         {
-            response = await _http
-                .PostAsync("api/v1/worker/execute-task", content, ct)
-                .ConfigureAwait(false);
+            response = await _http.SendAsync(request, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
