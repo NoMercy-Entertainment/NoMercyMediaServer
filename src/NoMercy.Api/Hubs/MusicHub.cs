@@ -510,9 +510,19 @@ public class MusicHub : ConnectionHub
         if (user is null)
             return;
 
+        // Diagnostic: log which device/connection sent this command so we can
+        // tell phone vs PC vs TV apart when hunting down echo loops.
+        string senderDevice = Context.ConnectionId;
+        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? sender))
+            senderDevice = $"{sender.Name}/{sender.DeviceId}/{sender.Browser}";
+        Logger.App($"ChangeVolumeCommand {volume} from {senderDevice}");
+
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
             playerState.VolumePercentage = volume;
+            // Fire the broadcast FIRST so clients see the new value with the
+            // minimum possible latency. The in-memory state is already
+            // authoritative for future broadcasts.
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
         else
@@ -521,19 +531,29 @@ public class MusicHub : ConnectionHub
             return;
         }
 
-        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
-            if (
-                CurrentDevice.TryGetValue(user.Id, out Device? device)
-                && device.DeviceId == client.DeviceId
-            )
+        // Persist to the ACTIVE device off the critical path. Clients don't
+        // need the DB row to land before they can react — the broadcast
+        // already reached them. Previous in-line await on ExecuteUpdateAsync
+        // added 500+ms of wire latency per volume event on SQLite under load.
+        if (CurrentDevice.TryGetValue(user.Id, out Device? device))
+        {
+            device.VolumePercent = volume;
+            string deviceId = device.DeviceId;
+            _ = Task.Run(async () =>
             {
-                device.VolumePercent = volume;
-
-                await using MediaContext mediaContext = new();
-                await mediaContext
-                    .Devices.Where(d => d.DeviceId == device.DeviceId)
-                    .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, volume));
-            }
+                try
+                {
+                    await using MediaContext mediaContext = new();
+                    await mediaContext
+                        .Devices.Where(d => d.DeviceId == deviceId)
+                        .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, volume));
+                }
+                catch (Exception ex)
+                {
+                    Logger.App($"ChangeVolumeCommand DB persist failed: {ex.Message}");
+                }
+            });
+        }
     }
 
     public override async Task OnConnectedAsync()

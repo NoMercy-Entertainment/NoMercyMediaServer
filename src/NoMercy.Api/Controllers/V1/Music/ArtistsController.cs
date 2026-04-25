@@ -52,11 +52,31 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view artists");
 
-        bool isLolomo = string.Equals(
-            request.Version,
-            "lolomo",
-            StringComparison.OrdinalIgnoreCase
-        );
+        // Lolomo with the "all" marker (`_`) returns one carousel per first-letter
+        // bucket in alphabetical order, with the symbol bucket (#) at the end.
+        if (request.Version == "lolomo" && (letter == "_" || letter == "all"))
+        {
+            List<ArtistCardDto> allCards = await _musicRepository.GetAllArtistCardsAsync(userId);
+
+            List<ComponentEnvelope> items = [Component.Container()];
+
+            IOrderedEnumerable<IGrouping<string, ArtistCardDto>> groups = allCards
+                .GroupBy(a => BucketLetter(a.Name))
+                .OrderBy(g => g.Key == "#" ? "zz" : g.Key);
+
+            foreach (IGrouping<string, ArtistCardDto> group in groups)
+            {
+                items.Add(
+                    Component
+                        .Carousel()
+                        .WithId($"artists-{group.Key.ToLowerInvariant()}")
+                        .WithTitle($"Artists starting with {group.Key}".Localize())
+                        .WithItems(group.Select(a => Component.MusicCard(new MusicCardData(a))))
+                );
+            }
+
+            return Ok(ComponentResponse.From(items));
+        }
 
         List<ArtistCardDto> artistCards = await _musicRepository.GetArtistCardsAsync(
             userId,
@@ -65,7 +85,7 @@ public class ArtistsController : BaseController
 
         string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        if (isLolomo)
+        if (request.Version == "lolomo")
         {
             List<ComponentEnvelope> items =
             [
@@ -87,6 +107,14 @@ public class ArtistsController : BaseController
             .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a))));
 
         return Ok(ComponentResponse.From(grid));
+    }
+
+    private static string BucketLetter(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "#";
+        char first = char.ToLowerInvariant(name[0]);
+        return first >= 'a' && first <= 'z' ? first.ToString().ToUpperInvariant() : "#";
     }
 
     [HttpGet]

@@ -91,10 +91,9 @@ public record ArtistTrackDto
             .Track.AlbumTrack.DistinctBy(trackAlbum => trackAlbum.AlbumId)
             .Select(albumTrack => new AlbumDto(albumTrack, country));
 
-        Artist = artistTrack.Track.ArtistTrack.Select(albumTrack => new ArtistDto(
-            albumTrack,
-            country
-        ));
+        Artist = artistTrack
+            .Track.ArtistTrack.DistinctBy(trackArtist => trackArtist.ArtistId)
+            .Select(trackArtist => new ArtistDto(trackArtist, country));
     }
 
     public ArtistTrackDto(Track track, string? country = "US")

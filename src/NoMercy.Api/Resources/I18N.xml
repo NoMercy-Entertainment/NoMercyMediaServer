@@ -537,4 +537,28 @@
     <Key>Albums starting with #</Key>
     <Value lang="nl">Albums beginnend met #</Value>
   </Entry>
+  <Entry>
+    <Key>Artists starting with A</Key>
+    <Value lang="nl">Artists starting with A</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists starting with E</Key>
+    <Value lang="nl">Artists starting with E</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums starting with D</Key>
+    <Value lang="nl">Albums starting with D</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists starting with B</Key>
+    <Value lang="nl">Artists starting with B</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists starting with C</Key>
+    <Value lang="nl">Artists starting with C</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums starting with E</Key>
+    <Value lang="nl">Albums starting with E</Value>
+  </Entry>
 </I18N>
