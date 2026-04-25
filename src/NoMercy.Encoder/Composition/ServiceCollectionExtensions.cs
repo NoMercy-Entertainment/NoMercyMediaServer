@@ -82,7 +82,11 @@ public static class ServiceCollectionExtensions
 
         // Hardware
         services.AddSingleton<IHardwareDetector, PlatformHardwareDetector>();
-        services.AddSingleton<IDriverFingerprintStore, JsonDriverFingerprintStore>();
+        // Driver fingerprint lives in AppDbContext.Configuration so a server
+        // admin can move the install without dragging a sidecar JSON file.
+        // The DB store auto-imports any legacy driver_fingerprint.json on
+        // first load and deletes the file on success.
+        services.AddSingleton<IDriverFingerprintStore, DbDriverFingerprintStore>();
         services.AddSingleton<IDriverChangeDetector, DriverChangeDetector>();
         services.AddSingleton<FfmpegCapabilities>();
         services.AddSingleton<IFfmpegCapabilities>(sp =>
