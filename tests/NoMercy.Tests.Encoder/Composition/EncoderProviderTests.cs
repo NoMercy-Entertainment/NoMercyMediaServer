@@ -1,12 +1,41 @@
 namespace NoMercy.Tests.Encoder.Composition;
 
+using System.Reflection;
 using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Pipeline;
 
+/// <summary>
+/// Tests for EncoderProvider lifecycle: configure, resolve, guard checks.
+///
+/// EncoderProvider uses static volatile fields. Each test resets the private
+/// _factory field via reflection so execution order does not matter.
+/// There is no public Reset() API — reflection is intentional here.
+/// </summary>
 [Collection("EncoderProvider")]
 public class EncoderProviderTests
 {
+    private static void ResetFactory()
+    {
+        FieldInfo? field = typeof(EncoderProvider).GetField(
+            "_factory",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
+        field?.SetValue(null, null);
+    }
+
+    [Fact]
+    public void Resolve_WhenNotConfigured_ThrowsInvalidOperation()
+    {
+        ResetFactory();
+
+        Action act = () => EncoderProvider.Resolve();
+
+        act.Should()
+            .Throw<InvalidOperationException>()
+            .WithMessage("*EncoderProvider.Configure()*");
+    }
+
     [Fact]
     public void Resolve_WhenConfigured_ReturnsEncoderFromFactory()
     {
@@ -16,9 +45,16 @@ public class EncoderProviderTests
         IEncoder result = EncoderProvider.Resolve();
 
         result.Should().BeSameAs(mockEncoder.Object);
+    }
 
-        // Reset: leave factory pointing at a dummy to avoid poisoning later tests
-        EncoderProvider.Configure(() => new Mock<IEncoder>().Object);
+    [Fact]
+    public void IsConfigured_BeforeConfigure_ReturnsFalse()
+    {
+        ResetFactory();
+
+        bool configured = EncoderProvider.IsConfigured;
+
+        configured.Should().BeFalse();
     }
 
     [Fact]
@@ -27,19 +63,5 @@ public class EncoderProviderTests
         Action act = () => EncoderProvider.Configure(null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("factory");
-
-        // Reset
-        EncoderProvider.Configure(() => new Mock<IEncoder>().Object);
-    }
-
-    [Fact]
-    public void IsConfigured_AfterConfigure_ReturnsTrue()
-    {
-        EncoderProvider.Configure(() => new Mock<IEncoder>().Object);
-
-        EncoderProvider.IsConfigured.Should().BeTrue();
-
-        // Reset
-        EncoderProvider.Configure(() => new Mock<IEncoder>().Object);
     }
 }
