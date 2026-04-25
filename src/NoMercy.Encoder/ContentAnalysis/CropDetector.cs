@@ -25,23 +25,39 @@ public partial class CropDetector(
     // against one-off black frames producing spurious crops.
     private const int MinObservations = 5;
 
-    // Maximum scan window — we don't need to decode the whole file.
-    private static readonly TimeSpan ScanDuration = TimeSpan.FromSeconds(60);
+    // Sample window per spec — 180s starting 60s into the file. Shorter
+    // windows (the previous 60s) misclassified scope-aspect content whose
+    // letterbox settled only after long fade-ins.
+    private const int StartOffsetSeconds = 60;
+    private static readonly TimeSpan ScanDuration = TimeSpan.FromSeconds(180);
 
-    public async Task<CropResult> DetectAsync(string inputPath, CancellationToken ct)
+    // round=4 forces detected crop dimensions to multiples of 4. Multiples
+    // of 2 (the previous default) tripped a handful of HEVC encoders that
+    // require modulo-4 — and the visual difference between mod2 and mod4
+    // crops is imperceptible.
+    private const string CropDetectFilter = "cropdetect=limit=24:round=4:reset=0";
+
+    public Task<CropResult> DetectAsync(string inputPath, CancellationToken ct) =>
+        DetectAsync(inputPath, sourceVideoFileId: null, ct);
+
+    public async Task<CropResult> DetectAsync(
+        string inputPath,
+        Guid? sourceVideoFileId,
+        CancellationToken ct
+    )
     {
         await using LocalPathLease inputLease = storage.AcquireLocalPath(inputPath);
         string[] args =
         [
             "-hide_banner",
             "-ss",
-            "120", // skip intro/logos
+            StartOffsetSeconds.ToString(),
             "-i",
             inputLease.Path,
             "-t",
             ((int)ScanDuration.TotalSeconds).ToString(),
             "-vf",
-            "cropdetect=limit=24:round=2:reset=0",
+            CropDetectFilter,
             "-f",
             "null",
             "-",
@@ -66,25 +82,47 @@ public partial class CropDetector(
             cancellationToken: ct
         );
 
+        int totalObservations = observations.Values.Sum();
+
         if (!result.IsSuccess)
         {
             logger.LogWarning(
                 "cropdetect returned exit code {ExitCode}. Skipping crop.",
                 result.ExitCode
             );
-            return new(0, 0, 0, 0, ShouldCrop: false);
+            return new(
+                0,
+                0,
+                0,
+                0,
+                ShouldCrop: false,
+                SourceVideoFileId: sourceVideoFileId,
+                SampleFramesAnalyzed: totalObservations,
+                Confidence: 0
+            );
         }
 
         if (observations.Count == 0)
         {
             logger.LogDebug("cropdetect observed no crop values for {Input}", inputPath);
-            return new(0, 0, 0, 0, ShouldCrop: false);
+            return new(
+                0,
+                0,
+                0,
+                0,
+                ShouldCrop: false,
+                SourceVideoFileId: sourceVideoFileId,
+                SampleFramesAnalyzed: 0,
+                Confidence: 0
+            );
         }
 
         (string bestCrop, int count) = observations.OrderByDescending(kv => kv.Value).First()
             is var first
             ? (first.Key, first.Value)
             : ("", 0);
+
+        double confidence = totalObservations > 0 ? (double)count / totalObservations : 0;
 
         if (count < MinObservations)
         {
@@ -93,13 +131,31 @@ public partial class CropDetector(
                 bestCrop,
                 count
             );
-            return new(0, 0, 0, 0, ShouldCrop: false);
+            return new(
+                0,
+                0,
+                0,
+                0,
+                ShouldCrop: false,
+                SourceVideoFileId: sourceVideoFileId,
+                SampleFramesAnalyzed: count,
+                Confidence: confidence
+            );
         }
 
         // crop=W:H:X:Y — parse the four parts.
         string[] parts = bestCrop.Split(':');
         if (parts.Length != 4)
-            return new(0, 0, 0, 0, ShouldCrop: false);
+            return new(
+                0,
+                0,
+                0,
+                0,
+                ShouldCrop: false,
+                SourceVideoFileId: sourceVideoFileId,
+                SampleFramesAnalyzed: count,
+                Confidence: confidence
+            );
 
         if (
             !int.TryParse(parts[0], out int width)
@@ -108,22 +164,41 @@ public partial class CropDetector(
             || !int.TryParse(parts[3], out int y)
         )
         {
-            return new(0, 0, 0, 0, ShouldCrop: false);
+            return new(
+                0,
+                0,
+                0,
+                0,
+                ShouldCrop: false,
+                SourceVideoFileId: sourceVideoFileId,
+                SampleFramesAnalyzed: count,
+                Confidence: confidence
+            );
         }
 
         logger.LogInformation(
-            "cropdetect → {Width}x{Height} at ({X},{Y}) ({Count} obs)",
+            "cropdetect → {Width}x{Height} at ({X},{Y}) ({Count} obs, confidence {Confidence:P0})",
             width,
             height,
             x,
             y,
-            count
+            count,
+            confidence
         );
 
         // Do not crop when the detected rectangle matches the full frame.
         bool shouldCrop = x > 0 || y > 0;
 
-        return new(width, height, x, y, shouldCrop);
+        return new(
+            width,
+            height,
+            x,
+            y,
+            ShouldCrop: shouldCrop,
+            SourceVideoFileId: sourceVideoFileId,
+            SampleFramesAnalyzed: count,
+            Confidence: confidence
+        );
     }
 
     [GeneratedRegex(@"crop=(?<crop>\d+:\d+:\d+:\d+)")]

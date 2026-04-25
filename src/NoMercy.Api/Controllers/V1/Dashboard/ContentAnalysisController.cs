@@ -38,6 +38,10 @@ public class ContentAnalysisController(
     /// already letterbox-free). Ffmpeg-bound — can take up to 60 seconds
     /// on large sources. Owner-only to avoid DoS-by-probe.
     /// </summary>
+    /// <remarks>
+    /// <b>Deprecated.</b> Use <c>POST /api/v1/encoder/content-analysis/crop/{videoFileId}</c>
+    /// instead. This alias will be removed in a future release.
+    /// </remarks>
     [HttpGet("crop/{videoFileId}")]
     public async Task<IActionResult> DetectCrop(string videoFileId, CancellationToken ct)
     {
@@ -57,17 +61,22 @@ public class ContentAnalysisController(
         if (!System.IO.File.Exists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
+        Guid sourceVideoFileId = new(fileId.ToByteArray());
+
         try
         {
-            CropResult result = await cropDetector.DetectAsync(path, ct);
+            CropResult result = await cropDetector.DetectAsync(path, sourceVideoFileId, ct);
             return Ok(
                 new
                 {
+                    source_video_file_id = result.SourceVideoFileId,
                     should_crop = result.ShouldCrop,
                     width = result.Width,
                     height = result.Height,
                     x = result.X,
                     y = result.Y,
+                    sample_frames_analyzed = result.SampleFramesAnalyzed,
+                    confidence = result.Confidence,
                 }
             );
         }
