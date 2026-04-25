@@ -336,6 +336,17 @@ public class PlanStage(
                                 extraFlags
                             );
 
+                            // Capped-CRF: when both a CRF target and a bitrate ceiling are set,
+                            // emit -maxrate / -bufsize so FFmpeg enforces the cap. Without these
+                            // the bitrate value is silently ignored and the encode is pure CRF.
+                            // Fix: Phase 3.10 — RateControl.CrfCapped was dashboard-display-only.
+                            if (v.Crf > 0 && v.BitrateKbps > 0)
+                            {
+                                int bufKbps = v.BitrateKbps * 2;
+                                extraFlags["-maxrate"] = $"{v.BitrateKbps}k";
+                                extraFlags["-bufsize"] = $"{bufKbps}k";
+                            }
+
                             // HDR→HDR passthrough: when source is HDR and the output profile
                             // keeps 10-bit without tonemapping to SDR, preserve color metadata
                             // so players treat the file as HDR. Without these flags the output

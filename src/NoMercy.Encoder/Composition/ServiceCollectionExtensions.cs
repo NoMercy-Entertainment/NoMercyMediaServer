@@ -88,14 +88,19 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<FfmpegCapabilities>()
         );
 
-        // IHardwareCapabilities factory — reads Capabilities after startup completes
+        // IHardwareCapabilities factory — reads from a singleton holder so
+        // the dependency graph does NOT pass through HardwareInitializationService.
+        // HIS itself transitively depends on IHardwareCapabilities (via
+        // BenchmarkJobTracker → HardwareBenchmark), so resolving capabilities
+        // through HIS forms a cycle that crashes the test host with a stack
+        // overflow. The holder is a tiny mutable singleton that HIS writes to
+        // once detection completes; before that, callers receive a CPU-only
+        // default that lets pipeline construction succeed without GPU info.
+        services.AddSingleton<HardwareCapabilitiesHolder>();
         services.AddSingleton<IHardwareCapabilities>(sp =>
-        {
-            HardwareInitializationService initService =
-                sp.GetRequiredService<HardwareInitializationService>();
-            return initService.Capabilities
-                ?? new HardwareCapabilities([], Environment.ProcessorCount);
-        });
+            sp.GetRequiredService<HardwareCapabilitiesHolder>().Current
+            ?? new HardwareCapabilities([], Environment.ProcessorCount)
+        );
 
         // IResourceMonitor — cross-platform CPU/memory readings via
         // System.Diagnostics. GPU utilization stays at 0 until a vendor-

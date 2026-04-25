@@ -10,11 +10,17 @@ public class HardwareInitializationService(
     FfmpegCapabilities ffmpegCapabilities,
     IDriverChangeDetector driverChangeDetector,
     IBenchmarkJobTracker benchmarkJobTracker,
+    HardwareCapabilitiesHolder capabilitiesHolder,
     ILogger<HardwareInitializationService> logger
 ) : IHostedService
 {
     public bool IsReady { get; private set; }
-    public IHardwareCapabilities? Capabilities { get; private set; }
+
+    public IHardwareCapabilities? Capabilities
+    {
+        get => capabilitiesHolder.Current;
+        private set => capabilitiesHolder.Current = value;
+    }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -53,10 +59,21 @@ public class HardwareInitializationService(
             Capabilities = new HardwareCapabilities(gpus, cpuCores);
             IsReady = true;
             logger.LogInformation("Hardware detection complete. Encoder ready.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Hardware detection failed — software-only fallback");
+            Capabilities = new HardwareCapabilities(Gpus: [], CpuCores: Environment.ProcessorCount);
+            IsReady = true;
+        }
 
-            // Driver change detection — runs after detection so fingerprint sees real GPU data.
-            // First boot: HardwareBenchmarkBackgroundService handles initial calibration.
-            // Subsequent boots with a changed driver: queue recalibration immediately.
+        // Driver change detection — runs in its own try-catch so a failure
+        // here (fingerprint store unavailable, mock-of in tests, etc.) cannot
+        // revert the Capabilities we just established. First boot:
+        // HardwareBenchmarkBackgroundService handles initial calibration;
+        // subsequent boots with a changed driver queue an immediate recalibration.
+        try
+        {
             DriverChangeResult driverResult = await driverChangeDetector.DetectAndPersistAsync(
                 cancellationToken
             );
@@ -87,9 +104,10 @@ public class HardwareInitializationService(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Hardware detection failed — software-only fallback");
-            Capabilities = new HardwareCapabilities(Gpus: [], CpuCores: Environment.ProcessorCount);
-            IsReady = true;
+            logger.LogWarning(
+                ex,
+                "Driver fingerprint check failed — continuing without recalibration trigger"
+            );
         }
     }
 

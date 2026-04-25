@@ -22,12 +22,25 @@ public class ServiceRegistrationTests
     {
         ServiceCollection services = new();
         services.AddLogging();
+        // IHostApplicationLifetime is normally added by HostBuilder; stub it
+        // here so GetServices<IHostedService>() can construct background
+        // services that depend on it without setting up a full host.
+        services.AddSingleton<IHostApplicationLifetime, TestHostLifetime>();
         services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";
             opts.FfprobePathOverride = "ffprobe";
         });
         return services.BuildServiceProvider();
+    }
+
+    private sealed class TestHostLifetime : IHostApplicationLifetime
+    {
+        public CancellationToken ApplicationStarted { get; } = CancellationToken.None;
+        public CancellationToken ApplicationStopping { get; } = CancellationToken.None;
+        public CancellationToken ApplicationStopped { get; } = CancellationToken.None;
+
+        public void StopApplication() { }
     }
 
     [Fact]

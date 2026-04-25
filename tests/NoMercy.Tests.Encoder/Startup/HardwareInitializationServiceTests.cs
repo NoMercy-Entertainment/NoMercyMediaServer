@@ -36,6 +36,9 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>()
         );
 
@@ -75,6 +78,9 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>()
         );
 
@@ -110,6 +116,9 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>()
         );
 
@@ -149,6 +158,9 @@ public class HardwareInitializationServiceTests
         HardwareInitializationService service = new(
             detector.Object,
             ffmpegCaps,
+            Mock.Of<IDriverChangeDetector>(),
+            Mock.Of<IBenchmarkJobTracker>(),
+            new HardwareCapabilitiesHolder(),
             Mock.Of<ILogger<HardwareInitializationService>>()
         );
 
