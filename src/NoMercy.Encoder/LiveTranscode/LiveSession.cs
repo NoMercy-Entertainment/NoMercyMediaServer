@@ -6,17 +6,27 @@ using System.Threading.Channels;
 public class LiveSession : ILiveSession
 {
     private readonly Channel<Segment> _segmentChannel = Channel.CreateUnbounded<Segment>();
-    private readonly CancellationTokenSource _runnerCts = new();
+
+    // Protects concurrent seeks: only one seek can manipulate the runner CTS at a time.
+    private readonly SemaphoreSlim _seekLock = new(1, 1);
+
+    // Tracks the current runner's cancellation source. Replaced on each seek.
+    private CancellationTokenSource _runnerCts = new();
+
+    // Linked to _runnerCts; cancelled when the whole session is disposed.
+    private readonly CancellationTokenSource _sessionCts = new();
 
     private int _state = (int)LiveSessionState.Starting;
     private long _playbackPositionTicks;
     private TimeSpan _transcodedPosition;
     private double _currentSpeed;
 
+    // Injected by LiveEncoder after construction via AttachRunnerFactory.
+    private Func<TimeSpan, CancellationToken, Task>? _runnerFactory;
+
     /// <summary>
-    /// Fires when the session is disposed — the live transcode runner should
-    /// observe this token and terminate its FFmpeg process so we don't leak
-    /// subprocesses after a client tears down the session.
+    /// Fires when the CURRENT runner should terminate. Replaced on each seek.
+    /// The outer session lifetime is tracked via <see cref="_sessionCts"/>.
     /// </summary>
     public CancellationToken RunnerCancellation => _runnerCts.Token;
 
@@ -36,6 +46,11 @@ public class LiveSession : ILiveSession
         CurrentQuality = quality;
     }
 
+    public void AttachRunnerFactory(Func<TimeSpan, CancellationToken, Task> factory)
+    {
+        _runnerFactory = factory;
+    }
+
     // Called by the encoder to push completed segments into the channel
     internal void PushSegment(Segment segment)
     {
@@ -49,12 +64,54 @@ public class LiveSession : ILiveSession
 
     internal void Complete() => _segmentChannel.Writer.Complete();
 
-    public Task SeekAsync(TimeSpan position, CancellationToken ct)
+    /// <summary>
+    /// Cancels the current FFmpeg runner, resets position state, then spawns
+    /// a new runner from <paramref name="position"/> via the attached factory.
+    /// </summary>
+    public async Task SeekAsync(TimeSpan position, CancellationToken ct)
     {
-        Volatile.Write(ref _state, (int)LiveSessionState.Seeking);
-        Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
-        _transcodedPosition = position;
-        return Task.CompletedTask;
+        await _seekLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            Volatile.Write(ref _state, (int)LiveSessionState.Seeking);
+
+            // Tear down existing runner
+            CancellationTokenSource oldCts = _runnerCts;
+            try
+            {
+                await oldCts.CancelAsync().ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Already disposed
+            }
+            finally
+            {
+                oldCts.Dispose();
+            }
+
+            // Reset position bookkeeping
+            Interlocked.Exchange(ref _playbackPositionTicks, position.Ticks);
+            _transcodedPosition = position;
+
+            // Create a new CTS for the replacement runner, linked to session lifetime
+            _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
+
+            // Spawn new runner if a factory is wired up
+            if (_runnerFactory is not null)
+            {
+                Volatile.Write(ref _state, (int)LiveSessionState.Transcoding);
+
+                _ = Task.Run(
+                    () => _runnerFactory(position, _runnerCts.Token),
+                    CancellationToken.None
+                );
+            }
+        }
+        finally
+        {
+            _seekLock.Release();
+        }
     }
 
     public Task ChangeQualityAsync(string qualityId, CancellationToken ct)
@@ -88,6 +145,15 @@ public class LiveSession : ILiveSession
     {
         try
         {
+            _sessionCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Already disposed
+        }
+
+        try
+        {
             _runnerCts.Cancel();
         }
         catch (ObjectDisposedException)
@@ -97,7 +163,10 @@ public class LiveSession : ILiveSession
 
         Volatile.Write(ref _state, (int)LiveSessionState.Ended);
         _segmentChannel.Writer.TryComplete();
+
+        _seekLock.Dispose();
         _runnerCts.Dispose();
+        _sessionCts.Dispose();
         return ValueTask.CompletedTask;
     }
 

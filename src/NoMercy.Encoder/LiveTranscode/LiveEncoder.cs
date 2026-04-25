@@ -45,32 +45,40 @@ public class LiveEncoder(
             outputDirectory
         );
 
-        LiveRunInput runInput = new(
-            InputPath: request.InputPath,
-            OutputDirectory: outputDirectory,
-            StartPosition: request.StartPosition,
-            Quality: quality,
-            SegmentDurationSeconds: options.DefaultSegmentDurationSeconds
-        );
+        // Build the run-input factory so SeekAsync can restart the runner from
+        // any position without coupling LiveSession to LiveFfmpegRunner directly.
+        async Task SpawnRunner(TimeSpan startPosition, CancellationToken runnerCt)
+        {
+            LiveRunInput runInput = new(
+                InputPath: request.InputPath,
+                OutputDirectory: outputDirectory,
+                StartPosition: startPosition,
+                Quality: quality,
+                SegmentDurationSeconds: options.DefaultSegmentDurationSeconds
+            );
+
+            try
+            {
+                await runner.RunAsync(runInput, session, runnerCt).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected on seek/dispose
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Live runner task faulted for session {SessionId}",
+                    sessionId
+                );
+            }
+        }
+
+        session.AttachRunnerFactory(SpawnRunner);
 
         _ = Task.Run(
-            async () =>
-            {
-                try
-                {
-                    await runner
-                        .RunAsync(runInput, session, session.RunnerCancellation)
-                        .ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(
-                        ex,
-                        "Live runner task faulted for session {SessionId}",
-                        sessionId
-                    );
-                }
-            },
+            () => SpawnRunner(request.StartPosition, session.RunnerCancellation),
             CancellationToken.None
         );
 

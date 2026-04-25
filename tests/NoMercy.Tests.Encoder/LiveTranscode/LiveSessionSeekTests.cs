@@ -1,0 +1,178 @@
+namespace NoMercy.Tests.Encoder.LiveTranscode;
+
+using Moq;
+using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.LiveTranscode;
+
+/// <summary>
+/// Verifies that SeekAsync tears down the current runner and spawns a new one.
+/// </summary>
+public class LiveSessionSeekTests
+{
+    private static LiveQuality MakeQuality() =>
+        new(
+            Id: "1080p",
+            Label: "1080p",
+            Width: 1920,
+            Height: 1080,
+            Codec: VideoCodecType.H264,
+            BitrateKbps: 8000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 2.0,
+            CanRealtime: true
+        );
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Seek triggers new runner — Spawn called twice, first CTS cancelled once
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SeekAsync_WithFactory_SpawnsNewRunner()
+    {
+        LiveSession session = new("seek-001", MakeQuality());
+        int spawnCount = 0;
+        SemaphoreSlim spawned = new(0, int.MaxValue);
+
+        session.AttachRunnerFactory(
+            (_, _) =>
+            {
+                Interlocked.Increment(ref spawnCount);
+                spawned.Release();
+                return Task.CompletedTask;
+            }
+        );
+
+        await session.SeekAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+
+        // Spawn happens via Task.Run inside SeekAsync — wait for it.
+        (await spawned.WaitAsync(TimeSpan.FromSeconds(2)))
+            .Should()
+            .BeTrue();
+        spawnCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SeekAsync_Twice_SpawnsRunnerTwice()
+    {
+        LiveSession session = new("seek-002", MakeQuality());
+        int spawnCount = 0;
+        SemaphoreSlim spawned = new(0, int.MaxValue);
+
+        session.AttachRunnerFactory(
+            (_, _) =>
+            {
+                Interlocked.Increment(ref spawnCount);
+                spawned.Release();
+                return Task.CompletedTask;
+            }
+        );
+
+        await session.SeekAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
+        (await spawned.WaitAsync(TimeSpan.FromSeconds(2))).Should().BeTrue();
+
+        await session.SeekAsync(TimeSpan.FromSeconds(60), CancellationToken.None);
+        (await spawned.WaitAsync(TimeSpan.FromSeconds(2))).Should().BeTrue();
+
+        spawnCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task SeekAsync_CancelsOldRunnerToken()
+    {
+        LiveSession session = new("seek-003", MakeQuality());
+
+        // Capture the first token before seeking.
+        CancellationToken firstToken = session.RunnerCancellation;
+
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
+
+        await session.SeekAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
+
+        // After seek the old token must be cancelled.
+        firstToken.IsCancellationRequested.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SeekAsync_UpdatesTranscodedPosition()
+    {
+        LiveSession session = new("seek-004", MakeQuality());
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
+
+        await session.SeekAsync(TimeSpan.FromSeconds(120), CancellationToken.None);
+
+        session.TranscodedPosition.Should().Be(TimeSpan.FromSeconds(120));
+    }
+
+    [Fact]
+    public async Task SeekAsync_SetsTranscodingState_WhenFactoryAttached()
+    {
+        LiveSession session = new("seek-005", MakeQuality());
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
+
+        await session.SeekAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+
+        session.State.Should().Be(LiveSessionState.Transcoding);
+    }
+
+    [Fact]
+    public async Task SeekAsync_SetsSeekingState_WhenNoFactoryAttached()
+    {
+        LiveSession session = new("seek-006", MakeQuality());
+        // No factory attached — falls into "seeking only" path.
+
+        await session.SeekAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+
+        // Without a factory the state stays Seeking because no runner flips it back.
+        session.State.Should().Be(LiveSessionState.Seeking);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Runner factory receives correct seek position
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SeekAsync_PassesCorrectPositionToFactory()
+    {
+        LiveSession session = new("seek-007", MakeQuality());
+        TimeSpan capturedPosition = TimeSpan.Zero;
+
+        session.AttachRunnerFactory(
+            (pos, _) =>
+            {
+                capturedPosition = pos;
+                return Task.CompletedTask;
+            }
+        );
+
+        TimeSpan targetPosition = TimeSpan.FromSeconds(75);
+        await session.SeekAsync(targetPosition, CancellationToken.None);
+
+        // The factory task is fire-and-forget — allow microtask queue to flush.
+        await Task.Delay(50);
+
+        capturedPosition.Should().Be(targetPosition);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // New runner token is distinct from old one
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SeekAsync_IssuesNewRunnerToken()
+    {
+        LiveSession session = new("seek-008", MakeQuality());
+        session.AttachRunnerFactory((_, _) => Task.CompletedTask);
+
+        CancellationToken tokenBefore = session.RunnerCancellation;
+
+        await session.SeekAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
+
+        CancellationToken tokenAfter = session.RunnerCancellation;
+
+        // The new token must not already be cancelled.
+        tokenAfter.IsCancellationRequested.Should().BeFalse();
+        // And it must be a different registration than the cancelled old one.
+        tokenBefore.IsCancellationRequested.Should().BeTrue();
+    }
+}

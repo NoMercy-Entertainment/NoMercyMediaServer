@@ -1,19 +1,32 @@
 namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Tests.Encoder.Storage;
 
 public class LiveFfmpegRunnerTests
 {
+    private static INvencSessionCap NoopCap()
+    {
+        Mock<INvencSessionCap> m = new();
+        return m.Object;
+    }
+
+    private static IHardwareCapabilities NoopHardware() =>
+        new HardwareCapabilities([], Environment.ProcessorCount);
+
     private static LiveFfmpegRunner MakeRunner(IProcessRunner? processRunner = null) =>
         new(
             processRunner ?? new FakeProcessRunner(() => { }),
             new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
             NullLogger<LiveFfmpegRunner>.Instance,
-            TestStorageFactory.CreateLocal()
+            TestStorageFactory.CreateLocal(),
+            NoopCap(),
+            NoopHardware()
         );
 
     private static LiveQuality MakeQuality(
@@ -260,7 +273,9 @@ public class LiveFfmpegRunnerTests
                 runner,
                 new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
                 NullLogger<LiveFfmpegRunner>.Instance,
-                TestStorageFactory.CreateLocal()
+                TestStorageFactory.CreateLocal(),
+                NoopCap(),
+                NoopHardware()
             );
 
             LiveSession session = new("sess", MakeQuality());

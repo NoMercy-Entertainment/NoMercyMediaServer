@@ -4,6 +4,7 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Storage;
 
@@ -11,7 +12,9 @@ public class LiveFfmpegRunner(
     IProcessRunner processRunner,
     EncoderOptions options,
     ILogger<LiveFfmpegRunner> logger,
-    IStorage storage
+    IStorage storage,
+    INvencSessionCap nvencSessionCap,
+    IHardwareCapabilities hardware
 ) : ILiveFfmpegRunner
 {
     private const string PlaylistFileName = "index.m3u8";
@@ -20,6 +23,13 @@ public class LiveFfmpegRunner(
 
     public async Task RunAsync(LiveRunInput input, LiveSession session, CancellationToken ct)
     {
+        // Enforce NVENC concurrent session cap before spawning FFmpeg.
+        // Hardware-accelerated live encodes use the first GPU device name for
+        // the error message; software encodes skip the check.
+        bool requiresGpu = input.Quality.IsHardwareAccelerated;
+        string gpuName = hardware.Gpus.Count > 0 ? hardware.Gpus[0].Name : "GPU";
+        nvencSessionCap.EnforceForGpuEncode(gpuName, requiresGpu);
+
         storage.CreateDirectory(input.OutputDirectory);
 
         await using LocalPathLease outputLease = storage.AcquireLocalPath(input.OutputDirectory);

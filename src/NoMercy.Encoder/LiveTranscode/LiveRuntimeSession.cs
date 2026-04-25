@@ -8,6 +8,7 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     private readonly CancellationTokenSource _drainerCts = new();
     private int _highestIndex = -1;
     private int _isComplete;
+    private long _lastAccessTicks = DateTime.UtcNow.Ticks;
 
     public ILiveSession Session { get; }
     public TimeSpan TargetSegmentDuration { get; }
@@ -27,6 +28,19 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     }
 
     public bool IsComplete => Volatile.Read(ref _isComplete) == 1;
+
+    /// <summary>
+    /// UTC time of the last playlist or segment access. Used by the idle reaper.
+    /// </summary>
+    public DateTime LastAccess =>
+        new(Interlocked.Read(ref _lastAccessTicks), DateTimeKind.Utc);
+
+    /// <summary>
+    /// Updates <see cref="LastAccess"/> to now. Called from playlist and segment
+    /// serve points so the reaper knows the session is still in use.
+    /// </summary>
+    public void TouchLastAccess() =>
+        Interlocked.Exchange(ref _lastAccessTicks, DateTime.UtcNow.Ticks);
 
     public int HighestSegmentIndex => Volatile.Read(ref _highestIndex);
 

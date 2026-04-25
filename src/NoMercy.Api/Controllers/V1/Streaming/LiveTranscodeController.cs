@@ -7,6 +7,7 @@ using NoMercy.Api.Controllers.V1.Streaming.Dtos;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Helpers.Extensions;
 using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
@@ -24,7 +25,8 @@ public class LiveTranscodeController(
     ILivePlaylistBuilder playlistBuilder,
     ISessionManager sessionManager,
     IMediaAnalyzer mediaAnalyzer,
-    IDbContextFactory<MediaContext> contextFactory
+    IDbContextFactory<MediaContext> contextFactory,
+    LiveSessionLimits sessionLimits
 ) : BaseController
 {
     [HttpPost("sessions")]
@@ -86,6 +88,10 @@ public class LiveTranscodeController(
         {
             session = await liveEncoder.StartAsync(liveRequest, ct);
         }
+        catch (EncoderRuntimeException ex)
+        {
+            return StatusCode(ex.HttpStatusCode, ex.Shape);
+        }
         catch (InvalidOperationException ex)
         {
             return ServiceUnavailableResponse(ex.Message);
@@ -98,13 +104,27 @@ public class LiveTranscodeController(
 
         string playlistUrl = $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
 
+        LiveQuality quality = session.CurrentQuality;
+        DateTime expiresAt = DateTime.UtcNow.AddMinutes(sessionLimits.IdleTimeoutMinutes);
+
+        SelectedVariantDto selectedVariant = new(
+            Codec: quality.Codec.ToString(),
+            Width: quality.Width,
+            Height: quality.Height,
+            BitrateKbps: quality.BitrateKbps
+        );
+
         return Ok(
             new StartLiveSessionResponse(
                 session.SessionId,
                 playlistUrl,
-                session.CurrentQuality.Id,
-                session.CurrentQuality.Label
+                quality.Id,
+                quality.Label
             )
+            {
+                SelectedVariant = selectedVariant,
+                ExpiresAt = expiresAt,
+            }
         );
     }
 
@@ -116,6 +136,8 @@ public class LiveTranscodeController(
 
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
             return NotFoundResponse("Live session not found");
+
+        runtime.TouchLastAccess();
 
         string segmentUrlTemplate =
             $"/api/v1/streaming/live/sessions/{sessionId}/segment/{{index}}.ts";
@@ -147,6 +169,8 @@ public class LiveTranscodeController(
         if (!System.IO.File.Exists(segment.FilePath))
             return NotFoundResponse($"Segment {index} file missing on disk");
 
+        runtime.TouchLastAccess();
+
         Response.Headers["Accept-Ranges"] = "bytes";
         FileStream stream = System.IO.File.OpenRead(segment.FilePath);
         return File(stream, "video/mp2t", enableRangeProcessing: true);
@@ -161,11 +185,12 @@ public class LiveTranscodeController(
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
             return NotFoundResponse("Live session not found");
 
-        runtime.Session.ReportPlaybackPosition(
-            TimeSpan.FromSeconds(Math.Max(0, request.TimeSeconds))
-        );
+        double clampedSeconds = Math.Max(0, request.TimeSeconds);
+        runtime.Session.ReportPlaybackPosition(TimeSpan.FromSeconds(clampedSeconds));
 
-        return NoContent();
+        bool isPaused = runtime.Session.State == LiveSessionState.Buffered;
+
+        return Ok(new ReportPositionResponse(clampedSeconds, isPaused));
     }
 
     [HttpDelete("sessions/{sessionId}")]
