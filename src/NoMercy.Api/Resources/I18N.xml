@@ -74,10 +74,8 @@
   </Entry>
   <Entry>
     <Key>An error occurred while saving the entity changes. See the inner exception for details.</Key>
-    <Value lang="nl"
-      >Er is een fout opgetreden bij het opslaan van de entiteitswijzigingen. Zie de
-      binnenste uitzondering voor details.</Value
-    >
+    <Value lang="nl">Er is een fout opgetreden bij het opslaan van de entiteitswijzigingen. Zie de
+      binnenste uitzondering voor details.</Value>
   </Entry>
   <Entry>
     <Key>Albums not found</Key>
@@ -357,9 +355,7 @@
   </Entry>
   <Entry>
     <Key>Something went wrong updating the library encoder profiles: {0}</Key>
-    <Value lang="nl"
-      >Er ging iets mis bij het bijwerken van de bibliotheek encoder profielen: {0}</Value
-    >
+    <Value lang="nl">Er ging iets mis bij het bijwerken van de bibliotheek encoder profielen: {0}</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to update the library</Key>
@@ -528,5 +524,41 @@
   <Entry>
     <Key>The owner cannot be deleted</Key>
     <Value lang="nl">The owner cannot be deleted</Value>
+  </Entry>
+  <Entry>
+    <Key>All failed jobs have been queued for retry</Key>
+    <Value lang="nl">All failed jobs have been queued for retry</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists starting with #</Key>
+    <Value lang="nl">Artiesten beginnend met #</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums starting with #</Key>
+    <Value lang="nl">Albums beginnend met #</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists starting with A</Key>
+    <Value lang="nl">Artists starting with A</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists starting with E</Key>
+    <Value lang="nl">Artists starting with E</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums starting with D</Key>
+    <Value lang="nl">Albums starting with D</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists starting with B</Key>
+    <Value lang="nl">Artists starting with B</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists starting with C</Key>
+    <Value lang="nl">Artists starting with C</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums starting with E</Key>
+    <Value lang="nl">Albums starting with E</Value>
   </Entry>
 </I18N>

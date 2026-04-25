@@ -144,8 +144,12 @@ public record ArtistResponseItemDto
             .ThenBy(artistTrack => artistTrack.Disc)
             .ThenBy(artistTrack => artistTrack.Track);
 
+        // Use the per-user TrackUser "liked" relation instead of MusicPlays.
+        // TrackUser is already included (filtered by userId) in the repo query,
+        // so no extra fan-out. MusicPlays would re-introduce the Ed Sheeran
+        // timeout via O(tracks × plays) explosion.
         FavoriteTracks = artist
-            .ArtistTrack.Where(artistTrack => artistTrack.Track.MusicPlays.Count > 0)
+            .ArtistTrack.Where(artistTrack => artistTrack.Track.TrackUser.Count > 0)
             .Select(artistTrack => new FavoriteTrackDto(artistTrack, country!))
             .ToList();
     }

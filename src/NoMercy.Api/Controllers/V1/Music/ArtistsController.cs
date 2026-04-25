@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
@@ -45,22 +46,75 @@ public class ArtistsController : BaseController
 
     [HttpGet]
     [Route("/api/v{version:apiVersion}/music/artists/{letter}")]
-    public async Task<IActionResult> Index(string letter)
+    public async Task<IActionResult> Index(string letter, [FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view artists");
+
+        // Lolomo with the "all" marker (`_`) returns one carousel per first-letter
+        // bucket in alphabetical order, with the symbol bucket (#) at the end.
+        if (request.Version == "lolomo" && (letter == "_" || letter == "all"))
+        {
+            List<ArtistCardDto> allCards = await _musicRepository.GetAllArtistCardsAsync(userId);
+
+            List<ComponentEnvelope> items = [Component.Container()];
+
+            IOrderedEnumerable<IGrouping<string, ArtistCardDto>> groups = allCards
+                .GroupBy(a => BucketLetter(a.Name))
+                .OrderBy(g => g.Key == "#" ? "zz" : g.Key);
+
+            foreach (IGrouping<string, ArtistCardDto> group in groups)
+            {
+                items.Add(
+                    Component
+                        .Carousel()
+                        .WithId($"artists-{group.Key.ToLowerInvariant()}")
+                        .WithTitle($"Artists starting with {group.Key}".Localize())
+                        .WithItems(group.Select(a => Component.MusicCard(new MusicCardData(a))))
+                );
+            }
+
+            return Ok(ComponentResponse.From(items));
+        }
 
         List<ArtistCardDto> artistCards = await _musicRepository.GetArtistCardsAsync(
             userId,
             letter
         );
 
-        ComponentEnvelope response = Component
-            .Grid()
-            .WithItems(artistCards.Select(a => Component.MusicCard(new ArtistsResponseItemDto(a))));
+        string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        return Ok(ComponentResponse.From(response));
+        if (request.Version == "lolomo")
+        {
+            List<ComponentEnvelope> items =
+            [
+                Component.Container(),
+                Component
+                    .Carousel()
+                    .WithId($"artists-{letter}")
+                    .WithTitle($"Artists starting with {displayLetter}".Localize())
+                    .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
+            ];
+
+            return Ok(ComponentResponse.From(items));
+        }
+
+        ComponentEnvelope grid = Component
+            .Grid()
+            .WithId($"artists-{letter}")
+            .WithTitle($"Artists starting with {displayLetter}".Localize())
+            .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a))));
+
+        return Ok(ComponentResponse.From(grid));
+    }
+
+    private static string BucketLetter(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "#";
+        char first = char.ToLowerInvariant(name[0]);
+        return first >= 'a' && first <= 'z' ? first.ToString().ToUpperInvariant() : "#";
     }
 
     [HttpGet]

@@ -12,29 +12,46 @@ public class MusicRepository(
     IDbContextFactory<MediaContext> contextFactory
 )
 {
-    private static readonly string[] Letters =
+    private static readonly string[] AlphaLetters =
     [
-        "*",
-        "#",
-        "'",
-        "\"",
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "0",
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+        "u",
+        "v",
+        "w",
+        "x",
+        "y",
+        "z",
     ];
 
     #region Artist Queries
 
-    public Task<Artist?> GetArtistAsync(Guid userId, Guid id, CancellationToken ct = default)
+    public async Task<Artist?> GetArtistAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
-        return mediaContext
+        // Explicit include set covering every navigation the DTO touches.
+        // Any missing leaf triggers lazy-load per-track and times out artists
+        // like Ed Sheeran. `MusicPlays` is deliberately excluded; DTO's
+        // `favorite_tracks` is returned empty and a dedicated endpoint will
+        // replace it later.
+        Artist? artist = await mediaContext
             .Artists.AsNoTracking()
             .AsSplitQuery()
             .Where(artist => artist.Id == id)
@@ -49,13 +66,6 @@ public class MusicRepository(
             .Include(artist => artist.AlbumArtist)
                 .ThenInclude(albumArtist => albumArtist.Album)
                     .ThenInclude(album => album.Images)
-            .Include(artist => artist.AlbumArtist)
-                .ThenInclude(albumArtist => albumArtist.Album)
-                    .ThenInclude(album => album.Translations)
-            .Include(artist => artist.AlbumArtist)
-                .ThenInclude(albumArtist => albumArtist.Album)
-                    .ThenInclude(album => album.AlbumMusicGenre)
-                        .ThenInclude(amg => amg.MusicGenre)
             .Include(artist => artist.ArtistTrack)
                 .ThenInclude(at => at.Track)
                     .ThenInclude(track => track.AlbumTrack)
@@ -66,6 +76,41 @@ public class MusicRepository(
             .Include(artist => artist.ArtistMusicGenre)
                 .ThenInclude(amg => amg.MusicGenre)
             .FirstOrDefaultAsync(ct);
+
+        if (artist is null)
+            return null;
+
+        // Hydrate Track.ArtistTrack with collaborator artists. The cycle
+        // Artist -> ArtistTrack -> Track -> ArtistTrack -> Artist can't be
+        // expressed in a single Include under AsNoTracking, so we fetch the
+        // collaborator rows in a separate flat query and reattach them.
+        List<Guid> trackIds = artist.ArtistTrack.Select(at => at.TrackId).Distinct().ToList();
+
+        if (trackIds.Count > 0)
+        {
+            List<ArtistTrack> collabs = await mediaContext
+                .ArtistTrack.AsNoTracking()
+                .Where(at => trackIds.Contains(at.TrackId))
+                .Include(at => at.Artist)
+                .ToListAsync(ct);
+
+            Dictionary<Guid, List<ArtistTrack>> byTrackId = collabs
+                .GroupBy(at => at.TrackId)
+                .ToDictionary(g => g.Key, g => g.DistinctBy(at => at.ArtistId).ToList());
+
+            foreach (ArtistTrack at in artist.ArtistTrack)
+            {
+                if (
+                    at.Track is not null
+                    && byTrackId.TryGetValue(at.TrackId, out List<ArtistTrack>? list)
+                )
+                {
+                    at.Track.ArtistTrack = list;
+                }
+            }
+        }
+
+        return artist;
     }
 
     public Task<List<Artist>> GetArtists(Guid userId, string letter, CancellationToken ct = default)
@@ -75,8 +120,8 @@ public class MusicRepository(
             .ForUser(userId)
             .Where(artist =>
                 (letter == "_" || letter == "#")
-                    ? Letters.Any(p => artist.Name.StartsWith(p))
-                    : artist.Name.StartsWith(letter)
+                    ? !AlphaLetters.Any(p => artist.Name.ToLower().StartsWith(p))
+                    : artist.Name.ToLower().StartsWith(letter.ToLower())
             )
             .Include(artist => artist.ArtistUser.Where(au => au.UserId == userId))
             .Include(artist => artist.Translations)
@@ -122,6 +167,9 @@ public class MusicRepository(
 
     public Task<Album?> GetAlbumAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
+        // Minimal include set — drops per-track TrackUser join and the
+        // track -> artist -> translations fan-out which caused the same
+        // timeout pattern as GetArtistAsync for large albums.
         return mediaContext
             .Albums.AsNoTracking()
             .AsSplitQuery()
@@ -131,15 +179,10 @@ public class MusicRepository(
             .Include(album => album.AlbumUser.Where(au => au.UserId == userId))
             .Include(album => album.AlbumTrack)
                 .ThenInclude(albumTrack => albumTrack.Track)
-                    .ThenInclude(track => track.TrackUser.Where(tu => tu.UserId == userId))
-            .Include(album => album.AlbumTrack)
-                .ThenInclude(albumTrack => albumTrack.Track)
                     .ThenInclude(track => track.ArtistTrack)
                         .ThenInclude(artistTrack => artistTrack.Artist)
-                            .ThenInclude(artist => artist.Translations)
             .Include(album => album.AlbumArtist)
                 .ThenInclude(albumArtist => albumArtist.Artist)
-                    .ThenInclude(artist => artist.Images)
             .Include(album => album.Images)
             .Include(album => album.Translations)
             .Include(album => album.AlbumMusicGenre)
@@ -154,8 +197,8 @@ public class MusicRepository(
             .ForUser(userId)
             .Where(album =>
                 (letter == "_" || letter == "#")
-                    ? Letters.Any(p => album.Name.StartsWith(p))
-                    : album.Name.StartsWith(letter)
+                    ? !AlphaLetters.Any(p => album.Name.ToLower().StartsWith(p))
+                    : album.Name.ToLower().StartsWith(letter.ToLower())
             )
             .Include(album => album.AlbumUser.Where(au => au.UserId == userId))
             .Include(album => album.Translations)
@@ -702,19 +745,19 @@ public class MusicRepository(
 
     #region Projection Methods — Artist Cards
 
-    public Task<List<ArtistCardDto>> GetArtistCardsAsync(
+    public async Task<List<ArtistCardDto>> GetArtistCardsAsync(
         Guid userId,
         string letter,
         CancellationToken ct = default
     )
     {
-        return mediaContext
+        List<ArtistCardDto> cards = await mediaContext
             .Artists.AsNoTracking()
             .ForUser(userId)
             .Where(artist =>
                 (letter == "_" || letter == "#")
-                    ? Letters.Any(p => artist.Name.StartsWith(p))
-                    : artist.Name.StartsWith(letter)
+                    ? !AlphaLetters.Any(p => artist.Name.ToLower().StartsWith(p))
+                    : artist.Name.ToLower().StartsWith(letter.ToLower())
             )
             .Where(artist => artist.ArtistTrack.Any())
             .OrderBy(artist => artist.Name)
@@ -735,6 +778,50 @@ public class MusicRepository(
                     .FirstOrDefault(),
             })
             .ToListAsync(ct);
+
+        return cards
+            .DistinctBy(c => c.Id)
+            .DistinctBy(c => c.Name.Trim().ToLowerInvariant())
+            .ToList();
+    }
+
+    /// <summary>
+    /// Returns every artist in the library as cards, ordered by name. Used by
+    /// the TV lolomo layout to build one carousel per first-letter bucket in
+    /// a single query instead of 27 round-trips.
+    /// </summary>
+    public async Task<List<ArtistCardDto>> GetAllArtistCardsAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        List<ArtistCardDto> cards = await mediaContext
+            .Artists.AsNoTracking()
+            .ForUser(userId)
+            .Where(artist => artist.ArtistTrack.Any())
+            .OrderBy(artist => artist.Name)
+            .Select(artist => new ArtistCardDto
+            {
+                Id = artist.Id,
+                Name = artist.Name,
+                Cover = artist.Cover,
+                Disambiguation = artist.Disambiguation,
+                Description = artist.Description,
+                ColorPalette = artist._colorPalette ?? string.Empty,
+                LibraryId = artist.LibraryId,
+                Folder = artist.Folder,
+                TrackCount = artist.ArtistTrack.Count(),
+                ThumbImagePath = artist
+                    .Images.Where(image => image.Type == "thumb")
+                    .Select(image => image.FilePath)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(ct);
+
+        return cards
+            .DistinctBy(c => c.Id)
+            .DistinctBy(c => c.Name.Trim().ToLowerInvariant())
+            .ToList();
     }
 
     public Task<List<ArtistCardDto>> GetLatestArtistCardsAsync(
@@ -838,9 +925,52 @@ public class MusicRepository(
             .ForUser(userId)
             .Where(album =>
                 (letter == "_" || letter == "#")
-                    ? Letters.Any(p => album.Name.StartsWith(p))
-                    : album.Name.StartsWith(letter)
+                    ? !AlphaLetters.Any(p => album.Name.ToLower().StartsWith(p))
+                    : album.Name.ToLower().StartsWith(letter.ToLower())
             )
+            .Where(album => album.AlbumTrack.Any(at => at.Track.Duration != null))
+            .OrderBy(album => album.Name)
+            .Select(album => new AlbumCardDto
+            {
+                Id = album.Id,
+                Name = album.Name,
+                Cover = album.Cover,
+                Disambiguation = album.Disambiguation,
+                Description = album.Description,
+                ColorPalette = album._colorPalette ?? string.Empty,
+                LibraryId = album.LibraryId,
+                Folder = album.Folder,
+                Year = album.Year,
+                TrackCount = album.AlbumTrack.Count(at => at.Track.Duration != null),
+                TranslatedDescription = album
+                    .Translations.Where(t => t.Iso31661 == language)
+                    .Select(t => t.Description)
+                    .FirstOrDefault(),
+                BackgroundImagePath = album
+                    .Images.Where(image => image.Type == "background")
+                    .Select(image => image.FilePath)
+                    .FirstOrDefault(),
+                BackgroundImageColorPalette = album
+                    .Images.Where(image => image.Type == "background")
+                    .Select(image => image._colorPalette)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Returns every album in the library as cards, ordered by name. Used by
+    /// the TV lolomo layout to build one carousel per first-letter bucket.
+    /// </summary>
+    public Task<List<AlbumCardDto>> GetAllAlbumCardsAsync(
+        Guid userId,
+        string language,
+        CancellationToken ct = default
+    )
+    {
+        return mediaContext
+            .Albums.AsNoTracking()
+            .ForUser(userId)
             .Where(album => album.AlbumTrack.Any(at => at.Track.Duration != null))
             .OrderBy(album => album.Name)
             .Select(album => new AlbumCardDto
