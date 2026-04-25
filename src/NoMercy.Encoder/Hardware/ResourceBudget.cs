@@ -25,10 +25,7 @@ public class ResourceBudget : IResourceBudget
 
         foreach (GpuDevice device in gpuDevices)
         {
-            _gpuSemaphores[device] = new(
-                device.MaxEncoderSessions,
-                device.MaxEncoderSessions
-            );
+            _gpuSemaphores[device] = new(device.MaxEncoderSessions, device.MaxEncoderSessions);
         }
     }
 
@@ -79,12 +76,7 @@ public class ResourceBudget : IResourceBudget
 
         _logger?.LogDebug("Lease {LeaseId} granted", leaseId);
 
-        return new(
-            leaseId,
-            requirement.GpuDevice,
-            requirement.GpuSlots,
-            requirement.CpuThreads
-        );
+        return new(leaseId, requirement.GpuDevice, requirement.GpuSlots, requirement.CpuThreads);
     }
 
     public ResourceLease? TryAcquire(ResourceRequirement requirement, TimeSpan timeout)
@@ -162,12 +154,7 @@ public class ResourceBudget : IResourceBudget
 
         _logger?.LogDebug("Lease {LeaseId} granted via TryAcquire", leaseId);
 
-        return new(
-            leaseId,
-            requirement.GpuDevice,
-            requirement.GpuSlots,
-            requirement.CpuThreads
-        );
+        return new(leaseId, requirement.GpuDevice, requirement.GpuSlots, requirement.CpuThreads);
     }
 
     public void Release(ResourceLease lease)

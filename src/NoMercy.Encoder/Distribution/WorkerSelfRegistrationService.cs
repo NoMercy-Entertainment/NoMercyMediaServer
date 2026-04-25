@@ -65,13 +65,12 @@ public class WorkerSelfRegistrationService(
             }
 
             bool alive = await TryHeartbeatAsync(http, stoppingToken).ConfigureAwait(false);
-            if (alive) continue;
+            if (alive)
+                continue;
             // Heartbeat bounced — coordinator doesn't know us. Could be
             // coordinator restart or our eviction after a long outage.
             // Re-register rather than spamming a 404 heartbeat loop.
-            logger.LogInformation(
-                "Heartbeat rejected by coordinator — attempting re-registration"
-            );
+            logger.LogInformation("Heartbeat rejected by coordinator — attempting re-registration");
             await TryRegisterAsync(http, stoppingToken).ConfigureAwait(false);
         }
 

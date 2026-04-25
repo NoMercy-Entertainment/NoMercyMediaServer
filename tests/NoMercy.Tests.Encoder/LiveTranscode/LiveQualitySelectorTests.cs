@@ -111,8 +111,7 @@ public class LiveQualitySelectorTests
             }
         );
 
-    private static SpeedIndex MakeEmptySpeedIndex() =>
-        new(new());
+    private static SpeedIndex MakeEmptySpeedIndex() => new(new());
 
     // ──────────────────────────────────────────────────────────────────────────
     // GetAvailableQualities

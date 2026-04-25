@@ -34,13 +34,7 @@ public class FfmpegCommandBuilderTests
     public void HwAccelInput_IncludesHwaccelFlags()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .AddInput(
-                new(
-                    "/input/video.mkv",
-                    HwAccelDevice: "cuda",
-                    HwAccelOutputFormat: "cuda"
-                )
-            )
+            .AddInput(new("/input/video.mkv", HwAccelDevice: "cuda", HwAccelOutputFormat: "cuda"))
             .AddOutput(new(FilePath: "/output/video.mp4", VideoCodec: "h264_nvenc"))
             .Build("ffmpeg");
 
@@ -54,13 +48,7 @@ public class FfmpegCommandBuilderTests
         FfmpegCommand cmd = new FfmpegCommandBuilder()
             .AddInput(new("/input.mkv"))
             .WithFilterComplex("[0:v]scale=1920:1080[v0]")
-            .AddOutput(
-                new(
-                    FilePath: "/output.mp4",
-                    VideoCodec: "libx264",
-                    MapStreams: ["[v0]"]
-                )
-            )
+            .AddOutput(new(FilePath: "/output.mp4", VideoCodec: "libx264", MapStreams: ["[v0]"]))
             .Build("ffmpeg");
 
         cmd.Arguments.Should()

@@ -25,11 +25,7 @@ public class ExecutionGraphBuilder
                     decodeId,
                     OperationType.Decode,
                     [],
-                    new()
-                    {
-                        ["stream_index"] = "0",
-                        ["codec"] = media.VideoStreams[0].Codec,
-                    }
+                    new() { ["stream_index"] = "0", ["codec"] = media.VideoStreams[0].Codec }
                 )
             );
 
@@ -62,10 +58,7 @@ public class ExecutionGraphBuilder
                         splitId,
                         OperationType.Split,
                         [lastVideoNode],
-                        new()
-                        {
-                            ["count"] = profile.VideoOutputs.Length.ToString(),
-                        }
+                        new() { ["count"] = profile.VideoOutputs.Length.ToString() }
                     )
                 );
 
@@ -172,10 +165,7 @@ public class ExecutionGraphBuilder
                     audioDecodeId,
                     OperationType.AudioDecode,
                     [],
-                    new()
-                    {
-                        ["stream_index"] = media.AudioStreams[i].Index.ToString(),
-                    }
+                    new() { ["stream_index"] = media.AudioStreams[i].Index.ToString() }
                 )
             );
 
@@ -218,14 +208,7 @@ public class ExecutionGraphBuilder
         if (media.Chapters.Count > 0)
         {
             string chapterId = $"node_{nodeId++}";
-            nodes.Add(
-                new(
-                    chapterId,
-                    OperationType.ChapterExtract,
-                    [],
-                    new()
-                )
-            );
+            nodes.Add(new(chapterId, OperationType.ChapterExtract, [], new()));
         }
 
         // Thumbnail generation (independent)

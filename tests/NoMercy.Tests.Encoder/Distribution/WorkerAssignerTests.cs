@@ -137,11 +137,7 @@ public class WorkerAssignerTests
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
             tasks,
-            [
-                new("a", 2.0, 4),
-                new("b", 1.0, 2),
-                new("c", 0.5, 1),
-            ]
+            [new("a", 2.0, 4), new("b", 1.0, 2), new("c", 0.5, 1)]
         );
 
         HashSet<string> placed = result.Values.SelectMany(v => v).Select(t => t.TaskId).ToHashSet();

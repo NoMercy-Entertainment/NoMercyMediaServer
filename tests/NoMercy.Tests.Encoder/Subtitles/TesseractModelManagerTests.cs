@@ -14,11 +14,7 @@ public class TesseractModelManagerTests : IDisposable
     public TesseractModelManagerTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"TessTest_{Guid.NewGuid():N}");
-        _options = new()
-        {
-            FfmpegPathOverride = "ffmpeg",
-            TesseractModelsDirectory = _tempDir,
-        };
+        _options = new() { FfmpegPathOverride = "ffmpeg", TesseractModelsDirectory = _tempDir };
     }
 
     public void Dispose()

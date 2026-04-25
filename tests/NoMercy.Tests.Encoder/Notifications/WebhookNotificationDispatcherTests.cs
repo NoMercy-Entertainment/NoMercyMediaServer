@@ -15,10 +15,7 @@ public class WebhookNotificationDispatcherTests
         CapturingHandler handler = new() { StatusCode = HttpStatusCode.OK };
         WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
 
-        await dispatcher.NotifyStartedAsync(
-            new(1, "/in", "/out", "HLS"),
-            CancellationToken.None
-        );
+        await dispatcher.NotifyStartedAsync(new(1, "/in", "/out", "HLS"), CancellationToken.None);
 
         Assert.Empty(handler.Requests);
     }
@@ -87,12 +84,7 @@ public class WebhookNotificationDispatcherTests
         WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
 
         await dispatcher.NotifyFailedAsync(
-            new(
-                5,
-                "/src.mkv",
-                "ffmpeg crashed",
-                "ProcessCrashedException"
-            ),
+            new(5, "/src.mkv", "ffmpeg crashed", "ProcessCrashedException"),
             CancellationToken.None
         );
 
@@ -115,10 +107,7 @@ public class WebhookNotificationDispatcherTests
         // so the test runs fast — we still see 3 request attempts.
         cts.CancelAfter(TimeSpan.FromSeconds(4));
 
-        await dispatcher.NotifyStartedAsync(
-            new(1, "/in", "/out", "HLS"),
-            cts.Token
-        );
+        await dispatcher.NotifyStartedAsync(new(1, "/in", "/out", "HLS"), cts.Token);
 
         Assert.InRange(handler.Requests.Count, 2, 3);
     }
@@ -140,10 +129,7 @@ public class WebhookNotificationDispatcherTests
         WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(6));
-        await dispatcher.NotifyStartedAsync(
-            new(1, "/in", "/out", "HLS"),
-            cts.Token
-        );
+        await dispatcher.NotifyStartedAsync(new(1, "/in", "/out", "HLS"), cts.Token);
 
         // Good URL gets at least one request even though bad URL is failing.
         Assert.Contains(
@@ -162,10 +148,7 @@ public class WebhookNotificationDispatcherTests
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await dispatcher.NotifyStartedAsync(
-            new(1, "/in", "/out", "HLS"),
-            cts.Token
-        );
+        await dispatcher.NotifyStartedAsync(new(1, "/in", "/out", "HLS"), cts.Token);
 
         // First attempt short-circuits before the request starts.
         Assert.Empty(handler.Requests);
@@ -185,11 +168,7 @@ public class WebhookNotificationDispatcherTests
     )
     {
         HttpClient client = new(handler);
-        return new(
-            options,
-            client,
-            NullLogger<WebhookNotificationDispatcher>.Instance
-        );
+        return new(options, client, NullLogger<WebhookNotificationDispatcher>.Instance);
     }
 
     private sealed class CapturingHandler : HttpMessageHandler

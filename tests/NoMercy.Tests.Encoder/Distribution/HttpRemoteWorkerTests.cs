@@ -101,11 +101,7 @@ public class HttpRemoteWorkerTests
 
         sut.UpdateSnapshot(
             MakeCapabilities(),
-            new(
-                AvailableGpuSlots: 2,
-                AvailableCpuThreads: 16,
-                GpuUtilization: 0.1
-            )
+            new(AvailableGpuSlots: 2, AvailableCpuThreads: 16, GpuUtilization: 0.1)
         );
 
         sut.GetAvailableBudget().AvailableCpuThreads.Should().Be(16);

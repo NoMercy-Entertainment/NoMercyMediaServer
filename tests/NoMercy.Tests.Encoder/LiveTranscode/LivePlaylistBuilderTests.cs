@@ -146,8 +146,7 @@ public class LivePlaylistBuilderTests
             .CurrentCulture;
         try
         {
-            System.Threading.Thread.CurrentThread.CurrentCulture =
-                new("nl-NL");
+            System.Threading.Thread.CurrentThread.CurrentCulture = new("nl-NL");
 
             LivePlaylistRequest request = new(
                 SessionId: "s",

@@ -185,9 +185,8 @@ public class WorkerSelfRegistrationServiceTests
         private readonly List<(HttpMethod Method, string Path)> _log = [];
 
         public RecordingHandler(HashSet<string>? okOn = null)
-            : this(req => new(
-                ShouldOk(req, okOn) ? HttpStatusCode.OK : HttpStatusCode.NotFound
-            )) { }
+            : this(req => new(ShouldOk(req, okOn) ? HttpStatusCode.OK : HttpStatusCode.NotFound))
+        { }
 
         public RecordingHandler(Func<HttpRequestMessage, HttpResponseMessage> respond)
         {

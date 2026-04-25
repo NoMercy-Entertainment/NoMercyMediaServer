@@ -66,9 +66,7 @@ public class SessionManagerTests
     [Fact]
     public void CanStartSession_WhenUserAtMax_ReturnsFalse()
     {
-        SessionManager manager = new(
-            new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 2 }
-        );
+        SessionManager manager = new(new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 2 });
         manager.RegisterSession(MakeSession("u1-s1"), userId: "user-1");
         manager.RegisterSession(MakeSession("u1-s2"), userId: "user-1");
 
@@ -80,9 +78,7 @@ public class SessionManagerTests
     [Fact]
     public void CanStartSession_DifferentUser_NotAffectedByOtherUserLimit()
     {
-        SessionManager manager = new(
-            new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 2 }
-        );
+        SessionManager manager = new(new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 2 });
         manager.RegisterSession(MakeSession("u1-s1"), userId: "user-1");
         manager.RegisterSession(MakeSession("u1-s2"), userId: "user-1");
 
@@ -94,9 +90,7 @@ public class SessionManagerTests
     [Fact]
     public void CanStartSession_NullUser_NotBoundByPerUserLimit()
     {
-        SessionManager manager = new(
-            new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 1 }
-        );
+        SessionManager manager = new(new() { MaxConcurrentSessions = 10, MaxSessionsPerUser = 1 });
         manager.RegisterSession(MakeSession("anon-1"));
         manager.RegisterSession(MakeSession("anon-2"));
 

@@ -273,11 +273,7 @@ public class HardwareBenchmark(
             return null;
 
         double multiplier = observedFps / SourceFrameRate;
-        return new(
-            Fps: observedFps,
-            SpeedMultiplier: multiplier,
-            MeasuredAt: DateTime.UtcNow
-        );
+        return new(Fps: observedFps, SpeedMultiplier: multiplier, MeasuredAt: DateTime.UtcNow);
     }
 
     internal static string[] BuildCalibrationArguments(

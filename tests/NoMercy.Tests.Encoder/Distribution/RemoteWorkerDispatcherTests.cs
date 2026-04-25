@@ -156,13 +156,7 @@ public class RemoteWorkerDispatcherTests
         IRemoteWorker rescue = MakeRemoteWorkerWithResult(
             "b-healthy",
             slots: 2,
-            result: new(
-                "t0",
-                true,
-                "/b/t0",
-                TimeSpan.FromSeconds(2),
-                WorkerId: "b-healthy"
-            )
+            result: new("t0", true, "/b/t0", TimeSpan.FromSeconds(2), WorkerId: "b-healthy")
         );
 
         FakeRegistry registry = new([failing, rescue]);

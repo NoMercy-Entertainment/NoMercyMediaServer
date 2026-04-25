@@ -16,11 +16,7 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
             if (media.HasAudio && IsAudioCompatible(media.AudioStreams[0], client))
                 return new(PlaybackAction.DirectPlay, null, null);
 
-            return new(
-                PlaybackAction.TranscodeAudio,
-                "Audio codec not supported",
-                null
-            );
+            return new(PlaybackAction.TranscodeAudio, "Audio codec not supported", null);
         }
 
         VideoStreamInfo video = media.VideoStreams[0];
@@ -45,11 +41,7 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
 
         // Video codec OK, but audio needs transcode
         if (!audioCodecOk)
-            return new(
-                PlaybackAction.TranscodeAudio,
-                "Audio codec not supported by client",
-                null
-            );
+            return new(PlaybackAction.TranscodeAudio, "Audio codec not supported by client", null);
 
         // Video + audio OK, but container wrong → remux
         if (!containerOk)
@@ -61,11 +53,7 @@ public class PlaybackDecisionEngine : IPlaybackDecisionEngine
 
         // Everything else OK but bitrate too high → transcode to reduce
         if (!bitrateOk)
-            return new(
-                PlaybackAction.TranscodeVideo,
-                "Bitrate exceeds client limit",
-                null
-            );
+            return new(PlaybackAction.TranscodeVideo, "Bitrate exceeds client limit", null);
 
         return new(PlaybackAction.DirectPlay, null, null);
     }

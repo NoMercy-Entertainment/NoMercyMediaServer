@@ -26,9 +26,7 @@ public class JobCheckpointTests
         deserialized.InputPath.Should().Be("/media/source/movie.mkv");
         deserialized.OutputDirectory.Should().Be("/output/movie");
         deserialized.CompletedGroupIndices.Should().BeEquivalentTo(new[] { 0, 1, 2 });
-        deserialized
-            .LastUpdated.Should()
-            .Be(new(2026, 1, 15, 10, 30, 0, DateTimeKind.Utc));
+        deserialized.LastUpdated.Should().Be(new(2026, 1, 15, 10, 30, 0, DateTimeKind.Utc));
     }
 
     [Fact]
