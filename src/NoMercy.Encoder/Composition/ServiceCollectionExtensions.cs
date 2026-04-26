@@ -350,10 +350,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFfmpegCapabilityProbe, FfmpegCapabilityProbe>();
         services.AddHostedService<FfmpegCapabilityProbeBackgroundService>();
 
-        // Built-in preset seeder — upserts the 12 shipping presets into
-        // EncodingPresets on every start. Skips rows where IsBuiltIn was
-        // deliberately cleared by the user to avoid clobbering their data.
-        services.AddHostedService<BuiltinPresetSeeder>();
+        // BuiltinPresetSeeder retired — Service-side EncodingPresetsSeed
+        // is the single source of truth for the curated preset library.
 
         // Self-registration background service — no-ops on standalone
         // installs (when CoordinatorUrl is not set). Safe to always

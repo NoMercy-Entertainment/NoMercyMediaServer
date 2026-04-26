@@ -55,6 +55,10 @@ public static class EncodingPresetsSeed
 
             if (staleBuiltInIds.Count > 0)
             {
+                // Drain bindings before EncoderProfile rows — non-cascading FK.
+                int unboundCount = await context
+                    .EncoderProfileFolder.Where(b => staleBuiltInIds.Contains(b.EncoderProfileId))
+                    .ExecuteDeleteAsync();
                 await context
                     .EncoderProfiles.Where(p => staleBuiltInIds.Contains(p.Id))
                     .ExecuteDeleteAsync();
@@ -63,7 +67,8 @@ public static class EncodingPresetsSeed
                     .ExecuteDeleteAsync();
 
                 Logger.Setup(
-                    $"Encoding presets: pruned {staleBuiltInIds.Count} stale built-in(s) + their materialized EncoderProfile rows",
+                    $"Encoding presets: pruned {staleBuiltInIds.Count} stale built-in(s), "
+                        + $"unbound {unboundCount} folder assignment(s), removed materialized EncoderProfile rows",
                     LogEventLevel.Information
                 );
             }
