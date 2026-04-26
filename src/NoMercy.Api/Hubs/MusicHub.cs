@@ -10,6 +10,7 @@ using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -585,7 +586,7 @@ public class MusicHub : ConnectionHub
             await _musicPlaybackService.UpdatePlaybackState(user, new());
         }
 
-        Logger.Socket("Music client connected");
+        Logger.Socket("Music client connected", LogEventLevel.Debug);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -671,6 +672,6 @@ public class MusicHub : ConnectionHub
 
         await _musicPlaybackService.UpdatePlaybackState(user, playerState);
 
-        Logger.Socket("Music client disconnected");
+        Logger.Socket("Music client disconnected", LogEventLevel.Debug);
     }
 }

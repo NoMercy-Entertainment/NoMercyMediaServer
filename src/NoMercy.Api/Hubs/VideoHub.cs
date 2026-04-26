@@ -13,6 +13,7 @@ using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -522,6 +523,6 @@ public class VideoHub : ConnectionHub
 
         await _videoPlaybackService.UpdatePlaybackState(user, playerState);
 
-        Logger.Socket("Video client disconnected");
+        Logger.Socket("Video client disconnected", LogEventLevel.Debug);
     }
 }

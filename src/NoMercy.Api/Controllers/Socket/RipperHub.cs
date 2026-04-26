@@ -10,6 +10,7 @@ using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.Socket;
 
@@ -31,13 +32,13 @@ public class RipperHub : ConnectionHub
         CurrentDevices.TryAdd(Context.ConnectionId, user.Id);
 
         await base.OnConnectedAsync();
-        Logger.Socket("Ripper client connected");
+        Logger.Socket("Ripper client connected", LogEventLevel.Debug);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
-        Logger.Socket("Ripper client disconnected");
+        Logger.Socket("Ripper client disconnected", LogEventLevel.Debug);
     }
 
     public async Task<DriveState?> GetDriveState(string drivePath)

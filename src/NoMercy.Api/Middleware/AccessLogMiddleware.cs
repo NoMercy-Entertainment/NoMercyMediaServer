@@ -32,11 +32,40 @@ public class AccessLogMiddleware
         "/transcode",
         "/manage",
         "/health",
+        // SignalR hubs — base path AND /negotiate handshake AND polling
+        // fallbacks all share the prefix; exact-match misses /negotiate.
+        "/videoHub",
+        "/musicHub",
+        "/ripperHub",
+        "/dashboardHub",
+        "/castHub",
     ];
 
-    private readonly string[] _ignoreExact = ["/", "/api/v1/dashboard/logs"];
+    private readonly string[] _ignoreExact =
+    [
+        "/",
+        "/api/v1/dashboard/logs",
+        "/api/v1/dashboard/devices",
+        "/api/v1/dashboard/activity",
+        // Dashboard overview poll targets — fire every few seconds.
+        "/api/v1/dashboard/server",
+        "/api/v1/dashboard/server/info",
+        "/api/v1/dashboard/server/storage",
+        "/api/v1/dashboard/system",
+        "/api/v1/dashboard/optical/drives",
+        "/api/v1/dashboard/tasks/queue",
+        "/api/v1/dashboard/tasks/runners",
+        "/api/v1/dashboard/hardware",
+        "/api/v1/dashboard/hardware/benchmark",
+        // Setup wizard poll targets — fire on every page load.
+        "/api/v1/setup/server-info",
+        "/api/v1/setup/permissions",
+        "/api/v1/setup/libraries",
+        "/api/v1/setup/screensaver",
+        "/api/v1/setup/music-playlists",
+    ];
 
-    private readonly string[] _ignoreIfAuthenticated = ["/videoHub", "/musicHub"];
+    private readonly string[] _ignoreIfAuthenticated = [];
 
     private readonly string[] _ignoreIfGuest = ["/status"];
 

@@ -4,6 +4,7 @@ using NoMercy.Database;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.Socket;
 
@@ -25,14 +26,14 @@ public class DashboardHub : ConnectionHub
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        Logger.Socket("Dashboard client connected");
+        Logger.Socket("Dashboard client connected", LogEventLevel.Debug);
         LogBroadcaster.StartBroadcasting(_clientMessenger);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
-        Logger.Socket("Dashboard client disconnected");
+        Logger.Socket("Dashboard client disconnected", LogEventLevel.Debug);
 
         StopResources();
     }
