@@ -2,6 +2,7 @@ namespace NoMercy.Encoder.PostProcess;
 
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
+using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Subtitles;
 
@@ -35,21 +36,24 @@ public class SubtitleExtractor : ISubtitleExtractor
 
         if (isBitmap)
         {
-            // Bitmap subs extracted as MKS (Matroska subtitle container).
-            // FFmpeg can't write .sub+.idx from MKV in a single command.
+            // Bitmap subs extracted as MKS — ffmpeg can't write .sub+.idx
+            // from MKV in a single command. OCR pass converts to WebVTT later.
             extension = "mks";
             ffmpegCodec = "copy";
         }
-        else if (isAss)
-        {
-            extension = "ass";
-            ffmpegCodec = "ass";
-        }
         else
         {
-            // All other text formats → WebVTT
-            extension = "vtt";
-            ffmpegCodec = "webvtt";
+            // Honor the profile's requested output codec so HLS playlists
+            // that reference .vtt sidecars get .vtt files even when the
+            // source is .ass. ASS preservation is opt-in via Codec=Ass.
+            (extension, ffmpegCodec) = plan.OutputCodec switch
+            {
+                SubtitleCodecType.WebVtt => ("vtt", "webvtt"),
+                SubtitleCodecType.Ass => ("ass", "ass"),
+                SubtitleCodecType.Srt => ("srt", "srt"),
+                SubtitleCodecType.Copy => isAss ? ("ass", "copy") : ("vtt", "copy"),
+                _ => ("vtt", "webvtt"),
+            };
         }
 
         Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(

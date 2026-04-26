@@ -223,6 +223,116 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         );
         string masterPath = Path.Combine(outputDirectory, $"{mediaTitle}.m3u8");
         await storage.WriteAsync(masterPath, Encoding.UTF8.GetBytes(masterPlaylist), ct);
+
+        await WriteSubtitleSidecarsAsync(outputDirectory, plan, ct);
+    }
+
+    /// <summary>
+    /// Emits the per-language subs_&lt;lang&gt;.m3u8 sidecar playlists the
+    /// master references. Single-segment VOD playlists pointing at the .vtt
+    /// file the extractor wrote under subtitles/. Without these the master's
+    /// EXT-X-MEDIA:TYPE=SUBTITLES URI 404s in every HLS player.
+    /// </summary>
+    private async Task WriteSubtitleSidecarsAsync(
+        string outputDirectory,
+        OutputPlan plan,
+        CancellationToken ct
+    )
+    {
+        SubtitleOutputPlan[] activeSubs = plan
+            .SubtitleOutputs.Where(s => s.Action is StreamAction.Extract or StreamAction.Copy)
+            .ToArray();
+        if (activeSubs.Length == 0)
+            return;
+
+        string subtitlesDir = Path.Combine(outputDirectory, "subtitles");
+        if (!storage.Exists(subtitlesDir))
+            return;
+
+        string[] vttFiles = storage
+            .List(subtitlesDir, "*.vtt", recursive: false)
+            .Where(e => !e.IsDirectory)
+            .Select(e => e.Path)
+            .ToArray();
+        if (vttFiles.Length == 0)
+            return;
+
+        double durationSeconds = MeasureVideoDuration(outputDirectory, plan);
+        if (durationSeconds <= 0)
+            durationSeconds = 36000;
+
+        HashSet<string> writtenUris = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (SubtitleOutputPlan sub in activeSubs)
+        {
+            string lang = sub.Language ?? "und";
+            string sidecarFile = $"subs_{lang}.m3u8";
+            if (!writtenUris.Add(sidecarFile))
+                continue;
+
+            string? vttPath = vttFiles.FirstOrDefault(f =>
+                Path.GetFileName(f).Contains($".{lang}.", StringComparison.OrdinalIgnoreCase)
+            );
+            if (vttPath is null)
+                continue;
+
+            string vttRelative = "subtitles/" + Path.GetFileName(vttPath);
+            string playlist =
+                "#EXTM3U\n"
+                + "#EXT-X-VERSION:6\n"
+                + "#EXT-X-PLAYLIST-TYPE:VOD\n"
+                + $"#EXT-X-TARGETDURATION:{(int)Math.Ceiling(durationSeconds)}\n"
+                + $"#EXTINF:{durationSeconds.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)},\n"
+                + vttRelative
+                + "\n#EXT-X-ENDLIST\n";
+
+            string sidecarPath = Path.Combine(outputDirectory, sidecarFile);
+            await storage.WriteAsync(sidecarPath, Encoding.UTF8.GetBytes(playlist), ct);
+        }
+    }
+
+    /// <summary>
+    /// Sums #EXTINF durations from the first video variant playlist as the
+    /// authoritative content length. Falls back to 0 if no variant is found.
+    /// </summary>
+    private double MeasureVideoDuration(string outputDirectory, OutputPlan plan)
+    {
+        VideoOutputPlan? firstVideo = plan.VideoOutputs.FirstOrDefault();
+        if (firstVideo is null)
+            return 0;
+
+        Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+            firstVideo.Width,
+            firstVideo.Height,
+            firstVideo.IsHdrOutput
+        );
+        string resolved = TemplateResolver.Resolve(firstVideo.PlaylistNameTemplate, tokens);
+        string subDir = Path.GetDirectoryName(resolved)?.Replace("\\", "/") ?? resolved;
+        string playlistFile = Path.GetFileName(resolved);
+        string variantPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
+
+        if (!storage.Exists(variantPath))
+            return 0;
+
+        string content = Encoding.UTF8.GetString(storage.Read(variantPath));
+        double total = 0;
+        foreach (string line in content.Split('\n'))
+        {
+            if (!line.StartsWith("#EXTINF:", StringComparison.Ordinal))
+                continue;
+            int comma = line.IndexOf(',');
+            string value = comma > 8 ? line[8..comma] : line[8..];
+            if (
+                double.TryParse(
+                    value.Trim(),
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out double seconds
+                )
+            )
+                total += seconds;
+        }
+        return total;
     }
 
     public string[] GetOutputSubdirectories(OutputPlan plan)
