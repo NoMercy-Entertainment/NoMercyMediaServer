@@ -101,18 +101,26 @@ public class PlaylistGenerator : IPlaylistGenerator
             );
         }
 
-        // Subtitle groups
+        // Subtitle groups — deduplicate by emitted URI. Multiple plans
+        // collapsing to the same subs_<lang>.m3u8 (e.g. profile lists both
+        // a webvtt and an ass SubtitleOutput, both matching the same source
+        // language) produced identical EXT-X-MEDIA lines and players would
+        // either show "English" twice in the picker or pick the wrong one.
         SubtitleOutputPlan[] activeSubs = plan
             .SubtitleOutputs.Where(s => s.Action is StreamAction.Extract or StreamAction.Copy)
             .ToArray();
 
         if (activeSubs.Length > 0)
         {
+            HashSet<string> seenSubsUris = new(StringComparer.OrdinalIgnoreCase);
             foreach (SubtitleOutputPlan sub in activeSubs)
             {
                 string lang = sub.Language ?? "und";
                 string displayName = GetSubtitleDisplayName(lang);
                 string subsUri = GetSubtitlePlaylistUri(sub);
+
+                if (!seenSubsUris.Add(subsUri))
+                    continue;
 
                 sb.AppendLine(
                     $"#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"{displayName}\",LANGUAGE=\"{lang}\",DEFAULT=NO,AUTOSELECT=YES,FORCED=NO,URI=\"{subsUri}\""
