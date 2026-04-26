@@ -12,17 +12,19 @@ using Serilog.Events;
 namespace NoMercy.Service.Seeds;
 
 /// <summary>
-/// Seeds the curated built-in shareable preset library. Eleven presets cover
-/// the practical resolution × storage matrix users actually pick from
-/// (4K Premium / Balanced / Space Saver, 1080p Premium / Balanced / Space
-/// Saver, plus a 1080p HDR / 10-bit live-action variant, an Anime 10-bit
-/// variant, and three music tiers). Archival "Source Remux" + AV1 Ultra
-/// Compact MKV presets land once the Copy codec pipeline is wired in.
+/// Seeds the curated built-in shareable preset library. Fourteen presets
+/// cover the practical resolution × storage matrix users actually pick from:
+///   - 4K Premium / Balanced / Space Saver         (HEVC main10, HLS)
+///   - 1080p Premium / Balanced / Space Saver      (H.264 high, HLS)
+///   - 1080p HDR / 10-bit                          (HEVC main10, HLS)
+///   - Anime 1080p 10-bit                          (HEVC main10 + tune, HLS)
+///   - Archive Lossless Original                   (Copy V/A/S, MKV)
+///   - 4K / 1080p Ultra Compact (AV1)              (AV1 + Copy A/S, MKV)
+///   - Music Lossless / High / Standard            (FLAC / MP3 320 / 192)
 ///
-/// Built-in presets carry a deterministic Ulid in the [100..110] range so
-/// repeat seeding upserts instead of duplicating. Old [1..12] built-ins from
-/// previous curations are pruned by the stale-cleanup pass below. IsBuiltIn
-/// = true prevents accidental deletion via the dashboard API.
+/// Deterministic Ulids in the [100..113] range. Old [1..12] built-ins from
+/// previous curations are pruned by the stale-cleanup pass in Init.
+/// IsBuiltIn = true prevents accidental deletion via the dashboard API.
 /// </summary>
 public static class EncodingPresetsSeed
 {
@@ -351,6 +353,9 @@ public static class EncodingPresetsSeed
         Ulid musicFlacId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 108 });
         Ulid musicMp3HighId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 109 });
         Ulid musicMp3StdId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 110 });
+        Ulid archiveMkvId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 111 });
+        Ulid av1Mkv4KId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 112 });
+        Ulid av1Mkv1080pId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 113 });
 
         return
         [
@@ -499,6 +504,157 @@ public static class EncodingPresetsSeed
                     preset: "slow",
                     tune: "animation"
                 ),
+            },
+            // ── Archive + AV1 tier (MKV, browser-incompatible by design) ────
+            // MKV is the forcing function: web browsers can't decode the
+            // container so playback always exercises the live transcoder.
+            // Every native player (Android TV, VLC, Kodi, Apple TV with HEVC
+            // support) direct-plays. Audio + subtitles are stream-copied so
+            // lossless source tracks (TrueHD, DTS-HD MA, FLAC) and image
+            // subtitle formats (PGS) are preserved bit-perfect.
+            new()
+            {
+                Id = archiveMkvId,
+                Name = "Archive — Lossless Original",
+                Description =
+                    "Source video, audio, and subtitles remuxed into MKV with zero re-encoding. File size matches the source. The forcing function for the live transcoder — web playback always transcodes on demand.",
+                Author = "NoMercy",
+                Tags = "archive,mkv,copy,lossless,passthrough",
+                IsBuiltIn = true,
+                ProfileJson = """
+                    {
+                        "Name": "Archive Source Remux",
+                        "Format": "Mkv",
+                        "VideoOutputs": [
+                            {
+                                "Codec": "Copy",
+                                "Width": 0,
+                                "Height": null,
+                                "BitrateKbps": 0,
+                                "Crf": 0,
+                                "Preset": null,
+                                "Profile": null,
+                                "Level": null,
+                                "ConvertHdrToSdr": false,
+                                "KeyframeIntervalSeconds": 2,
+                                "TenBit": false,
+                                "Tune": null
+                            }
+                        ],
+                        "AudioOutputs": [
+                            {
+                                "Codec": "Copy",
+                                "BitrateKbps": 0,
+                                "Channels": 0,
+                                "SampleRateHz": 0,
+                                "AllowedLanguages": []
+                            }
+                        ],
+                        "SubtitleOutputs": [
+                            {
+                                "Codec": "Copy",
+                                "Mode": "Extract",
+                                "AllowedLanguages": []
+                            }
+                        ]
+                    }
+                    """,
+            },
+            new()
+            {
+                Id = av1Mkv4KId,
+                Name = "4K — Ultra Compact (AV1)",
+                Description =
+                    "AV1 main10 at CRF 32 (libsvtav1 preset 4). Half the bitrate of HEVC at the same quality (~6 GB / 2hr). Audio + subs stream-copied to preserve lossless source tracks. Modern devices only — older hardware triggers live transcode.",
+                Author = "NoMercy",
+                Tags = "4k,2160p,av1,10bit,mkv,ultra-compact,modern",
+                IsBuiltIn = true,
+                ProfileJson = """
+                    {
+                        "Name": "AV1 4K Ultra Compact",
+                        "Format": "Mkv",
+                        "VideoOutputs": [
+                            {
+                                "Codec": "Av1",
+                                "Width": 3840,
+                                "Height": 2160,
+                                "BitrateKbps": 0,
+                                "Crf": 32,
+                                "Preset": "4",
+                                "Profile": "main",
+                                "Level": null,
+                                "ConvertHdrToSdr": false,
+                                "KeyframeIntervalSeconds": 4,
+                                "TenBit": true,
+                                "Tune": null
+                            }
+                        ],
+                        "AudioOutputs": [
+                            {
+                                "Codec": "Copy",
+                                "BitrateKbps": 0,
+                                "Channels": 0,
+                                "SampleRateHz": 0,
+                                "AllowedLanguages": []
+                            }
+                        ],
+                        "SubtitleOutputs": [
+                            {
+                                "Codec": "Copy",
+                                "Mode": "Extract",
+                                "AllowedLanguages": []
+                            }
+                        ]
+                    }
+                    """,
+            },
+            new()
+            {
+                Id = av1Mkv1080pId,
+                Name = "1080p — Ultra Compact (AV1)",
+                Description =
+                    "AV1 main at CRF 32 (libsvtav1 preset 4). Smallest 1080p files in the library (~1.5 GB / 2hr) with high visual quality. Audio + subs stream-copied. Modern devices only.",
+                Author = "NoMercy",
+                Tags = "1080p,av1,mkv,ultra-compact,modern",
+                IsBuiltIn = true,
+                ProfileJson = """
+                    {
+                        "Name": "AV1 1080p Ultra Compact",
+                        "Format": "Mkv",
+                        "VideoOutputs": [
+                            {
+                                "Codec": "Av1",
+                                "Width": 1920,
+                                "Height": 1080,
+                                "BitrateKbps": 0,
+                                "Crf": 32,
+                                "Preset": "4",
+                                "Profile": "main",
+                                "Level": null,
+                                "ConvertHdrToSdr": false,
+                                "KeyframeIntervalSeconds": 4,
+                                "TenBit": false,
+                                "Tune": null
+                            }
+                        ],
+                        "AudioOutputs": [
+                            {
+                                "Codec": "Copy",
+                                "BitrateKbps": 0,
+                                "Channels": 0,
+                                "SampleRateHz": 0,
+                                "AllowedLanguages": []
+                            }
+                        ],
+                        "SubtitleOutputs": [
+                            {
+                                "Codec": "Copy",
+                                "Mode": "Extract",
+                                "AllowedLanguages": []
+                            }
+                        ]
+                    }
+                    """,
             },
             // ── Music tiers ─────────────────────────────────────────────────
             new()
