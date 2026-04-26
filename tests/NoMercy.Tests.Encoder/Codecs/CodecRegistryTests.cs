@@ -47,13 +47,16 @@ public class CodecRegistryTests
     }
 
     [Fact]
-    public void TotalVideoEncoderCount_Is22()
+    public void TotalVideoEncoderCount_Is23()
     {
+        // 22 real encoders (H.264 × 6 + H.265 × 6 + AV1 × 5 + VP9 × 5)
+        // plus 1 synthetic "copy" encoder from CopyVideoDefinition. Bumped
+        // from 22 when stream-copy passthrough landed.
         int total = 0;
         foreach (VideoCodecType codecType in Enum.GetValues<VideoCodecType>())
         {
             total += _registry.GetVideoDefinition(codecType).Encoders.Length;
         }
-        total.Should().Be(22);
+        total.Should().Be(23);
     }
 }

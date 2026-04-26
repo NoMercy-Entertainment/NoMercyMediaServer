@@ -12,6 +12,18 @@ public class CodecResolver(CodecRegistry registry) : ICodecResolver
     {
         ICodecDefinition definition = registry.GetVideoDefinition(codec);
 
+        // Stream copy bypasses every preference branch. There is exactly one
+        // synthetic encoder ("copy") in CopyVideoDefinition.Encoders, no
+        // hardware path, no rate-control list (so MakeResolved would index
+        // an empty array and crash). Hand back a Copy-shaped ResolvedCodec
+        // directly with a sentinel rate-control mode the rest of the
+        // pipeline never reads for copy outputs.
+        if (codec == VideoCodecType.Copy)
+        {
+            EncoderInfo copyEncoder = definition.Encoders[0];
+            return new(copyEncoder.FfmpegName, copyEncoder, Device: null, RateControlMode.Crf);
+        }
+
         return preference switch
         {
             EncoderPreference.ForceSoftware => ResolveSoftware(definition),

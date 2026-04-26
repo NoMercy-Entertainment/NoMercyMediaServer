@@ -58,6 +58,13 @@ public static class EncoderArgumentResolver
         if (profileCrf <= 0)
             return 0;
 
+        // Stream copy passthrough has no quality dial. Profiles that
+        // accidentally carry a non-zero CRF on a Copy output must not have
+        // it forwarded as -qp / -cq / -crf — `ffmpeg -c:v copy` rejects
+        // every quality flag and refuses to start the encode.
+        if (resolved.FfmpegEncoderName == "copy")
+            return 0;
+
         bool supportsCrf = resolved.EncoderInfo.SupportedRateControl.Contains(RateControlMode.Crf);
         if (supportsCrf)
             return profileCrf; // Software encoder — use -crf as-is

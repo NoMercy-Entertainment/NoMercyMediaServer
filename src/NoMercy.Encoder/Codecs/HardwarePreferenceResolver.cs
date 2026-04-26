@@ -26,14 +26,13 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
     // Canonical software handles per codec — the definitive list of SW encoders
     // that deliver the best quality at the same bitrate. Codecs not in the table
     // fall back to a lib<lowerCodecName> heuristic.
-    private static readonly Dictionary<VideoCodecType, string> SoftwareHandles =
-        new()
-        {
-            [VideoCodecType.H264] = "libx264",
-            [VideoCodecType.H265] = "libx265",
-            [VideoCodecType.Av1] = "libsvtav1",
-            [VideoCodecType.Vp9] = "libvpx-vp9",
-        };
+    private static readonly Dictionary<VideoCodecType, string> SoftwareHandles = new()
+    {
+        [VideoCodecType.H264] = "libx264",
+        [VideoCodecType.H265] = "libx265",
+        [VideoCodecType.Av1] = "libsvtav1",
+        [VideoCodecType.Vp9] = "libvpx-vp9",
+    };
 
     public HardwareResolutionResult Resolve(
         VideoCodecType codec,
@@ -43,6 +42,24 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         IDecisionLogSink decisions
     )
     {
+        // Stream copy short-circuit. There is no encoder selection for "copy"
+        // — ffmpeg's pseudo-codec is always available, never a hardware path,
+        // never gated by the speed index. Skipping the preference dispatch
+        // also keeps Copy out of the SoftwareHandles table (it doesn't need
+        // a "canonical" entry — its handle is just "copy").
+        if (codec == VideoCodecType.Copy)
+        {
+            decisions.Add(
+                new DecisionLog(
+                    "encoder.select",
+                    "encoder.select.copy",
+                    "Stream copy — no encoder selection performed",
+                    new { codec = codec.ToString() }
+                )
+            );
+            return new(EncoderHandle: "copy", Failure: null);
+        }
+
         return preference switch
         {
             HardwarePreference.ForceSoftware => ResolveForceSoftware(
@@ -160,9 +177,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
 
         // Compute speed ratio vs software baseline
         double swFps = BestFpsForHandle(codec, swHandle, speedIndex);
-        string ratio = swFps > 0
-            ? $"{bestFps / swFps:F1}×"
-            : "?×";
+        string ratio = swFps > 0 ? $"{bestFps / swFps:F1}×" : "?×";
 
         decisions.Add(
             new DecisionLog(
@@ -205,11 +220,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                     "plan",
                     "plan.encoder_resolved",
                     $"ForceHardware → FAILED (no HW benchmark entries for {codec})",
-                    new
-                    {
-                        codec = codec.ToString(),
-                        reason = "force_hardware_failed",
-                    }
+                    new { codec = codec.ToString(), reason = "force_hardware_failed" }
                 )
             );
 
@@ -249,9 +260,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         string bestHandle = string.Empty;
         double bestFps = 0;
 
-        foreach (
-            KeyValuePair<SpeedKey, SpeedMeasurement> kv in speedIndex.Measurements
-        )
+        foreach (KeyValuePair<SpeedKey, SpeedMeasurement> kv in speedIndex.Measurements)
         {
             if (kv.Key.Codec != codec)
                 continue;
@@ -278,9 +287,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
     {
         double best = 0;
 
-        foreach (
-            KeyValuePair<SpeedKey, SpeedMeasurement> kv in speedIndex.Measurements
-        )
+        foreach (KeyValuePair<SpeedKey, SpeedMeasurement> kv in speedIndex.Measurements)
         {
             if (kv.Key.Codec != codec)
                 continue;
