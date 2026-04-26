@@ -179,10 +179,12 @@ public class VideoEncodeJob : AbstractEncoderJob
                     $"Encoded {InputFile} → {result.OutputPath} in {result.Duration.TotalSeconds:F1}s ({result.Metrics.EncoderUsed})"
                 );
 
+                await PublishStageAsync(fileMetadata, "Recording encoding history");
                 await RecordEncodingHistoryAsync(context, dbProfile, result, InputFile);
 
                 await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile);
 
+                await PublishStageAsync(fileMetadata, "Refreshing library");
                 fileManager.FilterFiles(fileMetadata.FileName);
                 await fileManager.FindFiles(
                     fileMetadata.Id,
@@ -410,5 +412,20 @@ public class VideoEncodeJob : AbstractEncoderJob
         public string Path { get; set; } = string.Empty;
         public int Id { get; set; }
         public string? ImgPath { get; set; }
+    }
+
+    private static async Task PublishStageAsync(FileMetadata fileMetadata, string message)
+    {
+        if (!EventBusProvider.IsConfigured)
+            return;
+        await EventBusProvider.Current.PublishAsync(
+            new EncodingStageChangedEvent
+            {
+                JobId = fileMetadata.Id,
+                Status = "running",
+                Title = fileMetadata.Title,
+                Message = message,
+            }
+        );
     }
 }
