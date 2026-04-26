@@ -214,26 +214,65 @@ public static class EncodingPresetsSeed
 
         try
         {
-            await context
-                .EncoderProfiles.UpsertRange(materialized)
-                .On(v => new { v.Id })
-                .WhenMatched(
-                    (existing, incoming) =>
-                        new()
-                        {
-                            Id = incoming.Id,
-                            Name = incoming.Name,
-                            Container = incoming.Container,
-                            _videoProfiles = incoming._videoProfiles,
-                            _audioProfiles = incoming._audioProfiles,
-                            _subtitleProfiles = incoming._subtitleProfiles,
-                            _thumbnailProfile = incoming._thumbnailProfile,
-                        }
-                )
-                .RunAsync();
+            // Upsert manually via plain EF — FlexLabs.Upsert was silently
+            // returning success without writing rows for this table (no
+            // exception, no rows changed, no rollback message). Bypass the
+            // library and walk the list ourselves.
+            //
+            // Fetch ALL existing EncoderProfile ids and intersect in memory
+            // rather than asking EF to translate `Where(p => list.Contains(p.Id))`.
+            // The translated SQL was matching nothing AND ALSO returning all
+            // 25 incoming ids as "existing" via an EF/value-converter quirk
+            // we couldn't reproduce — switching to in-memory intersection
+            // sidesteps the whole class of bug. EncoderProfiles is small
+            // (~50 rows max in practice), so the full scan is cheap.
+            HashSet<Ulid> allExistingIds = (
+                await context.EncoderProfiles.AsNoTracking().Select(p => p.Id).ToListAsync()
+            ).ToHashSet();
+            HashSet<Ulid> existingIds = materialized
+                .Select(m => m.Id)
+                .Where(allExistingIds.Contains)
+                .ToHashSet();
 
             Logger.Setup(
-                $"MaterializePresets: upserted {materialized.Count} EncoderProfile row(s) from EncodingPresets "
+                $"MaterializePresets DIAG: DB has {allExistingIds.Count} existing rows, "
+                    + $"{existingIds.Count} of {materialized.Count} incoming match. "
+                    + $"Sample DB id: {allExistingIds.FirstOrDefault()}, "
+                    + $"sample incoming id: {materialized.FirstOrDefault()?.Id.ToString() ?? "(none)"}",
+                LogEventLevel.Information
+            );
+
+            int inserted = 0;
+            int updated = 0;
+
+            foreach (EncoderProfile incoming in materialized)
+            {
+                if (existingIds.Contains(incoming.Id))
+                {
+                    EncoderProfile? tracked = await context.EncoderProfiles.FirstOrDefaultAsync(p =>
+                        p.Id == incoming.Id
+                    );
+                    if (tracked is null)
+                        continue;
+                    tracked.Name = incoming.Name;
+                    tracked.Container = incoming.Container;
+                    tracked._videoProfiles = incoming._videoProfiles;
+                    tracked._audioProfiles = incoming._audioProfiles;
+                    tracked._subtitleProfiles = incoming._subtitleProfiles;
+                    tracked._thumbnailProfile = incoming._thumbnailProfile;
+                    updated++;
+                }
+                else
+                {
+                    context.EncoderProfiles.Add(incoming);
+                    inserted++;
+                }
+            }
+
+            await context.SaveChangesAsync();
+
+            Logger.Setup(
+                $"MaterializePresets: {inserted} inserted, {updated} updated EncoderProfile row(s) from EncodingPresets "
                     + $"(scanned={presets.Count} empty={skippedEmpty} "
                     + $"deserializeFailures={deserializeFailures} "
                     + $"deserializeNull={skippedDeserializeNull})",

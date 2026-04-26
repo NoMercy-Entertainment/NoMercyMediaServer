@@ -235,8 +235,10 @@ public static class ProfileMapper
 
         // V3 VideoOutput → V1 IVideoProfile (anonymous-object shape that
         // EncoderProfile._videoProfiles deserializes back into IVideoProfile[]).
-        object[] videoProfiles = profile
-            .VideoOutputs.Select(v =>
+        // Each output collection on the deserialized record can be null when
+        // the source ProfileJson omitted the property — guard with ?? [].
+        object[] videoProfiles = (profile.VideoOutputs ?? [])
+            .Select(v =>
                 (object)
                     new
                     {
@@ -259,8 +261,8 @@ public static class ProfileMapper
             )
             .ToArray();
 
-        object[] audioProfiles = profile
-            .AudioOutputs.Select(a =>
+        object[] audioProfiles = (profile.AudioOutputs ?? [])
+            .Select(a =>
                 (object)
                     new
                     {
@@ -271,7 +273,7 @@ public static class ProfileMapper
                         Loudness = (string?)null,
                         Downmix = (string?)null,
                         CustomPanMatrix = (string?)null,
-                        AllowedLanguages = a.AllowedLanguages,
+                        AllowedLanguages = a.AllowedLanguages ?? [],
                         SegmentName = a.SegmentNameTemplate,
                         PlaylistName = a.PlaylistNameTemplate,
                         CustomArguments = Array.Empty<object>(),
@@ -279,13 +281,13 @@ public static class ProfileMapper
             )
             .ToArray();
 
-        object[] subtitleProfiles = profile
-            .SubtitleOutputs.Select(s =>
+        object[] subtitleProfiles = (profile.SubtitleOutputs ?? [])
+            .Select(s =>
                 (object)
                     new
                     {
                         Codec = SubtitleCodecToV1String(s.Codec),
-                        AllowedLanguages = s.AllowedLanguages,
+                        AllowedLanguages = s.AllowedLanguages ?? [],
                         PlaylistName = s.PlaylistNameTemplate,
                         CustomArguments = Array.Empty<object>(),
                     }
