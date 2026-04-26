@@ -37,23 +37,66 @@ public class HardwareBenchmark(
         (854, 480),
     ];
 
-    // 4K tier — added to DefaultTiers for hardware encoders whose GPU has
-    // enough VRAM to sustain 4K encoding (≥6 GB). Software encoders and
-    // low-VRAM GPUs skip this tier: a slow software 4K calibration at
-    // 30 frames still takes tens of seconds, and low-VRAM cards OOM or
-    // fall back to a tiled path that's not representative of real encodes.
-    private const int FourKCapableVramMb = 6_144;
+    // 4K tier — added to DefaultTiers for any encoder fast enough to sustain
+    // 4K calibration in a reasonable time. Hardware threshold is "card
+    // reports ≥4000 MB VRAM" rather than ≥6144 MB because Windows wmic
+    // returns AdapterRAM as a uint32 that overflows at 4095 MB on 8GB+
+    // cards (an RTX 2080 SUPER reports 4095 MB even though the real VRAM
+    // is 8192 MB). Lower threshold passes those cards through correctly;
+    // genuine low-VRAM cards (1-2 GB iGPUs) that fail OOM at 4K are
+    // swallowed by the per-probe catch in CalibrateAsync.
+    private const int FourKCapableVramMb = 4_000;
     private static readonly (int Width, int Height) UhdTier = (3840, 2160);
 
-    private const double CalibrationDurationSeconds = 1.0;
+    // Software encoder names that are fast enough to be benchmarked at 4K
+    // without dominating the total calibration runtime. libx264, libx265,
+    // and libsvtav1 hit ~real-time at 1080p on a modern CPU and 0.5–2x at
+    // 4K — a 300-frame probe lands in ≤30s. libaom-av1 / librav1e are
+    // explicitly excluded: they crawl at 0.05 fps at 4K and a single tier
+    // would block the benchmark for 5+ minutes.
+    private static readonly HashSet<string> FastSoftwareEncoders = new(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        "libx264",
+        "libx265",
+        "libsvtav1",
+    };
+
+    // Slow encoders that need the warmup-pad rule waived and a hard frame
+    // cap to keep total calibration tractable. ffmpeg's progress fps at
+    // these encoders is meaningful from frame 1 because there is no
+    // realistic steady-state to wait for — they're already crawling.
+    private static readonly HashSet<string> SlowSoftwareEncoders = new(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        "libaom-av1",
+        "librav1e",
+    };
+
     private const double SourceFrameRate = 30.0;
 
-    // Cap output to this many frames regardless of source length. Fast
-    // encoders finish in milliseconds; slow ones (libaom-av1, librav1e)
-    // can crawl at 0.3 fps — running a full 5-second source there eats
-    // 8+ minutes per tier. 30 frames is enough to get a stable fps
-    // reading while keeping the worst-case benchmark tractable.
-    private const int MaxCalibrationFrames = 30;
+    // Source-clip length per encoder class. Fast encoders need a longer
+    // source so the progress stream emits multiple non-zero fps lines and
+    // the measurement reflects steady-state throughput rather than
+    // first-frame spin-up time. Slow encoders keep a short source so a
+    // single tier doesn't block the calibration for minutes.
+    private const double FastEncoderSourceSeconds = 10.0;
+    private const double SlowEncoderSourceSeconds = 2.0;
+
+    // Per-encoder frame cap. Mirrors the source-seconds split so the cap
+    // and the source agree. Fast encoders measure 300 frames (~10s @ 30fps);
+    // slow ones cap at 60 frames so libaom-av1 / librav1e don't spend
+    // multiple minutes on a single tier.
+    //
+    // Encoders ramp UP to steady-state throughput rather than down — the
+    // first sample over second 1 of source captures spin-up overhead, the
+    // sample over second 5 captures steady state. observedFps takes the
+    // Math.Max across all samples, so the longer probe naturally selects
+    // the steady-state reading without an explicit warmup-discard step.
+    private const int FastEncoderMaxFrames = 300;
+    private const int SlowEncoderMaxFrames = 60;
 
     // Recalibrate once a month by default. Hardware / driver updates can
     // change real throughput noticeably.
@@ -204,21 +247,42 @@ public class HardwareBenchmark(
     }
 
     /// <summary>
-    /// Returns the tiers to benchmark for a given target. Hardware targets
-    /// whose GPU has enough VRAM to sustain 4K encoding get the UHD tier
-    /// prepended so the speed index captures their real 4K throughput.
-    /// Low-VRAM GPUs and software targets skip 4K — software calibration
-    /// at 4K is too slow to be practical even capped at 30 frames, and
-    /// low-VRAM cards either OOM or fall back to a tiled encode path that
-    /// doesn't represent real-world throughput.
+    /// Returns the tiers to benchmark for a given target. UHD is included
+    /// when either:
+    ///   - the encoder runs on a GPU whose reported VRAM is ≥4000 MB
+    ///     (handles wmic's int32 overflow that caps 8GB+ cards at 4095 MB), OR
+    ///   - the encoder is one of the fast software encoders (libx264 /
+    ///     libx265 / libsvtav1) that can sustain 4K calibration in
+    ///     reasonable wall time.
+    /// libaom-av1 / librav1e at 4K take 5+ minutes per probe, so they are
+    /// explicitly excluded — the speed index can extrapolate from their
+    /// 1080p numbers.
     /// </summary>
     internal static IEnumerable<(int Width, int Height)> TiersForTarget(CalibrationTarget target)
     {
-        if (target.Device is { VramMb: >= FourKCapableVramMb })
+        bool gpuFourKCapable = target.Device is { VramMb: >= FourKCapableVramMb };
+        bool swFourKCapable =
+            target.Device is null && FastSoftwareEncoders.Contains(target.Encoder.FfmpegName);
+
+        if (gpuFourKCapable || swFourKCapable)
             yield return UhdTier;
 
         foreach ((int w, int h) in DefaultTiers)
             yield return (w, h);
+    }
+
+    /// <summary>
+    /// Per-encoder source-seconds and frame-cap. Fast encoders get a 10-sec
+    /// source capped at 300 frames so the steady-state throughput is what
+    /// gets measured, not first-frame spin-up. Slow encoders (libaom-av1,
+    /// librav1e) get a 2-sec source capped at 60 frames so a single tier
+    /// doesn't block the entire calibration for multiple minutes.
+    /// </summary>
+    private static (double SourceSeconds, int MaxFrames) CalibrationProfile(EncoderInfo encoder)
+    {
+        if (SlowSoftwareEncoders.Contains(encoder.FfmpegName))
+            return (SlowEncoderSourceSeconds, SlowEncoderMaxFrames);
+        return (FastEncoderSourceSeconds, FastEncoderMaxFrames);
     }
 
     /// <summary>
@@ -330,6 +394,8 @@ public class HardwareBenchmark(
         int height
     )
     {
+        (double sourceSeconds, int _) = CalibrationProfile(target.Encoder);
+
         List<string> args = ["-hide_banner", "-nostats", "-loglevel", "error"];
 
         // Hardware device init — must come BEFORE the input flag so the
@@ -342,7 +408,7 @@ public class HardwareBenchmark(
         args.Add("lavfi");
         args.Add("-i");
         args.Add(
-            $"testsrc=duration={CalibrationDurationSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)}:size={width}x{height}:rate={SourceFrameRate.ToString(System.Globalization.CultureInfo.InvariantCulture)}"
+            $"testsrc=duration={sourceSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)}:size={width}x{height}:rate={SourceFrameRate.ToString(System.Globalization.CultureInfo.InvariantCulture)}"
         );
 
         // Upload lavfi frames to the GPU before the encoder consumes them.
@@ -382,9 +448,13 @@ public class HardwareBenchmark(
 
         // Hard cap on encoded frames — ffmpeg stops as soon as the output
         // reaches this count, regardless of how much source remains. Keeps
-        // slow encoders from holding the benchmark thread hostage.
+        // slow encoders from holding the benchmark thread hostage. The cap
+        // varies per encoder via CalibrationProfile so fast encoders get a
+        // long enough probe to settle into steady state (300 frames) and
+        // slow encoders bail early (60 frames).
+        (_, int maxFrames) = CalibrationProfile(target.Encoder);
         args.Add("-frames:v");
-        args.Add(MaxCalibrationFrames.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        args.Add(maxFrames.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
         args.Add("-f");
         args.Add("null");

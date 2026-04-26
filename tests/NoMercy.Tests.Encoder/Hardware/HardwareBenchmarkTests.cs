@@ -143,8 +143,11 @@ public class HardwareBenchmarkTests
     }
 
     [Fact]
-    public void BuildCalibrationArguments_CapsEncodedFrames()
+    public void BuildCalibrationArguments_CapsFastEncoderFrames_AtSteadyStateLength()
     {
+        // libx264 is a fast encoder — gets the long probe (300 frames over
+        // ~10s of source) so the steady-state throughput is what gets
+        // measured, not first-second spin-up.
         string[] args = HardwareBenchmark.BuildCalibrationArguments(
             SoftwareTarget(MakeSoftwareH264()),
             1920,
@@ -152,13 +155,31 @@ public class HardwareBenchmarkTests
         );
 
         int framesIdx = Array.IndexOf(args, "-frames:v");
-        framesIdx
-            .Should()
-            .BeGreaterThan(-1, "slow encoders need a frame cap to avoid minute-long probes");
-
+        framesIdx.Should().BeGreaterThan(-1);
         int frameCount = int.Parse(args[framesIdx + 1]);
-        frameCount.Should().BeGreaterThan(0);
-        frameCount.Should().BeLessThanOrEqualTo(60);
+        frameCount.Should().Be(300);
+    }
+
+    [Fact]
+    public void BuildCalibrationArguments_CapsSlowEncoderFrames_AtShortProbe()
+    {
+        // libaom-av1 is in the slow-encoder list — gets the short probe
+        // (60 frames) so a single tier doesn't block calibration for
+        // multiple minutes.
+        EncoderInfo libaom = MakeSoftwareH264() with
+        {
+            FfmpegName = "libaom-av1",
+        };
+        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+            new CalibrationTarget(VideoCodecType.Av1, libaom, Device: null, VendorIndex: 0),
+            1920,
+            1080
+        );
+
+        int framesIdx = Array.IndexOf(args, "-frames:v");
+        framesIdx.Should().BeGreaterThan(-1);
+        int frameCount = int.Parse(args[framesIdx + 1]);
+        frameCount.Should().Be(60);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -345,10 +366,28 @@ public class HardwareBenchmarkTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void TiersForTarget_SoftwareTarget_SkipsUhd()
+    public void TiersForTarget_FastSoftwareTarget_IncludesUhd()
     {
-        // Software targets have no Device — UHD tier must not be included.
+        // libx264 is in the fast-software-encoder list — gets a 4K probe
+        // so the speed index has a real reading instead of extrapolation.
         CalibrationTarget target = SoftwareTarget(MakeSoftwareH264());
+        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+
+        tiers.Should().Contain((3840, 2160));
+        tiers.Should().Contain((1920, 1080));
+    }
+
+    [Fact]
+    public void TiersForTarget_SlowSoftwareTarget_SkipsUhd()
+    {
+        // libaom-av1 / librav1e at 4K take 5+ minutes per probe — explicitly
+        // excluded from the UHD tier so a single slow encoder doesn't block
+        // the whole calibration.
+        EncoderInfo libaom = MakeSoftwareH264() with
+        {
+            FfmpegName = "libaom-av1",
+        };
+        CalibrationTarget target = new(VideoCodecType.Av1, libaom, Device: null, VendorIndex: 0);
         (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
 
         tiers.Should().NotContain((3840, 2160));
@@ -385,9 +424,14 @@ public class HardwareBenchmarkTests
     [Fact]
     public void TiersForTarget_LowVramGpu_SkipsUhd()
     {
-        // A card with 4 GB VRAM (below the 6 GB cut-off) should not attempt
-        // 4K — otherwise the probe risks OOM or tiled fallback that
-        // misrepresents real throughput.
+        // A card with 2 GB VRAM (below the 4 GB / 4000 MB cut-off) should
+        // not attempt 4K — the probe risks OOM or a tiled fallback that
+        // misrepresents real throughput. The threshold is 4000 MB rather
+        // than 6 GB because Windows wmic reports AdapterRAM as a uint32
+        // that overflows at 4095 MB on 8GB+ cards (tested on RTX 2080
+        // SUPER, returns 4095 MB instead of 8192 MB). Lowering the
+        // threshold keeps real 8GB+ cards on the 4K-capable side; this
+        // test pins genuinely low-VRAM iGPUs to the no-4K side.
         EncoderInfo qsv = new(
             FfmpegName: "h264_qsv",
             RequiredVendor: GpuVendor.Intel,
@@ -405,7 +449,7 @@ public class HardwareBenchmarkTests
         GpuDevice lowVram = new(
             Vendor: GpuVendor.Intel,
             Name: "UHD 630",
-            VramMb: 4_096,
+            VramMb: 2_048,
             MaxEncoderSessions: int.MaxValue,
             SupportedCodecs: [VideoCodecType.H264]
         );
