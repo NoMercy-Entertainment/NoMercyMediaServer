@@ -368,6 +368,11 @@ public partial class PlatformHardwareDetector(
 
     private List<VideoCodecType> DetectSupportedCodecs(GpuVendor vendor)
     {
+        return DetectSupportedCodecsAsync(vendor).GetAwaiter().GetResult();
+    }
+
+    private async Task<List<VideoCodecType>> DetectSupportedCodecsAsync(GpuVendor vendor)
+    {
         List<VideoCodecType> codecs = [];
 
         (VideoCodecType codec, string[] encoderNames)[] mappings = vendor switch
@@ -399,8 +404,25 @@ public partial class PlatformHardwareDetector(
             _ => [],
         };
 
+        // Gate AV1 NVENC behind an actual hardware capability check. ffmpeg
+        // ships av1_nvenc against any driver that knows about it, but the
+        // physical encoder block only exists on Ada Lovelace and newer
+        // (RTX 4060+ / RTX 6000 Ada / L4 / L40). Turing (RTX 20-series) and
+        // Ampere (RTX 30-series) lack the silicon — probing av1_nvenc on
+        // those cards fails at codec init, the benchmark gets nothing, and
+        // the dashboard shows a confusing missing-row gap.
+        bool nvidiaSupportsAv1 =
+            vendor == GpuVendor.Nvidia && await NvidiaSupportsAv1NvencAsync().ConfigureAwait(false);
+
         foreach ((VideoCodecType codec, string[] encoderNames) in mappings)
         {
+            // Skip AV1 NVENC when the GPU's compute capability is below
+            // 8.9 (Ada Lovelace). Other vendors' AV1 capability checks
+            // would land here too — for now Nvidia is the only one that
+            // ships the encoder broadly without supporting hardware.
+            if (codec == VideoCodecType.Av1 && vendor == GpuVendor.Nvidia && !nvidiaSupportsAv1)
+                continue;
+
             foreach (string encoderName in encoderNames)
             {
                 if (ffmpegCapabilities.HasEncoder(encoderName))
@@ -412,6 +434,71 @@ public partial class PlatformHardwareDetector(
         }
 
         return codecs;
+    }
+
+    /// <summary>
+    /// Returns true when at least one Nvidia GPU on the host has compute
+    /// capability ≥ 8.9 (Ada Lovelace), which is the minimum architecture
+    /// that includes the AV1 NVENC encoder block.
+    ///
+    /// Queries <c>nvidia-smi</c> — ships with every Nvidia driver, so it's
+    /// available wherever the encoders themselves are. If nvidia-smi is
+    /// missing or the query fails, defaults to <c>true</c> so users with
+    /// non-standard installs (e.g. Linux drivers without nvidia-smi in
+    /// PATH) still get an attempt at the encoder rather than silently
+    /// being denied; a failed probe at benchmark time will then drop the
+    /// codec from the speed index with a clear "encoder unavailable"
+    /// message.
+    /// </summary>
+    private async Task<bool> NvidiaSupportsAv1NvencAsync()
+    {
+        try
+        {
+            ProcessResult result = await processRunner.RunAsync(
+                "nvidia-smi",
+                ["--query-gpu=compute_cap", "--format=csv,noheader,nounits"],
+                null,
+                CancellationToken.None
+            );
+
+            if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+            {
+                logger.LogDebug(
+                    "nvidia-smi compute_cap query failed (exit {Code}) — assuming AV1 NVENC available",
+                    result.ExitCode
+                );
+                return true;
+            }
+
+            foreach (
+                string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            )
+            {
+                if (
+                    double.TryParse(
+                        line.Trim(),
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out double cap
+                    )
+                    && cap >= 8.9
+                )
+                    return true;
+            }
+
+            logger.LogInformation(
+                "AV1 NVENC unavailable — every Nvidia GPU on the host is below compute capability 8.9 (Ada Lovelace). The encoder block does not exist on Turing / Ampere silicon."
+            );
+            return false;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogDebug(
+                ex,
+                "nvidia-smi compute_cap query threw — assuming AV1 NVENC available"
+            );
+            return true;
+        }
     }
 
     private static GpuVendor? ClassifyVendor(string name)

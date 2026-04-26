@@ -380,9 +380,14 @@ public class HardwareBenchmark(
         {
             // Log the ffmpeg stderr tail so users can see *why* an encoder
             // dropped out — commonly missing CUDA driver, no VA-API device,
-            // or a vendor-specific flag incompatibility.
-            logger.LogDebug(
-                "Benchmark probe for {Encoder}{DeviceTag} @ {W}x{H} exited {Code}: {StdErr}",
+            // a vendor-specific flag incompatibility, or AV1 NVENC on a
+            // pre-Ada card. Information level: a missing benchmark row in
+            // the dashboard is otherwise indistinguishable from "the
+            // encoder doesn't exist", and silently skipping at Debug
+            // hid the explanation from anyone running on the default
+            // Information log level.
+            logger.LogInformation(
+                "Benchmark probe for {Encoder}{DeviceTag} @ {W}x{H} exited {Code} — encoder will be omitted from the speed index. Stderr tail: {StdErr}",
                 target.Encoder.FfmpegName,
                 target.Device is null ? "" : $" on {target.Device.Name}",
                 width,
