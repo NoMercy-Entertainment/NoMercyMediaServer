@@ -102,6 +102,24 @@ public class HardwareBenchmark(
     // change real throughput noticeably.
     private static readonly TimeSpan RecalibrationInterval = TimeSpan.FromDays(30);
 
+    /// <summary>
+    /// Version stamp baked into every cached SpeedIndex on disk. Bump when
+    /// changing the calibration source-seconds, frame cap, tier list, or
+    /// candidate enumeration so old cached numbers (which were measured
+    /// against a different probe shape) get auto-invalidated on the next
+    /// boot instead of waiting out the 30-day grace window.
+    ///
+    /// Version history:
+    ///   1 — original 1-sec / 30-frame probe, GPU detection broken,
+    ///       libx264 silently dropped, no 4K coverage.
+    ///   2 — fixed IHardwareCapabilities forwarder (real GPU enumeration),
+    ///       wall-clock fps fallback, 4K threshold drop, per-encoder probe
+    ///       length (300/60 frames over 10s/2s source). Existing v1 caches
+    ///       are CPU-only and noisy; force a recalibration so the speed
+    ///       index reflects real-world throughput.
+    /// </summary>
+    public const int BenchmarkSchemaVersion = 2;
+
     private SpeedIndex _cache = new(new());
 
     public SpeedIndex GetCachedIndex()
@@ -124,6 +142,23 @@ public class HardwareBenchmark(
         SpeedIndex cached = GetCachedIndex();
         if (cached.Measurements.Count == 0)
             return true;
+
+        // Schema-version mismatch trumps the calendar grace window. Cache
+        // files written by an older benchmark version measured against
+        // different probe length / tier list / enumeration rules — the
+        // numbers are not comparable to what the current code would emit
+        // and would silently mislead encoder selection. null === pre-v2
+        // (no version field at all).
+        int? loadedVersion = store.LoadedSchemaVersion;
+        if (loadedVersion is null || loadedVersion.Value < BenchmarkSchemaVersion)
+        {
+            logger.LogInformation(
+                "SpeedIndex cache schema {Loaded} older than current {Current} — forcing recalibration",
+                loadedVersion?.ToString() ?? "(none)",
+                BenchmarkSchemaVersion
+            );
+            return true;
+        }
 
         DateTime? lastCalibrated = store.LastCalibratedAt;
         if (lastCalibrated is null)

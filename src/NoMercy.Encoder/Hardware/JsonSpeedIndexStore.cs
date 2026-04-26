@@ -19,8 +19,11 @@ public class JsonSpeedIndexStore(
 ) : ISpeedIndexStore
 {
     private DateTime? _lastCalibratedAt;
+    private int? _loadedSchemaVersion;
 
     public DateTime? LastCalibratedAt => _lastCalibratedAt;
+
+    public int? LoadedSchemaVersion => _loadedSchemaVersion;
 
     public SpeedIndex? Load()
     {
@@ -46,6 +49,11 @@ public class JsonSpeedIndexStore(
             }
 
             _lastCalibratedAt = dto.CalibratedAt;
+            // SchemaVersion is optional in the on-disk shape so existing
+            // caches written before the field was introduced load as null
+            // and trip the version-mismatch invalidation in
+            // HardwareBenchmark.NeedsRecalibration on the next boot.
+            _loadedSchemaVersion = dto.SchemaVersion;
             return new(map);
         }
         catch (Exception ex)
@@ -75,6 +83,7 @@ public class JsonSpeedIndexStore(
             DateTime now = DateTime.UtcNow;
             SpeedIndexDto dto = new(
                 CalibratedAt: now,
+                SchemaVersion: HardwareBenchmark.BenchmarkSchemaVersion,
                 Entries: index
                     .Measurements.Select(kvp => new SpeedEntryDto(
                         Codec: kvp.Key.Codec,
@@ -98,6 +107,7 @@ public class JsonSpeedIndexStore(
             storage.Move(tmp, path);
 
             _lastCalibratedAt = now;
+            _loadedSchemaVersion = HardwareBenchmark.BenchmarkSchemaVersion;
         }
         catch (Exception ex)
         {
@@ -105,7 +115,15 @@ public class JsonSpeedIndexStore(
         }
     }
 
-    private sealed record SpeedIndexDto(DateTime CalibratedAt, SpeedEntryDto[] Entries);
+    // SchemaVersion is nullable in the on-disk shape so caches written
+    // before the field was introduced still parse — they load with
+    // SchemaVersion = null and the recalibration check treats null as
+    // "older than every shipped version" and fires a fresh benchmark.
+    private sealed record SpeedIndexDto(
+        DateTime CalibratedAt,
+        SpeedEntryDto[] Entries,
+        int? SchemaVersion = null
+    );
 
     private sealed record SpeedEntryDto(
         VideoCodecType Codec,

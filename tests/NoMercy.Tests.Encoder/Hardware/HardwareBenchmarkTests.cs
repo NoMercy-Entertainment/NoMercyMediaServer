@@ -607,10 +607,70 @@ public class HardwareBenchmarkTests
         );
         store.Setup(s => s.Load()).Returns(index);
         store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddDays(-1));
+        // Fresh cache means the schema version also matches the current
+        // build's BenchmarkSchemaVersion — without this the version-mismatch
+        // branch fires and forces recalibration regardless of calendar age.
+        store
+            .Setup(s => s.LoadedSchemaVersion)
+            .Returns(HardwareBenchmark.BenchmarkSchemaVersion);
 
         HardwareBenchmark sut = NewBenchmark(store: store.Object);
 
         sut.NeedsRecalibration().Should().BeFalse();
+    }
+
+    [Fact]
+    public void NeedsRecalibration_OlderSchemaVersion_ReturnsTrue()
+    {
+        // A cache file written by an older benchmark version measured a
+        // different probe shape — the numbers are not comparable to what
+        // current code would emit and must be discarded even when the
+        // calendar grace window has not elapsed.
+        Mock<ISpeedIndexStore> store = new();
+        SpeedIndex index = new(
+            new()
+            {
+                [new(VideoCodecType.H264, "libx264", 1920, null)] = new(
+                    60,
+                    2.0,
+                    DateTime.UtcNow.AddHours(-1)
+                ),
+            }
+        );
+        store.Setup(s => s.Load()).Returns(index);
+        store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddHours(-1));
+        store.Setup(s => s.LoadedSchemaVersion).Returns(0);
+
+        HardwareBenchmark sut = NewBenchmark(store: store.Object);
+
+        sut.NeedsRecalibration().Should().BeTrue();
+    }
+
+    [Fact]
+    public void NeedsRecalibration_NullSchemaVersion_ReturnsTrue()
+    {
+        // Cache files written before the SchemaVersion field existed load
+        // with LoadedSchemaVersion = null. Treat null as "older than every
+        // shipped version" so we recalibrate instead of trusting unknown
+        // numbers.
+        Mock<ISpeedIndexStore> store = new();
+        SpeedIndex index = new(
+            new()
+            {
+                [new(VideoCodecType.H264, "libx264", 1920, null)] = new(
+                    60,
+                    2.0,
+                    DateTime.UtcNow.AddHours(-1)
+                ),
+            }
+        );
+        store.Setup(s => s.Load()).Returns(index);
+        store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddHours(-1));
+        store.Setup(s => s.LoadedSchemaVersion).Returns((int?)null);
+
+        HardwareBenchmark sut = NewBenchmark(store: store.Object);
+
+        sut.NeedsRecalibration().Should().BeTrue();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
