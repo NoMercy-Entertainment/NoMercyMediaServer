@@ -12,13 +12,17 @@ using Serilog.Events;
 namespace NoMercy.Service.Seeds;
 
 /// <summary>
-/// Seeds the built-in shareable preset library. Matches Handbrake's approach
-/// — users see "General", "Web", "Matroska", etc. out of the box, and can
-/// duplicate any built-in into an editable preset.
+/// Seeds the curated built-in shareable preset library. Eleven presets cover
+/// the practical resolution × storage matrix users actually pick from
+/// (4K Premium / Balanced / Space Saver, 1080p Premium / Balanced / Space
+/// Saver, plus a 1080p HDR / 10-bit live-action variant, an Anime 10-bit
+/// variant, and three music tiers). Archival "Source Remux" + AV1 Ultra
+/// Compact MKV presets land once the Copy codec pipeline is wired in.
 ///
-/// Built-in presets carry a deterministic Ulid so repeat seeding upserts
-/// instead of duplicating. IsBuiltIn = true prevents accidental deletion
-/// via the dashboard API.
+/// Built-in presets carry a deterministic Ulid in the [100..110] range so
+/// repeat seeding upserts instead of duplicating. Old [1..12] built-ins from
+/// previous curations are pruned by the stale-cleanup pass below. IsBuiltIn
+/// = true prevents accidental deletion via the dashboard API.
 /// </summary>
 public static class EncodingPresetsSeed
 {
@@ -32,6 +36,39 @@ public static class EncodingPresetsSeed
             EncodingPreset[] userPresets = LoadUserPresetsFromFile();
             EncodingPreset[] presets = [.. builtIns, .. userPresets];
 
+            // Step 1: prune stale built-ins. Each shipped curation drops some
+            // presets and renames others — without this step the dashboard
+            // accumulates every historical preset id that ever shipped, with
+            // names users never picked. Only IsBuiltIn rows are eligible
+            // (user presets are sacred). Materialized EncoderProfile rows
+            // for the deleted presets are removed too so the V1 picker
+            // doesn't keep resolving deleted built-ins as ghost entries.
+            HashSet<Ulid> currentBuiltInIds = builtIns.Select(p => p.Id).ToHashSet();
+            List<Ulid> staleBuiltInIds = await context
+                .EncodingPresets.AsNoTracking()
+                .Where(p => p.IsBuiltIn)
+                .Select(p => p.Id)
+                .ToListAsync();
+            staleBuiltInIds = staleBuiltInIds.Where(id => !currentBuiltInIds.Contains(id)).ToList();
+
+            if (staleBuiltInIds.Count > 0)
+            {
+                await context
+                    .EncoderProfiles.Where(p => staleBuiltInIds.Contains(p.Id))
+                    .ExecuteDeleteAsync();
+                await context
+                    .EncodingPresets.Where(p => staleBuiltInIds.Contains(p.Id))
+                    .ExecuteDeleteAsync();
+
+                Logger.Setup(
+                    $"Encoding presets: pruned {staleBuiltInIds.Count} stale built-in(s) + their materialized EncoderProfile rows",
+                    LogEventLevel.Information
+                );
+            }
+
+            // Step 2: upsert the curated set + any user-authored presets from
+            // the seed file. Existing rows get content updates without losing
+            // their CreatedAt timestamp.
             await context
                 .EncodingPresets.UpsertRange(presets)
                 .On(p => p.Id)
@@ -296,85 +333,165 @@ public static class EncodingPresetsSeed
 
     internal static EncodingPreset[] BuildBuiltInPresets()
     {
-        // Deterministic Ulids so the seed is idempotent. Same binary layout
-        // every run, same rows — upsert maps them to their existing records.
-        // New presets: keep the byte[^1] counter incrementing so history
-        // remains stable across upserts.
-        Ulid generalId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
-        Ulid webHighId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2 });
-        Ulid archivalId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 });
-        Ulid animeId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4 });
-        Ulid musicId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5 });
-        Ulid chromecast1080pId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6 });
-        Ulid appleTv4KId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7 });
-        Ulid mobileLowId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8 });
-        Ulid uhd4KArchivalId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9 });
-        Ulid animeHevcId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10 });
-        Ulid musicMp3Id = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11 });
-        Ulid musicFlacId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12 });
+        // Deterministic Ulids so the seed is idempotent. New IDs live in the
+        // [100..110] range to make a clean break from the legacy [1..12]
+        // built-ins (those get pruned in Init's stale-cleanup pass). When
+        // adding a new built-in: bump byte[^1] past the highest current id,
+        // never reuse a retired number — preset ids end up referenced by
+        // EncoderProfileFolder rows in user databases and recycling them
+        // would silently change which preset a folder is bound to.
+        Ulid uhdPremiumId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100 });
+        Ulid uhdBalancedId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 101 });
+        Ulid uhdCompactId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 102 });
+        Ulid hdPremiumId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 103 });
+        Ulid hdBalancedId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 104 });
+        Ulid hdCompactId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 105 });
+        Ulid hdHdrId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 106 });
+        Ulid animeId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 107 });
+        Ulid musicFlacId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 108 });
+        Ulid musicMp3HighId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 109 });
+        Ulid musicMp3StdId = new(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 110 });
 
         return
         [
+            // ── 4K tier (HEVC main10, HLS) — modern TVs only ────────────────
+            // All 4K presets are HEVC 10-bit because every 4K-capable display
+            // from 2017 onwards decodes HEVC Main10, and 8-bit at 4K wastes
+            // bitrate without quality gain on HDR-capable panels.
             new()
             {
-                Id = generalId,
-                Name = "General — 1080p Fast",
-                Description = "Balanced streaming preset: H.264 1080p, medium preset, CRF 23.",
+                Id = uhdPremiumId,
+                Name = "4K — Premium Quality",
+                Description =
+                    "HEVC 10-bit at CRF 18 (slow). Highest practical quality, large files (~25 GB / 2hr).",
                 Author = "NoMercy",
-                Tags = "general,1080p,hls",
+                Tags = "4k,2160p,hevc,10bit,premium,hls",
                 IsBuiltIn = true,
-                ProfileJson = ProfileJsonTemplate(
-                    name: "General 1080p",
-                    width: 1920,
-                    height: 1080,
-                    crf: 23,
+                ProfileJson = HevcMain10Hls(
+                    name: "4K Premium",
+                    width: 3840,
+                    height: 2160,
+                    crf: 18,
+                    preset: "slow"
+                ),
+            },
+            new()
+            {
+                Id = uhdBalancedId,
+                Name = "4K — Balanced",
+                Description =
+                    "HEVC 10-bit at CRF 22 (medium). The recommended 4K default — visually transparent at ~13 GB / 2hr.",
+                Author = "NoMercy",
+                Tags = "4k,2160p,hevc,10bit,balanced,hls,recommended",
+                IsBuiltIn = true,
+                ProfileJson = HevcMain10Hls(
+                    name: "4K Balanced",
+                    width: 3840,
+                    height: 2160,
+                    crf: 22,
                     preset: "medium"
                 ),
             },
             new()
             {
-                Id = webHighId,
-                Name = "Web — 720p",
-                Description = "Lower-bitrate HLS for slow connections. 720p H.264 fast preset.",
+                Id = uhdCompactId,
+                Name = "4K — Space Saver",
+                Description =
+                    "HEVC 10-bit at CRF 26 (medium). Smaller files (~7 GB / 2hr) at noticeable but acceptable quality loss.",
                 Author = "NoMercy",
-                Tags = "web,720p,hls,low-bandwidth",
+                Tags = "4k,2160p,hevc,10bit,compact,hls",
                 IsBuiltIn = true,
-                ProfileJson = ProfileJsonTemplate(
-                    name: "Web 720p",
-                    width: 1280,
-                    height: 720,
-                    crf: 24,
-                    preset: "fast"
+                ProfileJson = HevcMain10Hls(
+                    name: "4K Space Saver",
+                    width: 3840,
+                    height: 2160,
+                    crf: 26,
+                    preset: "medium"
+                ),
+            },
+            // ── 1080p tier (H.264 high, HLS) — universal compatibility ─────
+            // H.264 8-bit because the 1080p audience is "every device made
+            // since 2010" — smart TVs, old iPads, cheap streamers. HEVC 1080p
+            // saves ~30% storage but loses the older quarter of devices.
+            new()
+            {
+                Id = hdPremiumId,
+                Name = "1080p — Premium Quality",
+                Description =
+                    "H.264 high profile at CRF 18 (slow). Premium 1080p — visually transparent at ~9 GB / 2hr.",
+                Author = "NoMercy",
+                Tags = "1080p,h264,premium,hls",
+                IsBuiltIn = true,
+                ProfileJson = H264HighHls(
+                    name: "1080p Premium",
+                    width: 1920,
+                    height: 1080,
+                    crf: 18,
+                    preset: "slow"
                 ),
             },
             new()
             {
-                Id = archivalId,
-                Name = "Archival — H.265 1080p",
+                Id = hdBalancedId,
+                Name = "1080p — Balanced",
                 Description =
-                    "HEVC archival preset. Smaller files at high visual quality. Slower encode.",
+                    "H.264 high profile at CRF 22 (medium). The global default — works on every device, ~4.5 GB / 2hr.",
                 Author = "NoMercy",
-                Tags = "archival,1080p,h265,hevc",
+                Tags = "1080p,h264,balanced,hls,recommended,default",
                 IsBuiltIn = true,
-                ProfileJson = ProfileJsonTemplate(
-                    name: "Archival H265",
+                ProfileJson = H264HighHls(
+                    name: "1080p Balanced",
                     width: 1920,
                     height: 1080,
-                    crf: 20,
-                    preset: "slow",
-                    codec: "H265"
+                    crf: 22,
+                    preset: "medium"
+                ),
+            },
+            new()
+            {
+                Id = hdCompactId,
+                Name = "1080p — Space Saver",
+                Description =
+                    "H.264 high profile at CRF 26 (medium). Smaller files (~3 GB / 2hr) for archives or slow connections.",
+                Author = "NoMercy",
+                Tags = "1080p,h264,compact,hls",
+                IsBuiltIn = true,
+                ProfileJson = H264HighHls(
+                    name: "1080p Space Saver",
+                    width: 1920,
+                    height: 1080,
+                    crf: 26,
+                    preset: "medium"
+                ),
+            },
+            // ── Specialty 1080p (HEVC 10-bit, HLS) ──────────────────────────
+            new()
+            {
+                Id = hdHdrId,
+                Name = "1080p — HDR / 10-bit",
+                Description =
+                    "HEVC main10 at CRF 22 (slow), HDR passthrough enabled. For HDR-mastered films or dark / grainy live action where 8-bit shows banding.",
+                Author = "NoMercy",
+                Tags = "1080p,hevc,10bit,hdr,hls,premium",
+                IsBuiltIn = true,
+                ProfileJson = HevcMain10Hls(
+                    name: "1080p HDR",
+                    width: 1920,
+                    height: 1080,
+                    crf: 22,
+                    preset: "slow"
                 ),
             },
             new()
             {
                 Id = animeId,
-                Name = "Anime — 1080p",
+                Name = "Anime — 1080p 10-bit",
                 Description =
-                    "Flat-color content preset. x264 tuned for anime with slightly higher CRF.",
+                    "HEVC main10 at CRF 22 (slow) tuned for animation. Flat-color content keeps gradients clean at 10-bit; tune=animation prioritises edge fidelity.",
                 Author = "NoMercy",
-                Tags = "anime,1080p,h264",
+                Tags = "anime,1080p,hevc,10bit,hls",
                 IsBuiltIn = true,
-                ProfileJson = ProfileJsonTemplate(
+                ProfileJson = HevcMain10Hls(
                     name: "Anime 1080p",
                     width: 1920,
                     height: 1080,
@@ -383,270 +500,26 @@ public static class EncodingPresetsSeed
                     tune: "animation"
                 ),
             },
+            // ── Music tiers ─────────────────────────────────────────────────
             new()
             {
-                Id = musicId,
-                Name = "Music — AAC 192k",
+                Id = musicFlacId,
+                Name = "Music — Lossless (FLAC)",
                 Description =
-                    "AAC 192 kbps stereo output in an M4A container. For music library encoding.",
+                    "FLAC stereo lossless. Bit-perfect preservation for music libraries and audiophile playback.",
                 Author = "NoMercy",
-                Tags = "music,aac,m4a,audio",
+                Tags = "music,flac,lossless,audio,archival",
                 IsBuiltIn = true,
                 ProfileJson = """
                     {
-                        "Name": "Music AAC 192k",
-                        "Format": "Mp4",
+                        "Name": "Music FLAC Lossless",
+                        "Format": "Flac",
                         "VideoOutputs": [],
-                        "AudioOutputs": [
-                            {
-                                "Codec": "Aac",
-                                "BitrateKbps": 192,
-                                "Channels": 2,
-                                "SampleRateHz": 48000,
-                                "AllowedLanguages": []
-                            }
-                        ],
-                        "SubtitleOutputs": []
-                    }
-                    """,
-            },
-            // Chromecast devices support H.264 High Profile up to Level 4.1
-            // (1080p) and HE-AAC stereo. Staying on-spec for this target maps
-            // to the widest reach of smart TVs and streamers too.
-            new()
-            {
-                Id = chromecast1080pId,
-                Name = "Chromecast — 1080p",
-                Description =
-                    "Chromecast-compatible HLS at 1080p. H.264 High @ L4.1, AAC stereo, widely supported by smart TVs and older devices.",
-                Author = "NoMercy",
-                Tags = "chromecast,1080p,h264,hls,smarttv",
-                IsBuiltIn = true,
-                ProfileJson = """
-                    {
-                        "Name": "Chromecast 1080p",
-                        "Format": "Hls",
-                        "SegmentDurationSeconds": 6,
-                        "VideoOutputs": [
-                            {
-                                "Codec": "H264",
-                                "Width": 1920,
-                                "Height": 1080,
-                                "BitrateKbps": 0,
-                                "Crf": 22,
-                                "Preset": "medium",
-                                "Profile": "high",
-                                "Level": "4.1",
-                                "ConvertHdrToSdr": true,
-                                "KeyframeIntervalSeconds": 2,
-                                "TenBit": false
-                            }
-                        ],
-                        "AudioOutputs": [
-                            {
-                                "Codec": "Aac",
-                                "BitrateKbps": 192,
-                                "Channels": 2,
-                                "SampleRateHz": 48000,
-                                "AllowedLanguages": []
-                            }
-                        ],
-                        "SubtitleOutputs": [
-                            {
-                                "Codec": "WebVtt",
-                                "Mode": "Extract",
-                                "AllowedLanguages": []
-                            }
-                        ]
-                    }
-                    """,
-            },
-            // Apple TV 4K decodes HEVC Main10 up to Level 5.1 and plays
-            // Dolby Digital Plus (EAC3) for surround. HDR passthrough requires
-            // 10-bit + HEVC + no tonemap. hvc1 tag is set by the encoder
-            // pipeline for videotoolbox.
-            new()
-            {
-                Id = appleTv4KId,
-                Name = "Apple TV 4K — HDR",
-                Description =
-                    "Apple TV 4K profile: HEVC Main10 2160p @ L5.1, EAC3 5.1, HDR passthrough when source is HDR.",
-                Author = "NoMercy",
-                Tags = "appletv,4k,2160p,hevc,hdr,eac3",
-                IsBuiltIn = true,
-                ProfileJson = """
-                    {
-                        "Name": "Apple TV 4K HDR",
-                        "Format": "Hls",
-                        "SegmentDurationSeconds": 6,
-                        "VideoOutputs": [
-                            {
-                                "Codec": "H265",
-                                "Width": 3840,
-                                "Height": 2160,
-                                "BitrateKbps": 0,
-                                "Crf": 22,
-                                "Preset": "medium",
-                                "Profile": "main10",
-                                "Level": "5.1",
-                                "ConvertHdrToSdr": false,
-                                "KeyframeIntervalSeconds": 2,
-                                "TenBit": true
-                            }
-                        ],
-                        "AudioOutputs": [
-                            {
-                                "Codec": "Eac3",
-                                "BitrateKbps": 640,
-                                "Channels": 6,
-                                "SampleRateHz": 48000,
-                                "AllowedLanguages": []
-                            }
-                        ],
-                        "SubtitleOutputs": [
-                            {
-                                "Codec": "WebVtt",
-                                "Mode": "Extract",
-                                "AllowedLanguages": []
-                            }
-                        ]
-                    }
-                    """,
-            },
-            // Mobile / poor-wifi preset: 480p bitrate-capped for a predictable
-            // ceiling. AAC 96k stereo keeps audio reasonable without eating
-            // the bandwidth budget. H.264 Main @ L3.1 plays on every phone
-            // from the last decade.
-            new()
-            {
-                Id = mobileLowId,
-                Name = "Mobile — 480p Low Bandwidth",
-                Description =
-                    "Data-friendly 480p H.264 Main @ L3.1 with AAC 96 kbps stereo. For mobile networks and low-end devices.",
-                Author = "NoMercy",
-                Tags = "mobile,480p,low-bandwidth,h264,hls",
-                IsBuiltIn = true,
-                ProfileJson = """
-                    {
-                        "Name": "Mobile 480p",
-                        "Format": "Hls",
-                        "SegmentDurationSeconds": 6,
-                        "VideoOutputs": [
-                            {
-                                "Codec": "H264",
-                                "Width": 854,
-                                "Height": 480,
-                                "BitrateKbps": 900,
-                                "Crf": 0,
-                                "Preset": "fast",
-                                "Profile": "main",
-                                "Level": "3.1",
-                                "ConvertHdrToSdr": true,
-                                "KeyframeIntervalSeconds": 2,
-                                "TenBit": false
-                            }
-                        ],
-                        "AudioOutputs": [
-                            {
-                                "Codec": "Aac",
-                                "BitrateKbps": 96,
-                                "Channels": 2,
-                                "SampleRateHz": 48000,
-                                "AllowedLanguages": []
-                            }
-                        ],
-                        "SubtitleOutputs": [
-                            {
-                                "Codec": "WebVtt",
-                                "Mode": "Extract",
-                                "AllowedLanguages": []
-                            }
-                        ]
-                    }
-                    """,
-            },
-            // 4K archival: HEVC 10-bit at CRF 18 (visually lossless), FLAC
-            // audio preserved in MKV. Massive files — intended for long-term
-            // storage of source-quality material, not streaming.
-            new()
-            {
-                Id = uhd4KArchivalId,
-                Name = "4K Archival — HEVC + FLAC",
-                Description =
-                    "Long-term archival: HEVC Main10 2160p at CRF 18 (visually lossless), FLAC audio, MKV container. Large files; storage not streaming.",
-                Author = "NoMercy",
-                Tags = "archival,4k,2160p,hevc,10bit,flac,mkv",
-                IsBuiltIn = true,
-                ProfileJson = """
-                    {
-                        "Name": "4K Archival",
-                        "Format": "Mkv",
-                        "VideoOutputs": [
-                            {
-                                "Codec": "H265",
-                                "Width": 3840,
-                                "Height": 2160,
-                                "BitrateKbps": 0,
-                                "Crf": 18,
-                                "Preset": "slow",
-                                "Profile": "main10",
-                                "Level": "5.1",
-                                "ConvertHdrToSdr": false,
-                                "KeyframeIntervalSeconds": 4,
-                                "TenBit": true
-                            }
-                        ],
                         "AudioOutputs": [
                             {
                                 "Codec": "Flac",
                                 "BitrateKbps": 0,
-                                "Channels": 6,
-                                "SampleRateHz": 48000,
-                                "AllowedLanguages": []
-                            }
-                        ],
-                        "SubtitleOutputs": []
-                    }
-                    """,
-            },
-            // Anime community standard: HEVC 10-bit preserves color banding
-            // much better than H.264 8-bit on flat-shaded content. Opus
-            // surround gives small high-quality audio. MKV holds ASS
-            // subtitles unchanged (HLS would convert to WebVTT and lose
-            // typesetting).
-            new()
-            {
-                Id = animeHevcId,
-                Name = "Anime — HEVC 10-bit 1080p",
-                Description =
-                    "Anime archival preset: HEVC 10-bit handles flat-color content without banding. Opus 5.1 audio, MKV keeps ASS subtitles intact.",
-                Author = "NoMercy",
-                Tags = "anime,1080p,hevc,10bit,opus,mkv",
-                IsBuiltIn = true,
-                ProfileJson = """
-                    {
-                        "Name": "Anime HEVC 10bit",
-                        "Format": "Mkv",
-                        "VideoOutputs": [
-                            {
-                                "Codec": "H265",
-                                "Width": 1920,
-                                "Height": 1080,
-                                "BitrateKbps": 0,
-                                "Crf": 22,
-                                "Preset": "slow",
-                                "Profile": "main10",
-                                "Level": "4.1",
-                                "ConvertHdrToSdr": false,
-                                "KeyframeIntervalSeconds": 2,
-                                "TenBit": true
-                            }
-                        ],
-                        "AudioOutputs": [
-                            {
-                                "Codec": "Opus",
-                                "BitrateKbps": 256,
-                                "Channels": 6,
+                                "Channels": 2,
                                 "SampleRateHz": 48000,
                                 "AllowedLanguages": []
                             }
@@ -657,12 +530,12 @@ public static class EncodingPresetsSeed
             },
             new()
             {
-                Id = musicMp3Id,
-                Name = "Music — MP3 320k",
+                Id = musicMp3HighId,
+                Name = "Music — High Quality (MP3 320k)",
                 Description =
-                    "MP3 320 kbps stereo output. Legacy-compatible music archival for players that do not handle AAC or FLAC.",
+                    "MP3 320 kbps stereo. Transparent quality with universal compatibility on every device that decodes audio.",
                 Author = "NoMercy",
-                Tags = "music,mp3,audio,legacy",
+                Tags = "music,mp3,high,audio",
                 IsBuiltIn = true,
                 ProfileJson = """
                     {
@@ -684,22 +557,22 @@ public static class EncodingPresetsSeed
             },
             new()
             {
-                Id = musicFlacId,
-                Name = "Music — FLAC Lossless",
+                Id = musicMp3StdId,
+                Name = "Music — Standard (MP3 192k)",
                 Description =
-                    "FLAC lossless stereo output. Bit-perfect archival of music libraries with no quality loss.",
+                    "MP3 192 kbps stereo. Sensible default for large music libraries on mobile devices.",
                 Author = "NoMercy",
-                Tags = "music,flac,audio,lossless,archival",
+                Tags = "music,mp3,standard,audio,mobile",
                 IsBuiltIn = true,
                 ProfileJson = """
                     {
-                        "Name": "Music FLAC Lossless",
-                        "Format": "Flac",
+                        "Name": "Music MP3 192k",
+                        "Format": "Mp3",
                         "VideoOutputs": [],
                         "AudioOutputs": [
                             {
-                                "Codec": "Flac",
-                                "BitrateKbps": 0,
+                                "Codec": "Mp3",
+                                "BitrateKbps": 192,
                                 "Channels": 2,
                                 "SampleRateHz": 48000,
                                 "AllowedLanguages": []
@@ -712,13 +585,18 @@ public static class EncodingPresetsSeed
         ];
     }
 
-    private static string ProfileJsonTemplate(
+    /// <summary>
+    /// Builds an HLS profile JSON for a HEVC Main10 (10-bit) video output
+    /// plus a stereo AAC 192k audio track. Used by every 4K and HDR / Anime
+    /// 1080p preset in the curated library — they all share the same shape
+    /// and only differ on width × height × CRF × preset × optional tune.
+    /// </summary>
+    private static string HevcMain10Hls(
         string name,
         int width,
         int height,
         int crf,
         string preset,
-        string codec = "H264",
         string? tune = null
     )
     {
@@ -729,17 +607,17 @@ public static class EncodingPresetsSeed
                 "Format": "Hls",
                 "VideoOutputs": [
                     {
-                        "Codec": "{{codec}}",
+                        "Codec": "H265",
                         "Width": {{width}},
                         "Height": {{height}},
                         "BitrateKbps": 0,
                         "Crf": {{crf}},
                         "Preset": "{{preset}}",
-                        "Profile": "high",
+                        "Profile": "main10",
                         "Level": null,
                         "ConvertHdrToSdr": false,
                         "KeyframeIntervalSeconds": 2,
-                        "TenBit": false,
+                        "TenBit": true,
                         "Tune": {{tuneJson}}
                     }
                 ],
@@ -752,7 +630,61 @@ public static class EncodingPresetsSeed
                         "AllowedLanguages": []
                     }
                 ],
-                "SubtitleOutputs": []
+                "SubtitleOutputs": [
+                    {
+                        "Codec": "WebVtt",
+                        "Mode": "Extract",
+                        "AllowedLanguages": []
+                    }
+                ]
+            }
+            """;
+    }
+
+    /// <summary>
+    /// Builds an HLS profile JSON for an H.264 high-profile (8-bit) video
+    /// output plus a stereo AAC 192k audio track. Used by the universal
+    /// 1080p Premium / Balanced / Space Saver tier where broadest device
+    /// compatibility matters more than codec efficiency.
+    /// </summary>
+    private static string H264HighHls(string name, int width, int height, int crf, string preset)
+    {
+        return $$"""
+            {
+                "Name": "{{name}}",
+                "Format": "Hls",
+                "VideoOutputs": [
+                    {
+                        "Codec": "H264",
+                        "Width": {{width}},
+                        "Height": {{height}},
+                        "BitrateKbps": 0,
+                        "Crf": {{crf}},
+                        "Preset": "{{preset}}",
+                        "Profile": "high",
+                        "Level": null,
+                        "ConvertHdrToSdr": true,
+                        "KeyframeIntervalSeconds": 2,
+                        "TenBit": false,
+                        "Tune": null
+                    }
+                ],
+                "AudioOutputs": [
+                    {
+                        "Codec": "Aac",
+                        "BitrateKbps": 192,
+                        "Channels": 2,
+                        "SampleRateHz": 48000,
+                        "AllowedLanguages": []
+                    }
+                ],
+                "SubtitleOutputs": [
+                    {
+                        "Codec": "WebVtt",
+                        "Mode": "Extract",
+                        "AllowedLanguages": []
+                    }
+                ]
             }
             """;
     }
