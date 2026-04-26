@@ -116,12 +116,7 @@ public class HardwareBenchmark(
 
             try
             {
-                SpeedMeasurement? measured = await MeasureAsync(
-                    target,
-                    tierWidth,
-                    tierHeight,
-                    ct
-                );
+                SpeedMeasurement? measured = await MeasureAsync(target, tierWidth, tierHeight, ct);
 
                 if (measured is null)
                     continue;
@@ -163,8 +158,7 @@ public class HardwareBenchmark(
             {
                 completed++;
                 double pct = total > 0 ? (double)completed / total * 100.0 : 100.0;
-                string stage =
-                    $"{target.Encoder.FfmpegName} {tierWidth}x{tierHeight}";
+                string stage = $"{target.Encoder.FfmpegName} {tierWidth}x{tierHeight}";
                 observer.Report(jobId, "benchmark", pct, stage);
             }
         }
@@ -258,6 +252,7 @@ public class HardwareBenchmark(
 
         ProgressParser parser = new();
         double observedFps = 0;
+        int lastFrame = 0;
 
         void OnStdOut(string line)
         {
@@ -267,8 +262,11 @@ public class HardwareBenchmark(
 
             if (snapshot.Fps > 0)
                 observedFps = Math.Max(observedFps, snapshot.Fps);
+            if (snapshot.Frame > lastFrame)
+                lastFrame = snapshot.Frame;
         }
 
+        System.Diagnostics.Stopwatch wall = System.Diagnostics.Stopwatch.StartNew();
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
             arguments,
@@ -277,6 +275,7 @@ public class HardwareBenchmark(
             null,
             ct
         );
+        wall.Stop();
 
         if (!result.IsSuccess)
         {
@@ -293,6 +292,29 @@ public class HardwareBenchmark(
                 TruncateStderr(result.StdErr)
             );
             return null;
+        }
+
+        // ffmpeg's `fps=` progress field is computed over a one-second
+        // sliding window — fast encoders like libx264 finish 30 frames in
+        // under 100ms and never emit a non-zero fps line. Fall back to
+        // wall-clock-derived fps so libx264 / nvenc / hwaccel encoders
+        // actually land in the speed index instead of being silently
+        // dropped. Only used when the progress stream gave us nothing
+        // usable — measured fps wins when both are present because it's
+        // closer to the encoder's steady-state rate (excludes process
+        // spin-up time).
+        if (observedFps <= 0 && lastFrame > 0 && wall.Elapsed.TotalSeconds > 0)
+        {
+            observedFps = lastFrame / wall.Elapsed.TotalSeconds;
+            logger.LogDebug(
+                "Wall-clock fps fallback for {Encoder} @ {W}x{H}: {Frames} frames in {Elapsed:F2}s = {Fps:F1} fps",
+                target.Encoder.FfmpegName,
+                width,
+                height,
+                lastFrame,
+                wall.Elapsed.TotalSeconds,
+                observedFps
+            );
         }
 
         if (observedFps <= 0)
