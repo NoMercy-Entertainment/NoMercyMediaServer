@@ -56,6 +56,12 @@ public static class AppFiles
     public static string MusicImagesPath => Path.Combine(ImagesPath, "music");
     public static string TempImagesPath => Path.Combine(ImagesPath, "temp");
 
+    // Encoder hardware speed-index cache. Stores per-encoder/codec/resolution
+    // FPS measurements so reboots reuse the calibration instead of redoing
+    // 20+ minutes of synthetic encodes on every start.
+    public static string SpeedIndexCachePath =>
+        Path.Combine(CachePath, "encoder", "speed_index.json");
+
     // ── Browser ──────────────────────────────────────────────────────────
 
     public static string BrowserPath => Path.Combine(AppPath, "browser");

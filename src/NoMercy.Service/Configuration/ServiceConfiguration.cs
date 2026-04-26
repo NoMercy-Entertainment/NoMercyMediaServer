@@ -450,6 +450,7 @@ public static class ServiceConfiguration
         services.AddScoped<FolderRepository>();
         services.AddScoped<MediaProcessingFileRepository>();
         services.AddScoped<IFileRepository, MediaProcessingFileRepository>();
+        services.AddScoped<FilesystemRepository>();
         services.AddScoped<LanguageRepository>();
         services.AddScoped<CollectionRepository>();
         services.AddScoped<MediaProcessingCollectionRepository>();
@@ -492,6 +493,12 @@ public static class ServiceConfiguration
             opts.FfprobePathOverride = AppFiles.FfProbePath;
             opts.TesseractModelsDirectory = AppFiles.TesseractModelsFolder;
             opts.WhisperModelPath = AppFiles.WhisperModelPath;
+            // Without this the JsonSpeedIndexStore silently no-ops on Save
+            // ("No SpeedIndexCachePath configured — skipping save"), and every
+            // reboot triggers a fresh ~20 min hardware benchmark calibration.
+            // Pointing at AppFiles.SpeedIndexCachePath persists results so
+            // NeedsRecalibration() can honour its 30-day grace window.
+            opts.SpeedIndexCachePath = AppFiles.SpeedIndexCachePath;
         });
 
         // Concrete activity probe for the deferred hardware benchmark —
