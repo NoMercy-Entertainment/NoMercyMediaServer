@@ -15,6 +15,7 @@ public class CodecRegistry
             new H265Definition(),
             new Av1Definition(),
             new Vp9Definition(),
+            new CopyVideoDefinition(),
         ];
 
         _videoDefinitions = definitions.ToDictionary(d => d.CodecType);
@@ -42,6 +43,14 @@ public class CodecRegistry
     {
         foreach ((VideoCodecType codecType, ICodecDefinition def) in _videoDefinitions)
         {
+            // Stream copy isn't a real encoder — benchmarking it would just
+            // measure ffmpeg's mux throughput and pollute the speed index
+            // with a dominant top-of-list entry that nothing should ever
+            // pick from. Hide it from the enumeration consumed by
+            // HardwareBenchmark / encoder-selection logic.
+            if (codecType == VideoCodecType.Copy)
+                continue;
+
             foreach (EncoderInfo encoder in def.Encoders)
                 yield return (codecType, encoder);
         }

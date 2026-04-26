@@ -183,6 +183,7 @@ public static class ProfileMapper
             "webvtt" or "vtt" => SubtitleCodecType.WebVtt,
             "ass" or "ssa" => SubtitleCodecType.Ass,
             "srt" or "subrip" => SubtitleCodecType.Srt,
+            "copy" or "passthrough" => SubtitleCodecType.Copy,
             _ => SubtitleCodecType.WebVtt,
         };
 
@@ -327,6 +328,7 @@ public static class ProfileMapper
             AudioCodecType.Eac3 => "eac3",
             AudioCodecType.TrueHd => "truehd",
             AudioCodecType.Dts => "dts",
+            AudioCodecType.Copy => "copy",
             _ => "aac",
         };
 
@@ -336,12 +338,18 @@ public static class ProfileMapper
             SubtitleCodecType.WebVtt => "webvtt",
             SubtitleCodecType.Ass => "ass",
             SubtitleCodecType.Srt => "srt",
+            SubtitleCodecType.Copy => "copy",
             _ => "webvtt",
         };
 
     private static VideoCodecType ParseVideoCodec(string codec)
     {
         string lower = codec.ToLowerInvariant();
+        // Copy passthrough must be checked before substring matches: any
+        // string containing "copy" (e.g. user-typed "h264 copy"?) should land
+        // on Copy, never on a re-encoder.
+        if (lower == "copy" || lower.Contains("passthrough"))
+            return VideoCodecType.Copy;
         if (lower.Contains("264") || lower.Contains("avc"))
             return VideoCodecType.H264;
         if (lower.Contains("265") || lower.Contains("hevc"))
@@ -356,6 +364,9 @@ public static class ProfileMapper
     private static AudioCodecType ParseAudioCodec(string codec)
     {
         string lower = codec.ToLowerInvariant();
+        // Same priority story as the video parser: "copy" wins outright.
+        if (lower == "copy" || lower.Contains("passthrough"))
+            return AudioCodecType.Copy;
         if (lower.Contains("aac") || lower.Contains("fdk"))
             return AudioCodecType.Aac;
         if (lower.Contains("opus"))

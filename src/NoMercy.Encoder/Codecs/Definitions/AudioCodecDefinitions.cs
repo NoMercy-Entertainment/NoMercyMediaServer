@@ -152,6 +152,22 @@ public static class AudioCodecDefinitions
         IsLossless: false
     );
 
+    // Copy — synthetic "encoder" for stream passthrough. ffmpeg name is the
+    // literal "copy" pseudo-codec. Bitrate / channels / sample-rate are all
+    // ignored at encode time (the copied bytes carry their own values), so
+    // every range field is zero. IsLossless is true because no decode/encode
+    // round-trip happens — the source bytes are remuxed unchanged.
+    private static readonly AudioEncoderInfo CopyEncoder = new(
+        FfmpegName: "copy",
+        CodecType: AudioCodecType.Copy,
+        Channels: [],
+        SampleRates: [],
+        MinBitrateKbps: 0,
+        MaxBitrateKbps: 0,
+        DefaultBitrateKbps: 0,
+        IsLossless: true
+    );
+
     private static readonly Dictionary<AudioCodecType, AudioEncoderInfo> EncoderMap = new()
     {
         [AudioCodecType.Aac] = AacEncoder,
@@ -163,6 +179,7 @@ public static class AudioCodecDefinitions
         [AudioCodecType.Vorbis] = VorbisEncoder,
         [AudioCodecType.TrueHd] = TrueHdEncoder,
         [AudioCodecType.Dts] = DtsEncoder,
+        [AudioCodecType.Copy] = CopyEncoder,
     };
 
     public static AudioEncoderInfo GetEncoder(AudioCodecType codecType) => EncoderMap[codecType];
