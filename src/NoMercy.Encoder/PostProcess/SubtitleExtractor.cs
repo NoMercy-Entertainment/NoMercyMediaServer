@@ -36,11 +36,9 @@ public class SubtitleExtractor : ISubtitleExtractor
 
         if (isBitmap)
         {
-            // VobSub (dvd_subtitle) → write .idx directly. NoMercy's ffmpeg
-            // fork carries the vobsubenc muxer (PR #14) which auto-detects
-            // the .idx extension and emits both .idx + .sub from a single
-            // -c:s copy pass. PGS / DVB still go to .mks (the OCR pass
-            // handles those).
+            // VobSub gets its native .idx/.sub pair via NoMercy ffmpeg's
+            // vobsubenc muxer. PGS / DVB stay in .mks for preservation —
+            // OCR pass converts them to WebVTT downstream.
             bool isVobSub = stream.Codec.Equals("dvd_subtitle", StringComparison.OrdinalIgnoreCase);
             extension = isVobSub ? "idx" : "mks";
             ffmpegCodec = "copy";
