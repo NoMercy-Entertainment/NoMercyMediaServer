@@ -371,16 +371,16 @@ public static class EncodingPresetsSeed
             BuiltIn(
                 Ulid.Parse("01KQ5R5GD8492DRDSHBTVZE8ZJ"),
                 "4K — Premium Quality",
-                "HEVC 10-bit at CRF 18 (slow). Highest practical quality, large files (~25 GB / 2hr).",
+                "HEVC 10-bit at CRF 16 (slow). Archive-grade — indistinguishable from BD source. Large files.",
                 "4k,2160p,hevc,10bit,premium,hls",
-                HevcMain10Hls("4K Premium", width: 3840, height: 2160, crf: 18, preset: "slow")
+                HevcMain10Hls("4K Premium", width: 3840, height: 2160, crf: 16, preset: "slow")
             ),
             BuiltIn(
                 Ulid.Parse("01KQ5R5GD9EQY63ZZCR3H99C0W"),
                 "4K — Balanced",
-                "HEVC 10-bit at CRF 22 (medium). The recommended 4K default — visually transparent at ~13 GB / 2hr.",
+                "HEVC 10-bit at CRF 20 (slow). The recommended 4K default — visually transparent vs source. Quality preserved.",
                 "4k,2160p,hevc,10bit,balanced,hls,recommended",
-                HevcMain10Hls("4K Balanced", width: 3840, height: 2160, crf: 22, preset: "medium")
+                HevcMain10Hls("4K Balanced", width: 3840, height: 2160, crf: 20, preset: "slow")
             ),
             BuiltIn(
                 Ulid.Parse("01KQ5R5GD9166D87SWC9KC2HQW"),
@@ -402,16 +402,16 @@ public static class EncodingPresetsSeed
             BuiltIn(
                 Ulid.Parse("01KQ5R5GD9W0YYVR9295J3662N"),
                 "1080p — Premium Quality",
-                "H.264 high profile at CRF 18 (slow). Premium 1080p — visually transparent at ~9 GB / 2hr.",
+                "H.264 high profile at CRF 16 (slow). Archive-grade 1080p — indistinguishable from BD source.",
                 "1080p,h264,premium,hls",
-                H264HighHls("1080p Premium", width: 1920, height: 1080, crf: 18, preset: "slow")
+                H264HighHls("1080p Premium", width: 1920, height: 1080, crf: 16, preset: "slow")
             ),
             BuiltIn(
                 Ulid.Parse("01KQ5R5GD9W3ZK7E2TJTASSW7G"),
                 "1080p — Balanced",
-                "H.264 high profile at CRF 22 (medium). The global default — works on every device, ~4.5 GB / 2hr.",
+                "H.264 high profile at CRF 18 (slow). The global default — visually transparent vs source, works on every device.",
                 "1080p,h264,balanced,hls,recommended,default",
-                H264HighHls("1080p Balanced", width: 1920, height: 1080, crf: 22, preset: "medium")
+                H264HighHls("1080p Balanced", width: 1920, height: 1080, crf: 18, preset: "slow")
             ),
             BuiltIn(
                 Ulid.Parse("01KQ5R5GDAEMZRGF2Q2YS3D69V"),
@@ -430,20 +430,20 @@ public static class EncodingPresetsSeed
             BuiltIn(
                 Ulid.Parse("01KQ5R5GDAEC3FH2EVTPMT4QDY"),
                 "1080p — HDR / 10-bit",
-                "HEVC main10 at CRF 22 (slow), HDR passthrough enabled. For HDR-mastered films or dark / grainy live action where 8-bit shows banding.",
+                "HEVC main10 at CRF 18 (slow), HDR passthrough enabled. Lower CRF preserves shadow detail without banding on HDR-mastered films and dark / grainy live action.",
                 "1080p,hevc,10bit,hdr,hls,premium",
-                HevcMain10Hls("1080p HDR", width: 1920, height: 1080, crf: 22, preset: "slow")
+                HevcMain10Hls("1080p HDR", width: 1920, height: 1080, crf: 18, preset: "slow")
             ),
             BuiltIn(
                 Ulid.Parse("01KQ5R5GDABK8644SSY7686R95"),
                 "Anime — 1080p 10-bit",
-                "HEVC main10 at CRF 22 (slow) tuned for animation. Flat-color content keeps gradients clean at 10-bit; tune=animation prioritises edge fidelity.",
+                "HEVC main10 at CRF 18 (slow) tuned for animation. Matches typical anime BD-rip CRF (16–18) so re-encodes stay roughly source-size; tune=animation preserves edge fidelity on flat-shaded content.",
                 "anime,1080p,hevc,10bit,hls",
                 HevcMain10Hls(
                     "Anime 1080p",
                     width: 1920,
                     height: 1080,
-                    crf: 22,
+                    crf: 18,
                     preset: "slow",
                     tune: "animation"
                 )
