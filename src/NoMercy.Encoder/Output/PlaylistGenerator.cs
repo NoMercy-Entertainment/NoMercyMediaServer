@@ -146,7 +146,7 @@ public class PlaylistGenerator : IPlaylistGenerator
             Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
                 video.Width,
                 video.Height,
-                video.TenBit
+                video.IsHdrOutput
             );
             string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
             string subDir =

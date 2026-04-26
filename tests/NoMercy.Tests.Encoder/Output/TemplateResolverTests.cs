@@ -55,20 +55,43 @@ public class TemplateResolverTests
     [Fact]
     public void VideoTokens_IncludesTypeAndFrameSize()
     {
-        Dictionary<string, string> tokens = TemplateResolver.VideoTokens(1920, 1080, tenBit: false);
+        Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+            1920,
+            1080,
+            isHdrOutput: false
+        );
         tokens["type"].Should().Be("video");
         tokens["framesize"].Should().Be("1920x1080");
         tokens["colorrange"].Should().Be("SDR");
     }
 
     [Fact]
-    public void VideoTokens_TenBit_MarksAsHdr()
+    public void VideoTokens_IsHdrOutput_LabelsAsHdr()
     {
-        // 10-bit is treated as the "HDR track" marker in folder names even
-        // though 10-bit ≠ HDR. The naming convention is about separating
-        // the 10-bit ladder from the 8-bit one so players don't mix them.
-        Dictionary<string, string> tokens = TemplateResolver.VideoTokens(3840, 2160, tenBit: true);
+        // The colorrange token derives from the actual HDR pipeline (PQ / HLG /
+        // SMPTE2084 transfer preserved end-to-end), NOT from bit depth. A
+        // 10-bit BT.709 anime master is SDR and must be labelled SDR; an
+        // HDR-passthrough output gets HDR regardless of any other field.
+        Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+            3840,
+            2160,
+            isHdrOutput: true
+        );
         tokens["colorrange"].Should().Be("HDR");
+    }
+
+    [Fact]
+    public void VideoTokens_TenBitButSdrPipeline_LabelsAsSdr()
+    {
+        // Regression for the "anime 10-bit folder named _HDR" bug. 10-bit
+        // colour depth alone never makes an output HDR — only the transfer
+        // pipeline does. Caller passes isHdrOutput = false for these.
+        Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+            1920,
+            1080,
+            isHdrOutput: false
+        );
+        tokens["colorrange"].Should().Be("SDR");
     }
 
     [Fact]
@@ -103,7 +126,11 @@ public class TemplateResolverTests
     {
         // The default video template from EncodingProfile:
         string template = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:";
-        Dictionary<string, string> tokens = TemplateResolver.VideoTokens(1280, 720, tenBit: false);
+        Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+            1280,
+            720,
+            isHdrOutput: false
+        );
 
         string resolved = TemplateResolver.Resolve(template, tokens);
 

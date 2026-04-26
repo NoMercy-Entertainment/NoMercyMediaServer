@@ -25,13 +25,16 @@ public static class TemplateResolver
         return result;
     }
 
-    public static Dictionary<string, string> VideoTokens(int width, int height, bool tenBit)
+    public static Dictionary<string, string> VideoTokens(int width, int height, bool isHdrOutput)
     {
         return new()
         {
             ["type"] = "video",
             ["framesize"] = $"{width}x{height}",
-            ["colorrange"] = tenBit ? "HDR" : "SDR",
+            // HDR labelling derives from the actual transfer pipeline that the
+            // OutputPlan builder set, never from bit depth. 10-bit BT.709 is
+            // SDR; an 8-bit HDR stream (rare but possible) would still be HDR.
+            ["colorrange"] = isHdrOutput ? "HDR" : "SDR",
         };
     }
 

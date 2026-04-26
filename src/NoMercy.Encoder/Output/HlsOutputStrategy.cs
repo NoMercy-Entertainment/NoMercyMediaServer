@@ -29,7 +29,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
                 video.Width,
                 video.Height,
-                video.TenBit
+                video.IsHdrOutput
             );
 
             // Template resolves to e.g. "video_1920x1080_SDR/video_1920x1080_SDR"
@@ -182,7 +182,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
                 video.Width,
                 video.Height,
-                video.TenBit
+                video.IsHdrOutput
             );
             string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
             string subDir =
@@ -234,7 +234,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
                 video.Width,
                 video.Height,
-                video.TenBit
+                video.IsHdrOutput
             );
             string resolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
             string subDir = Path.GetDirectoryName(resolved)?.Replace("\\", "/") ?? resolved;

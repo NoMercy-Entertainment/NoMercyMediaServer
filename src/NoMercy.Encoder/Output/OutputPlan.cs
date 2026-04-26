@@ -52,7 +52,13 @@ public record VideoOutputPlan(
     string PlaylistNameTemplate = ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
     bool ConvertHdrToSdr = false,
     string? TonemapFilterChain = null,
-    string? CropFilter = null
+    string? CropFilter = null,
+    // True when this output preserves the source's HDR transfer characteristics
+    // (PQ / HLG / SMPTE2084). Used by the :colorrange: template token so folder
+    // and playlist names label outputs HDR vs SDR based on the actual color
+    // pipeline, not bit depth — 10-bit BT.709 is SDR and conflating depth with
+    // HDR was mislabeling every 10-bit anime / SDR remux as HDR.
+    bool IsHdrOutput = false
 );
 
 public record AudioOutputPlan(

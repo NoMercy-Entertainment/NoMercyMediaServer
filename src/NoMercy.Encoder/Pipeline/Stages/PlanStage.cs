@@ -460,7 +460,12 @@ public class PlanStage(
                                 && !tonemapSuppressed
                                     ? tonemapPlan.FilterStringFragment
                                     : null,
-                                CropFilter: cropFilter
+                                CropFilter: cropFilter,
+                                // Reuses the same predicate as the HDR-passthrough flag
+                                // emission above (preservesHdr). Keeping them in sync
+                                // means the folder/playlist names match the actual color
+                                // metadata embedded in the segments.
+                                IsHdrOutput: preservesHdr
                             );
                         }
                     )
