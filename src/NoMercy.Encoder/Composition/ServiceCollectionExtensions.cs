@@ -93,8 +93,19 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<FfmpegCapabilities>()
         );
 
-        // IHardwareCapabilities factory — reads from a singleton holder so
-        // the dependency graph does NOT pass through HardwareInitializationService.
+        // IHardwareCapabilities — forwards every read through the holder so
+        // singletons constructed before HIS finishes detection (most notably
+        // HardwareBenchmark) pick up the GPU list once detection completes.
+        //
+        // Earlier this was a factory that captured Holder.Current at first
+        // resolution. That always returned null at startup and cached an
+        // empty CPU-only HardwareCapabilities forever — so the benchmark
+        // scheduler saw zero GPUs even after HIS detected an Nvidia / AMD /
+        // Intel card, and ran software calibrations only. The holder-backed
+        // forwarder fixes the staleness without disturbing the no-cycle
+        // dependency graph below.
+        //
+        // The dependency graph does NOT pass through HardwareInitializationService.
         // HIS itself transitively depends on IHardwareCapabilities (via
         // BenchmarkJobTracker → HardwareBenchmark), so resolving capabilities
         // through HIS forms a cycle that crashes the test host with a stack
@@ -102,10 +113,7 @@ public static class ServiceCollectionExtensions
         // once detection completes; before that, callers receive a CPU-only
         // default that lets pipeline construction succeed without GPU info.
         services.AddSingleton<HardwareCapabilitiesHolder>();
-        services.AddSingleton<IHardwareCapabilities>(sp =>
-            sp.GetRequiredService<HardwareCapabilitiesHolder>().Current
-            ?? new HardwareCapabilities([], Environment.ProcessorCount)
-        );
+        services.AddSingleton<IHardwareCapabilities, HolderBackedHardwareCapabilities>();
 
         // IResourceMonitor — cross-platform CPU/memory readings via
         // System.Diagnostics. GPU utilization stays at 0 until a vendor-
