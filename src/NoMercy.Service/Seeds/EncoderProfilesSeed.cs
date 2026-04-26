@@ -22,6 +22,13 @@ public static class EncoderProfilesSeed
         else
             encoderProfiles = EncoderProfileSeedData.GetEncoderProfiles();
 
+        // Strip any folder bindings before re-serializing — the seed file is
+        // a catalog of profiles, never a record of user-driven assignments.
+        // The dashboard owns EncoderProfileFolder rows; if the file keeps
+        // them, removed bindings come back on every restart.
+        foreach (EncoderProfile profile in encoderProfiles)
+            profile.EncoderProfileFolder = [];
+
         await File.WriteAllTextAsync(AppFiles.EncoderProfilesSeedFile, encoderProfiles.ToJson());
 
         try
@@ -42,34 +49,6 @@ public static class EncoderProfilesSeed
                             _subtitleProfiles = vi._subtitleProfiles,
                             _thumbnailProfile = vi._thumbnailProfile,
                         }
-                )
-                .RunAsync();
-        }
-        catch (Exception e)
-        {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
-        }
-
-        List<EncoderProfileFolder> encoderProfileFolders = [];
-        foreach (EncoderProfile encoderProfile in encoderProfiles)
-            encoderProfileFolders.AddRange(
-                encoderProfile
-                    .EncoderProfileFolder.ToList()
-                    .Select(encoderProfileFolder => new EncoderProfileFolder
-                    {
-                        EncoderProfileId = encoderProfile.Id,
-                        FolderId = encoderProfileFolder.FolderId,
-                    })
-            );
-
-        try
-        {
-            await dbContext
-                .EncoderProfileFolder.UpsertRange(encoderProfileFolders)
-                .On(v => new { v.FolderId, v.EncoderProfileId })
-                .WhenMatched(
-                    (vs, vi) =>
-                        new() { FolderId = vi.FolderId, EncoderProfileId = vi.EncoderProfileId }
                 )
                 .RunAsync();
         }
