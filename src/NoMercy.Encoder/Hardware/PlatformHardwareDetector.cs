@@ -49,6 +49,12 @@ public partial class PlatformHardwareDetector(
 
     private async Task<IReadOnlyList<GpuDevice>> DetectWindowsGpusAsync(CancellationToken ct)
     {
+        // Try wmic first (faster, works on every Windows 10/11 build through
+        // 22H2). wmic is deprecated and removed by default on Windows 11
+        // 24H2+ — when wmic.exe is missing the runner returns an exit code
+        // and we fall back to PowerShell Get-CimInstance, which is always
+        // available. Without the fallback users on modern Windows see zero
+        // detected GPUs and the hardware benchmark only ever tests the CPU.
         ProcessResult result = await processRunner.RunAsync(
             "wmic",
             [
@@ -62,9 +68,18 @@ public partial class PlatformHardwareDetector(
             ct
         );
 
-        if (!result.IsSuccess)
+        if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
         {
-            logger.LogWarning("wmic failed (exit {Code}): {Err}", result.ExitCode, result.StdErr);
+            logger.LogInformation(
+                "wmic GPU detection unavailable (exit {Code}) — falling back to PowerShell Get-CimInstance",
+                result.ExitCode
+            );
+            IReadOnlyList<GpuDevice> psDevices = await DetectWindowsGpusViaPowerShellAsync(ct);
+            if (psDevices.Count > 0)
+                return psDevices;
+            logger.LogWarning(
+                "Both wmic and PowerShell GPU detection returned no devices on Windows. Hardware benchmark will run CPU-only."
+            );
             return [];
         }
 
@@ -137,6 +152,76 @@ public partial class PlatformHardwareDetector(
                 devices.Add(device);
         }
 
+        // Some wmic builds on Windows 11 return an empty stdout instead of an
+        // error code. Treat empty as "wmic broken" and try PowerShell too.
+        if (devices.Count == 0)
+        {
+            logger.LogInformation(
+                "wmic returned 0 GPUs — falling back to PowerShell Get-CimInstance"
+            );
+            IReadOnlyList<GpuDevice> psDevices = await DetectWindowsGpusViaPowerShellAsync(ct);
+            if (psDevices.Count > 0)
+                return psDevices;
+        }
+
+        return devices;
+    }
+
+    /// <summary>
+    /// PowerShell <c>Get-CimInstance Win32_VideoController</c> fallback for
+    /// Windows hosts where wmic is missing or broken (Windows 11 24H2+ removed
+    /// wmic.exe by default). Emits one CSV line per GPU so we can reuse the
+    /// same parser shape: <c>Name|AdapterRAM|DriverVersion</c>.
+    /// </summary>
+    private async Task<IReadOnlyList<GpuDevice>> DetectWindowsGpusViaPowerShellAsync(
+        CancellationToken ct
+    )
+    {
+        // -NoProfile avoids the user's PowerShell profile. ConvertTo-Csv keeps
+        // the output trivially parseable. We pick a pipe delimiter so commas
+        // in driver-version strings (rare but possible) don't break the split.
+        const string Script =
+            "Get-CimInstance Win32_VideoController | "
+            + "Select-Object Name,AdapterRAM,DriverVersion | "
+            + "ForEach-Object { \"$($_.Name)|$($_.AdapterRAM)|$($_.DriverVersion)\" }";
+
+        ProcessResult result = await processRunner.RunAsync(
+            "powershell",
+            ["-NoProfile", "-NonInteractive", "-Command", Script],
+            null,
+            ct
+        );
+
+        if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+        {
+            logger.LogWarning(
+                "PowerShell Get-CimInstance failed (exit {Code}): {Err}",
+                result.ExitCode,
+                result.StdErr
+            );
+            return [];
+        }
+
+        List<GpuDevice> devices = [];
+        foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string[] parts = line.Trim().Split('|');
+            if (parts.Length < 2)
+                continue;
+
+            string name = parts[0].Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                continue;
+
+            _ = long.TryParse(parts[1].Trim(), out long adapterRamBytes);
+            long vramMb = adapterRamBytes / (1024 * 1024);
+            string? driverVersion =
+                parts.Length >= 3 && !string.IsNullOrWhiteSpace(parts[2]) ? parts[2].Trim() : null;
+
+            GpuDevice? device = BuildGpuDevice(name, vramMb, driverVersion);
+            if (device is not null)
+                devices.Add(device);
+        }
         return devices;
     }
 
