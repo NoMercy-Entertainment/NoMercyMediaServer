@@ -162,15 +162,39 @@ public class LiveFfmpegRunner(
         args.Add("-b:v");
         args.Add($"{input.Quality.BitrateKbps}k");
 
+        // Build -vf chain: always scale, then append HDR→SDR tonemap when needed.
+        bool needsTonemap =
+            input.Client is { SupportsHdr: false } && (input.SourceInfo?.IsHdr ?? false);
+
+        string vfChain = $"scale={input.Quality.Width}:{input.Quality.Height}";
+        if (needsTonemap)
+        {
+            // zscale linearize → convert primaries → hable tonemap → signal range → 8-bit output
+            vfChain +=
+                ",zscale=t=linear:npl=100,format=gbrpf32le"
+                + ",zscale=p=bt709"
+                + ",tonemap=tonemap=hable:desat=0"
+                + ",zscale=t=bt709:m=bt709:r=tv"
+                + ",format=yuv420p";
+        }
+
         args.Add("-vf");
-        args.Add($"scale={input.Quality.Width}:{input.Quality.Height}");
+        args.Add(vfChain);
+
+        // Clamp audio channel count to what the client supports.
+        int sourceChannels =
+            input.SourceInfo?.AudioStreams.Count > 0
+                ? input.SourceInfo.AudioStreams[0].Channels
+                : 2;
+        int clientMax = input.Client?.MaxAudioChannels is > 0 ? input.Client.MaxAudioChannels : 2;
+        int outputChannels = Math.Min(sourceChannels, clientMax);
 
         args.Add("-c:a");
         args.Add("aac");
         args.Add("-b:a");
         args.Add("128k");
         args.Add("-ac");
-        args.Add("2");
+        args.Add(outputChannels.ToString(CultureInfo.InvariantCulture));
 
         args.Add("-f");
         args.Add("hls");

@@ -2,6 +2,7 @@ namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
@@ -305,6 +306,165 @@ public class LiveFfmpegRunnerTests
                 // Best-effort cleanup
             }
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Client capabilities: audio channels + HDR tonemap
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static ClientCapabilities MakeClientCaps(bool supportsHdr, int maxAudioChannels) =>
+        new(
+            SupportedVideoCodecs: [],
+            SupportedAudioCodecs: [],
+            SupportedContainers: [],
+            MaxWidth: 1920,
+            MaxHeight: 1080,
+            SupportsHdr: supportsHdr,
+            Supports10Bit: false,
+            MaxBitrateKbps: 8000,
+            MaxAudioChannels: maxAudioChannels
+        );
+
+    private static MediaInfo MakeMediaInfo(bool isHdr, int audioChannels)
+    {
+        VideoStreamInfo video = new(
+            Index: 0,
+            Codec: "hevc",
+            Width: 3840,
+            Height: 2160,
+            FrameRate: 24,
+            BitDepth: 10,
+            PixelFormat: "yuv420p10le",
+            ColorPrimaries: isHdr ? "bt2020" : "bt709",
+            ColorTransfer: isHdr ? "smpte2084" : "bt709",
+            ColorSpace: isHdr ? "bt2020nc" : "bt709",
+            IsDefault: true,
+            BitRateKbps: 40000
+        );
+        AudioStreamInfo audio = new(
+            Index: 1,
+            Codec: "truehd",
+            Channels: audioChannels,
+            SampleRate: 48000,
+            BitRateKbps: 3000,
+            Language: "eng",
+            IsDefault: true
+        );
+        return new(
+            FilePath: "/media/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(120),
+            OverallBitRateKbps: 43000,
+            FileSizeBytes: 40_000_000_000L,
+            VideoStreams: [video],
+            AudioStreams: [audio],
+            SubtitleStreams: [],
+            Chapters: []
+        );
+    }
+
+    [Fact]
+    public void BuildArguments_HdrSource_SdrClient_AppendsTonemap()
+    {
+        // HDR source, client doesn't support HDR → tonemap chain must appear.
+        LiveRunInput input = new(
+            InputPath: "/media/hdr.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4,
+            Client: MakeClientCaps(supportsHdr: false, maxAudioChannels: 2),
+            SourceInfo: MakeMediaInfo(isHdr: true, audioChannels: 2)
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int vfIdx = Array.IndexOf(args, "-vf");
+        string vf = args[vfIdx + 1];
+        vf.Should().Contain("scale=");
+        vf.Should().Contain("zscale=t=linear");
+        vf.Should().Contain("tonemap=tonemap=hable");
+        vf.Should().Contain("format=yuv420p");
+    }
+
+    [Fact]
+    public void BuildArguments_HdrSource_HdrClient_NoTonemap()
+    {
+        // HDR source, client supports HDR → no tonemap.
+        LiveRunInput input = new(
+            InputPath: "/media/hdr.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4,
+            Client: MakeClientCaps(supportsHdr: true, maxAudioChannels: 8),
+            SourceInfo: MakeMediaInfo(isHdr: true, audioChannels: 8)
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int vfIdx = Array.IndexOf(args, "-vf");
+        string vf = args[vfIdx + 1];
+        vf.Should().NotContain("zscale");
+        vf.Should().NotContain("tonemap");
+    }
+
+    [Fact]
+    public void BuildArguments_AudioChannels_CappedByClientMax()
+    {
+        // Source has 7.1 (8 ch), client claims max 2 → -ac 2.
+        LiveRunInput input = new(
+            InputPath: "/media/surround.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4,
+            Client: MakeClientCaps(supportsHdr: false, maxAudioChannels: 2),
+            SourceInfo: MakeMediaInfo(isHdr: false, audioChannels: 8)
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int acIdx = Array.IndexOf(args, "-ac");
+        args[acIdx + 1].Should().Be("2");
+    }
+
+    [Fact]
+    public void BuildArguments_AudioChannels_UsesSourceWhenBelowClientMax()
+    {
+        // Source has stereo (2 ch), client claims max 8 → -ac 2 (don't upmix).
+        LiveRunInput input = new(
+            InputPath: "/media/stereo.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4,
+            Client: MakeClientCaps(supportsHdr: false, maxAudioChannels: 8),
+            SourceInfo: MakeMediaInfo(isHdr: false, audioChannels: 2)
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int acIdx = Array.IndexOf(args, "-ac");
+        args[acIdx + 1].Should().Be("2");
+    }
+
+    [Fact]
+    public void BuildArguments_NoClientCaps_DefaultsToStereo()
+    {
+        // No client caps → fallback to -ac 2.
+        LiveRunInput input = new(
+            InputPath: "/media/in.mkv",
+            OutputDirectory: "/tmp/live",
+            StartPosition: TimeSpan.Zero,
+            Quality: MakeQuality(),
+            SegmentDurationSeconds: 4
+        );
+
+        string[] args = LiveFfmpegRunner.BuildArguments(input);
+
+        int acIdx = Array.IndexOf(args, "-ac");
+        args[acIdx + 1].Should().Be("2");
     }
 
     private static string WritePlaylist(string content)

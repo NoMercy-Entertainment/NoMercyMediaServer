@@ -10,5 +10,6 @@ public record ClientCapabilities(
     int MaxHeight,
     bool SupportsHdr,
     bool Supports10Bit,
-    int MaxBitrateKbps
+    int MaxBitrateKbps,
+    int MaxAudioChannels = 2
 );

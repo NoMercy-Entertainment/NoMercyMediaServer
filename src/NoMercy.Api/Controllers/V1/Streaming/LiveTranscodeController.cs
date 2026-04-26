@@ -300,7 +300,8 @@ public class LiveTranscodeController(
             MaxHeight: dto.MaxHeight,
             SupportsHdr: dto.SupportsHdr,
             Supports10Bit: dto.Supports10Bit,
-            MaxBitrateKbps: dto.MaxBitrateKbps
+            MaxBitrateKbps: dto.MaxBitrateKbps,
+            MaxAudioChannels: dto.MaxAudioChannels > 0 ? dto.MaxAudioChannels : 2
         );
     }
 

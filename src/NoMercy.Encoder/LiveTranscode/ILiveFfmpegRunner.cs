@@ -1,11 +1,15 @@
 namespace NoMercy.Encoder.LiveTranscode;
 
+using NoMercy.Encoder.Analysis;
+
 public record LiveRunInput(
     string InputPath,
     string OutputDirectory,
     TimeSpan StartPosition,
     LiveQuality Quality,
-    int SegmentDurationSeconds
+    int SegmentDurationSeconds,
+    ClientCapabilities? Client = null,
+    MediaInfo? SourceInfo = null
 );
 
 /// <summary>

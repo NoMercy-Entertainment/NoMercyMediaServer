@@ -18,5 +18,6 @@ public record ClientCapabilitiesDto(
     [property: JsonProperty("max_height")] int MaxHeight,
     [property: JsonProperty("supports_hdr")] bool SupportsHdr,
     [property: JsonProperty("supports_10bit")] bool Supports10Bit,
-    [property: JsonProperty("max_bitrate_kbps")] int MaxBitrateKbps
+    [property: JsonProperty("max_bitrate_kbps")] int MaxBitrateKbps,
+    [property: JsonProperty("max_audio_channels")] int MaxAudioChannels = 2
 );
