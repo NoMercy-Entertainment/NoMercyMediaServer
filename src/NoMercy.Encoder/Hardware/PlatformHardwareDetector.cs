@@ -341,7 +341,7 @@ public partial class PlatformHardwareDetector(
             return null;
         }
 
-        List<VideoCodecType> supportedCodecs = DetectSupportedCodecs(vendor.Value);
+        List<VideoCodecType> supportedCodecs = DetectSupportedCodecs(vendor.Value, name);
         if (supportedCodecs.Count == 0)
         {
             logger.LogDebug(
@@ -366,12 +366,15 @@ public partial class PlatformHardwareDetector(
         return new(vendor.Value, name, vramMb, maxSessions, supportedCodecs, driverVersion);
     }
 
-    private List<VideoCodecType> DetectSupportedCodecs(GpuVendor vendor)
+    private List<VideoCodecType> DetectSupportedCodecs(GpuVendor vendor, string gpuName)
     {
-        return DetectSupportedCodecsAsync(vendor).GetAwaiter().GetResult();
+        return DetectSupportedCodecsAsync(vendor, gpuName).GetAwaiter().GetResult();
     }
 
-    private async Task<List<VideoCodecType>> DetectSupportedCodecsAsync(GpuVendor vendor)
+    private async Task<List<VideoCodecType>> DetectSupportedCodecsAsync(
+        GpuVendor vendor,
+        string gpuName
+    )
     {
         List<VideoCodecType> codecs = [];
 
@@ -404,23 +407,28 @@ public partial class PlatformHardwareDetector(
             _ => [],
         };
 
-        // Gate AV1 NVENC behind an actual hardware capability check. ffmpeg
-        // ships av1_nvenc against any driver that knows about it, but the
-        // physical encoder block only exists on Ada Lovelace and newer
-        // (RTX 4060+ / RTX 6000 Ada / L4 / L40). Turing (RTX 20-series) and
-        // Ampere (RTX 30-series) lack the silicon — probing av1_nvenc on
-        // those cards fails at codec init, the benchmark gets nothing, and
-        // the dashboard shows a confusing missing-row gap.
-        bool nvidiaSupportsAv1 =
-            vendor == GpuVendor.Nvidia && await NvidiaSupportsAv1NvencAsync().ConfigureAwait(false);
+        // Gate AV1 hardware encoding per vendor. ffmpeg ships every encoder
+        // (av1_nvenc / av1_amf / av1_qsv / av1_vaapi) against any driver that
+        // knows about the codec name, but the physical encoder block only
+        // exists on specific GPU generations:
+        //
+        //   Nvidia: Ada Lovelace+         (RTX 4000+, L4/L40, RTX 6000 Ada)
+        //   AMD:    RDNA 3+               (RX 7000, RX 9000, W7700+)
+        //   Intel:  Arc Alchemist+        (Arc A/B series, Xe-LPG/Xe2 iGPU)
+        //
+        // Probing on cards without the silicon fails at codec init, the
+        // benchmark gets nothing, and the dashboard shows a confusing
+        // missing-row gap. Each vendor uses its own detection signal:
+        //   Nvidia → nvidia-smi compute_cap (clean numeric query)
+        //   AMD/Intel → GPU name pattern (no equivalent CLI)
+        // For unknown / future GPU SKUs we default to "allowed" so the
+        // probe-and-log fallback covers any pattern miss — a real card
+        // without AV1 support emits a visible Information-level log.
+        bool gpuSupportsAv1 = await GpuSupportsAv1Async(vendor, gpuName).ConfigureAwait(false);
 
         foreach ((VideoCodecType codec, string[] encoderNames) in mappings)
         {
-            // Skip AV1 NVENC when the GPU's compute capability is below
-            // 8.9 (Ada Lovelace). Other vendors' AV1 capability checks
-            // would land here too — for now Nvidia is the only one that
-            // ships the encoder broadly without supporting hardware.
-            if (codec == VideoCodecType.Av1 && vendor == GpuVendor.Nvidia && !nvidiaSupportsAv1)
+            if (codec == VideoCodecType.Av1 && !gpuSupportsAv1)
                 continue;
 
             foreach (string encoderName in encoderNames)
@@ -434,6 +442,109 @@ public partial class PlatformHardwareDetector(
         }
 
         return codecs;
+    }
+
+    /// <summary>
+    /// Per-vendor AV1 hardware-encode capability check. Returns true when the
+    /// GPU model is known to ship the AV1 encoder block. False on confirmed
+    /// pre-AV1 generations. Defaults to true for vendors / patterns we don't
+    /// recognise so the probe-and-log fallback stays the safety net.
+    /// </summary>
+    private async Task<bool> GpuSupportsAv1Async(GpuVendor vendor, string gpuName)
+    {
+        return vendor switch
+        {
+            GpuVendor.Nvidia => await NvidiaSupportsAv1NvencAsync().ConfigureAwait(false),
+            GpuVendor.Amd => AmdSupportsAv1Encode(gpuName),
+            GpuVendor.Intel => IntelSupportsAv1Encode(gpuName),
+            _ => true,
+        };
+    }
+
+    /// <summary>
+    /// Returns true when the AMD GPU name matches an RDNA 3 or later SKU.
+    /// AV1 AMF first appeared on RDNA 3 (Navi 31/32/33 — RX 7000-series and
+    /// W7700+ workstation cards). RDNA 1 (RX 5000) and RDNA 2 (RX 6000,
+    /// console APUs) lack the silicon.
+    ///
+    /// Pattern coverage:
+    ///   - "RX 7..."       → RX 7600 / 7700 / 7800 / 7900 (XT/XTX) and mobile M/S/XT variants
+    ///   - "RX 9..."       → RX 9000-series (RDNA 4)
+    ///   - "Pro W7..."     → W7700 / W7800 / W7900 workstation cards
+    ///   - "Radeon 8..."   → Strix Halo / Strix Point integrated (Radeon 8050S–8060S)
+    ///
+    /// Anything else defaults to true so an unrecognised model still gets
+    /// the probe attempt; a real failure shows up in the Information-level
+    /// benchmark log.
+    /// </summary>
+    private bool AmdSupportsAv1Encode(string gpuName)
+    {
+        string upper = gpuName.ToUpperInvariant();
+
+        // Confirmed pre-AV1 generations. Block these explicitly so the
+        // benchmark doesn't waste time probing a known-failing encoder.
+        if (
+            upper.Contains("RX 5")
+            || upper.Contains("RX 6")
+            || upper.Contains("PRO W5")
+            || upper.Contains("PRO W6")
+            || upper.Contains("VEGA")
+            || upper.Contains("POLARIS")
+        )
+        {
+            logger.LogInformation(
+                "AV1 AMF unavailable on {Name} — RDNA 1/2 / Vega / Polaris silicon predates the AV1 encoder block.",
+                gpuName
+            );
+            return false;
+        }
+
+        // Unknown SKU — default allow so the probe-and-log fallback handles
+        // any future card we haven't pattern-matched yet.
+        return true;
+    }
+
+    /// <summary>
+    /// Returns true when the Intel GPU name matches an Arc Alchemist /
+    /// Battlemage discrete card or an Xe-LPG / Xe2 integrated GPU. AV1 QSV /
+    /// VAAPI first appeared on Arc Alchemist (DG2). Iris Xe Graphics, UHD
+    /// Graphics 6xx/7xx, and earlier iGPUs lack the encoder block.
+    ///
+    /// Pattern coverage:
+    ///   - "ARC A"           → Arc Alchemist desktop (A310/380/580/750/770) and mobile
+    ///   - "ARC B"           → Arc Battlemage (B570/B580)
+    ///   - "ARC GRAPHICS"    → Meteor Lake (Xe-LPG) and Lunar Lake (Xe2) integrated
+    ///   - "ARC PRO"         → Arc Pro workstation variants
+    ///
+    /// Iris Xe / UHD Graphics on the same machine are blocked explicitly.
+    /// Unknown SKUs default to true so a future Intel discrete GPU isn't
+    /// silently denied.
+    /// </summary>
+    private bool IntelSupportsAv1Encode(string gpuName)
+    {
+        string upper = gpuName.ToUpperInvariant();
+
+        // Pre-Arc iGPUs — known to lack AV1 encode silicon.
+        if (
+            upper.Contains("IRIS XE")
+            || upper.Contains("UHD GRAPHICS")
+            || upper.Contains("HD GRAPHICS")
+        )
+        {
+            logger.LogInformation(
+                "AV1 QSV/VAAPI unavailable on {Name} — pre-Arc Intel iGPUs lack the AV1 encoder block.",
+                gpuName
+            );
+            return false;
+        }
+
+        // Arc family — discrete cards and modern Core Ultra integrated GPUs
+        // both ship the encoder block.
+        if (upper.Contains("ARC"))
+            return true;
+
+        // Anything else — default allow, let the probe decide.
+        return true;
     }
 
     /// <summary>
