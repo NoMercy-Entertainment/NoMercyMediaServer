@@ -92,6 +92,29 @@ public class QueueRunner
 
         _logger.LogDebug("Queue workers initialized: {WorkerCount} workers spawned", workerCount);
 
+        // Restore any queues that were persisted as paused before the last shutdown.
+        if (_configurationStore is not null)
+        {
+            List<string> queueNames;
+            lock (_workersLock)
+            {
+                queueNames = [.. _workers.Keys];
+            }
+
+            foreach (string queueName in queueNames)
+            {
+                string key = $"queue.{queueName}.paused";
+                if (_configurationStore.HasKey(key) && _configurationStore.GetValue(key) == "true")
+                {
+                    await Stop(queueName);
+                    _logger.LogInformation(
+                        "Queue '{Name}' restored as paused from configuration store",
+                        queueName
+                    );
+                }
+            }
+        }
+
         // Signal that queue workers are ready, allowing cron jobs to start execution
         CronWorker.SignalQueueWorkersReady();
 
@@ -224,6 +247,34 @@ public class QueueRunner
             Restart(key);
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Stop workers for <paramref name="name"/> and persist the paused state so
+    /// it survives a server restart. Use this for user-initiated pauses.
+    /// </summary>
+    public async Task Pause(string name)
+    {
+        await Stop(name);
+
+        if (_configurationStore is not null)
+            await _configurationStore.SetValueAsync($"queue.{name}.paused", "true");
+
+        _logger.LogInformation("Queue '{Name}' paused and state persisted", name);
+    }
+
+    /// <summary>
+    /// Restart workers for <paramref name="name"/> and clear the persisted paused state.
+    /// Use this for user-initiated resumes.
+    /// </summary>
+    public async Task Resume(string name)
+    {
+        await Start(name);
+
+        if (_configurationStore is not null)
+            await _configurationStore.SetValueAsync($"queue.{name}.paused", "false");
+
+        _logger.LogInformation("Queue '{Name}' resumed and state persisted", name);
     }
 
     #endregion

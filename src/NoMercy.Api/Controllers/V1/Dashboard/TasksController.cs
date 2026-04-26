@@ -326,7 +326,7 @@ public class TasksController(
                 }
             );
 
-        await QueueRunner.Current.Stop("encoder");
+        await QueueRunner.Current.Pause("encoder");
         return Ok(
             new StatusResponseDto<string> { Message = "Encoder queue paused", Status = "success" }
         );
@@ -349,7 +349,7 @@ public class TasksController(
                 }
             );
 
-        await QueueRunner.Current.Start("encoder");
+        await QueueRunner.Current.Resume("encoder");
         return Ok(
             new StatusResponseDto<string> { Message = "Encoder queue resumed", Status = "success" }
         );
