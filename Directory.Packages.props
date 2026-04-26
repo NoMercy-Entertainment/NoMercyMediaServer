@@ -79,6 +79,7 @@
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.0.0" />
     <!-- Diagnostics -->
     <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="10.0.7" />
+    <PackageVersion Include="Vortice.DXGI" Version="3.8.3" />
     <!-- System & Infrastructure -->
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="DeviceId" Version="6.11.0" />

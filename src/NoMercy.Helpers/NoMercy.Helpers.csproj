@@ -15,6 +15,7 @@
     <PackageReference Include="LibHeif.Native" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" />
+    <PackageReference Include="Vortice.DXGI" Condition="'$(OS)' == 'Windows_NT'" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="SecureStore" />
     <PackageReference Include="Serilog.Expressions" />

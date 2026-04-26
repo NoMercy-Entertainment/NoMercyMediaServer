@@ -206,7 +206,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
             {
                 FileName = "nvidia-smi",
                 Arguments =
-                    "--query-gpu=index,utilization.gpu,utilization.memory,utilization.encoder,utilization.decoder,power.draw"
+                    "--query-gpu=index,utilization.gpu,utilization.memory,utilization.encoder,utilization.decoder,power.draw,name"
                     + " --format=csv,noheader,nounits",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -224,7 +224,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
             foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
                 string[] parts = line.Split(',', StringSplitOptions.TrimEntries);
-                if (parts.Length < 6)
+                if (parts.Length < 7)
                     continue;
                 if (!int.TryParse(parts[0], out int index))
                     continue;
@@ -233,6 +233,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
                 resource._gpu[key] = new()
                 {
                     Identifier = key,
+                    Name = parts[6],
                     Core = ParseDouble(parts[1]),
                     Memory = ParseDouble(parts[2]),
                     Encode = ParseDouble(parts[3]),
@@ -273,9 +274,11 @@ internal sealed class LinuxResourceProvider : IResourceProvider
                     continue;
 
                 string key = $"gpu/{index}";
+                string amdName = ReadAmdGpuName(cardPath, index);
                 resource._gpu[key] = new()
                 {
                     Identifier = key,
+                    Name = amdName,
                     Core = utilization,
                     D3D = utilization,
                 };
@@ -286,6 +289,27 @@ internal sealed class LinuxResourceProvider : IResourceProvider
         {
             // sysfs not available or no AMD GPU
         }
+    }
+
+    // AMD GPU name from /sys/class/drm/cardN/device/product_name, with fallback.
+    private static string ReadAmdGpuName(string cardPath, int fallbackIndex)
+    {
+        try
+        {
+            string namePath = Path.Combine(cardPath, "device", "product_name");
+            if (File.Exists(namePath))
+            {
+                string name = File.ReadAllText(namePath).Trim();
+                if (!string.IsNullOrWhiteSpace(name))
+                    return name;
+            }
+        }
+        catch
+        {
+            // sysfs read failed — fall through to fallback
+        }
+
+        return $"GPU {fallbackIndex}";
     }
 
     private static double ParseDouble(string s) =>

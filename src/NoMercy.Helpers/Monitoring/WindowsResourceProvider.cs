@@ -1,12 +1,74 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using Vortice.DXGI;
 
 namespace NoMercy.Helpers.Monitoring;
 
 [SupportedOSPlatform("windows")]
 internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
 {
+    // -----------------------------------------------------------------------
+    // DXGI LUID → adapter name cache
+    // Built once at construction; LUIDs don't change without a driver reload.
+    // -----------------------------------------------------------------------
+
+    // PDH encodes LUID as two hex segments joined by '_':
+    //   "0x00000000_0x0001E147"  (HighPart_LowPart)
+    // DXGI Luid.HighPart = int, Luid.LowPart = uint.
+    // We normalise to uppercase so dictionary lookup is case-insensitive.
+    private static readonly Dictionary<string, string> DxgiLuidNames = BuildDxgiLuidNames();
+
+    private static Dictionary<string, string> BuildDxgiLuidNames()
+    {
+        Dictionary<string, string> map = [];
+
+        try
+        {
+            IDXGIFactory1? factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
+            if (factory is null)
+                return map;
+
+            using IDXGIFactory1 dxgiFactory = factory;
+
+            uint adapterIndex = 0;
+            while (true)
+            {
+                SharpGen.Runtime.Result hr = dxgiFactory.EnumAdapters1(
+                    adapterIndex,
+                    out IDXGIAdapter1? adapter
+                );
+                if (hr.Failure || adapter is null)
+                    break;
+
+                using IDXGIAdapter1 dxgiAdapter = adapter;
+                AdapterDescription1 desc = dxgiAdapter.Description1;
+
+                // Normalise LUID to match PDH format "0xHHHHHHHH_0xLLLLLLLL"
+                string luidKey =
+                    $"0x{desc.Luid.HighPart:X8}_0x{desc.Luid.LowPart:X8}".ToUpperInvariant();
+
+                map[luidKey] = desc.Description;
+                adapterIndex++;
+            }
+        }
+        catch
+        {
+            // DXGI unavailable — names fall back to "GPU N"
+        }
+
+        return map;
+    }
+
+    private static string ResolveGpuName(string luid, int fallbackIndex)
+    {
+        // PDH LUID segments may be lowercase; normalise for lookup.
+        string upperLuid = luid.ToUpperInvariant();
+        return DxgiLuidNames.TryGetValue(upperLuid, out string? name)
+            ? name
+            : $"GPU {fallbackIndex}";
+    }
+
     // -----------------------------------------------------------------------
     // CPU counters
     // -----------------------------------------------------------------------
@@ -71,12 +133,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         // Fall back to "% Processor Time" if "Processor Information" is unavailable.
         try
         {
-            _cpuTotal = new(
-                "Processor Information",
-                "% Processor Utility",
-                "_Total",
-                true
-            );
+            _cpuTotal = new("Processor Information", "% Processor Utility", "_Total", true);
         }
         catch
         {
@@ -427,6 +484,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             Gpu gpu = new()
             {
                 Identifier = $"gpu/{gpuIndex}",
+                Name = ResolveGpuName(kvp.Key, gpuIndex),
                 D3D = Math.Round(engines.GetValueOrDefault("3D"), 1),
                 Decode = Math.Round(engines.GetValueOrDefault("VideoDecode"), 1),
                 Encode = Math.Round(engines.GetValueOrDefault("VideoEncode"), 1),
