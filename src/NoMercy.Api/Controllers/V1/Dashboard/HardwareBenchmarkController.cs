@@ -21,6 +21,7 @@ public class HardwareBenchmarkController(IHardwareBenchmark benchmark) : BaseCon
             return UnauthorizedResponse("You do not have permission to view hardware benchmarks");
 
         SpeedIndex index = benchmark.GetCachedIndex();
+        BenchmarkProgress? progress = benchmark.CurrentProgress;
         return Ok(
             new
             {
@@ -35,6 +36,17 @@ public class HardwareBenchmarkController(IHardwareBenchmark benchmark) : BaseCon
                     measured_at = kvp.Value.MeasuredAt,
                 }),
                 needs_recalibration = benchmark.NeedsRecalibration(),
+                is_running = benchmark.IsRunning,
+                progress = progress is null
+                    ? null
+                    : new
+                    {
+                        percent_complete = progress.PercentComplete,
+                        completed_probes = progress.CompletedProbes,
+                        total_probes = progress.TotalProbes,
+                        stage = progress.Stage,
+                        updated_at = progress.UpdatedAt,
+                    },
             }
         );
     }

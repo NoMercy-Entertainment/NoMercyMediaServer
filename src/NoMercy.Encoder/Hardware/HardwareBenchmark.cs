@@ -121,6 +121,12 @@ public class HardwareBenchmark(
     public const int BenchmarkSchemaVersion = 2;
 
     private SpeedIndex _cache = new(new());
+    private bool _isRunning;
+    private BenchmarkProgress? _progress;
+
+    public bool IsRunning => _isRunning;
+
+    public BenchmarkProgress? CurrentProgress => _progress;
 
     public SpeedIndex GetCachedIndex()
     {
@@ -169,7 +175,26 @@ public class HardwareBenchmark(
 
     public async Task<SpeedIndex> CalibrateAsync(CancellationToken ct)
     {
-        Dictionary<SpeedKey, SpeedMeasurement> results = new();
+        _isRunning = true;
+        _progress = new(0, 0, 0, "starting", DateTime.UtcNow);
+        try
+        {
+            return await CalibrateInternalAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _isRunning = false;
+        }
+    }
+
+    private async Task<SpeedIndex> CalibrateInternalAsync(CancellationToken ct)
+    {
+        // Seed the live results dict with whatever's in the cache so probes
+        // that fail this run don't make existing rows disappear from the
+        // dashboard mid-benchmark. Each successful probe overwrites the
+        // matching key; failed probes leave the previous reading in place
+        // until the next full run.
+        Dictionary<SpeedKey, SpeedMeasurement> results = new(GetCachedIndex().Measurements);
 
         IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
         string jobId = Guid.NewGuid().ToString("N");
@@ -207,6 +232,13 @@ public class HardwareBenchmark(
                 );
                 results[key] = measured;
 
+                // Publish the partial index immediately so the dashboard's
+                // GET /hardware/benchmark poll sees this row appear within
+                // its next refetch interval. Without this, _cache only
+                // updates after the entire ~10 min run completes and the
+                // user watches a stale table for the whole benchmark.
+                _cache = new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>(results));
+
                 logger.LogInformation(
                     "Benchmarked {Encoder}{DeviceTag} @ {W}x{H}: {Fps:F1} fps ({Speed:F2}x)",
                     target.Encoder.FfmpegName,
@@ -238,10 +270,12 @@ public class HardwareBenchmark(
                 double pct = total > 0 ? (double)completed / total * 100.0 : 100.0;
                 string stage = $"{target.Encoder.FfmpegName} {tierWidth}x{tierHeight}";
                 observer.Report(jobId, "benchmark", pct, stage);
+                _progress = new(pct, completed, total, stage, DateTime.UtcNow);
             }
         }
 
         observer.Report(jobId, "benchmark", 100, "done");
+        _progress = new(100, completed, total, "done", DateTime.UtcNow);
 
         SpeedIndex index = new(results);
         store.Save(index);
