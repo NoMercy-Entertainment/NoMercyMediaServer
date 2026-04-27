@@ -374,8 +374,21 @@ public class MusicHub : ConnectionHub
     {
         if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
             return;
-        state.DeviceId = device.DeviceId;
-        state.VolumePercentage = device.VolumePercent;
+
+        // Only adopt the caller's device as active when there is no active
+        // device yet, or when the caller IS the current active. A passive
+        // device that initiates a playlist change (e.g. phone tapping an
+        // album while music plays on the TV) must NOT steal active back —
+        // the new playlist should land on the existing active device.
+        bool callerIsActiveOrNoActive =
+            string.IsNullOrEmpty(state.DeviceId)
+            || state.DeviceId.Equals(device.DeviceId, StringComparison.OrdinalIgnoreCase);
+
+        if (callerIsActiveOrNoActive)
+        {
+            state.DeviceId = device.DeviceId;
+            state.VolumePercentage = device.VolumePercent;
+        }
     }
 
     private void UpdatePlaylistInfo(
