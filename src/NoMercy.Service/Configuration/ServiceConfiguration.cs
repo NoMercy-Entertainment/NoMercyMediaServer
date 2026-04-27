@@ -11,8 +11,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NoMercy.Api.Constraints;
 using NoMercy.Api.Controllers.Socket;
+using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
 using NoMercy.Api.Services;
+using NoMercy.Data.Activity;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
@@ -538,6 +540,8 @@ public static class ServiceConfiguration
 
         services.AddVideoHubServices();
         services.AddMusicHubServices();
+        services.AddSingleton<IActivityHubBroadcaster, ActivityHubBroadcaster>();
+        services.AddSingleton<IActivityLogger, ActivityLogger>();
         services.AddSignalREventHandlers();
 
         services.AddLocalization(options => options.ResourcesPath = "Resources");
