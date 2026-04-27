@@ -6,11 +6,14 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
+using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 using AnalysisMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
@@ -32,7 +35,8 @@ public class EncoderProfilesController(
     IProfileSignatureVerifier signatureVerifier,
     IHttpClientFactory httpClientFactory,
     MediaContext mediaContext,
-    EncodingPresetRepository presetRepository
+    EncodingPresetRepository presetRepository,
+    IActivityLogger activityLogger
 ) : BaseController
 {
     /// <summary>
@@ -121,6 +125,31 @@ public class EncoderProfilesController(
         };
 
         EncodingPreset saved = await presetRepository.CreateAsync(preset);
+
+        try
+        {
+            await activityLogger.LogConfigurationAsync(
+                "config.encoder_default_changed",
+                User.UserId(),
+                Ulid.Empty,
+                configKey: $"encoder.profile.{saved.Id}",
+                oldValue: null,
+                newValue: new
+                {
+                    id = saved.Id.ToString(),
+                    name = saved.Name,
+                    action = "created",
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.App(
+                $"Failed to log encoder profile created: {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
+
         return Ok(saved);
     }
 
@@ -221,6 +250,30 @@ public class EncoderProfilesController(
             bool removed = await presetRepository.DeleteAsync(presetId);
             if (!removed)
                 return NotFoundResponse("Profile not found");
+
+            try
+            {
+                await activityLogger.LogConfigurationAsync(
+                    "config.encoder_default_changed",
+                    User.UserId(),
+                    Ulid.Empty,
+                    configKey: $"encoder.profile.{existing.Id}",
+                    oldValue: new
+                    {
+                        id = existing.Id.ToString(),
+                        name = existing.Name,
+                        action = "deleted",
+                    },
+                    newValue: null
+                );
+            }
+            catch (Exception logEx)
+            {
+                Logger.App(
+                    $"Failed to log encoder profile deleted: {logEx.Message}",
+                    LogEventLevel.Warning
+                );
+            }
 
             return NoContent();
         }
@@ -499,6 +552,9 @@ public class EncoderProfilesController(
             return UnprocessableEntity(envelope);
         }
 
+        string oldName = existing.Name;
+        string? oldProfileJson = existing.ProfileJson;
+
         // Forward mutations through the repository so the UpdatedAt stamp
         // and change-tracking are handled consistently.
         EncodingPreset? updated = await presetRepository.UpdateAsync(
@@ -513,6 +569,29 @@ public class EncoderProfilesController(
                     preset.ProfileJson = request.ProfileJson;
             }
         );
+
+        try
+        {
+            await activityLogger.LogConfigurationAsync(
+                "config.encoder_default_changed",
+                User.UserId(),
+                Ulid.Empty,
+                configKey: $"encoder.profile.{presetId}",
+                oldValue: new { name = oldName, profile_json = oldProfileJson },
+                newValue: new
+                {
+                    name = updated?.Name ?? oldName,
+                    profile_json = updated?.ProfileJson ?? oldProfileJson,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.App(
+                $"Failed to log encoder profile updated: {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
 
         return Ok(updated);
     }
@@ -574,6 +653,35 @@ public class EncoderProfilesController(
         };
 
         EncodingPreset saved = await presetRepository.CreateAsync(cloneRow);
+
+        try
+        {
+            await activityLogger.LogConfigurationAsync(
+                "config.encoder_default_changed",
+                User.UserId(),
+                Ulid.Empty,
+                configKey: $"encoder.profile.{saved.Id}",
+                oldValue: new
+                {
+                    id = source.Id.ToString(),
+                    name = source.Name,
+                    action = "cloned_from",
+                },
+                newValue: new
+                {
+                    id = saved.Id.ToString(),
+                    name = saved.Name,
+                    action = "cloned",
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.App(
+                $"Failed to log encoder profile cloned: {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
 
         return CreatedAtAction(
             nameof(Clone),
@@ -762,6 +870,31 @@ public class EncoderProfilesController(
         };
 
         EncodingPreset saved = await presetRepository.CreateAsync(preset);
+
+        try
+        {
+            await activityLogger.LogConfigurationAsync(
+                "config.encoder_default_changed",
+                User.UserId(),
+                Ulid.Empty,
+                configKey: $"encoder.profile.{saved.Id}",
+                oldValue: null,
+                newValue: new
+                {
+                    id = saved.Id.ToString(),
+                    name = saved.Name,
+                    action = "imported",
+                    source = request.Url ?? "inline",
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.App(
+                $"Failed to log encoder profile imported: {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
 
         return CreatedAtAction(
             nameof(Import),

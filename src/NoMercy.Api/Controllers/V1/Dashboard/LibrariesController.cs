@@ -8,6 +8,7 @@ using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.Middleware;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
+using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
@@ -20,6 +21,7 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -35,7 +37,8 @@ public class LibrariesController(
     FolderRepository folderRepository,
     JobDispatcher jobDispatcher,
     LanguageRepository languageRepository,
-    IDbContextFactory<MediaContext> mediaContextFactory
+    IDbContextFactory<MediaContext> mediaContextFactory,
+    IActivityLogger activityLogger
 ) : BaseController
 {
     [HttpGet]
@@ -87,6 +90,27 @@ public class LibrariesController(
 
             await libraryRepository.AddLibraryAsync(library, userId);
 
+            try
+            {
+                await activityLogger.LogConfigurationAsync(
+                    "config.library_added",
+                    userId,
+                    Ulid.Empty,
+                    configKey: $"library.{library.Id}",
+                    oldValue: null,
+                    newValue: new
+                    {
+                        id = library.Id.ToString(),
+                        name = library.Title,
+                        type = library.Type,
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.App($"Failed to log library created: {ex.Message}", LogEventLevel.Warning);
+            }
+
             return Ok(
                 new StatusResponseDto<Library>
                 {
@@ -113,6 +137,9 @@ public class LibrariesController(
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
         if (library is null)
             return NotFoundResponse("Library not found");
+
+        Guid userId = User.UserId();
+        bool? oldRealtime = request.Realtime.HasValue ? library.Realtime : null;
 
         try
         {
@@ -153,6 +180,28 @@ public class LibrariesController(
         catch (Exception)
         {
             return InternalServerErrorResponse("Something went wrong updating the library");
+        }
+
+        if (oldRealtime.HasValue)
+        {
+            try
+            {
+                await activityLogger.LogConfigurationAsync(
+                    "config.library_scan_schedule_changed",
+                    userId,
+                    Ulid.Empty,
+                    configKey: $"library.{library.Id}.scan_schedule",
+                    oldValue: new { realtime = oldRealtime.Value },
+                    newValue: new { realtime = library.Realtime }
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.App(
+                    $"Failed to log library scan schedule change: {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
         }
 
         // Only update folder libraries if provided
@@ -247,6 +296,8 @@ public class LibrariesController(
         if (library is null)
             return NotFoundResponse("Library not found");
 
+        Guid userId = User.UserId();
+
         try
         {
             await libraryRepository.DeleteLibraryAsync(library);
@@ -272,6 +323,22 @@ public class LibrariesController(
                     await EventBusProvider.Current.PublishAsync(
                         new FolderPathRemovedEvent { RequestPath = fl.FolderId }
                     );
+            }
+
+            try
+            {
+                await activityLogger.LogConfigurationAsync(
+                    "config.library_removed",
+                    userId,
+                    Ulid.Empty,
+                    configKey: $"library.{library.Id}",
+                    oldValue: new { id = library.Id.ToString(), name = library.Title },
+                    newValue: null
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.App($"Failed to log library removed: {ex.Message}", LogEventLevel.Warning);
             }
 
             return Ok(
