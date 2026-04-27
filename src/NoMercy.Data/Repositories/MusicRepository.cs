@@ -344,6 +344,19 @@ public class MusicRepository(
         return lyricsJson.FromJson<Lyric[]>();
     }
 
+    public async Task UpdateTrackLyricsOffsetAsync(
+        Track track,
+        int? offsetMs,
+        CancellationToken ct = default
+    )
+    {
+        await mediaContext
+            .Upsert(track)
+            .On(v => new { v.Id })
+            .WhenMatched(v => new() { LyricsOffset = offsetMs })
+            .RunAsync();
+    }
+
     #endregion
 
     #region Playlist Queries
