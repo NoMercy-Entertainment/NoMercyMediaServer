@@ -1422,19 +1422,17 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
             switch (profile.Format)
             {
                 case OutputFormat.Hls:
-                    if (output.Codec == SubtitleCodecType.WebVtt)
+                    if (
+                        output.Codec
+                        is SubtitleCodecType.WebVtt
+                            or SubtitleCodecType.Ass
+                            or SubtitleCodecType.Copy
+                    )
                     {
-                        // Valid — no issue
-                    }
-                    else if (output.Codec == SubtitleCodecType.Ass)
-                    {
-                        sink.Add(
-                            EncoderRuleId.SubtitlesAssNeedsCapableClient,
-                            EncoderRuleSeverity.Warning,
-                            $"SubtitleOutput[{i}].Codec",
-                            "ASS subtitles in HLS Extract mode will be converted to WebVTT, losing styling.",
-                            $"Change `SubtitleOutput[{i}].Codec` to `WebVtt` to avoid silent styling loss."
-                        );
+                        // SubtitleExtractor handles each path: WebVTT writes
+                        // segmented .vtt + sidecar (HLS-spec), ASS writes
+                        // direct .ass that the master URI references, Copy
+                        // preserves source format byte-for-byte.
                     }
                     else
                     {
@@ -1442,8 +1440,8 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                             EncoderRuleId.SubtitlesContainerIncompatible,
                             EncoderRuleSeverity.Error,
                             $"SubtitleOutput[{i}].Codec",
-                            $"{output.Codec} is not supported in HLS Extract mode. Use WebVTT.",
-                            $"Change `SubtitleOutput[{i}].Codec` to `WebVtt`."
+                            $"{output.Codec} is not supported in HLS Extract mode. Use WebVTT, Ass, or Copy.",
+                            $"Change `SubtitleOutput[{i}].Codec` to `WebVtt`, `Ass`, or `Copy`."
                         );
                     }
                     break;
