@@ -10,6 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Makaretu.Dns"/>
         <PackageReference Include="Microsoft.AspNetCore.SignalR"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore" />
         <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
