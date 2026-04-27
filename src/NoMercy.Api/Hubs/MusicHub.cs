@@ -143,6 +143,26 @@ public class MusicHub : ConnectionHub
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, musicPlayerState);
         await _musicPlaybackService.PublishStartedEventAsync(user.Id, musicPlayerState);
+
+        try
+        {
+            await ActivityLogger.LogPlaybackAsync(
+                "playback.started",
+                user.Id,
+                device.Id,
+                Ulid.Empty,
+                new
+                {
+                    media_type = "audio",
+                    track_id = item.Id,
+                    title = item.Name,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+        }
     }
 
     private Device GetCurrentDevice(User user)
@@ -287,6 +307,27 @@ public class MusicHub : ConnectionHub
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, state);
         await _musicPlaybackService.PublishStartedEventAsync(user.Id, state);
+
+        Device device = GetCurrentDevice(user);
+        try
+        {
+            await ActivityLogger.LogPlaybackAsync(
+                "playback.started",
+                user.Id,
+                device.Id,
+                Ulid.Empty,
+                new
+                {
+                    media_type = "audio",
+                    track_id = item.Id,
+                    title = item.Name,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+        }
     }
 
     private void UpdateDeviceInfo(MusicPlayerState state)
@@ -599,6 +640,9 @@ public class MusicHub : ConnectionHub
 
         bool stopPlayback = false;
         bool wasCurrentDevice = false;
+        Ulid stoppedDeviceId = Ulid.Empty;
+        Guid stoppedTrackId = Guid.Empty;
+        string? stoppedTitle = null;
 
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
@@ -610,6 +654,9 @@ public class MusicHub : ConnectionHub
 
                     stopPlayback = true;
                     wasCurrentDevice = true;
+                    stoppedDeviceId = client.Id;
+                    stoppedTrackId = state.CurrentItem?.Id ?? Guid.Empty;
+                    stoppedTitle = state.CurrentItem?.Name;
                 }
 
         await base.OnDisconnectedAsync(exception);
@@ -673,6 +720,32 @@ public class MusicHub : ConnectionHub
         }
 
         await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+
+        if (stopPlayback && stoppedDeviceId != Ulid.Empty)
+        {
+            try
+            {
+                await ActivityLogger.LogPlaybackAsync(
+                    "playback.stopped",
+                    user.Id,
+                    stoppedDeviceId,
+                    Ulid.Empty,
+                    new
+                    {
+                        media_type = "audio",
+                        track_id = stoppedTrackId,
+                        title = stoppedTitle,
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.Socket(
+                    $"Failed to log playback.stopped: {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+        }
 
         Logger.Socket("Music client disconnected", LogEventLevel.Debug);
     }

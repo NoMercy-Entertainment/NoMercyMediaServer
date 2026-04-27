@@ -271,6 +271,21 @@ public class VideoHub : ConnectionHub
         _videoPlaybackService.StartPlaybackTimer(user);
         await _videoPlaybackService.UpdatePlaybackState(user, videoPlayerState);
         await _videoPlaybackService.PublishStartedEventAsync(user.Id, videoPlayerState);
+
+        try
+        {
+            await ActivityLogger.LogPlaybackAsync(
+                "playback.started",
+                user.Id,
+                device.Id,
+                item.VideoId,
+                new { media_type = "video", title = item.Title }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+        }
     }
 
     private Device GetCurrentDevice(User user)
@@ -334,6 +349,22 @@ public class VideoHub : ConnectionHub
         _videoPlaybackService.StartPlaybackTimer(user);
         await _videoPlaybackService.UpdatePlaybackState(user, state);
         await _videoPlaybackService.PublishStartedEventAsync(user.Id, state);
+
+        Device device = GetCurrentDevice(user);
+        try
+        {
+            await ActivityLogger.LogPlaybackAsync(
+                "playback.started",
+                user.Id,
+                device.Id,
+                item.VideoId,
+                new { media_type = "video", title = item.Title }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+        }
     }
 
     private void UpdateDeviceInfo(VideoPlayerState state)
@@ -463,6 +494,9 @@ public class VideoHub : ConnectionHub
             return;
 
         bool stopPlayback = false;
+        Ulid stoppedDeviceId = Ulid.Empty;
+        Ulid stoppedMediaId = Ulid.Empty;
+        string? stoppedTitle = null;
 
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? state))
@@ -473,6 +507,9 @@ public class VideoHub : ConnectionHub
                     _videoDeviceManager.RemoveUserDevice(user.Id);
 
                     stopPlayback = true;
+                    stoppedDeviceId = client.Id;
+                    stoppedMediaId = state.CurrentItem?.VideoId ?? Ulid.Empty;
+                    stoppedTitle = state.CurrentItem?.Title;
                 }
 
         await base.OnDisconnectedAsync(exception);
@@ -524,6 +561,27 @@ public class VideoHub : ConnectionHub
         }
 
         await _videoPlaybackService.UpdatePlaybackState(user, playerState);
+
+        if (stopPlayback && stoppedDeviceId != Ulid.Empty)
+        {
+            try
+            {
+                await ActivityLogger.LogPlaybackAsync(
+                    "playback.stopped",
+                    user.Id,
+                    stoppedDeviceId,
+                    stoppedMediaId,
+                    new { media_type = "video", title = stoppedTitle }
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.Socket(
+                    $"Failed to log playback.stopped: {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+        }
 
         Logger.Socket("Video client disconnected", LogEventLevel.Debug);
     }
