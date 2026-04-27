@@ -651,30 +651,14 @@ public static class ServiceConfiguration
 
                         return Task.CompletedTask;
                     },
-                    OnTokenValidated = async context =>
-                    {
-                        try
-                        {
-                            IActivityLogger activityLogger =
-                                context.HttpContext.RequestServices.GetRequiredService<IActivityLogger>();
-                            User? user = context.Principal?.User();
-                            if (user is null)
-                                return;
-
-                            Ulid deviceId = TryGetDeviceId(context.HttpContext) ?? Ulid.Empty;
-
-                            await activityLogger.LogAuthAsync(
-                                "auth.login",
-                                user.Id,
-                                deviceId,
-                                success: true
-                            );
-                        }
-                        catch
-                        { /* never fail the auth pipeline */
-                        }
-                    },
-                    OnAuthenticationFailed = async context =>
+                    // OnTokenValidated fires on EVERY authenticated request (every API call,
+                    // every SignalR frame), not on actual login. Logging "auth.login" here
+                    // produced one row per request and flooded the activity log with
+                    // duplicates and FK-failing Ulid.Empty deviceIds. Real login events live
+                    // at Keycloak; the server has no notion of "login" via JWT validation.
+                    // If we ever want session timeline data, log "session_start" from
+                    // ConnectionHub.OnConnectedAsync (one row per actual hub connection).
+                    OnAuthenticationFailed = context =>
                     {
                         HttpRequest req = context.Request;
 
@@ -757,22 +741,11 @@ public static class ServiceConfiguration
                             Serilog.Events.LogEventLevel.Warning
                         );
 
-                        try
-                        {
-                            IActivityLogger activityLogger =
-                                context.HttpContext.RequestServices.GetRequiredService<IActivityLogger>();
-                            await activityLogger.LogAuthAsync(
-                                "auth.login_failed",
-                                userId: Guid.Empty,
-                                deviceId: TryGetDeviceId(context.HttpContext) ?? Ulid.Empty,
-                                success: false,
-                                errorCode: context.Exception?.GetType().Name ?? "unknown",
-                                metadata: new { reason }
-                            );
-                        }
-                        catch
-                        { /* never fail the auth pipeline */
-                        }
+                        // Activity log write removed — OnAuthenticationFailed fires for every
+                        // expired-token request (effectively continuously for any idle client),
+                        // not just real login failures. Real failures live at Keycloak. Diagnostic
+                        // log above is enough for server-side visibility.
+                        return Task.CompletedTask;
                     },
                 };
             });
