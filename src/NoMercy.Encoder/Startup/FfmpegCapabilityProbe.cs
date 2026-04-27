@@ -110,8 +110,12 @@ public sealed class FfmpegCapabilityProbe(
 
     private async Task<List<string>> ProbeMissingMuxersAsync(CancellationToken ct)
     {
+        // Use bundled ffmpeg — see FfmpegCapabilities.ProbeListAsync for context.
+        string ffmpegPath = File.Exists(NoMercy.NmSystem.Information.AppFiles.FfmpegPath)
+            ? NoMercy.NmSystem.Information.AppFiles.FfmpegPath
+            : "ffmpeg";
         ProcessResult result = await processRunner
-            .RunAsync("ffmpeg", ["-hide_banner", "-muxers"], null, ct)
+            .RunAsync(ffmpegPath, ["-hide_banner", "-muxers"], null, ct)
             .ConfigureAwait(false);
 
         HashSet<string> available = [];

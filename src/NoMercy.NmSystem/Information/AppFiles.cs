@@ -102,7 +102,10 @@ public static class AppFiles
     public static string TesseractModelsFolder => Path.Combine(TesseractFolder, "tessdata");
 
     public static string WhisperModel { get; set; } = "ggml-large-v3";
-    public static string WhisperModelPath => Path.Combine(DependenciesPath, WhisperModel + ".bin");
+
+    // The model ships inside the ffmpeg/ subfolder alongside ffmpeg.exe and the
+    // libbluray jars — the build output puts everything ffmpeg-runtime there.
+    public static string WhisperModelPath => Path.Combine(FfmpegFolder, WhisperModel + ".bin");
 
     public static string CloudflareDPath =>
         Path.Combine(DependenciesPath, "cloudflared" + Info.ExecSuffix);
