@@ -78,7 +78,9 @@ public class MediaFilesController(IDbContextFactory<MediaContext> contextFactory
             {
                 Id = file.Id.ToString(),
                 Type = "movie",
-                Label = $"{file.Movie.Title} ({file.Movie.ReleaseDate.Year})",
+                Label = file.Movie.ReleaseDate.HasValue
+                    ? $"{file.Movie.Title} ({file.Movie.ReleaseDate.Value.Year})"
+                    : file.Movie.Title,
                 ParentLabel = file.Movie.Title,
                 Filename = file.Filename,
                 Quality = file.Quality,

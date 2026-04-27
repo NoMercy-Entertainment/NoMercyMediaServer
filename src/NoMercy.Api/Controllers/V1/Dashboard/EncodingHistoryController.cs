@@ -36,10 +36,29 @@ public class EncodingHistoryController(EncodingHistoryRepository historyReposito
         List<EncodingHistory> entries = await historyRepository.GetRecentAsync(pageSize, pageIndex);
         int total = await historyRepository.GetTotalCountAsync();
 
+        List<EncodingHistoryEntryDto> data = entries
+            .Select(e => new EncodingHistoryEntryDto(
+                Id: e.Id.ToString(),
+                InputPath: e.InputPath,
+                OutputPath: e.OutputPath,
+                ProfileId: e.ProfileId?.ToString(),
+                ProfileName: e.ProfileName,
+                EncoderUsed: e.EncoderUsed,
+                GpuUsed: e.GpuUsed,
+                DurationSeconds: e.DurationSeconds,
+                InputSizeBytes: e.InputSizeBytes,
+                OutputSizeBytes: e.OutputSizeBytes,
+                CompressionRatio: e.CompressionRatio,
+                AverageSpeed: e.AverageSpeed,
+                AverageFps: e.AverageFps,
+                CreatedAt: e.CreatedAt
+            ))
+            .ToList();
+
         return Ok(
             new
             {
-                data = entries,
+                data,
                 meta = new
                 {
                     total,
@@ -106,3 +125,26 @@ public class EncodingHistoryController(EncodingHistoryRepository historyReposito
 }
 
 public record PurgeHistoryRequest(int? OlderThanDays = null);
+
+/// <summary>
+/// Frontend-facing shape for a single history row. Mirrors
+/// EncodingHistory but with no JsonProperty attributes so the global
+/// camelCase resolver applies — keeps the dashboard list aligned with
+/// EncodingHistoryStats and the Vue types.
+/// </summary>
+public record EncodingHistoryEntryDto(
+    string Id,
+    string InputPath,
+    string OutputPath,
+    string? ProfileId,
+    string ProfileName,
+    string EncoderUsed,
+    string? GpuUsed,
+    double DurationSeconds,
+    long InputSizeBytes,
+    long OutputSizeBytes,
+    double CompressionRatio,
+    double AverageSpeed,
+    double AverageFps,
+    DateTime CreatedAt
+);
