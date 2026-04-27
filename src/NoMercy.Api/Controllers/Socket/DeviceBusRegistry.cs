@@ -60,6 +60,12 @@ public sealed class DeviceBusRegistry(
         // pong received — presence confirmed by socket remaining in _live
     }
 
+    public void ForceClose(Ulid deviceId)
+    {
+        if (_live.TryRemove(deviceId, out WebSocket? ws) && ws.State == WebSocketState.Open)
+            ws.Abort();
+    }
+
     public async Task BroadcastChange(Guid ownerUserId)
     {
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
