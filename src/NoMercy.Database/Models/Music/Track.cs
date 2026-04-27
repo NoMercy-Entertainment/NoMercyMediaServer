@@ -43,6 +43,9 @@ public class Track : ColorPaletteTimeStamps
     [JsonProperty("quality")]
     public int? Quality { get; set; }
 
+    [JsonProperty("lyrics_offset")]
+    public int? LyricsOffset { get; set; }
+
     [Column("Lyrics")]
     [System.Text.Json.Serialization.JsonIgnore]
     // ReSharper disable once InconsistentNaming

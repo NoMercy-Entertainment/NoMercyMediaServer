@@ -131,23 +131,52 @@ public class TracksController : BaseController
             return NotFoundResponse("Track not found");
 
         if (track.Lyrics is not null)
-            return Ok(new DataResponseDto<Lyric[]> { Data = track.Lyrics });
+            return Ok(new LyricsResponseDto { Data = track.Lyrics, Offset = track.LyricsOffset });
 
         try
         {
             dynamic? subtitles = await NoMercyLyricsClient.SearchLyrics(track);
             if (subtitles is null)
                 return NotFoundResponse("Subtitle not found");
-            subtitles = await _musicRepository.UpdateTrackLyricsAsync(
+            Lyric[]? saved = await _musicRepository.UpdateTrackLyricsAsync(
                 track,
                 JsonConvert.SerializeObject(subtitles)
             );
-            return Ok(new DataResponseDto<dynamic> { Data = subtitles });
+            return Ok(new LyricsResponseDto { Data = saved ?? [], Offset = track.LyricsOffset });
         }
         catch (Exception e)
         {
             return NotFoundResponse(e.Message);
         }
+    }
+
+    [HttpPatch]
+    [Route("{id:guid}/lyrics-offset")]
+    public async Task<IActionResult> LyricsOffset(Guid id, [FromBody] PatchLyricsOffsetDto request)
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to update lyrics offset");
+
+        if (request.Offset is not null && (request.Offset < -30000 || request.Offset > 30000))
+            return ValidationProblem("Offset must be between -30000 and 30000 ms");
+
+        Track? track = await _musicRepository.GetTrackWithIncludesAsync(id);
+
+        if (track is null)
+            return NotFoundResponse("Track not found");
+
+        await _musicRepository.UpdateTrackLyricsOffsetAsync(track, request.Offset);
+
+        return Ok(
+            new LyricsOffsetResponseDto
+            {
+                Status = "ok",
+                Message = request.Offset is null
+                    ? "Lyrics offset cleared"
+                    : $"Lyrics offset set to {request.Offset} ms",
+                Offset = request.Offset,
+            }
+        );
     }
 
     [HttpPost]
@@ -167,4 +196,31 @@ public class TracksController : BaseController
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Playback recorded" });
     }
+}
+
+public record LyricsResponseDto
+{
+    [JsonProperty("data")]
+    public Lyric[] Data { get; set; } = [];
+
+    [JsonProperty("offset")]
+    public int? Offset { get; set; }
+}
+
+public record PatchLyricsOffsetDto
+{
+    [JsonProperty("offset")]
+    public int? Offset { get; set; }
+}
+
+public record LyricsOffsetResponseDto
+{
+    [JsonProperty("status")]
+    public string Status { get; set; } = string.Empty;
+
+    [JsonProperty("message")]
+    public string Message { get; set; } = string.Empty;
+
+    [JsonProperty("offset")]
+    public int? Offset { get; set; }
 }
