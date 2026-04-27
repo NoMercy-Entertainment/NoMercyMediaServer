@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
 using NoMercy.Database;
+using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking.Messaging;
@@ -17,17 +18,20 @@ public class ConnectionHub : Hub
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     protected readonly ConnectedClients ConnectedClients;
+    protected readonly IActivityLogger ActivityLogger;
     private string Endpoint { get; set; }
 
     protected ConnectionHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
-        ConnectedClients connectedClients
+        ConnectedClients connectedClients,
+        IActivityLogger activityLogger
     )
     {
         _httpContextAccessor = httpContextAccessor;
         _contextFactory = contextFactory;
         ConnectedClients = connectedClients;
+        ActivityLogger = activityLogger;
         Endpoint = _httpContextAccessor.HttpContext?.Request.Path.Value ?? "Unknown";
         // Logger.Socket($"Connected to {Endpoint}");
     }
@@ -144,17 +148,7 @@ public class ConnectionHub : Hub
                 .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, true));
             await mediaContext.SaveChangesAsync();
 
-            await SaveActivityLog(
-                mediaContext,
-                new()
-                {
-                    DeviceId = device.Id,
-                    Time = DateTime.Now,
-                    Type = "Connected to server",
-                    UserId = user.Id,
-                    Category = ActivityCategory.Connection,
-                }
-            );
+            await ActivityLogger.LogConnectionAsync("connection.connected", user.Id, device.Id);
         }
 
         ConnectedClients.Clients.TryAdd(Context.ConnectionId, client);
@@ -179,44 +173,16 @@ public class ConnectionHub : Hub
                     .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, false));
                 await mediaContext.SaveChangesAsync();
 
-                await SaveActivityLog(
-                    mediaContext,
-                    new()
-                    {
-                        DeviceId = device.Id,
-                        Time = DateTime.Now,
-                        Type = "Disconnected from server",
-                        UserId = client.Sub,
-                        Category = ActivityCategory.Connection,
-                    }
+                await ActivityLogger.LogConnectionAsync(
+                    "connection.disconnected",
+                    client.Sub,
+                    device.Id
                 );
             }
 
             ConnectedClients.Clients.Remove(Context.ConnectionId, out _);
 
             await Clients.All.SendAsync("ConnectedDevicesState", Devices());
-        }
-    }
-
-    private static async Task SaveActivityLog(
-        MediaContext mediaContext,
-        ActivityLog log,
-        int count = 0
-    )
-    {
-        try
-        {
-            await mediaContext.ActivityLogs.AddAsync(log);
-            await mediaContext.SaveChangesAsync();
-        }
-        catch (Exception)
-        {
-            if (count > 2)
-                return; // 3 times
-
-            count += 1;
-            await Task.Delay(1000);
-            await SaveActivityLog(mediaContext, log, count);
         }
     }
 

@@ -53,6 +53,7 @@ using NoMercy.Service.Extensions;
 using NoMercy.Setup;
 using NoMercyQueue.Extensions;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
+using DatabaseActivity = NoMercy.Database.Activity;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MediaProcessingCollectionRepository = NoMercy.MediaProcessing.Collections.CollectionRepository;
 using MediaProcessingEpisodeRepository = NoMercy.MediaProcessing.Episodes.EpisodeRepository;
@@ -443,21 +444,22 @@ public static class ServiceConfiguration
             optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
         });
 
-        services.AddDbContextFactory<MediaContext>(
-            optionsAction =>
-            {
-                optionsAction.UseSqlite(
-                    $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True;",
-                    o =>
-                    {
-                        o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-                        o.ExecutionStrategy(deps => new SqliteRetryingExecutionStrategy(deps));
-                    }
-                );
-                optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
-            },
-            ServiceLifetime.Scoped
-        );
+        // Singleton lifetime so singleton consumers (MdnsDeviceScanner,
+        // DeviceBusRegistry, ActivityLogger) can inject the factory. The
+        // factory itself is thread-safe; each CreateDbContextAsync() call
+        // produces a fresh disposable context.
+        services.AddDbContextFactory<MediaContext>(optionsAction =>
+        {
+            optionsAction.UseSqlite(
+                $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True;",
+                o =>
+                {
+                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    o.ExecutionStrategy(deps => new SqliteRetryingExecutionStrategy(deps));
+                }
+            );
+            optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
+        });
 
         // Add Repositories
         services.AddScoped<HomeRepository>();
@@ -542,6 +544,9 @@ public static class ServiceConfiguration
         services.AddMusicHubServices();
         services.AddSingleton<IActivityHubBroadcaster, ActivityHubBroadcaster>();
         services.AddSingleton<IActivityLogger, ActivityLogger>();
+        services.AddSingleton<DatabaseActivity.IActivityLogger>(sp =>
+            sp.GetRequiredService<IActivityLogger>()
+        );
         services.AddSignalREventHandlers();
 
         services.AddLocalization(options => options.ResourcesPath = "Resources");
