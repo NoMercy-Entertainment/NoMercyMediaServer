@@ -182,6 +182,7 @@ public class VideoEncodeJob : AbstractEncoderJob
                 await PublishStageAsync(fileMetadata, "Recording encoding history");
                 await RecordEncodingHistoryAsync(context, dbProfile, result, InputFile);
 
+                await PublishStageAsync(fileMetadata, "Checking source subtitles");
                 await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile);
 
                 await PublishStageAsync(fileMetadata, "Refreshing library");

@@ -139,7 +139,11 @@ public class EventBusProgressObserver : IProgressObserver
     public void OnCompleted()
     {
         _registry?.UnregisterJob(_jobId);
-        Publish(status: "completed", message: "Done");
+        // Stay in the "encoding" inflight set so the dashboard card stays
+        // visible while VideoEncodeJob runs the post-processing phases
+        // (history insert, OCR, library refresh). The card is removed by
+        // the EncodingCompletedEvent emitted at the very end of the job.
+        Publish(status: "encoding", message: "Finalizing");
     }
 
     public void OnError(EncodingError error)
