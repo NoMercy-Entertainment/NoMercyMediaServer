@@ -199,7 +199,11 @@ public class VideoEncodeJob : AbstractEncoderJob
                         new EncodingCompletedEvent
                         {
                             JobId = fileMetadata.Id,
-                            OutputPath = fileMetadata.Path,
+                            // Master playlist / muxed file from the orchestrator,
+                            // not the output directory — OcrPostEncodeSubscriber
+                            // checks the extension to gate HLS/DASH detection
+                            // and ffprobes this path directly.
+                            OutputPath = result.OutputPath,
                             Duration = stopwatch.Elapsed,
                         }
                     );
