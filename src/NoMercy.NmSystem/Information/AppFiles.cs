@@ -95,6 +95,7 @@ public static class AppFiles
     public static string FfmpegPath => Path.Combine(FfmpegFolder, "ffmpeg" + Info.ExecSuffix);
     public static string FfProbePath => Path.Combine(FfmpegFolder, "ffprobe" + Info.ExecSuffix);
     public static string FfPlayPath => Path.Combine(FfmpegFolder, "ffplay" + Info.ExecSuffix);
+    public static string FpcalcPath => Path.Combine(FfmpegFolder, "fpcalc" + Info.ExecSuffix);
 
     public static string YtdlpPath => Path.Combine(DependenciesPath, "yt-dlp" + Info.ExecSuffix);
 

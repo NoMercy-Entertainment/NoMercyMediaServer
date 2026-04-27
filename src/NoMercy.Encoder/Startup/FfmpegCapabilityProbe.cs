@@ -66,7 +66,11 @@ public sealed class FfmpegCapabilityProbe(
 
         List<string> missingMuxers = await ProbeMissingMuxersAsync(ct).ConfigureAwait(false);
 
-        bool fpcalcPresent = await ProbeExternalToolAsync("fpcalc", "--version", ct)
+        bool fpcalcPresent = await ProbeExternalToolAsync(
+                NoMercy.NmSystem.Information.AppFiles.FpcalcPath,
+                "--version",
+                ct
+            )
             .ConfigureAwait(false);
 
         bool whisperModelPresent = ProbeWhisperModel();
