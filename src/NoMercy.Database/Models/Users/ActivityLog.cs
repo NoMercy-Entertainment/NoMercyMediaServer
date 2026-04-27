@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -7,15 +7,34 @@ namespace NoMercy.Database.Models.Users;
 [PrimaryKey(nameof(Id))]
 [Index(nameof(UserId))]
 [Index(nameof(DeviceId))]
+[Index(nameof(Category))]
+[Index(nameof(MediaId))]
 public class ActivityLog : Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [JsonProperty("id")]
     public int Id { get; private set; }
 
+    [JsonProperty("category")]
+    public required ActivityCategory Category { get; set; }
+
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
+
+    [JsonProperty("time")]
     public required DateTime Time { get; set; }
+
+    [JsonProperty("media_id")]
+    public Ulid? MediaId { get; set; }
+
+    [JsonProperty("success")]
+    public bool Success { get; set; } = true;
+
+    [JsonProperty("error_code")]
+    public string? ErrorCode { get; set; }
+
+    [JsonProperty("metadata")]
+    public string? Metadata { get; set; }
 
     [JsonProperty("device_id")]
     public Ulid DeviceId { get; set; }
