@@ -164,4 +164,39 @@ public class ActivityLoggerTests : IDisposable
         row.ErrorCode.Should().Be("transcoder_unavailable");
         row.Metadata.Should().Contain("\"message\":\"FFmpeg returned exit code 2\"");
     }
+
+    [Fact]
+    public async Task Successful_write_invokes_hub_broadcaster()
+    {
+        IDbContextFactory<MediaContext> factory = CreateFactory();
+        Mock<IActivityHubBroadcaster> broadcaster = new();
+        broadcaster
+            .Setup(b => b.BroadcastAsync(It.IsAny<ActivityLog>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        ActivityLogger logger = new(factory, NullLogger<ActivityLogger>.Instance, broadcaster.Object);
+        await logger.LogAuthAsync("auth.login", Guid.NewGuid(), Ulid.NewUlid(), success: true);
+
+        broadcaster.Verify(
+            b => b.BroadcastAsync(It.Is<ActivityLog>(r => r.Type == "auth.login"), It.IsAny<CancellationToken>()),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task Broadcast_exception_does_not_throw_to_caller()
+    {
+        IDbContextFactory<MediaContext> factory = CreateFactory();
+        Mock<IActivityHubBroadcaster> broadcaster = new();
+        broadcaster
+            .Setup(b => b.BroadcastAsync(It.IsAny<ActivityLog>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("hub down"));
+
+        ActivityLogger logger = new(factory, NullLogger<ActivityLogger>.Instance, broadcaster.Object);
+
+        Func<Task> act = () =>
+            logger.LogAuthAsync("auth.login", Guid.NewGuid(), Ulid.NewUlid(), success: true);
+
+        await act.Should().NotThrowAsync();
+    }
 }
