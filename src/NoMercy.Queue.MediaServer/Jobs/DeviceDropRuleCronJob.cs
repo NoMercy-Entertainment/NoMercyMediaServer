@@ -78,6 +78,18 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
 
         List<Ulid> dropIds = toDrop.Select(d => d.Id).ToList();
 
+        List<(Ulid DeviceId, Guid UserId, string Name, string Reason)> notices = toDrop
+            .Where(d => d.OwnerUserId.HasValue)
+            .Select(d =>
+            {
+                DateTime? lastSeen = MaxOf(d.WsConnectedAt, d.MdnsSeenAt);
+                string reason =
+                    lastSeen.HasValue && now - lastSeen.Value >= TtlWindow ? "ttl" : "efuse";
+                string name = string.IsNullOrEmpty(d.CustomName) ? d.Name : d.CustomName!;
+                return (d.Id, d.OwnerUserId!.Value, name, reason);
+            })
+            .ToList();
+
         List<Device> tracked = await _context
             .Devices.Where(d => dropIds.Contains(d.Id))
             .ToListAsync(cancellationToken);
@@ -88,11 +100,19 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
             d.IsActive = false;
         }
 
+        foreach ((Ulid _, Guid userId, string name, string reason) in notices)
+        {
+            _context.DeviceDropNotices.Add(new DeviceDropNotice
+            {
+                UserId = userId,
+                DeviceName = name,
+                Reason = reason,
+            });
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Dropped {Count} devices from registry", toDrop.Count);
-
-        // NOTE: DeviceDropNotice persistence is implemented in Task 8.
     }
 
     private static DateTime? MaxOf(DateTime? a, DateTime? b) =>

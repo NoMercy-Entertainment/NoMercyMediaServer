@@ -78,6 +78,25 @@ public sealed class DeviceHub : ConnectionHub
         return new WakeResult("cast_fallback");
     }
 
+    public async Task<List<DeviceDropNoticeDto>> PendingNotices()
+    {
+        User? user = Context.User.User();
+        if (user is null) return [];
+
+        await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
+        List<DeviceDropNotice> notices = await ctx.DeviceDropNotices
+            .Where(n => n.UserId == user.Id && !n.Acknowledged)
+            .ToListAsync();
+
+        foreach (DeviceDropNotice n in notices)
+            n.Acknowledged = true;
+        await ctx.SaveChangesAsync();
+
+        return notices
+            .Select(n => new DeviceDropNoticeDto(n.DeviceName, n.Reason))
+            .ToList();
+    }
+
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
@@ -87,3 +106,5 @@ public sealed class DeviceHub : ConnectionHub
 }
 
 public sealed record WakeResult(string Status);
+
+public sealed record DeviceDropNoticeDto(string DeviceName, string Reason);

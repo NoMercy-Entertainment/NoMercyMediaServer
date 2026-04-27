@@ -135,6 +135,7 @@ public class MediaContext : DbContext
     public virtual DbSet<Creator> Creators { get; init; }
     public virtual DbSet<Crew> Crews { get; init; }
     public virtual DbSet<Device> Devices { get; init; }
+    public virtual DbSet<DeviceDropNotice> DeviceDropNotices { get; init; }
     public virtual DbSet<EncoderProfileFolder> EncoderProfileFolder { get; init; }
     public virtual DbSet<EncoderProfile> EncoderProfiles { get; init; }
     public virtual DbSet<Episode> Episodes { get; init; }
