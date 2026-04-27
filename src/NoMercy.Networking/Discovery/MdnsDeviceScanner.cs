@@ -3,6 +3,7 @@ using Makaretu.Dns;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
+using NoMercy.Networking.Devices;
 
 namespace NoMercy.Networking.Discovery;
 
@@ -12,16 +13,19 @@ public sealed class MdnsDeviceScanner : IDisposable
 
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly ILogger<MdnsDeviceScanner> _logger;
+    private readonly IDeviceListChangeNotifier? _changeNotifier;
     private readonly ServiceDiscovery _discovery = new();
     private readonly MulticastService _multicast = new();
     private int _started;
 
     public MdnsDeviceScanner(
         IDbContextFactory<MediaContext> contextFactory,
-        ILogger<MdnsDeviceScanner> logger)
+        ILogger<MdnsDeviceScanner> logger,
+        IDeviceListChangeNotifier? changeNotifier = null)
     {
         _contextFactory = contextFactory;
         _logger = logger;
+        _changeNotifier = changeNotifier;
     }
 
     public void Start(CancellationToken stoppingToken)
@@ -76,6 +80,9 @@ public sealed class MdnsDeviceScanner : IDisposable
             device.LanPort = port;
             device.MdnsSeenAt = now;
             await ctx.SaveChangesAsync();
+
+            if (_changeNotifier is not null && device.OwnerUserId is not null)
+                await _changeNotifier.BroadcastChange(device.OwnerUserId.Value);
         }
         catch (Exception ex)
         {

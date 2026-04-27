@@ -7,6 +7,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
+using NoMercy.Networking.Devices;
 using NoMercy.Networking.Messaging;
 
 namespace NoMercy.Api.Hubs;
@@ -83,17 +84,6 @@ public sealed class DeviceHub : ConnectionHub
         List<DeviceListItem> list = await GetDevices();
         await Clients.Caller.SendAsync("DeviceListChanged", list);
     }
-}
-
-public sealed record DeviceListItem
-{
-    public required Ulid DeviceId { get; init; }
-    public required string Fingerprint { get; init; }
-    public required string Name { get; init; }
-    public required string Type { get; init; }
-    public bool Online { get; init; }
-    public string? LanIp { get; init; }
-    public DateTime? LastSeenAt { get; init; }
 }
 
 public sealed record WakeResult(string Status);

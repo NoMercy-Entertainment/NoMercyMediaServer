@@ -2,20 +2,30 @@ using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.Hubs;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Networking.Devices;
 
 namespace NoMercy.Api.Controllers.Socket;
 
-public sealed class DeviceBusRegistry(IDbContextFactory<MediaContext> contextFactory)
+public sealed class DeviceBusRegistry(
+    IDbContextFactory<MediaContext> contextFactory,
+    IHubContext<DeviceHub> hubContext
+) : IDeviceListChangeNotifier
 {
     private readonly ConcurrentDictionary<Ulid, WebSocket> _live = new();
 
-    public Task Register(Ulid deviceId, WebSocket ws)
+    public async Task Register(Ulid deviceId, WebSocket ws)
     {
         _live[deviceId] = ws;
-        return Task.CompletedTask;
+
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
+        Device? device = await ctx.Devices.FindAsync(deviceId);
+        if (device?.OwnerUserId is not null)
+            await BroadcastChange(device.OwnerUserId.Value);
     }
 
     public async Task Unregister(Ulid deviceId)
@@ -27,6 +37,9 @@ public sealed class DeviceBusRegistry(IDbContextFactory<MediaContext> contextFac
         if (device is null) return;
         device.WsConnectedAt = null;
         await ctx.SaveChangesAsync();
+
+        if (device.OwnerUserId is not null)
+            await BroadcastChange(device.OwnerUserId.Value);
     }
 
     public bool IsOnline(Ulid deviceId) => _live.ContainsKey(deviceId);
@@ -45,5 +58,29 @@ public sealed class DeviceBusRegistry(IDbContextFactory<MediaContext> contextFac
     public void Touch(Ulid deviceId)
     {
         // pong received — presence confirmed by socket remaining in _live
+    }
+
+    public async Task BroadcastChange(Guid ownerUserId)
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
+        List<Device> rows = await ctx.Devices
+            .Where(d => d.OwnerUserId == ownerUserId && d.Fingerprint != null)
+            .ToListAsync();
+
+        List<DeviceListItem> items = rows
+            .Select(d => new DeviceListItem
+            {
+                DeviceId = d.Id,
+                Fingerprint = d.Fingerprint!,
+                Name = d.CustomName ?? d.Name,
+                Type = d.Type,
+                Online = IsOnline(d.Id),
+                LanIp = d.LanIp,
+                LastSeenAt =
+                    d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
+            })
+            .ToList();
+
+        await hubContext.Clients.User(ownerUserId.ToString()).SendAsync("DeviceListChanged", items);
     }
 }
