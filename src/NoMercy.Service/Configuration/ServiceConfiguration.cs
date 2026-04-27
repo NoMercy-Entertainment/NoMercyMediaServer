@@ -307,6 +307,10 @@ public static class ServiceConfiguration
         services.AddSingleton<NetworkChangeMonitor>();
         services.AddHostedService(sp => sp.GetRequiredService<NetworkChangeMonitor>());
 
+        // mDNS LAN device scanner
+        services.AddSingleton<MdnsDeviceScanner>();
+        services.AddHostedService<MdnsDeviceScannerHostedService>();
+
         services.AddSingleton<StorageMonitor>();
         services.AddSingleton<ChromeCast>();
         services.AddSingleton<DriveMonitor>();
