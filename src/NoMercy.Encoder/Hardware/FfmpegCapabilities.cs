@@ -48,12 +48,20 @@ public partial class FfmpegCapabilities(IProcessRunner processRunner) : IFfmpegC
         return names;
     }
 
-    [GeneratedRegex(@"^\s*[VASD][F.][S.][X.][B.][D.]\s+(?<name>\S+)")]
+    [GeneratedRegex(@"^[VASD][F.][S.][X.][B.][D.]\s+(?<name>\S+)")]
     private static partial Regex EncoderPattern();
 
-    [GeneratedRegex(@"^\s*[T.][S.][C.]\s+(?<name>\S+)")]
+    // Filter rows: optional flag chars (NoMercy fork shows 2, stock ffmpeg
+    // shows 3), then a name, then a "AA->A" / "VV->V" / "N->V" type
+    // signature. The signature requirement is what excludes legend rows
+    // like "T.. = Timeline support" without needing a separate skip list.
+    [GeneratedRegex(@"^[TSC.]+\s+(?<name>\S+)\s+[VANS|]+->[VANS|]+")]
     private static partial Regex FilterPattern();
 
-    [GeneratedRegex(@"^\s+(?<name>\S+)$")]
+    // Protocols print one identifier per line under "Input:" / "Output:"
+    // headers. Match lowercase identifiers only — the headers (capitalised,
+    // colon-suffixed) and the "Supported file protocols:" preamble are
+    // automatically excluded.
+    [GeneratedRegex(@"^(?<name>[a-z][a-z0-9_]*)$")]
     private static partial Regex ProtocolPattern();
 }
