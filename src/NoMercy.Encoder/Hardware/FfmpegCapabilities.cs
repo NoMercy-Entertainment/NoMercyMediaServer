@@ -36,11 +36,7 @@ public partial class FfmpegCapabilities(IProcessRunner processRunner) : IFfmpegC
         CancellationToken ct
     )
     {
-        // Use the bundled NoMercy ffmpeg fork — a stock ffmpeg on PATH (or no
-        // ffmpeg on PATH at all) would otherwise mask custom protocols the
-        // fork ships, like libbluray and dvdread.
-        string ffmpegPath = File.Exists(AppFiles.FfmpegPath) ? AppFiles.FfmpegPath : "ffmpeg";
-        ProcessResult result = await processRunner.RunAsync(ffmpegPath, [flag], null, ct);
+        ProcessResult result = await processRunner.RunAsync(AppFiles.FfmpegPath, [flag], null, ct);
         HashSet<string> names = [];
         foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
