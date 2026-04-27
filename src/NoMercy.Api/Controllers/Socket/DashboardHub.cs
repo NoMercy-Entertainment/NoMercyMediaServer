@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
+using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
@@ -28,6 +29,11 @@ public class DashboardHub : ConnectionHub
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
+        if (Context.User.IsModerator())
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, "moderators");
+        }
+
         Logger.Socket("Dashboard client connected", LogEventLevel.Debug);
         LogBroadcaster.StartBroadcasting(_clientMessenger);
     }
@@ -35,6 +41,7 @@ public class DashboardHub : ConnectionHub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "moderators");
         Logger.Socket("Dashboard client disconnected", LogEventLevel.Debug);
 
         StopResources();
