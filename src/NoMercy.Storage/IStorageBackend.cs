@@ -38,4 +38,12 @@ public interface IStorageBackend
     /// symlink, does not exist, or cannot be resolved.
     /// </summary>
     string? ResolveLinkTarget(string path);
+
+    /// <summary>
+    /// Returns true when <paramref name="path"/> is flagged as hidden
+    /// or system by the backend. Used by browse/picker code to skip
+    /// OS-managed entries (Windows Hidden/System attributes, etc.).
+    /// Returns false when the path does not exist or cannot be queried.
+    /// </summary>
+    bool IsHidden(string path);
 }

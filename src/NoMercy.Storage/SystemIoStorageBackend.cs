@@ -61,4 +61,17 @@ public sealed class SystemIoStorageBackend : IStorageBackend
             return null;
         }
     }
+
+    public bool IsHidden(string path)
+    {
+        try
+        {
+            FileAttributes attrs = File.GetAttributes(path);
+            return (attrs & (FileAttributes.Hidden | FileAttributes.System)) != 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
