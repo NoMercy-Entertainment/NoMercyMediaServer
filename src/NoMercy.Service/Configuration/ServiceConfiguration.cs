@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NoMercy.Api.Constraints;
+using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Middleware;
 using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
@@ -34,6 +35,7 @@ using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.Networking;
 using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Connectivity.Strategies;
+using NoMercy.Networking.Devices;
 using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem;
@@ -291,6 +293,8 @@ public static class ServiceConfiguration
 
         // TODO: Remove after all palettes are regenerated with the new Median Cut algorithm
         services.RegisterCronJob<ReprocessAllPalettesCronJob>("reprocess-all-palettes-job");
+
+        services.RegisterCronJob<DeviceDropRuleCronJob>("device-drop-rule-job");
     }
 
     private static void ConfigureCoreServices(IServiceCollection services)
@@ -354,7 +358,7 @@ public static class ServiceConfiguration
 
         // Add Singleton Services
         services.AddSingleton<AppProcessManager>();
-        services.AddSingleton<ResourceMonitor>();
+        services.AddSingleton<NoMercy.Helpers.Monitoring.ResourceMonitor>();
 
         // Network discovery (replaces static Networking.Networking IP/address members)
         services.AddSingleton<INetworkDiscovery>(sp =>
@@ -392,6 +396,14 @@ public static class ServiceConfiguration
         // Network change monitor
         services.AddSingleton<NetworkChangeMonitor>();
         services.AddHostedService(sp => sp.GetRequiredService<NetworkChangeMonitor>());
+
+        // mDNS LAN device scanner
+        services.AddSingleton<MdnsDeviceScanner>();
+        services.AddHostedService<MdnsDeviceScannerHostedService>();
+        services.AddSingleton<DeviceBusRegistry>();
+        services.AddSingleton<IDeviceListChangeNotifier>(sp =>
+            sp.GetRequiredService<DeviceBusRegistry>()
+        );
 
         services.AddSingleton<StorageMonitor>();
         services.AddSingleton<ChromeCast>();

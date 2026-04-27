@@ -205,6 +205,21 @@ public class MediaContext : DbContext
             .ToList()
             .ForEach(fk => fk.DeleteBehavior = DeleteBehavior.Cascade);
 
+        // Server-orchestrated cast: device fingerprint uniqueness scoped to
+        // owner; SET NULL on owner delete so devices survive but become unowned.
+        modelBuilder
+            .Entity<Device>()
+            .HasIndex(d => new { d.OwnerUserId, d.Fingerprint })
+            .IsUnique()
+            .HasFilter("Fingerprint IS NOT NULL");
+
+        modelBuilder
+            .Entity<Device>()
+            .HasOne(d => d.OwnerUser)
+            .WithMany()
+            .HasForeignKey(d => d.OwnerUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         base.OnModelCreating(modelBuilder);
     }
 
@@ -220,6 +235,7 @@ public class MediaContext : DbContext
     public virtual DbSet<Creator> Creators { get; init; }
     public virtual DbSet<Crew> Crews { get; init; }
     public virtual DbSet<Device> Devices { get; init; }
+    public virtual DbSet<DeviceDropNotice> DeviceDropNotices { get; init; }
     public virtual DbSet<EncoderProfileFolder> EncoderProfileFolder { get; init; }
     public virtual DbSet<EncoderProfile> EncoderProfiles { get; init; }
     public virtual DbSet<EncodingHistory> EncodingHistory { get; init; }

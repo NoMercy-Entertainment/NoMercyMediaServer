@@ -98,6 +98,11 @@ public static class ApplicationConfiguration
             "album-palette-job",
             app.ApplicationServices
         );
+
+        cronWorker.RegisterJobWithSchedule<DeviceDropRuleCronJob>(
+            "device-drop-rule-job",
+            app.ApplicationServices
+        );
     }
 
     private static void ConfigureLocalization(IApplicationBuilder app)
@@ -256,6 +261,16 @@ public static class ApplicationConfiguration
 
             endpoints.MapHub<DrivesHub>(
                 "/drivesHub",
+                options =>
+                {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.CloseOnAuthenticationExpiration = true;
+                }
+            );
+
+            endpoints.MapHub<DeviceHub>(
+                "/deviceHub",
                 options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
