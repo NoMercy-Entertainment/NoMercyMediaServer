@@ -42,6 +42,7 @@ public static class JsonHelper
             new ParseNumbersAsInt32Converter(), // Custom converter for parsing numbers as int
             new StringEnumConverter(), // Convert enums to strings
             new DoubleConverter(), // Custom converter for double values
+            new UlidNewtonsoftConverter(), // Serialize Ulid as canonical 26-char string
         },
     };
 

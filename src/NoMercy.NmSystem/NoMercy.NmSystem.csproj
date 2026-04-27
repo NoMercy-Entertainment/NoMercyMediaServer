@@ -34,6 +34,7 @@
     <PackageReference Include="System.Management" />
     <PackageReference Include="DnsClient" />
     <PackageReference Include="TagLibSharp" />
+    <PackageReference Include="Ulid" />
   </ItemGroup>
 
   <ItemGroup>
