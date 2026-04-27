@@ -650,7 +650,30 @@ public static class ServiceConfiguration
 
                         return Task.CompletedTask;
                     },
-                    OnAuthenticationFailed = context =>
+                    OnTokenValidated = async context =>
+                    {
+                        try
+                        {
+                            IActivityLogger activityLogger =
+                                context.HttpContext.RequestServices.GetRequiredService<IActivityLogger>();
+                            User? user = context.Principal?.User();
+                            if (user is null)
+                                return;
+
+                            Ulid deviceId = TryGetDeviceId(context.HttpContext) ?? Ulid.Empty;
+
+                            await activityLogger.LogAuthAsync(
+                                "auth.login",
+                                user.Id,
+                                deviceId,
+                                success: true
+                            );
+                        }
+                        catch
+                        { /* never fail the auth pipeline */
+                        }
+                    },
+                    OnAuthenticationFailed = async context =>
                     {
                         HttpRequest req = context.Request;
 
@@ -732,7 +755,23 @@ public static class ServiceConfiguration
                             $"{reason} — {client} → {hub} from {remoteIp}",
                             Serilog.Events.LogEventLevel.Warning
                         );
-                        return Task.CompletedTask;
+
+                        try
+                        {
+                            IActivityLogger activityLogger =
+                                context.HttpContext.RequestServices.GetRequiredService<IActivityLogger>();
+                            await activityLogger.LogAuthAsync(
+                                "auth.login_failed",
+                                userId: Guid.Empty,
+                                deviceId: TryGetDeviceId(context.HttpContext) ?? Ulid.Empty,
+                                success: false,
+                                errorCode: context.Exception?.GetType().Name ?? "unknown",
+                                metadata: new { reason }
+                            );
+                        }
+                        catch
+                        { /* never fail the auth pipeline */
+                        }
                     },
                 };
             });
@@ -849,5 +888,14 @@ public static class ServiceConfiguration
                 }
             );
         });
+    }
+
+    private static Ulid? TryGetDeviceId(HttpContext httpContext)
+    {
+        string? raw = httpContext.Request.Query["client_id"].FirstOrDefault();
+        if (string.IsNullOrEmpty(raw))
+            return null;
+
+        return Ulid.TryParse(raw, out Ulid id) ? id : null;
     }
 }
