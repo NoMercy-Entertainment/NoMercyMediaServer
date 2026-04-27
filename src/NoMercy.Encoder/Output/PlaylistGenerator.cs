@@ -264,7 +264,9 @@ public class PlaylistGenerator : IPlaylistGenerator
 
     /// <summary>
     /// Emits the per-subtitle media playlist (.m3u8) referencing the WebVTT
-    /// segments produced by <see cref="WebVttSegmenter"/>.
+    /// segments produced by <see cref="WebVttSegmenter"/>. Segment filenames
+    /// follow subs_&lt;lang&gt;_&lt;variant&gt;_NNNNN.vtt to keep distinct
+    /// variants of the same language addressable on disk.
     /// </summary>
     public static string GenerateSubtitleMediaPlaylist(
         SubtitleOutputPlan sub,
@@ -273,6 +275,9 @@ public class PlaylistGenerator : IPlaylistGenerator
         string segmentUriPrefix = ""
     )
     {
+        string lang = sub.Language ?? "und";
+        string variant = string.IsNullOrEmpty(sub.Variant) ? "full" : sub.Variant;
+
         System.Text.StringBuilder sb = new();
         sb.AppendLine("#EXTM3U");
         sb.AppendLine("#EXT-X-VERSION:3");
@@ -282,9 +287,10 @@ public class PlaylistGenerator : IPlaylistGenerator
         foreach (NoMercy.Encoder.Subtitles.WebVttSegment seg in segments)
         {
             double actualDuration = (seg.EndTime - seg.StartTime).TotalSeconds;
+            string segFile = $"subs_{lang}_{variant}_{seg.Index:D5}.vtt";
             string uri = string.IsNullOrEmpty(segmentUriPrefix)
-                ? $"subs_{sub.Language ?? "und"}_{seg.Index:D5}.vtt"
-                : $"{segmentUriPrefix}/subs_{sub.Language ?? "und"}_{seg.Index:D5}.vtt";
+                ? segFile
+                : $"{segmentUriPrefix}/{segFile}";
 
             sb.AppendLine($"#EXTINF:{actualDuration:F3},");
             sb.AppendLine(uri);

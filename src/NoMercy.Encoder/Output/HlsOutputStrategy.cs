@@ -5,6 +5,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
 
 public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
@@ -227,9 +228,10 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         await WriteSubtitleSidecarsAsync(outputDirectory, plan, ct);
     }
 
-    // Wraps WebVTT extracts in single-segment VOD playlists the master can
-    // reference. ASS/SRT URIs in the master point straight at the file, so
-    // those plans skip this path entirely.
+    // Slices each extracted WebVTT into per-segment .vtt files matching the
+    // video segment cadence (RFC 8216 §3.5) and emits the playlist that
+    // references them. ASS/SRT URIs in the master point straight at the
+    // file, so those plans skip this path entirely.
     private async Task WriteSubtitleSidecarsAsync(
         string outputDirectory,
         OutputPlan plan,
@@ -257,44 +259,57 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         if (vttFiles.Length == 0)
             return;
 
-        double durationSeconds = MeasureVideoDuration(outputDirectory, plan);
-        if (durationSeconds <= 0)
-            durationSeconds = 36000;
+        int segmentDurationSeconds =
+            plan.SegmentDurationSeconds > 0 ? plan.SegmentDurationSeconds : 6;
+        TimeSpan segmentDuration = TimeSpan.FromSeconds(segmentDurationSeconds);
+
+        WebVttSegmenter segmenter = new();
+        PlaylistGenerator generator = new();
 
         foreach (SubtitleOutputPlan sub in webVttSubs)
         {
             string lang = sub.Language ?? "und";
             string variant = string.IsNullOrEmpty(sub.Variant) ? "full" : sub.Variant;
-            string sidecarFile = $"subs_{lang}_{variant}.m3u8";
 
-            // Match the .vtt file the extractor produced via the same
-            // template tokens (subs.<lang>.<variant>.vtt); fall back to a
-            // language-only match if the variant token isn't in the name.
-            string? vttPath = vttFiles.FirstOrDefault(f =>
+            // Match the source .vtt the extractor produced.
+            string? sourceVttPath = vttFiles.FirstOrDefault(f =>
                 Path.GetFileName(f)
                     .Contains($".{lang}.{variant}.", StringComparison.OrdinalIgnoreCase)
             );
-            vttPath ??= vttFiles.FirstOrDefault(f =>
+            sourceVttPath ??= vttFiles.FirstOrDefault(f =>
                 Path.GetFileName(f).Contains($".{lang}.", StringComparison.OrdinalIgnoreCase)
             );
-            if (vttPath is null)
+            if (sourceVttPath is null)
                 continue;
 
-            // Sidecar lives next to the .vtt it wraps (subtitles/), so the
-            // master URI subtitles/subs_<lang>_<variant>.m3u8 resolves to a
-            // playlist whose own EXTINF can use a bare filename.
-            string vttFile = Path.GetFileName(vttPath);
-            string playlist =
-                "#EXTM3U\n"
-                + "#EXT-X-VERSION:6\n"
-                + "#EXT-X-PLAYLIST-TYPE:VOD\n"
-                + $"#EXT-X-TARGETDURATION:{(int)Math.Ceiling(durationSeconds)}\n"
-                + $"#EXTINF:{durationSeconds.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)},\n"
-                + vttFile
-                + "\n#EXT-X-ENDLIST\n";
+            // Skip our own segment files if the language probe finds them
+            // before the source — they end with _NNNNN.vtt.
+            if (
+                System.Text.RegularExpressions.Regex.IsMatch(
+                    Path.GetFileName(sourceVttPath),
+                    @"_\d{5}\.vtt$"
+                )
+            )
+                continue;
 
-            string sidecarPath = Path.Combine(subtitlesDir, sidecarFile);
-            await storage.WriteAsync(sidecarPath, Encoding.UTF8.GetBytes(playlist), ct);
+            string vttContent = Encoding.UTF8.GetString(storage.Read(sourceVttPath));
+            IReadOnlyList<NoMercy.Encoder.Subtitles.WebVttSegment> segments =
+                segmenter.SliceContent(vttContent, segmentDuration);
+
+            for (int i = 0; i < segments.Count; i++)
+            {
+                string segFile = $"subs_{lang}_{variant}_{i:D5}.vtt";
+                string segPath = Path.Combine(subtitlesDir, segFile);
+                await storage.WriteAsync(segPath, Encoding.UTF8.GetBytes(segments[i].Content), ct);
+            }
+
+            string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(
+                sub,
+                segments,
+                segmentDurationSeconds
+            );
+            string playlistPath = Path.Combine(subtitlesDir, $"subs_{lang}_{variant}.m3u8");
+            await storage.WriteAsync(playlistPath, Encoding.UTF8.GetBytes(playlist), ct);
         }
     }
 
