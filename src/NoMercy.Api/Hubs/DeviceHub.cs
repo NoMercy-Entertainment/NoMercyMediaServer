@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using NoMercy.Api.Controllers.Socket;
 using NoMercy.Database;
 using NoMercy.Database.Activity;
@@ -108,6 +109,9 @@ public sealed class DeviceHub : ConnectionHub
     }
 }
 
-public sealed record WakeResult(string Status);
+public sealed record WakeResult([property: JsonProperty("status")] string Status);
 
-public sealed record DeviceDropNoticeDto(string DeviceName, string Reason);
+public sealed record DeviceDropNoticeDto(
+    [property: JsonProperty("device_name")] string DeviceName,
+    [property: JsonProperty("reason")] string Reason
+);
