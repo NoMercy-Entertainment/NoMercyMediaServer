@@ -565,7 +565,8 @@ public class MusicHub : ConnectionHub
         }
         else
         {
-            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+            // No live player state — nothing to transfer. The else-branch's previous
+            // `UpdatePlaybackState(user, null)` call would have NRE'd; just return.
             return;
         }
 
@@ -586,6 +587,11 @@ public class MusicHub : ConnectionHub
         };
 
         await _clientMessenger.SendTo("ChangeDevice", "musicHub", user.Id, payload);
+
+        // Broadcast the updated playback state so the new active device receives the
+        // current track + position and starts playing. Without this, TV becomes the
+        // active device flag but stays paused with isPlaying=false.
+        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
     }
 
     public async Task ChangeVolumeCommand(int volume)
