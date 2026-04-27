@@ -6,6 +6,7 @@ using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+using NoMercy.NmSystem.Extensions;
 
 public class PlaylistGenerator : IPlaylistGenerator
 {
@@ -211,33 +212,8 @@ public class PlaylistGenerator : IPlaylistGenerator
         return sb.ToString();
     }
 
-    private static string GetAudioDisplayName(string language)
-    {
-        return language.ToUpperInvariant() switch
-        {
-            "ENG" => "English",
-            "FRE" or "FRA" => "French",
-            "GER" or "DEU" => "German",
-            "SPA" => "Spanish",
-            "ITA" => "Italian",
-            "DUT" or "NLD" => "Dutch",
-            "JPN" or "JAP" => "Japanese",
-            "KOR" => "Korean",
-            "CHI" or "ZHO" => "Chinese",
-            "RUS" => "Russian",
-            "POR" => "Portuguese",
-            "ARA" => "Arabic",
-            "HIN" => "Hindi",
-            "SWE" => "Swedish",
-            "NOR" => "Norwegian",
-            "DAN" => "Danish",
-            "FIN" => "Finnish",
-            "POL" => "Polish",
-            "TUR" => "Turkish",
-            "UND" => "Unknown",
-            _ => language,
-        };
-    }
+    private static string GetAudioDisplayName(string language) =>
+        Culture.EnglishLanguageName(language);
 
     private static string GetVideoCodecTag(VideoOutputPlan video) =>
         HlsCodecsStringBuilder.VideoCodecString(
@@ -258,30 +234,7 @@ public class PlaylistGenerator : IPlaylistGenerator
 
     private static string GetSubtitleDisplayName(string language, string variant = "full")
     {
-        string langName = language.ToUpperInvariant() switch
-        {
-            "ENG" => "English",
-            "FRE" or "FRA" => "French",
-            "GER" or "DEU" => "German",
-            "SPA" => "Spanish",
-            "ITA" => "Italian",
-            "DUT" or "NLD" => "Dutch",
-            "JPN" or "JAP" => "Japanese",
-            "KOR" => "Korean",
-            "CHI" or "ZHO" => "Chinese",
-            "RUS" => "Russian",
-            "POR" => "Portuguese",
-            "ARA" => "Arabic",
-            "HIN" => "Hindi",
-            "SWE" => "Swedish",
-            "NOR" => "Norwegian",
-            "DAN" => "Danish",
-            "FIN" => "Finnish",
-            "POL" => "Polish",
-            "TUR" => "Turkish",
-            "UND" => "Unknown",
-            _ => language,
-        };
+        string langName = Culture.EnglishLanguageName(language);
 
         return variant.ToLowerInvariant() switch
         {
