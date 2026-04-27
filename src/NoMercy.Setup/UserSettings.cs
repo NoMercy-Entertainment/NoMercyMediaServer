@@ -101,6 +101,9 @@ public static class UserSettings
                     break;
                 case "encoderRunners":
                     Config.EncoderWorkers = new(Config.EncoderWorkers.Key, setting.Value.ToInt());
+                    Logger.App(
+                        $"UserSettings: Config.EncoderWorkers loaded as {Config.EncoderWorkers.Value} (DB value '{setting.Value}')"
+                    );
                     break;
                 case "cronRunners":
                     Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.ToInt());

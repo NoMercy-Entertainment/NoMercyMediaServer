@@ -57,6 +57,11 @@ public class QueueRunner
             _workers[entry.Key] = (entry.Value, [], new(), false);
         }
 
+        _logger.LogInformation(
+            "QueueRunner constructed with WorkerCounts: {Counts}",
+            string.Join(", ", configuration.WorkerCounts.Select(kvp => $"{kvp.Key}={kvp.Value}"))
+        );
+
         Current = this;
     }
 
@@ -73,6 +78,7 @@ public class QueueRunner
         _jobQueue.ResetAllReservedJobs();
 
         int workerCount = 0;
+        Dictionary<string, int> spawnedPerQueue = new();
         foreach (
             KeyValuePair<
                 string,
@@ -84,13 +90,21 @@ public class QueueRunner
                 )
             > keyValuePair in _workers
         )
-            for (int i = 0; i < keyValuePair.Value.count; i++)
+        {
+            int target = keyValuePair.Value.count;
+            for (int i = 0; i < target; i++)
             {
                 SpawnWorkerThread(keyValuePair.Key);
                 workerCount++;
             }
+            spawnedPerQueue[keyValuePair.Key] = target;
+        }
 
-        _logger.LogDebug("Queue workers initialized: {WorkerCount} workers spawned", workerCount);
+        _logger.LogInformation(
+            "Queue workers spawned per queue: {Counts} (total {Total})",
+            string.Join(", ", spawnedPerQueue.Select(kvp => $"{kvp.Key}={kvp.Value}")),
+            workerCount
+        );
 
         // Restore any queues that were persisted as paused before the last shutdown.
         if (_configurationStore is not null)
