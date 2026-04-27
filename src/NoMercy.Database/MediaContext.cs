@@ -106,6 +106,19 @@ public class MediaContext : DbContext
                 .ToTable(tb => tb.HasTrigger($"update_{tableName}_updated_at"));
         }
 
+        modelBuilder
+            .Entity<Device>()
+            .HasIndex(d => new { d.OwnerUserId, d.Fingerprint })
+            .IsUnique()
+            .HasFilter("Fingerprint IS NOT NULL");
+
+        modelBuilder
+            .Entity<Device>()
+            .HasOne(d => d.OwnerUser)
+            .WithMany()
+            .HasForeignKey(d => d.OwnerUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         base.OnModelCreating(modelBuilder);
     }
     
