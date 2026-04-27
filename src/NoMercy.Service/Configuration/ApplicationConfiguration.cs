@@ -55,6 +55,8 @@ public static class ApplicationConfiguration
         cronWorker.RegisterJobWithSchedule<ArtistFanartCronJob>("artist-fanart-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<ArtistPaletteCronJob>("artist-palette-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<AlbumPaletteCronJob>("album-palette-job", app.ApplicationServices);
+
+        cronWorker.RegisterJobWithSchedule<DeviceDropRuleCronJob>("device-drop-rule-job", app.ApplicationServices);
     }
 
     private static void ConfigureLocalization(IApplicationBuilder app)

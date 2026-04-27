@@ -240,6 +240,8 @@ public static class ServiceConfiguration
 
         // TODO: Remove after all palettes are regenerated with the new Median Cut algorithm
         services.RegisterCronJob<ReprocessAllPalettesCronJob>("reprocess-all-palettes-job");
+
+        services.RegisterCronJob<DeviceDropRuleCronJob>("device-drop-rule-job");
     }
     
 
