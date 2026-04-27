@@ -561,4 +561,12 @@
     <Key>Albums starting with E</Key>
     <Value lang="nl">Albums starting with E</Value>
   </Entry>
+  <Entry>
+    <Key>Encoder queue paused</Key>
+    <Value lang="nl">Encoder queue paused</Value>
+  </Entry>
+  <Entry>
+    <Key>Encoder queue resumed</Key>
+    <Value lang="nl">Encoder queue resumed</Value>
+  </Entry>
 </I18N>

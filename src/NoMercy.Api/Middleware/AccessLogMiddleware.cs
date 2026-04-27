@@ -62,7 +62,6 @@ public class AccessLogMiddleware
         "/api/v1/setup/permissions",
         "/api/v1/setup/libraries",
         "/api/v1/setup/screensaver",
-        "/api/v1/setup/music-playlists",
     ];
 
     private readonly string[] _ignoreIfAuthenticated = [];
