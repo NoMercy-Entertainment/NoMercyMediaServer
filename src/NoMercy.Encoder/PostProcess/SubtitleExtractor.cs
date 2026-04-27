@@ -116,31 +116,8 @@ public class SubtitleExtractor : ISubtitleExtractor
         return $"{resolved}.{extension}";
     }
 
-    /// <summary>
-    /// Determines the subtitle variant from track metadata.
-    /// Title takes priority over disposition flags for accuracy.
-    /// </summary>
-    private static string ResolveVariant(SubtitleStreamInfo stream)
-    {
-        string title = stream.Title?.ToLowerInvariant() ?? "";
-
-        // Title-based detection takes priority
-        if (title.Contains("s&s") || title.Contains("sign") || title.Contains("song"))
-            return "sign";
-
-        if (title.Contains("sdh") || title.Contains("hearing"))
-            return "sdh";
-
-        // Fall back to disposition flags
-        if (stream.IsForced)
-            return "sign";
-
-        if (stream.IsDefault)
-            return "full";
-
-        // Non-forced, non-default, no recognizable title → alternate translation
-        return "alt";
-    }
+    private static string ResolveVariant(SubtitleStreamInfo stream) =>
+        SubtitleClassifier.ResolveVariant(stream);
 }
 
 public record SubtitleOutputInfo(

@@ -12,6 +12,7 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Subtitles;
 
 public record ExecutionPlan(
     ExecutionGroup[] Groups,
@@ -559,7 +560,8 @@ public class PlanStage(
                         SourceIndex: si,
                         MapLabel: $"0:s:{si}",
                         PlaylistNameTemplate: subProfile.PlaylistNameTemplate,
-                        Mode: subProfile.Mode
+                        Mode: subProfile.Mode,
+                        Variant: SubtitleClassifier.ResolveVariant(stream)
                     )
                 );
             }

@@ -81,7 +81,10 @@ public record SubtitleOutputPlan(
     int SourceIndex,
     string? MapLabel,
     string PlaylistNameTemplate = "subtitles/:filename:.:language:.:variant:",
-    SubtitleMode Mode = SubtitleMode.Extract
+    SubtitleMode Mode = SubtitleMode.Extract,
+    // Variant slot — full / sign / sdh / alt — derived from the source stream's
+    // title and disposition flags so multi-track sources keep distinct URIs.
+    string Variant = "full"
 );
 
 public record ThumbnailOutputPlan(int Width, int Height, int IntervalSeconds);

@@ -101,29 +101,29 @@ public class PlaylistGenerator : IPlaylistGenerator
             );
         }
 
-        // Subtitle groups — deduplicate by emitted URI. Multiple plans
-        // collapsing to the same subs_<lang>.m3u8 (e.g. profile lists both
-        // a webvtt and an ass SubtitleOutput, both matching the same source
-        // language) produced identical EXT-X-MEDIA lines and players would
-        // either show "English" twice in the picker or pick the wrong one.
+        // Subtitle groups — one EXT-X-MEDIA per plan. URI now reflects
+        // language + variant + codec, so the "English (Full)" / "(Sign)" /
+        // "(SDH)" tracks of a single source land as three distinct entries
+        // pointing at three distinct files instead of collapsing to one.
         SubtitleOutputPlan[] activeSubs = plan
             .SubtitleOutputs.Where(s => s.Action is StreamAction.Extract or StreamAction.Copy)
             .ToArray();
 
         if (activeSubs.Length > 0)
         {
-            HashSet<string> seenSubsUris = new(StringComparer.OrdinalIgnoreCase);
             foreach (SubtitleOutputPlan sub in activeSubs)
             {
                 string lang = sub.Language ?? "und";
-                string displayName = GetSubtitleDisplayName(lang);
+                string displayName = GetSubtitleDisplayName(lang, sub.Variant);
                 string subsUri = GetSubtitlePlaylistUri(sub);
-
-                if (!seenSubsUris.Add(subsUri))
-                    continue;
+                bool isForced = string.Equals(
+                    sub.Variant,
+                    "sign",
+                    StringComparison.OrdinalIgnoreCase
+                );
 
                 sb.AppendLine(
-                    $"#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"{displayName}\",LANGUAGE=\"{lang}\",DEFAULT=NO,AUTOSELECT=YES,FORCED=NO,URI=\"{subsUri}\""
+                    $"#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"{displayName}\",LANGUAGE=\"{lang}\",DEFAULT=NO,AUTOSELECT=YES,FORCED={YesNo(isForced)},URI=\"{subsUri}\""
                 );
             }
 
@@ -256,9 +256,9 @@ public class PlaylistGenerator : IPlaylistGenerator
     // Subtitle helpers
     // ------------------------------------------------------------------
 
-    private static string GetSubtitleDisplayName(string language)
+    private static string GetSubtitleDisplayName(string language, string variant = "full")
     {
-        return language.ToUpperInvariant() switch
+        string langName = language.ToUpperInvariant() switch
         {
             "ENG" => "English",
             "FRE" or "FRA" => "French",
@@ -282,23 +282,29 @@ public class PlaylistGenerator : IPlaylistGenerator
             "UND" => "Unknown",
             _ => language,
         };
+
+        return variant.ToLowerInvariant() switch
+        {
+            "sign" => $"{langName} (Signs & Songs)",
+            "sdh" => $"{langName} (SDH)",
+            "alt" => $"{langName} (Alt)",
+            _ => langName,
+        };
     }
 
-    /// <summary>
-    /// Derives the subtitle playlist URI from the plan's
-    /// <see cref="SubtitleOutputPlan.PlaylistNameTemplate"/>.
-    /// The template tokens are :filename: (replaced with "subs") and
-    /// :language:/:variant: (replaced with the language / codec).
-    /// </summary>
+    // ASS/SRT sidecars play directly from the file URI; only WebVTT needs
+    // a single-segment .m3u8 wrapper because that's what HLS spec requires.
     internal static string GetSubtitlePlaylistUri(SubtitleOutputPlan sub)
     {
         string lang = sub.Language ?? "und";
-        string codec = sub.OutputCodec.ToString().ToLowerInvariant();
+        string variant = string.IsNullOrEmpty(sub.Variant) ? "full" : sub.Variant;
 
-        // Use a simple derivation: subs_<lang>.m3u8 in the subtitles/ dir,
-        // which matches the default PlaylistNameTemplate shape and keeps
-        // the master playlist short.
-        return $"subs_{lang}.m3u8";
+        return sub.OutputCodec switch
+        {
+            SubtitleCodecType.Ass => $"subtitles/subs.{lang}.{variant}.ass",
+            SubtitleCodecType.Srt => $"subtitles/subs.{lang}.{variant}.srt",
+            _ => $"subs_{lang}_{variant}.m3u8",
+        };
     }
 
     /// <summary>

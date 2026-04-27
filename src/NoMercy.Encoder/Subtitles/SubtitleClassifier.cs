@@ -1,3 +1,5 @@
+using NoMercy.Encoder.Analysis;
+
 namespace NoMercy.Encoder.Subtitles;
 
 public static class SubtitleClassifier
@@ -24,4 +26,25 @@ public static class SubtitleClassifier
 
     public static bool IsBitmapBased(string codec) =>
         BitmapCodecs.Contains(codec.ToLowerInvariant());
+
+    // Title takes priority over disposition flags so signs/songs and SDH
+    // tracks land in the right slot even when the muxer mis-flagged them.
+    public static string ResolveVariant(SubtitleStreamInfo stream)
+    {
+        string title = stream.Title?.ToLowerInvariant() ?? "";
+
+        if (title.Contains("s&s") || title.Contains("sign") || title.Contains("song"))
+            return "sign";
+
+        if (title.Contains("sdh") || title.Contains("hearing"))
+            return "sdh";
+
+        if (stream.IsForced)
+            return "sign";
+
+        if (stream.IsDefault)
+            return "full";
+
+        return "alt";
+    }
 }

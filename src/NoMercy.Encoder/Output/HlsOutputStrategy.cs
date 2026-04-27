@@ -227,22 +227,22 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         await WriteSubtitleSidecarsAsync(outputDirectory, plan, ct);
     }
 
-    /// <summary>
-    /// Emits the per-language subs_&lt;lang&gt;.m3u8 sidecar playlists the
-    /// master references. Single-segment VOD playlists pointing at the .vtt
-    /// file the extractor wrote under subtitles/. Without these the master's
-    /// EXT-X-MEDIA:TYPE=SUBTITLES URI 404s in every HLS player.
-    /// </summary>
+    // Wraps WebVTT extracts in single-segment VOD playlists the master can
+    // reference. ASS/SRT URIs in the master point straight at the file, so
+    // those plans skip this path entirely.
     private async Task WriteSubtitleSidecarsAsync(
         string outputDirectory,
         OutputPlan plan,
         CancellationToken ct
     )
     {
-        SubtitleOutputPlan[] activeSubs = plan
-            .SubtitleOutputs.Where(s => s.Action is StreamAction.Extract or StreamAction.Copy)
+        SubtitleOutputPlan[] webVttSubs = plan
+            .SubtitleOutputs.Where(s =>
+                s.Action is StreamAction.Extract or StreamAction.Copy
+                && s.OutputCodec is SubtitleCodecType.WebVtt
+            )
             .ToArray();
-        if (activeSubs.Length == 0)
+        if (webVttSubs.Length == 0)
             return;
 
         string subtitlesDir = Path.Combine(outputDirectory, "subtitles");
@@ -261,16 +261,20 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         if (durationSeconds <= 0)
             durationSeconds = 36000;
 
-        HashSet<string> writtenUris = new(StringComparer.OrdinalIgnoreCase);
-
-        foreach (SubtitleOutputPlan sub in activeSubs)
+        foreach (SubtitleOutputPlan sub in webVttSubs)
         {
             string lang = sub.Language ?? "und";
-            string sidecarFile = $"subs_{lang}.m3u8";
-            if (!writtenUris.Add(sidecarFile))
-                continue;
+            string variant = string.IsNullOrEmpty(sub.Variant) ? "full" : sub.Variant;
+            string sidecarFile = $"subs_{lang}_{variant}.m3u8";
 
+            // Match the .vtt file the extractor produced via the same
+            // template tokens (subs.<lang>.<variant>.vtt); fall back to a
+            // language-only match if the variant token isn't in the name.
             string? vttPath = vttFiles.FirstOrDefault(f =>
+                Path.GetFileName(f)
+                    .Contains($".{lang}.{variant}.", StringComparison.OrdinalIgnoreCase)
+            );
+            vttPath ??= vttFiles.FirstOrDefault(f =>
                 Path.GetFileName(f).Contains($".{lang}.", StringComparison.OrdinalIgnoreCase)
             );
             if (vttPath is null)
