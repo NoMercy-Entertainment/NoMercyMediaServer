@@ -47,6 +47,10 @@ public static class ApplicationConfiguration
             "certificate-renewal",
             app.ApplicationServices
         );
+        cronWorker.RegisterJobWithSchedule<ActivityLogRetentionCronJob>(
+            "activity-log-retention",
+            app.ApplicationServices
+        );
 
         cronWorker.RegisterJobWithSchedule<ShowPaletteCronJob>(
             "show-palette-job",

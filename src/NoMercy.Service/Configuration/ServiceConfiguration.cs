@@ -278,6 +278,7 @@ public static class ServiceConfiguration
     private static void ConfigureCronJobs(IServiceCollection services)
     {
         services.RegisterCronJob<CertificateRenewalCronJob>("certificate-renewal");
+        services.RegisterCronJob<ActivityLogRetentionCronJob>("activity-log-retention");
 
         services.RegisterCronJob<ShowPaletteCronJob>("show-palette-job");
         services.RegisterCronJob<SeasonPaletteCronJob>("season-palette-job");
