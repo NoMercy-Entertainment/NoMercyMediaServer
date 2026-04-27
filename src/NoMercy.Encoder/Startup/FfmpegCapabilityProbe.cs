@@ -58,7 +58,12 @@ public sealed class FfmpegCapabilityProbe(
             await ffmpegCapabilities.ProbeAsync(ct).ConfigureAwait(false);
 
         bool bluRay = ffmpegCapabilities.HasProtocol("bluray");
-        bool dvdRead = ffmpegCapabilities.HasProtocol("dvdread");
+        // ffmpeg ≥ 6.1 dropped the dvdread:// protocol form in favour of the
+        // dvdvideo demuxer (-f dvdvideo -i /path/to/disc). Both stock builds
+        // with --enable-libdvdread and the NoMercy fork expose libdvdread
+        // exclusively through that demuxer, so the demuxer's presence is
+        // the canonical capability check.
+        bool dvdRead = ffmpegCapabilities.HasDemuxer("dvdvideo");
 
         List<string> missingFilters = RequiredFilters
             .Where(f => !ffmpegCapabilities.HasFilter(f))
