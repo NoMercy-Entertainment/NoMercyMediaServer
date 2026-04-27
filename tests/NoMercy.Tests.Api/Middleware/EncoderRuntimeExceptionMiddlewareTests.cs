@@ -76,8 +76,8 @@ public class EncoderRuntimeExceptionMiddlewareTests
             throw new InvalidOperationException("something unrelated")
         );
 
-        InvalidOperationException thrown = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => client.GetAsync("/")
+        InvalidOperationException thrown = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.GetAsync("/")
         );
 
         Assert.Equal("something unrelated", thrown.Message);

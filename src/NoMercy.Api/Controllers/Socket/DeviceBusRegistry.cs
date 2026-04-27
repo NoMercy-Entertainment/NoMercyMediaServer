@@ -34,7 +34,8 @@ public sealed class DeviceBusRegistry(
 
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
         Device? device = await ctx.Devices.FindAsync(deviceId);
-        if (device is null) return;
+        if (device is null)
+            return;
         device.WsConnectedAt = null;
         await ctx.SaveChangesAsync();
 
@@ -69,12 +70,11 @@ public sealed class DeviceBusRegistry(
     public async Task BroadcastChange(Guid ownerUserId)
     {
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
-        List<Device> rows = await ctx.Devices
-            .Where(d => d.OwnerUserId == ownerUserId && d.Fingerprint != null)
+        List<Device> rows = await ctx
+            .Devices.Where(d => d.OwnerUserId == ownerUserId && d.Fingerprint != null)
             .ToListAsync();
 
-        List<DeviceListItem> items = rows
-            .Select(d => new DeviceListItem
+        List<DeviceListItem> items = rows.Select(d => new DeviceListItem
             {
                 DeviceId = d.Id,
                 Fingerprint = d.Fingerprint!,
@@ -82,8 +82,7 @@ public sealed class DeviceBusRegistry(
                 Type = d.Type,
                 Online = IsOnline(d.Id),
                 LanIp = d.LanIp,
-                LastSeenAt =
-                    d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
+                LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
             })
             .ToList();
 

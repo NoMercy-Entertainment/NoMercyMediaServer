@@ -17,15 +17,31 @@ namespace NoMercy.Database.Migrations
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 2048, nullable: true),
+                    Description = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 2048,
+                        nullable: true
+                    ),
                     Author = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Tags = table.Column<string>(type: "TEXT", maxLength: 1024, nullable: true),
-                    ProfileJson = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    ProfileJson = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 256,
+                        nullable: false
+                    ),
                     ParentPresetId = table.Column<string>(type: "TEXT", nullable: true),
                     ParentId = table.Column<string>(type: "TEXT", nullable: true),
                     IsBuiltIn = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
+                    UpdatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
                 },
                 constraints: table =>
                 {
@@ -35,30 +51,34 @@ namespace NoMercy.Database.Migrations
                         column: x => x.ParentId,
                         principalTable: "EncodingPresets",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
+                        onDelete: ReferentialAction.Restrict
+                    );
+                }
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_EncodingPresets_Name",
                 table: "EncodingPresets",
-                column: "Name");
+                column: "Name"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_EncodingPresets_ParentId",
                 table: "EncodingPresets",
-                column: "ParentId");
+                column: "ParentId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_EncodingPresets_ParentPresetId",
                 table: "EncodingPresets",
-                column: "ParentPresetId");
+                column: "ParentPresetId"
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "EncodingPresets");
+            migrationBuilder.DropTable(name: "EncodingPresets");
         }
     }
 }

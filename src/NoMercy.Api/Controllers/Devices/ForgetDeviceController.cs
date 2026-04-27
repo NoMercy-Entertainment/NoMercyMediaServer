@@ -29,12 +29,15 @@ public sealed class ForgetDeviceController : ControllerBase
     public async Task<IActionResult> Forget(string deviceId)
     {
         User? user = HttpContext.User.User();
-        if (user is null) return Unauthorized();
-        if (!Ulid.TryParse(deviceId, out Ulid id)) return BadRequest();
+        if (user is null)
+            return Unauthorized();
+        if (!Ulid.TryParse(deviceId, out Ulid id))
+            return BadRequest();
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
         Device? device = await ctx.Devices.FindAsync(id);
-        if (device is null || device.OwnerUserId != user.Id) return NotFound();
+        if (device is null || device.OwnerUserId != user.Id)
+            return NotFound();
 
         Guid ownerUserId = device.OwnerUserId!.Value;
 

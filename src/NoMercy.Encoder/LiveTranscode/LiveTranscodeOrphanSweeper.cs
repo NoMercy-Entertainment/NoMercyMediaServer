@@ -48,10 +48,7 @@ public class LiveTranscodeOrphanSweeper(
             try
             {
                 Directory.Delete(dir, recursive: true);
-                logger.LogInformation(
-                    "LiveTranscodeOrphanSweeper: deleted orphan {Dir}",
-                    dir
-                );
+                logger.LogInformation("LiveTranscodeOrphanSweeper: deleted orphan {Dir}", dir);
             }
             catch (Exception ex)
             {

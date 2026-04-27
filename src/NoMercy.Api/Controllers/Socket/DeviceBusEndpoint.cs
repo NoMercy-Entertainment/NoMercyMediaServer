@@ -51,7 +51,8 @@ public sealed class DeviceBusEndpoint(
             while (ws.State == WebSocketState.Open && !ct.IsCancellationRequested)
             {
                 WebSocketReceiveResult result = await ws.ReceiveAsync(buffer, ct);
-                if (result.MessageType == WebSocketMessageType.Close) break;
+                if (result.MessageType == WebSocketMessageType.Close)
+                    break;
 
                 string json = Encoding.UTF8.GetString(buffer, 0, result.Count);
                 using JsonDocument doc = JsonDocument.Parse(json);
@@ -60,7 +61,8 @@ public sealed class DeviceBusEndpoint(
                 if (type == "hello")
                 {
                     device = await HandleHello(doc.RootElement, user, ws);
-                    if (device is null) break;
+                    if (device is null)
+                        break;
                 }
                 else if (type == "pong" && device is not null)
                 {
@@ -74,7 +76,8 @@ public sealed class DeviceBusEndpoint(
         }
         finally
         {
-            if (device is not null) await registry.Unregister(device.Id);
+            if (device is not null)
+                await registry.Unregister(device.Id);
         }
     }
 
@@ -84,11 +87,12 @@ public sealed class DeviceBusEndpoint(
         string deviceName = root.GetProperty("name").GetString() ?? "Android TV";
         string deviceType = root.GetProperty("device_type").GetString() ?? "tv";
 
-        if (string.IsNullOrEmpty(fingerprint)) return null;
+        if (string.IsNullOrEmpty(fingerprint))
+            return null;
 
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
-        Device? device = await ctx.Devices.FirstOrDefaultAsync(
-            d => d.Fingerprint == fingerprint && d.OwnerUserId == user.Id
+        Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
+            d.Fingerprint == fingerprint && d.OwnerUserId == user.Id
         );
 
         if (device is null)

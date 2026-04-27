@@ -16,11 +16,17 @@ namespace NoMercy.Tests.Api;
 [Trait("Category", "ContentSegments")]
 public class ContentSegmentManualEditTests
 {
-    private static MethodInfo? FindAction(Type controller, Type httpVerbAttribute, string routeSuffix)
+    private static MethodInfo? FindAction(
+        Type controller,
+        Type httpVerbAttribute,
+        string routeSuffix
+    )
     {
-        foreach (MethodInfo method in controller
-                     .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-                     .Where(m => m.GetCustomAttributes<HttpMethodAttribute>().Any()))
+        foreach (
+            MethodInfo method in controller
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Where(m => m.GetCustomAttributes<HttpMethodAttribute>().Any())
+        )
         {
             HttpMethodAttribute? attr = method
                 .GetCustomAttributes(httpVerbAttribute, inherit: false)

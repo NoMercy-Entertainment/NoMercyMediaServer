@@ -20,11 +20,5 @@ public interface IAnalysisProgressObserver
     /// <param name="percent">Completion [0–100].</param>
     /// <param name="stage">Human-readable current stage label.</param>
     /// <param name="etaSeconds">Estimated seconds remaining, or null when unknown.</param>
-    void Report(
-        string jobId,
-        string type,
-        double percent,
-        string stage,
-        double? etaSeconds = null
-    );
+    void Report(string jobId, string type, double percent, string stage, double? etaSeconds = null);
 }

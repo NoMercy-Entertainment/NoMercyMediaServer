@@ -36,12 +36,7 @@ public class EncodingNotificationSubscriber(
             eventBus.Subscribe<EncodingStartedEvent>(
                 (evt, ct) =>
                     dispatcher.NotifyStartedAsync(
-                        new(
-                            evt.JobId,
-                            evt.InputPath,
-                            evt.OutputPath,
-                            evt.ProfileName
-                        ),
+                        new(evt.JobId, evt.InputPath, evt.OutputPath, evt.ProfileName),
                         ct
                     )
             )
@@ -61,12 +56,7 @@ public class EncodingNotificationSubscriber(
             eventBus.Subscribe<EncodingFailedEvent>(
                 (evt, ct) =>
                     dispatcher.NotifyFailedAsync(
-                        new(
-                            evt.JobId,
-                            evt.InputPath,
-                            evt.ErrorMessage,
-                            evt.ExceptionType
-                        ),
+                        new(evt.JobId, evt.InputPath, evt.ErrorMessage, evt.ExceptionType),
                         ct
                     )
             )

@@ -24,7 +24,11 @@ public class EncoderContentAnalysisController_Routes_Test
 {
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
-    private static MethodInfo? FindAction(Type controller, Type httpVerbAttribute, string routeSuffix)
+    private static MethodInfo? FindAction(
+        Type controller,
+        Type httpVerbAttribute,
+        string routeSuffix
+    )
     {
         IEnumerable<MethodInfo> actions = controller
             .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
@@ -48,7 +52,12 @@ public class EncoderContentAnalysisController_Routes_Test
         return null;
     }
 
-    private static void AssertEndpointExists(Type controller, Type httpVerb, string routeSuffix, string description)
+    private static void AssertEndpointExists(
+        Type controller,
+        Type httpVerb,
+        string routeSuffix,
+        string description
+    )
     {
         MethodInfo? method = FindAction(controller, httpVerb, routeSuffix);
         Assert.True(
@@ -71,21 +80,35 @@ public class EncoderContentAnalysisController_Routes_Test
         string description
     )
     {
-        AssertEndpointExists(typeof(EncoderContentAnalysisController), httpVerb, routeSuffix, description);
+        AssertEndpointExists(
+            typeof(EncoderContentAnalysisController),
+            httpVerb,
+            routeSuffix,
+            description
+        );
     }
 
     // ─── EncoderOcrLanguagesController ───────────────────────────────────────
 
     [Theory]
     [InlineData(typeof(HttpGetAttribute), "languages", "GET /languages")]
-    [InlineData(typeof(HttpPostAttribute), "languages/{code}/download", "POST /languages/{code}/download")]
+    [InlineData(
+        typeof(HttpPostAttribute),
+        "languages/{code}/download",
+        "POST /languages/{code}/download"
+    )]
     public void EncoderOcrLanguagesController_HasExpectedEndpoint(
         Type httpVerb,
         string routeSuffix,
         string description
     )
     {
-        AssertEndpointExists(typeof(EncoderOcrLanguagesController), httpVerb, routeSuffix, description);
+        AssertEndpointExists(
+            typeof(EncoderOcrLanguagesController),
+            httpVerb,
+            routeSuffix,
+            description
+        );
     }
 
     // ─── Dashboard alias — GET crop carries deprecation notice ───────────────

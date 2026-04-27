@@ -174,11 +174,19 @@ public class ActivityLoggerTests : IDisposable
             .Setup(b => b.BroadcastAsync(It.IsAny<ActivityLog>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        ActivityLogger logger = new(factory, NullLogger<ActivityLogger>.Instance, broadcaster.Object);
+        ActivityLogger logger = new(
+            factory,
+            NullLogger<ActivityLogger>.Instance,
+            broadcaster.Object
+        );
         await logger.LogAuthAsync("auth.login", Guid.NewGuid(), Ulid.NewUlid(), success: true);
 
         broadcaster.Verify(
-            b => b.BroadcastAsync(It.Is<ActivityLog>(r => r.Type == "auth.login"), It.IsAny<CancellationToken>()),
+            b =>
+                b.BroadcastAsync(
+                    It.Is<ActivityLog>(r => r.Type == "auth.login"),
+                    It.IsAny<CancellationToken>()
+                ),
             Times.Once
         );
     }
@@ -192,7 +200,11 @@ public class ActivityLoggerTests : IDisposable
             .Setup(b => b.BroadcastAsync(It.IsAny<ActivityLog>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("hub down"));
 
-        ActivityLogger logger = new(factory, NullLogger<ActivityLogger>.Instance, broadcaster.Object);
+        ActivityLogger logger = new(
+            factory,
+            NullLogger<ActivityLogger>.Instance,
+            broadcaster.Object
+        );
 
         Func<Task> act = () =>
             logger.LogAuthAsync("auth.login", Guid.NewGuid(), Ulid.NewUlid(), success: true);

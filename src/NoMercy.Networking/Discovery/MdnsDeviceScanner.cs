@@ -21,7 +21,8 @@ public sealed class MdnsDeviceScanner : IDisposable
     public MdnsDeviceScanner(
         IDbContextFactory<MediaContext> contextFactory,
         ILogger<MdnsDeviceScanner> logger,
-        IDeviceListChangeNotifier? changeNotifier = null)
+        IDeviceListChangeNotifier? changeNotifier = null
+    )
     {
         _contextFactory = contextFactory;
         _logger = logger;
@@ -71,7 +72,9 @@ public sealed class MdnsDeviceScanner : IDisposable
             DateTime now = DateTime.UtcNow;
             bool ipChanged = device.LanIp != ip;
             bool portChanged = device.LanPort != port;
-            bool stale = device.MdnsSeenAt is null || now - device.MdnsSeenAt.Value > TimeSpan.FromMinutes(5);
+            bool stale =
+                device.MdnsSeenAt is null
+                || now - device.MdnsSeenAt.Value > TimeSpan.FromMinutes(5);
 
             if (!ipChanged && !portChanged && !stale)
                 return;

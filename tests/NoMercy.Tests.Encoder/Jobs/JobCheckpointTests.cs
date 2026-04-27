@@ -212,7 +212,9 @@ public class JobCheckpointTests
         // payload as null instead of running the record's positional
         // default. The store treats null + empty as equivalent for the
         // resume path; both signal "no data carried over from before."
-        (loaded.VariantId ?? string.Empty).Should().BeEmpty();
+        (loaded.VariantId ?? string.Empty)
+            .Should()
+            .BeEmpty();
         loaded.LastProgressMs.Should().Be(0);
         (loaded.LastFfmpegStderrTail ?? string.Empty).Should().BeEmpty();
         loaded.FailedAt.Should().BeNull();

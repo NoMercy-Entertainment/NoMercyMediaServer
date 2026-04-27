@@ -20,7 +20,10 @@ public class LiveSessionIdleReaper(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogDebug("LiveSessionIdleReaper started (idle timeout = {Min} min)", limits.IdleTimeoutMinutes);
+        logger.LogDebug(
+            "LiveSessionIdleReaper started (idle timeout = {Min} min)",
+            limits.IdleTimeoutMinutes
+        );
 
         while (!stoppingToken.IsCancellationRequested)
         {

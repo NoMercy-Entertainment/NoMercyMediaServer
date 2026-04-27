@@ -23,8 +23,16 @@ namespace NoMercy.Database.Migrations
                     EndSeconds = table.Column<double>(type: "REAL", nullable: false),
                     Source = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
                     Confidence = table.Column<double>(type: "REAL", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
+                    UpdatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
                 },
                 constraints: table =>
                 {
@@ -34,36 +42,41 @@ namespace NoMercy.Database.Migrations
                         column: x => x.EpisodeId,
                         principalTable: "Episodes",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Cascade
+                    );
                     table.ForeignKey(
                         name: "FK_ContentSegments_Movies_MovieId",
                         column: x => x.MovieId,
                         principalTable: "Movies",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContentSegments_EpisodeId",
                 table: "ContentSegments",
-                column: "EpisodeId");
+                column: "EpisodeId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContentSegments_EpisodeId_SegmentType",
                 table: "ContentSegments",
-                columns: new[] { "EpisodeId", "SegmentType" });
+                columns: new[] { "EpisodeId", "SegmentType" }
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContentSegments_MovieId",
                 table: "ContentSegments",
-                column: "MovieId");
+                column: "MovieId"
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "ContentSegments");
+            migrationBuilder.DropTable(name: "ContentSegments");
         }
     }
 }

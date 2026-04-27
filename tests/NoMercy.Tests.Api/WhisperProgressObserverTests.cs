@@ -21,10 +21,13 @@ public class WhisperProgressObserverTests
     {
         Mock<IClientProxy> clientProxyMock = new();
         clientProxyMock
-            .Setup(c => c.SendCoreAsync(
-                It.IsAny<string>(),
-                It.IsAny<object[]>(),
-                It.IsAny<CancellationToken>()))
+            .Setup(c =>
+                c.SendCoreAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<object[]>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .Returns(Task.CompletedTask);
 
         Mock<IHubClients> hubClientsMock = new();
@@ -52,10 +55,12 @@ public class WhisperProgressObserverTests
         Thread.Sleep(100);
 
         clientProxyMock.Verify(
-            c => c.SendCoreAsync(
-                "WhisperProgress",
-                It.Is<object[]>(args => args.Length > 0),
-                It.IsAny<CancellationToken>()),
+            c =>
+                c.SendCoreAsync(
+                    "WhisperProgress",
+                    It.Is<object[]>(args => args.Length > 0),
+                    It.IsAny<CancellationToken>()
+                ),
             Times.AtLeastOnce
         );
     }
@@ -70,7 +75,9 @@ public class WhisperProgressObserverTests
         observer.OnStageStarted("stage");
         observer.OnStageCompleted("stage", TimeSpan.Zero);
         observer.OnCompleted();
-        observer.OnError(new(NoMercy.Encoder.Errors.EncodingErrorKind.Unknown, "msg", null, null, false));
+        observer.OnError(
+            new(NoMercy.Encoder.Errors.EncodingErrorKind.Unknown, "msg", null, null, false)
+        );
         observer.OnPlanResolved([], [], [], false, false);
     }
 }

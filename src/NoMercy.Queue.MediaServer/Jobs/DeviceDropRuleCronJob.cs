@@ -102,12 +102,14 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
 
         foreach ((Ulid _, Guid userId, string name, string reason) in notices)
         {
-            _context.DeviceDropNotices.Add(new DeviceDropNotice
-            {
-                UserId = userId,
-                DeviceName = name,
-                Reason = reason,
-            });
+            _context.DeviceDropNotices.Add(
+                new DeviceDropNotice
+                {
+                    UserId = userId,
+                    DeviceName = name,
+                    Reason = reason,
+                }
+            );
         }
 
         await _context.SaveChangesAsync(cancellationToken);

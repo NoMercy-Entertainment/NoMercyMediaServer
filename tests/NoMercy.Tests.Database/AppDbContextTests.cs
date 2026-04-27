@@ -51,9 +51,7 @@ public class AppDbContextTests : IDisposable
     {
         string secret = "my-super-secret-token";
 
-        _context.Configuration.Add(
-            new() { Key = "auth_access_token", SecureValue = secret }
-        );
+        _context.Configuration.Add(new() { Key = "auth_access_token", SecureValue = secret });
         await _context.SaveChangesAsync();
 
         Configuration? loaded = await _context.Configuration.FirstOrDefaultAsync(c =>

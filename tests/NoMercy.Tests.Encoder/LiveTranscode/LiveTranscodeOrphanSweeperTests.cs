@@ -20,7 +20,10 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
     private LiveTranscodeOrphanSweeper BuildSweeper()
     {
         EncoderOptions opts = new() { LiveTranscodeCachePath = _cacheRoot };
-        return new LiveTranscodeOrphanSweeper(opts, NullLogger<LiveTranscodeOrphanSweeper>.Instance);
+        return new LiveTranscodeOrphanSweeper(
+            opts,
+            NullLogger<LiveTranscodeOrphanSweeper>.Instance
+        );
     }
 
     // ──────────────────────────────────────────────────────────────────────────
