@@ -112,7 +112,9 @@ public class EncodingOrchestrator(
                 ct
             );
 
-            long outputBytes = artifacts.Sum(a => a.SizeBytes);
+            // OutputBytes counts everything on disk (segments + sidecars +
+            // thumbnails); artifacts are stream-level only. Walk separately.
+            long outputBytes = await SumOutputBytesAsync(request.OutputDirectory, ct);
             long sourceBytes = await GetSourceBytesAsync(request.InputPath, ct);
             double durationSec = wall.Elapsed.TotalSeconds;
             double avgFps = result.Metrics?.AverageFps ?? 0;
@@ -214,6 +216,12 @@ public class EncodingOrchestrator(
         }
     }
 
+    // Stream-level artifacts only — the master + variant playlists for HLS,
+    // the muxed file itself for MP4 / MKV / audio outputs. Per-segment
+    // hashing was costing ~57s on a SMB-mounted output dir for one HLS
+    // encode (hundreds of .ts / .m4s / .vtt / sprite files); none of it
+    // was consumed downstream. Sizes still come from the recursive walk
+    // so EncodeStats.OutputBytes stays accurate.
     private async Task<IReadOnlyList<OutputArtifact>> BuildArtifactsAsync(
         string outputDirectory,
         CancellationToken ct
@@ -248,6 +256,11 @@ public class EncodingOrchestrator(
                 continue;
             }
 
+            if (!IsStreamLevelArtifact(entry.Path))
+            {
+                continue;
+            }
+
             try
             {
                 string hash = await storage.HashAsync(entry.Path, "sha256", ct);
@@ -263,6 +276,32 @@ public class EncodingOrchestrator(
         return artifacts;
     }
 
+    private static bool IsStreamLevelArtifact(string path)
+    {
+        string ext = Path.GetExtension(path).ToLowerInvariant();
+        string name = Path.GetFileName(path).ToLowerInvariant();
+
+        // HLS playlists — master + per-variant. Segment files (.ts / .m4s)
+        // and segment-wrapping subtitle playlists (subs_<lang>_<variant>.m3u8
+        // sit next to .vtt segments) are the SAME structural fingerprint as
+        // their variant playlist, so skip the segment files but keep all
+        // .m3u8 — playlists are KB-sized text, hashing is free.
+        if (ext == ".m3u8")
+            return true;
+
+        // Single-file muxed outputs.
+        if (ext is ".mp4" or ".mkv" or ".webm" or ".flac" or ".mp3" or ".ogg" or ".opus")
+            return true;
+
+        // ASS / SRT sidecars when the profile preserves them as direct files.
+        if (ext is ".ass" or ".srt")
+            return true;
+
+        // Everything else (segments, fmp4 init, thumbnails, sprite vtt,
+        // per-segment .vtt) is auxiliary and skipped.
+        return false;
+    }
+
     private async Task<long> GetSourceBytesAsync(string inputPath, CancellationToken ct)
     {
         try
@@ -273,5 +312,35 @@ public class EncodingOrchestrator(
         {
             return 0;
         }
+    }
+
+    // Plain size walk — no hashing, no extra I/O beyond directory metadata.
+    private async Task<long> SumOutputBytesAsync(string outputDirectory, CancellationToken ct)
+    {
+        long total = 0;
+        try
+        {
+            await foreach (
+                StorageEntry entry in storage.ListAsync(
+                    outputDirectory,
+                    pattern: null,
+                    recursive: true,
+                    ct: ct
+                )
+            )
+            {
+                if (!entry.IsDirectory)
+                    total += entry.SizeBytes;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Could not sum output sizes for {Dir} — OutputBytes will be 0",
+                outputDirectory
+            );
+        }
+        return total;
     }
 }
