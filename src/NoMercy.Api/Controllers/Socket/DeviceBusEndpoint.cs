@@ -91,8 +91,12 @@ public sealed class DeviceBusEndpoint(
             return null;
 
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
+        // Look up by DeviceId first — that's the primary unique key MusicHub already
+        // uses (== ANDROID_ID for Android clients). Falls back to Fingerprint match
+        // for legacy device-bus rows that pre-date the ID alignment. Either way,
+        // upsert by setting both columns + ownership so the row is whole.
         Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
-            d.Fingerprint == fingerprint && d.OwnerUserId == user.Id
+            d.DeviceId == fingerprint || (d.Fingerprint == fingerprint && d.OwnerUserId == user.Id)
         );
 
         if (device is null)
@@ -107,6 +111,14 @@ public sealed class DeviceBusEndpoint(
                 IsActive = true,
             };
             ctx.Devices.Add(device);
+        }
+        else
+        {
+            // Existing MusicHub-registered row — backfill the device-bus columns.
+            device.Fingerprint = fingerprint;
+            device.OwnerUserId ??= user.Id;
+            if (string.IsNullOrEmpty(device.Type))
+                device.Type = deviceType;
         }
 
         device.WsConnectedAt = DateTime.UtcNow;
