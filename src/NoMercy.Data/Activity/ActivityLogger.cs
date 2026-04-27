@@ -147,6 +147,21 @@ public class ActivityLogger : IActivityLogger
 
     private async Task WriteAsync(ActivityLog row, CancellationToken ct)
     {
+        // Drop rows that would violate the FK constraints rather than retry-and-log-noise.
+        // Auth callbacks fall back to Ulid.Empty / Guid.Empty when the device or user
+        // can't be resolved (e.g. failed login, device-less OAuth redirect). Those IDs
+        // don't match any Devices/Users row, so the FK fails on every retry.
+        if (row.DeviceId == Ulid.Empty || row.UserId == Guid.Empty)
+        {
+            _logger.LogDebug(
+                "Skipping activity log {Type}: missing DeviceId or UserId (device={DeviceId}, user={UserId})",
+                row.Type,
+                row.DeviceId,
+                row.UserId
+            );
+            return;
+        }
+
         for (int attempt = 1; attempt <= MaxRetries; attempt++)
         {
             try
