@@ -44,6 +44,31 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
                 using IDXGIAdapter1 dxgiAdapter = adapter;
                 AdapterDescription1 desc = dxgiAdapter.Description1;
 
+                // Skip software/fallback adapters (Microsoft Basic Render Driver, WARP, etc.).
+                // AdapterFlags.Software is the DXGI_ADAPTER_FLAG_SOFTWARE bit.
+                if ((desc.Flags & AdapterFlags.Software) != 0)
+                {
+                    adapterIndex++;
+                    continue;
+                }
+
+                // Belt-and-braces name blacklist — driver naming is inconsistent enough
+                // that the flag alone can miss edge cases.
+                if (
+                    desc.Description.StartsWith(
+                        "Microsoft Basic",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    || desc.Description.Contains(
+                        "Basic Render Driver",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    adapterIndex++;
+                    continue;
+                }
+
                 // Normalise LUID to match PDH format "0xHHHHHHHH_0xLLLLLLLL"
                 string luidKey =
                     $"0x{desc.Luid.HighPart:X8}_0x{desc.Luid.LowPart:X8}".ToUpperInvariant();
@@ -479,6 +504,12 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         int gpuIndex = 0;
         foreach (KeyValuePair<string, Dictionary<string, double>> kvp in totals)
         {
+            // If the LUID is absent from the DXGI map the adapter was filtered out
+            // (software/Basic Render Driver).  Don't emit it at all.
+            string upperLuid = kvp.Key.ToUpperInvariant();
+            if (!DxgiLuidNames.ContainsKey(upperLuid))
+                continue;
+
             Dictionary<string, double> engines = kvp.Value;
 
             Gpu gpu = new()
