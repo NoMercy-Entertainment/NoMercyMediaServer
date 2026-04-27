@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
+using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
@@ -33,9 +34,10 @@ public class MusicHub : ConnectionHub
         MusicPlayerStateManager musicPlayerStateManager,
         MusicDeviceManager musicDeviceManager,
         MusicPlaylistManager musicPlaylistManager,
-        MusicPlaybackCommandHandler commandHandler
+        MusicPlaybackCommandHandler commandHandler,
+        IActivityLogger activityLogger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients)
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _httpContextAccessor = httpContextAccessor;
         _clientMessenger = clientMessenger;

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.Socket;
 using NoMercy.Database;
+using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
@@ -22,9 +23,10 @@ public sealed class DeviceHub : ConnectionHub
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
-        DeviceBusRegistry busRegistry
+        DeviceBusRegistry busRegistry,
+        IActivityLogger activityLogger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients)
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _contextFactory = contextFactory;
         _busRegistry = busRegistry;
@@ -33,15 +35,15 @@ public sealed class DeviceHub : ConnectionHub
     public async Task<List<DeviceListItem>> GetDevices()
     {
         User? user = Context.User.User();
-        if (user is null) return [];
+        if (user is null)
+            return [];
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        List<Device> rows = await ctx.Devices
-            .Where(d => d.OwnerUserId == user.Id && d.Fingerprint != null)
+        List<Device> rows = await ctx
+            .Devices.Where(d => d.OwnerUserId == user.Id && d.Fingerprint != null)
             .ToListAsync();
 
-        return rows
-            .Select(d => new DeviceListItem
+        return rows.Select(d => new DeviceListItem
             {
                 DeviceId = d.Id,
                 Fingerprint = d.Fingerprint!,
@@ -57,9 +59,11 @@ public sealed class DeviceHub : ConnectionHub
     public async Task<WakeResult> WakeForMusic(string deviceId)
     {
         User? user = Context.User.User();
-        if (user is null) return new WakeResult("not_owned");
+        if (user is null)
+            return new WakeResult("not_owned");
 
-        if (!Ulid.TryParse(deviceId, out Ulid id)) return new WakeResult("not_owned");
+        if (!Ulid.TryParse(deviceId, out Ulid id))
+            return new WakeResult("not_owned");
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
         Device? device = await ctx.Devices.FindAsync(id);
@@ -81,20 +85,19 @@ public sealed class DeviceHub : ConnectionHub
     public async Task<List<DeviceDropNoticeDto>> PendingNotices()
     {
         User? user = Context.User.User();
-        if (user is null) return [];
+        if (user is null)
+            return [];
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        List<DeviceDropNotice> notices = await ctx.DeviceDropNotices
-            .Where(n => n.UserId == user.Id && !n.Acknowledged)
+        List<DeviceDropNotice> notices = await ctx
+            .DeviceDropNotices.Where(n => n.UserId == user.Id && !n.Acknowledged)
             .ToListAsync();
 
         foreach (DeviceDropNotice n in notices)
             n.Acknowledged = true;
         await ctx.SaveChangesAsync();
 
-        return notices
-            .Select(n => new DeviceDropNoticeDto(n.DeviceName, n.Reason))
-            .ToList();
+        return notices.Select(n => new DeviceDropNoticeDto(n.DeviceName, n.Reason)).ToList();
     }
 
     public override async Task OnConnectedAsync()

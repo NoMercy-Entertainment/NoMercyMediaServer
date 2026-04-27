@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
@@ -18,9 +19,10 @@ public class DrivesHub : ConnectionHub
     public DrivesHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
-        ConnectedClients connectedClients
+        ConnectedClients connectedClients,
+        IActivityLogger activityLogger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients) { }
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger) { }
 
     public override async Task OnConnectedAsync()
     {

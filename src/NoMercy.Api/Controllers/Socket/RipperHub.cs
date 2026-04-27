@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
@@ -21,9 +22,10 @@ public class RipperHub : ConnectionHub
     public RipperHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
-        ConnectedClients connectedClients
+        ConnectedClients connectedClients,
+        IActivityLogger activityLogger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients) { }
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger) { }
 
     public override async Task OnConnectedAsync()
     {

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
@@ -22,9 +23,10 @@ public class CastHub : ConnectionHub
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
-        IClientMessenger clientMessenger
+        IClientMessenger clientMessenger,
+        IActivityLogger activityLogger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients)
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _clientMessenger = clientMessenger;
     }

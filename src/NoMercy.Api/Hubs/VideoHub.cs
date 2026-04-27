@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Services.Video;
+using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
@@ -38,9 +39,10 @@ public class VideoHub : ConnectionHub
         VideoPlayerStateManager videoPlayerStateManager,
         VideoDeviceManager videoDeviceManager,
         VideoPlaylistManager videoPlaylistManager,
-        VideoPlaybackCommandHandler commandHandler
+        VideoPlaybackCommandHandler commandHandler,
+        IActivityLogger activityLogger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients)
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _httpContextAccessor = httpContextAccessor;
         _clientMessenger = clientMessenger;

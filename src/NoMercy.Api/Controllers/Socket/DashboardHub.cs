@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
@@ -16,9 +17,10 @@ public class DashboardHub : ConnectionHub
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
-        IClientMessenger clientMessenger
+        IClientMessenger clientMessenger,
+        IActivityLogger activityLogger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients)
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _clientMessenger = clientMessenger;
     }

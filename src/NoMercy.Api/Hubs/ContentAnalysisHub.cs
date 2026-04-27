@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
@@ -27,5 +28,6 @@ namespace NoMercy.Api.Hubs;
 public class ContentAnalysisHub(
     IHttpContextAccessor httpContextAccessor,
     IDbContextFactory<MediaContext> contextFactory,
-    ConnectedClients connectedClients
-) : ConnectionHub(httpContextAccessor, contextFactory, connectedClients) { }
+    ConnectedClients connectedClients,
+    IActivityLogger activityLogger
+) : ConnectionHub(httpContextAccessor, contextFactory, connectedClients, activityLogger) { }

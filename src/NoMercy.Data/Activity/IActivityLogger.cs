@@ -1,53 +1,6 @@
-using NoMercy.Database.Models.Users;
-
+// NoMercy.Data.Activity.IActivityLogger is an alias for the canonical interface
+// defined in NoMercy.Database.Activity. Callers within NoMercy.Data and NoMercy.Api
+// can continue using `using NoMercy.Data.Activity;` — the type is the same object.
 namespace NoMercy.Data.Activity;
 
-public interface IActivityLogger
-{
-    Task LogAuthAsync(
-        string type,
-        Guid userId,
-        Ulid deviceId,
-        bool success,
-        string? errorCode = null,
-        object? metadata = null,
-        CancellationToken ct = default
-    );
-
-    Task LogConnectionAsync(
-        string type,
-        Guid userId,
-        Ulid deviceId,
-        CancellationToken ct = default
-    );
-
-    Task LogPlaybackAsync(
-        string type,
-        Guid userId,
-        Ulid deviceId,
-        Ulid mediaId,
-        object? metadata = null,
-        CancellationToken ct = default
-    );
-
-    Task LogConfigurationAsync(
-        string type,
-        Guid userId,
-        Ulid deviceId,
-        string configKey,
-        object? oldValue,
-        object? newValue,
-        CancellationToken ct = default
-    );
-
-    Task LogFailureAsync(
-        string type,
-        Guid userId,
-        Ulid deviceId,
-        string errorCode,
-        string message,
-        Ulid? mediaId = null,
-        object? metadata = null,
-        CancellationToken ct = default
-    );
-}
+public interface IActivityLogger : NoMercy.Database.Activity.IActivityLogger { }
