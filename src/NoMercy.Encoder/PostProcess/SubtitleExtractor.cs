@@ -45,15 +45,14 @@ public class SubtitleExtractor : ISubtitleExtractor
         }
         else
         {
-            // Honor the profile's requested output codec so HLS playlists
-            // that reference .vtt sidecars get .vtt files even when the
-            // source is .ass. ASS preservation is opt-in via Codec=Ass.
+            // Copy = preserve source format byte-for-byte (no styling loss for
+            // ASS, no ext mismatch for SRT). Explicit codecs force conversion.
             (extension, ffmpegCodec) = plan.OutputCodec switch
             {
                 SubtitleCodecType.WebVtt => ("vtt", "webvtt"),
                 SubtitleCodecType.Ass => ("ass", "ass"),
                 SubtitleCodecType.Srt => ("srt", "srt"),
-                SubtitleCodecType.Copy => isAss ? ("ass", "copy") : ("vtt", "copy"),
+                SubtitleCodecType.Copy => CopyExtensionFor(stream.Codec),
                 _ => ("vtt", "webvtt"),
             };
         }
@@ -118,6 +117,20 @@ public class SubtitleExtractor : ISubtitleExtractor
 
     private static string ResolveVariant(SubtitleStreamInfo stream) =>
         SubtitleClassifier.ResolveVariant(stream);
+
+    // Map a source codec to the extension ffmpeg's `-c:s copy` will produce
+    // without re-muxing. Falls through to a forced WebVTT conversion only
+    // when the source codec is unknown to us — better than writing the
+    // wrong extension and confusing the player.
+    private static (string extension, string ffmpegCodec) CopyExtensionFor(string sourceCodec) =>
+        sourceCodec.ToLowerInvariant() switch
+        {
+            "ass" or "ssa" => ("ass", "copy"),
+            "srt" or "subrip" => ("srt", "copy"),
+            "webvtt" => ("vtt", "copy"),
+            "mov_text" => ("vtt", "webvtt"),
+            _ => ("vtt", "webvtt"),
+        };
 }
 
 public record SubtitleOutputInfo(

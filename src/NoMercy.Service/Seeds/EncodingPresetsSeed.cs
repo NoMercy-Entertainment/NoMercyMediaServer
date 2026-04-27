@@ -574,7 +574,7 @@ public static class EncodingPresetsSeed
             SubtitleOutputs:
             [
                 new(
-                    Codec: SubtitleCodecType.WebVtt,
+                    Codec: SubtitleCodecType.Copy,
                     Mode: SubtitleMode.Extract,
                     AllowedLanguages: []
                 ),
@@ -631,7 +631,7 @@ public static class EncodingPresetsSeed
             SubtitleOutputs:
             [
                 new(
-                    Codec: SubtitleCodecType.WebVtt,
+                    Codec: SubtitleCodecType.Copy,
                     Mode: SubtitleMode.Extract,
                     AllowedLanguages: []
                 ),

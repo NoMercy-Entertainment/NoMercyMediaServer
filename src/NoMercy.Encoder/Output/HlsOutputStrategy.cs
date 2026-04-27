@@ -280,17 +280,20 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             if (vttPath is null)
                 continue;
 
-            string vttRelative = "subtitles/" + Path.GetFileName(vttPath);
+            // Sidecar lives next to the .vtt it wraps (subtitles/), so the
+            // master URI subtitles/subs_<lang>_<variant>.m3u8 resolves to a
+            // playlist whose own EXTINF can use a bare filename.
+            string vttFile = Path.GetFileName(vttPath);
             string playlist =
                 "#EXTM3U\n"
                 + "#EXT-X-VERSION:6\n"
                 + "#EXT-X-PLAYLIST-TYPE:VOD\n"
                 + $"#EXT-X-TARGETDURATION:{(int)Math.Ceiling(durationSeconds)}\n"
                 + $"#EXTINF:{durationSeconds.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)},\n"
-                + vttRelative
+                + vttFile
                 + "\n#EXT-X-ENDLIST\n";
 
-            string sidecarPath = Path.Combine(outputDirectory, sidecarFile);
+            string sidecarPath = Path.Combine(subtitlesDir, sidecarFile);
             await storage.WriteAsync(sidecarPath, Encoding.UTF8.GetBytes(playlist), ct);
         }
     }

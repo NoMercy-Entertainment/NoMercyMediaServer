@@ -246,7 +246,9 @@ public class PlaylistGenerator : IPlaylistGenerator
     }
 
     // ASS/SRT sidecars play directly from the file URI; only WebVTT needs
-    // a single-segment .m3u8 wrapper because that's what HLS spec requires.
+    // a single-segment .m3u8 wrapper because that's what HLS spec requires
+    // for EXT-X-MEDIA. All subtitle assets live under subtitles/ so the
+    // root stays clean.
     internal static string GetSubtitlePlaylistUri(SubtitleOutputPlan sub)
     {
         string lang = sub.Language ?? "und";
@@ -256,7 +258,7 @@ public class PlaylistGenerator : IPlaylistGenerator
         {
             SubtitleCodecType.Ass => $"subtitles/subs.{lang}.{variant}.ass",
             SubtitleCodecType.Srt => $"subtitles/subs.{lang}.{variant}.srt",
-            _ => $"subs_{lang}_{variant}.m3u8",
+            _ => $"subtitles/subs_{lang}_{variant}.m3u8",
         };
     }
 
