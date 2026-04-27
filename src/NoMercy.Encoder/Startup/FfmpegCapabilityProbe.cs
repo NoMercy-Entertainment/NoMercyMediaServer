@@ -64,14 +64,15 @@ public sealed class FfmpegCapabilityProbe(
             .Where(f => !ffmpegCapabilities.HasFilter(f))
             .ToList();
 
-        List<string> missingMuxers = await ProbeMissingMuxersAsync(ct).ConfigureAwait(false);
+        HashSet<string> availableMuxers = await ProbeMuxersAsync(ct).ConfigureAwait(false);
+        List<string> missingMuxers = RequiredMuxers
+            .Where(m => !availableMuxers.Contains(m))
+            .ToList();
 
-        bool fpcalcPresent = await ProbeExternalToolAsync(
-                NoMercy.NmSystem.Information.AppFiles.FpcalcPath,
-                "--version",
-                ct
-            )
-            .ConfigureAwait(false);
+        // Chromaprint fingerprinting is compiled into the NoMercy ffmpeg fork
+        // as the chromaprint muxer (-c:a chromaprint) — no separate fpcalc
+        // binary. Presence of the muxer is the canonical capability check.
+        bool fpcalcPresent = availableMuxers.Contains("chromaprint");
 
         bool whisperModelPresent = ProbeWhisperModel();
 
@@ -112,7 +113,7 @@ public sealed class FfmpegCapabilityProbe(
 
     // -------------------------------------------------------------------------
 
-    private async Task<List<string>> ProbeMissingMuxersAsync(CancellationToken ct)
+    private async Task<HashSet<string>> ProbeMuxersAsync(CancellationToken ct)
     {
         ProcessResult result = await processRunner
             .RunAsync(
@@ -138,31 +139,7 @@ public sealed class FfmpegCapabilityProbe(
                 available.Add(parts[0]);
         }
 
-        return RequiredMuxers.Where(m => !available.Contains(m)).ToList();
-    }
-
-    private async Task<bool> ProbeExternalToolAsync(
-        string executable,
-        string versionArg,
-        CancellationToken ct
-    )
-    {
-        try
-        {
-            ProcessResult result = await processRunner
-                .RunAsync(executable, [versionArg], null, ct)
-                .ConfigureAwait(false);
-            return result.ExitCode == 0;
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug(
-                ex,
-                "External tool '{Executable}' not found or failed version check",
-                executable
-            );
-            return false;
-        }
+        return available;
     }
 
     private bool ProbeWhisperModel()
@@ -212,8 +189,8 @@ public sealed class FfmpegCapabilityProbe(
                     EncoderRuleId.CapabilityFpcalcMissing,
                     EncoderRuleSeverity.Warning,
                     "fpcalc",
-                    "fpcalc (chromaprint) is not installed or not on PATH.",
-                    "Install chromaprint: 'apt install libchromaprint-tools' / 'brew install chromaprint' / download from acoustid.org/chromaprint."
+                    "Chromaprint muxer is not compiled into the bundled ffmpeg fork — audio fingerprinting unavailable.",
+                    "Reinstall NoMercy or rebuild the ffmpeg fork with --enable-chromaprint."
                 )
             );
 
