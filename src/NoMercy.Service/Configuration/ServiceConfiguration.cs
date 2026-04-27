@@ -10,6 +10,7 @@ using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NoMercy.Api.Constraints;
+using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Middleware;
 using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
@@ -310,6 +311,7 @@ public static class ServiceConfiguration
         // mDNS LAN device scanner
         services.AddSingleton<MdnsDeviceScanner>();
         services.AddHostedService<MdnsDeviceScannerHostedService>();
+        services.AddSingleton<DeviceBusRegistry>();
 
         services.AddSingleton<StorageMonitor>();
         services.AddSingleton<ChromeCast>();
