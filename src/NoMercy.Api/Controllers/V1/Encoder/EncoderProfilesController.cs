@@ -105,9 +105,50 @@ public class EncoderProfilesController(
             return UnauthorizedResponse("You do not have permission to create profiles");
 
         if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            try
+            {
+                await activityLogger.LogFailureAsync(
+                    "failure.config_save",
+                    User.UserId(),
+                    Ulid.Empty,
+                    errorCode: "validation_error",
+                    message: "name is required"
+                );
+            }
+            catch (Exception logEx)
+            {
+                Logger.App(
+                    $"Failed to log failure.config_save: {logEx.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+
             return BadRequestResponse("name is required");
+        }
+
         if (string.IsNullOrWhiteSpace(request.ProfileJson))
+        {
+            try
+            {
+                await activityLogger.LogFailureAsync(
+                    "failure.config_save",
+                    User.UserId(),
+                    Ulid.Empty,
+                    errorCode: "validation_error",
+                    message: "profile_json is required"
+                );
+            }
+            catch (Exception logEx)
+            {
+                Logger.App(
+                    $"Failed to log failure.config_save: {logEx.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+
             return BadRequestResponse("profile_json is required");
+        }
 
         EncodingPreset? existing = await presetRepository.GetByNameAsync(request.Name);
         if (existing is not null)

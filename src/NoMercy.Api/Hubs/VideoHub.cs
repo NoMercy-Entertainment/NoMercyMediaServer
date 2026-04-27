@@ -218,11 +218,59 @@ public class VideoHub : ConnectionHub
         catch (ArgumentException ex)
         {
             Logger.App($"Invalid playlist type: {ex.Message}");
+
+            User? user2 = Context.User.User();
+            if (user2 is not null)
+            {
+                ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
+                Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
+                try
+                {
+                    await ActivityLogger.LogFailureAsync(
+                        "failure.playback_start",
+                        user2.Id,
+                        deviceId2,
+                        errorCode: ex.GetType().Name,
+                        message: ex.Message
+                    );
+                }
+                catch (Exception logEx)
+                {
+                    Logger.Socket(
+                        $"Failed to log failure.playback_start: {logEx.Message}",
+                        LogEventLevel.Warning
+                    );
+                }
+            }
         }
         catch (Exception ex)
         {
             Logger.App($"Error in StartPlaybackCommand");
             Logger.App(ex);
+
+            User? user2 = Context.User.User();
+            if (user2 is not null)
+            {
+                ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
+                Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
+                try
+                {
+                    await ActivityLogger.LogFailureAsync(
+                        "failure.playback_start",
+                        user2.Id,
+                        deviceId2,
+                        errorCode: ex.GetType().Name,
+                        message: ex.Message
+                    );
+                }
+                catch (Exception logEx)
+                {
+                    Logger.Socket(
+                        $"Failed to log failure.playback_start: {logEx.Message}",
+                        LogEventLevel.Warning
+                    );
+                }
+            }
         }
     }
 
