@@ -328,7 +328,15 @@ public static class ServiceConfiguration
         InMemoryEventBus innerBus = new();
         LoggingEventBusDecorator loggingBus = new(
             innerBus,
-            message => Logger.App(message, Serilog.Events.LogEventLevel.Verbose)
+            message => Logger.App(message, Serilog.Events.LogEventLevel.Verbose),
+            // High-frequency progress events would otherwise spam the verbose
+            // log every ~500ms during an encode without adding signal.
+            excludedEventTypes:
+            [
+                "EncoderProgressBroadcastEvent",
+                "EncodingProgressEvent",
+                "PlaybackProgressEvent",
+            ]
         );
         EventAuditLog auditLog = new(
             new()
