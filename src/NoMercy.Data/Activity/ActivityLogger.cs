@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -174,21 +175,25 @@ public class ActivityLogger : IActivityLogger
             }
             catch (Exception ex) when (attempt < MaxRetries)
             {
+                // Fold the exception (incl. inner) into the template so the cause
+                // shows up in the structured-log JSON; the @x exception field is
+                // dropped by the upstream enricher pipeline.
                 _logger.LogWarning(
-                    ex,
-                    "Activity log write failed (attempt {Attempt}/{Max}); retrying",
+                    "Activity log write failed (attempt {Attempt}/{Max}) for {Type}: {ErrorChain}; retrying",
                     attempt,
-                    MaxRetries
+                    MaxRetries,
+                    row.Type,
+                    FlattenError(ex)
                 );
                 await Task.Delay(RetryDelay, ct);
             }
             catch (Exception ex)
             {
                 _logger.LogError(
-                    ex,
-                    "Activity log write failed after {Max} attempts; dropping row {Type}",
+                    "Activity log write failed after {Max} attempts; dropping row {Type}: {ErrorChain}",
                     MaxRetries,
-                    row.Type
+                    row.Type,
+                    FlattenError(ex)
                 );
                 return;
             }
@@ -208,6 +213,20 @@ public class ActivityLogger : IActivityLogger
         {
             _logger.LogWarning(ex, "Activity hub broadcast failed for {Type}", row.Type);
         }
+    }
+
+    private static string FlattenError(Exception ex)
+    {
+        StringBuilder sb = new();
+        Exception? current = ex;
+        while (current is not null)
+        {
+            if (sb.Length > 0)
+                sb.Append(" -> ");
+            sb.Append(current.GetType().Name).Append(": ").Append(current.Message);
+            current = current.InnerException;
+        }
+        return sb.ToString();
     }
 
     private static string? Serialize(object? metadata)
