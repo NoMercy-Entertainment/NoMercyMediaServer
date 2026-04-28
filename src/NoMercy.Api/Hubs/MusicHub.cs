@@ -635,6 +635,41 @@ public class MusicHub : ConnectionHub
                     new { type = "wake_for_music", session_id = Guid.NewGuid().ToString() }
                 );
             }
+
+            // Panel wake: software wake above gets the box's app foregrounded
+            // but doesn't fire HDMI-CEC One Touch Play, so the TV screen stays
+            // asleep. cast_shell on the box DOES fire CEC OTP when it receives
+            // a Cast launch, so issue one server-side via sharpcaster against
+            // the discovered Chromecast receiver. Best-effort and async — we
+            // don't gate the device transfer on whether the panel actually
+            // wakes (some TV models / cast_shell builds don't honor
+            // third-party LAUNCHes for CEC).
+            if (targetTv is not null)
+            {
+                string? receiverName = targetTv.CustomName ?? targetTv.Name;
+                if (!string.IsNullOrEmpty(receiverName))
+                {
+                    string nameForLaunch = receiverName;
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            // SelectChromecast connects/reuses the pool entry for this
+                            // specific receiver; Launch passes the name explicitly so
+                            // concurrent calls for different TVs never cross-target.
+                            await ChromeCast.SelectChromecast(nameForLaunch);
+                            await ChromeCast.Launch(nameForLaunch);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Socket(
+                                $"Server-side Cast launch failed for {nameForLaunch}: {ex.Message}",
+                                Serilog.Events.LogEventLevel.Warning
+                            );
+                        }
+                    });
+                }
+            }
         }
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
