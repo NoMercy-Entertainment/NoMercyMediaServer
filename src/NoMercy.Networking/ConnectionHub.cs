@@ -17,6 +17,7 @@ public class ConnectionHub : Hub
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IDbContextFactory<MediaContext> _contextFactory;
+    protected IDbContextFactory<MediaContext> ContextFactory => _contextFactory;
     protected readonly ConnectedClients ConnectedClients;
     protected readonly IActivityLogger ActivityLogger;
     private string Endpoint { get; set; }
@@ -136,6 +137,15 @@ public class ConnectionHub : Hub
         }
 
         Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
+
+        // Align the in-memory client's PK with the persisted Devices.Id. The
+        // Client base class assigns a fresh Ulid at construction; the upsert
+        // matches on the DeviceId fingerprint and preserves the existing PK,
+        // so client.Id and device.Id diverge. Subsequent ActivityLog writes
+        // use device.Id from the in-memory map and FK-fail because the random
+        // Ulid never made it into the Devices table.
+        if (device is not null)
+            client.Id = device.Id;
 
         client.CustomName = device?.CustomName;
         client.VolumePercent = device?.VolumePercent ?? 0;
