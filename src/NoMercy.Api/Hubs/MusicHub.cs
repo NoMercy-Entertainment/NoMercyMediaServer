@@ -24,6 +24,7 @@ public class MusicHub : ConnectionHub
     private readonly MusicDeviceManager _musicDeviceManager;
     private readonly MusicPlaylistManager _musicPlaylistManager;
     private readonly MusicPlaybackCommandHandler _commandHandler;
+    private readonly NoMercy.Api.Controllers.Socket.DeviceBusRegistry _busRegistry;
 
     public MusicHub(
         IHttpContextAccessor httpContextAccessor,
@@ -35,7 +36,8 @@ public class MusicHub : ConnectionHub
         MusicDeviceManager musicDeviceManager,
         MusicPlaylistManager musicPlaylistManager,
         MusicPlaybackCommandHandler commandHandler,
-        IActivityLogger activityLogger
+        IActivityLogger activityLogger,
+        NoMercy.Api.Controllers.Socket.DeviceBusRegistry busRegistry
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
@@ -46,6 +48,7 @@ public class MusicHub : ConnectionHub
         _musicDeviceManager = musicDeviceManager;
         _musicPlaylistManager = musicPlaylistManager;
         _commandHandler = commandHandler;
+        _busRegistry = busRegistry;
     }
 
     private static readonly ConcurrentDictionary<Guid, Device> CurrentDevice = new();
@@ -215,6 +218,40 @@ public class MusicHub : ConnectionHub
         CurrentDevice[user.Id] = device;
 
         return device;
+    }
+
+    /// <summary>
+    /// MusicHub-flavoured device list: live MusicHub clients plus every TV the
+    /// current user owns from the Devices table, including ones that aren't
+    /// currently on the hub (sleeping panels, powered-off boxes). The web and
+    /// mobile pickers need to render those so the user can wake them; without
+    /// this merge a standby TV silently disappears from the picker until it
+    /// reconnects on its own.
+    /// </summary>
+    private async Task<List<Device>> MusicDevicesAsync()
+    {
+        List<Device> connected = Devices();
+        User? user = Context.User.User();
+        if (user is null)
+            return connected;
+
+        await using MediaContext ctx = await ContextFactory.CreateDbContextAsync();
+        List<Device> registeredTvs = await ctx
+            .Devices.Where(d => d.OwnerUserId == user.Id && d.Type == "tv")
+            .ToListAsync();
+
+        HashSet<string> seenDeviceIds = new(
+            connected.Select(d => d.DeviceId),
+            StringComparer.OrdinalIgnoreCase
+        );
+
+        foreach (Device tv in registeredTvs)
+        {
+            if (seenDeviceIds.Add(tv.DeviceId))
+                connected.Add(tv);
+        }
+
+        return connected;
     }
 
     private static bool IsSamePlaylist(MusicPlayerState state, string type, Guid listId)
@@ -563,7 +600,7 @@ public class MusicHub : ConnectionHub
         if (user is null)
             return;
 
-        List<Device> connectedDevices = Devices();
+        List<Device> connectedDevices = await MusicDevicesAsync();
 
         await _clientMessenger.SendTo(
             "ConnectedDevicesState",
@@ -571,6 +608,34 @@ public class MusicHub : ConnectionHub
             user.Id,
             connectedDevices
         );
+
+        // If the target is a TV that owns the user but isn't currently on
+        // MusicHub, fire wake_for_music over the device-bus so its panel +
+        // app come up. Without this, the web picker can transfer the active
+        // flag to a sleeping TV but the TV never actually plays. Mobile
+        // already drives this through DeviceHub.WakeForMusic; web can't, so
+        // the server has to do it on their behalf.
+        bool targetIsLive = connectedDevices.Any(d =>
+            d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+            && ConnectedClients.Clients.Values.Any(c =>
+                c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+                && c.Endpoint.Contains("musicHub", StringComparison.OrdinalIgnoreCase)
+            )
+        );
+
+        if (!targetIsLive)
+        {
+            Device? targetTv = connectedDevices.FirstOrDefault(d =>
+                d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
+            );
+            if (targetTv is not null && _busRegistry.IsOnline(targetTv.Id))
+            {
+                _ = _busRegistry.SendAsync(
+                    targetTv.Id,
+                    new { type = "wake_for_music", session_id = Guid.NewGuid().ToString() }
+                );
+            }
+        }
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
@@ -670,7 +735,7 @@ public class MusicHub : ConnectionHub
         await Task.Delay(500);
 
         // Send updated device list to all connected devices for this user
-        List<Device> connectedDevices = Devices();
+        List<Device> connectedDevices = await MusicDevicesAsync();
         await _clientMessenger.SendTo(
             "ConnectedDevicesState",
             "musicHub",
@@ -722,7 +787,7 @@ public class MusicHub : ConnectionHub
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            List<Device> connectedDevices = Devices();
+            List<Device> connectedDevices = await MusicDevicesAsync();
 
             // Send updated device list to all remaining connected devices
             await _clientMessenger.SendTo(
