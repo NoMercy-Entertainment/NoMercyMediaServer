@@ -8,9 +8,12 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Cast;
 using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
@@ -25,6 +28,8 @@ public class MusicHub : ConnectionHub
     private readonly MusicPlaylistManager _musicPlaylistManager;
     private readonly MusicPlaybackCommandHandler _commandHandler;
     private readonly NoMercy.Api.Controllers.Socket.DeviceBusRegistry _busRegistry;
+    private readonly CastSessionTokenService _castTokenService;
+    private readonly INetworkDiscovery? _networkDiscovery;
 
     public MusicHub(
         IHttpContextAccessor httpContextAccessor,
@@ -37,7 +42,9 @@ public class MusicHub : ConnectionHub
         MusicPlaylistManager musicPlaylistManager,
         MusicPlaybackCommandHandler commandHandler,
         IActivityLogger activityLogger,
-        NoMercy.Api.Controllers.Socket.DeviceBusRegistry busRegistry
+        NoMercy.Api.Controllers.Socket.DeviceBusRegistry busRegistry,
+        CastSessionTokenService castTokenService,
+        INetworkDiscovery? networkDiscovery = null
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
@@ -49,6 +56,8 @@ public class MusicHub : ConnectionHub
         _musicPlaylistManager = musicPlaylistManager;
         _commandHandler = commandHandler;
         _busRegistry = busRegistry;
+        _castTokenService = castTokenService;
+        _networkDiscovery = networkDiscovery;
     }
 
     private static readonly ConcurrentDictionary<Guid, Device> CurrentDevice = new();
@@ -677,7 +686,18 @@ public class MusicHub : ConnectionHub
             // mDNS name (set in Android TV settings) doesn't match our DB's
             // custom name (set in NoMercy onboarding). Async because the lookup
             // may need to refresh mDNS discovery if the cache is stale.
+            //
+            // The LAUNCH payload now carries a LaunchCustomData bundle: APK
+            // ignores its auth fields (already authenticated), Web Receiver
+            // consumes them to bootstrap volatile in-memory auth on TVs that
+            // don't have the APK installed.
             string targetIp = targetTv.Ip;
+            Ulid targetUlid = targetTv.Id;
+            string serverIdString = Info.DeviceId.ToString();
+            string serverUrl = ResolveServerUrl();
+            string locale = ResolveSenderLocale();
+            CastIntent intent = ResolveMusicIntent(user.Id, deviceId);
+
             _ = Task.Run(async () =>
             {
                 try
@@ -691,13 +711,31 @@ public class MusicHub : ConnectionHub
                         );
                         return;
                     }
+
+                    LaunchCustomData? launchData = await _castTokenService.MintAsync(
+                        userId: user.Id,
+                        serverId: serverIdString,
+                        serverUrl: serverUrl,
+                        deviceId: targetUlid,
+                        intent: intent,
+                        clientLocale: locale
+                    );
+
+                    if (launchData is null)
+                    {
+                        Logger.Socket(
+                            $"Cast token mint failed for {targetIp} — falling back to LAUNCH without customData",
+                            Serilog.Events.LogEventLevel.Warning
+                        );
+                    }
+
                     // SelectChromecast connects/reuses the pool entry for this
                     // specific receiver; LaunchAndroidReceiver sends a LAUNCH
                     // with launchOptions.androidReceiverCompatible=true so
                     // cast_shell foregrounds the native APK instead of the
-                    // Web Receiver placeholder.
+                    // Web Receiver placeholder. customData rides alongside.
                     await ChromeCast.SelectChromecast(receiverName);
-                    await ChromeCast.LaunchAndroidReceiver(receiverName);
+                    await ChromeCast.LaunchAndroidReceiver(receiverName, launchData);
                 }
                 catch (Exception ex)
                 {
@@ -944,5 +982,57 @@ public class MusicHub : ConnectionHub
         }
 
         Logger.Socket("Music client disconnected", LogEventLevel.Debug);
+    }
+
+    // ── Cast-receiver helpers (Phase 0) ──────────────────────────────────────
+
+    private string ResolveServerUrl()
+    {
+        // Public origin the receiver should use for API + SignalR. NetworkDiscovery
+        // owns the authoritative external URL once Connectivity has resolved a path
+        // (Cloudflare tunnel, port-forward, or STUN). Fall back to ApiBaseUrl in
+        // the rare case Discovery isn't ready yet — receiver will get a working
+        // URL on the next launch once Connectivity stabilizes.
+        string? external = _networkDiscovery?.ExternalAddress;
+        return string.IsNullOrEmpty(external) ? Config.ApiBaseUrl : external;
+    }
+
+    private string ResolveSenderLocale()
+    {
+        // Sender ships its locale via standard Accept-Language. We pick the first
+        // tag and pass it through; receiver uses it to seed i18n on first paint.
+        string? header =
+            _httpContextAccessor.HttpContext?.Request.Headers.AcceptLanguage.ToString();
+        if (string.IsNullOrEmpty(header))
+            return "en-US";
+
+        string first = header.Split(',')[0].Split(';')[0].Trim();
+        return string.IsNullOrEmpty(first) ? "en-US" : first;
+    }
+
+    private CastIntent ResolveMusicIntent(Guid userId, string targetDeviceId)
+    {
+        // If the user has a live music player state when handing off to the TV,
+        // the receiver should resume that exact list. Otherwise idle — receiver
+        // shows the splash and waits for user input or a follow-up command.
+        if (!_musicPlayerStateManager.TryGetValue(userId, out MusicPlayerState? state))
+            return CastIntent.Idle();
+        if (state?.CurrentItem is null)
+            return CastIntent.Idle();
+
+        // CurrentList is "/music/{type}/{listId}" — split it back out.
+        string path = state.CurrentList.ToString().TrimStart('/');
+        string[] parts = path.Split('/');
+        if (
+            parts.Length < 3
+            || !string.Equals(parts[0], "music", StringComparison.OrdinalIgnoreCase)
+        )
+            return CastIntent.Idle();
+
+        string listType = parts[1];
+        string listId = parts[2];
+        string trackId = state.CurrentItem.Id.ToString();
+        int? resumeAt = state.Time > 0 ? (int?)(state.Time / 1000) : null;
+        return CastIntent.PlayMusic(listType, listId, trackId, resumeAt);
     }
 }

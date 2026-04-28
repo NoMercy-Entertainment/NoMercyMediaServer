@@ -269,8 +269,15 @@ public class ChromeCast
     /// the Web Receiver placeholder. Sharpcaster's built-in LaunchApplicationAsync
     /// doesn't expose launchOptions, so we craft and send the JSON ourselves
     /// against the public ChromecastClient.SendAsync surface.
+    ///
+    /// When <paramref name="customData"/> is supplied (cast-receiver-leanback
+    /// flow), the object is serialized into the LAUNCH payload's customData
+    /// field. Both the APK (via Cast Connect intent extras) and the Web
+    /// Receiver (via cast.framework.system.LaunchRequestEvent.data) receive
+    /// it. The APK ignores auth fields (it has its own persistent Keycloak
+    /// session); the Web Receiver consumes them to bootstrap volatile auth.
     /// </summary>
-    public static async Task LaunchAndroidReceiver(string? name = null)
+    public static async Task LaunchAndroidReceiver(string? name = null, object? customData = null)
     {
         string? target = name ?? _lastSelectedName;
         if (target == null)
@@ -299,24 +306,11 @@ public class ChromeCast
         }
 
         int requestId = System.Threading.Interlocked.Increment(ref _androidLaunchRequestId);
-        // The Cast Web Sender SDK encodes androidReceiverCompatible=true as
-        // supportedAppTypes=["ANDROID_TV"] inside the LAUNCH payload — not as
-        // a launchOptions sub-object. cast_shell uses this array to decide
-        // whether to load the registered Android receiver vs the Web Receiver
-        // placeholder. Send both fields for safety; cast_shell ignores
-        // unknown keys.
-        var payload = new
-        {
-            type = "LAUNCH",
-            requestId,
-            appId = "925B4C3C",
-            language = "en-US",
-            supportedAppTypes = new[] { "ANDROID_TV" },
-            launchOptions = new { androidReceiverCompatible = true },
-        };
-        string json = System.Text.Json.JsonSerializer.Serialize(payload);
+        string json = BuildLaunchJson(requestId, customData);
 
-        Logger.Ping($"Launching cast-tv (androidReceiverCompatible) on {target}");
+        Logger.Ping(
+            $"Launching cast-tv (androidReceiverCompatible{(customData is null ? "" : ", customData")}) on {target}"
+        );
 
         // Watch for cast_shell's reply on this request id. RECEIVER_STATUS
         // arrives back on the receiver channel when cast_shell accepts the
@@ -362,16 +356,7 @@ public class ChromeCast
                 int retryRequestId = System.Threading.Interlocked.Increment(
                     ref _androidLaunchRequestId
                 );
-                var retryPayload = new
-                {
-                    type = "LAUNCH",
-                    requestId = retryRequestId,
-                    appId = "925B4C3C",
-                    language = "en-US",
-                    supportedAppTypes = new[] { "ANDROID_TV" },
-                    launchOptions = new { androidReceiverCompatible = true },
-                };
-                string retryJson = System.Text.Json.JsonSerializer.Serialize(retryPayload);
+                string retryJson = BuildLaunchJson(retryRequestId, customData);
                 await SendLaunchAsync(client, retryRequestId, retryJson);
             }
         }
@@ -383,6 +368,41 @@ public class ChromeCast
         {
             client.ReceiverChannel.ReceiverStatusChanged -= watcher;
         }
+    }
+
+    private static string BuildLaunchJson(int requestId, object? customData)
+    {
+        // The Cast Web Sender SDK encodes androidReceiverCompatible=true as
+        // supportedAppTypes=["ANDROID_TV"] inside the LAUNCH payload — not as
+        // a launchOptions sub-object. cast_shell uses this array to decide
+        // whether to load the registered Android receiver vs the Web Receiver
+        // placeholder. Send both fields for safety; cast_shell ignores
+        // unknown keys.
+        if (customData is null)
+        {
+            var payload = new
+            {
+                type = "LAUNCH",
+                requestId,
+                appId = "925B4C3C",
+                language = "en-US",
+                supportedAppTypes = new[] { "ANDROID_TV" },
+                launchOptions = new { androidReceiverCompatible = true },
+            };
+            return System.Text.Json.JsonSerializer.Serialize(payload);
+        }
+
+        var payloadWithCustomData = new
+        {
+            type = "LAUNCH",
+            requestId,
+            appId = "925B4C3C",
+            language = "en-US",
+            supportedAppTypes = new[] { "ANDROID_TV" },
+            launchOptions = new { androidReceiverCompatible = true },
+            customData,
+        };
+        return System.Text.Json.JsonSerializer.Serialize(payloadWithCustomData);
     }
 
     private static async Task SendLaunchAsync(ChromecastClient client, int requestId, string json)

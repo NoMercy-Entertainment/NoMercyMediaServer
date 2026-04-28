@@ -10,10 +10,12 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Cast;
 using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
@@ -27,6 +29,8 @@ public class VideoHub : ConnectionHub
     private readonly VideoDeviceManager _videoDeviceManager;
     private readonly VideoPlaylistManager _videoPlaylistManager;
     private readonly VideoPlaybackCommandHandler _commandHandler;
+    private readonly CastSessionTokenService _castTokenService;
+    private readonly INetworkDiscovery? _networkDiscovery;
 
     private readonly IDbContextFactory<MediaContext> _contextFactory;
 
@@ -40,7 +44,9 @@ public class VideoHub : ConnectionHub
         VideoDeviceManager videoDeviceManager,
         VideoPlaylistManager videoPlaylistManager,
         VideoPlaybackCommandHandler commandHandler,
-        IActivityLogger activityLogger
+        IActivityLogger activityLogger,
+        CastSessionTokenService castTokenService,
+        INetworkDiscovery? networkDiscovery = null
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
@@ -52,6 +58,8 @@ public class VideoHub : ConnectionHub
         _videoDeviceManager = videoDeviceManager;
         _videoPlaylistManager = videoPlaylistManager;
         _commandHandler = commandHandler;
+        _castTokenService = castTokenService;
+        _networkDiscovery = networkDiscovery;
     }
 
     public async Task SetTime(VideoProgressRequest request)
@@ -497,7 +505,26 @@ public class VideoHub : ConnectionHub
         if (user is null)
             return;
 
+        // Extend connected-device list with owned TVs from the Devices table —
+        // mirrors MusicHub.MusicDevicesAsync. Without this, the picker can't
+        // hand video off to a sleeping TV. Live MusicHub clients are merged
+        // with registered TV devices (online or not).
         List<Device> connectedDevices = Devices();
+        await using (MediaContext ctx = await _contextFactory.CreateDbContextAsync())
+        {
+            List<Device> registeredTvs = await ctx
+                .Devices.Where(d => d.OwnerUserId == user.Id && d.Type == "tv")
+                .ToListAsync();
+
+            HashSet<string> seenDeviceIds = new(
+                connectedDevices.Select(d => d.DeviceId),
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            foreach (Device tv in registeredTvs)
+                if (seenDeviceIds.Add(tv.DeviceId))
+                    connectedDevices.Add(tv);
+        }
 
         await _clientMessenger.SendTo(
             "ConnectedDevicesState",
@@ -505,6 +532,67 @@ public class VideoHub : ConnectionHub
             user.Id,
             connectedDevices
         );
+
+        // TV-target branch: when handing off video to a TV, mint a cast session
+        // bundle and LAUNCH the receiver. Mirrors MusicHub.ChangeDeviceCommand.
+        // Cast Connect routes APK-installed TVs to the native APK and Web-only
+        // TVs to cast.nomercy.tv — both consume customData.
+        Device? targetTv = connectedDevices.FirstOrDefault(d =>
+            d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
+        );
+
+        if (targetTv is not null)
+        {
+            string targetIp = targetTv.Ip;
+            Ulid targetUlid = targetTv.Id;
+            string serverIdString = Info.DeviceId.ToString();
+            string serverUrl = ResolveServerUrl();
+            string locale = ResolveSenderLocale();
+            CastIntent intent = ResolveVideoIntent(user.Id);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    string? receiverName = await ChromeCast.FindReceiverNameByIpAsync(targetIp);
+                    if (string.IsNullOrEmpty(receiverName))
+                    {
+                        Logger.Socket(
+                            $"No Chromecast receiver discovered at {targetIp} — video handoff will not wake panel via CEC",
+                            LogEventLevel.Warning
+                        );
+                        return;
+                    }
+
+                    LaunchCustomData? launchData = await _castTokenService.MintAsync(
+                        userId: user.Id,
+                        serverId: serverIdString,
+                        serverUrl: serverUrl,
+                        deviceId: targetUlid,
+                        intent: intent,
+                        clientLocale: locale
+                    );
+
+                    if (launchData is null)
+                    {
+                        Logger.Socket(
+                            $"Cast token mint failed for video handoff to {targetIp} — falling back to LAUNCH without customData",
+                            LogEventLevel.Warning
+                        );
+                    }
+
+                    await ChromeCast.SelectChromecast(receiverName);
+                    await ChromeCast.LaunchAndroidReceiver(receiverName, launchData);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Socket(
+                        $"Server-side video Cast launch failed for {targetIp}: {ex.Message}",
+                        LogEventLevel.Warning
+                    );
+                }
+            });
+        }
 
         if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
         {
@@ -533,6 +621,46 @@ public class VideoHub : ConnectionHub
         };
 
         await _clientMessenger.SendTo("ChangeDevice", "videoHub", user.Id, payload);
+    }
+
+    // ── Cast-receiver helpers (Phase 0) ──────────────────────────────────────
+
+    private string ResolveServerUrl()
+    {
+        string? external = _networkDiscovery?.ExternalAddress;
+        return string.IsNullOrEmpty(external) ? Config.ApiBaseUrl : external;
+    }
+
+    private string ResolveSenderLocale()
+    {
+        string? header =
+            _httpContextAccessor.HttpContext?.Request.Headers.AcceptLanguage.ToString();
+        if (string.IsNullOrEmpty(header))
+            return "en-US";
+
+        string first = header.Split(',')[0].Split(';')[0].Trim();
+        return string.IsNullOrEmpty(first) ? "en-US" : first;
+    }
+
+    private CastIntent ResolveVideoIntent(Guid userId)
+    {
+        // If the user has a live video player state when handing off to the TV,
+        // resume that exact item. Otherwise idle — receiver shows the splash.
+        if (!_videoPlayerStateManager.TryGetValue(userId, out VideoPlayerState? state))
+            return CastIntent.Idle();
+        if (state?.CurrentItem is null)
+            return CastIntent.Idle();
+
+        // CurrentList is "/{type}/{listId}/watch" — extract type for navigation.
+        string path = state.CurrentList.ToString().TrimStart('/');
+        string[] parts = path.Split('/');
+        if (parts.Length < 2)
+            return CastIntent.Idle();
+
+        string mediaType = parts[0];
+        string mediaId = state.CurrentItem.Id.ToString();
+        int? resumeAt = state.Time > 0 ? (int?)(state.Time / 1000) : null;
+        return CastIntent.PlayVideo(mediaType, mediaId, resumeAt);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

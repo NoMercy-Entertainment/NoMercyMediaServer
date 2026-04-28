@@ -323,6 +323,7 @@ public static class ServiceConfiguration
         });
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
+        services.AddSingleton<NoMercy.Setup.Cast.CastSessionTokenService>();
 
         // Add Memory Cache with size limit to prevent unbounded growth
         services.AddMemoryCache(options =>
