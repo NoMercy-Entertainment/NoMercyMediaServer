@@ -279,6 +279,25 @@ public class ChromeCast
         if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
             return;
 
+        // Force a round-trip GET_STATUS before LAUNCH. Sharpcaster's
+        // ConnectChromecast fires CONNECT and returns; the actual processing
+        // on cast_shell side races with our subsequent LAUNCH. If LAUNCH
+        // lands before cast_shell finished wiring the session, cast_shell
+        // accepts it but skips the CEC OneTouchPlay step (gated on full
+        // session handshake). GetChromecastStatusAsync awaits a
+        // RECEIVER_STATUS reply, which can only arrive after CONNECT is
+        // processed end-to-end.
+        try
+        {
+            await client.ReceiverChannel.GetChromecastStatusAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.Ping(
+                $"LaunchAndroidReceiver pre-LAUNCH GET_STATUS failed for {target}: {ex.Message}"
+            );
+        }
+
         int requestId = System.Threading.Interlocked.Increment(ref _androidLaunchRequestId);
         // The Cast Web Sender SDK encodes androidReceiverCompatible=true as
         // supportedAppTypes=["ANDROID_TV"] inside the LAUNCH payload — not as
@@ -299,20 +318,82 @@ public class ChromeCast
 
         Logger.Ping($"Launching cast-tv (androidReceiverCompatible) on {target}");
 
+        // Watch for cast_shell's reply on this request id. RECEIVER_STATUS
+        // arrives back on the receiver channel when cast_shell accepts the
+        // LAUNCH — if we don't see ChromecastStatus.Application.AppId match
+        // ours within 1.5s, retry once. Single retry is enough; the failure
+        // mode is a timing race during the first cold connect, not a hard
+        // protocol break.
+        bool launchAccepted = false;
+        EventHandler<ChromecastStatus>? watcher = null;
+        watcher = (sender, status) =>
+        {
+            if (
+                status?.Application is not null
+                && string.Equals(
+                    status.Application.AppId,
+                    "925B4C3C",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+                launchAccepted = true;
+        };
+        client.ReceiverChannel.ReceiverStatusChanged += watcher;
+
         try
         {
-            await client.SendAsync(
-                logger: null,
-                ns: "urn:x-cast:com.google.cast.receiver",
-                messageRequestId: requestId,
-                messagePayload: json,
-                destinationId: "receiver-0"
-            );
+            await SendLaunchAsync(client, requestId, json);
+
+            // Wait briefly for the RECEIVER_STATUS broadcast confirming the
+            // app was launched. 1.5s covers cast_shell's normal handshake +
+            // resource allocation window.
+            int waited = 0;
+            while (!launchAccepted && waited < 1500)
+            {
+                await Task.Delay(100);
+                waited += 100;
+            }
+
+            if (!launchAccepted)
+            {
+                Logger.Ping(
+                    $"LaunchAndroidReceiver: no LAUNCH ack from {target} within 1.5s — retrying once"
+                );
+                int retryRequestId = System.Threading.Interlocked.Increment(
+                    ref _androidLaunchRequestId
+                );
+                var retryPayload = new
+                {
+                    type = "LAUNCH",
+                    requestId = retryRequestId,
+                    appId = "925B4C3C",
+                    language = "en-US",
+                    supportedAppTypes = new[] { "ANDROID_TV" },
+                    launchOptions = new { androidReceiverCompatible = true },
+                };
+                string retryJson = System.Text.Json.JsonSerializer.Serialize(retryPayload);
+                await SendLaunchAsync(client, retryRequestId, retryJson);
+            }
         }
         catch (Exception ex)
         {
             Logger.Ping($"LaunchAndroidReceiver failed for {target}: {ex.Message}");
         }
+        finally
+        {
+            client.ReceiverChannel.ReceiverStatusChanged -= watcher;
+        }
+    }
+
+    private static async Task SendLaunchAsync(ChromecastClient client, int requestId, string json)
+    {
+        await client.SendAsync(
+            logger: null,
+            ns: "urn:x-cast:com.google.cast.receiver",
+            messageRequestId: requestId,
+            messagePayload: json,
+            destinationId: "receiver-0"
+        );
     }
 
     /// <summary>

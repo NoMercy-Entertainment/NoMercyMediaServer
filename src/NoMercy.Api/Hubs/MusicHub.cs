@@ -251,6 +251,32 @@ public class MusicHub : ConnectionHub
                 connected.Add(tv);
         }
 
+        // Pre-warm sharpcaster's TLS pool for every owned TV so the first
+        // ChangeDeviceCommand to that TV doesn't pay cold-handshake latency
+        // (which is the leading cause of first-tap LAUNCH races on the wire).
+        // Fire-and-forget; the per-receiver client pool dedupes so repeated
+        // calls are cheap.
+        foreach (Device tv in registeredTvs)
+        {
+            if (string.IsNullOrEmpty(tv.Ip))
+                continue;
+            string ip = tv.Ip;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    string? receiverName = await ChromeCast.FindReceiverNameByIpAsync(ip);
+                    if (!string.IsNullOrEmpty(receiverName))
+                        await ChromeCast.SelectChromecast(receiverName);
+                }
+                catch
+                {
+                    // Best-effort pre-warm; the actual cast will retry the
+                    // discovery + connect path itself if this fails.
+                }
+            });
+        }
+
         return connected;
     }
 
