@@ -18,6 +18,20 @@ public sealed class DeviceBusRegistry(
 {
     private readonly ConcurrentDictionary<Ulid, WebSocket> _live = new();
 
+    // Per-device foreground/screen state reported by the device-bus client.
+    // Phone-side picker reads these via DeviceListItem to decide whether to
+    // fire the Cast SDK CEC wake (skip when both are true — panel is on with
+    // our app already on screen, no wake needed).
+    private readonly ConcurrentDictionary<Ulid, (bool Foreground, bool ScreenOn)> _status = new();
+
+    public void UpdateStatus(Ulid deviceId, bool foreground, bool screenOn)
+    {
+        _status[deviceId] = (foreground, screenOn);
+    }
+
+    public (bool Foreground, bool ScreenOn) GetStatus(Ulid deviceId) =>
+        _status.TryGetValue(deviceId, out (bool Foreground, bool ScreenOn) s) ? s : (false, false);
+
     public async Task Register(Ulid deviceId, WebSocket ws)
     {
         _live[deviceId] = ws;
@@ -31,6 +45,7 @@ public sealed class DeviceBusRegistry(
     public async Task Unregister(Ulid deviceId)
     {
         _live.TryRemove(deviceId, out _);
+        _status.TryRemove(deviceId, out _);
 
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
         Device? device = await ctx.Devices.FindAsync(deviceId);
@@ -74,15 +89,21 @@ public sealed class DeviceBusRegistry(
             .Devices.Where(d => d.OwnerUserId == ownerUserId && d.Fingerprint != null)
             .ToListAsync();
 
-        List<DeviceListItem> items = rows.Select(d => new DeviceListItem
+        List<DeviceListItem> items = rows.Select(d =>
             {
-                DeviceId = d.Id,
-                Fingerprint = d.Fingerprint!,
-                Name = d.CustomName ?? d.Name,
-                Type = d.Type,
-                Online = IsOnline(d.Id),
-                LanIp = d.LanIp,
-                LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
+                (bool Foreground, bool ScreenOn) s = GetStatus(d.Id);
+                return new DeviceListItem
+                {
+                    DeviceId = d.Id,
+                    Fingerprint = d.Fingerprint!,
+                    Name = d.CustomName ?? d.Name,
+                    Type = d.Type,
+                    Online = IsOnline(d.Id),
+                    LanIp = d.LanIp,
+                    LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
+                    Foreground = s.Foreground,
+                    ScreenOn = s.ScreenOn,
+                };
             })
             .ToList();
 

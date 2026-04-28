@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NoMercy.Api.Services.Music;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
@@ -18,6 +19,8 @@ namespace NoMercy.Api.Controllers.Socket;
 public sealed class DeviceBusEndpoint(
     IDbContextFactory<MediaContext> contextFactory,
     DeviceBusRegistry registry,
+    MusicPlayerStateManager musicPlayerStateManager,
+    MusicPlaybackService musicPlaybackService,
     ILogger<DeviceBusEndpoint> logger
 ) : ControllerBase
 {
@@ -68,6 +71,19 @@ public sealed class DeviceBusEndpoint(
                 {
                     registry.Touch(device.Id);
                 }
+                else if (type == "status" && device is not null)
+                {
+                    bool foreground =
+                        doc.RootElement.TryGetProperty("foreground", out JsonElement fe)
+                        && fe.ValueKind == JsonValueKind.True;
+                    bool screenOn =
+                        doc.RootElement.TryGetProperty("screen_on", out JsonElement se)
+                        && se.ValueKind == JsonValueKind.True;
+
+                    registry.UpdateStatus(device.Id, foreground, screenOn);
+                    if (device.OwnerUserId is not null)
+                        await registry.BroadcastChange(device.OwnerUserId.Value);
+                }
             }
         }
         catch (Exception ex)
@@ -77,7 +93,41 @@ public sealed class DeviceBusEndpoint(
         finally
         {
             if (device is not null)
+            {
+                if (
+                    device.OwnerUserId is not null
+                    && musicPlayerStateManager.TryGetValue(
+                        device.OwnerUserId.Value,
+                        out MusicPlayerState? playerState
+                    )
+                    && string.Equals(
+                        playerState.DeviceId,
+                        device.DeviceId,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    logger.LogInformation(
+                        "Active music device {DeviceName} disconnected from device-bus — clearing active",
+                        device.Name
+                    );
+                    playerState.PlayState = false;
+                    playerState.DeviceId = null;
+                    try
+                    {
+                        await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
+                        User owner = await ctx.Users.FirstAsync(u =>
+                            u.Id == device.OwnerUserId.Value
+                        );
+                        await musicPlaybackService.UpdatePlaybackState(owner, playerState);
+                    }
+                    catch
+                    {
+                        // Best-effort during teardown.
+                    }
+                }
                 await registry.Unregister(device.Id);
+            }
         }
     }
 

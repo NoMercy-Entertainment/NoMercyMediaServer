@@ -44,15 +44,21 @@ public sealed class DeviceHub : ConnectionHub
             .Devices.Where(d => d.OwnerUserId == user.Id && d.Fingerprint != null)
             .ToListAsync();
 
-        return rows.Select(d => new DeviceListItem
+        return rows.Select(d =>
             {
-                DeviceId = d.Id,
-                Fingerprint = d.Fingerprint!,
-                Name = d.CustomName ?? d.Name,
-                Type = d.Type,
-                Online = _busRegistry.IsOnline(d.Id),
-                LanIp = d.LanIp,
-                LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
+                (bool Foreground, bool ScreenOn) s = _busRegistry.GetStatus(d.Id);
+                return new DeviceListItem
+                {
+                    DeviceId = d.Id,
+                    Fingerprint = d.Fingerprint!,
+                    Name = d.CustomName ?? d.Name,
+                    Type = d.Type,
+                    Online = _busRegistry.IsOnline(d.Id),
+                    LanIp = d.LanIp,
+                    LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
+                    Foreground = s.Foreground,
+                    ScreenOn = s.ScreenOn,
+                };
             })
             .ToList();
     }
