@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercy.Database;
 
@@ -10,9 +11,11 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations
 {
     [DbContext(typeof(MediaContext))]
-    partial class MediaContextModelSnapshot : ModelSnapshot
+    [Migration("20260427043949_AddActivityLogStructuredFields")]
+    partial class AddActivityLogStructuredFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.7");
@@ -2347,9 +2350,6 @@ namespace NoMercy.Database.Migrations
                     b.Property<string>("HostFolder")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
-
-                    b.Property<int?>("LyricsOffset")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("MetadataId")
                         .HasColumnType("TEXT");

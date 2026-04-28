@@ -152,6 +152,7 @@ public class ConnectionHub : Hub
                     Time = DateTime.Now,
                     Type = "Connected to server",
                     UserId = user.Id,
+                    Category = ActivityCategory.Connection,
                 }
             );
         }
@@ -186,6 +187,7 @@ public class ConnectionHub : Hub
                         Time = DateTime.Now,
                         Type = "Disconnected from server",
                         UserId = client.Sub,
+                        Category = ActivityCategory.Connection,
                     }
                 );
             }
