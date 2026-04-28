@@ -623,12 +623,16 @@ public class MusicHub : ConnectionHub
             )
         );
 
-        if (!targetIsLive)
+        Device? targetTv = connectedDevices.FirstOrDefault(d =>
+            d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
+        );
+
+        if (targetTv is not null)
         {
-            Device? targetTv = connectedDevices.FirstOrDefault(d =>
-                d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
-            );
-            if (targetTv is not null && _busRegistry.IsOnline(targetTv.Id))
+            // Software wake: only when the TV's MusicHub side isn't already live.
+            // If it's live the app is already foregrounded; sending wake_for_music
+            // again would just redundantly bounce the activity stack.
+            if (!targetIsLive && _busRegistry.IsOnline(targetTv.Id))
             {
                 _ = _busRegistry.SendAsync(
                     targetTv.Id,
@@ -636,40 +640,47 @@ public class MusicHub : ConnectionHub
                 );
             }
 
-            // Panel wake: software wake above gets the box's app foregrounded
-            // but doesn't fire HDMI-CEC One Touch Play, so the TV screen stays
-            // asleep. cast_shell on the box DOES fire CEC OTP when it receives
-            // a Cast launch, so issue one server-side via sharpcaster against
-            // the discovered Chromecast receiver. Best-effort and async — we
-            // don't gate the device transfer on whether the panel actually
-            // wakes (some TV models / cast_shell builds don't honor
-            // third-party LAUNCHes for CEC).
-            if (targetTv is not null)
+            // Panel wake (CEC OTP): always fire on every TV-target ChangeDevice,
+            // even when the app is already live on MusicHub. The user re-tapping
+            // the active TV usually means "my screen went off, wake it again" —
+            // cast_shell only fires HDMI-CEC One Touch Play when it receives a
+            // Cast LAUNCH, so we issue one server-side via sharpcaster against
+            // the discovered Chromecast receiver. Best-effort, async — some TV
+            // models / cast_shell builds don't honor third-party LAUNCHes for CEC.
+            // Resolve the receiver via its LAN IP rather than name — the Cast
+            // mDNS name (set in Android TV settings) doesn't match our DB's
+            // custom name (set in NoMercy onboarding). Async because the lookup
+            // may need to refresh mDNS discovery if the cache is stale.
+            string targetIp = targetTv.Ip;
+            _ = Task.Run(async () =>
             {
-                string? receiverName = targetTv.CustomName ?? targetTv.Name;
-                if (!string.IsNullOrEmpty(receiverName))
+                try
                 {
-                    string nameForLaunch = receiverName;
-                    _ = Task.Run(async () =>
+                    string? receiverName = await ChromeCast.FindReceiverNameByIpAsync(targetIp);
+                    if (string.IsNullOrEmpty(receiverName))
                     {
-                        try
-                        {
-                            // SelectChromecast connects/reuses the pool entry for this
-                            // specific receiver; Launch passes the name explicitly so
-                            // concurrent calls for different TVs never cross-target.
-                            await ChromeCast.SelectChromecast(nameForLaunch);
-                            await ChromeCast.Launch(nameForLaunch);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Socket(
-                                $"Server-side Cast launch failed for {nameForLaunch}: {ex.Message}",
-                                Serilog.Events.LogEventLevel.Warning
-                            );
-                        }
-                    });
+                        Logger.Socket(
+                            $"No Chromecast receiver discovered at {targetIp} — panel won't wake via CEC",
+                            Serilog.Events.LogEventLevel.Warning
+                        );
+                        return;
+                    }
+                    // SelectChromecast connects/reuses the pool entry for this
+                    // specific receiver; LaunchAndroidReceiver sends a LAUNCH
+                    // with launchOptions.androidReceiverCompatible=true so
+                    // cast_shell foregrounds the native APK instead of the
+                    // Web Receiver placeholder.
+                    await ChromeCast.SelectChromecast(receiverName);
+                    await ChromeCast.LaunchAndroidReceiver(receiverName);
                 }
-            }
+                catch (Exception ex)
+                {
+                    Logger.Socket(
+                        $"Server-side Cast launch failed for {targetIp}: {ex.Message}",
+                        Serilog.Events.LogEventLevel.Warning
+                    );
+                }
+            });
         }
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))

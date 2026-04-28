@@ -43,6 +43,82 @@ public class ChromeCast
         return _chromecastReceivers.Select(x => x.Name).ToArray();
     }
 
+    /// <summary>
+    /// Looks up a discovered Chromecast receiver by its LAN IP address. Useful
+    /// when the caller knows the device IP (from the Devices table) but not the
+    /// receiver's mDNS broadcast name (which the user sets independently in
+    /// Android TV settings, e.g. "Tv in woonkamer" vs the NoMercy custom name
+    /// "Woonkamer TV"). Re-discovers via mDNS once when the cache misses
+    /// because Init() runs at server start and stale caches are common — the
+    /// TV may have come online after that boot phase.
+    /// </summary>
+    public static async Task<string?> FindReceiverNameByIpAsync(string ip)
+    {
+        if (string.IsNullOrEmpty(ip))
+            return null;
+
+        string? hit = LookupNameByIp(ip);
+        if (hit is not null)
+            return hit;
+
+        // Cache miss — refresh and try again. Discovery takes 2-3s; this only
+        // runs when the LAN topology changed since Init().
+        Logger.Ping($"Chromecast cache miss for {ip} — refreshing mDNS");
+        try
+        {
+            _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
+            foreach (ChromecastReceiver chromecast in _chromecastReceivers)
+                Logger.Ping(
+                    $"Discovered chromecast: {chromecast.Name} @ {chromecast.DeviceUri?.Host}"
+                );
+        }
+        catch (Exception ex)
+        {
+            Logger.Ping($"Chromecast re-discovery failed: {ex.Message}");
+        }
+
+        string? cached = LookupNameByIp(ip);
+        if (cached is not null)
+            return cached;
+
+        // mDNS still empty — Windows firewall / Zeroconf flakiness commonly
+        // blocks the multicast scan even when the device is reachable on the
+        // same /24. Synthesize a receiver record from the IP and the default
+        // Cast control port so SelectChromecast can still try a direct TCP
+        // connect. The phone-to-TV cast already proved IP reachability; only
+        // the discovery layer is broken.
+        ChromecastReceiver synthetic = new()
+        {
+            Name = ip,
+            DeviceUri = new Uri($"https://{ip}"),
+            Port = 8009,
+            Model = "Chromecast",
+            Version = "0",
+            Status = string.Empty,
+            ExtraInformation = new Dictionary<string, string>(),
+        };
+        List<ChromecastReceiver> merged = new(_chromecastReceivers) { synthetic };
+        _chromecastReceivers = merged;
+        Logger.Ping(
+            $"Synthesized Chromecast receiver for {ip}:8009 — mDNS unavailable, will attempt direct connect"
+        );
+        return ip;
+    }
+
+    private static string? LookupNameByIp(string ip)
+    {
+        foreach (ChromecastReceiver receiver in _chromecastReceivers)
+        {
+            if (
+                receiver.DeviceUri is not null
+                && string.Equals(receiver.DeviceUri.Host, ip, StringComparison.OrdinalIgnoreCase)
+            )
+                return receiver.Name;
+        }
+
+        return null;
+    }
+
     // --- Pool helpers ---
 
     private static ChromecastClient BuildClient(string receiverName)
@@ -182,6 +258,61 @@ public class ChromeCast
 
         Logger.Ping($"Launching chromecast: {target}");
         _ = await client.LaunchApplicationAsync("925B4C3C");
+    }
+
+    private static int _androidLaunchRequestId = new Random().Next();
+
+    /// <summary>
+    /// Launches the NoMercy cast application as an Android TV receiver. Sends
+    /// a LAUNCH protocol message with androidReceiverCompatible=true so cast_shell
+    /// foregrounds the native APK (tv.nomercy.app) instead of falling back to
+    /// the Web Receiver placeholder. Sharpcaster's built-in LaunchApplicationAsync
+    /// doesn't expose launchOptions, so we craft and send the JSON ourselves
+    /// against the public ChromecastClient.SendAsync surface.
+    /// </summary>
+    public static async Task LaunchAndroidReceiver(string? name = null)
+    {
+        string? target = name ?? _lastSelectedName;
+        if (target == null)
+            return;
+
+        if (!ClientPool.TryGetValue(target, out ChromecastClient? client))
+            return;
+
+        int requestId = System.Threading.Interlocked.Increment(ref _androidLaunchRequestId);
+        // The Cast Web Sender SDK encodes androidReceiverCompatible=true as
+        // supportedAppTypes=["ANDROID_TV"] inside the LAUNCH payload — not as
+        // a launchOptions sub-object. cast_shell uses this array to decide
+        // whether to load the registered Android receiver vs the Web Receiver
+        // placeholder. Send both fields for safety; cast_shell ignores
+        // unknown keys.
+        var payload = new
+        {
+            type = "LAUNCH",
+            requestId,
+            appId = "925B4C3C",
+            language = "en-US",
+            supportedAppTypes = new[] { "ANDROID_TV" },
+            launchOptions = new { androidReceiverCompatible = true },
+        };
+        string json = System.Text.Json.JsonSerializer.Serialize(payload);
+
+        Logger.Ping($"Launching cast-tv (androidReceiverCompatible) on {target}");
+
+        try
+        {
+            await client.SendAsync(
+                logger: null,
+                ns: "urn:x-cast:com.google.cast.receiver",
+                messageRequestId: requestId,
+                messagePayload: json,
+                destinationId: "receiver-0"
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Ping($"LaunchAndroidReceiver failed for {target}: {ex.Message}");
+        }
     }
 
     /// <summary>
