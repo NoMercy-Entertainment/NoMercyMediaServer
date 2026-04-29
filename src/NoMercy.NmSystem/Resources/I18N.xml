@@ -18,7 +18,11 @@
   </Entry>
   <Entry>
     <Key>Are you sure you want to remove this from continue watching?</Key>
-    <Value lang="nl">Weet je zeker dat je dit wilt verwijderen?</Value>
+    <Value lang="nl">Weet je zeker dat je dit uit Doorgaan met kijken wilt verwijderen?</Value>
+  </Entry>
+  <Entry>
+    <Key>Remove from continue watching</Key>
+    <Value lang="nl">Uit Doorgaan met kijken verwijderen</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view continue watching</Key>
