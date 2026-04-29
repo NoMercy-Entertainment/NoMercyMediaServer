@@ -730,12 +730,20 @@ public class MusicHub : ConnectionHub
                     }
 
                     // SelectChromecast connects/reuses the pool entry for this
-                    // specific receiver; LaunchAndroidReceiver sends a LAUNCH
-                    // with launchOptions.androidReceiverCompatible=true so
-                    // cast_shell foregrounds the native APK instead of the
-                    // Web Receiver placeholder. customData rides alongside.
+                    // specific receiver. useAndroidReceiver is true only when
+                    // the APK is reachable on this TV (registered with the bus
+                    // registry); otherwise cast_shell would try the Cast
+                    // Connect path, fail to find the APK, and fall back to Web
+                    // Receiver — that fallback path drops customData and the
+                    // receiver hangs on its splash. Going straight to Web
+                    // Receiver preserves customData.
+                    bool apkOnline = _busRegistry.IsOnline(targetUlid);
                     await ChromeCast.SelectChromecast(receiverName);
-                    await ChromeCast.LaunchAndroidReceiver(receiverName, launchData);
+                    await ChromeCast.LaunchAndroidReceiver(
+                        receiverName,
+                        launchData,
+                        useAndroidReceiver: apkOnline
+                    );
                 }
                 catch (Exception ex)
                 {

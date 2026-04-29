@@ -277,7 +277,11 @@ public class ChromeCast
     /// it. The APK ignores auth fields (it has its own persistent Keycloak
     /// session); the Web Receiver consumes them to bootstrap volatile auth.
     /// </summary>
-    public static async Task LaunchAndroidReceiver(string? name = null, object? customData = null)
+    public static async Task LaunchAndroidReceiver(
+        string? name = null,
+        object? customData = null,
+        bool useAndroidReceiver = true
+    )
     {
         string? target = name ?? _lastSelectedName;
         if (target == null)
@@ -306,10 +310,11 @@ public class ChromeCast
         }
 
         int requestId = System.Threading.Interlocked.Increment(ref _androidLaunchRequestId);
-        string json = BuildLaunchJson(requestId, customData);
+        string json = BuildLaunchJson(requestId, customData, useAndroidReceiver);
 
+        string flavor = useAndroidReceiver ? "androidReceiverCompatible" : "webReceiverOnly";
         Logger.Ping(
-            $"Launching cast-tv (androidReceiverCompatible{(customData is null ? "" : ", customData")}) on {target}"
+            $"Launching cast-tv ({flavor}{(customData is null ? "" : ", customData")}) on {target}"
         );
 
         // Watch for cast_shell's reply on this request id. RECEIVER_STATUS
@@ -356,7 +361,7 @@ public class ChromeCast
                 int retryRequestId = System.Threading.Interlocked.Increment(
                     ref _androidLaunchRequestId
                 );
-                string retryJson = BuildLaunchJson(retryRequestId, customData);
+                string retryJson = BuildLaunchJson(retryRequestId, customData, useAndroidReceiver);
                 await SendLaunchAsync(client, retryRequestId, retryJson);
             }
         }
@@ -370,22 +375,49 @@ public class ChromeCast
         }
     }
 
-    private static string BuildLaunchJson(int requestId, object? customData)
+    private static string BuildLaunchJson(
+        int requestId,
+        object? customData,
+        bool useAndroidReceiver
+    )
     {
-        // The Cast Web Sender SDK encodes androidReceiverCompatible=true as
-        // supportedAppTypes=["ANDROID_TV"] inside the LAUNCH payload — not as
-        // a launchOptions sub-object. cast_shell uses this array to decide
-        // whether to load the registered Android receiver vs the Web Receiver
-        // placeholder. Send both fields for safety; cast_shell ignores
-        // unknown keys.
         // Newtonsoft.Json honours [JsonProperty("snake_case")] on
-        // LaunchCustomData so the receiver gets access_token / refresh_token /
-        // user_id rather than AccessToken / RefreshToken / UserId.
-        // System.Text.Json ignores Newtonsoft attributes, which would silently
-        // drop the receiver's auth hydration.
+        // LaunchCustomData so the receiver sees access_token / refresh_token /
+        // user_id. System.Text.Json ignores those attributes and silently
+        // drops the receiver's auth hydration.
+        //
+        // useAndroidReceiver controls whether cast_shell tries to dispatch to
+        // the registered Cast Connect APK first. When true, supportedAppTypes
+        // and launchOptions.androidReceiverCompatible nudge cast_shell toward
+        // the APK path; if no APK is installed cast_shell falls back to the
+        // Web Receiver — and the fallback drops customData on the floor. For
+        // Web-Receiver-only TVs (no APK), call with false so cast_shell goes
+        // straight to the Web Receiver and customData survives.
         if (customData is null)
         {
-            var payload = new
+            object payload = useAndroidReceiver
+                ? new
+                {
+                    type = "LAUNCH",
+                    requestId,
+                    appId = "925B4C3C",
+                    language = "en-US",
+                    supportedAppTypes = new[] { "ANDROID_TV" },
+                    launchOptions = new { androidReceiverCompatible = true },
+                }
+                : new
+                {
+                    type = "LAUNCH",
+                    requestId,
+                    appId = "925B4C3C",
+                    language = "en-US",
+                    supportedAppTypes = new[] { "WEB" },
+                };
+            return Newtonsoft.Json.JsonConvert.SerializeObject(payload);
+        }
+
+        object payloadWithCustomData = useAndroidReceiver
+            ? new
             {
                 type = "LAUNCH",
                 requestId,
@@ -393,20 +425,17 @@ public class ChromeCast
                 language = "en-US",
                 supportedAppTypes = new[] { "ANDROID_TV" },
                 launchOptions = new { androidReceiverCompatible = true },
+                customData,
+            }
+            : new
+            {
+                type = "LAUNCH",
+                requestId,
+                appId = "925B4C3C",
+                language = "en-US",
+                supportedAppTypes = new[] { "WEB" },
+                customData,
             };
-            return Newtonsoft.Json.JsonConvert.SerializeObject(payload);
-        }
-
-        var payloadWithCustomData = new
-        {
-            type = "LAUNCH",
-            requestId,
-            appId = "925B4C3C",
-            language = "en-US",
-            supportedAppTypes = new[] { "ANDROID_TV" },
-            launchOptions = new { androidReceiverCompatible = true },
-            customData,
-        };
         return Newtonsoft.Json.JsonConvert.SerializeObject(payloadWithCustomData);
     }
 

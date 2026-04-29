@@ -30,6 +30,7 @@ public class VideoHub : ConnectionHub
     private readonly VideoPlaylistManager _videoPlaylistManager;
     private readonly VideoPlaybackCommandHandler _commandHandler;
     private readonly CastSessionTokenService _castTokenService;
+    private readonly NoMercy.Api.Controllers.Socket.DeviceBusRegistry _busRegistry;
     private readonly INetworkDiscovery? _networkDiscovery;
 
     private readonly IDbContextFactory<MediaContext> _contextFactory;
@@ -46,6 +47,7 @@ public class VideoHub : ConnectionHub
         VideoPlaybackCommandHandler commandHandler,
         IActivityLogger activityLogger,
         CastSessionTokenService castTokenService,
+        NoMercy.Api.Controllers.Socket.DeviceBusRegistry busRegistry,
         INetworkDiscovery? networkDiscovery = null
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
@@ -59,6 +61,7 @@ public class VideoHub : ConnectionHub
         _videoPlaylistManager = videoPlaylistManager;
         _commandHandler = commandHandler;
         _castTokenService = castTokenService;
+        _busRegistry = busRegistry;
         _networkDiscovery = networkDiscovery;
     }
 
@@ -581,8 +584,13 @@ public class VideoHub : ConnectionHub
                         );
                     }
 
+                    bool apkOnline = _busRegistry.IsOnline(targetUlid);
                     await ChromeCast.SelectChromecast(receiverName);
-                    await ChromeCast.LaunchAndroidReceiver(receiverName, launchData);
+                    await ChromeCast.LaunchAndroidReceiver(
+                        receiverName,
+                        launchData,
+                        useAndroidReceiver: apkOnline
+                    );
                 }
                 catch (Exception ex)
                 {
