@@ -1,4 +1,5 @@
 using System.Net.Mime;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.NmSystem.SystemCalls;
@@ -28,6 +29,13 @@ public class GlobalExceptionHandlerMiddleware
                 LogEventLevel.Debug
             );
         }
+        catch (Exception ex) when (IsClientDisconnect(ex, context))
+        {
+            Logger.App(
+                $"[{context.TraceIdentifier}] Client disconnected mid-request: {context.Request.Path} ({ex.GetType().Name}: {ex.Message})",
+                LogEventLevel.Debug
+            );
+        }
         catch (Exception ex)
         {
             string traceId = context.TraceIdentifier;
@@ -48,5 +56,25 @@ public class GlobalExceptionHandlerMiddleware
 
             await context.Response.WriteAsJsonAsync(problem);
         }
+    }
+
+    private static bool IsClientDisconnect(Exception ex, HttpContext context)
+    {
+        if (context.RequestAborted.IsCancellationRequested)
+            return true;
+
+        return ex switch
+        {
+            BadHttpRequestException => true,
+            ConnectionResetException => true,
+            IOException io
+                when io.Message.Contains("client reset", StringComparison.OrdinalIgnoreCase)
+                    || io.Message.Contains(
+                        "connection was forcibly closed",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    || io.InnerException is ConnectionResetException => true,
+            _ => false,
+        };
     }
 }
