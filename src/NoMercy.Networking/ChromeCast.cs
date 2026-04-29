@@ -338,11 +338,11 @@ public class ChromeCast
         {
             await SendLaunchAsync(client, requestId, json);
 
-            // Wait briefly for the RECEIVER_STATUS broadcast confirming the
-            // app was launched. 1.5s covers cast_shell's normal handshake +
-            // resource allocation window.
+            // Wait for the RECEIVER_STATUS broadcast confirming the app was
+            // launched. 5s covers cast_shell's handshake + resource allocation
+            // window after mDNS fallback to direct-connect on port 8009.
             int waited = 0;
-            while (!launchAccepted && waited < 1500)
+            while (!launchAccepted && waited < 5000)
             {
                 await Task.Delay(100);
                 waited += 100;
@@ -351,7 +351,7 @@ public class ChromeCast
             if (!launchAccepted)
             {
                 Logger.Ping(
-                    $"LaunchAndroidReceiver: no LAUNCH ack from {target} within 1.5s — retrying once"
+                    $"LaunchAndroidReceiver: no LAUNCH ack from {target} within 5s — retrying once"
                 );
                 int retryRequestId = System.Threading.Interlocked.Increment(
                     ref _androidLaunchRequestId
@@ -378,6 +378,11 @@ public class ChromeCast
         // whether to load the registered Android receiver vs the Web Receiver
         // placeholder. Send both fields for safety; cast_shell ignores
         // unknown keys.
+        // Newtonsoft.Json honours [JsonProperty("snake_case")] on
+        // LaunchCustomData so the receiver gets access_token / refresh_token /
+        // user_id rather than AccessToken / RefreshToken / UserId.
+        // System.Text.Json ignores Newtonsoft attributes, which would silently
+        // drop the receiver's auth hydration.
         if (customData is null)
         {
             var payload = new
@@ -389,7 +394,7 @@ public class ChromeCast
                 supportedAppTypes = new[] { "ANDROID_TV" },
                 launchOptions = new { androidReceiverCompatible = true },
             };
-            return System.Text.Json.JsonSerializer.Serialize(payload);
+            return Newtonsoft.Json.JsonConvert.SerializeObject(payload);
         }
 
         var payloadWithCustomData = new
@@ -402,7 +407,7 @@ public class ChromeCast
             launchOptions = new { androidReceiverCompatible = true },
             customData,
         };
-        return System.Text.Json.JsonSerializer.Serialize(payloadWithCustomData);
+        return Newtonsoft.Json.JsonConvert.SerializeObject(payloadWithCustomData);
     }
 
     private static async Task SendLaunchAsync(ChromecastClient client, int requestId, string json)

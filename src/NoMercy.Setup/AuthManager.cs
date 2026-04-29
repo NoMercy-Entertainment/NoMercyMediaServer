@@ -56,6 +56,18 @@ public class AuthManager
             return false;
         }
 
+        if (!TokenIssuerMatchesConfiguredRealm(accessToken))
+        {
+            Logger.Auth(
+                $"Cached token issuer doesn't match configured realm {Config.AuthBaseUrl} — discarding and requiring re-auth",
+                LogEventLevel.Warning
+            );
+            await UpsertSecureValue("auth_access_token", string.Empty);
+            await UpsertSecureValue("auth_refresh_token", string.Empty);
+            await UpsertSecureValue("auth_token_metadata", string.Empty);
+            return false;
+        }
+
         DateTime expiresAt = ParseExpiresAt(accessToken, metadataJson);
         bool isValid = expiresAt > DateTime.UtcNow.AddMinutes(5);
 
@@ -367,6 +379,22 @@ public class AuthManager
         catch (Exception ex)
         {
             Logger.Auth($"Token refresh exception: {ex.Message}", LogEventLevel.Warning);
+            return false;
+        }
+    }
+
+    private static bool TokenIssuerMatchesConfiguredRealm(string accessToken)
+    {
+        try
+        {
+            JwtSecurityTokenHandler handler = new();
+            JwtSecurityToken jwt = handler.ReadJwtToken(accessToken);
+            string issuer = (jwt.Issuer ?? string.Empty).TrimEnd('/');
+            string configured = Config.AuthBaseUrl.TrimEnd('/');
+            return issuer.Equals(configured, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
             return false;
         }
     }

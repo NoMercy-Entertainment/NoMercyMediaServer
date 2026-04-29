@@ -340,7 +340,8 @@ public class SetupEndpoints
             return;
         }
 
-        string redirectUri = $"http://localhost:{Config.InternalServerPort}/setup/silent-sso";
+        string redirectUri =
+            $"{context.Request.Scheme}://{context.Request.Host.Value}/setup/silent-sso";
 
         try
         {
