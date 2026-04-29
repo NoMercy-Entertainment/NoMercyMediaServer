@@ -506,14 +506,17 @@ public class HomeService
                     .WithContextMenu([
                         new()
                         {
-                            Title = "Remove from watchlist".Localize(),
+                            Id = "remove_continue_watching",
+                            Title = "Remove from continue watching".Localize(),
                             Icon = "mooooom-trash",
                             Method = "DELETE",
+                            Destructive = true,
                             Confirm =
                                 "Are you sure you want to remove this from continue watching?".Localize(),
                             Args = new()
                             {
-                                { "url", new Uri("/userdata/continue", UriKind.Relative) },
+                                { "url", "/userData/continue" },
+                                { "replaceKey", "home" },
                             },
                         },
                     ])

@@ -32,7 +32,7 @@ public record NMHomeCardWrapper
     [JsonProperty("watch")]
     public bool Watch { get; set; }
 
-    [JsonProperty("contextMenuItems")]
+    [JsonProperty("context_menu_items")]
     public IEnumerable<ContextMenuItem> ContextMenuItems { get; set; } = [];
 
     [JsonProperty("url")]

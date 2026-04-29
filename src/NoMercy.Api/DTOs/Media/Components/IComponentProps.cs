@@ -35,7 +35,7 @@ public interface IContainerProps : IComponentProps
     [JsonProperty("items")]
     IEnumerable<ComponentEnvelope> Items { get; set; }
 
-    [JsonProperty("contextMenuItems")]
+    [JsonProperty("context_menu_items")]
     IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
 
     [JsonProperty("url")]
@@ -60,7 +60,7 @@ public interface ILeafProps<TData> : IComponentProps
     [JsonProperty("watch")]
     bool Watch { get; set; }
 
-    [JsonProperty("contextMenuItems")]
+    [JsonProperty("context_menu_items")]
     IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
 
     [JsonProperty("url")]
