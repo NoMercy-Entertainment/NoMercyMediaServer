@@ -5,6 +5,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 
 namespace NoMercy.Providers.Helpers;
 
@@ -67,16 +68,18 @@ public static class CacheController
 
         try
         {
-            if (File.Exists(fullname) == false)
+            IStorage storage = StorageProvider.Storage;
+
+            if (!storage.Exists(fullname))
             {
                 value = default;
                 return false;
             }
 
-            // invalidate cache after 1 day of creation date
-            if (File.GetCreationTime(fullname) < DateTime.Now.SubDays(1))
+            // invalidate cache after 1 day of last write time
+            if (storage.LastModified(fullname) < DateTimeOffset.UtcNow.AddDays(-1))
             {
-                File.Delete(fullname);
+                storage.Delete(fullname);
                 value = default;
                 return false;
             }
@@ -84,7 +87,7 @@ public static class CacheController
             T? data;
             try
             {
-                string d = File.ReadAllText(fullname);
+                string d = System.Text.Encoding.UTF8.GetString(storage.Read(fullname));
                 data = xml ? d.FromXml<T>() : d.FromJson<T>();
             }
             catch (Exception)
@@ -128,7 +131,11 @@ public static class CacheController
 
             try
             {
-                await File.WriteAllTextAsync(fullname, data);
+                await StorageProvider.Storage.WriteAllTextAsync(
+                    fullname,
+                    data,
+                    CancellationToken.None
+                );
                 PruneCache();
                 return;
             }

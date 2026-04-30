@@ -11,6 +11,8 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -144,10 +146,11 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
         string subtitleFolder = Path.Combine(hostFolder, "subtitles");
 
-        if (Directory.Exists(subtitleFolder))
+        IStorage storage = StorageProvider.Storage;
+        if (await storage.ExistsAsync(subtitleFolder, CancellationToken.None))
         {
-            string[] subtitleFiles = Directory.GetFiles(subtitleFolder);
-            foreach (string subtitleFile in subtitleFiles)
+            IReadOnlyList<StorageEntry> subtitleEntries = storage.List(subtitleFolder, "*", false);
+            foreach (string subtitleFile in subtitleEntries.Select(e => e.Path))
             {
                 Regex regex = SubtitleFileTagsRegex();
                 Match match = regex.Match(subtitleFile);
@@ -290,18 +293,19 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
         Folder[] rootFolders = Library.FolderLibraries.Select(f => f.Folder).ToArray();
 
+        IStorage storage = StorageProvider.Storage;
         foreach (Folder rootFolder in rootFolders)
         {
             string path = Path.Combine(rootFolder.Path, folder);
 
-            if (!Directory.Exists(path))
+            if (!storage.Exists(path))
             {
                 string? match = Str.FindMatchingDirectory(rootFolder.Path, folder);
                 if (match != null)
                     path = match;
             }
 
-            if (Directory.Exists(path))
+            if (storage.Exists(path))
                 Folders.Add(new() { Path = path, Id = rootFolder.Id });
         }
     }

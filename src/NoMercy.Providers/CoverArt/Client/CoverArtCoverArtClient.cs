@@ -3,6 +3,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Models;
 using NoMercy.Providers.Helpers;
 using NoMercy.Setup;
+using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Configuration = AcoustID.Configuration;
@@ -59,7 +60,8 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
             Path.GetFileName((url?.LocalPath).OrEmpty())
         );
 
-        if (File.Exists(filePath))
+        IStorage storage = StorageProvider.Storage;
+        if (await storage.ExistsAsync(filePath, CancellationToken.None))
             return Image.Load<Rgba32>(filePath);
 
         HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.CoverArtImage);
@@ -70,8 +72,8 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
 
         byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 
-        if (download is not false && !File.Exists(filePath))
-            await File.WriteAllBytesAsync(filePath, bytes);
+        if (download is not false && !await storage.ExistsAsync(filePath, CancellationToken.None))
+            await storage.WriteAsync(filePath, bytes, CancellationToken.None);
 
         return Image.Load<Rgba32>(bytes);
     }

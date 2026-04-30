@@ -15,6 +15,7 @@ using NoMercy.Providers.Helpers;
 using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
+using NoMercy.Storage;
 using NoMercyQueue.Workers;
 
 namespace NoMercy.Service.Configuration;
@@ -28,6 +29,10 @@ public static class ApplicationConfiguration
     {
         HttpClientProvider.Initialize(
             app.ApplicationServices.GetRequiredService<IHttpClientFactory>()
+        );
+        StorageProvider.Initialize(
+            app.ApplicationServices.GetRequiredService<IStorage>(),
+            app.ApplicationServices.GetRequiredService<IStorageBackend>()
         );
         app.ApplicationServices.InitializeSignalREventHandlers();
 

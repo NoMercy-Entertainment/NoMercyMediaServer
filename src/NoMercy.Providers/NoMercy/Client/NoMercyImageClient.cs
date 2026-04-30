@@ -2,6 +2,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
+using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -24,12 +25,12 @@ public abstract class NoMercyImageClient : TmdbBaseClient
             {
                 string folder = Path.Join(AppFiles.ImagesPath, "original");
 
-                if (!Directory.Exists(folder))
-                    Directory.CreateDirectory(folder);
+                IStorage storage = StorageProvider.Storage;
+                await storage.CreateDirectoryAsync(folder, CancellationToken.None);
 
                 string filePath = Path.Combine(folder, path.Replace("/", "").Replace("\\", ""));
 
-                if (File.Exists(filePath))
+                if (await storage.ExistsAsync(filePath, CancellationToken.None))
                     return Image.Load<Rgba32>(filePath);
 
                 HttpClient httpClient = HttpClientProvider.CreateClient(
@@ -44,8 +45,11 @@ public abstract class NoMercyImageClient : TmdbBaseClient
 
                 byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 
-                if (download is not false && !File.Exists(filePath))
-                    await File.WriteAllBytesAsync(filePath, bytes);
+                if (
+                    download is not false
+                    && !await storage.ExistsAsync(filePath, CancellationToken.None)
+                )
+                    await storage.WriteAsync(filePath, bytes, CancellationToken.None);
 
                 return Image.Load<Rgba32>(bytes);
             }
