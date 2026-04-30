@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace NoMercy.Storage;
 
@@ -38,6 +39,11 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IStorage>(sp => new LocalStorage(
             sp.GetRequiredService<IStorageBackend>(),
             sp.GetRequiredService<StoragePathGuard>()
+        ));
+
+        services.TryAddSingleton<IStorageFactory>(sp => new StorageFactory(
+            sp.GetRequiredService<IStorageBackend>(),
+            sp.GetRequiredService<ILogger<StorageFactory>>()
         ));
 
         return services;
