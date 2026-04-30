@@ -144,11 +144,26 @@ public class VideoEncodeJob : AbstractEncoderJob
                         "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
                     );
 
+                // Resolve per-folder storage so the encoder operates under the
+                // correct backend (local / SMB / S3 / etc.) and path guard.
+                // TODO: cross-backend transfer — when source and output folders
+                // map to different backends, the orchestrator will need to
+                // AcquireLocalPathAsync on the source, encode, then stream-write
+                // to the destination. For now source == destination (same folder).
+                NoMercy.Storage.IStorage folderStorage = StorageFactory.For(
+                    folder.Id,
+                    folder.BackendType,
+                    folder.BackendConfig,
+                    folder.Path
+                );
+
                 EncodingRequest request = new(
                     InputPath: InputFile,
                     OutputDirectory: fileMetadata.Path,
                     Profile: encodingProfile,
-                    MediaTitle: fileMetadata.FileName
+                    MediaTitle: fileMetadata.FileName,
+                    SourceStorage: folderStorage,
+                    DestinationStorage: folderStorage
                 );
 
                 IEncoderProcessRegistry? processRegistry =

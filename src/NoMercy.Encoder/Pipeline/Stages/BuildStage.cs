@@ -47,6 +47,10 @@ public class BuildStage(
 
         try
         {
+            // Use the per-folder destination storage from the job context when
+            // available; fall back to the DI-injected singleton for default installs.
+            IStorage effectiveStorage = context.DestinationStorage ?? storage;
+
             input = await ApplyDrmPreparationAsync(input, ct).ConfigureAwait(false);
             // Pass 1 of a 2-pass encode: video-only analysis to the stats file,
             // no audio / subtitles / sprite / font-extraction outputs. The
@@ -117,16 +121,16 @@ public class BuildStage(
             IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.OutputPlan.Format);
 
             // Ensure output subdirectories exist before FFmpeg runs
-            storage.CreateDirectory(input.OutputDirectory);
+            effectiveStorage.CreateDirectory(input.OutputDirectory);
             foreach (string subDir in strategy.GetOutputSubdirectories(input.Plan.OutputPlan))
             {
-                storage.CreateDirectory(Path.Combine(input.OutputDirectory, subDir));
+                effectiveStorage.CreateDirectory(Path.Combine(input.OutputDirectory, subDir));
             }
 
             // Ensure subtitles/ directory exists
             if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0)
             {
-                storage.CreateDirectory(Path.Combine(input.OutputDirectory, "subtitles"));
+                effectiveStorage.CreateDirectory(Path.Combine(input.OutputDirectory, "subtitles"));
             }
 
             FfmpegCommandBuilder builder = new();
@@ -232,7 +236,7 @@ public class BuildStage(
                     input.OutputDirectory,
                     input.MediaTitle,
                     subtitleExtractor,
-                    storage
+                    effectiveStorage
                 );
 
                 bitmapSubCommands = BuildBitmapSubtitleCommands(
@@ -243,7 +247,7 @@ public class BuildStage(
                     input.OutputDirectory,
                     input.MediaTitle,
                     subtitleExtractor,
-                    storage
+                    effectiveStorage
                 );
             }
 
@@ -265,7 +269,7 @@ public class BuildStage(
             if (context.MediaInfo is not null && context.MediaInfo.HasAttachments)
             {
                 string fontDir = Path.Combine(input.OutputDirectory, "fonts");
-                storage.CreateDirectory(fontDir);
+                effectiveStorage.CreateDirectory(fontDir);
                 FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
                     options.FfmpegPath,
                     input.InputPath,

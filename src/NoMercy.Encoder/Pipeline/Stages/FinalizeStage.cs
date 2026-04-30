@@ -38,7 +38,11 @@ public class FinalizeStage(
 
         try
         {
-            storage.CreateDirectory(input.OutputDirectory);
+            // Use the per-folder destination storage from the job context when
+            // available; fall back to the DI-injected singleton for default installs.
+            IStorage effectiveStorage = context.DestinationStorage ?? storage;
+
+            effectiveStorage.CreateDirectory(input.OutputDirectory);
 
             IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.Format);
 
@@ -72,7 +76,7 @@ public class FinalizeStage(
             // Thumbnail sprite + VTT are produced by the spritevtt muxer
             // in the main FFmpeg command — no post-processing needed.
 
-            long totalSize = storage
+            long totalSize = effectiveStorage
                 .List(input.OutputDirectory, "*", recursive: true)
                 .Where(e => !e.IsDirectory)
                 .Sum(e => e.SizeBytes);

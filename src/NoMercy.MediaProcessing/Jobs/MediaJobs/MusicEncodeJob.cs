@@ -116,10 +116,24 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                         "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
                     );
 
+                // Resolve per-folder storage so the encoder operates under the
+                // correct backend and path guard for this library folder.
+                // TODO: cross-backend transfer — when source and output folders
+                // map to different backends, staged copy semantics will be needed.
+                // For now source == destination (same folder).
+                NoMercy.Storage.IStorage folderStorage = StorageFactory.For(
+                    folder.Id,
+                    folder.BackendType,
+                    folder.BackendConfig,
+                    folder.Path
+                );
+
                 EncodingRequest request = new(
                     InputPath: MediaFile.Path,
                     OutputDirectory: FolderMetaData.BasePath,
-                    Profile: encodingProfile
+                    Profile: encodingProfile,
+                    SourceStorage: folderStorage,
+                    DestinationStorage: folderStorage
                 );
 
                 EventBusProgressObserver progressObserver = new(

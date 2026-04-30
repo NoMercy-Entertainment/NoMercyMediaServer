@@ -23,7 +23,11 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
             inputPath
         );
 
-        if (!storage.Exists(inputPath))
+        // Use the per-folder source storage from the job context when available;
+        // fall back to the DI-injected singleton for app-state / default installs.
+        IStorage effectiveStorage = context.SourceStorage ?? storage;
+
+        if (!effectiveStorage.Exists(inputPath))
         {
             return new StageFailure(
                 new(

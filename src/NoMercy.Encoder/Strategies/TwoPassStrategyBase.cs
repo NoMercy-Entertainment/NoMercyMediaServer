@@ -39,9 +39,13 @@ public abstract class TwoPassStrategyBase(
         CancellationToken ct
     )
     {
+        // Use per-folder destination storage from the request when available;
+        // fall back to the DI-injected singleton for default installs.
+        IStorage effectiveStorage = request.DestinationStorage ?? request.SourceStorage ?? storage;
+
         try
         {
-            return await EncodeInternalAsync(request, progress, ct);
+            return await EncodeInternalAsync(request, effectiveStorage, progress, ct);
         }
         catch (OperationCanceledException)
         {
@@ -49,7 +53,7 @@ public abstract class TwoPassStrategyBase(
             // resume point. Also remove any partial output the encode wrote.
             // Both operations are best-effort: log and continue on error.
             await DeleteCheckpointOnCancelAsync(request.OutputDirectory);
-            DeletePartialOutput(request.OutputDirectory);
+            DeletePartialOutput(request.OutputDirectory, effectiveStorage);
             throw;
         }
     }
@@ -70,22 +74,25 @@ public abstract class TwoPassStrategyBase(
         }
     }
 
-    private void DeletePartialOutput(string outputDirectory)
+    private void DeletePartialOutput(string outputDirectory, IStorage stor)
     {
         try
         {
-            if (!storage.Exists(outputDirectory))
+            if (!stor.Exists(outputDirectory))
                 return;
 
             foreach (
-                NoMercy.Storage.StorageEntry entry in storage
-                    .List(outputDirectory, "*", recursive: true)
+                NoMercy.Storage.StorageEntry entry in stor.List(
+                        outputDirectory,
+                        "*",
+                        recursive: true
+                    )
                     .Where(e => !e.IsDirectory)
             )
             {
                 try
                 {
-                    storage.Delete(entry.Path);
+                    stor.Delete(entry.Path);
                 }
                 catch (Exception ex)
                 {
@@ -109,18 +116,19 @@ public abstract class TwoPassStrategyBase(
 
     private async Task<EncodingResult> EncodeInternalAsync(
         EncodingRequest request,
+        IStorage stor,
         IProgressObserver? progress,
         CancellationToken ct
     )
     {
-        string statsFilePath = ResolveStatsFilePath(request);
+        string statsFilePath = ResolveStatsFilePath(request, stor);
         int variantCount = Math.Max(1, request.Profile.VideoOutputs.Length);
 
         JobCheckpoint? checkpoint = await checkpointStore.LoadAsync(request.OutputDirectory, ct);
         bool pass1AlreadyDone =
             checkpoint is { Pass1Completed: true }
             && !string.IsNullOrEmpty(checkpoint.StatsFilePath)
-            && AllVariantStatsPresent(checkpoint.StatsFilePath!, variantCount);
+            && AllVariantStatsPresent(checkpoint.StatsFilePath!, variantCount, stor);
 
         if (pass1AlreadyDone)
         {
@@ -199,15 +207,15 @@ public abstract class TwoPassStrategyBase(
         progress?.OnStageCompleted("Pass 2", pass2Result.Duration);
 
         await checkpointStore.DeleteAsync(request.OutputDirectory, ct);
-        DeleteStatsFiles(statsFilePath, storage);
+        DeleteStatsFiles(statsFilePath, stor);
 
         return pass2Result;
     }
 
-    private string ResolveStatsFilePath(EncodingRequest request)
+    private static string ResolveStatsFilePath(EncodingRequest request, IStorage stor)
     {
         string statsDir = Path.Combine(request.OutputDirectory, ".2pass");
-        storage.CreateDirectory(statsDir);
+        stor.CreateDirectory(statsDir);
         return Path.Combine(statsDir, "x264");
     }
 
@@ -262,13 +270,13 @@ public abstract class TwoPassStrategyBase(
     /// Missing any one forces the whole pass 1 to re-run for consistency;
     /// mixing fresh and stale stats across variants gives unreliable quality.
     /// </summary>
-    private bool AllVariantStatsPresent(string basePath, int variantCount)
+    private static bool AllVariantStatsPresent(string basePath, int variantCount, IStorage stor)
     {
         for (int i = 0; i < variantCount; i++)
         {
             string variantBase = $"{basePath}_v{i}";
             // x264 writes {variantBase}-0.log — that's the signal we look for.
-            if (!storage.Exists($"{variantBase}-0.log"))
+            if (!stor.Exists($"{variantBase}-0.log"))
                 return false;
         }
         return true;

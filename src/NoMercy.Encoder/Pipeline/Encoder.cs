@@ -26,7 +26,13 @@ public class Encoder(
         CancellationToken ct = default
     )
     {
-        EncodingContext context = EncodingContext.Create();
+        EncodingContext context = EncodingContext.Create() with
+        {
+            SourceStorage = request.SourceStorage,
+            // When caller only sets SourceStorage, treat destination as the same.
+            // Explicit DestinationStorage wins when source ≠ destination folders.
+            DestinationStorage = request.DestinationStorage ?? request.SourceStorage,
+        };
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         logger.LogInformation(
@@ -179,7 +185,11 @@ public class Encoder(
         CancellationToken ct = default
     )
     {
-        EncodingContext context = EncodingContext.Create();
+        EncodingContext context = EncodingContext.Create() with
+        {
+            SourceStorage = request.SourceStorage,
+            DestinationStorage = request.DestinationStorage ?? request.SourceStorage,
+        };
         Stopwatch stopwatch = Stopwatch.StartNew();
         TimeSpan previewDuration = TimeSpan.FromSeconds(previewDurationSeconds);
 

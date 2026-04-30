@@ -84,6 +84,16 @@ public class EncodingOrchestrator(
             request.InputPath
         );
 
+        // Resolve per-request storages. Jobs supply per-folder IStorage instances
+        // that enforce path guards and backend routing. Fall back to the DI singleton
+        // for callers that do not set per-folder storage (live transcoder, tests, etc.).
+        // TODO: cross-backend — when source != destination the orchestrator will need
+        // to AcquireLocalPathAsync on sourceStorage, run the encode, then stream the
+        // output to destinationStorage. Leave copy semantics for the remote-driver follow-up.
+        IStorage sourceStorage = request.SourceStorage ?? storage;
+        IStorage destinationStorage =
+            request.DestinationStorage ?? request.SourceStorage ?? storage;
+
         Stopwatch wall = Stopwatch.StartNew();
 
         try
@@ -109,13 +119,18 @@ public class EncodingOrchestrator(
 
             IReadOnlyList<OutputArtifact> artifacts = await BuildArtifactsAsync(
                 request.OutputDirectory,
+                destinationStorage,
                 ct
             );
 
             // OutputBytes counts everything on disk (segments + sidecars +
             // thumbnails); artifacts are stream-level only. Walk separately.
-            long outputBytes = await SumOutputBytesAsync(request.OutputDirectory, ct);
-            long sourceBytes = await GetSourceBytesAsync(request.InputPath, ct);
+            long outputBytes = await SumOutputBytesAsync(
+                request.OutputDirectory,
+                destinationStorage,
+                ct
+            );
+            long sourceBytes = await GetSourceBytesAsync(request.InputPath, sourceStorage, ct);
             double durationSec = wall.Elapsed.TotalSeconds;
             double avgFps = result.Metrics?.AverageFps ?? 0;
             int bitrateKbps = durationSec > 0 ? (int)(outputBytes * 8L / (durationSec * 1000)) : 0;
@@ -224,6 +239,7 @@ public class EncodingOrchestrator(
     // so EncodeStats.OutputBytes stays accurate.
     private async Task<IReadOnlyList<OutputArtifact>> BuildArtifactsAsync(
         string outputDirectory,
+        IStorage stor,
         CancellationToken ct
     )
     {
@@ -232,7 +248,7 @@ public class EncodingOrchestrator(
         IAsyncEnumerable<StorageEntry>? entries;
         try
         {
-            entries = storage.ListAsync(outputDirectory, pattern: null, recursive: true, ct: ct);
+            entries = stor.ListAsync(outputDirectory, pattern: null, recursive: true, ct: ct);
         }
         catch (Exception ex)
         {
@@ -263,7 +279,7 @@ public class EncodingOrchestrator(
 
             try
             {
-                string hash = await storage.HashAsync(entry.Path, "sha256", ct);
+                string hash = await stor.HashAsync(entry.Path, "sha256", ct);
                 string mime = OutputArtifact.MimeFromPath(entry.Path);
                 artifacts.Add(new OutputArtifact(entry.Path, entry.SizeBytes, hash, mime));
             }
@@ -302,11 +318,15 @@ public class EncodingOrchestrator(
         return false;
     }
 
-    private async Task<long> GetSourceBytesAsync(string inputPath, CancellationToken ct)
+    private async Task<long> GetSourceBytesAsync(
+        string inputPath,
+        IStorage stor,
+        CancellationToken ct
+    )
     {
         try
         {
-            return await storage.SizeAsync(inputPath, ct);
+            return await stor.SizeAsync(inputPath, ct);
         }
         catch
         {
@@ -315,13 +335,17 @@ public class EncodingOrchestrator(
     }
 
     // Plain size walk — no hashing, no extra I/O beyond directory metadata.
-    private async Task<long> SumOutputBytesAsync(string outputDirectory, CancellationToken ct)
+    private async Task<long> SumOutputBytesAsync(
+        string outputDirectory,
+        IStorage stor,
+        CancellationToken ct
+    )
     {
         long total = 0;
         try
         {
             await foreach (
-                StorageEntry entry in storage.ListAsync(
+                StorageEntry entry in stor.ListAsync(
                     outputDirectory,
                     pattern: null,
                     recursive: true,
