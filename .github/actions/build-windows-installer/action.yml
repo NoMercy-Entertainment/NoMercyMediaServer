@@ -28,8 +28,19 @@ runs:
 
     - name: Install Inno Setup
       shell: pwsh
+      env:
+        GH_API_TOKEN: ${{ github.token }}
       run: |
-        $Release = Invoke-RestMethod -Uri "https://api.github.com/repos/jrsoftware/issrc/releases/latest" -UseBasicParsing
+        # Authenticated GitHub API call avoids the 60/hr anonymous rate limit
+        # that runner shared-egress IPs routinely exhaust.
+        $Headers = @{
+          'User-Agent' = 'nomercy-media-server-ci'
+          'Accept'     = 'application/vnd.github+json'
+        }
+        if ($env:GH_API_TOKEN) {
+          $Headers['Authorization'] = "Bearer $env:GH_API_TOKEN"
+        }
+        $Release = Invoke-RestMethod -Uri "https://api.github.com/repos/jrsoftware/issrc/releases/latest" -Headers $Headers -UseBasicParsing
         $Asset = $Release.assets | Where-Object { $_.name -match '^innosetup-\d+\.\d+\.\d+\.exe$' } | Select-Object -First 1
 
         if (-not $Asset) {
