@@ -10,6 +10,7 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Client.Mocks;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Setup;
+using NoMercy.Storage;
 
 namespace NoMercy.Tests.MediaProcessing.Movies;
 
@@ -34,7 +35,12 @@ public class MovieManagerTests
         _movieRepositoryMock = new();
         _movieClientMock = new();
 
-        _movieManager = new(_movieRepositoryMock.Object, jobDispatcherMock.Object);
+        IStorageBackend storageBackend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(
+            storageBackend,
+            new StoragePathGuard([], storageBackend)
+        );
+        _movieManager = new(_movieRepositoryMock.Object, jobDispatcherMock.Object, storage);
         _movieAppends = mockDataProvider.MockMovieAppendsResponse()!;
         _library = new() { Id = new(), Title = "Test Library" };
         _movieId = 1771;

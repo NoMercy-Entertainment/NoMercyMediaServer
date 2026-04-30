@@ -28,13 +28,15 @@ using NoMercy.Providers.TMDB.Models.Episode;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Files;
 
-public class FileRepository(MediaContext context) : IFileRepository
+public class FileRepository(MediaContext context, IStorageBackend storageBackend) : IFileRepository
 {
     private readonly MediaContext _context = context;
+    private readonly IStorageBackend _storageBackend = storageBackend;
 
     public Task<IDbContextTransaction> BeginTransactionAsync()
     {
@@ -1517,13 +1519,15 @@ public class FileRepository(MediaContext context) : IFileRepository
             folder = "/";
         }
 
-        if (!Directory.Exists(folder))
+        if (!_storageBackend.DirectoryExists(folder))
             return array;
 
-        string[] directories;
+        IEnumerable<string> directories;
         try
         {
-            directories = Directory.GetDirectories(folder);
+            directories = _storageBackend
+                .EnumerateFileSystemEntries(folder, "*", SearchOption.TopDirectoryOnly)
+                .Where(e => _storageBackend.DirectoryExists(e));
         }
         catch (IOException)
         {

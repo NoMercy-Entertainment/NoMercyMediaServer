@@ -13,14 +13,19 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.Shared;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Movies;
 
-public class MovieManager(IMovieRepository movieRepository, JobDispatcher jobDispatcher)
-    : BaseManager,
-        IMovieManager
+public class MovieManager(
+    IMovieRepository movieRepository,
+    JobDispatcher jobDispatcher,
+    IStorage storage
+) : BaseManager, IMovieManager
 {
+    private readonly IStorage _storage = storage;
+
     public async Task<TmdbMovieAppends?> Add(int id, Library library)
     {
         Logger.MovieDb($"Movie: {id}: Adding to Library {library.Title}");
@@ -39,7 +44,7 @@ public class MovieManager(IMovieRepository movieRepository, JobDispatcher jobDis
         {
             string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
 
-            if (!Directory.Exists(folderName))
+            if (!_storage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
                     folderLibrary.Folder.Path,
@@ -49,7 +54,7 @@ public class MovieManager(IMovieRepository movieRepository, JobDispatcher jobDis
                     folderName = match;
             }
 
-            if (!Directory.Exists(folderName))
+            if (!_storage.Exists(folderName))
                 continue;
 
             DirectoryInfo folderInfo = new(folderName);

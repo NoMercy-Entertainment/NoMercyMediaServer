@@ -74,4 +74,7 @@ public sealed class SystemIoStorageBackend : IStorageBackend
             return false;
         }
     }
+
+    public void MoveDirectory(string source, string destination) =>
+        Directory.Move(source, destination);
 }

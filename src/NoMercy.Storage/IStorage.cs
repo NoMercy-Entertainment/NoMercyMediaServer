@@ -101,4 +101,8 @@ public interface IStorage
     Task<string> ReadAllTextAsync(string path, CancellationToken ct);
 
     Task WriteAllTextAsync(string path, string contents, CancellationToken ct);
+
+    Task MoveDirectoryAsync(string from, string to, CancellationToken ct);
+
+    void MoveDirectory(string from, string to);
 }

@@ -10,6 +10,7 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.Storage;
 
 /// <summary>
 /// Consumer video-archiver workflow: when a newly-scanned movie or episode
@@ -21,9 +22,13 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 /// rescans don't re-encode. Folders without profile assignments are a no-op —
 /// users can still manage encoding by hand through the dashboard.
 /// </summary>
-public class AutoEncodeSubscriber(IEventBus eventBus, ILogger<AutoEncodeSubscriber> logger)
-    : IHostedService
+public class AutoEncodeSubscriber(
+    IEventBus eventBus,
+    ILogger<AutoEncodeSubscriber> logger,
+    IStorage storage
+) : IHostedService
 {
+    private readonly IStorage _storage = storage;
     private readonly List<IDisposable> _subscriptions = [];
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -140,7 +145,7 @@ public class AutoEncodeSubscriber(IEventBus eventBus, ILogger<AutoEncodeSubscrib
     /// directory named after the media title. If that directory exists with
     /// any files in it, consider the file already encoded.
     /// </summary>
-    private static bool IsAlreadyEncoded(VideoFile file)
+    private bool IsAlreadyEncoded(VideoFile file)
     {
         if (string.IsNullOrEmpty(file.HostFolder))
             return false;
@@ -152,27 +157,19 @@ public class AutoEncodeSubscriber(IEventBus eventBus, ILogger<AutoEncodeSubscrib
         string sourceExt = Path.GetExtension(file.Filename).ToLowerInvariant();
         try
         {
-            if (!Directory.Exists(file.HostFolder))
+            if (!_storage.Exists(file.HostFolder))
                 return false;
 
             // Any .NoMercy subdirectory counts as encoded.
             if (
-                Directory
-                    .EnumerateDirectories(
-                        file.HostFolder,
-                        "*.NoMercy",
-                        SearchOption.TopDirectoryOnly
-                    )
-                    .Any()
+                _storage
+                    .List(file.HostFolder, "*.NoMercy", recursive: false)
+                    .Any(e => e.IsDirectory)
             )
                 return true;
 
             // Any master playlist alongside counts too.
-            if (
-                Directory
-                    .EnumerateFiles(file.HostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
-                    .Any()
-            )
+            if (_storage.List(file.HostFolder, "*.m3u8", recursive: false).Any(e => !e.IsDirectory))
                 return true;
 
             _ = sourceExt;

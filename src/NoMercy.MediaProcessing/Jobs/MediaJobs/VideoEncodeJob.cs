@@ -20,6 +20,7 @@ using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -34,9 +35,15 @@ public class VideoEncodeJob : AbstractEncoderJob
     {
         await using MediaContext context = new();
 
+        IStorageBackend storageBackend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(
+            storageBackend,
+            new StoragePathGuard([], storageBackend)
+        );
+
         await using LibraryRepository libraryRepository = new(context);
-        FileRepository fileRepository = new(context);
-        FileManager fileManager = new(fileRepository);
+        FileRepository fileRepository = new(context, storageBackend);
+        FileManager fileManager = new(fileRepository, storage);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)

@@ -46,4 +46,6 @@ public interface IStorageBackend
     /// Returns false when the path does not exist or cannot be queried.
     /// </summary>
     bool IsHidden(string path);
+
+    void MoveDirectory(string source, string destination);
 }

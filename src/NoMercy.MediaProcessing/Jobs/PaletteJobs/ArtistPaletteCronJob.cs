@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using SixLabors.ImageSharp;
@@ -14,14 +15,20 @@ public class ArtistPaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<ArtistPaletteCronJob> _logger;
     private readonly MediaContext _context;
+    private readonly IStorage _storage;
 
     public string CronExpression => new CronExpressionBuilder().EveryHours(2);
     public string JobName => "Artist ColorPalette Job";
 
-    public ArtistPaletteCronJob(ILogger<ArtistPaletteCronJob> logger, MediaContext context)
+    public ArtistPaletteCronJob(
+        ILogger<ArtistPaletteCronJob> logger,
+        MediaContext context,
+        IStorage storage
+    )
     {
         _logger = logger;
         _context = context;
+        _storage = storage;
     }
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
@@ -49,7 +56,7 @@ public class ArtistPaletteCronJob : ICronJobExecutor
                 try
                 {
                     string filePath = AppFiles.MusicImagesPath + artist.Cover;
-                    if (File.Exists(filePath))
+                    if (_storage.Exists(filePath))
                     {
                         using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(filePath);
                         artist._colorPalette = BaseImageManager.GenerateColorPalette([

@@ -14,14 +14,19 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Shows;
 
-public class ShowManager(IShowRepository showRepository, JobDispatcher jobDispatcher)
-    : BaseManager,
-        IShowManager
+public class ShowManager(
+    IShowRepository showRepository,
+    JobDispatcher jobDispatcher,
+    IStorage storage
+) : BaseManager, IShowManager
 {
+    private readonly IStorage _storage = storage;
+
     public async Task<TmdbTvShowAppends?> AddShowAsync(
         int id,
         Library library,
@@ -45,7 +50,7 @@ public class ShowManager(IShowRepository showRepository, JobDispatcher jobDispat
         {
             string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
 
-            if (!Directory.Exists(folderName))
+            if (!_storage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
                     folderLibrary.Folder.Path,
@@ -55,7 +60,7 @@ public class ShowManager(IShowRepository showRepository, JobDispatcher jobDispat
                     folderName = match;
             }
 
-            if (!Directory.Exists(folderName))
+            if (!_storage.Exists(folderName))
                 continue;
 
             DirectoryInfo folderInfo = new(folderName);
@@ -118,7 +123,7 @@ public class ShowManager(IShowRepository showRepository, JobDispatcher jobDispat
             LogEventLevel.Debug
         );
 
-        ShowManager showManager = new(showRepository, jobDispatcher);
+        ShowManager showManager = new(showRepository, jobDispatcher, _storage);
         await showManager.StoreGenres(showAppends);
         await showManager.StoreContentRatings(showAppends);
         await showManager.StoreTranslations(showAppends);

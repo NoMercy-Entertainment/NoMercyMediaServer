@@ -211,4 +211,16 @@ public sealed class LoggingStorage(IStorage inner) : IStorage
         Calls.Add($"WriteAllTextAsync:{path}");
         return inner.WriteAllTextAsync(path, contents, ct);
     }
+
+    public Task MoveDirectoryAsync(string from, string to, CancellationToken ct)
+    {
+        Calls.Add($"MoveDirectoryAsync:{from}→{to}");
+        return inner.MoveDirectoryAsync(from, to, ct);
+    }
+
+    public void MoveDirectory(string from, string to)
+    {
+        Calls.Add($"MoveDirectory:{from}→{to}");
+        inner.MoveDirectory(from, to);
+    }
 }

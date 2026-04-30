@@ -21,6 +21,7 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
 
@@ -38,7 +39,9 @@ public class LibrariesController(
     JobDispatcher jobDispatcher,
     LanguageRepository languageRepository,
     IDbContextFactory<MediaContext> mediaContextFactory,
-    IActivityLogger activityLogger
+    IActivityLogger activityLogger,
+    IStorageBackend storageBackend,
+    IStorage storage
 ) : BaseController
 {
     [HttpGet]
@@ -826,8 +829,8 @@ public class LibrariesController(
         {
             await using MediaContext mediaContext = new();
 
-            FileRepository fileRepository = new(mediaContext);
-            FileManager fileManager = new(fileRepository);
+            FileRepository fileRepository = new(mediaContext, storageBackend);
+            FileManager fileManager = new(fileRepository, storage);
 
             await fileManager.MoveToLibraryFolder(request.Id, folder);
 

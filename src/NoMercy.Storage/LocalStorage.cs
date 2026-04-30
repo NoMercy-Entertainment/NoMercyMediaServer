@@ -311,4 +311,19 @@ public sealed class LocalStorage : IStorage
         await writer.WriteAsync(contents.AsMemory(), ct);
         await writer.FlushAsync(ct);
     }
+
+    public Task MoveDirectoryAsync(string from, string to, CancellationToken ct)
+    {
+        string safeFrom = _guard.Validate(from);
+        string safeTo = _guard.Validate(to);
+        _backend.MoveDirectory(safeFrom, safeTo);
+        return Task.CompletedTask;
+    }
+
+    public void MoveDirectory(string from, string to)
+    {
+        string safeFrom = _guard.Validate(from);
+        string safeTo = _guard.Validate(to);
+        _backend.MoveDirectory(safeFrom, safeTo);
+    }
 }

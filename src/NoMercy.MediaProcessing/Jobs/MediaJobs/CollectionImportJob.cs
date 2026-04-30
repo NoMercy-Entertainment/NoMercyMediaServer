@@ -10,6 +10,7 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.Providers.TMDB.Models.Collections;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -27,8 +28,14 @@ public class CollectionImportJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
+        IStorageBackend storageBackend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(
+            storageBackend,
+            new StoragePathGuard([], storageBackend)
+        );
+
         MovieRepository movieRepository = new(context);
-        MovieManager movieManager = new(movieRepository, jobDispatcher);
+        MovieManager movieManager = new(movieRepository, jobDispatcher, storage);
 
         CollectionRepository collectionRepository = new(context);
         CollectionManager collectionManager = new(

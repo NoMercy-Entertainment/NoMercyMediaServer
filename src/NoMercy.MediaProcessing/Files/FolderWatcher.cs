@@ -1,4 +1,5 @@
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 using Stowage;
 
@@ -8,6 +9,7 @@ public class FolderWatcher : IDisposable
 {
     private static readonly List<IDisposable> Watchers = [];
     private static volatile FolderWatcher? _instance;
+    private static readonly IStorageBackend StorageBackend = new SystemIoStorageBackend();
 
     public event Action<FileWatcherEventArgs>? OnChanged;
     public event Action<FileWatcherEventArgs>? OnCreated;
@@ -26,7 +28,7 @@ public class FolderWatcher : IDisposable
         List<Action> disposers = [];
         disposers.AddRange(
             from folder in foldersToWatch
-            where Directory.Exists(folder)
+            where StorageBackend.DirectoryExists(folder)
             select CreateWatcher(folder)
         );
 

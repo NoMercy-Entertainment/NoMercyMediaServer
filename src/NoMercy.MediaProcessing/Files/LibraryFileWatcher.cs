@@ -7,6 +7,7 @@ using NoMercy.Events.FileWatcher;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Files;
@@ -18,6 +19,7 @@ public class LibraryFileWatcher
     public static LibraryFileWatcher Instance => _instance.Value;
 
     private static readonly FolderWatcher Fs = new();
+    private static readonly IStorageBackend StorageBackend = new SystemIoStorageBackend();
 
     private static readonly Dictionary<string, FileChangeGroup> FileChangeGroups = new();
     private static readonly Lock LockObject = new();
@@ -158,7 +160,7 @@ public class LibraryFileWatcher
 
     private static bool IsAllowedExtensionForLibrary(Library library, string path)
     {
-        if (Directory.Exists(path))
+        if (StorageBackend.DirectoryExists(path))
             return true;
 
         switch (library.Type)

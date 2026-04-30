@@ -17,6 +17,7 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.EventHandlers;
@@ -102,7 +103,8 @@ public class FileWatcherEventHandler : IDisposable
             string filename = "/" + Path.GetFileName(@event.FullPath);
 
             await using MediaContext mediaContext = new();
-            FileRepository fileRepository = new(mediaContext);
+            IStorageBackend storageBackend = new SystemIoStorageBackend();
+            FileRepository fileRepository = new(mediaContext, storageBackend);
 
             int videoFilesDeleted = await fileRepository.DeleteVideoFilesByHostFolderAsync(
                 hostFolder
@@ -145,7 +147,8 @@ public class FileWatcherEventHandler : IDisposable
             string newFilename = "/" + Path.GetFileName(@event.NewFullPath);
 
             await using MediaContext mediaContext = new();
-            FileRepository fileRepository = new(mediaContext);
+            IStorageBackend storageBackend = new SystemIoStorageBackend();
+            FileRepository fileRepository = new(mediaContext, storageBackend);
 
             int updated = await fileRepository.UpdateVideoFilePathsAsync(
                 oldHostFolder,

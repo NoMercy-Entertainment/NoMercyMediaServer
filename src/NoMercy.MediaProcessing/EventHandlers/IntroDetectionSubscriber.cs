@@ -11,6 +11,7 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
+using NoMercy.Storage;
 
 /// <summary>
 /// Wires <see cref="EncodingCompletedEvent"/> to the chromaprint-based
@@ -27,9 +28,11 @@ using NoMercy.Events.Encoding;
 public class IntroDetectionSubscriber(
     IEventBus eventBus,
     IServiceScopeFactory scopeFactory,
-    ILogger<IntroDetectionSubscriber> logger
+    ILogger<IntroDetectionSubscriber> logger,
+    IStorage storage
 ) : IHostedService
 {
+    private readonly IStorage _storage = storage;
     private const int MinEpisodes = 3;
     private static readonly TimeSpan IntroScanWindow = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan OutroScanWindow = TimeSpan.FromMinutes(3);
@@ -258,7 +261,7 @@ public class IntroDetectionSubscriber(
         await context.SaveChangesAsync(ct);
     }
 
-    private static string? ResolveEpisodeInputPath(Episode episode)
+    private string? ResolveEpisodeInputPath(Episode episode)
     {
         // The subscriber fingerprints the ORIGINAL source (not HLS output)
         // so the timestamps it detects are meaningful against the full
@@ -272,7 +275,7 @@ public class IntroDetectionSubscriber(
                 continue;
 
             string path = System.IO.Path.Combine(file.HostFolder, file.Filename);
-            if (System.IO.File.Exists(path))
+            if (_storage.Exists(path))
                 return path;
         }
 

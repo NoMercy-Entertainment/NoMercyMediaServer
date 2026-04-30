@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.EventHandlers;
+using NoMercy.Storage;
 
 /// <summary>
 /// Lifecycle / wiring tests for <see cref="AutoEncodeSubscriber"/>. The
@@ -21,8 +22,17 @@ public class AutoEncodeSubscriberLifecycleTests
     [Fact]
     public async Task Start_SubscribesToMediaFilesScannedEvent()
     {
+        IStorageBackend storageBackend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(
+            storageBackend,
+            new StoragePathGuard([], storageBackend)
+        );
         InMemoryEventBus bus = new();
-        AutoEncodeSubscriber subscriber = new(bus, NullLogger<AutoEncodeSubscriber>.Instance);
+        AutoEncodeSubscriber subscriber = new(
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            storage
+        );
 
         await subscriber.StartAsync(CancellationToken.None);
 
@@ -40,8 +50,17 @@ public class AutoEncodeSubscriberLifecycleTests
     [Fact]
     public async Task Stop_DisposesSubscriptions_EventBusNoLongerCalls()
     {
+        IStorageBackend storageBackend2 = new SystemIoStorageBackend();
+        IStorage storage2 = new LocalStorage(
+            storageBackend2,
+            new StoragePathGuard([], storageBackend2)
+        );
         TrackingEventBus bus = new();
-        AutoEncodeSubscriber subscriber = new(bus, NullLogger<AutoEncodeSubscriber>.Instance);
+        AutoEncodeSubscriber subscriber = new(
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            storage2
+        );
 
         await subscriber.StartAsync(CancellationToken.None);
         Assert.Single(bus.ActiveSubscriptions);
@@ -53,8 +72,17 @@ public class AutoEncodeSubscriberLifecycleTests
     [Fact]
     public async Task MultipleStartStopCycles_DoNotLeakSubscriptions()
     {
+        IStorageBackend storageBackend3 = new SystemIoStorageBackend();
+        IStorage storage3 = new LocalStorage(
+            storageBackend3,
+            new StoragePathGuard([], storageBackend3)
+        );
         TrackingEventBus bus = new();
-        AutoEncodeSubscriber subscriber = new(bus, NullLogger<AutoEncodeSubscriber>.Instance);
+        AutoEncodeSubscriber subscriber = new(
+            bus,
+            NullLogger<AutoEncodeSubscriber>.Instance,
+            storage3
+        );
 
         for (int i = 0; i < 3; i++)
         {

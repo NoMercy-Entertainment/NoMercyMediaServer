@@ -16,6 +16,7 @@ using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -35,8 +36,14 @@ public class ShowImportJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
+        IStorageBackend storageBackend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(
+            storageBackend,
+            new StoragePathGuard([], storageBackend)
+        );
+
         ShowRepository showRepository = new(context);
-        ShowManager showManager = new(showRepository, jobDispatcher);
+        ShowManager showManager = new(showRepository, jobDispatcher, storage);
 
         SeasonRepository seasonRepository = new(context);
         SeasonManager seasonManager = new(seasonRepository, jobDispatcher);

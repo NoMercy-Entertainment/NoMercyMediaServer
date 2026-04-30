@@ -12,6 +12,7 @@ using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -29,11 +30,17 @@ public class MovieImportJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        FileRepository fileRepository = new(context);
-        FileManager fileManager = new(fileRepository);
+        IStorageBackend storageBackend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(
+            storageBackend,
+            new StoragePathGuard([], storageBackend)
+        );
+
+        FileRepository fileRepository = new(context, storageBackend);
+        FileManager fileManager = new(fileRepository, storage);
 
         MovieRepository movieRepository = new(context);
-        MovieManager movieManager = new(movieRepository, jobDispatcher);
+        MovieManager movieManager = new(movieRepository, jobDispatcher, storage);
 
         Library? movieLibrary = await context
             .Libraries.Where(f => f.Id == LibraryId)

@@ -17,6 +17,7 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercy.Storage;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -454,8 +455,14 @@ public class LibraryManager(
             return;
         }
 
-        FileRepository fileRepository = new(mediaContext);
-        FileManager fileManager = new(fileRepository);
+        IStorageBackend storageBackend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(
+            storageBackend,
+            new StoragePathGuard([], storageBackend)
+        );
+
+        FileRepository fileRepository = new(mediaContext, storageBackend);
+        FileManager fileManager = new(fileRepository, storage);
 
         await fileManager.FindFiles(id, library);
     }

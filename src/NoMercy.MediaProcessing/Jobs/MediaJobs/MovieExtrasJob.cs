@@ -8,6 +8,7 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.MediaProcessing.People;
 using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -25,8 +26,14 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
+        IStorageBackend storageBackend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(
+            storageBackend,
+            new StoragePathGuard([], storageBackend)
+        );
+
         MovieRepository movieRepository = new(context);
-        MovieManager movieManager = new(movieRepository, jobDispatcher);
+        MovieManager movieManager = new(movieRepository, jobDispatcher, storage);
 
         PersonRepository personRepository = new(context);
         PersonManager personManager = new(personRepository, jobDispatcher);
