@@ -11,18 +11,23 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
-using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Logic;
 
-public partial class FileLogic(int id, Library library, MediaContext mediaContext)
-    : IDisposable,
-        IAsyncDisposable
+public partial class FileLogic(
+    int id,
+    Library library,
+    MediaContext mediaContext,
+    IStorageFactory storageFactory,
+    IStorageBackend storageBackend
+) : IDisposable, IAsyncDisposable
 {
     private readonly MediaContext _mediaContext = mediaContext;
+    private readonly IStorageFactory _storageFactory = storageFactory;
+    private readonly IStorageBackend _storageBackend = storageBackend;
 
     private int Id { get; set; } = id;
     private Library Library { get; set; } = library;
@@ -146,7 +151,12 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
         string subtitleFolder = Path.Combine(hostFolder, "subtitles");
 
-        IStorage storage = StorageProvider.Storage;
+        IStorage storage = _storageFactory.For(
+            folder.Id,
+            folder.BackendType,
+            folder.BackendConfig,
+            folder.Path
+        );
         if (await storage.ExistsAsync(subtitleFolder, CancellationToken.None))
         {
             IReadOnlyList<StorageEntry> subtitleEntries = storage.List(subtitleFolder, "*", false);
@@ -258,7 +268,7 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(string path)
     {
-        MediaScan mediaScan = new(StorageProvider.Backend);
+        MediaScan mediaScan = new(_storageBackend);
 
         int depth = Library.Type switch
         {
@@ -293,24 +303,33 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
         Folder[] rootFolders = Library.FolderLibraries.Select(f => f.Folder).ToArray();
 
-        IStorage storage = StorageProvider.Storage;
         foreach (Folder rootFolder in rootFolders)
         {
+            IStorage folderStorage = _storageFactory.For(
+                rootFolder.Id,
+                rootFolder.BackendType,
+                rootFolder.BackendConfig,
+                rootFolder.Path
+            );
             string path = Path.Combine(rootFolder.Path, folder);
 
-            if (!storage.Exists(path))
+            if (!folderStorage.Exists(path))
             {
-                string? match = Str.FindMatchingDirectory(
-                    StorageProvider.Backend,
-                    rootFolder.Path,
-                    folder
-                );
+                string? match = Str.FindMatchingDirectory(_storageBackend, rootFolder.Path, folder);
                 if (match != null)
                     path = match;
             }
 
-            if (storage.Exists(path))
-                Folders.Add(new() { Path = path, Id = rootFolder.Id });
+            if (folderStorage.Exists(path))
+                Folders.Add(
+                    new()
+                    {
+                        Path = path,
+                        Id = rootFolder.Id,
+                        BackendType = rootFolder.BackendType,
+                        BackendConfig = rootFolder.BackendConfig,
+                    }
+                );
         }
     }
 

@@ -7,7 +7,6 @@ using NoMercy.Events.FileWatcher;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
 using Serilog.Events;
 
@@ -16,12 +15,14 @@ namespace NoMercy.MediaProcessing.Files;
 public class LibraryFileWatcher
 {
     // ReSharper disable once InconsistentNaming
-    private static readonly Lazy<LibraryFileWatcher> _instance = new(() => new());
+    private static readonly Lazy<LibraryFileWatcher> _instance = new(() => new(_backendStore!));
     public static LibraryFileWatcher Instance => _instance.Value;
 
+    private static IStorageBackend? _backendStore;
+
     private static FolderWatcher? _fs;
-    private static FolderWatcher Fs => _fs ??= new(StorageProvider.Backend);
-    private static IStorageBackend StorageBackend => StorageProvider.Backend;
+    private static FolderWatcher Fs => _fs ??= new(_backendStore!);
+    private static IStorageBackend StorageBackend => _backendStore!;
 
     private static readonly Dictionary<string, FileChangeGroup> FileChangeGroups = new();
     private static readonly Lock LockObject = new();
@@ -35,8 +36,9 @@ public class LibraryFileWatcher
 
     private static List<Library> _libraries = [];
 
-    public LibraryFileWatcher()
+    public LibraryFileWatcher(IStorageBackend storageBackend)
     {
+        _backendStore = storageBackend;
         Logger.System("Starting FileSystem Watcher", LogEventLevel.Debug);
 
         Fs.OnChanged += _onFileChanged;
@@ -289,8 +291,9 @@ public class LibraryFileWatcher
         }
     }
 
-    public static void Start()
+    public static void Start(IStorageBackend storageBackend)
     {
+        _backendStore = storageBackend;
         _ = Instance;
     }
 }

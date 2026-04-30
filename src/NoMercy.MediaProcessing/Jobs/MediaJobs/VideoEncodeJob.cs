@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -37,11 +38,14 @@ public class VideoEncodeJob : AbstractEncoderJob
         await using MediaContext context = new();
 
         IStorageBackend storageBackend = StorageProvider.Backend;
-        IStorage storage = StorageProvider.Storage;
+        IStorageFactory storageFactory = new StorageFactory(
+            storageBackend,
+            NullLogger<StorageFactory>.Instance
+        );
 
-        await using LibraryRepository libraryRepository = new(context);
+        await using LibraryRepository libraryRepository = new(context, storageBackend);
         FileRepository fileRepository = new(context, storageBackend);
-        FileManager fileManager = new(fileRepository, storage);
+        FileManager fileManager = new(fileRepository, storageFactory, storageBackend);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)

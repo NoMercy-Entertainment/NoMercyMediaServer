@@ -13,7 +13,6 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
-using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -29,7 +28,7 @@ public class LibraryManager(
     JobDispatcher jobDispatcher,
     MediaContext mediaContext,
     IStorageBackend storageBackend,
-    IStorage storage,
+    IStorageFactory storageFactory,
     IEventBus? eventBus = null
 ) : BaseManager, ILibraryManager
 {
@@ -184,7 +183,7 @@ public class LibraryManager(
         HashSet<string> existingFolders
     )
     {
-        await using MediaScan mediaScan = new(StorageProvider.Backend);
+        await using MediaScan mediaScan = new(storageBackend);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(path, depth);
 
         List<MediaFolderExtend> newFolders = rootFolders
@@ -230,7 +229,7 @@ public class LibraryManager(
         HashSet<string> existingFolders
     )
     {
-        await using MediaScan mediaScan = new(StorageProvider.Backend);
+        await using MediaScan mediaScan = new(storageBackend);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(path, depth)
         )
@@ -276,7 +275,7 @@ public class LibraryManager(
 
     private async Task<int> ScanVideoFolder(string path, int depth)
     {
-        await using MediaScan mediaScan = new(StorageProvider.Backend);
+        await using MediaScan mediaScan = new(storageBackend);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(path, depth);
 
         IEventBus? bus =
@@ -312,7 +311,7 @@ public class LibraryManager(
 
     private async Task<int> ScanAudioFolder(string path, int depth)
     {
-        await using MediaScan mediaScan = new(StorageProvider.Backend);
+        await using MediaScan mediaScan = new(storageBackend);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(path, depth)
         )
@@ -459,7 +458,7 @@ public class LibraryManager(
         }
 
         FileRepository fileRepository = new(mediaContext, storageBackend);
-        FileManager fileManager = new(fileRepository, storage);
+        FileManager fileManager = new(fileRepository, storageFactory, storageBackend);
 
         await fileManager.FindFiles(id, library);
     }

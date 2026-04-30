@@ -2,6 +2,7 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
@@ -28,10 +29,18 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
         JobDispatcher jobDispatcher = new();
 
         IStorageBackend storageBackend = StorageProvider.Backend;
-        IStorage storage = StorageProvider.Storage;
+        IStorageFactory storageFactory = new StorageFactory(
+            storageBackend,
+            NullLogger<StorageFactory>.Instance
+        );
 
         MovieRepository movieRepository = new(context);
-        MovieManager movieManager = new(movieRepository, jobDispatcher, storage);
+        MovieManager movieManager = new(
+            movieRepository,
+            jobDispatcher,
+            storageFactory,
+            storageBackend
+        );
 
         CollectionRepository collectionRepository = new(context);
         CollectionManager collectionManager = new(

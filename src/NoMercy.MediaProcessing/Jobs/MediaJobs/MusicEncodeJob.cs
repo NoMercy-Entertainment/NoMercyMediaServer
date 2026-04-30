@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -19,6 +20,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -34,7 +36,8 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
     {
         await using MediaContext context = new();
 
-        await using LibraryRepository libraryRepository = new(context);
+        IStorageBackend storageBackend = StorageProvider.Backend;
+        await using LibraryRepository libraryRepository = new(context, storageBackend);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)
@@ -213,7 +216,8 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
         RecordingManager recordingManager = new(
             recordingRepository,
             musicGenreRepository,
-            artistRepository
+            artistRepository,
+            StorageProvider.Backend
         );
 
         await using MediaScan mediaScan = new(StorageProvider.Backend);

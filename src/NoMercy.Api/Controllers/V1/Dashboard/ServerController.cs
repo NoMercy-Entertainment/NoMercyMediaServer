@@ -266,7 +266,8 @@ public class ServerController(
         if (request.Type == "music")
         {
             List<FileItem> fileList = await FileRepository.GetMusicBrainzReleasesInDirectory(
-                request.Folder
+                request.Folder,
+                fileRepository.StorageBackend
             );
             return Ok(
                 new DataResponseDto<FileListResponseDto>

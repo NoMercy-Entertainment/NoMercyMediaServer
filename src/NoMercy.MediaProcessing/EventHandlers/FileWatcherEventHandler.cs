@@ -13,7 +13,6 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -47,7 +46,7 @@ public class FileWatcherEventHandler : IDisposable
                 LogEventLevel.Information
             );
 
-            MediaScan mediaScan = new(StorageProvider.Backend);
+            MediaScan mediaScan = new(_storageBackend);
             MediaScan scan = mediaScan.EnableFileListing();
 
             if (@event.LibraryType == Config.MusicMediaType)

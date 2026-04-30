@@ -10,7 +10,6 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -23,10 +22,12 @@ namespace NoMercy.MediaProcessing.Shows;
 public class ShowManager(
     IShowRepository showRepository,
     JobDispatcher jobDispatcher,
-    IStorage storage
+    IStorageFactory storageFactory,
+    IStorageBackend storageBackend
 ) : BaseManager, IShowManager
 {
-    private readonly IStorage _storage = storage;
+    private readonly IStorageFactory _storageFactory = storageFactory;
+    private readonly IStorageBackend _storageBackend = storageBackend;
 
     public async Task<TmdbTvShowAppends?> AddShowAsync(
         int id,
@@ -49,12 +50,18 @@ public class ShowManager(
 
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
         {
+            IStorage folderStorage = _storageFactory.For(
+                folderLibrary.Folder.Id,
+                folderLibrary.Folder.BackendType,
+                folderLibrary.Folder.BackendConfig,
+                folderLibrary.Folder.Path
+            );
             string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
 
-            if (!_storage.Exists(folderName))
+            if (!folderStorage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
-                    StorageProvider.Backend,
+                    _storageBackend,
                     folderLibrary.Folder.Path,
                     baseUrl.Replace("/", "")
                 );
@@ -62,7 +69,7 @@ public class ShowManager(
                     folderName = match;
             }
 
-            if (!_storage.Exists(folderName))
+            if (!folderStorage.Exists(folderName))
                 continue;
 
             DirectoryInfo folderInfo = new(folderName);
@@ -125,7 +132,12 @@ public class ShowManager(
             LogEventLevel.Debug
         );
 
-        ShowManager showManager = new(showRepository, jobDispatcher, _storage);
+        ShowManager showManager = new(
+            showRepository,
+            jobDispatcher,
+            _storageFactory,
+            _storageBackend
+        );
         await showManager.StoreGenres(showAppends);
         await showManager.StoreContentRatings(showAppends);
         await showManager.StoreTranslations(showAppends);

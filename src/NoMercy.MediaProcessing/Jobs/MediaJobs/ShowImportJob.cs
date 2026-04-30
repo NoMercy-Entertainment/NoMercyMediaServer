@@ -4,6 +4,7 @@
 
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.TvShows;
@@ -38,10 +39,18 @@ public class ShowImportJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         IStorageBackend storageBackend = StorageProvider.Backend;
-        IStorage storage = StorageProvider.Storage;
+        IStorageFactory storageFactory = new StorageFactory(
+            storageBackend,
+            NullLogger<StorageFactory>.Instance
+        );
 
         ShowRepository showRepository = new(context);
-        ShowManager showManager = new(showRepository, jobDispatcher, storage);
+        ShowManager showManager = new(
+            showRepository,
+            jobDispatcher,
+            storageFactory,
+            storageBackend
+        );
 
         SeasonRepository seasonRepository = new(context);
         SeasonManager seasonManager = new(seasonRepository, jobDispatcher);

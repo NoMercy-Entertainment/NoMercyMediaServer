@@ -5,15 +5,18 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
-using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Libraries;
 
-public class LibraryRepository(MediaContext context) : ILibraryRepository
+public class LibraryRepository(MediaContext context, IStorageBackend storageBackend)
+    : ILibraryRepository
 {
+    private readonly IStorageBackend _storageBackend = storageBackend;
+
     public async Task<IEnumerable<MediaFolderExtend>> GetRootFoldersAsync(string path)
     {
-        await using MediaScan mediaScan = new(StorageProvider.Backend);
+        await using MediaScan mediaScan = new(_storageBackend);
         return (await mediaScan.DisableRegexFilter().Process(path, 2))
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();

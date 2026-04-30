@@ -2,11 +2,13 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -24,13 +26,19 @@ public class FileRescanJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        LibraryRepository libraryRepository = new(context);
+        IStorageBackend storageBackend = StorageProvider.Backend;
+        IStorageFactory storageFactory = new StorageFactory(
+            storageBackend,
+            NullLogger<StorageFactory>.Instance
+        );
+
+        LibraryRepository libraryRepository = new(context, storageBackend);
         LibraryManager libraryManager = new(
             libraryRepository,
             jobDispatcher,
             context,
-            StorageProvider.Backend,
-            StorageProvider.Storage
+            storageBackend,
+            storageFactory
         );
 
         await libraryManager.RescanFiles(LibraryId, Id);

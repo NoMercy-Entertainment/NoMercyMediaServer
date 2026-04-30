@@ -15,6 +15,7 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -25,7 +26,8 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [Route("api/v{version:apiVersion}/dashboard/specials", Order = 11)]
 public class SpecialsController(
     MediaContext mediaContext,
-    IDbContextFactory<MediaContext> contextFactory
+    IDbContextFactory<MediaContext> contextFactory,
+    IStorageBackend storageBackend
 ) : BaseController
 {
     [HttpGet]
@@ -340,7 +342,7 @@ public class SpecialsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan the special");
 
-        LibraryLogic specialLogic = new(id, mediaContext);
+        LibraryLogic specialLogic = new(id, mediaContext, storageBackend);
 
         if (await specialLogic.Process())
             return Ok(

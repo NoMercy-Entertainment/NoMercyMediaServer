@@ -12,8 +12,8 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.FanArt.Client;
-using NoMercy.Providers.Helpers;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -24,9 +24,12 @@ namespace NoMercy.MediaProcessing.Recordings;
 public partial class RecordingManager(
     IRecordingRepository recordingRepository,
     IMusicGenreRepository musicGenreRepository,
-    IArtistRepository artistRepository
+    IArtistRepository artistRepository,
+    IStorageBackend storageBackend
 ) : BaseManager, IRecordingManager
 {
+    private readonly IStorageBackend _storageBackend = storageBackend;
+
     // public async Task StoreWithoutFiles(MusicBrainzReleaseAppends releaseAppends, Folder libraryFolder)
     // {
     //     foreach (MusicBrainzMedia media in releaseAppends.Media)
@@ -72,7 +75,7 @@ public partial class RecordingManager(
             LogEventLevel.Verbose
         );
 
-        MediaScan mediaScan = new(StorageProvider.Backend);
+        MediaScan mediaScan = new(_storageBackend);
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType("music")

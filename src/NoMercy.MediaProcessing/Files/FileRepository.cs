@@ -21,7 +21,6 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.AcoustId.Client;
 using NoMercy.Providers.AcoustId.Models;
-using NoMercy.Providers.Helpers;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Providers.TMDB.Client;
@@ -38,6 +37,8 @@ public class FileRepository(MediaContext context, IStorageBackend storageBackend
 {
     private readonly MediaContext _context = context;
     private readonly IStorageBackend _storageBackend = storageBackend;
+
+    public IStorageBackend StorageBackend => _storageBackend;
 
     public Task<IDbContextTransaction> BeginTransactionAsync()
     {
@@ -984,11 +985,14 @@ public class FileRepository(MediaContext context, IStorageBackend storageBackend
 
     private static readonly List<string> PrevSearchQueries = [];
 
-    public static async Task<List<FileItem>> GetMusicBrainzReleasesInDirectory(string folder)
+    public static async Task<List<FileItem>> GetMusicBrainzReleasesInDirectory(
+        string folder,
+        IStorageBackend storageBackend
+    )
     {
         PrevSearchQueries.Clear();
 
-        MediaScan mediaScan = new(StorageProvider.Backend);
+        MediaScan mediaScan = new(storageBackend);
         ConcurrentBag<MediaFolderExtend> mediaFolders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType("music")

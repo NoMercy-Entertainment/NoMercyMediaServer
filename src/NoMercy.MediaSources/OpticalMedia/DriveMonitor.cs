@@ -12,14 +12,12 @@ using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Episode;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
-using NoMercy.Storage;
 using Serilog.Events;
 using DirectoryInfo = BDInfo.IO.DirectoryInfo;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
@@ -365,10 +363,9 @@ public partial class DriveMonitor
             AppFiles.FfProbePath,
             $" -hide_banner -v info -i \"bluray:{path}\""
         );
-        await StorageProvider.Storage.WriteAllTextAsync(
+        await System.IO.File.WriteAllTextAsync(
             Path.Combine(AppFiles.TempPath, "bdrom.json"),
-            bDRom.ToJson(),
-            System.Threading.CancellationToken.None
+            bDRom.ToJson()
         );
 
         List<BluRayPlaylist> bluRayPlaylist = ExtractBluRayPlaylists(directoryInfo, playlistString);
@@ -396,7 +393,7 @@ public partial class DriveMonitor
 
         string encodePath = Path.Combine(AppFiles.TranscodePath, "ripper");
         Folders.EmptyFolder(encodePath);
-        StorageProvider.Backend.CreateDirectory(encodePath);
+        System.IO.Directory.CreateDirectory(encodePath);
 
         StringBuilder sb = new();
         sb.Append(" -hide_banner -progress - ");
@@ -421,7 +418,7 @@ public partial class DriveMonitor
 
         string encodePath = Path.Combine(AppFiles.TranscodePath, "ripper");
         Folders.EmptyFolder(encodePath);
-        StorageProvider.Backend.CreateDirectory(encodePath);
+        System.IO.Directory.CreateDirectory(encodePath);
 
         StringBuilder sb = new();
         sb.Append(" -hide_banner -progress - ");
@@ -509,11 +506,10 @@ public partial class DriveMonitor
     private static string TryGetTitle(BDROM bDRom)
     {
         string metadataFile = Path.Combine(bDRom.DirectoryMETA.FullName, "DL", "bdmt_eng.xml");
-        IStorageBackend backend = StorageProvider.Backend;
-        if (!backend.FileExists(metadataFile))
+        if (!System.IO.File.Exists(metadataFile))
             return bDRom.VolumeLabel;
 
-        using System.IO.Stream stream = backend.OpenRead(metadataFile);
+        using System.IO.Stream stream = System.IO.File.OpenRead(metadataFile);
         using System.IO.StreamReader reader = new(stream);
         string xmlContent = reader.ReadToEnd();
         XDocument doc = XDocument.Parse(xmlContent);
@@ -565,7 +561,7 @@ public partial class DriveMonitor
     {
         string encodePath = Path.Combine(AppFiles.TranscodePath, "ripper");
         Folders.EmptyFolder(encodePath);
-        StorageProvider.Backend.CreateDirectory(encodePath);
+        System.IO.Directory.CreateDirectory(encodePath);
 
         StringBuilder sb = new();
         sb.Append(" -hide_banner -progress - ");
@@ -586,7 +582,7 @@ public partial class DriveMonitor
     {
         string encodePath = Path.Combine(AppFiles.TranscodePath, "ripper");
         Folders.EmptyFolder(encodePath);
-        StorageProvider.Backend.CreateDirectory(encodePath);
+        System.IO.Directory.CreateDirectory(encodePath);
 
         StringBuilder sb = new();
         sb.Append(" -hide_banner -progress - ");

@@ -3,6 +3,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
@@ -32,13 +33,21 @@ public class MovieImportJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         IStorageBackend storageBackend = StorageProvider.Backend;
-        IStorage storage = StorageProvider.Storage;
+        IStorageFactory storageFactory = new StorageFactory(
+            storageBackend,
+            NullLogger<StorageFactory>.Instance
+        );
 
         FileRepository fileRepository = new(context, storageBackend);
-        FileManager fileManager = new(fileRepository, storage);
+        FileManager fileManager = new(fileRepository, storageFactory, storageBackend);
 
         MovieRepository movieRepository = new(context);
-        MovieManager movieManager = new(movieRepository, jobDispatcher, storage);
+        MovieManager movieManager = new(
+            movieRepository,
+            jobDispatcher,
+            storageFactory,
+            storageBackend
+        );
 
         Library? movieLibrary = await context
             .Libraries.Where(f => f.Id == LibraryId)

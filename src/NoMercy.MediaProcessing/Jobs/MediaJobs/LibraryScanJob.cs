@@ -2,10 +2,12 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -25,13 +27,19 @@ public class LibraryScanJob : AbstractMediaJob
 
         IEventBus? eventBus = EventBusProvider.IsConfigured ? EventBusProvider.Current : null;
 
-        LibraryRepository libraryRepository = new(context);
+        IStorageBackend storageBackend = StorageProvider.Backend;
+        IStorageFactory storageFactory = new StorageFactory(
+            storageBackend,
+            NullLogger<StorageFactory>.Instance
+        );
+
+        LibraryRepository libraryRepository = new(context, storageBackend);
         LibraryManager libraryManager = new(
             libraryRepository,
             jobDispatcher,
             context,
-            StorageProvider.Backend,
-            StorageProvider.Storage,
+            storageBackend,
+            storageFactory,
             eventBus
         );
 

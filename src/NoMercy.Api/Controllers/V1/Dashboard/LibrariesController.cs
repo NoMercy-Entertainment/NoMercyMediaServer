@@ -41,7 +41,7 @@ public class LibrariesController(
     IDbContextFactory<MediaContext> mediaContextFactory,
     IActivityLogger activityLogger,
     IStorageBackend storageBackend,
-    IStorage storage
+    IStorageFactory storageFactory
 ) : BaseController
 {
     [HttpGet]
@@ -830,7 +830,7 @@ public class LibrariesController(
             await using MediaContext mediaContext = new();
 
             FileRepository fileRepository = new(mediaContext, storageBackend);
-            FileManager fileManager = new(fileRepository, storage);
+            FileManager fileManager = new(fileRepository, storageFactory, storageBackend);
 
             await fileManager.MoveToLibraryFolder(request.Id, folder);
 

@@ -501,7 +501,12 @@ public class AudioImportJob : AbstractMusicFolderJob
         artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
 
         RecordingRepository recordingRepository = new(_mediaContext);
-        recordingManager = new(recordingRepository, musicGenreRepository, artistRepository);
+        recordingManager = new(
+            recordingRepository,
+            musicGenreRepository,
+            artistRepository,
+            StorageProvider.Backend
+        );
 
         albumLibrary = _mediaContext
             .Libraries.Where(f => f.Id == LibraryId)
