@@ -17,6 +17,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Setup;
+using NoMercy.Storage;
 using NoMercyQueue;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 
@@ -36,7 +37,8 @@ public class ManagementController(
     AppProcessManager appProcessManager,
     SetupState setupState,
     INetworkDiscovery networkDiscovery,
-    ISessionManager sessionManager
+    ISessionManager sessionManager,
+    IStorageBackend storageBackend
 ) : BaseController
 {
     [HttpGet("status")]
@@ -223,7 +225,7 @@ public class ManagementController(
         {
             string tempPath = AppFiles.ServerTempExePath;
 
-            if (System.IO.File.Exists(tempPath))
+            if (storageBackend.FileExists(tempPath))
             {
                 Logger.Setup("Update already staged, skipping download.");
                 return Ok(
@@ -291,7 +293,7 @@ public class ManagementController(
                     );
 
                 case ServerUpdateResult.Downloaded:
-                    if (!System.IO.File.Exists(tempPath))
+                    if (!storageBackend.FileExists(tempPath))
                     {
                         Logger.Setup(
                             $"Server update staged file missing at {tempPath} after successful download",
@@ -302,7 +304,7 @@ public class ManagementController(
                         );
                     }
 
-                    long fileSize = new System.IO.FileInfo(tempPath).Length;
+                    long fileSize = storageBackend.GetFileSize(tempPath);
                     Logger.Setup($"Server update staged at {tempPath} ({fileSize} bytes)");
                     return Ok(
                         new

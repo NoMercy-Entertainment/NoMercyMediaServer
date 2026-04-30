@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Encoder.Composition;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Worker;
 
@@ -41,7 +42,8 @@ namespace NoMercy.Api.Controllers.V1.Worker;
 public class WorkerSourceController(
     IDbContextFactory<MediaContext> contextFactory,
     EncoderOptions encoderOptions,
-    ILogger<WorkerSourceController> logger
+    ILogger<WorkerSourceController> logger,
+    IStorage storage
 ) : BaseController
 {
     private static readonly TimeSpan MaxSignatureAge = TimeSpan.FromMinutes(5);
@@ -118,7 +120,7 @@ public class WorkerSourceController(
             return NotFoundResponse("Source file not found in library");
         }
 
-        if (!System.IO.File.Exists(path))
+        if (!storage.Exists(path))
         {
             logger.LogWarning(
                 "Known VideoFile {Path} is missing on disk (deleted since scan?)",

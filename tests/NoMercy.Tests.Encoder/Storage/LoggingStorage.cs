@@ -199,4 +199,16 @@ public sealed class LoggingStorage(IStorage inner) : IStorage
         Calls.Add($"AcquireLocalPath:{path}");
         return inner.AcquireLocalPath(path);
     }
+
+    public Task<string> ReadAllTextAsync(string path, CancellationToken ct)
+    {
+        Calls.Add($"ReadAllTextAsync:{path}");
+        return inner.ReadAllTextAsync(path, ct);
+    }
+
+    public Task WriteAllTextAsync(string path, string contents, CancellationToken ct)
+    {
+        Calls.Add($"WriteAllTextAsync:{path}");
+        return inner.WriteAllTextAsync(path, contents, ct);
+    }
 }

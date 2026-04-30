@@ -11,6 +11,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Storage;
 using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
 
 namespace NoMercy.Api.Controllers.V1.Streaming;
@@ -30,7 +31,8 @@ public class LiveTranscodeController(
     SpeedIndex speedIndex,
     IResourceBudget budget,
     IDbContextFactory<MediaContext> contextFactory,
-    LiveSessionLimits sessionLimits
+    LiveSessionLimits sessionLimits,
+    IStorage storage
 ) : BaseController
 {
     [HttpGet("sessions")]
@@ -191,13 +193,13 @@ public class LiveTranscodeController(
         if (!runtime.TryGetSegment(index, out Segment segment))
             return NotFoundResponse($"Segment {index} is not ready yet");
 
-        if (!System.IO.File.Exists(segment.FilePath))
+        if (!storage.Exists(segment.FilePath))
             return NotFoundResponse($"Segment {index} file missing on disk");
 
         runtime.TouchLastAccess();
 
         Response.Headers["Accept-Ranges"] = "bytes";
-        FileStream stream = System.IO.File.OpenRead(segment.FilePath);
+        Stream stream = storage.OpenRead(segment.FilePath);
         return File(stream, "video/mp2t", enableRangeProcessing: true);
     }
 

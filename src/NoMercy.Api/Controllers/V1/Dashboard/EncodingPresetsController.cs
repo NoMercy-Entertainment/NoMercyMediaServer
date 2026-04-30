@@ -12,6 +12,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -26,7 +27,8 @@ public class EncodingPresetsController(
     IProfileValidator profileValidator,
     IMediaAnalyzer mediaAnalyzer,
     IDbContextFactory<MediaContext> contextFactory,
-    IHttpClientFactory httpClientFactory
+    IHttpClientFactory httpClientFactory,
+    IStorageBackend storageBackend
 ) : BaseController
 {
     [Obsolete("Use GET /api/v1/encoder/profiles")]
@@ -533,7 +535,7 @@ public class EncodingPresetsController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!System.IO.File.Exists(path))
+        if (!storageBackend.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         NoMercy.Encoder.Analysis.MediaInfo media;

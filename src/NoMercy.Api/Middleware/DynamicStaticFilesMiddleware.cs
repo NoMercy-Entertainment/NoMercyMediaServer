@@ -5,6 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Middleware;
 
@@ -37,7 +38,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         ".opus",
     };
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, IStorage storage)
     {
         if (!context.Request.Path.HasValue)
         {
@@ -89,7 +90,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             IFileInfo? file = relativePath != null ? provider.GetFileInfo(relativePath) : null;
 
             if (file?.PhysicalPath != null)
-                await ServeFile(context, file);
+                await ServeFile(context, file, storage);
             else
                 await next(context);
         }
@@ -102,13 +103,12 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         }
     }
 
-    private static async Task ServeFile(HttpContext context, IFileInfo file)
+    private static async Task ServeFile(HttpContext context, IFileInfo file, IStorage storage)
     {
         if (file.PhysicalPath is not { } filePhysicalPath)
             return;
 
-        FileInfo fileInfo = new(filePhysicalPath);
-        long fileLength = fileInfo.Length;
+        long fileLength = storage.Size(filePhysicalPath);
 
         context.Response.ContentType = MimeMapping.MimeUtility.GetMimeMapping(file.PhysicalPath);
 
@@ -185,7 +185,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         context.Response.Headers.AcceptRanges = "bytes";
         context.Response.ContentLength = length;
 
-        await using FileStream fs = File.OpenRead(file.PhysicalPath);
+        await using Stream fs = storage.OpenRead(file.PhysicalPath);
 
         fs.Seek(start, SeekOrigin.Begin);
         byte[] buffer = new byte[64 * 1024];

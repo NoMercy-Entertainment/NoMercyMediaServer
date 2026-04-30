@@ -136,7 +136,6 @@ public class VideoPlaylistResponseDto
             : title;
 
         Subs subs = Subtitles(videoFile);
-
         Id = episode.Id;
         Title = specialTitle;
         Description = overview;
@@ -249,7 +248,6 @@ public class VideoPlaylistResponseDto
         string? overview = movie.Translations.FirstOrDefault()?.Overview ?? movie.Overview;
 
         Subs subs = Subtitles(videoFile);
-
         Id = movie.Id;
         Title = title;
         Description = overview;
@@ -343,8 +341,6 @@ public class VideoPlaylistResponseDto
     private record Subs
     {
         public List<IVideoTrack> TextTracks { get; set; } = [];
-        public List<FontDto> Fonts { get; set; } = [];
-        public string FontsFile { get; set; } = string.Empty;
     }
 
     public class Subtitle
@@ -367,16 +363,12 @@ public class VideoPlaylistResponseDto
         List<Subtitle>? subtitleList = JsonConvert.DeserializeObject<List<Subtitle>>(subtitles);
 
         List<IVideoTrack> textTracks = [];
-        bool search = false;
 
         foreach (Subtitle sub in subtitleList ?? [])
         {
             string language = sub.Language;
             string type = sub.Type;
             string ext = sub.Ext;
-
-            if (ext == "ass")
-                search = true;
 
             textTracks.Add(
                 new()
@@ -392,32 +384,6 @@ public class VideoPlaylistResponseDto
             );
         }
 
-        List<FontDto> fonts = [];
-        string fontsFile = "";
-
-        if (
-            !search
-            || videoFile?.HostFolder == null
-            || !System.IO.File.Exists($"{videoFile.HostFolder}fonts.json")
-        )
-            return new()
-            {
-                TextTracks = textTracks,
-                Fonts = fonts,
-                FontsFile = fontsFile,
-            };
-
-        fontsFile = $"/{videoFile.Share}/{videoFile.Folder}fonts.json";
-        List<FontDto?>? deserializedFonts = JsonConvert.DeserializeObject<List<FontDto?>?>(
-            System.IO.File.ReadAllText($"{videoFile.HostFolder}fonts.json")
-        );
-        fonts = deserializedFonts?.Where(f => f != null).Select(f => f!).ToList() ?? [];
-
-        return new()
-        {
-            TextTracks = textTracks,
-            Fonts = fonts,
-            FontsFile = fontsFile,
-        };
+        return new() { TextTracks = textTracks };
     }
 }

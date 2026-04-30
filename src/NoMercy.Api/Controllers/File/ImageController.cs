@@ -7,6 +7,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
+using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -14,7 +15,7 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace NoMercy.Api.Controllers.File;
 
 [Route("images/{type}/{path}")]
-public class ImageController : BaseController
+public class ImageController(IStorage storage) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Image(
@@ -30,13 +31,13 @@ public class ImageController : BaseController
             Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
             string folder = Path.Join(AppFiles.ImagesPath, type);
-            if (!Directory.Exists(folder))
+            if (!storage.Exists(folder))
                 return NotFoundResponse("Image folder not found");
 
             string filePath = Path.Join(folder, path.Replace("/", ""));
             try
             {
-                if (!System.IO.File.Exists(filePath) && type == "original")
+                if (!storage.Exists(filePath) && type == "original")
                 {
                     using Image<Rgba32>? downloadedImage = await TmdbImageClient.Download(
                         "/" + path
@@ -48,11 +49,10 @@ public class ImageController : BaseController
                 //
             }
 
-            if (!System.IO.File.Exists(filePath))
+            if (!storage.Exists(filePath))
                 return NotFoundResponse("Image not found");
 
-            FileInfo fileInfo = new(filePath);
-            long originalFileSize = fileInfo.Length;
+            long originalFileSize = storage.Size(filePath);
             string originalMimeType = MimeUtility.GetMimeMapping(filePath);
 
             bool emptyArguments =
@@ -76,13 +76,13 @@ public class ImageController : BaseController
                 + request.Format.FileExtensions.First();
 
             string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
-            if (System.IO.File.Exists(cachedImagePath))
+            if (storage.Exists(cachedImagePath))
                 return PhysicalFile(cachedImagePath, request.Format.DefaultMimeType);
 
             try
             {
                 (byte[] magickImage, string mimeType) = Images.ResizeMagickNet(filePath, request);
-                await System.IO.File.WriteAllBytesAsync(cachedImagePath, magickImage);
+                await storage.WriteAsync(cachedImagePath, magickImage, CancellationToken.None);
 
                 return File(magickImage, mimeType);
             }
@@ -119,9 +119,9 @@ public class ImageController : BaseController
                 + request.Format.FileExtensions.First();
 
             string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
-            if (System.IO.File.Exists(cachedImagePath))
+            if (storage.Exists(cachedImagePath))
             {
-                System.IO.File.Delete(cachedImagePath);
+                storage.Delete(cachedImagePath);
                 return Ok(new { status = "ok", message = "Cache deleted" });
             }
 

@@ -14,6 +14,7 @@ using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Storage;
 using ContentSegment = NoMercy.Database.Models.Media.ContentSegment;
 using ContentSegmentType = NoMercy.Database.Models.Media.ContentSegmentType;
 
@@ -38,7 +39,8 @@ public class EncoderContentAnalysisController(
     IAudioFingerprinter fingerprinter,
     IIntroDetector introDetector,
     IDbContextFactory<MediaContext> contextFactory,
-    IHubContext<ContentAnalysisHub> hubContext
+    IHubContext<ContentAnalysisHub> hubContext,
+    IStorageBackend storageBackend
 ) : BaseController
 {
     // ─── Crop ────────────────────────────────────────────────────────────────
@@ -64,7 +66,7 @@ public class EncoderContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!System.IO.File.Exists(path))
+        if (!storageBackend.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         Guid sourceVideoFileId = new(fileId.ToByteArray());
@@ -140,7 +142,7 @@ public class EncoderContentAnalysisController(
                 continue;
 
             string path = Path.Combine(source.HostFolder, source.Filename);
-            if (!System.IO.File.Exists(path))
+            if (!storageBackend.FileExists(path))
                 continue;
 
             try
@@ -332,7 +334,7 @@ public class EncoderContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!System.IO.File.Exists(path))
+        if (!storageBackend.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         try
@@ -405,7 +407,7 @@ public class EncoderContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!System.IO.File.Exists(path))
+        if (!storageBackend.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         WhisperOptions options = new(

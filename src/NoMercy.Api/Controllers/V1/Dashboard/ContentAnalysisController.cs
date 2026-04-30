@@ -10,6 +10,7 @@ using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -29,7 +30,8 @@ public class ContentAnalysisController(
     IWhisperTranscriber? whisperTranscriber,
     IAudioFingerprinter fingerprinter,
     IIntroDetector introDetector,
-    IDbContextFactory<MediaContext> contextFactory
+    IDbContextFactory<MediaContext> contextFactory,
+    IStorageBackend storageBackend
 ) : BaseController
 {
     /// <summary>
@@ -58,7 +60,7 @@ public class ContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!System.IO.File.Exists(path))
+        if (!storageBackend.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         Guid sourceVideoFileId = new(fileId.ToByteArray());
@@ -119,7 +121,7 @@ public class ContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!System.IO.File.Exists(path))
+        if (!storageBackend.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         try
@@ -181,7 +183,7 @@ public class ContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!System.IO.File.Exists(path))
+        if (!storageBackend.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         WhisperOptions options = new(
@@ -254,7 +256,7 @@ public class ContentAnalysisController(
                 continue;
 
             string path = Path.Combine(source.HostFolder, source.Filename);
-            if (!System.IO.File.Exists(path))
+            if (!storageBackend.FileExists(path))
                 continue;
 
             try
