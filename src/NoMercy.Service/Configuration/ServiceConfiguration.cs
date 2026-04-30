@@ -440,6 +440,7 @@ public static class ServiceConfiguration
         services.AddScoped<FolderRepository>();
         services.AddScoped<MediaProcessingFileRepository>();
         services.AddScoped<IFileRepository, MediaProcessingFileRepository>();
+        services.AddScoped<FilesystemRepository>();
         services.AddScoped<LanguageRepository>();
         services.AddScoped<CollectionRepository>();
         services.AddScoped<MediaProcessingCollectionRepository>();

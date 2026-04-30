@@ -22,6 +22,12 @@ public class DirectoryTree
     [JsonProperty("full_path")]
     public string FullPath { get; set; } = string.Empty;
 
+    [JsonProperty("subtitle", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Subtitle { get; set; }
+
+    [JsonProperty("is_empty", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? IsEmpty { get; set; }
+
     public DirectoryTree() { }
 
     public DirectoryTree(string parent, string path)
