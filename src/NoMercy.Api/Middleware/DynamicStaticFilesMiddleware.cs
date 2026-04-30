@@ -130,8 +130,14 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         long start = 0;
         long end;
 
-        // Default chunk size for open-ended range requests on streamable media (1 MB)
-        const long defaultChunkSize = 1024 * 1024;
+        // Initial probe chunk size (1 MB) — serves the first slice fast for browsers
+        // that issue a "bytes=0-" or no-range request, so they can start parsing the
+        // moov atom without waiting on the whole file. Any other open-ended range
+        // (start > 0) is served to EOF: ExoPlayer's DefaultExtractorInput reads
+        // sequentially via Mp4Extractor.readFully, and capping at 1 MiB makes its
+        // read return -1 mid-atom and throws EOFException (web's <video> reopens
+        // the connection automatically; ExoPlayer does not).
+        const long initialProbeChunkSize = 1024 * 1024;
 
         if (hasRangeRequest)
         {
@@ -158,21 +164,24 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
                     return;
                 }
             }
-            else if (isStreamableMedia)
+            else if (isStreamableMedia && start == 0)
             {
-                // Open-ended range on streamable media (e.g., "bytes=0-") — serve a chunk
-                end = Math.Min(start + defaultChunkSize - 1, fileLength - 1);
+                // Initial probe (browser asking "bytes=0-") — serve first chunk fast.
+                end = Math.Min(start + initialProbeChunkSize - 1, fileLength - 1);
             }
             else
             {
-                // Open-ended range on non-streamable file — serve the rest
+                // Open-ended range with non-zero start, or non-streamable file —
+                // serve everything from start to EOF. Required for ExoPlayer's
+                // sequential readFully across MP4 atoms.
                 end = fileLength - 1;
             }
         }
         else
         {
-            // Streamable media without range request — serve initial chunk
-            end = Math.Min(start + defaultChunkSize - 1, fileLength - 1);
+            // Streamable media without range request — serve initial chunk so the
+            // browser can start playback before the full file streams in.
+            end = Math.Min(start + initialProbeChunkSize - 1, fileLength - 1);
         }
 
         long length = end - start + 1;
