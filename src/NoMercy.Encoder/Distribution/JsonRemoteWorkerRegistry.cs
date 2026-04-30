@@ -1,11 +1,13 @@
 namespace NoMercy.Encoder.Distribution;
 
 using System.Collections.Concurrent;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
+using NoMercy.Storage;
 
 /// <summary>
 /// Persistent coordinator-side registry. Wraps <see cref="InMemoryRemoteWorkerRegistry"/>
@@ -36,6 +38,7 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
     private readonly ITaskSerializer _serializer;
     private readonly byte[] _signingKey;
     private readonly ILogger<JsonRemoteWorkerRegistry> _logger;
+    private readonly IStorage _storage;
 
     // Keep a parallel dictionary of the durable worker descriptors so we
     // can reconstruct HttpRemoteWorker instances on rehydration without
@@ -48,7 +51,8 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
         IHttpClientFactory httpClientFactory,
         ITaskSerializer serializer,
         byte[] signingKey,
-        ILogger<JsonRemoteWorkerRegistry> logger
+        ILogger<JsonRemoteWorkerRegistry> logger,
+        IStorage storage
     )
     {
         _inner = inner;
@@ -57,6 +61,7 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
         _serializer = serializer;
         _signingKey = signingKey;
         _logger = logger;
+        _storage = storage;
 
         HydrateFromDisk();
     }
@@ -111,12 +116,12 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
 
     private void HydrateFromDisk()
     {
-        if (!File.Exists(_filePath))
+        if (!_storage.Exists(_filePath))
             return;
 
         try
         {
-            string json = File.ReadAllText(_filePath);
+            string json = Encoding.UTF8.GetString(_storage.Read(_filePath));
             List<PersistedWorkerEntry>? entries = JsonSerializer.Deserialize<
                 List<PersistedWorkerEntry>
             >(json, JsonOptions);
@@ -187,16 +192,17 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
         try
         {
             string dir = Path.GetDirectoryName(_filePath)!;
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
+            _storage.CreateDirectory(dir);
 
             List<PersistedWorkerEntry> entries = _persisted.Values.ToList();
             string json = JsonSerializer.Serialize(entries, JsonOptions);
 
             // Atomic write: temp file in same directory + Move overwrites.
             string tmp = _filePath + ".tmp";
-            File.WriteAllText(tmp, json);
-            File.Move(tmp, _filePath, overwrite: true);
+            _storage.Write(tmp, Encoding.UTF8.GetBytes(json));
+            if (_storage.Exists(_filePath))
+                _storage.Delete(_filePath);
+            _storage.Move(tmp, _filePath);
         }
         catch (Exception ex)
         {

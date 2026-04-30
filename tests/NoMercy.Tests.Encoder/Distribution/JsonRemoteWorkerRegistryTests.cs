@@ -7,6 +7,7 @@ using Moq;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
+using NoMercy.Storage;
 
 /// <summary>
 /// Persistence tests for <see cref="JsonRemoteWorkerRegistry"/>.
@@ -42,6 +43,12 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    private static IStorage MakeStorage() =>
+        new LocalStorage(
+            new SystemIoStorageBackend(),
+            new StoragePathGuard([], new SystemIoStorageBackend())
+        );
+
     private JsonRemoteWorkerRegistry BuildRegistry() =>
         new(
             inner: new InMemoryRemoteWorkerRegistry(),
@@ -49,7 +56,8 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
             httpClientFactory: MakeHttpClientFactory(),
             serializer: _serializer,
             signingKey: _signingKey,
-            logger: NullLogger<JsonRemoteWorkerRegistry>.Instance
+            logger: NullLogger<JsonRemoteWorkerRegistry>.Instance,
+            storage: MakeStorage()
         );
 
     private static IHttpClientFactory MakeHttpClientFactory()
@@ -154,7 +162,8 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
             httpClientFactory: MakeHttpClientFactory(),
             serializer: _serializer,
             signingKey: _signingKey,
-            logger: NullLogger<JsonRemoteWorkerRegistry>.Instance
+            logger: NullLogger<JsonRemoteWorkerRegistry>.Instance,
+            storage: MakeStorage()
         );
 
         sut.GetActiveWorkers().Should().BeEmpty();

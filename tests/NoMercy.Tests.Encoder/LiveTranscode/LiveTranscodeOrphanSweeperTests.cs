@@ -3,6 +3,7 @@ namespace NoMercy.Tests.Encoder.LiveTranscode;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Storage;
 
 public class LiveTranscodeOrphanSweeperTests : IDisposable
 {
@@ -17,12 +18,19 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
             Directory.Delete(_cacheRoot, recursive: true);
     }
 
+    private static IStorage MakeStorage() =>
+        new LocalStorage(
+            new SystemIoStorageBackend(),
+            new StoragePathGuard([], new SystemIoStorageBackend())
+        );
+
     private LiveTranscodeOrphanSweeper BuildSweeper()
     {
         EncoderOptions opts = new() { LiveTranscodeCachePath = _cacheRoot };
         return new LiveTranscodeOrphanSweeper(
             opts,
-            NullLogger<LiveTranscodeOrphanSweeper>.Instance
+            NullLogger<LiveTranscodeOrphanSweeper>.Instance,
+            MakeStorage()
         );
     }
 
@@ -101,7 +109,8 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
 
         LiveTranscodeOrphanSweeper sweeper = new(
             opts,
-            NullLogger<LiveTranscodeOrphanSweeper>.Instance
+            NullLogger<LiveTranscodeOrphanSweeper>.Instance,
+            MakeStorage()
         );
 
         Func<Task> act = () => sweeper.StartAsync(CancellationToken.None);

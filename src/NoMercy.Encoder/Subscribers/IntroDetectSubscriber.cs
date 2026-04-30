@@ -7,6 +7,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Events;
 using NoMercy.Events.Library;
+using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Subscribers;
 
@@ -26,6 +27,7 @@ public class IntroDetectSubscriber : IDisposable
     private readonly IIntroDetector _introDetector;
     private readonly EncoderOptions _options;
     private readonly ILogger<IntroDetectSubscriber> _logger;
+    private readonly IStorage _storage;
     private readonly List<IDisposable> _subscriptions = [];
 
     // Fingerprint the first 3 minutes for intro detection.
@@ -45,13 +47,15 @@ public class IntroDetectSubscriber : IDisposable
         IAudioFingerprinter fingerprinter,
         IIntroDetector introDetector,
         EncoderOptions options,
-        ILogger<IntroDetectSubscriber> logger
+        ILogger<IntroDetectSubscriber> logger,
+        IStorage storage
     )
     {
         _fingerprinter = fingerprinter;
         _introDetector = introDetector;
         _options = options;
         _logger = logger;
+        _storage = storage;
 
         _subscriptions.Add(eventBus.Subscribe<LibraryScanCompletedEvent>(OnLibraryScanCompleted));
     }
@@ -299,7 +303,7 @@ public class IntroDetectSubscriber : IDisposable
             if (ct.IsCancellationRequested)
                 break;
 
-            if (!File.Exists(filePath))
+            if (!_storage.Exists(filePath))
             {
                 _logger.LogDebug(
                     "IntroDetect: file not found for episode {EpisodeId}: {FilePath}",

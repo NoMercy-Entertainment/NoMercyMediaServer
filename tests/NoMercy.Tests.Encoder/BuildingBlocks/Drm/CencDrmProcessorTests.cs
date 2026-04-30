@@ -5,6 +5,7 @@ using Moq;
 using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
 public class CencDrmProcessorTests
 {
@@ -24,6 +25,8 @@ public class CencDrmProcessorTests
             KeyUri: "https://license.example/widevine",
             CencKeys: keys ?? [SdEntry()]
         );
+
+    private static IStorage MakeStorage() => Mock.Of<IStorage>();
 
     private static CencDrmProcessor BuildSut(
         string? packagerPath = "/fake/packager",
@@ -45,7 +48,12 @@ public class CencDrmProcessorTests
                     It.IsAny<CancellationToken>()
                 ) == Task.FromResult(new ProcessResult(0, "", "", TimeSpan.Zero))
             );
-        return new CencDrmProcessor(opts, processRunner, NullLogger<CencDrmProcessor>.Instance);
+        return new CencDrmProcessor(
+            opts,
+            processRunner,
+            NullLogger<CencDrmProcessor>.Instance,
+            MakeStorage()
+        );
     }
 
     // ── BuildPackagerArguments (pure, no I/O) ─────────────────────────────
@@ -186,7 +194,8 @@ public class CencDrmProcessorTests
         CencDrmProcessor sut = new(
             opts,
             Mock.Of<IProcessRunner>(),
-            NullLogger<CencDrmProcessor>.Instance
+            NullLogger<CencDrmProcessor>.Instance,
+            MakeStorage()
         );
 
         Func<Task> act = () =>

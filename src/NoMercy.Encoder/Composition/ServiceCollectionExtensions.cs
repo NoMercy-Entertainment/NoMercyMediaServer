@@ -317,7 +317,8 @@ public static class ServiceCollectionExtensions
                     httpClientFactory: sp.GetRequiredService<IHttpClientFactory>(),
                     serializer: sp.GetRequiredService<ITaskSerializer>(),
                     signingKey: encoderOpts.GetDistributedEncodingSigningKey(),
-                    logger: sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<JsonRemoteWorkerRegistry>>()
+                    logger: sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<JsonRemoteWorkerRegistry>>(),
+                    storage: sp.GetRequiredService<IStorage>()
                 );
             }
 

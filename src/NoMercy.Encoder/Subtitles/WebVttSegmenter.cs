@@ -2,6 +2,7 @@ namespace NoMercy.Encoder.Subtitles;
 
 using System.Text;
 using System.Text.RegularExpressions;
+using NoMercy.Storage;
 
 /// <summary>
 /// Slices a WebVTT file into per-HLS-segment .vtt files.
@@ -20,12 +21,16 @@ public sealed class WebVttSegmenter
     /// Parse <paramref name="vttFilePath"/> and emit one
     /// <see cref="WebVttSegment"/> per segment window up to the last cue end.
     /// </summary>
-    public IReadOnlyList<WebVttSegment> Slice(string vttFilePath, TimeSpan segmentDuration)
+    public IReadOnlyList<WebVttSegment> Slice(
+        string vttFilePath,
+        TimeSpan segmentDuration,
+        IStorage storage
+    )
     {
         if (segmentDuration <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(segmentDuration), "Must be positive.");
 
-        string raw = File.ReadAllText(vttFilePath, Encoding.UTF8);
+        string raw = Encoding.UTF8.GetString(storage.Read(vttFilePath));
         return SliceContent(raw, segmentDuration);
     }
 

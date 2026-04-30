@@ -3,6 +3,7 @@ namespace NoMercy.Encoder.BuildingBlocks.Drm;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Storage;
 
 /// <summary>
 /// CENC raw-key packaging via shaka-packager.
@@ -24,7 +25,8 @@ using NoMercy.Encoder.Infrastructure;
 public class CencDrmProcessor(
     EncoderOptions options,
     IProcessRunner processRunner,
-    ILogger<CencDrmProcessor> logger
+    ILogger<CencDrmProcessor> logger,
+    IStorage storage
 ) : IDrmProcessor
 {
     public DrmMethod Method => DrmMethod.Cenc;
@@ -105,7 +107,7 @@ public class CencDrmProcessor(
                 nameof(config)
             );
 
-        string packagerPath = options.GetShakaPackagerPath();
+        string packagerPath = options.GetShakaPackagerPath(storage);
 
         List<string> args = BuildPackagerArguments(streamDescriptors, keys, mpdOutputPath);
 
@@ -130,7 +132,7 @@ public class CencDrmProcessor(
                     + $"stderr: {result.StdErr}"
             );
 
-        if (!File.Exists(mpdOutputPath))
+        if (!storage.Exists(mpdOutputPath))
             throw new InvalidOperationException(
                 $"shaka-packager completed but MPD not found at: {mpdOutputPath}"
             );

@@ -1,4 +1,5 @@
 using NoMercy.Encoder.Profiles;
+using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Composition;
 
@@ -43,7 +44,7 @@ public class EncoderOptions
     ///   3. <c>packager</c> on the system PATH (checked via <c>which</c>/<c>where</c>)
     /// Throws <see cref="InvalidOperationException"/> when nothing is found.
     /// </summary>
-    public string GetShakaPackagerPath()
+    public string GetShakaPackagerPath(IStorage storage)
     {
         if (!string.IsNullOrWhiteSpace(ShakaPackagerPathOverride))
             return ShakaPackagerPathOverride;
@@ -54,13 +55,13 @@ public class EncoderOptions
             string dir = Path.GetDirectoryName(FfmpegPathOverride) ?? string.Empty;
             string siblingName = OperatingSystem.IsWindows() ? "packager.exe" : "packager";
             string sibling = Path.Combine(dir, siblingName);
-            if (File.Exists(sibling))
+            if (storage.Exists(sibling))
                 return sibling;
         }
 
         // Fall back to system PATH
         string pathEnv = OperatingSystem.IsWindows() ? "packager.exe" : "packager";
-        string? onPath = FindOnPath(pathEnv);
+        string? onPath = FindOnPath(pathEnv, storage);
         if (onPath is not null)
             return onPath;
 
@@ -70,14 +71,14 @@ public class EncoderOptions
         );
     }
 
-    private static string? FindOnPath(string binaryName)
+    private static string? FindOnPath(string binaryName, IStorage storage)
     {
         string pathVar = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
         char sep = OperatingSystem.IsWindows() ? ';' : ':';
         foreach (string dir in pathVar.Split(sep, StringSplitOptions.RemoveEmptyEntries))
         {
             string full = Path.Combine(dir.Trim(), binaryName);
-            if (File.Exists(full))
+            if (storage.Exists(full))
                 return full;
         }
 

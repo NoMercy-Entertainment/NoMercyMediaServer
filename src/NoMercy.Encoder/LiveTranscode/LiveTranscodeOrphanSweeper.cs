@@ -3,6 +3,7 @@ namespace NoMercy.Encoder.LiveTranscode;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
+using NoMercy.Storage;
 
 /// <summary>
 /// One-shot hosted service that runs once at startup and deletes any
@@ -12,14 +13,15 @@ using NoMercy.Encoder.Composition;
 /// </summary>
 public class LiveTranscodeOrphanSweeper(
     EncoderOptions options,
-    ILogger<LiveTranscodeOrphanSweeper> logger
+    ILogger<LiveTranscodeOrphanSweeper> logger,
+    IStorage storage
 ) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
         string cacheRoot = options.ResolvedLiveTranscodeCachePath;
 
-        if (!Directory.Exists(cacheRoot))
+        if (!storage.Exists(cacheRoot))
         {
             logger.LogDebug(
                 "LiveTranscodeOrphanSweeper: cache root {Dir} does not exist, nothing to sweep",
@@ -28,10 +30,13 @@ public class LiveTranscodeOrphanSweeper(
             return Task.CompletedTask;
         }
 
-        string[] orphans;
+        IReadOnlyList<StorageEntry> orphans;
         try
         {
-            orphans = Directory.GetDirectories(cacheRoot, "lts-*", SearchOption.TopDirectoryOnly);
+            orphans = storage
+                .List(cacheRoot, "lts-*", recursive: false)
+                .Where(e => e.IsDirectory)
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -43,19 +48,22 @@ public class LiveTranscodeOrphanSweeper(
             return Task.CompletedTask;
         }
 
-        foreach (string dir in orphans)
+        foreach (StorageEntry entry in orphans)
         {
             try
             {
-                Directory.Delete(dir, recursive: true);
-                logger.LogInformation("LiveTranscodeOrphanSweeper: deleted orphan {Dir}", dir);
+                storage.DeleteDirectory(entry.Path, recursive: true);
+                logger.LogInformation(
+                    "LiveTranscodeOrphanSweeper: deleted orphan {Dir}",
+                    entry.Path
+                );
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
                     ex,
                     "LiveTranscodeOrphanSweeper: could not delete orphan {Dir}",
-                    dir
+                    entry.Path
                 );
             }
         }
