@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
 
 namespace NoMercy.NmSystem.SystemCalls;
 
@@ -263,15 +264,17 @@ public static class Optical
 
     public static OpticalDiscType GetDiscType(string drivePath)
     {
-        if (!Directory.Exists(drivePath))
+        IStorageBackend backend = new SystemIoStorageBackend();
+
+        if (!backend.DirectoryExists(drivePath))
             return OpticalDiscType.None;
 
         // Check for Blu-ray
-        if (Directory.Exists(Path.Combine(drivePath, "BDMV")))
+        if (backend.DirectoryExists(Path.Combine(drivePath, "BDMV")))
             return OpticalDiscType.BluRay;
 
         // Check for DVD
-        if (Directory.Exists(Path.Combine(drivePath, "VIDEO_TS")))
+        if (backend.DirectoryExists(Path.Combine(drivePath, "VIDEO_TS")))
             return OpticalDiscType.Dvd;
 
         // Check for CD (Audio CD or Data CD)

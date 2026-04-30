@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem.FileSystem;
@@ -10,9 +11,11 @@ public class FilePermissions
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            if (File.Exists(path))
+            IStorageBackend backend = new SystemIoStorageBackend();
+
+            if (backend.FileExists(path))
                 await Shell.ExecAsync("chmod", $"+x \"{path}\"");
-            else if (Directory.Exists(path))
+            else if (backend.DirectoryExists(path))
                 await Shell.ExecAsync("chmod", $"-R +x \"{path}\"");
 
             Logger.System($"Set execution permissions for {path}", LogEventLevel.Verbose);

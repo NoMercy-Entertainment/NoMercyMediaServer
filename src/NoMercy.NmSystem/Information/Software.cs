@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using DeviceId;
+using NoMercy.Storage;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -67,11 +68,11 @@ public static class Software
         return $"{Version!.Major}.{Version.Minor}.{Version.Build}";
     }
 
-    public static string? GetFileVersion(string exePath)
+    public static string? GetFileVersion(IStorageBackend backend, string exePath)
     {
         try
         {
-            if (!File.Exists(exePath))
+            if (!backend.FileExists(exePath))
                 return null;
 
             FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(exePath);
@@ -89,6 +90,10 @@ public static class Software
             return null;
         }
     }
+
+    // Backward-compatible overload — callers outside NmSystem will be migrated in the Tier-3 pass.
+    public static string? GetFileVersion(string exePath) =>
+        GetFileVersion(new SystemIoStorageBackend(), exePath);
 
     internal static DateTime GetBootTime()
     {

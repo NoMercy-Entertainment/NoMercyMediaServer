@@ -1,6 +1,7 @@
 using System.Management;
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Dto;
+using NoMercy.Storage;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -96,7 +97,8 @@ public class Storage
 
     private static long GetWindowsFreeSpace(string path)
     {
-        if (!Directory.Exists(path))
+        IStorageBackend backend = new SystemIoStorageBackend();
+        if (!backend.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
         if (GetDiskFreeSpaceEx(path, out ulong freeBytesAvailable, out _, out _))
@@ -134,7 +136,8 @@ public class Storage
 
     private static long GetUnixFreeSpace(string path)
     {
-        if (!Directory.Exists(path))
+        IStorageBackend backend = new SystemIoStorageBackend();
+        if (!backend.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
         if (statvfs(path, out Statvfs stat) == 0)
@@ -179,7 +182,8 @@ public class Storage
 
     private static string GetWindowsFileSystemType(string path)
     {
-        if (!Directory.Exists(path))
+        IStorageBackend backend = new SystemIoStorageBackend();
+        if (!backend.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
 #pragma warning disable CA1416
@@ -199,7 +203,8 @@ public class Storage
 
     private static string GetUnixFileSystemType(string path)
     {
-        if (!Directory.Exists(path))
+        IStorageBackend backend = new SystemIoStorageBackend();
+        if (!backend.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
         string output = SystemCalls.Shell.ExecCommand($"df -T {path} | awk 'NR==2 {{print $2}}'");
@@ -210,26 +215,45 @@ public class Storage
 
     #region Disk Usage by Directory
 
-    public static Dictionary<string, long> GetDiskUsageByDirectory(string path)
+    public static Dictionary<string, long> GetDiskUsageByDirectory(
+        IStorageBackend backend,
+        string path,
+        CancellationToken ct = default
+    )
     {
-        if (!Directory.Exists(path))
+        if (!backend.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
         Dictionary<string, long> directorySizes = new();
-        foreach (string dir in Directory.GetDirectories(path))
+        foreach (
+            string dir in backend
+                .EnumerateFileSystemEntries(path, "*", SearchOption.TopDirectoryOnly)
+                .Where(e => backend.DirectoryExists(e))
+        )
         {
-            long size = GetDirectorySize(dir);
+            ct.ThrowIfCancellationRequested();
+            long size = GetDirectorySize(backend, dir, ct);
             directorySizes.Add(dir, size);
         }
 
         return directorySizes;
     }
 
-    private static long GetDirectorySize(string path)
+    private static long GetDirectorySize(IStorageBackend backend, string path, CancellationToken ct)
     {
         long size = 0;
-        foreach (string file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
-            size += new FileInfo(file).Length;
+        foreach (
+            string entry in backend.EnumerateFileSystemEntries(
+                path,
+                "*",
+                SearchOption.AllDirectories
+            )
+        )
+        {
+            ct.ThrowIfCancellationRequested();
+            if (backend.FileExists(entry))
+                size += backend.GetFileSize(entry);
+        }
 
         return size;
     }

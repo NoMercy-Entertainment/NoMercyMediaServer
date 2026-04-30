@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using NoMercy.Storage;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.NmSystem.Extensions;
@@ -440,15 +441,27 @@ public static partial class Str
         return Regex.Replace(name, @"[^a-zA-Z0-9]", "").ToLowerInvariant();
     }
 
-    public static string? FindMatchingDirectory(string rootPath, string expectedFolderName)
+    public static string? FindMatchingDirectory(
+        IStorageBackend backend,
+        string rootPath,
+        string expectedFolderName
+    )
     {
-        if (!Directory.Exists(rootPath))
+        if (!backend.DirectoryExists(rootPath))
             return null;
 
         string normalizedExpected = expectedFolderName.NormalizeForComparison();
 
-        foreach (string dir in Directory.EnumerateDirectories(rootPath))
+        foreach (
+            string dir in backend.EnumerateFileSystemEntries(
+                rootPath,
+                "*",
+                SearchOption.TopDirectoryOnly
+            )
+        )
         {
+            if (!backend.DirectoryExists(dir))
+                continue;
             string dirName = Path.GetFileName(dir).OrEmpty();
             if (dirName.NormalizeForComparison() == normalizedExpected)
                 return dir;
@@ -456,6 +469,10 @@ public static partial class Str
 
         return null;
     }
+
+    // Backward-compatible overload — callers outside NmSystem will be migrated in the Tier-3 pass.
+    public static string? FindMatchingDirectory(string rootPath, string expectedFolderName) =>
+        FindMatchingDirectory(new SystemIoStorageBackend(), rootPath, expectedFolderName);
 
     public static string TitleSort(this object self, int? parseYear)
     {

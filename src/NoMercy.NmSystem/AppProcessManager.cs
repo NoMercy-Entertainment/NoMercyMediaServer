@@ -2,13 +2,20 @@ using System.Diagnostics;
 using System.Reflection;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 
 namespace NoMercy.NmSystem;
 
 public class AppProcessManager
 {
     private readonly object _lock = new();
+    private readonly IStorageBackend _backend;
     private Process? _appProcess;
+
+    public AppProcessManager(IStorageBackend? backend = null)
+    {
+        _backend = backend ?? new SystemIoStorageBackend();
+    }
 
     public bool IsRunning
     {
@@ -40,10 +47,10 @@ public class AppProcessManager
                 return false;
 
             ProcessStartInfo? startInfo =
-                CreateProductionStartInfo()
-                ?? CreateInstalledStartInfo()
-                ?? CreateDevBinaryStartInfo()
-                ?? CreateDotnetRunStartInfo();
+                CreateProductionStartInfo(_backend)
+                ?? CreateInstalledStartInfo(_backend)
+                ?? CreateDevBinaryStartInfo(_backend)
+                ?? CreateDotnetRunStartInfo(_backend);
 
             if (startInfo is not null && !string.IsNullOrEmpty(route))
             {
@@ -102,17 +109,17 @@ public class AppProcessManager
         }
     }
 
-    private static ProcessStartInfo? CreateProductionStartInfo()
+    private static ProcessStartInfo? CreateProductionStartInfo(IStorageBackend backend)
     {
         string exePath = AppFiles.AppExePath;
 
-        if (!File.Exists(exePath))
+        if (!backend.FileExists(exePath))
             return null;
 
         return new(exePath) { UseShellExecute = false, CreateNoWindow = true };
     }
 
-    private static ProcessStartInfo? CreateInstalledStartInfo()
+    private static ProcessStartInfo? CreateInstalledStartInfo(IStorageBackend backend)
     {
         string? ownDir = Path.GetDirectoryName(
             Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
@@ -123,15 +130,15 @@ public class AppProcessManager
 
         string candidate = Path.Combine(ownDir, "NoMercyApp" + Info.ExecSuffix);
 
-        if (!File.Exists(candidate))
+        if (!backend.FileExists(candidate))
             return null;
 
         return new(candidate) { UseShellExecute = false, CreateNoWindow = true };
     }
 
-    private static ProcessStartInfo? CreateDevBinaryStartInfo()
+    private static ProcessStartInfo? CreateDevBinaryStartInfo(IStorageBackend backend)
     {
-        string? appProjectDir = FindProjectDirectory("NoMercy.App");
+        string? appProjectDir = FindProjectDirectory("NoMercy.App", backend);
 
         if (appProjectDir is null)
             return null;
@@ -158,16 +165,16 @@ public class AppProcessManager
 
         foreach (string path in searchPaths)
         {
-            if (File.Exists(path))
+            if (backend.FileExists(path))
                 return new(path) { UseShellExecute = false, CreateNoWindow = true };
         }
 
         return null;
     }
 
-    private static ProcessStartInfo? CreateDotnetRunStartInfo()
+    private static ProcessStartInfo? CreateDotnetRunStartInfo(IStorageBackend backend)
     {
-        string? appProjectDir = FindProjectDirectory("NoMercy.App");
+        string? appProjectDir = FindProjectDirectory("NoMercy.App", backend);
 
         if (appProjectDir is null)
             return null;
@@ -185,7 +192,7 @@ public class AppProcessManager
         return startInfo;
     }
 
-    private static string? FindProjectDirectory(string projectName)
+    private static string? FindProjectDirectory(string projectName, IStorageBackend backend)
     {
         string? assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
@@ -195,7 +202,7 @@ public class AppProcessManager
         {
             string candidate = Path.Combine(directory, "src", projectName);
 
-            if (Directory.Exists(candidate))
+            if (backend.DirectoryExists(candidate))
                 return candidate;
 
             directory = Path.GetDirectoryName(directory);
