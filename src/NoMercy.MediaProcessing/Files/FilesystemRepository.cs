@@ -56,22 +56,54 @@ public class FilesystemRepository
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            // Skip drive types whose metadata reads can block on OS-level
+            // retry timeouts (a dead Z:\ network share or empty CD-ROM
+            // adds ~30s each). Users type those paths into /ls directly.
             DriveInfo[] drives = DriveInfo.GetDrives();
             return drives
-                .Where(d => d.IsReady)
-                .Select(d =>
-                {
-                    DirectoryTree entry = Build(d.RootDirectory.ToString(), "", withEmpty);
-                    if (!string.IsNullOrEmpty(d.VolumeLabel))
-                        entry.Subtitle = d.VolumeLabel;
-                    return entry;
-                })
+                .Where(d =>
+                    d.DriveType != DriveType.Network
+                    && d.DriveType != DriveType.Unknown
+                    && d.DriveType != DriveType.NoRootDirectory
+                )
+                .AsParallel()
+                .Select(BuildRoot)
+                .Where(entry => entry is not null)
+                .Select(entry => entry!)
                 .OrderBy(e => e.FullPath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
 
         (_, List<DirectoryTree> entries) = List("/", withEmpty);
         return entries;
+    }
+
+    private static DirectoryTree? BuildRoot(DriveInfo drive)
+    {
+        try
+        {
+            if (!drive.IsReady)
+                return null;
+
+            DirectoryTree entry = Build(drive.RootDirectory.ToString(), "", withEmpty: false);
+
+            try
+            {
+                if (!string.IsNullOrEmpty(drive.VolumeLabel))
+                    entry.Subtitle = drive.VolumeLabel;
+            }
+            catch
+            {
+                // VolumeLabel can throw on slow/transitional drives; we
+                // already have a valid entry, just skip the label.
+            }
+
+            return entry;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public string Mkdir(string parent, string name)
