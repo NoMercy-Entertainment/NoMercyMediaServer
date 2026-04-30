@@ -97,4 +97,8 @@ public interface IStorage
     IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive);
 
     LocalPathLease AcquireLocalPath(string path);
+
+    Task<string> ReadAllTextAsync(string path, CancellationToken ct);
+
+    Task WriteAllTextAsync(string path, string contents, CancellationToken ct);
 }

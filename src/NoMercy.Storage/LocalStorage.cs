@@ -295,4 +295,20 @@ public sealed class LocalStorage : IStorage
         if (!_backend.DirectoryExists(parent))
             _backend.CreateDirectory(parent);
     }
+
+    public async Task<string> ReadAllTextAsync(string path, CancellationToken ct)
+    {
+        string safe = _guard.Validate(path);
+        using StreamReader reader = new(_backend.OpenRead(safe));
+        return await reader.ReadToEndAsync(ct);
+    }
+
+    public async Task WriteAllTextAsync(string path, string contents, CancellationToken ct)
+    {
+        string safe = _guard.Validate(path);
+        EnsureParentDirectory(safe);
+        await using StreamWriter writer = new(_backend.OpenWrite(safe, overwrite: true));
+        await writer.WriteAsync(contents.AsMemory(), ct);
+        await writer.FlushAsync(ct);
+    }
 }
