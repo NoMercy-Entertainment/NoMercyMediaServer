@@ -3,11 +3,14 @@ using System.Text;
 using NeoSmart.SecureStore;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
 
 namespace NoMercy.Helpers;
 
 public static class CredentialManager
 {
+    private static readonly IStorageBackend _backend = new SystemIoStorageBackend();
+
     private class SecretSerializer : ISecretSerializer
     {
         public T Deserialize<T>(SecureBuffer serialized)
@@ -26,7 +29,7 @@ public static class CredentialManager
 
     public static UserPass? Credential(string target)
     {
-        if (!File.Exists(AppFiles.SecretsStore))
+        if (!_backend.FileExists(AppFiles.SecretsStore))
             return null;
 
         using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);
@@ -46,7 +49,7 @@ public static class CredentialManager
         string apiKey
     )
     {
-        bool exists = File.Exists(AppFiles.SecretsStore);
+        bool exists = _backend.FileExists(AppFiles.SecretsStore);
 
         using SecretsManager secretsManager = exists
             ? SecretsManager.LoadStore(AppFiles.SecretsStore)
@@ -69,7 +72,7 @@ public static class CredentialManager
 
     public static bool RemoveCredentials(string target)
     {
-        if (!File.Exists(AppFiles.SecretsStore))
+        if (!_backend.FileExists(AppFiles.SecretsStore))
             return false;
 
         using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);

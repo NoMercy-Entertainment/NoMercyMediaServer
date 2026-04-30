@@ -1,4 +1,5 @@
 using HeyRed.ImageSharp.Heif.Formats.Avif;
+using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Png;
@@ -9,6 +10,8 @@ namespace NoMercy.Helpers;
 
 public static class Images
 {
+    private static readonly IStorageBackend _backend = new SystemIoStorageBackend();
+
     static Images()
     {
         Configuration.Default.ImageFormatsManager.AddImageFormat(AvifFormat.Instance);
@@ -39,7 +42,7 @@ public static class Images
 
     private static Image<Rgba32> ReadFileStream(string image)
     {
-        if (!File.Exists(image))
+        if (!_backend.FileExists(image))
             throw new("File not found");
 
         // try

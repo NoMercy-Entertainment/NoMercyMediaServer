@@ -1,9 +1,13 @@
 using System.Runtime.InteropServices;
+using System.Text;
+using NoMercy.Storage;
 
 namespace NoMercy.Setup;
 
 public static class DesktopIconCreator
 {
+    private static readonly IStorageBackend _backend = new SystemIoStorageBackend();
+
     public static void CreateDesktopIcon(string appName, string appPath, string iconPath)
     {
         try
@@ -64,7 +68,9 @@ public static class DesktopIconCreator
             end tell";
 
             string scriptPath = "/tmp/CreateShortcut.scpt";
-            File.WriteAllText(scriptPath, script);
+            using (Stream scriptStream = _backend.OpenWrite(scriptPath, overwrite: true))
+            using (StreamWriter scriptWriter = new(scriptStream, Encoding.UTF8, leaveOpen: true))
+                scriptWriter.Write(script);
             using (
                 System.Diagnostics.Process? osascriptProc = System.Diagnostics.Process.Start(
                     "osascript",
@@ -73,10 +79,10 @@ public static class DesktopIconCreator
             )
                 osascriptProc?.WaitForExit();
 
-            if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
+            if (!string.IsNullOrEmpty(iconPath) && _backend.FileExists(iconPath))
             {
                 string iconDest = Path.Combine(aliasPath, "Icon.icns");
-                File.Copy(iconPath, iconDest, true);
+                _backend.CopyFile(iconPath, iconDest, overwrite: true);
 
                 using (
                     System.Diagnostics.Process? shProc = System.Diagnostics.Process.Start(
@@ -117,7 +123,11 @@ public static class DesktopIconCreator
                 Type=Application
                 Terminal=false";
 
-            File.WriteAllText(shortcutPath, content);
+            using (Stream shortcutStream = _backend.OpenWrite(shortcutPath, overwrite: true))
+            using (
+                StreamWriter shortcutWriter = new(shortcutStream, Encoding.UTF8, leaveOpen: true)
+            )
+                shortcutWriter.Write(content);
             using (
                 System.Diagnostics.Process? chmodProc = System.Diagnostics.Process.Start(
                     "chmod",

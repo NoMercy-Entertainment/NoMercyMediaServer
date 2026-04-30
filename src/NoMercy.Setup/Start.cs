@@ -62,7 +62,7 @@ public class Start
             // Auth is now handled by AuthManager (DI) via BootOrchestrator — not here.
             new(
                 "Binaries",
-                Binaries.DownloadAll,
+                () => new Binaries().DownloadAll(),
                 CanDefer: false,
                 Phase: 2,
                 DependsOn: ["NetworkProbe"]

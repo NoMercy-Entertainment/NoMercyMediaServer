@@ -1,5 +1,6 @@
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
@@ -9,6 +10,7 @@ using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 using DnsHttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
@@ -16,6 +18,7 @@ namespace NoMercy.Networking;
 
 public static class Certificate
 {
+    private static readonly IStorageBackend _backend = new SystemIoStorageBackend();
     private static X509Certificate2? _cachedCertificate;
     private static readonly object _certLock = new();
 
@@ -35,10 +38,12 @@ public static class Certificate
         {
             // Fallback: load from legacy PEM files (pre-DB-storage installs)
 #pragma warning disable CS0618
-            if (File.Exists(AppFiles.CertFile) && File.Exists(AppFiles.KeyFile))
+            if (_backend.FileExists(AppFiles.CertFile) && _backend.FileExists(AppFiles.KeyFile))
             {
-                certPem = File.ReadAllText(AppFiles.CertFile);
-                keyPem = File.ReadAllText(AppFiles.KeyFile);
+                using (StreamReader certReader = new(_backend.OpenRead(AppFiles.CertFile)))
+                    certPem = certReader.ReadToEnd();
+                using (StreamReader keyReader = new(_backend.OpenRead(AppFiles.KeyFile)))
+                    keyPem = keyReader.ReadToEnd();
                 Logger.Setup("Loading SSL certificate from legacy PEM files");
             }
             else
@@ -93,7 +98,7 @@ public static class Certificate
 
         // Legacy fallback: cert files on disk (pre-DB-storage installs)
 #pragma warning disable CS0618
-        return File.Exists(AppFiles.CertFile) && File.Exists(AppFiles.KeyFile);
+        return _backend.FileExists(AppFiles.CertFile) && _backend.FileExists(AppFiles.KeyFile);
 #pragma warning restore CS0618
     }
 
@@ -140,14 +145,18 @@ public static class Certificate
     private static X509Certificate2 CombinePublicAndPrivateCerts()
     {
 #pragma warning disable CS0618 // Obsolete
-        if (!File.Exists(AppFiles.CertFile))
+        if (!_backend.FileExists(AppFiles.CertFile))
             throw new FileNotFoundException($"Certificate file not found: {AppFiles.CertFile}");
 
-        if (!File.Exists(AppFiles.KeyFile))
+        if (!_backend.FileExists(AppFiles.KeyFile))
             throw new FileNotFoundException($"Private key file not found: {AppFiles.KeyFile}");
 
-        string certPem = File.ReadAllText(AppFiles.CertFile);
-        string keyPem = File.ReadAllText(AppFiles.KeyFile);
+        string certPem;
+        string keyPem;
+        using (StreamReader certReader = new(_backend.OpenRead(AppFiles.CertFile)))
+            certPem = certReader.ReadToEnd();
+        using (StreamReader keyReader = new(_backend.OpenRead(AppFiles.KeyFile)))
+            keyPem = keyReader.ReadToEnd();
 #pragma warning restore CS0618
 
         using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
@@ -317,22 +326,30 @@ public static class Certificate
 
         // Keep file writes alongside DB writes for backwards compat (Task 17 removes these)
 #pragma warning disable CS0618 // Obsolete
-        if (File.Exists(AppFiles.KeyFile))
-            File.Delete(AppFiles.KeyFile);
-        if (File.Exists(AppFiles.CaFile))
-            File.Delete(AppFiles.CaFile);
-        if (File.Exists(AppFiles.CertFile))
-            File.Delete(AppFiles.CertFile);
+        if (_backend.FileExists(AppFiles.KeyFile))
+            _backend.DeleteFile(AppFiles.KeyFile);
+        if (_backend.FileExists(AppFiles.CaFile))
+            _backend.DeleteFile(AppFiles.CaFile);
+        if (_backend.FileExists(AppFiles.CertFile))
+            _backend.DeleteFile(AppFiles.CertFile);
 
-        await File.WriteAllTextAsync(AppFiles.KeyFile, keyPem);
-        await File.WriteAllTextAsync(AppFiles.CaFile, data.Data.CertificateAuthority);
-        await File.WriteAllTextAsync(AppFiles.CertFile, certPem);
+        await WriteTextAsync(AppFiles.KeyFile, keyPem);
+        await WriteTextAsync(AppFiles.CaFile, data.Data.CertificateAuthority);
+        await WriteTextAsync(AppFiles.CertFile, certPem);
 #pragma warning restore CS0618
 
         Logger.Certificate(
             !hasExistingCert ? "SSL Certificate created" : "SSL Certificate renewed"
         );
         return new();
+    }
+
+    private static async Task WriteTextAsync(string path, string content)
+    {
+        await using Stream stream = _backend.OpenWrite(path, overwrite: true);
+        await using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
+        await writer.WriteAsync(content);
+        await writer.FlushAsync();
     }
 
     /// <summary>Sentinel returned by FetchCertificate to indicate a successfully written certificate.</summary>

@@ -1,13 +1,16 @@
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Setup;
 
 public static class OfflineJwksCache
 {
+    private static readonly IStorageBackend Backend = new SystemIoStorageBackend();
     private static readonly object CacheLock = new();
     private static RsaSecurityKey? _cachedSigningKey;
 
@@ -33,7 +36,9 @@ public static class OfflineJwksCache
     {
         try
         {
-            File.WriteAllText(AppFiles.AuthKeysFile, publicKeyBase64);
+            using Stream stream = Backend.OpenWrite(AppFiles.AuthKeysFile, overwrite: true);
+            using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
+            writer.Write(publicKeyBase64);
             CachedSigningKey = CreateSecurityKeyFromBase64(publicKeyBase64);
             Logger.Auth("Cached auth public key for offline use");
         }
@@ -47,10 +52,13 @@ public static class OfflineJwksCache
     {
         try
         {
-            if (!File.Exists(AppFiles.AuthKeysFile))
+            if (!Backend.FileExists(AppFiles.AuthKeysFile))
                 return false;
 
-            string publicKeyBase64 = File.ReadAllText(AppFiles.AuthKeysFile).Trim();
+            string publicKeyBase64;
+            using (StreamReader reader = new(Backend.OpenRead(AppFiles.AuthKeysFile)))
+                publicKeyBase64 = reader.ReadToEnd().Trim();
+
             if (string.IsNullOrEmpty(publicKeyBase64))
                 return false;
 

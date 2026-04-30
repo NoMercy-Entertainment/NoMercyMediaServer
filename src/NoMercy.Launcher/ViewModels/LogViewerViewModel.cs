@@ -8,6 +8,7 @@ using NoMercy.Launcher.Services;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
 
 namespace NoMercy.Launcher.ViewModels;
 
@@ -162,13 +163,15 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         try
         {
             string logPath = AppFiles.LogPath;
-            if (!Directory.Exists(logPath))
+            IStorageBackend backend = new SystemIoStorageBackend();
+            IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
+            if (!backend.DirectoryExists(logPath))
             {
                 StatusText = "No log directory found";
                 return;
             }
 
-            List<LogEntry> diskLogs = await LogReader.GetLogsAsync(logPath);
+            List<LogEntry> diskLogs = await LogReader.GetLogsAsync(storage, logPath);
             diskLogs = diskLogs
                 .OrderByDescending(e => e.Time)
                 .Take(_tailCount)

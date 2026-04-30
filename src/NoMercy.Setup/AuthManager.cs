@@ -10,6 +10,7 @@ using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Setup;
@@ -17,6 +18,7 @@ namespace NoMercy.Setup;
 public class AuthManager
 {
     private readonly AppDbContext _appContext;
+    private readonly IStorageBackend _backend;
 
     private readonly object _authReadyLock = new();
     private TaskCompletionSource _authReadyTcs = new(
@@ -24,9 +26,10 @@ public class AuthManager
     );
     private CancellationTokenSource? _refreshCts;
 
-    public AuthManager(AppDbContext appContext)
+    public AuthManager(AppDbContext appContext, IStorageBackend? backend = null)
     {
         _appContext = appContext;
+        _backend = backend ?? new SystemIoStorageBackend();
     }
 
     // ── Public API ───────────────────────────────────────────────────────────
@@ -405,12 +408,14 @@ public class AuthManager
         string tokenFilePath = AppFiles.TokenFile;
 #pragma warning restore CS0618
 
-        if (!File.Exists(tokenFilePath))
+        if (!_backend.FileExists(tokenFilePath))
             return;
 
         try
         {
-            string fileContents = File.ReadAllText(tokenFilePath);
+            string fileContents;
+            using (StreamReader reader = new(_backend.OpenRead(tokenFilePath)))
+                fileContents = reader.ReadToEnd();
             if (string.IsNullOrWhiteSpace(fileContents) || fileContents.Trim() == "{}")
             {
                 SecureDeleteFile(tokenFilePath);
@@ -581,17 +586,17 @@ public class AuthManager
         ];
     }
 
-    public static void SecureDeleteFile(string path)
+    public void SecureDeleteFile(string path)
     {
         try
         {
-            if (!File.Exists(path))
+            if (!_backend.FileExists(path))
                 return;
 
-            long fileLength = new FileInfo(path).Length;
+            long fileLength = _backend.GetFileSize(path);
             if (fileLength > 0)
             {
-                using FileStream stream = new(
+                using Stream stream = new FileStream(
                     path,
                     FileMode.Open,
                     FileAccess.Write,
@@ -608,7 +613,7 @@ public class AuthManager
                 stream.Flush();
             }
 
-            File.Delete(path);
+            _backend.DeleteFile(path);
         }
         catch (Exception ex)
         {

@@ -4,6 +4,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
+using NoMercy.Storage;
 using Serilog.Events;
 using Config = NoMercy.NmSystem.Information.Config;
 
@@ -11,6 +12,7 @@ namespace NoMercy.Setup;
 
 public class ApiInfo
 {
+    private static readonly IStorageBackend Backend = new SystemIoStorageBackend();
     public static string MakeMkvKey { get; set; } = string.Empty;
     public static string TmdbKey { get; set; } = string.Empty;
     public static string OmdbKey { get; set; } = string.Empty;
@@ -154,7 +156,14 @@ public class ApiInfo
         {
             data.CachedAt = DateTime.UtcNow.ToString("O");
             string json = JsonConvert.SerializeObject(data, Formatting.Indented);
-            await File.WriteAllTextAsync(CacheFilePath, json);
+            await using Stream stream = Backend.OpenWrite(CacheFilePath, overwrite: true);
+            await using StreamWriter writer = new(
+                stream,
+                System.Text.Encoding.UTF8,
+                leaveOpen: true
+            );
+            await writer.WriteAsync(json);
+            await writer.FlushAsync();
         }
         catch (Exception ex)
         {
@@ -166,10 +175,12 @@ public class ApiInfo
     {
         try
         {
-            if (!File.Exists(CacheFilePath))
+            if (!Backend.FileExists(CacheFilePath))
                 return null;
 
-            string json = await File.ReadAllTextAsync(CacheFilePath);
+            string json;
+            using (StreamReader reader = new(Backend.OpenRead(CacheFilePath)))
+                json = await reader.ReadToEndAsync();
             if (string.IsNullOrWhiteSpace(json))
                 return null;
 

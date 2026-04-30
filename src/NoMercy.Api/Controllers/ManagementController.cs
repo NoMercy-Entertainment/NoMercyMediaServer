@@ -260,7 +260,7 @@ public class ManagementController(
             }
 
             Logger.Setup("Downloading server update on demand...");
-            ServerUpdateResult result = await Binaries.DownloadServerUpdate();
+            ServerUpdateResult result = await new Binaries(storageBackend).DownloadServerUpdate();
 
             switch (result)
             {

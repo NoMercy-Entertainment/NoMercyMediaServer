@@ -7,6 +7,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
+using NoMercy.Storage;
 using Serilog.Events;
 using Downloader = NoMercy.NmSystem.SystemCalls.Download;
 using FileAttributes = NoMercy.NmSystem.FileSystem.FileAttributes;
@@ -23,9 +24,11 @@ public enum ServerUpdateResult
     NoAssetFound,
 }
 
-public static class Binaries
+public class Binaries
 {
-    private static readonly HttpClient HttpClient = new();
+    private readonly IStorageBackend _backend;
+    private readonly IStorage _storage;
+    private readonly HttpClient _httpClient;
 
     private const string GithubMediaServerApiUrl =
         "https://api.github.com/repos/NoMercy-Entertainment/nomercy-media-server/releases/latest";
@@ -41,22 +44,25 @@ public static class Binaries
     private const string GithubCloudflaredApiUrl =
         "https://api.github.com/repos/cloudflare/cloudflared/releases/latest";
 
-    static Binaries()
+    public Binaries(IStorageBackend? backend = null)
     {
-        HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        _backend = backend ?? new SystemIoStorageBackend();
+        _storage = new LocalStorage(_backend, new StoragePathGuard([], _backend));
+        _httpClient = new HttpClient();
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
     }
 
     /// <summary>
     /// Returns true when the binary exists in an installer directory (not the binaries path).
     /// This prevents redundant downloads when binaries were installed by an installer.
     /// </summary>
-    private static bool ExistsInInstalledDirectory(string executableName)
+    private bool ExistsInInstalledDirectory(string executableName)
     {
         // Check the Launcher's install directory (set for installer deployments only)
         string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
         if (
             !string.IsNullOrEmpty(installDir)
-            && File.Exists(Path.Combine(installDir, executableName))
+            && _backend.FileExists(Path.Combine(installDir, executableName))
         )
             return true;
 
@@ -73,14 +79,14 @@ public static class Binaries
                 Path.GetFullPath(AppFiles.BinariesPath),
                 StringComparison.OrdinalIgnoreCase
             )
-            && File.Exists(Path.Combine(ownDir, executableName))
+            && _backend.FileExists(Path.Combine(ownDir, executableName))
         )
             return true;
 
         return false;
     }
 
-    public static Task DownloadAll()
+    public Task DownloadAll()
     {
         return Task.Run(async () =>
         {
@@ -100,7 +106,7 @@ public static class Binaries
         });
     }
 
-    private static bool CheckLocalVersion(
+    private bool CheckLocalVersion(
         GithubReleaseResponse releaseInfo,
         string destination,
         out string version
@@ -110,11 +116,11 @@ public static class Binaries
             ? releaseInfo.TagName[1..]
             : releaseInfo.TagName;
 
-        bool fileExists = File.Exists(destination);
+        bool fileExists = _storage.Exists(destination);
         if (!fileExists)
             return false;
 
-        DateTime creationTime = File.GetCreationTimeUtc(destination);
+        DateTime creationTime = _storage.LastModified(destination).UtcDateTime;
         DateTimeOffset releaseDate =
             releaseInfo.PublishedAt != DateTimeOffset.MinValue
                 ? releaseInfo.PublishedAt.UtcDateTime
@@ -123,7 +129,7 @@ public static class Binaries
         return creationTime >= releaseDate;
     }
 
-    private static async Task<GithubReleaseResponse> GetLatestReleaseInfo(string apiUrl)
+    private async Task<GithubReleaseResponse> GetLatestReleaseInfo(string apiUrl)
     {
         int attempt = 0;
         TimeSpan backoff = TimeSpan.FromSeconds(30);
@@ -133,7 +139,7 @@ public static class Binaries
             attempt++;
             try
             {
-                using HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);
+                using HttpResponseMessage response = await _httpClient.GetAsync(apiUrl);
 
                 if (
                     response.StatusCode
@@ -190,7 +196,7 @@ public static class Binaries
         }
     }
 
-    private static async Task DownloadApp()
+    private async Task DownloadApp()
     {
         if (ExistsInInstalledDirectory("NoMercyApp" + Info.ExecSuffix))
         {
@@ -214,7 +220,7 @@ public static class Binaries
             return;
         }
 
-        await Downloader.DeleteSourceDownload(AppFiles.AppExePath);
+        await Downloader.DeleteSourceDownload(_storage, AppFiles.AppExePath);
 
         Uri? downloadUrl = null;
 
@@ -266,14 +272,19 @@ public static class Binaries
             return;
         }
 
-        string path = await Downloader.DownloadFile("NoMercyApp", downloadUrl, AppFiles.AppExePath);
+        string path = await Downloader.DownloadFile(
+            _storage,
+            "NoMercyApp",
+            downloadUrl,
+            AppFiles.AppExePath
+        );
 
         await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
 
         await FilePermissions.SetExecutionPermissions(path);
     }
 
-    private static async Task DownloadLauncher()
+    private async Task DownloadLauncher()
     {
         if (ExistsInInstalledDirectory("NoMercyLauncher" + Info.ExecSuffix))
         {
@@ -300,7 +311,7 @@ public static class Binaries
             return;
         }
 
-        await Downloader.DeleteSourceDownload(AppFiles.LauncherExePath);
+        await Downloader.DeleteSourceDownload(_storage, AppFiles.LauncherExePath);
 
         Uri? downloadUrl = null;
 
@@ -356,6 +367,7 @@ public static class Binaries
         }
 
         string path = await Downloader.DownloadFile(
+            _storage,
             "NoMercyLauncher",
             downloadUrl,
             AppFiles.LauncherExePath
@@ -366,7 +378,7 @@ public static class Binaries
         await FilePermissions.SetExecutionPermissions(path);
     }
 
-    private static async Task DownloadCli()
+    private async Task DownloadCli()
     {
         if (ExistsInInstalledDirectory("nomercy" + Info.ExecSuffix))
         {
@@ -390,7 +402,7 @@ public static class Binaries
             return;
         }
 
-        await Downloader.DeleteSourceDownload(AppFiles.CliExePath);
+        await Downloader.DeleteSourceDownload(_storage, AppFiles.CliExePath);
 
         Uri? downloadUrl = null;
 
@@ -442,14 +454,19 @@ public static class Binaries
             return;
         }
 
-        string path = await Downloader.DownloadFile("nomercy", downloadUrl, AppFiles.CliExePath);
+        string path = await Downloader.DownloadFile(
+            _storage,
+            "nomercy",
+            downloadUrl,
+            AppFiles.CliExePath
+        );
 
         await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
 
         await FilePermissions.SetExecutionPermissions(path);
     }
 
-    public static async Task<ServerUpdateResult> DownloadServerUpdate()
+    public async Task<ServerUpdateResult> DownloadServerUpdate()
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
@@ -510,7 +527,7 @@ public static class Binaries
 
         Logger.Setup($"Server update available: {currentVersion} -> {latestVersion}");
 
-        await Downloader.DeleteSourceDownload(AppFiles.ServerTempExePath);
+        await Downloader.DeleteSourceDownload(_storage, AppFiles.ServerTempExePath);
 
         Uri? downloadUrl = null;
 
@@ -575,6 +592,7 @@ public static class Binaries
         }
 
         string path = await Downloader.DownloadFile(
+            _storage,
             "NoMercyMediaServer Update",
             downloadUrl,
             AppFiles.ServerTempExePath
@@ -584,7 +602,7 @@ public static class Binaries
         bool fileReady = false;
         for (int attempt = 0; attempt < 5; attempt++)
         {
-            if (File.Exists(path) && new FileInfo(path).Length > 0)
+            if (_storage.Exists(path) && _storage.SizeOrZero(path) > 0)
             {
                 fileReady = true;
                 break;
@@ -610,16 +628,16 @@ public static class Binaries
 
         await FilePermissions.SetExecutionPermissions(path);
 
-        Logger.Setup($"Server update staged at {path} ({new FileInfo(path).Length} bytes)");
+        Logger.Setup($"Server update staged at {path} ({_storage.SizeOrZero(path)} bytes)");
         return ServerUpdateResult.Downloaded;
     }
 
-    private static async Task DownloadFfmpeg()
+    private async Task DownloadFfmpeg()
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubFfmpegApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            if (!File.Exists(AppFiles.FfmpegPath))
+            if (!_storage.Exists(AppFiles.FfmpegPath))
                 throw new InvalidOperationException(
                     "FFmpeg is not installed and release info could not be fetched. Will retry."
                 );
@@ -640,9 +658,9 @@ public static class Binaries
             return;
         }
 
-        await Downloader.DeleteSourceDownload(AppFiles.FfmpegPath);
-        await Downloader.DeleteSourceDownload(AppFiles.FfProbePath);
-        await Downloader.DeleteSourceDownload(AppFiles.FfPlayPath);
+        await Downloader.DeleteSourceDownload(_storage, AppFiles.FfmpegPath);
+        await Downloader.DeleteSourceDownload(_storage, AppFiles.FfProbePath);
+        await Downloader.DeleteSourceDownload(_storage, AppFiles.FfPlayPath);
 
         Uri? downloadUrl = null;
 
@@ -698,19 +716,19 @@ public static class Binaries
             return;
         }
 
-        string path = await Downloader.DownloadFile("FFMpeg", downloadUrl);
+        string path = await Downloader.DownloadFile(_storage, "FFMpeg", downloadUrl);
 
-        List<string> files = await Archiving.ExtractArchive(path, AppFiles.FfmpegFolder);
+        List<string> files = await Archiving.ExtractArchive(_storage, path, AppFiles.FfmpegFolder);
         foreach (string file in files)
         {
             await FileAttributes.SetCreatedAttribute(file, releaseInfo.PublishedAt);
             await FilePermissions.SetExecutionPermissions(file);
         }
 
-        await Downloader.DeleteSourceDownload(path);
+        await Downloader.DeleteSourceDownload(_storage, path);
     }
 
-    private static async Task DownloadYtdlp()
+    private async Task DownloadYtdlp()
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubYtdlpApiUrl);
         if (releaseInfo.Assets.Length == 0)
@@ -728,7 +746,7 @@ public static class Binaries
             return;
         }
 
-        await Downloader.DeleteSourceDownload(AppFiles.YtdlpPath);
+        await Downloader.DeleteSourceDownload(_storage, AppFiles.YtdlpPath);
 
         Uri? downloadUrl = null;
 
@@ -781,6 +799,7 @@ public static class Binaries
         }
 
         string outputPath = await Downloader.DownloadFile(
+            _storage,
             "yt-dlp",
             downloadUrl,
             AppFiles.YtdlpPath
@@ -793,7 +812,7 @@ public static class Binaries
         Logger.Setup($"Downloaded yt-dlp to {outputPath}");
     }
 
-    private static async Task DownloadCloudflared()
+    private async Task DownloadCloudflared()
     {
         string destinationPath = AppFiles.CloudflareDPath;
 
@@ -813,7 +832,7 @@ public static class Binaries
             return;
         }
 
-        await Downloader.DeleteSourceDownload(destinationPath);
+        await Downloader.DeleteSourceDownload(_storage, destinationPath);
 
         Uri? downloadUrl = null;
         bool needsExtraction = false;
@@ -872,26 +891,30 @@ public static class Binaries
             return;
         }
 
-        string path = await Downloader.DownloadFile("cloudflared", downloadUrl);
+        string path = await Downloader.DownloadFile(_storage, "cloudflared", downloadUrl);
 
         Logger.Setup($"Downloaded cloudflared to {path}");
 
         if (needsExtraction)
         {
-            List<string> files = await Archiving.ExtractArchive(path, AppFiles.DependenciesPath);
+            List<string> files = await Archiving.ExtractArchive(
+                _storage,
+                path,
+                AppFiles.DependenciesPath
+            );
             foreach (string file in files)
             {
                 await FileAttributes.SetCreatedAttribute(file, releaseInfo.PublishedAt);
                 await FilePermissions.SetExecutionPermissions(file);
             }
-            await Downloader.DeleteSourceDownload(path);
+            await Downloader.DeleteSourceDownload(_storage, path);
         }
         else
         {
-            if (File.Exists(destinationPath))
-                File.Delete(destinationPath);
+            if (_storage.Exists(destinationPath))
+                _storage.Delete(destinationPath);
 
-            File.Move(path, destinationPath);
+            _storage.Move(path, destinationPath);
 
             await FileAttributes.SetCreatedAttribute(destinationPath, releaseInfo.PublishedAt);
 
@@ -899,7 +922,7 @@ public static class Binaries
         }
     }
 
-    private static async Task DownloadWhisperModels(string modelName = "ggml-large-v3")
+    private async Task DownloadWhisperModels(string modelName = "ggml-large-v3")
     {
         string destinationPath = Path.Combine(AppFiles.FfmpegFolder, modelName + ".bin");
 
@@ -922,7 +945,7 @@ public static class Binaries
             return;
         }
 
-        await Downloader.DeleteSourceDownload(destinationPath);
+        await Downloader.DeleteSourceDownload(_storage, destinationPath);
 
         List<Uri> downloadUrls = releaseInfo
             .Assets.Where(a => a.Name.Contains(modelName, StringComparison.OrdinalIgnoreCase))
@@ -941,7 +964,9 @@ public static class Binaries
         List<string> paths = [];
         foreach (Uri downloadUrl in downloadUrls)
         {
-            paths.Add(await Downloader.DownloadFile("nomercy-whisper-models", downloadUrl));
+            paths.Add(
+                await Downloader.DownloadFile(_storage, "nomercy-whisper-models", downloadUrl)
+            );
         }
 
         if (downloadUrls.Count > 1)
@@ -950,7 +975,7 @@ public static class Binaries
 
             foreach (string path in paths)
             {
-                await Downloader.DeleteSourceDownload(path);
+                await Downloader.DeleteSourceDownload(_storage, path);
             }
 
             await FileAttributes.SetCreatedAttribute(outputPath, releaseInfo.PublishedAt);
@@ -963,18 +988,11 @@ public static class Binaries
         }
     }
 
-    private static async Task<string> ConcatenateModelParts(
-        string modelName,
-        IEnumerable<Uri> partUrls
-    )
+    private async Task<string> ConcatenateModelParts(string modelName, IEnumerable<Uri> partUrls)
     {
         string destinationPath = Path.Combine(AppFiles.FfmpegFolder, modelName + ".bin");
 
-        await using FileStream destinationStream = new(
-            destinationPath,
-            FileMode.OpenOrCreate,
-            FileAccess.Write
-        );
+        await using Stream destinationStream = _backend.OpenWrite(destinationPath, overwrite: true);
 
         foreach (Uri partUrl in partUrls)
         {
@@ -983,7 +1001,7 @@ public static class Binaries
                 Path.GetFileName(partUrl.ToString())
             );
 
-            await using FileStream partStream = new(partPath, FileMode.Open, FileAccess.Read);
+            await using Stream partStream = _backend.OpenRead(partPath);
             await partStream.CopyToAsync(destinationStream);
         }
 
@@ -992,7 +1010,7 @@ public static class Binaries
         return destinationPath;
     }
 
-    private static async Task DownloadTesseractData(IEnumerable<string> languages)
+    private async Task DownloadTesseractData(IEnumerable<string> languages)
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubTesseractApiUrl);
         if (releaseInfo.Assets.Length == 0)
@@ -1032,15 +1050,16 @@ public static class Binaries
                 continue;
             }
 
-            await Downloader.DeleteSourceDownload(destinationPath);
+            await Downloader.DeleteSourceDownload(_storage, destinationPath);
 
             string path = await Downloader.DownloadFile(
+                _storage,
                 $"Tesseract data for {lang}",
                 downloadUrl,
                 $"{lang}.traineddata"
             );
 
-            File.Move(path, destinationPath);
+            _storage.Move(path, destinationPath);
 
             await FileAttributes.SetCreatedAttribute(destinationPath, releaseInfo.PublishedAt);
 

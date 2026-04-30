@@ -1,22 +1,30 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text;
 using Mono.Nat;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Networking.Discovery;
 
 public class NetworkDiscovery : INetworkDiscovery
 {
+    private readonly IStorageBackend _backend;
     private string? _internalIp;
     private string? _externalIp;
     private INatDevice? _device;
     private bool _hasFoundDevice;
+
+    public NetworkDiscovery(IStorageBackend? backend = null)
+    {
+        _backend = backend ?? new SystemIoStorageBackend();
+    }
 
     public string InternalIp
     {
@@ -547,11 +555,13 @@ public class NetworkDiscovery : INetworkDiscovery
         return null;
     }
 
-    private static void CacheExternalIp(string ip)
+    private void CacheExternalIp(string ip)
     {
         try
         {
-            File.WriteAllText(ExternalIpCacheFile, ip);
+            using Stream stream = _backend.OpenWrite(ExternalIpCacheFile, overwrite: true);
+            using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
+            writer.Write(ip);
         }
         catch (Exception e)
         {
@@ -559,13 +569,14 @@ public class NetworkDiscovery : INetworkDiscovery
         }
     }
 
-    private static string? LoadCachedExternalIp()
+    private string? LoadCachedExternalIp()
     {
         try
         {
-            if (!File.Exists(ExternalIpCacheFile))
+            if (!_backend.FileExists(ExternalIpCacheFile))
                 return null;
-            string cached = File.ReadAllText(ExternalIpCacheFile).Trim();
+            using StreamReader reader = new(_backend.OpenRead(ExternalIpCacheFile), Encoding.UTF8);
+            string cached = reader.ReadToEnd().Trim();
             return string.IsNullOrEmpty(cached) ? null : cached;
         }
         catch

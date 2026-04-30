@@ -5,6 +5,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.LogEnrichers;
 using NoMercy.NmSystem.NewtonSoftConverters;
+using NoMercy.Storage;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -417,7 +418,13 @@ public static class Logger
     )
     {
         string logDirectoryPath = AppFiles.LogPath;
-        List<LogEntry> logs = await LogReader.GetLogsAsync(logDirectoryPath, filter: filter);
+        IStorageBackend backend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
+        List<LogEntry> logs = await LogReader.GetLogsAsync(
+            storage,
+            logDirectoryPath,
+            filter: filter
+        );
 
         return logs.OrderByDescending(entry => entry.Time)
             .Take(limit)
