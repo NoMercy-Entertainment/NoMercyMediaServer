@@ -1,11 +1,13 @@
 using System.Text.Json;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
 
 public class PluginConfiguration : IPluginConfiguration
 {
     private readonly string _configFilePath;
+    private readonly IStorage _storage;
     private readonly object _lock = new();
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -16,10 +18,20 @@ public class PluginConfiguration : IPluginConfiguration
         AllowTrailingCommas = true,
     };
 
-    public PluginConfiguration(string dataFolderPath)
+    public PluginConfiguration(string dataFolderPath, IStorage? storage = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dataFolderPath);
         _configFilePath = Path.Combine(dataFolderPath, "config.json");
+
+        if (storage is not null)
+        {
+            _storage = storage;
+        }
+        else
+        {
+            IStorageBackend backend = new SystemIoStorageBackend();
+            _storage = new LocalStorage(backend, new StoragePathGuard([dataFolderPath], backend));
+        }
     }
 
     public T? GetConfiguration<T>()
@@ -27,12 +39,13 @@ public class PluginConfiguration : IPluginConfiguration
     {
         lock (_lock)
         {
-            if (!File.Exists(_configFilePath))
+            if (!_storage.Exists(_configFilePath))
             {
                 return null;
             }
 
-            string json = File.ReadAllText(_configFilePath);
+            byte[] bytes = _storage.Read(_configFilePath);
+            string json = System.Text.Encoding.UTF8.GetString(bytes);
             return JsonSerializer.Deserialize<T>(json, JsonOptions);
         }
     }
@@ -40,12 +53,12 @@ public class PluginConfiguration : IPluginConfiguration
     public async Task<T?> GetConfigurationAsync<T>(CancellationToken ct = default)
         where T : class, new()
     {
-        if (!File.Exists(_configFilePath))
+        if (!_storage.Exists(_configFilePath))
         {
             return null;
         }
 
-        string json = await File.ReadAllTextAsync(_configFilePath, ct);
+        string json = await _storage.ReadAllTextAsync(_configFilePath, ct);
         return JsonSerializer.Deserialize<T>(json, JsonOptions);
     }
 
@@ -57,13 +70,13 @@ public class PluginConfiguration : IPluginConfiguration
         lock (_lock)
         {
             string? directory = Path.GetDirectoryName(_configFilePath);
-            if (directory is not null && !Directory.Exists(directory))
+            if (directory is not null && !_storage.Exists(directory))
             {
-                Directory.CreateDirectory(directory);
+                _storage.CreateDirectory(directory);
             }
 
             string json = JsonSerializer.Serialize(configuration, JsonOptions);
-            File.WriteAllText(_configFilePath, json);
+            _storage.Write(_configFilePath, System.Text.Encoding.UTF8.GetBytes(json));
         }
     }
 
@@ -73,27 +86,27 @@ public class PluginConfiguration : IPluginConfiguration
         ArgumentNullException.ThrowIfNull(configuration);
 
         string? directory = Path.GetDirectoryName(_configFilePath);
-        if (directory is not null && !Directory.Exists(directory))
+        if (directory is not null && !_storage.Exists(directory))
         {
-            Directory.CreateDirectory(directory);
+            _storage.CreateDirectory(directory);
         }
 
         string json = JsonSerializer.Serialize(configuration, JsonOptions);
-        await File.WriteAllTextAsync(_configFilePath, json, ct);
+        await _storage.WriteAllTextAsync(_configFilePath, json, ct);
     }
 
     public bool HasConfiguration()
     {
-        return File.Exists(_configFilePath);
+        return _storage.Exists(_configFilePath);
     }
 
     public void DeleteConfiguration()
     {
         lock (_lock)
         {
-            if (File.Exists(_configFilePath))
+            if (_storage.Exists(_configFilePath))
             {
-                File.Delete(_configFilePath);
+                _storage.Delete(_configFilePath);
             }
         }
     }

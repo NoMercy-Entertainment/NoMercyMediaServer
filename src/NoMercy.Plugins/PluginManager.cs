@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Events.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
 
@@ -13,13 +14,17 @@ public class PluginManager : IPluginManager, IDisposable
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<PluginManager> _logger;
     private readonly string _pluginsPath;
+    private readonly IStorage _storage;
+    private readonly IStorageBackend _backend;
     private readonly ConcurrentDictionary<Guid, LoadedPlugin> _loadedPlugins = new();
 
     public PluginManager(
         IEventBus eventBus,
         IServiceProvider serviceProvider,
         ILogger<PluginManager> logger,
-        string pluginsPath
+        string pluginsPath,
+        IStorage? storage = null,
+        IStorageBackend? backend = null
     )
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -27,6 +32,17 @@ public class PluginManager : IPluginManager, IDisposable
             serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _pluginsPath = pluginsPath ?? throw new ArgumentNullException(nameof(pluginsPath));
+
+        _backend = backend ?? new SystemIoStorageBackend();
+
+        if (storage is not null)
+        {
+            _storage = storage;
+        }
+        else
+        {
+            _storage = new LocalStorage(_backend, new StoragePathGuard([pluginsPath], _backend));
+        }
     }
 
     public IReadOnlyList<PluginInfo> GetInstalledPlugins()
@@ -39,7 +55,11 @@ public class PluginManager : IPluginManager, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(packagePath);
 
         string fullPath = Path.GetFullPath(packagePath);
-        if (!File.Exists(fullPath))
+
+        // Source assembly may be anywhere on disk (user-supplied install path).
+        // Use the raw backend for the existence check and copy-in; the destination
+        // is always inside the allowlisted plugin root so _storage covers it.
+        if (!_backend.FileExists(fullPath))
         {
             throw new FileNotFoundException($"Plugin assembly not found: {fullPath}", fullPath);
         }
@@ -47,13 +67,13 @@ public class PluginManager : IPluginManager, IDisposable
         string pluginName = Path.GetFileNameWithoutExtension(fullPath);
         string pluginDir = Path.Combine(_pluginsPath, pluginName);
 
-        if (!Directory.Exists(pluginDir))
+        if (!_storage.Exists(pluginDir))
         {
-            Directory.CreateDirectory(pluginDir);
+            _storage.CreateDirectory(pluginDir);
         }
 
         string destPath = Path.Combine(pluginDir, Path.GetFileName(fullPath));
-        File.Copy(fullPath, destPath, overwrite: true);
+        _backend.CopyFile(fullPath, destPath, overwrite: true);
 
         await LoadPluginAssemblyAsync(destPath, ct);
     }
@@ -81,9 +101,9 @@ public class PluginManager : IPluginManager, IDisposable
             try
             {
                 string dataFolder = Path.Combine(_pluginsPath, "data", pluginId.ToString("N"));
-                if (!Directory.Exists(dataFolder))
+                if (!_storage.Exists(dataFolder))
                 {
-                    Directory.CreateDirectory(dataFolder);
+                    _storage.CreateDirectory(dataFolder);
                 }
 
                 PluginContext context = new(_eventBus, _serviceProvider, _logger, dataFolder);
@@ -154,11 +174,11 @@ public class PluginManager : IPluginManager, IDisposable
         if (loaded.Info.AssemblyPath is not null)
         {
             string? pluginDir = Path.GetDirectoryName(loaded.Info.AssemblyPath);
-            if (pluginDir is not null && Directory.Exists(pluginDir))
+            if (pluginDir is not null && _storage.Exists(pluginDir))
             {
                 try
                 {
-                    Directory.Delete(pluginDir, recursive: true);
+                    _storage.DeleteDirectory(pluginDir, recursive: true);
                 }
                 catch (IOException)
                 {
@@ -175,13 +195,20 @@ public class PluginManager : IPluginManager, IDisposable
 
     public async Task LoadPluginsFromDirectoryAsync(CancellationToken ct = default)
     {
-        if (!Directory.Exists(_pluginsPath))
+        if (!_storage.Exists(_pluginsPath))
         {
             return;
         }
 
-        foreach (string pluginDir in Directory.GetDirectories(_pluginsPath))
+        IReadOnlyList<StorageEntry> entries = _storage.List(_pluginsPath, null, recursive: false);
+        foreach (StorageEntry entry in entries)
         {
+            if (!entry.IsDirectory)
+            {
+                continue;
+            }
+
+            string pluginDir = entry.Path;
             string dirName = Path.GetFileName(pluginDir);
             if (dirName is "configurations" or "data")
             {
@@ -189,16 +216,23 @@ public class PluginManager : IPluginManager, IDisposable
             }
 
             string manifestPath = Path.Combine(pluginDir, "plugin.json");
-            if (File.Exists(manifestPath))
+            if (_storage.Exists(manifestPath))
             {
                 await LoadPluginFromManifestAsync(manifestPath, ct);
                 continue;
             }
 
-            string[] dllFiles = Directory.GetFiles(pluginDir, "*.dll");
-            foreach (string dllPath in dllFiles)
+            IReadOnlyList<StorageEntry> dllEntries = _storage.List(
+                pluginDir,
+                "*.dll",
+                recursive: false
+            );
+            foreach (StorageEntry dllEntry in dllEntries)
             {
-                await LoadPluginAssemblyAsync(dllPath, ct);
+                if (!dllEntry.IsDirectory)
+                {
+                    await LoadPluginAssemblyAsync(dllEntry.Path, ct);
+                }
             }
         }
     }
@@ -212,10 +246,14 @@ public class PluginManager : IPluginManager, IDisposable
 
         try
         {
-            PluginManifest manifest = await PluginManifestParser.ParseFileAsync(manifestPath, ct);
+            PluginManifest manifest = await PluginManifestParser.ParseFileAsync(
+                manifestPath,
+                _storage,
+                ct
+            );
             string assemblyPath = Path.Combine(pluginDir, manifest.Assembly);
 
-            if (!File.Exists(assemblyPath))
+            if (!_storage.Exists(assemblyPath))
             {
                 _logger.LogWarning(
                     "Plugin manifest {ManifestPath} references assembly '{Assembly}' which was not found.",
@@ -272,9 +310,9 @@ public class PluginManager : IPluginManager, IDisposable
                             "data",
                             instance.Id.ToString("N")
                         );
-                        if (!Directory.Exists(dataFolder))
+                        if (!_storage.Exists(dataFolder))
                         {
-                            Directory.CreateDirectory(dataFolder);
+                            _storage.CreateDirectory(dataFolder);
                         }
 
                         PluginContext context = new(
@@ -446,9 +484,9 @@ public class PluginManager : IPluginManager, IDisposable
                 }
 
                 string dataFolder = Path.Combine(_pluginsPath, "data", instance.Id.ToString("N"));
-                if (!Directory.Exists(dataFolder))
+                if (!_storage.Exists(dataFolder))
                 {
-                    Directory.CreateDirectory(dataFolder);
+                    _storage.CreateDirectory(dataFolder);
                 }
 
                 PluginContext context = new(_eventBus, _serviceProvider, _logger, dataFolder);

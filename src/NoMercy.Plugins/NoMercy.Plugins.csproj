@@ -22,5 +22,6 @@
   <ItemGroup>
     <ProjectReference Include="..\NoMercy.Plugins.Abstractions\NoMercy.Plugins.Abstractions.csproj" />
     <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj" />
+    <ProjectReference Include="..\NoMercy.Storage\NoMercy.Storage.csproj" />
   </ItemGroup>
 </Project>

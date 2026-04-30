@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
 
@@ -19,7 +20,13 @@ public static class PluginServiceCollectionExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             ILogger<PluginManager> logger = sp.GetRequiredService<ILogger<PluginManager>>();
-            return new PluginManager(eventBus, sp, logger, pluginsPath);
+            IStorageBackend backend =
+                sp.GetService<IStorageBackend>() ?? new SystemIoStorageBackend();
+            IStorage storage = new LocalStorage(
+                backend,
+                new StoragePathGuard([pluginsPath], backend)
+            );
+            return new PluginManager(eventBus, sp, logger, pluginsPath, storage, backend);
         });
 
         return services;
