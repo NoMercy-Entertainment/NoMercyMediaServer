@@ -77,6 +77,9 @@ public class MediaContext : DbContext
 
         modelBuilder.Entity<Crew>().Property(t => t.JobId).IsRequired(false);
 
+        // BackendConfig is free-form JSON — no max-length cap.
+        modelBuilder.Entity<Folder>().Property(f => f.BackendConfig).HasMaxLength(int.MaxValue);
+
         // Metadata owns its AudioTrack — delete the track when metadata is removed.
         modelBuilder
             .Entity<Metadata>()
