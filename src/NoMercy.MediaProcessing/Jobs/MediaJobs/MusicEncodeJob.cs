@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -19,8 +18,6 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
-using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -34,10 +31,12 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
 
     public override async Task Handle()
     {
+        // TODO: cross-backend transfer — MediaFile.Path (source) and FolderMetaData.BasePath
+        // (encode output) both resolve through the same folder's StorageBackend today. When
+        // source and destination cross folder boundaries, staged copy semantics will be needed.
         await using MediaContext context = new();
 
-        IStorageBackend storageBackend = StorageProvider.Backend;
-        await using LibraryRepository libraryRepository = new(context, storageBackend);
+        await using LibraryRepository libraryRepository = new(context, StorageBackend);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)
@@ -217,10 +216,10 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
             recordingRepository,
             musicGenreRepository,
             artistRepository,
-            StorageProvider.Backend
+            StorageBackend
         );
 
-        await using MediaScan mediaScan = new(StorageProvider.Backend);
+        await using MediaScan mediaScan = new(StorageBackend);
 
         // V3 encoder writes to BasePath — scan picks up all encoded output in that folder
         MediaFolderExtend mediaFolder = (

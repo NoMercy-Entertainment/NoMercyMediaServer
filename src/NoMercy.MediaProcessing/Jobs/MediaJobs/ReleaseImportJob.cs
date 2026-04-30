@@ -9,7 +9,6 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
-using NoMercy.Providers.Helpers;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -37,7 +36,7 @@ public class ReleaseImportJob : AbstractMusicFolderJob
                 .ThenInclude(f => f.Folder)
             .FirstAsync();
 
-        await using MediaScan mediaScan = new(StorageProvider.Backend);
+        await using MediaScan mediaScan = new(StorageBackend);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             // .EnableFileListing()

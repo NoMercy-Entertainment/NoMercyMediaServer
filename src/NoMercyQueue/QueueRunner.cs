@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
@@ -28,6 +29,7 @@ public class QueueRunner
     public readonly JobDispatcher Dispatcher;
     private readonly IConfigurationStore? _configurationStore;
     private readonly ILogger<QueueRunner> _logger;
+    private readonly IServiceScopeFactory? _scopeFactory;
 
     /// <summary>
     /// Static accessor for non-DI code paths (jobs, logic classes).
@@ -39,10 +41,12 @@ public class QueueRunner
         IQueueContext queueContext,
         QueueConfiguration configuration,
         ILoggerFactory loggerFactory,
-        IConfigurationStore? configurationStore = null
+        IConfigurationStore? configurationStore = null,
+        IServiceScopeFactory? scopeFactory = null
     )
     {
         _configurationStore = configurationStore;
+        _scopeFactory = scopeFactory;
         _logger = loggerFactory.CreateLogger<QueueRunner>();
         _jobQueue = new(
             queueContext,
@@ -165,7 +169,7 @@ public class QueueRunner
 
     private void SpawnWorker(string name)
     {
-        QueueWorker queueWorkerInstance = new(_jobQueue, name, this);
+        QueueWorker queueWorkerInstance = new(_jobQueue, name, this, scopeFactory: _scopeFactory);
 
         queueWorkerInstance.WorkCompleted += QueueWorkerCompleted(name, queueWorkerInstance);
 

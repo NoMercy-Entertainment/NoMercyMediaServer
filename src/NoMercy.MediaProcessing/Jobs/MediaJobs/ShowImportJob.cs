@@ -4,7 +4,6 @@
 
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.TvShows;
@@ -15,10 +14,8 @@ using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem.Information;
-using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
-using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -38,18 +35,12 @@ public class ShowImportJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        IStorageBackend storageBackend = StorageProvider.Backend;
-        IStorageFactory storageFactory = new StorageFactory(
-            storageBackend,
-            NullLogger<StorageFactory>.Instance
-        );
-
         ShowRepository showRepository = new(context);
         ShowManager showManager = new(
             showRepository,
             jobDispatcher,
-            storageFactory,
-            storageBackend
+            StorageFactory,
+            StorageBackend
         );
 
         SeasonRepository seasonRepository = new(context);

@@ -2,15 +2,12 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
-using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Movies;
-using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Models.Collections;
-using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -28,18 +25,12 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        IStorageBackend storageBackend = StorageProvider.Backend;
-        IStorageFactory storageFactory = new StorageFactory(
-            storageBackend,
-            NullLogger<StorageFactory>.Instance
-        );
-
         MovieRepository movieRepository = new(context);
         MovieManager movieManager = new(
             movieRepository,
             jobDispatcher,
-            storageFactory,
-            storageBackend
+            StorageFactory,
+            StorageBackend
         );
 
         CollectionRepository collectionRepository = new(context);

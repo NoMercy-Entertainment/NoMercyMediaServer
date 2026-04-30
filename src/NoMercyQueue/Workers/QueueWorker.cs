@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
@@ -9,7 +10,8 @@ public class QueueWorker(
     JobQueue queue,
     string name = "default",
     QueueRunner? runner = null,
-    ILogger<QueueWorker>? logger = null
+    ILogger<QueueWorker>? logger = null,
+    IServiceScopeFactory? scopeFactory = null
 )
 {
     private const int MaxTransientRetries = 5;
@@ -127,36 +129,58 @@ public class QueueWorker(
     /// "database is locked").  These retries do NOT consume the job's attempt count —
     /// they exist to absorb short-lived write-lock contention that is normal under
     /// concurrent queue workers sharing a single SQLite database.
+    /// <para>
+    /// When a <see cref="IServiceScopeFactory"/> is available and the job implements
+    /// <see cref="IJobStorageInjector"/>, a fresh DI scope is opened per execution,
+    /// storage services are resolved and set on the job, and the scope is disposed
+    /// when the job completes (success or failure).
+    /// </para>
     /// </summary>
     private void ExecuteWithTransientRetry(IShouldQueue job, QueueJobModel queueJob)
     {
-        for (int attempt = 0; ; attempt++)
+        IServiceScope? scope = null;
+
+        if (scopeFactory is not null && job is IJobStorageInjector injector)
         {
-            try
-            {
-                // GetAwaiter().GetResult() rather than .Wait() so that the
-                // original exception propagates unwrapped (not wrapped in
-                // AggregateException) — this keeps catch-block handling and
-                // retry classification correct.
-                job.Handle().GetAwaiter().GetResult();
-                return;
-            }
-            catch (Exception ex) when (IsTransientSqliteError(ex) && attempt < MaxTransientRetries)
-            {
-                int delay = TransientRetryBaseMs + Random.Shared.Next(TransientRetryJitterMs);
+            scope = scopeFactory.CreateScope();
+            injector.InjectStorageServices(scope.ServiceProvider);
+        }
 
-                logger?.LogWarning(
-                    "QueueWorker {Name} - {CurrentIndex}: Job {JobId} hit transient SQLite error (attempt {Attempt}/{Max}), retrying in {Delay}ms",
-                    name,
-                    CurrentIndex,
-                    queueJob.Id,
-                    attempt + 1,
-                    MaxTransientRetries,
-                    delay
-                );
+        try
+        {
+            for (int attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    // GetAwaiter().GetResult() rather than .Wait() so that the
+                    // original exception propagates unwrapped (not wrapped in
+                    // AggregateException) — this keeps catch-block handling and
+                    // retry classification correct.
+                    job.Handle().GetAwaiter().GetResult();
+                    return;
+                }
+                catch (Exception ex)
+                    when (IsTransientSqliteError(ex) && attempt < MaxTransientRetries)
+                {
+                    int delay = TransientRetryBaseMs + Random.Shared.Next(TransientRetryJitterMs);
 
-                Thread.Sleep(delay);
+                    logger?.LogWarning(
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} hit transient SQLite error (attempt {Attempt}/{Max}), retrying in {Delay}ms",
+                        name,
+                        CurrentIndex,
+                        queueJob.Id,
+                        attempt + 1,
+                        MaxTransientRetries,
+                        delay
+                    );
+
+                    Thread.Sleep(delay);
+                }
             }
+        }
+        finally
+        {
+            scope?.Dispose();
         }
     }
 

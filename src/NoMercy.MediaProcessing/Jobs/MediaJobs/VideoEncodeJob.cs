@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -21,8 +20,6 @@ using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
-using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -35,17 +32,16 @@ public class VideoEncodeJob : AbstractEncoderJob
 
     public override async Task Handle()
     {
+        // TODO: cross-backend transfer — InputFile (source) and the encode output directory
+        // both resolve through the same folder's StorageBackend today. When source and
+        // destination cross folder boundaries (e.g. source on SMB, output on local SSD),
+        // AcquireLocalPathAsync on the source backend and a staged write on the destination
+        // backend will be needed. Leave existing copy semantics until remote drivers land.
         await using MediaContext context = new();
 
-        IStorageBackend storageBackend = StorageProvider.Backend;
-        IStorageFactory storageFactory = new StorageFactory(
-            storageBackend,
-            NullLogger<StorageFactory>.Instance
-        );
-
-        await using LibraryRepository libraryRepository = new(context, storageBackend);
-        FileRepository fileRepository = new(context, storageBackend);
-        FileManager fileManager = new(fileRepository, storageFactory, storageBackend);
+        await using LibraryRepository libraryRepository = new(context, StorageBackend);
+        FileRepository fileRepository = new(context, StorageBackend);
+        FileManager fileManager = new(fileRepository, StorageFactory, StorageBackend);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)

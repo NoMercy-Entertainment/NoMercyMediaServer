@@ -19,6 +19,7 @@ public static class ServiceRegistration
             IQueueContext queueContext = sp.GetRequiredService<IQueueContext>();
             IConfigurationStore configStore = sp.GetRequiredService<IConfigurationStore>();
             ILoggerFactory loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            IServiceScopeFactory scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
             QueueConfiguration configuration = new()
             {
                 WorkerCounts = new()
@@ -33,7 +34,7 @@ public static class ServiceRegistration
                     [Config.MusicWorkers.Key] = Config.MusicWorkers.Value,
                 },
             };
-            return new(queueContext, configuration, loggerFactory, configStore);
+            return new(queueContext, configuration, loggerFactory, configStore, scopeFactory);
         });
         services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
 
