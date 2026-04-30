@@ -16,7 +16,6 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
-using NoMercy.Providers.Helpers;
 using NoMercy.Setup;
 using NoMercy.Storage;
 using NoMercyQueue;
@@ -240,10 +239,7 @@ public class ManagementController(
                 );
             }
 
-            string? onDiskVersion = Software.GetFileVersion(
-                StorageProvider.Backend,
-                AppFiles.ServerExePath
-            );
+            string? onDiskVersion = Software.GetFileVersion(storageBackend, AppFiles.ServerExePath);
             string runningVersion = Software.GetReleaseVersion();
             if (
                 onDiskVersion is not null

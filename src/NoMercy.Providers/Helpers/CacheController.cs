@@ -14,6 +14,19 @@ public static class CacheController
     private const long MaxCacheSizeBytes = 500_000_000; // 500MB
     private const int MaxLockEntries = 10_000;
 
+    private static IStorage? _storage;
+
+    public static void Initialize(IStorage storage)
+    {
+        _storage = storage;
+    }
+
+    private static IStorage Storage =>
+        _storage
+        ?? throw new InvalidOperationException(
+            "CacheController has not been initialized. Call CacheController.Initialize() at startup."
+        );
+
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileLocks = new();
 
     private static SemaphoreSlim GetLock(string path)
@@ -68,7 +81,7 @@ public static class CacheController
 
         try
         {
-            IStorage storage = StorageProvider.Storage;
+            IStorage storage = Storage;
 
             if (!storage.Exists(fullname))
             {
@@ -131,11 +144,7 @@ public static class CacheController
 
             try
             {
-                await StorageProvider.Storage.WriteAllTextAsync(
-                    fullname,
-                    data,
-                    CancellationToken.None
-                );
+                await Storage.WriteAllTextAsync(fullname, data, CancellationToken.None);
                 PruneCache();
                 return;
             }

@@ -6,7 +6,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
 using NoMercyQueue.Workers;
 using Serilog.Events;
 
@@ -20,7 +20,7 @@ public static class DatabaseSeeder
     /// Phase 1: Create database schema (migrations + EnsureCreated).
     /// Does NOT require authentication — safe to call before auth.
     /// </summary>
-    public static async Task InitSchema()
+    public static async Task InitSchema(IStorage storage)
     {
         Logger.Setup("Initializing database schemas...");
 
@@ -30,7 +30,7 @@ public static class DatabaseSeeder
         await EnsureDatabaseCreated(appDbContext);
 
         // Migrate Configuration data from media.db to app.db (one-time on update)
-        await MigrateConfigurationData(appDbContext);
+        await MigrateConfigurationData(appDbContext, storage);
         await appDbContext.DisposeAsync();
 
         // 2. MediaContext — content and metadata
@@ -47,7 +47,7 @@ public static class DatabaseSeeder
         Logger.Setup("Database schemas initialized");
     }
 
-    private static async Task MigrateConfigurationData(AppDbContext appContext)
+    private static async Task MigrateConfigurationData(AppDbContext appContext, IStorage storage)
     {
         // Only migrate if app.db has no Configuration rows AND media.db exists with rows
         bool appHasData = await appContext.Configuration.AnyAsync();
@@ -55,7 +55,7 @@ public static class DatabaseSeeder
             return;
 
         string mediaDbPath = AppFiles.MediaDatabase;
-        if (!StorageProvider.Storage.Exists(mediaDbPath))
+        if (!storage.Exists(mediaDbPath))
             return;
 
         try
@@ -121,7 +121,7 @@ public static class DatabaseSeeder
     /// No network or auth required — safe to call right after InitSchema().
     /// Each seed is individually guarded so one failure doesn't block the rest.
     /// </summary>
-    public static async Task SeedOfflineData()
+    public static async Task SeedOfflineData(IStorage storage, IStorageBackend storageBackend)
     {
         AppDbContext appDbContext = new();
         MediaContext mediaDbContext = new();
@@ -129,9 +129,9 @@ public static class DatabaseSeeder
         Func<Task>[] offlineSeeds =
         [
             () => ConfigSeed.Init(appDbContext),
-            () => LibrariesSeed.Init(mediaDbContext),
-            () => EncoderProfilesSeed.Init(mediaDbContext),
-            () => EncodingPresetsSeed.Init(mediaDbContext),
+            () => LibrariesSeed.Init(mediaDbContext, storage, storageBackend),
+            () => EncoderProfilesSeed.Init(mediaDbContext, storage),
+            () => EncodingPresetsSeed.Init(mediaDbContext, storage),
             () => EncodingPresetsSeed.MaterializePresetsAsync(mediaDbContext),
         ];
 
@@ -152,11 +152,11 @@ public static class DatabaseSeeder
     /// Seed provider data (TMDB genres, languages, certifications, etc.).
     /// Requires API keys (no auth). Called early in startup before any import jobs.
     /// </summary>
-    public static async Task Run()
+    public static async Task Run(IStorage storage, IStorageBackend storageBackend)
     {
         MediaContext mediaDbContext = new();
 
-        await SeedOfflineData();
+        await SeedOfflineData(storage, storageBackend);
 
         Func<Task>[] seeds =
         [
@@ -184,13 +184,13 @@ public static class DatabaseSeeder
     /// Seed auth-dependent data (users, library assignment, claims).
     /// Called after auth completes via BootOrchestrator.
     /// </summary>
-    public static async Task SeedAuthData()
+    public static async Task SeedAuthData(IStorage storage)
     {
         MediaContext mediaDbContext = new();
 
         Func<Task>[] seeds =
         [
-            () => UsersSeed.Init(mediaDbContext),
+            () => UsersSeed.Init(mediaDbContext, storage),
             () => AssignOwnerToUnassignedLibraries(mediaDbContext),
             () => ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext),
         ];

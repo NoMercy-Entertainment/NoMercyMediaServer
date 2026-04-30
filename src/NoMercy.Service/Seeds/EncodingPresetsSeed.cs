@@ -7,7 +7,7 @@ using NoMercy.Encoder.Profiles;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;
@@ -29,14 +29,14 @@ namespace NoMercy.Service.Seeds;
 /// </summary>
 public static class EncodingPresetsSeed
 {
-    public static async Task Init(MediaContext context)
+    public static async Task Init(MediaContext context, IStorage storage)
     {
         Logger.Setup("Adding Encoding Presets", LogEventLevel.Verbose);
 
         try
         {
             EncodingPreset[] builtIns = BuildBuiltInPresets();
-            EncodingPreset[] userPresets = LoadUserPresetsFromFile();
+            EncodingPreset[] userPresets = LoadUserPresetsFromFile(storage);
             EncodingPreset[] presets = [.. builtIns, .. userPresets];
 
             // Step 1: prune stale built-ins. Each shipped curation drops some
@@ -110,17 +110,15 @@ public static class EncodingPresetsSeed
     /// block server startup, it just logs a warning and moves on. Presets
     /// loaded here are treated as normal user presets (IsBuiltIn = false).
     /// </summary>
-    private static EncodingPreset[] LoadUserPresetsFromFile()
+    private static EncodingPreset[] LoadUserPresetsFromFile(IStorage storage)
     {
         string path = AppFiles.EncodingPresetsSeedFile;
-        if (!StorageProvider.Storage.Exists(path))
+        if (!storage.Exists(path))
             return [];
 
         try
         {
-            string json = StorageProvider
-                .Storage.ReadAllTextAsync(path, CancellationToken.None)
-                .Result;
+            string json = storage.ReadAllTextAsync(path, CancellationToken.None).Result;
             PresetSeedEntry[]? entries = JsonConvert.DeserializeObject<PresetSeedEntry[]>(json);
             if (entries is null || entries.Length == 0)
                 return [];

@@ -11,6 +11,19 @@ namespace NoMercy.Providers.TMDB.Client;
 
 public abstract class TmdbImageClient : TmdbBaseClient
 {
+    private static IStorage? _storage;
+
+    public static void Initialize(IStorage storage)
+    {
+        _storage = storage;
+    }
+
+    private static IStorage Storage =>
+        _storage
+        ?? throw new InvalidOperationException(
+            "TmdbImageClient has not been initialized. Call TmdbImageClient.Initialize() at startup."
+        );
+
     public static Task<Image<Rgba32>?>? Download(string? path, bool? download = true)
     {
         try
@@ -44,7 +57,7 @@ public abstract class TmdbImageClient : TmdbBaseClient
                 bool isSvg = path.EndsWith(".svg");
                 string folder = Path.Join(AppFiles.ImagesPath, "original");
 
-                IStorage storage = StorageProvider.Storage;
+                IStorage storage = Storage;
                 await storage.CreateDirectoryAsync(folder, CancellationToken.None);
 
                 string filePath = Path.Join(folder, path.Replace("/", ""));

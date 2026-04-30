@@ -6,23 +6,27 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
 using NoMercy.Service.Seeds.Dto;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;
 
 public static class LibrariesSeed
 {
-    public static async Task Init(this MediaContext dbContext)
+    public static async Task Init(
+        this MediaContext dbContext,
+        IStorage storage,
+        IStorageBackend storageBackend
+    )
     {
-        if (!StorageProvider.Storage.Exists(AppFiles.LibrariesSeedFile))
+        if (!storage.Exists(AppFiles.LibrariesSeedFile))
             return;
         Logger.Setup("Adding Libraries", LogEventLevel.Verbose);
 
         List<LibrarySeedDto> librarySeed =
-            StorageProvider
-                .Storage.ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
+            storage
+                .ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
                 .Result.FromJson<List<LibrarySeedDto>>()
             ?? [];
 
@@ -74,13 +78,13 @@ public static class LibrariesSeed
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
-        if (!StorageProvider.Storage.Exists(AppFiles.FolderRootsSeedFile))
+        if (!storage.Exists(AppFiles.FolderRootsSeedFile))
             return;
         Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
 
         Folder[] folders =
-            StorageProvider
-                .Storage.ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
+            storage
+                .ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
                 .Result.FromJson<Folder[]>()
             ?? [];
 
@@ -98,9 +102,7 @@ public static class LibrariesSeed
         }
 
         // Register seeded folders with the middleware so they can serve files over HTTP
-        foreach (
-            Folder folder in folders.Where(f => StorageProvider.Backend.DirectoryExists(f.Path))
-        )
+        foreach (Folder folder in folders.Where(f => storageBackend.DirectoryExists(f.Path)))
             DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
 
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);

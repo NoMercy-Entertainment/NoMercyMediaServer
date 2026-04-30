@@ -13,6 +13,19 @@ namespace NoMercy.Providers.CoverArt.Client;
 
 public class CoverArtCoverArtClient : CoverArtBaseClient
 {
+    private static IStorage? _storage;
+
+    public static void Initialize(IStorage storage)
+    {
+        _storage = storage;
+    }
+
+    private static IStorage Storage =>
+        _storage
+        ?? throw new InvalidOperationException(
+            "CoverArtCoverArtClient has not been initialized. Call CoverArtCoverArtClient.Initialize() at startup."
+        );
+
     public CoverArtCoverArtClient(Guid id)
         : base(id)
     {
@@ -60,7 +73,7 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
             Path.GetFileName((url?.LocalPath).OrEmpty())
         );
 
-        IStorage storage = StorageProvider.Storage;
+        IStorage storage = Storage;
         if (await storage.ExistsAsync(filePath, CancellationToken.None))
             return Image.Load<Rgba32>(filePath);
 

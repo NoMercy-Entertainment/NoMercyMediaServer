@@ -6,15 +6,15 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
 using NoMercy.Service.Seeds.Dto;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;
 
 public static class UsersSeed
 {
-    public static async Task Init(this MediaContext dbContext)
+    public static async Task Init(this MediaContext dbContext, IStorage storage)
     {
         try
         {
@@ -90,12 +90,12 @@ public static class UsersSeed
                 )
                 .RunAsync();
 
-            if (!StorageProvider.Storage.Exists(AppFiles.LibrariesSeedFile))
+            if (!storage.Exists(AppFiles.LibrariesSeedFile))
                 return;
 
             Library[] libraries =
-                StorageProvider
-                    .Storage.ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
+                storage
+                    .ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
                     .Result.FromJson<Library[]>()
                 ?? [];
 

@@ -12,6 +12,19 @@ namespace NoMercy.Providers.NoMercy.Client;
 
 public abstract class NoMercyImageClient : TmdbBaseClient
 {
+    private static IStorage? _storage;
+
+    public static void Initialize(IStorage storage)
+    {
+        _storage = storage;
+    }
+
+    private static IStorage Storage =>
+        _storage
+        ?? throw new InvalidOperationException(
+            "NoMercyImageClient has not been initialized. Call NoMercyImageClient.Initialize() at startup."
+        );
+
     public static Task<Image<Rgba32>?> Download(string? path, bool? download = true)
     {
         return GetQueue().Enqueue(Task, $"original{path}", true);
@@ -25,7 +38,7 @@ public abstract class NoMercyImageClient : TmdbBaseClient
             {
                 string folder = Path.Join(AppFiles.ImagesPath, "original");
 
-                IStorage storage = StorageProvider.Storage;
+                IStorage storage = Storage;
                 await storage.CreateDirectoryAsync(folder, CancellationToken.None);
 
                 string filePath = Path.Combine(folder, path.Replace("/", "").Replace("\\", ""));

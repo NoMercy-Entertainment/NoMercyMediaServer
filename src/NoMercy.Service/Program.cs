@@ -17,6 +17,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Service.Configuration;
 using NoMercy.Service.Seeds;
 using NoMercy.Setup;
+using NoMercy.Storage;
 using NoMercyQueue;
 
 namespace NoMercy.Service;
@@ -132,13 +133,21 @@ public static class Program
         // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
         await Setup.Start.InitEssential();
 
+        // Pre-DI storage pair — used for seed calls that run before the DI
+        // container is built. Same pattern as Start.cs Binaries task.
+        IStorageBackend preBootBackend = new SystemIoStorageBackend();
+        IStorage preBootStorage = new LocalStorage(
+            preBootBackend,
+            new StoragePathGuard([], preBootBackend)
+        );
+
         // Create database schema before anything else can query it.
         // This does NOT require auth — only migrations + EnsureCreated.
-        await DatabaseSeeder.InitSchema();
+        await DatabaseSeeder.InitSchema(preBootStorage);
 
         // Seed offline data (config, languages, encoder profiles, etc.)
         // immediately so the UI has data before auth completes.
-        await DatabaseSeeder.SeedOfflineData();
+        await DatabaseSeeder.SeedOfflineData(preBootStorage, preBootBackend);
 
         // Proactively resolve port conflicts before building the host.
         // This avoids the costly build→fail→kill→rebuild cycle and prevents
@@ -154,13 +163,17 @@ public static class Program
 
         WebApplication app = CreateWebApplication(options, forceHttp: !hasCert);
 
+        // From this point on, use the DI-registered storage singletons.
+        IStorage diStorage = app.Services.GetRequiredService<IStorage>();
+        IStorageBackend diStorageBackend = app.Services.GetRequiredService<IStorageBackend>();
+
         // API keys are available without auth, so seed TMDB/MusicBrainz data
         // (genres, languages, etc.) now — before any import jobs can run.
         // Must run AFTER CreateWebApplication so HttpClientProvider is bound
         // to the real IHttpClientFactory (otherwise seed HTTP calls fall back
         // to a bare HttpClient with no registered headers, and MusicBrainz
         // returns 403 for anonymous UAs).
-        await DatabaseSeeder.Run();
+        await DatabaseSeeder.Run(diStorage, diStorageBackend);
 
         // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).
         // It returns true when interactive auth is required (setup mode).
@@ -175,7 +188,7 @@ public static class Program
 
         // Auth completed — seed auth-dependent data (users, library assignment, claims)
         if (!needsSetupMode)
-            await DatabaseSeeder.SeedAuthData();
+            await DatabaseSeeder.SeedAuthData(diStorage);
 
         // Force QueueRunner singleton creation and initialize workers immediately —
         // don't wait for InitRemaining() which can be blocked by rate-limited HTTP calls.

@@ -7,7 +7,6 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
 using VideoFile = NoMercy.Database.Models.Media.VideoFile;
 
@@ -92,9 +91,15 @@ public static class Dev
         await Task.CompletedTask;
     }
 
+    private static IStorage CreateStorage()
+    {
+        IStorageBackend backend = new SystemIoStorageBackend();
+        return new LocalStorage(backend, new StoragePathGuard([], backend));
+    }
+
     private static Task DeleteEmptyPlaylists(string episodeFolder)
     {
-        IStorage storage = StorageProvider.Storage;
+        IStorage storage = CreateStorage();
 
         if (!storage.Exists(episodeFolder))
             return Task.CompletedTask;
@@ -139,7 +144,7 @@ public static class Dev
     private static Dictionary<string, long> CalculateBitratesFromMaster(string episodeFolder)
     {
         Dictionary<string, long> results = new(StringComparer.OrdinalIgnoreCase);
-        IStorage storage = StorageProvider.Storage;
+        IStorage storage = CreateStorage();
 
         if (!storage.Exists(episodeFolder))
             return results;
@@ -299,7 +304,7 @@ public static class Dev
     // Diagnostic helper you can call locally to print a short report for an episode folder
     private static void DiagnoseMasterFolder(string hostFolder)
     {
-        IStorage storage = StorageProvider.Storage;
+        IStorage storage = CreateStorage();
 
         Logger.App($"Diagnosing folder: {hostFolder}");
         if (!storage.Exists(hostFolder))
@@ -439,7 +444,7 @@ public static class Dev
         if (string.IsNullOrEmpty(hostFolder))
             return;
 
-        IStorage storage = StorageProvider.Storage;
+        IStorage storage = CreateStorage();
 
         if (!storage.Exists(hostFolder))
         {

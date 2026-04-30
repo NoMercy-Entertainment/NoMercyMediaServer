@@ -9,7 +9,6 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
 using NoMercyQueue.Core.Interfaces;
 
@@ -57,7 +56,7 @@ public class FindMediaFilesJob : IShouldQueue
         if (library == null)
             return;
 
-        IStorageBackend storageBackend = StorageProvider.Backend;
+        IStorageBackend storageBackend = new SystemIoStorageBackend();
         IStorageFactory storageFactory = new StorageFactory(
             storageBackend,
             NullLogger<StorageFactory>.Instance

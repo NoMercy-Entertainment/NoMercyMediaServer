@@ -11,7 +11,11 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
+using NoMercy.Providers.CoverArt.Client;
+using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.Helpers;
+using NoMercy.Providers.NoMercy.Client;
+using NoMercy.Providers.TMDB.Client;
 using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
@@ -30,10 +34,12 @@ public static class ApplicationConfiguration
         HttpClientProvider.Initialize(
             app.ApplicationServices.GetRequiredService<IHttpClientFactory>()
         );
-        StorageProvider.Initialize(
-            app.ApplicationServices.GetRequiredService<IStorage>(),
-            app.ApplicationServices.GetRequiredService<IStorageBackend>()
-        );
+        IStorage storage = app.ApplicationServices.GetRequiredService<IStorage>();
+        CacheController.Initialize(storage);
+        TmdbImageClient.Initialize(storage);
+        NoMercyImageClient.Initialize(storage);
+        FanArtImageClient.Initialize(storage);
+        CoverArtCoverArtClient.Initialize(storage);
         app.ApplicationServices.InitializeSignalREventHandlers();
 
         ConfigureLocalization(app);
@@ -317,11 +323,13 @@ public static class ApplicationConfiguration
     {
         try
         {
+            IStorageBackend storageBackend =
+                app.ApplicationServices.GetRequiredService<IStorageBackend>();
             using MediaContext mediaContext = new();
             List<Folder> folderLibraries = mediaContext.Folders.ToList();
             foreach (
                 Folder folder in folderLibraries.Where(folder =>
-                    StorageProvider.Backend.DirectoryExists(folder.Path)
+                    storageBackend.DirectoryExists(folder.Path)
                 )
             )
                 DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);

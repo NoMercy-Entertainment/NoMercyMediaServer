@@ -6,23 +6,27 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;
 
 public static class FolderRootsSeed
 {
-    public static async Task Init(this MediaContext dbContext)
+    public static async Task Init(
+        this MediaContext dbContext,
+        IStorage storage,
+        IStorageBackend storageBackend
+    )
     {
-        if (!StorageProvider.Storage.Exists(AppFiles.FolderRootsSeedFile))
+        if (!storage.Exists(AppFiles.FolderRootsSeedFile))
             return;
 
         Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
 
         Folder[] folders =
-            StorageProvider
-                .Storage.ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
+            storage
+                .ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
                 .Result.FromJson<Folder[]>()
             ?? [];
 
@@ -40,9 +44,7 @@ public static class FolderRootsSeed
         }
 
         // Register seeded folders with the middleware so they can serve files over HTTP
-        foreach (
-            Folder folder in folders.Where(f => StorageProvider.Backend.DirectoryExists(f.Path))
-        )
+        foreach (Folder folder in folders.Where(f => storageBackend.DirectoryExists(f.Path)))
             DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
 
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);

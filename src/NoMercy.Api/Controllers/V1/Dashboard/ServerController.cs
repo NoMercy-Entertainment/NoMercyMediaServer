@@ -24,6 +24,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
 using NoMercyQueue;
 using Serilog.Events;
 using SixLabors.ImageSharp;
@@ -51,7 +52,8 @@ public class ServerController(
     IEventBus eventBus,
     IWallpaperService wallpaperService,
     INetworkDiscovery networkDiscovery,
-    IHttpClientFactory httpClientFactory
+    IHttpClientFactory httpClientFactory,
+    IStorageBackend storageBackend
 ) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
@@ -479,7 +481,7 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view files");
 
-        MediaScan mediaScan = new(StorageProvider.Backend);
+        MediaScan mediaScan = new(storageBackend);
 
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()

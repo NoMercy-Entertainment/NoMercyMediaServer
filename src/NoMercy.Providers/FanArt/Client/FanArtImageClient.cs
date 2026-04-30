@@ -12,6 +12,19 @@ namespace NoMercy.Providers.FanArt.Client;
 
 public class FanArtImageClient : FanArtBaseClient
 {
+    private static IStorage? _storage;
+
+    public static void Initialize(IStorage storage)
+    {
+        _storage = storage;
+    }
+
+    private static IStorage Storage =>
+        _storage
+        ?? throw new InvalidOperationException(
+            "FanArtImageClient has not been initialized. Call FanArtImageClient.Initialize() at startup."
+        );
+
     public FanArtImageClient()
     {
         Configuration.ClientKey = ApiInfo.AcousticIdKey;
@@ -37,7 +50,7 @@ public class FanArtImageClient : FanArtBaseClient
     {
         string filePath = Path.Combine(AppFiles.MusicImagesPath, Path.GetFileName(url.LocalPath));
 
-        IStorage storage = StorageProvider.Storage;
+        IStorage storage = Storage;
         if (await storage.ExistsAsync(filePath, CancellationToken.None))
             return Image.Load<Rgba32>(filePath);
 
