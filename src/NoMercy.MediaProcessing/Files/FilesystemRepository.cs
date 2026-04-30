@@ -97,26 +97,12 @@ public class FilesystemRepository
 
     private static DirectoryTree Build(string parent, string path, bool withEmpty)
     {
-        DirectoryTree entry = new(parent, path);
-        if (!withEmpty || entry.Type != "folder")
-            return entry;
-
-        try
-        {
-            entry.IsEmpty = !Directory
-                .EnumerateFileSystemEntries(entry.FullPath, "*", SearchOption.TopDirectoryOnly)
-                .Any();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            entry.IsEmpty = null;
-        }
-        catch (IOException)
-        {
-            entry.IsEmpty = null;
-        }
-
-        return entry;
+        // withEmpty intentionally ignored — populating IsEmpty per entry
+        // means an extra TopDirectoryOnly enumeration for every child
+        // folder, which kills picker latency on big trees. Clients can
+        // still send the flag for wire compat but the field stays null.
+        _ = withEmpty;
+        return new(parent, path);
     }
 
     private static IEnumerable<string> EnumerateChildDirectories(string folder)
