@@ -48,4 +48,24 @@ public class Device : Timestamps
 
     [JsonProperty("volume_percent")]
     public int VolumePercent { get; set; }
+
+    [JsonProperty("fingerprint")]
+    public string? Fingerprint { get; set; }
+
+    [JsonProperty("owner_user_id")]
+    public Guid? OwnerUserId { get; set; }
+
+    [JsonProperty("lan_ip")]
+    public string? LanIp { get; set; }
+
+    [JsonProperty("lan_port")]
+    public int? LanPort { get; set; }
+
+    [JsonProperty("ws_connected_at")]
+    public DateTime? WsConnectedAt { get; set; }
+
+    [JsonProperty("mdns_seen_at")]
+    public DateTime? MdnsSeenAt { get; set; }
+
+    public virtual User? OwnerUser { get; set; }
 }

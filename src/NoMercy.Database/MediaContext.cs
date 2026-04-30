@@ -197,6 +197,21 @@ public class MediaContext : DbContext
             .ToList()
             .ForEach(fk => fk.DeleteBehavior = DeleteBehavior.Cascade);
 
+        // Device presence: fingerprint + ownership unique per (user, fingerprint),
+        // with FK to User that nulls out on user deletion (presence rows survive).
+        modelBuilder
+            .Entity<Device>()
+            .HasIndex(d => new { d.OwnerUserId, d.Fingerprint })
+            .IsUnique()
+            .HasFilter("Fingerprint IS NOT NULL");
+
+        modelBuilder
+            .Entity<Device>()
+            .HasOne(d => d.OwnerUser)
+            .WithMany()
+            .HasForeignKey(d => d.OwnerUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         base.OnModelCreating(modelBuilder);
     }
 

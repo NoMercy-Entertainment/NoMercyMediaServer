@@ -252,6 +252,16 @@ public static class ApplicationConfiguration
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
+
+            endpoints.MapHub<DeviceHub>(
+                "/deviceHub",
+                options =>
+                {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.CloseOnAuthenticationExpiration = true;
+                }
+            );
         });
     }
 
