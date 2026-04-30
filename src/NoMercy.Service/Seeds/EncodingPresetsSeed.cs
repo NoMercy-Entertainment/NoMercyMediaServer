@@ -7,6 +7,7 @@ using NoMercy.Encoder.Profiles;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;
@@ -112,12 +113,14 @@ public static class EncodingPresetsSeed
     private static EncodingPreset[] LoadUserPresetsFromFile()
     {
         string path = AppFiles.EncodingPresetsSeedFile;
-        if (!File.Exists(path))
+        if (!StorageProvider.Storage.Exists(path))
             return [];
 
         try
         {
-            string json = File.ReadAllText(path);
+            string json = StorageProvider
+                .Storage.ReadAllTextAsync(path, CancellationToken.None)
+                .Result;
             PresetSeedEntry[]? entries = JsonConvert.DeserializeObject<PresetSeedEntry[]>(json);
             if (entries is null || entries.Length == 0)
                 return [];

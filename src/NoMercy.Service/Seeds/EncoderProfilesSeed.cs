@@ -4,6 +4,7 @@ using NoMercy.Database.Models.Media;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercy.Service.Seeds.Data;
 using Serilog.Events;
 
@@ -16,8 +17,9 @@ public static class EncoderProfilesSeed
         Logger.Setup("Adding Encoder Profiles", LogEventLevel.Verbose);
 
         List<EncoderProfile> encoderProfiles;
-        if (File.Exists(AppFiles.EncoderProfilesSeedFile))
-            encoderProfiles = File.ReadAllTextAsync(AppFiles.EncoderProfilesSeedFile)
+        if (StorageProvider.Storage.Exists(AppFiles.EncoderProfilesSeedFile))
+            encoderProfiles = StorageProvider
+                .Storage.ReadAllTextAsync(AppFiles.EncoderProfilesSeedFile, CancellationToken.None)
                 .Result.FromJson<List<EncoderProfile>>()!;
         else
             encoderProfiles = EncoderProfileSeedData.GetEncoderProfiles();
@@ -29,7 +31,11 @@ public static class EncoderProfilesSeed
         foreach (EncoderProfile profile in encoderProfiles)
             profile.EncoderProfileFolder = [];
 
-        await File.WriteAllTextAsync(AppFiles.EncoderProfilesSeedFile, encoderProfiles.ToJson());
+        await StorageProvider.Storage.WriteAllTextAsync(
+            AppFiles.EncoderProfilesSeedFile,
+            encoderProfiles.ToJson(),
+            CancellationToken.None
+        );
 
         try
         {

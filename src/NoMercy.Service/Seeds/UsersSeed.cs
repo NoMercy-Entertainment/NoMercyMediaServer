@@ -6,6 +6,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercy.Service.Seeds.Dto;
 using Serilog.Events;
 
@@ -89,11 +90,13 @@ public static class UsersSeed
                 )
                 .RunAsync();
 
-            if (!File.Exists(AppFiles.LibrariesSeedFile))
+            if (!StorageProvider.Storage.Exists(AppFiles.LibrariesSeedFile))
                 return;
 
             Library[] libraries =
-                File.ReadAllTextAsync(AppFiles.LibrariesSeedFile).Result.FromJson<Library[]>()
+                StorageProvider
+                    .Storage.ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
+                    .Result.FromJson<Library[]>()
                 ?? [];
 
             List<LibraryUser> libraryUsers = [];

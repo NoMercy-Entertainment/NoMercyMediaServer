@@ -320,7 +320,9 @@ public static class ApplicationConfiguration
             using MediaContext mediaContext = new();
             List<Folder> folderLibraries = mediaContext.Folders.ToList();
             foreach (
-                Folder folder in folderLibraries.Where(folder => Directory.Exists(folder.Path))
+                Folder folder in folderLibraries.Where(folder =>
+                    StorageProvider.Backend.DirectoryExists(folder.Path)
+                )
             )
                 DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
 

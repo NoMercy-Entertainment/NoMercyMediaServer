@@ -6,6 +6,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercyQueue.Workers;
 using Serilog.Events;
 
@@ -54,7 +55,7 @@ public static class DatabaseSeeder
             return;
 
         string mediaDbPath = AppFiles.MediaDatabase;
-        if (!File.Exists(mediaDbPath))
+        if (!StorageProvider.Storage.Exists(mediaDbPath))
             return;
 
         try

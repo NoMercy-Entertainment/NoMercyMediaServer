@@ -6,6 +6,7 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercy.Service.Seeds.Dto;
 using Serilog.Events;
 
@@ -15,12 +16,13 @@ public static class LibrariesSeed
 {
     public static async Task Init(this MediaContext dbContext)
     {
-        if (!File.Exists(AppFiles.LibrariesSeedFile))
+        if (!StorageProvider.Storage.Exists(AppFiles.LibrariesSeedFile))
             return;
         Logger.Setup("Adding Libraries", LogEventLevel.Verbose);
 
         List<LibrarySeedDto> librarySeed =
-            File.ReadAllTextAsync(AppFiles.LibrariesSeedFile)
+            StorageProvider
+                .Storage.ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
                 .Result.FromJson<List<LibrarySeedDto>>()
             ?? [];
 
@@ -72,12 +74,15 @@ public static class LibrariesSeed
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
-        if (!File.Exists(AppFiles.FolderRootsSeedFile))
+        if (!StorageProvider.Storage.Exists(AppFiles.FolderRootsSeedFile))
             return;
         Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
 
         Folder[] folders =
-            File.ReadAllTextAsync(AppFiles.FolderRootsSeedFile).Result.FromJson<Folder[]>() ?? [];
+            StorageProvider
+                .Storage.ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
+                .Result.FromJson<Folder[]>()
+            ?? [];
 
         try
         {
@@ -93,7 +98,9 @@ public static class LibrariesSeed
         }
 
         // Register seeded folders with the middleware so they can serve files over HTTP
-        foreach (Folder folder in folders.Where(f => Directory.Exists(f.Path)))
+        foreach (
+            Folder folder in folders.Where(f => StorageProvider.Backend.DirectoryExists(f.Path))
+        )
             DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
 
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);
