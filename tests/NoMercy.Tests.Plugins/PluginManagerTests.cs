@@ -5,6 +5,7 @@ using NoMercy.Events;
 using NoMercy.Events.Plugins;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -27,7 +28,14 @@ public class PluginManagerTests : IDisposable
         IServiceProvider services = new MinimalServiceProvider();
         ILogger<PluginManager> logger = NullLogger<PluginManager>.Instance;
 
-        _manager = new(_eventBus, services, logger, _tempPluginsDir);
+        _manager = new(
+            _eventBus,
+            services,
+            logger,
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend()
+        );
     }
 
     public void Dispose()
@@ -55,7 +63,9 @@ public class PluginManagerTests : IDisposable
                 null!,
                 new MinimalServiceProvider(),
                 NullLogger<PluginManager>.Instance,
-                "/tmp"
+                "/tmp",
+                TestStorageHelper.CreateStorage("/tmp"),
+                TestStorageHelper.CreateBackend()
             );
         act.Should().Throw<ArgumentNullException>().WithParameterName("eventBus");
     }
@@ -68,7 +78,9 @@ public class PluginManagerTests : IDisposable
                 new InMemoryEventBus(),
                 null!,
                 NullLogger<PluginManager>.Instance,
-                "/tmp"
+                "/tmp",
+                TestStorageHelper.CreateStorage("/tmp"),
+                TestStorageHelper.CreateBackend()
             );
         act.Should().Throw<ArgumentNullException>().WithParameterName("serviceProvider");
     }
@@ -77,7 +89,14 @@ public class PluginManagerTests : IDisposable
     public void Constructor_NullLogger_Throws()
     {
         Action act = () =>
-            new PluginManager(new InMemoryEventBus(), new MinimalServiceProvider(), null!, "/tmp");
+            new PluginManager(
+                new InMemoryEventBus(),
+                new MinimalServiceProvider(),
+                null!,
+                "/tmp",
+                TestStorageHelper.CreateStorage("/tmp"),
+                TestStorageHelper.CreateBackend()
+            );
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
 
@@ -89,7 +108,9 @@ public class PluginManagerTests : IDisposable
                 new InMemoryEventBus(),
                 new MinimalServiceProvider(),
                 NullLogger<PluginManager>.Instance,
-                null!
+                null!,
+                TestStorageHelper.CreateStorage("/tmp"),
+                TestStorageHelper.CreateBackend()
             );
         act.Should().Throw<ArgumentNullException>().WithParameterName("pluginsPath");
     }
@@ -170,7 +191,9 @@ public class PluginManagerTests : IDisposable
             bus,
             new MinimalServiceProvider(),
             NullLogger<PluginManager>.Instance,
-            nonExistentPath
+            nonExistentPath,
+            TestStorageHelper.CreateStorage(nonExistentPath),
+            TestStorageHelper.CreateBackend()
         );
 
         Func<Task> act = () => manager.LoadPluginsFromDirectoryAsync();
@@ -251,7 +274,9 @@ public class PluginManagerTests : IDisposable
             bus,
             new MinimalServiceProvider(),
             NullLogger<PluginManager>.Instance,
-            _tempPluginsDir
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend()
         );
 
         Action act = () =>
@@ -280,9 +305,15 @@ public class PluginManagerTests : IDisposable
         InMemoryEventBus bus = new();
         MinimalServiceProvider services = new();
         ILogger logger = NullLogger.Instance;
-        string dataFolder = "/tmp/test-data";
+        string dataFolder = _tempPluginsDir;
 
-        PluginContext context = new(bus, services, logger, dataFolder);
+        PluginContext context = new(
+            bus,
+            services,
+            logger,
+            dataFolder,
+            TestStorageHelper.CreateStorage(dataFolder)
+        );
 
         context.EventBus.Should().BeSameAs(bus);
         context.Services.Should().BeSameAs(services);
@@ -294,7 +325,13 @@ public class PluginManagerTests : IDisposable
     public void PluginContext_NullEventBus_Throws()
     {
         Action act = () =>
-            new PluginContext(null!, new MinimalServiceProvider(), NullLogger.Instance, "/tmp");
+            new PluginContext(
+                null!,
+                new MinimalServiceProvider(),
+                NullLogger.Instance,
+                _tempPluginsDir,
+                TestStorageHelper.CreateStorage(_tempPluginsDir)
+            );
         act.Should().Throw<ArgumentNullException>().WithParameterName("eventBus");
     }
 
@@ -302,7 +339,13 @@ public class PluginManagerTests : IDisposable
     public void PluginContext_NullServices_Throws()
     {
         Action act = () =>
-            new PluginContext(new InMemoryEventBus(), null!, NullLogger.Instance, "/tmp");
+            new PluginContext(
+                new InMemoryEventBus(),
+                null!,
+                NullLogger.Instance,
+                _tempPluginsDir,
+                TestStorageHelper.CreateStorage(_tempPluginsDir)
+            );
         act.Should().Throw<ArgumentNullException>().WithParameterName("services");
     }
 
@@ -310,7 +353,13 @@ public class PluginManagerTests : IDisposable
     public void PluginContext_NullLogger_Throws()
     {
         Action act = () =>
-            new PluginContext(new InMemoryEventBus(), new MinimalServiceProvider(), null!, "/tmp");
+            new PluginContext(
+                new InMemoryEventBus(),
+                new MinimalServiceProvider(),
+                null!,
+                _tempPluginsDir,
+                TestStorageHelper.CreateStorage(_tempPluginsDir)
+            );
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
 
@@ -322,7 +371,8 @@ public class PluginManagerTests : IDisposable
                 new InMemoryEventBus(),
                 new MinimalServiceProvider(),
                 NullLogger.Instance,
-                null!
+                null!,
+                TestStorageHelper.CreateStorage(_tempPluginsDir)
             );
         act.Should().Throw<ArgumentNullException>().WithParameterName("dataFolderPath");
     }

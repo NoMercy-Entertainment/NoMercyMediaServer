@@ -6,6 +6,7 @@ using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Libraries;
+using NoMercy.Providers.Helpers;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -24,7 +25,13 @@ public class FileRescanJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         LibraryRepository libraryRepository = new(context);
-        LibraryManager libraryManager = new(libraryRepository, jobDispatcher, context);
+        LibraryManager libraryManager = new(
+            libraryRepository,
+            jobDispatcher,
+            context,
+            StorageProvider.Backend,
+            StorageProvider.Storage
+        );
 
         await libraryManager.RescanFiles(LibraryId, Id);
 

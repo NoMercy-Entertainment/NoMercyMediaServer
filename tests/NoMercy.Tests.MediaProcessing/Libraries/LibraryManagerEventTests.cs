@@ -6,6 +6,7 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Storage;
 
 namespace NoMercy.Tests.MediaProcessing.Libraries;
 
@@ -63,9 +64,11 @@ public class LibraryManagerEventTests : IDisposable
             }
         );
 
+        IStorageBackend backend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
         LibraryRepository repo = new(_context);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, backend, storage, bus);
 
         await manager.ProcessLibrary(Ulid.NewUlid());
 
@@ -104,9 +107,11 @@ public class LibraryManagerEventTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
+        IStorageBackend backend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
         LibraryRepository repo = new(_context);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, backend, storage, bus);
 
         await manager.ProcessLibrary(libraryId);
 
@@ -137,9 +142,11 @@ public class LibraryManagerEventTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
+        IStorageBackend backend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
         LibraryRepository repo = new(_context);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context);
+        LibraryManager manager = new(repo, dispatcher, _context, backend, storage);
 
         await manager.ProcessLibrary(libraryId);
     }
@@ -169,9 +176,11 @@ public class LibraryManagerEventTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
+        IStorageBackend backend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
         LibraryRepository repo = new(_context);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, backend, storage, bus);
 
         await manager.ProcessLibrary(libraryId);
 
@@ -205,9 +214,11 @@ public class LibraryManagerEventTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
+        IStorageBackend backend = new SystemIoStorageBackend();
+        IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
         LibraryRepository repo = new(_context);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, backend, storage, bus);
 
         await manager.ProcessLibrary(libraryId);
 

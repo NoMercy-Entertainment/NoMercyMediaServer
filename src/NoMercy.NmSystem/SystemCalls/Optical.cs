@@ -264,6 +264,7 @@ public static class Optical
 
     public static OpticalDiscType GetDiscType(string drivePath)
     {
+        // LOCAL-ONLY: Optical is a static class in NmSystem; no reference to NoMercy.Providers.
         IStorageBackend backend = new SystemIoStorageBackend();
 
         if (!backend.DirectoryExists(drivePath))

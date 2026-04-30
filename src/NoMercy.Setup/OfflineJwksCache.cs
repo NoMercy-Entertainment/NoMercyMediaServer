@@ -10,6 +10,8 @@ namespace NoMercy.Setup;
 
 public static class OfflineJwksCache
 {
+    // LOCAL-ONLY: OfflineJwksCache is called during DI registration (ConfigureAuth) and
+    // AuthManager.InitializeAsync — both run before StorageProvider is initialized.
     private static readonly IStorageBackend Backend = new SystemIoStorageBackend();
     private static readonly object CacheLock = new();
     private static RsaSecurityKey? _cachedSigningKey;

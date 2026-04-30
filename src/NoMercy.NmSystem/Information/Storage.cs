@@ -77,27 +77,26 @@ public class Storage
 
     #region Space Information
 
-    public static long GetUsedSpace(string path)
+    public static long GetUsedSpace(IStorageBackend backend, string path)
     {
         long totalSpace = GetTotalSpace(path);
-        long freeSpace = GetFreeSpace(path);
+        long freeSpace = GetFreeSpace(backend, path);
         return totalSpace - freeSpace;
     }
 
-    private static long GetFreeSpace(string path)
+    private static long GetFreeSpace(IStorageBackend backend, string path)
     {
         if (Software.IsWindows)
-            return GetWindowsFreeSpace(path);
+            return GetWindowsFreeSpace(backend, path);
 
         if (Software.IsLinux || Software.IsMac)
-            return GetUnixFreeSpace(path);
+            return GetUnixFreeSpace(backend, path);
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
     }
 
-    private static long GetWindowsFreeSpace(string path)
+    private static long GetWindowsFreeSpace(IStorageBackend backend, string path)
     {
-        IStorageBackend backend = new SystemIoStorageBackend();
         if (!backend.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
@@ -134,9 +133,8 @@ public class Storage
     [DllImport("libc.so.6", EntryPoint = "statvfs", SetLastError = true)]
     private static extern int statvfs(string path, out Statvfs buf);
 
-    private static long GetUnixFreeSpace(string path)
+    private static long GetUnixFreeSpace(IStorageBackend backend, string path)
     {
-        IStorageBackend backend = new SystemIoStorageBackend();
         if (!backend.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
@@ -169,20 +167,19 @@ public class Storage
 
     #region File System Information
 
-    public static string GetFileSystemType(string path)
+    public static string GetFileSystemType(IStorageBackend backend, string path)
     {
         if (Software.IsWindows)
-            return GetWindowsFileSystemType(path);
+            return GetWindowsFileSystemType(backend, path);
 
         if (Software.IsLinux || Software.IsMac)
-            return GetUnixFileSystemType(path);
+            return GetUnixFileSystemType(backend, path);
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
     }
 
-    private static string GetWindowsFileSystemType(string path)
+    private static string GetWindowsFileSystemType(IStorageBackend backend, string path)
     {
-        IStorageBackend backend = new SystemIoStorageBackend();
         if (!backend.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
@@ -201,9 +198,8 @@ public class Storage
         throw new("File system type not found.");
     }
 
-    private static string GetUnixFileSystemType(string path)
+    private static string GetUnixFileSystemType(IStorageBackend backend, string path)
     {
-        IStorageBackend backend = new SystemIoStorageBackend();
         if (!backend.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 

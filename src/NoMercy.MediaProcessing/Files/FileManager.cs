@@ -16,6 +16,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
 using Serilog.Events;
 using SubtitlesParserV2;
@@ -156,6 +157,7 @@ public partial class FileManager(IFileRepository fileRepository, IStorage storag
                 if (!_storage.Exists(path))
                 {
                     string? match = Str.FindMatchingDirectory(
+                        StorageProvider.Backend,
                         libraryFolder.Folder.Path,
                         tv.Folder.Replace("/", "")
                     );
@@ -178,6 +180,7 @@ public partial class FileManager(IFileRepository fileRepository, IStorage storag
                 if (!_storage.Exists(path))
                 {
                     string? match = Str.FindMatchingDirectory(
+                        StorageProvider.Backend,
                         libraryFolder.Folder.Path,
                         movie.Folder.Replace("/", "")
                     );
@@ -872,7 +875,7 @@ public partial class FileManager(IFileRepository fileRepository, IStorage storag
 
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Library library, string path)
     {
-        MediaScan mediaScan = new();
+        MediaScan mediaScan = new(StorageProvider.Backend);
 
         int depth = library.Type switch
         {
@@ -918,7 +921,11 @@ public partial class FileManager(IFileRepository fileRepository, IStorage storag
 
             if (!_storage.Exists(path))
             {
-                string? match = Str.FindMatchingDirectory(rootFolder.Path, folder);
+                string? match = Str.FindMatchingDirectory(
+                    StorageProvider.Backend,
+                    rootFolder.Path,
+                    folder
+                );
                 if (match != null)
                     path = match;
             }

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -17,7 +18,7 @@ public class PluginConfigurationTests : IDisposable
             "nomercy-config-tests-" + Guid.NewGuid().ToString("N")
         );
         Directory.CreateDirectory(_tempDir);
-        _config = new(_tempDir);
+        _config = new(_tempDir, TestStorageHelper.CreateStorage(_tempDir));
     }
 
     public void Dispose()
@@ -49,7 +50,7 @@ public class PluginConfigurationTests : IDisposable
     [Fact]
     public void Constructor_NullPath_ThrowsArgumentException()
     {
-        Action act = () => new PluginConfiguration(null!);
+        Action act = () => new PluginConfiguration(null!, TestStorageHelper.CreateStorage(_tempDir));
 
         act.Should().Throw<ArgumentException>();
     }
@@ -57,7 +58,7 @@ public class PluginConfigurationTests : IDisposable
     [Fact]
     public void Constructor_EmptyPath_ThrowsArgumentException()
     {
-        Action act = () => new PluginConfiguration("");
+        Action act = () => new PluginConfiguration("", TestStorageHelper.CreateStorage(_tempDir));
 
         act.Should().Throw<ArgumentException>();
     }
@@ -199,7 +200,8 @@ public class PluginConfigurationTests : IDisposable
     public void SaveConfiguration_CreatesDirectoryIfNeeded()
     {
         string nestedDir = Path.Combine(_tempDir, "nested", "deep");
-        PluginConfiguration nestedConfig = new(nestedDir);
+        Directory.CreateDirectory(nestedDir);
+        PluginConfiguration nestedConfig = new(nestedDir, TestStorageHelper.CreateStorage(nestedDir));
 
         nestedConfig.SaveConfiguration(new TestConfig { ApiKey = "nested" });
 

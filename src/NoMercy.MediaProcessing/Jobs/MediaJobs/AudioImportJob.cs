@@ -16,6 +16,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
+using NoMercy.Providers.Helpers;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using SixLabors.ImageSharp;
@@ -515,7 +516,7 @@ public class AudioImportJob : AbstractMusicFolderJob
 
     private async IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)> GetAudioFiles()
     {
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(StorageProvider.Backend);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             .EnableFileListing()

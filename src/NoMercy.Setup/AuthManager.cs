@@ -26,10 +26,10 @@ public class AuthManager
     );
     private CancellationTokenSource? _refreshCts;
 
-    public AuthManager(AppDbContext appContext, IStorageBackend? backend = null)
+    public AuthManager(AppDbContext appContext, IStorageBackend backend)
     {
         _appContext = appContext;
-        _backend = backend ?? new SystemIoStorageBackend();
+        _backend = backend;
     }
 
     // ── Public API ───────────────────────────────────────────────────────────

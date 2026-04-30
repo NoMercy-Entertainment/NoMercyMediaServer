@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Setup;
+using NoMercy.Storage;
 
 namespace NoMercy.Tests.Setup;
 
@@ -27,7 +28,7 @@ public class AuthManagerTests : IDisposable
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(_appContext);
+        _authManager = new(_appContext, new SystemIoStorageBackend());
     }
 
     public void Dispose()

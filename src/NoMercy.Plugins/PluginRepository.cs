@@ -27,24 +27,15 @@ public class PluginRepository : IPluginRepository
         HttpClient httpClient,
         ILogger logger,
         string pluginsPath,
-        IStorage? storage = null
+        IStorage storage
     )
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginsPath);
+        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
 
         string configDir = Path.Combine(pluginsPath, "configurations");
-
-        if (storage is not null)
-        {
-            _storage = storage;
-        }
-        else
-        {
-            IStorageBackend backend = new SystemIoStorageBackend();
-            _storage = new LocalStorage(backend, new StoragePathGuard([pluginsPath], backend));
-        }
 
         if (!_storage.Exists(configDir))
         {

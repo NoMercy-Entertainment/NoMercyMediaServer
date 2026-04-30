@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Setup;
+using NoMercy.Storage;
 
 namespace NoMercy.Tests.Setup;
 
@@ -391,7 +392,7 @@ public class EndToEndMiddlewareFlowTests
         dbContext.Database.OpenConnection();
         dbContext.Database.EnsureCreated();
 
-        AuthManager authManager = new(dbContext);
+        AuthManager authManager = new(dbContext, new SystemIoStorageBackend());
         return new(state, authManager);
     }
 

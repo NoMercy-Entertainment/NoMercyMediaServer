@@ -18,6 +18,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -215,7 +216,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
             artistRepository
         );
 
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(StorageProvider.Backend);
 
         // V3 encoder writes to BasePath — scan picks up all encoded output in that folder
         MediaFolderExtend mediaFolder = (

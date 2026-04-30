@@ -1,4 +1,5 @@
 using NoMercy.Networking.Discovery;
+using NoMercy.Storage;
 using Xunit;
 
 namespace NoMercy.Tests.Networking;
@@ -90,7 +91,7 @@ public class NetworkingExternalIpTests
     public void ExternalIp_ReturnsCachedValueWithoutBlocking()
     {
         // After setting ExternalIp, the getter returns the cached value instantly.
-        NetworkDiscovery discovery = new();
+        NetworkDiscovery discovery = new(new SystemIoStorageBackend());
         string original = discovery.ExternalIp;
 
         discovery.ExternalIp = "1.2.3.4";

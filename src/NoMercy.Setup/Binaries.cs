@@ -44,10 +44,10 @@ public class Binaries
     private const string GithubCloudflaredApiUrl =
         "https://api.github.com/repos/cloudflare/cloudflared/releases/latest";
 
-    public Binaries(IStorageBackend? backend = null)
+    public Binaries(IStorageBackend backend, IStorage storage)
     {
-        _backend = backend ?? new SystemIoStorageBackend();
-        _storage = new LocalStorage(_backend, new StoragePathGuard([], _backend));
+        _backend = backend;
+        _storage = storage;
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
     }
@@ -513,7 +513,7 @@ public class Binaries
             return ServerUpdateResult.UseInstaller;
         }
 
-        string? onDiskVersion = Software.GetFileVersion(AppFiles.ServerExePath);
+        string? onDiskVersion = Software.GetFileVersion(_backend, AppFiles.ServerExePath);
         if (
             onDiskVersion is not null
             && string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase)

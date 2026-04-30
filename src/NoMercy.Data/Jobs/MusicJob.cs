@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.Providers.Helpers;
 using NoMercyQueue.Core.Interfaces;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -37,7 +38,7 @@ public class MusicJob : IShouldQueue, IDisposable, IAsyncDisposable
         if (Library is null)
             return;
 
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(StorageProvider.Backend);
         IEnumerable<MediaFolderExtend> mediaFolder = await mediaScan
             .EnableFileListing()
             .DisableRegexFilter()

@@ -21,9 +21,9 @@ public class NetworkDiscovery : INetworkDiscovery
     private INatDevice? _device;
     private bool _hasFoundDevice;
 
-    public NetworkDiscovery(IStorageBackend? backend = null)
+    public NetworkDiscovery(IStorageBackend backend)
     {
-        _backend = backend ?? new SystemIoStorageBackend();
+        _backend = backend;
     }
 
     public string InternalIp

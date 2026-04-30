@@ -7,6 +7,7 @@ using NoMercy.Events.FileWatcher;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
 using Serilog.Events;
 
@@ -18,8 +19,9 @@ public class LibraryFileWatcher
     private static readonly Lazy<LibraryFileWatcher> _instance = new(() => new());
     public static LibraryFileWatcher Instance => _instance.Value;
 
-    private static readonly FolderWatcher Fs = new();
-    private static readonly IStorageBackend StorageBackend = new SystemIoStorageBackend();
+    private static FolderWatcher? _fs;
+    private static FolderWatcher Fs => _fs ??= new(StorageProvider.Backend);
+    private static IStorageBackend StorageBackend => StorageProvider.Backend;
 
     private static readonly Dictionary<string, FileChangeGroup> FileChangeGroups = new();
     private static readonly Lock LockObject = new();

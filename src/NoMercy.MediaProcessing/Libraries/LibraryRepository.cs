@@ -5,6 +5,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.Providers.Helpers;
 
 namespace NoMercy.MediaProcessing.Libraries;
 
@@ -12,7 +13,7 @@ public class LibraryRepository(MediaContext context) : ILibraryRepository
 {
     public async Task<IEnumerable<MediaFolderExtend>> GetRootFoldersAsync(string path)
     {
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(StorageProvider.Backend);
         return (await mediaScan.DisableRegexFilter().Process(path, 2))
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();

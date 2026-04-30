@@ -4,6 +4,7 @@ using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 using NoMercy.Setup;
 using NoMercy.Setup.Dto;
+using NoMercy.Storage;
 
 namespace NoMercy.Tests.Setup;
 
@@ -111,7 +112,7 @@ public class DegradedModeStartupTests
     {
         // GetInternalIp now uses NetworkInterface enumeration first,
         // which works without network connectivity
-        NetworkDiscovery discovery = new();
+        NetworkDiscovery discovery = new(new SystemIoStorageBackend());
         string ip = discovery.InternalIp;
 
         Assert.False(
@@ -123,7 +124,7 @@ public class DegradedModeStartupTests
     [Fact]
     public void GetInternalIp_ReturnsValidIpFormat()
     {
-        NetworkDiscovery discovery = new();
+        NetworkDiscovery discovery = new(new SystemIoStorageBackend());
         string ip = discovery.InternalIp;
 
         // Should be a valid IPv4 address
@@ -268,7 +269,7 @@ public class CloudflareFallbackTests
     {
         // ExternalIp property should return "0.0.0.0" when no IP has been discovered,
         // not throw an exception
-        NetworkDiscovery discovery = new();
+        NetworkDiscovery discovery = new(new SystemIoStorageBackend());
         string ip = discovery.ExternalIp;
         Assert.NotNull(ip);
     }
@@ -336,7 +337,7 @@ public class CloudflareFallbackTests
         // api.nomercy.tv (Cloudflare) is down, it should not throw
         try
         {
-            NetworkDiscovery discovery = new();
+            NetworkDiscovery discovery = new(new SystemIoStorageBackend());
             await discovery.DiscoverExternalIpAsync();
         }
         catch (Exception ex)

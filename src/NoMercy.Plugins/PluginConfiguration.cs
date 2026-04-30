@@ -18,20 +18,12 @@ public class PluginConfiguration : IPluginConfiguration
         AllowTrailingCommas = true,
     };
 
-    public PluginConfiguration(string dataFolderPath, IStorage? storage = null)
+    public PluginConfiguration(string dataFolderPath, IStorage storage)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dataFolderPath);
+        ArgumentNullException.ThrowIfNull(storage);
         _configFilePath = Path.Combine(dataFolderPath, "config.json");
-
-        if (storage is not null)
-        {
-            _storage = storage;
-        }
-        else
-        {
-            IStorageBackend backend = new SystemIoStorageBackend();
-            _storage = new LocalStorage(backend, new StoragePathGuard([dataFolderPath], backend));
-        }
+        _storage = storage;
     }
 
     public T? GetConfiguration<T>()

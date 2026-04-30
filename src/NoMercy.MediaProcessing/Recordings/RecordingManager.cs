@@ -12,6 +12,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.FanArt.Client;
+using NoMercy.Providers.Helpers;
 using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
 using SixLabors.ImageSharp;
@@ -71,7 +72,7 @@ public partial class RecordingManager(
             LogEventLevel.Verbose
         );
 
-        MediaScan mediaScan = new();
+        MediaScan mediaScan = new(StorageProvider.Backend);
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType("music")

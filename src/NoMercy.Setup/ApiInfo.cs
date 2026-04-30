@@ -12,6 +12,9 @@ namespace NoMercy.Setup;
 
 public class ApiInfo
 {
+    // LOCAL-ONLY: ApiInfo.RequestInfo is called in startup phase 1 before StorageProvider
+    // is initialized; threading IStorageBackend through every Program.cs startup call is
+    // disproportionate work for a read-only cache file check.
     private static readonly IStorageBackend Backend = new SystemIoStorageBackend();
     public static string MakeMkvKey { get; set; } = string.Empty;
     public static string TmdbKey { get; set; } = string.Empty;

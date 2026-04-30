@@ -12,9 +12,9 @@ public class AppProcessManager
     private readonly IStorageBackend _backend;
     private Process? _appProcess;
 
-    public AppProcessManager(IStorageBackend? backend = null)
+    public AppProcessManager(IStorageBackend backend)
     {
-        _backend = backend ?? new SystemIoStorageBackend();
+        _backend = backend;
     }
 
     public bool IsRunning

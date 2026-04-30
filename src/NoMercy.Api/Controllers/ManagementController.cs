@@ -16,6 +16,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Providers.Helpers;
 using NoMercy.Setup;
 using NoMercy.Storage;
 using NoMercyQueue;
@@ -38,7 +39,8 @@ public class ManagementController(
     SetupState setupState,
     INetworkDiscovery networkDiscovery,
     ISessionManager sessionManager,
-    IStorageBackend storageBackend
+    IStorageBackend storageBackend,
+    IStorage storage
 ) : BaseController
 {
     [HttpGet("status")]
@@ -238,7 +240,10 @@ public class ManagementController(
                 );
             }
 
-            string? onDiskVersion = Software.GetFileVersion(AppFiles.ServerExePath);
+            string? onDiskVersion = Software.GetFileVersion(
+                StorageProvider.Backend,
+                AppFiles.ServerExePath
+            );
             string runningVersion = Software.GetReleaseVersion();
             if (
                 onDiskVersion is not null
@@ -260,7 +265,10 @@ public class ManagementController(
             }
 
             Logger.Setup("Downloading server update on demand...");
-            ServerUpdateResult result = await new Binaries(storageBackend).DownloadServerUpdate();
+            ServerUpdateResult result = await new Binaries(
+                storageBackend,
+                storage
+            ).DownloadServerUpdate();
 
             switch (result)
             {

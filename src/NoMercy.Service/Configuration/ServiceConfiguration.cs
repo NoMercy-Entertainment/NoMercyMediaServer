@@ -51,6 +51,7 @@ using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
 using NoMercy.Setup;
+using NoMercy.Storage;
 using NoMercyQueue.Extensions;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using DatabaseActivity = NoMercy.Database.Activity;
@@ -319,7 +320,8 @@ public static class ServiceConfiguration
             IServiceScope authScope = scopeFactory.CreateScope();
             AppDbContext authDbContext =
                 authScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            return new(authDbContext);
+            IStorageBackend storageBackend = sp.GetRequiredService<IStorageBackend>();
+            return new(authDbContext, storageBackend);
         });
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
@@ -368,7 +370,8 @@ public static class ServiceConfiguration
         // Network discovery (replaces static Networking.Networking IP/address members)
         services.AddSingleton<INetworkDiscovery>(sp =>
         {
-            NetworkDiscovery discovery = new();
+            IStorageBackend storageBackend = sp.GetRequiredService<IStorageBackend>();
+            NetworkDiscovery discovery = new(storageBackend);
             if (!string.IsNullOrEmpty(StartupOptions.OverrideInternalIp))
                 discovery.InternalIp = StartupOptions.OverrideInternalIp;
             if (!string.IsNullOrEmpty(StartupOptions.OverrideExternalIp))

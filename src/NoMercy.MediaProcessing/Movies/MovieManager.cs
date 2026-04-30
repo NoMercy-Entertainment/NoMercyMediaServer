@@ -9,6 +9,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Networks;
@@ -47,6 +48,7 @@ public class MovieManager(
             if (!_storage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
+                    StorageProvider.Backend,
                     folderLibrary.Folder.Path,
                     baseUrl.Replace("/", "")
                 );

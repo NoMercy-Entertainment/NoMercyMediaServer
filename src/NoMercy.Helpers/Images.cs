@@ -10,7 +10,8 @@ namespace NoMercy.Helpers;
 
 public static class Images
 {
-    private static readonly IStorageBackend _backend = new SystemIoStorageBackend();
+    // LOCAL-ONLY: NoMercy.Helpers cannot reference NoMercy.Providers (circular dependency).
+    private static IStorageBackend _backend => new SystemIoStorageBackend();
 
     static Images()
     {

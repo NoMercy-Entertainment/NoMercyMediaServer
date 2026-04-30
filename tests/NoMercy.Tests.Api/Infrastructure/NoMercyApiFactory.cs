@@ -23,6 +23,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Service;
 using NoMercy.Setup;
+using NoMercy.Storage;
 
 namespace NoMercy.Tests.Api.Infrastructure;
 
@@ -502,7 +503,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         AppDbContext testAppContext = new();
         testAppContext.Database.EnsureCreated();
 
-        AuthManager testAuthManager = new(testAppContext);
+        AuthManager testAuthManager = new(testAppContext, new SystemIoStorageBackend());
         services.AddSingleton(testAuthManager);
         services.AddSingleton(new SetupEndpoints(completedState, testAuthManager));
         services.AddSingleton(new BootOrchestrator(completedState, testAuthManager));

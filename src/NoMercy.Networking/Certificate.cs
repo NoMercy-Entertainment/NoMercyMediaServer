@@ -18,6 +18,9 @@ namespace NoMercy.Networking;
 
 public static class Certificate
 {
+    // LOCAL-ONLY: Certificate runs before StorageProvider is initialized (startup phase 1-3).
+    // DI is not available here; replacing this would require threading IStorageBackend
+    // through every startup call site including Program.cs and BootOrchestrator.
     private static readonly IStorageBackend _backend = new SystemIoStorageBackend();
     private static X509Certificate2? _cachedCertificate;
     private static readonly object _certLock = new();

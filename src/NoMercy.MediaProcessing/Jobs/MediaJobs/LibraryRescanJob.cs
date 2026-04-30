@@ -5,6 +5,7 @@
 using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.Libraries;
+using NoMercy.Providers.Helpers;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -25,7 +26,14 @@ public class LibraryRescanJob : AbstractMediaJob
         IEventBus? eventBus = EventBusProvider.IsConfigured ? EventBusProvider.Current : null;
 
         LibraryRepository libraryRepository = new(context);
-        LibraryManager libraryManager = new(libraryRepository, jobDispatcher, context, eventBus);
+        LibraryManager libraryManager = new(
+            libraryRepository,
+            jobDispatcher,
+            context,
+            StorageProvider.Backend,
+            StorageProvider.Storage,
+            eventBus
+        );
 
         await libraryManager.ProcessLibrary(LibraryId);
     }

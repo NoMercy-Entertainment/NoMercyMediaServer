@@ -1,6 +1,7 @@
 using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
+using NoMercy.Storage;
 using NoMercyQueue;
 using Serilog.Events;
 using AppFiles = NoMercy.NmSystem.Information.AppFiles;
@@ -62,7 +63,13 @@ public class Start
             // Auth is now handled by AuthManager (DI) via BootOrchestrator — not here.
             new(
                 "Binaries",
-                () => new Binaries().DownloadAll(),
+                // LOCAL-ONLY: Start.cs is in NoMercy.Setup which cannot reference NoMercy.Providers (circular).
+                () =>
+                {
+                    IStorageBackend backend = new SystemIoStorageBackend();
+                    IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
+                    return new Binaries(backend, storage).DownloadAll();
+                },
                 CanDefer: false,
                 Phase: 2,
                 DependsOn: ["NetworkProbe"]

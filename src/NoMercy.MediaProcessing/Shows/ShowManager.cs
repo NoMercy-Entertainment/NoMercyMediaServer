@@ -10,6 +10,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -53,6 +54,7 @@ public class ShowManager(
             if (!_storage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
+                    StorageProvider.Backend,
                     folderLibrary.Folder.Path,
                     baseUrl.Replace("/", "")
                 );

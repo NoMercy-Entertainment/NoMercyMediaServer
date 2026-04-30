@@ -9,7 +9,12 @@ public class FolderWatcher : IDisposable
 {
     private static readonly List<IDisposable> Watchers = [];
     private static volatile FolderWatcher? _instance;
-    private static readonly IStorageBackend StorageBackend = new SystemIoStorageBackend();
+    private readonly IStorageBackend _storageBackend;
+
+    public FolderWatcher(IStorageBackend storageBackend)
+    {
+        _storageBackend = storageBackend;
+    }
 
     public event Action<FileWatcherEventArgs>? OnChanged;
     public event Action<FileWatcherEventArgs>? OnCreated;
@@ -28,7 +33,7 @@ public class FolderWatcher : IDisposable
         List<Action> disposers = [];
         disposers.AddRange(
             from folder in foldersToWatch
-            where StorageBackend.DirectoryExists(folder)
+            where _storageBackend.DirectoryExists(folder)
             select CreateWatcher(folder)
         );
 

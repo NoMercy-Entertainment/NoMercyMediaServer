@@ -6,7 +6,8 @@ namespace NoMercy.Setup;
 
 public static class DesktopIconCreator
 {
-    private static readonly IStorageBackend _backend = new SystemIoStorageBackend();
+    // LOCAL-ONLY: DesktopIconCreator is in NoMercy.Setup which cannot reference NoMercy.Providers (circular).
+    private static IStorageBackend _backend => new SystemIoStorageBackend();
 
     public static void CreateDesktopIcon(string appName, string appPath, string iconPath)
     {

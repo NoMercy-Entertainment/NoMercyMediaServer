@@ -28,17 +28,6 @@ public static class PluginManifestParser
         return manifest;
     }
 
-    public static Task<PluginManifest> ParseFileAsync(
-        string filePath,
-        CancellationToken ct = default
-    )
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        IStorageBackend backend = new SystemIoStorageBackend();
-        IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
-        return ParseFileAsync(filePath, storage, ct);
-    }
-
     public static async Task<PluginManifest> ParseFileAsync(
         string filePath,
         IStorage storage,

@@ -9,7 +9,8 @@ namespace NoMercy.Helpers;
 
 public static class CredentialManager
 {
-    private static readonly IStorageBackend _backend = new SystemIoStorageBackend();
+    // LOCAL-ONLY: NoMercy.Helpers cannot reference NoMercy.Providers (circular dependency).
+    private static IStorageBackend _backend => new SystemIoStorageBackend();
 
     private class SecretSerializer : ISecretSerializer
     {

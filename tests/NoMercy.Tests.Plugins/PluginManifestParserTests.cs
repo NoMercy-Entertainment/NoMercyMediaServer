@@ -2,6 +2,7 @@ using System.Text.Json;
 using FluentAssertions;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -221,7 +222,8 @@ public class PluginManifestParserTests : IDisposable
         string filePath = Path.Combine(_tempDir, "plugin.json");
         await File.WriteAllTextAsync(filePath, json);
 
-        PluginManifest manifest = await PluginManifestParser.ParseFileAsync(filePath);
+        IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
+        PluginManifest manifest = await PluginManifestParser.ParseFileAsync(filePath, storage);
 
         manifest.Id.Should().Be(id);
         manifest.Name.Should().Be("FilePlugin");
@@ -230,7 +232,8 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public async Task ParseFileAsync_FileNotFound_ThrowsFileNotFoundException()
     {
-        Func<Task> act = () => PluginManifestParser.ParseFileAsync("/nonexistent/plugin.json");
+        IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
+        Func<Task> act = () => PluginManifestParser.ParseFileAsync("/nonexistent/plugin.json", storage);
 
         await act.Should().ThrowAsync<FileNotFoundException>();
     }
@@ -238,7 +241,8 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public async Task ParseFileAsync_NullPath_ThrowsArgumentException()
     {
-        Func<Task> act = () => PluginManifestParser.ParseFileAsync(null!);
+        IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
+        Func<Task> act = () => PluginManifestParser.ParseFileAsync(null!, storage);
 
         await act.Should().ThrowAsync<ArgumentException>();
     }

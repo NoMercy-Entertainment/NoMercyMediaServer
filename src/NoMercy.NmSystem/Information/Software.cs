@@ -91,10 +91,6 @@ public static class Software
         }
     }
 
-    // Backward-compatible overload — callers outside NmSystem will be migrated in the Tier-3 pass.
-    public static string? GetFileVersion(string exePath) =>
-        GetFileVersion(new SystemIoStorageBackend(), exePath);
-
     internal static DateTime GetBootTime()
     {
         if (IsWindows)

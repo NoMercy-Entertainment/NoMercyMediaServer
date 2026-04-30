@@ -470,10 +470,6 @@ public static partial class Str
         return null;
     }
 
-    // Backward-compatible overload — callers outside NmSystem will be migrated in the Tier-3 pass.
-    public static string? FindMatchingDirectory(string rootPath, string expectedFolderName) =>
-        FindMatchingDirectory(new SystemIoStorageBackend(), rootPath, expectedFolderName);
-
     public static string TitleSort(this object self, int? parseYear)
     {
         return _parseTitleSort(

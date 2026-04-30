@@ -11,6 +11,7 @@ public class FilePermissions
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            // LOCAL-ONLY: FilePermissions is a static class in NmSystem; no reference to NoMercy.Providers.
             IStorageBackend backend = new SystemIoStorageBackend();
 
             if (backend.FileExists(path))

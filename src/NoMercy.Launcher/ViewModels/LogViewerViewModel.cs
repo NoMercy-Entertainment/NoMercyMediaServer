@@ -163,6 +163,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         try
         {
             string logPath = AppFiles.LogPath;
+            // LOCAL-ONLY: Launcher is a separate GUI process; NoMercy.Service DI is not available here.
             IStorageBackend backend = new SystemIoStorageBackend();
             IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
             if (!backend.DirectoryExists(logPath))

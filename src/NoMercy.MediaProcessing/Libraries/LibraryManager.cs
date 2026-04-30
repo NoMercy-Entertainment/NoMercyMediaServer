@@ -13,6 +13,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -27,6 +28,8 @@ public class LibraryManager(
     LibraryRepository libraryRepository,
     JobDispatcher jobDispatcher,
     MediaContext mediaContext,
+    IStorageBackend storageBackend,
+    IStorage storage,
     IEventBus? eventBus = null
 ) : BaseManager, ILibraryManager
 {
@@ -181,7 +184,7 @@ public class LibraryManager(
         HashSet<string> existingFolders
     )
     {
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(StorageProvider.Backend);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(path, depth);
 
         List<MediaFolderExtend> newFolders = rootFolders
@@ -227,7 +230,7 @@ public class LibraryManager(
         HashSet<string> existingFolders
     )
     {
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(StorageProvider.Backend);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(path, depth)
         )
@@ -273,7 +276,7 @@ public class LibraryManager(
 
     private async Task<int> ScanVideoFolder(string path, int depth)
     {
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(StorageProvider.Backend);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(path, depth);
 
         IEventBus? bus =
@@ -309,7 +312,7 @@ public class LibraryManager(
 
     private async Task<int> ScanAudioFolder(string path, int depth)
     {
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(StorageProvider.Backend);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(path, depth)
         )
@@ -454,12 +457,6 @@ public class LibraryManager(
             Logger.App("Library with ID " + libraryId + " not found", LogEventLevel.Warning);
             return;
         }
-
-        IStorageBackend storageBackend = new SystemIoStorageBackend();
-        IStorage storage = new LocalStorage(
-            storageBackend,
-            new StoragePathGuard([], storageBackend)
-        );
 
         FileRepository fileRepository = new(mediaContext, storageBackend);
         FileManager fileManager = new(fileRepository, storage);

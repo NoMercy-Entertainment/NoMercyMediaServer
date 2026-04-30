@@ -23,8 +23,8 @@ public class PluginManager : IPluginManager, IDisposable
         IServiceProvider serviceProvider,
         ILogger<PluginManager> logger,
         string pluginsPath,
-        IStorage? storage = null,
-        IStorageBackend? backend = null
+        IStorage storage,
+        IStorageBackend backend
     )
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -32,17 +32,8 @@ public class PluginManager : IPluginManager, IDisposable
             serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _pluginsPath = pluginsPath ?? throw new ArgumentNullException(nameof(pluginsPath));
-
-        _backend = backend ?? new SystemIoStorageBackend();
-
-        if (storage is not null)
-        {
-            _storage = storage;
-        }
-        else
-        {
-            _storage = new LocalStorage(_backend, new StoragePathGuard([pluginsPath], _backend));
-        }
+        _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
     }
 
     public IReadOnlyList<PluginInfo> GetInstalledPlugins()
@@ -106,7 +97,7 @@ public class PluginManager : IPluginManager, IDisposable
                     _storage.CreateDirectory(dataFolder);
                 }
 
-                PluginContext context = new(_eventBus, _serviceProvider, _logger, dataFolder);
+                PluginContext context = new(_eventBus, _serviceProvider, _logger, dataFolder, _storage);
                 loaded.Instance.Initialize(context);
                 PluginLifecycle.Transition(loaded.Info, PluginStatus.Active);
 
@@ -319,7 +310,8 @@ public class PluginManager : IPluginManager, IDisposable
                             _eventBus,
                             _serviceProvider,
                             _logger,
-                            dataFolder
+                            dataFolder,
+                            _storage
                         );
 
                         try
@@ -489,7 +481,7 @@ public class PluginManager : IPluginManager, IDisposable
                     _storage.CreateDirectory(dataFolder);
                 }
 
-                PluginContext context = new(_eventBus, _serviceProvider, _logger, dataFolder);
+                PluginContext context = new(_eventBus, _serviceProvider, _logger, dataFolder, _storage);
 
                 try
                 {

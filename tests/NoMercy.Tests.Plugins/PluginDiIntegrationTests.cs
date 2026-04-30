@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -92,7 +93,9 @@ public class PluginDiIntegrationTests : IDisposable
             bus,
             new MinimalServiceProvider(),
             NullLogger<PluginManager>.Instance,
-            _tempPluginsDir
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend()
         );
 
         Action act = () => services!.RegisterPluginServices(manager);
@@ -120,7 +123,9 @@ public class PluginDiIntegrationTests : IDisposable
             bus,
             new MinimalServiceProvider(),
             NullLogger<PluginManager>.Instance,
-            _tempPluginsDir
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend()
         );
 
         services.RegisterPluginServices(manager);
@@ -137,7 +142,9 @@ public class PluginDiIntegrationTests : IDisposable
             bus,
             new MinimalServiceProvider(),
             NullLogger<PluginManager>.Instance,
-            _tempPluginsDir
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            TestStorageHelper.CreateBackend()
         );
 
         IEnumerable<IPluginServiceRegistrator> registrators = manager.GetServiceRegistrators();

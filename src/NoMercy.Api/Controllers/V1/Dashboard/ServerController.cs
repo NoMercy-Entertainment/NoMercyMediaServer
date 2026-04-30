@@ -478,7 +478,7 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view files");
 
-        MediaScan mediaScan = new();
+        MediaScan mediaScan = new(StorageProvider.Backend);
 
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()

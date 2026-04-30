@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Setup;
+using NoMercy.Storage;
 
 namespace NoMercy.Tests.Setup;
 
@@ -27,7 +28,7 @@ public class BootOrchestratorTests : IDisposable
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(_appContext);
+        _authManager = new(_appContext, new SystemIoStorageBackend());
         _setupState = new();
         _orchestrator = new(_setupState, _authManager);
     }

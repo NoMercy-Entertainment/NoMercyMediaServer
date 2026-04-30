@@ -258,7 +258,7 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(string path)
     {
-        MediaScan mediaScan = new();
+        MediaScan mediaScan = new(StorageProvider.Backend);
 
         int depth = Library.Type switch
         {
@@ -300,7 +300,11 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
             if (!storage.Exists(path))
             {
-                string? match = Str.FindMatchingDirectory(rootFolder.Path, folder);
+                string? match = Str.FindMatchingDirectory(
+                    StorageProvider.Backend,
+                    rootFolder.Path,
+                    folder
+                );
                 if (match != null)
                     path = match;
             }

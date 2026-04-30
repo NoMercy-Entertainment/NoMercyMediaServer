@@ -418,6 +418,7 @@ public static class Logger
     )
     {
         string logDirectoryPath = AppFiles.LogPath;
+        // LOCAL-ONLY: Logger is a static class in NmSystem; no reference to NoMercy.Providers.
         IStorageBackend backend = new SystemIoStorageBackend();
         IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
         List<LogEntry> logs = await LogReader.GetLogsAsync(

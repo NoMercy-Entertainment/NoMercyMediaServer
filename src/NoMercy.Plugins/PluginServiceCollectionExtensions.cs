@@ -20,8 +20,7 @@ public static class PluginServiceCollectionExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             ILogger<PluginManager> logger = sp.GetRequiredService<ILogger<PluginManager>>();
-            IStorageBackend backend =
-                sp.GetService<IStorageBackend>() ?? new SystemIoStorageBackend();
+            IStorageBackend backend = sp.GetRequiredService<IStorageBackend>();
             IStorage storage = new LocalStorage(
                 backend,
                 new StoragePathGuard([pluginsPath], backend)

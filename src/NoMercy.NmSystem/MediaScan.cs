@@ -26,9 +26,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     private string[] _extensionFilter = [];
 
-    public MediaScan(IStorageBackend? backend = null)
+    public MediaScan(IStorageBackend backend)
     {
-        _backend = backend ?? new SystemIoStorageBackend();
+        _backend = backend;
     }
 
     public MediaScan EnableFileListing()

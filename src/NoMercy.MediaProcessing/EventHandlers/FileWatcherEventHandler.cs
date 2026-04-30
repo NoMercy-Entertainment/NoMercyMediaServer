@@ -13,6 +13,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -26,9 +27,11 @@ public class FileWatcherEventHandler : IDisposable
 {
     private readonly List<IDisposable> _subscriptions = [];
     private readonly SemaphoreSlim _semaphore = new(2);
+    private readonly IStorageBackend _storageBackend;
 
-    public FileWatcherEventHandler(IEventBus eventBus)
+    public FileWatcherEventHandler(IEventBus eventBus, IStorageBackend storageBackend)
     {
+        _storageBackend = storageBackend;
         _subscriptions.Add(eventBus.Subscribe<FileCreatedEvent>(OnFileCreated));
         _subscriptions.Add(eventBus.Subscribe<FileDeletedEvent>(OnFileDeleted));
         _subscriptions.Add(eventBus.Subscribe<FileRenamedEvent>(OnFileRenamed));
@@ -44,7 +47,7 @@ public class FileWatcherEventHandler : IDisposable
                 LogEventLevel.Information
             );
 
-            MediaScan mediaScan = new();
+            MediaScan mediaScan = new(StorageProvider.Backend);
             MediaScan scan = mediaScan.EnableFileListing();
 
             if (@event.LibraryType == Config.MusicMediaType)
@@ -103,8 +106,7 @@ public class FileWatcherEventHandler : IDisposable
             string filename = "/" + Path.GetFileName(@event.FullPath);
 
             await using MediaContext mediaContext = new();
-            IStorageBackend storageBackend = new SystemIoStorageBackend();
-            FileRepository fileRepository = new(mediaContext, storageBackend);
+            FileRepository fileRepository = new(mediaContext, _storageBackend);
 
             int videoFilesDeleted = await fileRepository.DeleteVideoFilesByHostFolderAsync(
                 hostFolder
@@ -147,8 +149,7 @@ public class FileWatcherEventHandler : IDisposable
             string newFilename = "/" + Path.GetFileName(@event.NewFullPath);
 
             await using MediaContext mediaContext = new();
-            IStorageBackend storageBackend = new SystemIoStorageBackend();
-            FileRepository fileRepository = new(mediaContext, storageBackend);
+            FileRepository fileRepository = new(mediaContext, _storageBackend);
 
             int updated = await fileRepository.UpdateVideoFilePathsAsync(
                 oldHostFolder,
