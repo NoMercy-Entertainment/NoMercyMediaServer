@@ -1,4 +1,4 @@
-using Moq;
+﻿using Moq;
 using NoMercy.Storage;
 using NoMercy.Storage.Validation;
 
@@ -6,9 +6,9 @@ namespace NoMercy.Tests.Storage;
 
 public class StoragePathGuardTests
 {
-    private static Mock<IStorageBackend> NewBackend()
+    private static Mock<IStorageDriver> NewBackend()
     {
-        Mock<IStorageBackend> m = new(MockBehavior.Strict);
+        Mock<IStorageDriver> m = new(MockBehavior.Strict);
         m.Setup(b => b.GetFullPath(It.IsAny<string>())).Returns<string>(p => Path.GetFullPath(p));
         m.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
         return m;
@@ -137,12 +137,12 @@ public class StoragePathGuardTests
             Path.Combine(Path.GetTempPath(), "elsewhere", "target.txt")
         );
 
-        Mock<IStorageBackend> backend = NewBackend();
-        backend
+        Mock<IStorageDriver> driver = NewBackend();
+        driver
             .Setup(b => b.ResolveLinkTarget(Path.GetFullPath(canonicalInside)))
             .Returns(realOutside);
 
-        StoragePathGuard guard = new([root], backend.Object);
+        StoragePathGuard guard = new([root], driver.Object);
 
         Action act = () => guard.Validate(canonicalInside);
 

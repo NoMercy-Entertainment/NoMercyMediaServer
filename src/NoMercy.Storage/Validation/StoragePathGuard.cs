@@ -2,7 +2,7 @@ namespace NoMercy.Storage.Validation;
 
 /// <summary>
 /// Validates every path that flows through <see cref="IStorage"/>
-/// before it reaches a backend. Two layers:
+/// before it reaches a driver. Two layers:
 ///   1. Structural — empty / null-byte / Windows device paths are
 ///      rejected unconditionally.
 ///   2. Allowlist — when configured, the canonical path (after symlink
@@ -12,7 +12,7 @@ namespace NoMercy.Storage.Validation;
 /// </summary>
 public sealed class StoragePathGuard
 {
-    private readonly IStorageBackend _backend;
+    private readonly IStorageDriver _driver;
     private readonly string[] _normalizedRoots;
     private readonly StringComparison _comparison;
 
@@ -20,9 +20,9 @@ public sealed class StoragePathGuard
 
     public IReadOnlyList<string> AllowedRoots => _normalizedRoots;
 
-    public StoragePathGuard(IEnumerable<string> allowedRoots, IStorageBackend backend)
+    public StoragePathGuard(IEnumerable<string> allowedRoots, IStorageDriver driver)
     {
-        _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+        _driver = driver ?? throw new ArgumentNullException(nameof(driver));
         _comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
@@ -58,7 +58,7 @@ public sealed class StoragePathGuard
         string canonical;
         try
         {
-            canonical = _backend.GetFullPath(requestedPath);
+            canonical = _driver.GetFullPath(requestedPath);
         }
         catch (Exception ex)
         {
@@ -71,7 +71,7 @@ public sealed class StoragePathGuard
         if (!Enforced)
             return canonical;
 
-        string resolved = _backend.ResolveLinkTarget(canonical) ?? canonical;
+        string resolved = _driver.ResolveLinkTarget(canonical) ?? canonical;
 
         foreach (string root in _normalizedRoots)
             if (IsUnderRoot(resolved, root, _comparison))

@@ -4,13 +4,13 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 
-namespace NoMercy.Storage.Backends.S3;
+namespace NoMercy.Storage.Drivers.S3;
 
 /// <summary>
-/// <see cref="IStorageBackend"/> backed by any S3-compatible object store
+/// <see cref="IStorageDriver"/> backed by any S3-compatible object store
 /// (AWS S3, Cloudflare R2, MinIO, DigitalOcean Spaces, …).
 /// </summary>
-public sealed class S3StorageBackend : IStorageBackend, IDisposable
+public sealed class S3StorageDriver : IStorageDriver, IDisposable
 {
     private readonly IAmazonS3 _client;
     private readonly string _bucket;
@@ -31,7 +31,7 @@ public sealed class S3StorageBackend : IStorageBackend, IDisposable
     ///   credential chain is used (env-vars / IAM role).</param>
     /// <param name="secretKey">AWS secret access key. Required when
     ///   <paramref name="accessKey"/> is supplied.</param>
-    public S3StorageBackend(
+    public S3StorageDriver(
         string bucket,
         string region,
         string? prefix = null,
@@ -70,7 +70,7 @@ public sealed class S3StorageBackend : IStorageBackend, IDisposable
     /// Exposed for testing — allows injection of a pre-configured client
     /// (e.g. one pointing at a Testcontainers MinIO instance).
     /// </summary>
-    internal S3StorageBackend(IAmazonS3 client, string bucket, string? prefix = null)
+    internal S3StorageDriver(IAmazonS3 client, string bucket, string? prefix = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _bucket = bucket ?? throw new ArgumentNullException(nameof(bucket));
@@ -88,7 +88,7 @@ public sealed class S3StorageBackend : IStorageBackend, IDisposable
         string.IsNullOrEmpty(_prefix) ? key : key.Substring(_prefix.Length);
 
     // -----------------------------------------------------------------------
-    // IStorageBackend
+    // IStorageDriver
     // -----------------------------------------------------------------------
 
     public bool FileExists(string path)

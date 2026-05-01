@@ -1,12 +1,12 @@
 using System.Text.Json;
 
-namespace NoMercy.Storage.Backends.Nfs;
+namespace NoMercy.Storage.Drivers.Nfs;
 
 /// <summary>
-/// Parsed representation of the JSON <c>BackendConfig</c> for NFS folder backends.
+/// Parsed representation of the JSON <c>DriverConfig</c> for NFS folder drivers.
 /// Drives in-process NFS via libnfs P/Invoke — no OS-level mount required.
 /// </summary>
-internal sealed record NfsBackendConfig(
+internal sealed record NfsDriverConfig(
     string Server,
     string Export,
     int Version,
@@ -22,20 +22,20 @@ internal sealed record NfsBackendConfig(
     };
 
     /// <summary>
-    /// Parses and validates the JSON config blob from <c>Folder.BackendConfig</c>.
+    /// Parses and validates the JSON config blob from <c>Folder.DriverConfig</c>.
     /// Throws <see cref="ArgumentException"/> on missing required fields.
     /// </summary>
-    internal static NfsBackendConfig Parse(string json, Ulid folderId)
+    internal static NfsDriverConfig Parse(string json, Ulid folderId)
     {
-        NfsBackendConfigRaw? raw;
+        NfsDriverConfigRaw? raw;
         try
         {
-            raw = JsonSerializer.Deserialize<NfsBackendConfigRaw>(json, ParseOptions);
+            raw = JsonSerializer.Deserialize<NfsDriverConfigRaw>(json, ParseOptions);
         }
         catch (JsonException ex)
         {
             throw new ArgumentException(
-                $"Failed to parse backend_config for NFS folder {folderId}: {ex.Message}",
+                $"Failed to parse driver_config for NFS folder {folderId}: {ex.Message}",
                 nameof(json),
                 ex
             );
@@ -43,30 +43,30 @@ internal sealed record NfsBackendConfig(
 
         if (raw is null)
             throw new ArgumentException(
-                $"backend_config deserialized to null for NFS folder {folderId}.",
+                $"driver_config deserialized to null for NFS folder {folderId}.",
                 nameof(json)
             );
 
         if (string.IsNullOrWhiteSpace(raw.Server))
             throw new ArgumentException(
-                $"backend_config.server is required for NFS folder {folderId}.",
+                $"driver_config.server is required for NFS folder {folderId}.",
                 nameof(json)
             );
 
         if (string.IsNullOrWhiteSpace(raw.Export))
             throw new ArgumentException(
-                $"backend_config.export is required for NFS folder {folderId}.",
+                $"driver_config.export is required for NFS folder {folderId}.",
                 nameof(json)
             );
 
         int version = raw.Version ?? 3;
         if (version != 3 && version != 4)
             throw new ArgumentException(
-                $"backend_config.version must be 3 or 4 for NFS folder {folderId} (got {version}).",
+                $"driver_config.version must be 3 or 4 for NFS folder {folderId} (got {version}).",
                 nameof(json)
             );
 
-        return new NfsBackendConfig(
+        return new NfsDriverConfig(
             raw.Server.Trim(),
             NormalizeExport(raw.Export.Trim()),
             version,
@@ -88,7 +88,7 @@ internal sealed record NfsBackendConfig(
     // -----------------------------------------------------------------------
     // Overload for unit tests that supply individual fields without JSON
     // -----------------------------------------------------------------------
-    internal static NfsBackendConfig For(
+    internal static NfsDriverConfig For(
         string server,
         string export,
         int version = 3,
@@ -101,7 +101,7 @@ internal sealed record NfsBackendConfig(
     // -----------------------------------------------------------------------
     // Raw deserialization target (snake_case keys)
     // -----------------------------------------------------------------------
-    private sealed record NfsBackendConfigRaw(
+    private sealed record NfsDriverConfigRaw(
         string? Server,
         string? Export,
         int? Version,

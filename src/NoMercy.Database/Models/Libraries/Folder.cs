@@ -6,7 +6,7 @@ namespace NoMercy.Database.Models.Libraries;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Path), IsUnique = true)]
-[Index(nameof(BackendType))]
+[Index(nameof(DriverType))]
 public class Folder
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -16,11 +16,11 @@ public class Folder
     [JsonProperty("path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonProperty("backend_type")]
-    public string BackendType { get; set; } = "local";
+    [JsonProperty("driver_type")]
+    public string DriverType { get; set; } = "local";
 
-    [JsonProperty("backend_config")]
-    public string? BackendConfig { get; set; }
+    [JsonProperty("driver_config")]
+    public string? DriverConfig { get; set; }
 
     [JsonProperty("encoder_profile_folder")]
     public ICollection<EncoderProfileFolder> EncoderProfileFolder { get; set; } = [];

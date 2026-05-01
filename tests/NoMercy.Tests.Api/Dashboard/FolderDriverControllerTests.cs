@@ -1,17 +1,16 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Moq;
 using NoMercy.Database;
-using NoMercy.Storage;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
-[Trait("Category", "FolderBackend")]
-public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
+[Trait("Category", "FolderDriver")]
+public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
     private readonly HttpClient _unauthed;
@@ -19,20 +18,20 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     // Use the folder seeded by NoMercyApiFactory
     private static readonly Ulid MovieFolderId = NoMercyApiFactory.MovieFolderId;
 
-    public FolderBackendControllerTests(NoMercyApiFactory factory)
+    public FolderDriverControllerTests(NoMercyApiFactory factory)
     {
         _authed = factory.CreateClient().AsAuthenticated();
         _unauthed = factory.CreateClient().AsUnauthenticated();
     }
 
     // =========================================================================
-    // GET /backends — metadata list
+    // GET /drivers — metadata list
     // =========================================================================
 
     [Fact]
-    public async Task GetBackendTypes_ReturnsAllFiveEntries()
+    public async Task GetDriverTypes_ReturnsAllFiveEntries()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/folders/backends");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/folders/drivers");
         string body = await response.Content.ReadAsStringAsync();
 
         Assert.True(
@@ -48,9 +47,9 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task GetBackendTypes_LocalIsAvailable_S3AndR2AreNot()
+    public async Task GetDriverTypes_LocalIsAvailable_S3AndR2AreNot()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/folders/backends");
+        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/folders/drivers");
         string body = await response.Content.ReadAsStringAsync();
         JsonDocument json = JsonDocument.Parse(body);
 
@@ -69,10 +68,10 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task GetBackendTypes_Unauthenticated_Returns401Or403()
+    public async Task GetDriverTypes_Unauthenticated_Returns401Or403()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            "/api/v1/dashboard/folders/backends"
+            "/api/v1/dashboard/folders/drivers"
         );
 
         Assert.True(
@@ -82,14 +81,14 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     // =========================================================================
-    // GET /{id}/backend — read current state
+    // GET /{id}/driver — read current state
     // =========================================================================
 
     [Fact]
     public async Task GetBackend_SeededFolder_ReturnsLocalDefault()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend"
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver"
         );
         string body = await response.Content.ReadAsStringAsync();
 
@@ -101,7 +100,7 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
         JsonDocument json = JsonDocument.Parse(body);
         JsonElement root = json.RootElement;
 
-        Assert.Equal("local", root.GetProperty("backend_type").GetString());
+        Assert.Equal("local", root.GetProperty("driver_type").GetString());
     }
 
     [Fact]
@@ -109,7 +108,7 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     {
         Ulid unknownId = Ulid.NewUlid();
         HttpResponseMessage response = await _authed.GetAsync(
-            $"/api/v1/dashboard/folders/{unknownId}/backend"
+            $"/api/v1/dashboard/folders/{unknownId}/driver"
         );
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -119,7 +118,7 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task GetBackend_Unauthenticated_Returns401Or403()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend"
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver"
         );
 
         Assert.True(
@@ -129,16 +128,16 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     // =========================================================================
-    // PUT /{id}/backend — update
+    // PUT /{id}/driver — update
     // =========================================================================
 
     [Fact]
     public async Task PutBackend_ValidLocalConfig_Returns200AndPersists()
     {
-        object payload = new { backend_type = "local", backend_config = (object?)null };
+        object payload = new { driver_type = "local", driver_config = (object?)null };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
             payload
         );
         string body = await response.Content.ReadAsStringAsync();
@@ -149,16 +148,16 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         JsonDocument json = JsonDocument.Parse(body);
-        Assert.Equal("local", json.RootElement.GetProperty("backend_type").GetString());
+        Assert.Equal("local", json.RootElement.GetProperty("driver_type").GetString());
 
         // Verify persisted in DB
         await using MediaContext ctx = new();
-        NoMercy.Database.Models.Libraries.Folder? folder = await ctx
+        Folder? folder = await ctx
             .Folders.AsNoTracking()
             .FirstOrDefaultAsync(f => f.Id == MovieFolderId);
 
         Assert.NotNull(folder);
-        Assert.Equal("local", folder!.BackendType);
+        Assert.Equal("local", folder!.DriverType);
     }
 
     [Fact]
@@ -166,12 +165,12 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     {
         object payload = new
         {
-            backend_type = "local",
-            backend_config = new { rootPath = "/mnt/media" },
+            driver_type = "local",
+            driver_config = new { rootPath = "/mnt/media" },
         };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
             payload
         );
         string body = await response.Content.ReadAsStringAsync();
@@ -183,12 +182,12 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task PutBackend_InvalidBackendType_Returns400()
+    public async Task PutDriver_InvalidDriverType_Returns400()
     {
-        object payload = new { backend_type = "ftp" };
+        object payload = new { driver_type = "ftp" };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
             payload
         );
 
@@ -200,12 +199,12 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     {
         object payload = new
         {
-            backend_type = "smb",
-            backend_config = new { someOtherField = "value" },
+            driver_type = "smb",
+            driver_config = new { someOtherField = "value" },
         };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
             payload
         );
 
@@ -215,10 +214,10 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task PutBackend_NfsMissingMountPath_Returns400()
     {
-        object payload = new { backend_type = "nfs", backend_config = (object?)null };
+        object payload = new { driver_type = "nfs", driver_config = (object?)null };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
             payload
         );
 
@@ -228,10 +227,10 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task PutBackend_S3MissingBucket_Returns400()
     {
-        object payload = new { backend_type = "s3", backend_config = new { region = "us-east-1" } };
+        object payload = new { driver_type = "s3", driver_config = new { region = "us-east-1" } };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
             payload
         );
 
@@ -243,12 +242,12 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     {
         object payload = new
         {
-            backend_type = "s3",
-            backend_config = new { bucket = "my-bucket", region = "us-east-1" },
+            driver_type = "s3",
+            driver_config = new { bucket = "my-bucket", region = "us-east-1" },
         };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
             payload
         );
         string body = await response.Content.ReadAsStringAsync();
@@ -262,7 +261,7 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
         JsonElement warnings = json.RootElement.GetProperty("warnings");
 
         Assert.Equal(JsonValueKind.Array, warnings.ValueKind);
-        Assert.True(warnings.GetArrayLength() > 0, "Expected at least one warning for s3 backend");
+        Assert.True(warnings.GetArrayLength() > 0, "Expected at least one warning for s3 driver");
 
         string? warning = warnings[0].GetString();
         Assert.NotNull(warning);
@@ -271,8 +270,8 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
 
         // Restore to local so other tests aren't affected
         await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
-            new { backend_type = "local", backend_config = (object?)null }
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            new { driver_type = "local", driver_config = (object?)null }
         );
     }
 
@@ -281,12 +280,12 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     {
         object payload = new
         {
-            backend_type = "r2",
-            backend_config = new { bucket = "my-r2-bucket", region = "auto" },
+            driver_type = "r2",
+            driver_config = new { bucket = "my-r2-bucket", region = "auto" },
         };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
             payload
         );
         string body = await response.Content.ReadAsStringAsync();
@@ -300,12 +299,12 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
         JsonElement warnings = json.RootElement.GetProperty("warnings");
 
         Assert.Equal(JsonValueKind.Array, warnings.ValueKind);
-        Assert.True(warnings.GetArrayLength() > 0, "Expected at least one warning for r2 backend");
+        Assert.True(warnings.GetArrayLength() > 0, "Expected at least one warning for r2 driver");
 
         // Restore to local so other tests aren't affected
         await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
-            new { backend_type = "local", backend_config = (object?)null }
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
+            new { driver_type = "local", driver_config = (object?)null }
         );
     }
 
@@ -313,10 +312,10 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task PutBackend_UnknownFolder_Returns404()
     {
         Ulid unknownId = Ulid.NewUlid();
-        object payload = new { backend_type = "local" };
+        object payload = new { driver_type = "local" };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{unknownId}/backend",
+            $"/api/v1/dashboard/folders/{unknownId}/driver",
             payload
         );
 
@@ -326,10 +325,10 @@ public class FolderBackendControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task PutBackend_Unauthenticated_Returns401Or403()
     {
-        object payload = new { backend_type = "local" };
+        object payload = new { driver_type = "local" };
 
         HttpResponseMessage response = await _unauthed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/backend",
+            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
             payload
         );
 

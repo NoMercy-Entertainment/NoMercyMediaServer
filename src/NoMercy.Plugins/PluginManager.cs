@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using NoMercy.Events;
@@ -15,7 +15,7 @@ public class PluginManager : IPluginManager, IDisposable
     private readonly ILogger<PluginManager> _logger;
     private readonly string _pluginsPath;
     private readonly IStorage _storage;
-    private readonly IStorageBackend _backend;
+    private readonly IStorageDriver _driver;
     private readonly ConcurrentDictionary<Guid, LoadedPlugin> _loadedPlugins = new();
 
     public PluginManager(
@@ -24,7 +24,7 @@ public class PluginManager : IPluginManager, IDisposable
         ILogger<PluginManager> logger,
         string pluginsPath,
         IStorage storage,
-        IStorageBackend backend
+        IStorageDriver driver
     )
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -32,7 +32,7 @@ public class PluginManager : IPluginManager, IDisposable
             serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _pluginsPath = pluginsPath ?? throw new ArgumentNullException(nameof(pluginsPath));
-        _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+        _driver = driver ?? throw new ArgumentNullException(nameof(driver));
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
     }
 
@@ -50,7 +50,7 @@ public class PluginManager : IPluginManager, IDisposable
         // Source assembly may be anywhere on disk (user-supplied install path).
         // Use the raw backend for the existence check and copy-in; the destination
         // is always inside the allowlisted plugin root so _storage covers it.
-        if (!_backend.FileExists(fullPath))
+        if (!_driver.FileExists(fullPath))
         {
             throw new FileNotFoundException($"Plugin assembly not found: {fullPath}", fullPath);
         }
@@ -64,7 +64,7 @@ public class PluginManager : IPluginManager, IDisposable
         }
 
         string destPath = Path.Combine(pluginDir, Path.GetFileName(fullPath));
-        _backend.CopyFile(fullPath, destPath, overwrite: true);
+        _driver.CopyFile(fullPath, destPath, overwrite: true);
 
         await LoadPluginAssemblyAsync(destPath, ct);
     }
@@ -97,7 +97,13 @@ public class PluginManager : IPluginManager, IDisposable
                     _storage.CreateDirectory(dataFolder);
                 }
 
-                PluginContext context = new(_eventBus, _serviceProvider, _logger, dataFolder, _storage);
+                PluginContext context = new(
+                    _eventBus,
+                    _serviceProvider,
+                    _logger,
+                    dataFolder,
+                    _storage
+                );
                 loaded.Instance.Initialize(context);
                 PluginLifecycle.Transition(loaded.Info, PluginStatus.Active);
 
@@ -481,7 +487,13 @@ public class PluginManager : IPluginManager, IDisposable
                     _storage.CreateDirectory(dataFolder);
                 }
 
-                PluginContext context = new(_eventBus, _serviceProvider, _logger, dataFolder, _storage);
+                PluginContext context = new(
+                    _eventBus,
+                    _serviceProvider,
+                    _logger,
+                    dataFolder,
+                    _storage
+                );
 
                 try
                 {

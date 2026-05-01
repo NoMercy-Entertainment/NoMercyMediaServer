@@ -4,81 +4,81 @@ using System.Security.Cryptography;
 namespace NoMercy.Storage.Remote;
 
 /// <summary>
-/// <see cref="IStorage"/> implementation for remote object-store backends
-/// (S3, R2, MinIO, and future NFS in-process driver). Identical to
+/// <see cref="IStorage"/> implementation for remote object-store drivers
+/// (S3, R2, MinIO, and NFS in-process). Identical to
 /// <see cref="LocalStorage"/> except <see cref="AcquireLocalPathAsync"/>
 /// downloads the object to a temp file and deletes it on lease dispose.
 /// </summary>
 public sealed class RemoteStorage : IStorage
 {
-    private readonly IStorageBackend _backend;
+    private readonly IStorageDriver _driver;
 
-    public RemoteStorage(IStorageBackend backend)
+    public RemoteStorage(IStorageDriver driver)
     {
-        _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+        _driver = driver ?? throw new ArgumentNullException(nameof(driver));
     }
 
     public async Task<byte[]> ReadAsync(string path, CancellationToken ct)
     {
-        await using Stream stream = _backend.OpenRead(path);
+        await using Stream stream = _driver.OpenRead(path);
         using MemoryStream ms = new();
         await stream.CopyToAsync(ms, ct);
         return ms.ToArray();
     }
 
     public Task<Stream> OpenReadAsync(string path, CancellationToken ct) =>
-        Task.FromResult(_backend.OpenRead(path));
+        Task.FromResult(_driver.OpenRead(path));
 
     public async Task WriteAsync(string path, byte[] bytes, CancellationToken ct)
     {
-        await using Stream stream = _backend.OpenWrite(path, overwrite: true);
+        await using Stream stream = _driver.OpenWrite(path, overwrite: true);
         await stream.WriteAsync(bytes.AsMemory(), ct);
     }
 
     public Task<Stream> OpenWriteAsync(string path, bool overwrite, CancellationToken ct) =>
-        Task.FromResult(_backend.OpenWrite(path, overwrite));
+        Task.FromResult(_driver.OpenWrite(path, overwrite));
 
     public Task<bool> ExistsAsync(string path, CancellationToken ct) =>
-        Task.FromResult(_backend.FileExists(path) || _backend.DirectoryExists(path));
+        Task.FromResult(_driver.FileExists(path) || _driver.DirectoryExists(path));
 
     public Task DeleteAsync(string path, CancellationToken ct)
     {
-        if (_backend.FileExists(path))
-            _backend.DeleteFile(path);
+        if (_driver.FileExists(path))
+            _driver.DeleteFile(path);
         return Task.CompletedTask;
     }
 
     public Task DeleteDirectoryAsync(string path, bool recursive, CancellationToken ct)
     {
-        if (_backend.DirectoryExists(path))
-            _backend.DeleteDirectory(path, recursive);
+        if (_driver.DirectoryExists(path))
+            _driver.DeleteDirectory(path, recursive);
         return Task.CompletedTask;
     }
 
     public Task CreateDirectoryAsync(string path, CancellationToken ct)
     {
-        _backend.CreateDirectory(path);
+        _driver.CreateDirectory(path);
         return Task.CompletedTask;
     }
 
     public Task MoveAsync(string from, string to, CancellationToken ct)
     {
-        _backend.MoveFile(from, to);
+        _driver.MoveFile(from, to);
         return Task.CompletedTask;
     }
 
     public Task CopyAsync(string from, string to, CancellationToken ct)
     {
-        _backend.CopyFile(from, to, overwrite: true);
+        _driver.CopyFile(from, to, overwrite: true);
         return Task.CompletedTask;
     }
 
     public Task<long> SizeAsync(string path, CancellationToken ct) =>
-        Task.FromResult(_backend.GetFileSize(path));
+        Task.FromResult(_driver.GetFileSize(path));
 
     public Task<DateTimeOffset> LastModifiedAsync(string path, CancellationToken ct)
     {
-        DateTime utc = _backend.GetLastWriteTimeUtc(path);
+        DateTime utc = _driver.GetLastWriteTimeUtc(path);
         return Task.FromResult(new DateTimeOffset(utc, TimeSpan.Zero));
     }
 
@@ -94,14 +94,12 @@ public sealed class RemoteStorage : IStorage
             : SearchOption.TopDirectoryOnly;
         string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
 
-        foreach (
-            string entry in _backend.EnumerateFileSystemEntries(path, effectivePattern, option)
-        )
+        foreach (string entry in _driver.EnumerateFileSystemEntries(path, effectivePattern, option))
         {
             ct.ThrowIfCancellationRequested();
-            bool isDir = _backend.DirectoryExists(entry);
-            long size = isDir ? 0L : _backend.GetFileSize(entry);
-            DateTime utc = _backend.GetLastWriteTimeUtc(entry);
+            bool isDir = _driver.DirectoryExists(entry);
+            long size = isDir ? 0L : _driver.GetFileSize(entry);
+            DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             yield return new StorageEntry(
                 entry,
                 isDir,
@@ -124,7 +122,7 @@ public sealed class RemoteStorage : IStorage
             ),
         };
 
-        await using Stream stream = _backend.OpenRead(path);
+        await using Stream stream = _driver.OpenRead(path);
         byte[] digest = await hasher.ComputeHashAsync(stream, ct);
         return Convert.ToHexString(digest).ToLowerInvariant();
     }
@@ -137,7 +135,7 @@ public sealed class RemoteStorage : IStorage
     {
         string tmp = Path.Combine(Path.GetTempPath(), $"nomercy-remote-{Guid.NewGuid():N}");
 
-        await using Stream src = _backend.OpenRead(path);
+        await using Stream src = _driver.OpenRead(path);
         await using FileStream dst = new(
             tmp,
             FileMode.Create,
@@ -166,51 +164,51 @@ public sealed class RemoteStorage : IStorage
 
     // --- Sync companions ----------------------------------------------------
 
-    public bool Exists(string path) => _backend.FileExists(path) || _backend.DirectoryExists(path);
+    public bool Exists(string path) => _driver.FileExists(path) || _driver.DirectoryExists(path);
 
     public long SizeOrZero(string path) =>
-        _backend.FileExists(path) ? _backend.GetFileSize(path) : 0L;
+        _driver.FileExists(path) ? _driver.GetFileSize(path) : 0L;
 
-    public long Size(string path) => _backend.GetFileSize(path);
+    public long Size(string path) => _driver.GetFileSize(path);
 
     public DateTimeOffset LastModified(string path) =>
-        new(_backend.GetLastWriteTimeUtc(path), TimeSpan.Zero);
+        new(_driver.GetLastWriteTimeUtc(path), TimeSpan.Zero);
 
-    public void CreateDirectory(string path) => _backend.CreateDirectory(path);
+    public void CreateDirectory(string path) => _driver.CreateDirectory(path);
 
     public void Delete(string path)
     {
-        if (_backend.FileExists(path))
-            _backend.DeleteFile(path);
+        if (_driver.FileExists(path))
+            _driver.DeleteFile(path);
     }
 
     public void DeleteDirectory(string path, bool recursive)
     {
-        if (_backend.DirectoryExists(path))
-            _backend.DeleteDirectory(path, recursive);
+        if (_driver.DirectoryExists(path))
+            _driver.DeleteDirectory(path, recursive);
     }
 
     public byte[] Read(string path)
     {
-        using Stream stream = _backend.OpenRead(path);
+        using Stream stream = _driver.OpenRead(path);
         using MemoryStream ms = new();
         stream.CopyTo(ms);
         return ms.ToArray();
     }
 
-    public Stream OpenRead(string path) => _backend.OpenRead(path);
+    public Stream OpenRead(string path) => _driver.OpenRead(path);
 
-    public Stream OpenWrite(string path, bool overwrite) => _backend.OpenWrite(path, overwrite);
+    public Stream OpenWrite(string path, bool overwrite) => _driver.OpenWrite(path, overwrite);
 
     public void Write(string path, byte[] bytes)
     {
-        using Stream stream = _backend.OpenWrite(path, overwrite: true);
+        using Stream stream = _driver.OpenWrite(path, overwrite: true);
         stream.Write(bytes, 0, bytes.Length);
     }
 
-    public void Move(string from, string to) => _backend.MoveFile(from, to);
+    public void Move(string from, string to) => _driver.MoveFile(from, to);
 
-    public void Copy(string from, string to) => _backend.CopyFile(from, to, overwrite: true);
+    public void Copy(string from, string to) => _driver.CopyFile(from, to, overwrite: true);
 
     public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
     {
@@ -220,13 +218,11 @@ public sealed class RemoteStorage : IStorage
         string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
 
         List<StorageEntry> entries = [];
-        foreach (
-            string entry in _backend.EnumerateFileSystemEntries(path, effectivePattern, option)
-        )
+        foreach (string entry in _driver.EnumerateFileSystemEntries(path, effectivePattern, option))
         {
-            bool isDir = _backend.DirectoryExists(entry);
-            long size = isDir ? 0L : _backend.GetFileSize(entry);
-            DateTime utc = _backend.GetLastWriteTimeUtc(entry);
+            bool isDir = _driver.DirectoryExists(entry);
+            long size = isDir ? 0L : _driver.GetFileSize(entry);
+            DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             entries.Add(
                 new StorageEntry(entry, isDir, size, new DateTimeOffset(utc, TimeSpan.Zero))
             );
@@ -238,7 +234,7 @@ public sealed class RemoteStorage : IStorage
     {
         string tmp = Path.Combine(Path.GetTempPath(), $"nomercy-remote-{Guid.NewGuid():N}");
 
-        using Stream src = _backend.OpenRead(path);
+        using Stream src = _driver.OpenRead(path);
         using FileStream dst = new(tmp, FileMode.Create, FileAccess.Write, FileShare.None);
         src.CopyTo(dst);
 
@@ -260,22 +256,22 @@ public sealed class RemoteStorage : IStorage
 
     public async Task<string> ReadAllTextAsync(string path, CancellationToken ct)
     {
-        using StreamReader reader = new(_backend.OpenRead(path));
+        using StreamReader reader = new(_driver.OpenRead(path));
         return await reader.ReadToEndAsync(ct);
     }
 
     public async Task WriteAllTextAsync(string path, string contents, CancellationToken ct)
     {
-        await using StreamWriter writer = new(_backend.OpenWrite(path, overwrite: true));
+        await using StreamWriter writer = new(_driver.OpenWrite(path, overwrite: true));
         await writer.WriteAsync(contents.AsMemory(), ct);
         await writer.FlushAsync(ct);
     }
 
     public Task MoveDirectoryAsync(string from, string to, CancellationToken ct)
     {
-        _backend.MoveDirectory(from, to);
+        _driver.MoveDirectory(from, to);
         return Task.CompletedTask;
     }
 
-    public void MoveDirectory(string from, string to) => _backend.MoveDirectory(from, to);
+    public void MoveDirectory(string from, string to) => _driver.MoveDirectory(from, to);
 }

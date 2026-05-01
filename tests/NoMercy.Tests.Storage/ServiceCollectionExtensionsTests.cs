@@ -1,6 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Storage;
@@ -16,7 +16,7 @@ public class ServiceCollectionExtensionsTests
         ServiceProvider provider = services.BuildServiceProvider();
 
         provider.GetRequiredService<IStorage>().Should().BeOfType<LocalStorage>();
-        provider.GetRequiredService<IStorageBackend>().Should().BeOfType<SystemIoStorageBackend>();
+        provider.GetRequiredService<IStorageDriver>().Should().BeOfType<LocalStorageDriver>();
         provider.GetRequiredService<StorageOptions>().AllowedRoots.Should().BeEmpty();
         provider.GetRequiredService<StoragePathGuard>().Enforced.Should().BeFalse();
     }

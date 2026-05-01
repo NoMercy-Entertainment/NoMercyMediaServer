@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reflection;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -9,12 +9,12 @@ namespace NoMercy.NmSystem;
 public class AppProcessManager
 {
     private readonly object _lock = new();
-    private readonly IStorageBackend _backend;
+    private readonly IStorageDriver _driver;
     private Process? _appProcess;
 
-    public AppProcessManager(IStorageBackend backend)
+    public AppProcessManager(IStorageDriver driver)
     {
-        _backend = backend;
+        _driver = driver;
     }
 
     public bool IsRunning
@@ -47,10 +47,10 @@ public class AppProcessManager
                 return false;
 
             ProcessStartInfo? startInfo =
-                CreateProductionStartInfo(_backend)
-                ?? CreateInstalledStartInfo(_backend)
-                ?? CreateDevBinaryStartInfo(_backend)
-                ?? CreateDotnetRunStartInfo(_backend);
+                CreateProductionStartInfo(_driver)
+                ?? CreateInstalledStartInfo(_driver)
+                ?? CreateDevBinaryStartInfo(_driver)
+                ?? CreateDotnetRunStartInfo(_driver);
 
             if (startInfo is not null && !string.IsNullOrEmpty(route))
             {
@@ -109,17 +109,17 @@ public class AppProcessManager
         }
     }
 
-    private static ProcessStartInfo? CreateProductionStartInfo(IStorageBackend backend)
+    private static ProcessStartInfo? CreateProductionStartInfo(IStorageDriver driver)
     {
         string exePath = AppFiles.AppExePath;
 
-        if (!backend.FileExists(exePath))
+        if (!driver.FileExists(exePath))
             return null;
 
         return new(exePath) { UseShellExecute = false, CreateNoWindow = true };
     }
 
-    private static ProcessStartInfo? CreateInstalledStartInfo(IStorageBackend backend)
+    private static ProcessStartInfo? CreateInstalledStartInfo(IStorageDriver driver)
     {
         string? ownDir = Path.GetDirectoryName(
             Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
@@ -130,15 +130,15 @@ public class AppProcessManager
 
         string candidate = Path.Combine(ownDir, "NoMercyApp" + Info.ExecSuffix);
 
-        if (!backend.FileExists(candidate))
+        if (!driver.FileExists(candidate))
             return null;
 
         return new(candidate) { UseShellExecute = false, CreateNoWindow = true };
     }
 
-    private static ProcessStartInfo? CreateDevBinaryStartInfo(IStorageBackend backend)
+    private static ProcessStartInfo? CreateDevBinaryStartInfo(IStorageDriver driver)
     {
-        string? appProjectDir = FindProjectDirectory("NoMercy.App", backend);
+        string? appProjectDir = FindProjectDirectory("NoMercy.App", driver);
 
         if (appProjectDir is null)
             return null;
@@ -165,16 +165,16 @@ public class AppProcessManager
 
         foreach (string path in searchPaths)
         {
-            if (backend.FileExists(path))
+            if (driver.FileExists(path))
                 return new(path) { UseShellExecute = false, CreateNoWindow = true };
         }
 
         return null;
     }
 
-    private static ProcessStartInfo? CreateDotnetRunStartInfo(IStorageBackend backend)
+    private static ProcessStartInfo? CreateDotnetRunStartInfo(IStorageDriver driver)
     {
-        string? appProjectDir = FindProjectDirectory("NoMercy.App", backend);
+        string? appProjectDir = FindProjectDirectory("NoMercy.App", driver);
 
         if (appProjectDir is null)
             return null;
@@ -192,7 +192,7 @@ public class AppProcessManager
         return startInfo;
     }
 
-    private static string? FindProjectDirectory(string projectName, IStorageBackend backend)
+    private static string? FindProjectDirectory(string projectName, IStorageDriver driver)
     {
         string? assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
@@ -202,7 +202,7 @@ public class AppProcessManager
         {
             string candidate = Path.Combine(directory, "src", projectName);
 
-            if (backend.DirectoryExists(candidate))
+            if (driver.DirectoryExists(candidate))
                 return candidate;
 
             directory = Path.GetDirectoryName(directory);

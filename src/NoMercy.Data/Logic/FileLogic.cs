@@ -22,12 +22,12 @@ public partial class FileLogic(
     Library library,
     MediaContext mediaContext,
     IStorageFactory storageFactory,
-    IStorageBackend storageBackend
+    IStorageDriver storageDriver
 ) : IDisposable, IAsyncDisposable
 {
     private readonly MediaContext _mediaContext = mediaContext;
     private readonly IStorageFactory _storageFactory = storageFactory;
-    private readonly IStorageBackend _storageBackend = storageBackend;
+    private readonly IStorageDriver _storageDriver = storageDriver;
 
     private int Id { get; set; } = id;
     private Library Library { get; set; } = library;
@@ -153,8 +153,8 @@ public partial class FileLogic(
 
         IStorage storage = _storageFactory.For(
             folder.Id,
-            folder.BackendType,
-            folder.BackendConfig,
+            folder.DriverType,
+            folder.DriverConfig,
             folder.Path
         );
         if (await storage.ExistsAsync(subtitleFolder, CancellationToken.None))
@@ -268,7 +268,7 @@ public partial class FileLogic(
 
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(string path)
     {
-        MediaScan mediaScan = new(_storageBackend);
+        MediaScan mediaScan = new(_storageDriver);
 
         int depth = Library.Type switch
         {
@@ -307,15 +307,15 @@ public partial class FileLogic(
         {
             IStorage folderStorage = _storageFactory.For(
                 rootFolder.Id,
-                rootFolder.BackendType,
-                rootFolder.BackendConfig,
+                rootFolder.DriverType,
+                rootFolder.DriverConfig,
                 rootFolder.Path
             );
             string path = Path.Combine(rootFolder.Path, folder);
 
             if (!folderStorage.Exists(path))
             {
-                string? match = Str.FindMatchingDirectory(_storageBackend, rootFolder.Path, folder);
+                string? match = Str.FindMatchingDirectory(_storageDriver, rootFolder.Path, folder);
                 if (match != null)
                     path = match;
             }
@@ -326,8 +326,8 @@ public partial class FileLogic(
                     {
                         Path = path,
                         Id = rootFolder.Id,
-                        BackendType = rootFolder.BackendType,
-                        BackendConfig = rootFolder.BackendConfig,
+                        DriverType = rootFolder.DriverType,
+                        DriverConfig = rootFolder.DriverConfig,
                     }
                 );
         }

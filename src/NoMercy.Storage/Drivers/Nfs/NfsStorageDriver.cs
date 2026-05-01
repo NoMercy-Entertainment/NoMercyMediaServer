@@ -1,25 +1,25 @@
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using NoMercy.Storage.Backends.Nfs.Interop;
+using NoMercy.Storage.Drivers.Nfs.Interop;
 
-namespace NoMercy.Storage.Backends.Nfs;
+namespace NoMercy.Storage.Drivers.Nfs;
 
 /// <summary>
-/// <see cref="IStorageBackend"/> backed by libnfs P/Invoke — connects to an
+/// <see cref="IStorageDriver"/> backed by libnfs P/Invoke — connects to an
 /// NFS server in-process without requiring an OS-level mount. Supports NFS3
 /// and NFS4 with optional AUTH_UNIX credentials.
 ///
 /// Thread-safety: the libnfs context is not re-entrant. All operations are
 /// protected by a <see cref="SemaphoreSlim"/> (max 1 concurrent call).
 /// </summary>
-public sealed class NfsStorageBackend : IStorageBackend, IDisposable
+public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 {
-    private readonly NfsBackendConfig _config;
+    private readonly NfsDriverConfig _config;
     private readonly IntPtr _nfs;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private bool _disposed;
 
-    internal NfsStorageBackend(NfsBackendConfig config)
+    internal NfsStorageDriver(NfsDriverConfig config)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _nfs = LibNfs.InitContext();
@@ -41,7 +41,7 @@ public sealed class NfsStorageBackend : IStorageBackend, IDisposable
     }
 
     // -----------------------------------------------------------------------
-    // IStorageBackend
+    // IStorageDriver
     // -----------------------------------------------------------------------
 
     public bool FileExists(string path)

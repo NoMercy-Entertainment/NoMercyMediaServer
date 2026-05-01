@@ -1,6 +1,6 @@
-namespace NoMercy.Storage.Local;
+namespace NoMercy.Storage.Drivers.Local;
 
-public sealed class SystemIoStorageBackend : IStorageBackend
+public sealed class LocalStorageDriver : IStorageDriver
 {
     public bool FileExists(string path) => File.Exists(path);
 

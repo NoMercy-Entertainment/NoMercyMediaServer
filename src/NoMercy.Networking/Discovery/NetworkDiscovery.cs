@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
@@ -10,20 +10,21 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using Serilog.Events;
+using HttpClient = System.Net.Http.HttpClient;
 
 namespace NoMercy.Networking.Discovery;
 
 public class NetworkDiscovery : INetworkDiscovery
 {
-    private readonly IStorageBackend _backend;
+    private readonly IStorageDriver _driver;
     private string? _internalIp;
     private string? _externalIp;
     private INatDevice? _device;
     private bool _hasFoundDevice;
 
-    public NetworkDiscovery(IStorageBackend backend)
+    public NetworkDiscovery(IStorageDriver driver)
     {
-        _backend = backend;
+        _driver = driver;
     }
 
     public string InternalIp
@@ -468,7 +469,7 @@ public class NetworkDiscovery : INetworkDiscovery
         // 1. Try the NoMercy API over IPv6
         try
         {
-            using System.Net.Http.HttpClient httpClient = new(
+            using HttpClient httpClient = new(
                 new SocketsHttpHandler
                 {
                     ConnectCallback = async (context, ct) =>
@@ -516,7 +517,7 @@ public class NetworkDiscovery : INetworkDiscovery
         {
             try
             {
-                using System.Net.Http.HttpClient httpClient = new(
+                using HttpClient httpClient = new(
                     new SocketsHttpHandler
                     {
                         ConnectCallback = async (context, ct) =>
@@ -559,7 +560,7 @@ public class NetworkDiscovery : INetworkDiscovery
     {
         try
         {
-            using Stream stream = _backend.OpenWrite(ExternalIpCacheFile, overwrite: true);
+            using Stream stream = _driver.OpenWrite(ExternalIpCacheFile, overwrite: true);
             using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
             writer.Write(ip);
         }
@@ -573,9 +574,9 @@ public class NetworkDiscovery : INetworkDiscovery
     {
         try
         {
-            if (!_backend.FileExists(ExternalIpCacheFile))
+            if (!_driver.FileExists(ExternalIpCacheFile))
                 return null;
-            using StreamReader reader = new(_backend.OpenRead(ExternalIpCacheFile), Encoding.UTF8);
+            using StreamReader reader = new(_driver.OpenRead(ExternalIpCacheFile), Encoding.UTF8);
             string cached = reader.ReadToEnd().Trim();
             return string.IsNullOrEmpty(cached) ? null : cached;
         }

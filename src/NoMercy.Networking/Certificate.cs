@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -12,7 +12,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 using DnsHttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
@@ -21,9 +21,9 @@ namespace NoMercy.Networking;
 public static class Certificate
 {
     // LOCAL-ONLY: Certificate runs before StorageProvider is initialized (startup phase 1-3).
-    // DI is not available here; replacing this would require threading IStorageBackend
+    // DI is not available here; replacing this would require threading IStorageDriver
     // through every startup call site including Program.cs and BootOrchestrator.
-    private static readonly IStorageBackend _backend = new SystemIoStorageBackend();
+    private static readonly IStorageDriver _driver = new LocalStorageDriver();
     private static X509Certificate2? _cachedCertificate;
     private static readonly object _certLock = new();
 
@@ -43,11 +43,11 @@ public static class Certificate
         {
             // Fallback: load from legacy PEM files (pre-DB-storage installs)
 #pragma warning disable CS0618
-            if (_backend.FileExists(AppFiles.CertFile) && _backend.FileExists(AppFiles.KeyFile))
+            if (_driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile))
             {
-                using (StreamReader certReader = new(_backend.OpenRead(AppFiles.CertFile)))
+                using (StreamReader certReader = new(_driver.OpenRead(AppFiles.CertFile)))
                     certPem = certReader.ReadToEnd();
-                using (StreamReader keyReader = new(_backend.OpenRead(AppFiles.KeyFile)))
+                using (StreamReader keyReader = new(_driver.OpenRead(AppFiles.KeyFile)))
                     keyPem = keyReader.ReadToEnd();
                 Logger.Setup("Loading SSL certificate from legacy PEM files");
             }
@@ -103,7 +103,7 @@ public static class Certificate
 
         // Legacy fallback: cert files on disk (pre-DB-storage installs)
 #pragma warning disable CS0618
-        return _backend.FileExists(AppFiles.CertFile) && _backend.FileExists(AppFiles.KeyFile);
+        return _driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile);
 #pragma warning restore CS0618
     }
 
@@ -150,17 +150,17 @@ public static class Certificate
     private static X509Certificate2 CombinePublicAndPrivateCerts()
     {
 #pragma warning disable CS0618 // Obsolete
-        if (!_backend.FileExists(AppFiles.CertFile))
+        if (!_driver.FileExists(AppFiles.CertFile))
             throw new FileNotFoundException($"Certificate file not found: {AppFiles.CertFile}");
 
-        if (!_backend.FileExists(AppFiles.KeyFile))
+        if (!_driver.FileExists(AppFiles.KeyFile))
             throw new FileNotFoundException($"Private key file not found: {AppFiles.KeyFile}");
 
         string certPem;
         string keyPem;
-        using (StreamReader certReader = new(_backend.OpenRead(AppFiles.CertFile)))
+        using (StreamReader certReader = new(_driver.OpenRead(AppFiles.CertFile)))
             certPem = certReader.ReadToEnd();
-        using (StreamReader keyReader = new(_backend.OpenRead(AppFiles.KeyFile)))
+        using (StreamReader keyReader = new(_driver.OpenRead(AppFiles.KeyFile)))
             keyPem = keyReader.ReadToEnd();
 #pragma warning restore CS0618
 
@@ -331,12 +331,12 @@ public static class Certificate
 
         // Keep file writes alongside DB writes for backwards compat (Task 17 removes these)
 #pragma warning disable CS0618 // Obsolete
-        if (_backend.FileExists(AppFiles.KeyFile))
-            _backend.DeleteFile(AppFiles.KeyFile);
-        if (_backend.FileExists(AppFiles.CaFile))
-            _backend.DeleteFile(AppFiles.CaFile);
-        if (_backend.FileExists(AppFiles.CertFile))
-            _backend.DeleteFile(AppFiles.CertFile);
+        if (_driver.FileExists(AppFiles.KeyFile))
+            _driver.DeleteFile(AppFiles.KeyFile);
+        if (_driver.FileExists(AppFiles.CaFile))
+            _driver.DeleteFile(AppFiles.CaFile);
+        if (_driver.FileExists(AppFiles.CertFile))
+            _driver.DeleteFile(AppFiles.CertFile);
 
         await WriteTextAsync(AppFiles.KeyFile, keyPem);
         await WriteTextAsync(AppFiles.CaFile, data.Data.CertificateAuthority);
@@ -351,7 +351,7 @@ public static class Certificate
 
     private static async Task WriteTextAsync(string path, string content)
     {
-        await using Stream stream = _backend.OpenWrite(path, overwrite: true);
+        await using Stream stream = _driver.OpenWrite(path, overwrite: true);
         await using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
         await writer.WriteAsync(content);
         await writer.FlushAsync();

@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Storage;
 using NoMercy.Storage.Factory;
@@ -9,24 +9,24 @@ namespace NoMercy.Tests.Storage;
 
 public class StorageFactoryTests
 {
-    private static Mock<IStorageBackend> BackendMock()
+    private static Mock<IStorageDriver> BackendMock()
     {
-        Mock<IStorageBackend> backend = new(MockBehavior.Loose);
-        backend
+        Mock<IStorageDriver> driver = new(MockBehavior.Loose);
+        driver
             .Setup(b => b.GetFullPath(It.IsAny<string>()))
             .Returns<string>(p => Path.GetFullPath(p));
-        backend.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
-        return backend;
+        driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
+        return driver;
     }
 
-    private static StorageFactory Factory(Mock<IStorageBackend>? backend = null)
+    private static StorageFactory Factory(Mock<IStorageDriver>? driver = null)
     {
-        Mock<IStorageBackend> b = backend ?? BackendMock();
+        Mock<IStorageDriver> b = driver ?? BackendMock();
         return new StorageFactory(b.Object, NullLogger<StorageFactory>.Instance);
     }
 
     // -----------------------------------------------------------------------
-    // Local backend
+    // Local driver
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -58,8 +58,8 @@ public class StorageFactoryTests
     [Fact]
     public void For_local_rejects_paths_outside_folder_root()
     {
-        Mock<IStorageBackend> backend = BackendMock();
-        StorageFactory factory = Factory(backend);
+        Mock<IStorageDriver> driver = BackendMock();
+        StorageFactory factory = Factory(driver);
 
         // Use a temp subdir so the parent is outside the allowed root
         string root = Path.Combine(Path.GetTempPath(), "nm-factory-test-" + Ulid.NewUlid());
@@ -74,7 +74,7 @@ public class StorageFactoryTests
     }
 
     // -----------------------------------------------------------------------
-    // SMB — OS-mount backend, still treated as local
+    // SMB — OS-mount driver, still treated as local
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -123,20 +123,20 @@ public class StorageFactoryTests
     [Theory]
     [InlineData("s3")]
     [InlineData("r2")]
-    public void For_s3_r2_null_config_throws_ArgumentException(string backendType)
+    public void For_s3_r2_null_config_throws_ArgumentException(string DriverType)
     {
         StorageFactory factory = Factory();
         Ulid id = Ulid.NewUlid();
 
         // null config is invalid — bucket + region are required
-        Action act = () => factory.For(id, backendType, null, Path.GetTempPath());
+        Action act = () => factory.For(id, DriverType, null, Path.GetTempPath());
 
         act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
     [InlineData("s3")]
-    public void For_s3_valid_config_returns_RemoteStorage(string backendType)
+    public void For_s3_valid_config_returns_RemoteStorage(string DriverType)
     {
         StorageFactory factory = Factory();
         Ulid id = Ulid.NewUlid();
@@ -144,7 +144,7 @@ public class StorageFactoryTests
         string json =
             $"{{\"bucket\":\"test\",\"region\":\"us-east-1\",\"endpoint\":\"http://localhost:9000\"}}";
 
-        IStorage storage = factory.For(id, backendType, json, Path.GetTempPath());
+        IStorage storage = factory.For(id, DriverType, json, Path.GetTempPath());
 
         storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
@@ -162,7 +162,7 @@ public class StorageFactoryTests
     }
 
     // -----------------------------------------------------------------------
-    // Unknown backend type
+    // Unknown driver type
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -266,14 +266,14 @@ public class StorageFactoryTests
     }
 
     // -----------------------------------------------------------------------
-    // LocalBackendConfig RootPath override
+    // LocalDriverConfig RootPath override
     // -----------------------------------------------------------------------
 
     [Fact]
     public void For_local_with_RootPath_in_config_uses_config_root()
     {
-        Mock<IStorageBackend> backend = BackendMock();
-        StorageFactory factory = Factory(backend);
+        Mock<IStorageDriver> driver = BackendMock();
+        StorageFactory factory = Factory(driver);
 
         string configRoot = Path.GetTempPath();
         string json = $"{{\"rootPath\": \"{configRoot.Replace("\\", "\\\\")}\"}}";
@@ -292,8 +292,8 @@ public class StorageFactoryTests
     [Fact]
     public void For_local_with_malformed_configJson_falls_back_to_folderPath()
     {
-        Mock<IStorageBackend> backend = BackendMock();
-        StorageFactory factory = Factory(backend);
+        Mock<IStorageDriver> driver = BackendMock();
+        StorageFactory factory = Factory(driver);
 
         string root = Path.Combine(Path.GetTempPath(), "nm-factory-fallback-" + Ulid.NewUlid());
         Ulid id = Ulid.NewUlid();

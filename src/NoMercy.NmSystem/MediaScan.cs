@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using MovieFileLibrary;
 using NoMercy.NmSystem.Dto;
@@ -13,7 +13,7 @@ namespace NoMercy.NmSystem;
 public class MediaScan : IDisposable, IAsyncDisposable
 {
     private readonly MovieDetector _movieDetector = new();
-    private readonly IStorageBackend _backend;
+    private readonly IStorageDriver _driver;
 
     private bool _fileListingEnabled;
     private bool _regexFilterEnabled = true;
@@ -26,9 +26,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     private string[] _extensionFilter = [];
 
-    public MediaScan(IStorageBackend backend)
+    public MediaScan(IStorageDriver driver)
     {
-        _backend = backend;
+        _driver = driver;
     }
 
     public MediaScan EnableFileListing()
@@ -66,7 +66,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     public async Task<ConcurrentBag<MediaFolderExtend>> Process(string rootFolder, int depth = 0)
     {
-        rootFolder = _backend.GetFullPath(rootFolder);
+        rootFolder = _driver.GetFullPath(rootFolder);
         return !_fileListingEnabled
             ? await Task.Run(() => ScanFoldersOnly(rootFolder, depth))
             : await ScanFolderAsync(rootFolder, depth);
@@ -77,14 +77,14 @@ public class MediaScan : IDisposable, IAsyncDisposable
         int depth
     )
     {
-        folderPath = _backend.GetFullPath(folderPath);
+        folderPath = _driver.GetFullPath(folderPath);
 
         ConcurrentBag<MediaFolderExtend> folders = [];
 
         if (depth < 0)
             return folders;
 
-        if (!_backend.DirectoryExists(folderPath))
+        if (!_driver.DirectoryExists(folderPath))
             return folders;
 
         ConcurrentBag<MediaFile> files = await FilesAsync(folderPath);
@@ -98,7 +98,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 Name = Path.GetFileName(folderPath),
                 Path = folderPath,
                 Created = Directory.GetCreationTime(folderPath),
-                Modified = _backend.GetLastWriteTimeUtc(folderPath).ToLocalTime(),
+                Modified = _driver.GetLastWriteTimeUtc(folderPath).ToLocalTime(),
                 Accessed = Directory.GetLastAccessTime(folderPath),
                 Type = "folder",
                 Parsed = new()
@@ -117,9 +117,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
             IOrderedEnumerable<string>? directories = null;
             try
             {
-                directories = _backend
+                directories = _driver
                     .EnumerateFileSystemEntries(folderPath, "*", SearchOption.TopDirectoryOnly)
-                    .Where(e => _backend.DirectoryExists(e))
+                    .Where(e => _driver.DirectoryExists(e))
                     .OrderBy(f => f);
             }
             catch
@@ -144,7 +144,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                                 Name = folderName,
                                 Path = directory,
                                 Created = Directory.GetCreationTime(directory),
-                                Modified = _backend.GetLastWriteTimeUtc(directory).ToLocalTime(),
+                                Modified = _driver.GetLastWriteTimeUtc(directory).ToLocalTime(),
                                 Accessed = Directory.GetLastAccessTime(directory),
                                 Type = "folder",
                             }
@@ -174,7 +174,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                             Name = folderName,
                             Path = directory,
                             Created = Directory.GetCreationTime(directory),
-                            Modified = _backend.GetLastWriteTimeUtc(directory).ToLocalTime(),
+                            Modified = _driver.GetLastWriteTimeUtc(directory).ToLocalTime(),
                             Accessed = Directory.GetLastAccessTime(directory),
                             Type = "folder",
                             Parsed = new()
@@ -209,7 +209,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     private ConcurrentBag<MediaFolderExtend> ScanFoldersOnly(string folderPath, int depth)
     {
-        folderPath = _backend.GetFullPath(folderPath.ToUtf8());
+        folderPath = _driver.GetFullPath(folderPath.ToUtf8());
 
         if (depth < 0)
             return [];
@@ -218,9 +218,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
         {
             ConcurrentBag<MediaFolderExtend> folders = [];
 
-            IOrderedEnumerable<string> directories = _backend
+            IOrderedEnumerable<string> directories = _driver
                 .EnumerateFileSystemEntries(folderPath, "*", SearchOption.TopDirectoryOnly)
-                .Where(e => _backend.DirectoryExists(e))
+                .Where(e => _driver.DirectoryExists(e))
                 .OrderBy(f => f);
 
             Parallel.ForEach(
@@ -228,7 +228,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 Config.ParallelOptions,
                 (directory, _) =>
                 {
-                    string dir = _backend.GetFullPath(directory.ToUtf8());
+                    string dir = _driver.GetFullPath(directory.ToUtf8());
                     Logger.App($"Scanning {dir}");
 
                     string folderName = Path.GetFileName(dir);
@@ -241,7 +241,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                                 Name = folderName,
                                 Path = dir,
                                 Created = Directory.GetCreationTime(dir),
-                                Modified = _backend.GetLastWriteTimeUtc(dir).ToLocalTime(),
+                                Modified = _driver.GetLastWriteTimeUtc(dir).ToLocalTime(),
                                 Accessed = Directory.GetLastAccessTime(dir),
                                 Type = "folder",
                             }
@@ -268,7 +268,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                             Name = folderName,
                             Path = directory,
                             Created = Directory.GetCreationTime(directory),
-                            Modified = _backend.GetLastWriteTimeUtc(directory).ToLocalTime(),
+                            Modified = _driver.GetLastWriteTimeUtc(directory).ToLocalTime(),
                             Accessed = Directory.GetLastAccessTime(directory),
                             Type = "folder",
 
@@ -304,16 +304,16 @@ public class MediaScan : IDisposable, IAsyncDisposable
         ConcurrentBag<MediaFile> files = [];
         try
         {
-            IEnumerable<string> entries = _backend
+            IEnumerable<string> entries = _driver
                 .EnumerateFileSystemEntries(folderPath, "*", SearchOption.TopDirectoryOnly)
-                .Where(e => _backend.FileExists(e));
+                .Where(e => _driver.FileExists(e));
 
             await Parallel.ForEachAsync(
                 entries,
                 Config.ParallelOptions,
                 async (file, cancellationToken) =>
                 {
-                    file = _backend.GetFullPath(file.ToUtf8());
+                    file = _driver.GetFullPath(file.ToUtf8());
 
                     if (Filter is not null)
                         if (!file.Contains(Filter))
@@ -401,9 +401,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         Name = Path.GetFileName(file),
                         Path = file,
                         Extension = extension,
-                        Size = (int)_backend.GetFileSize(file),
+                        Size = (int)_driver.GetFileSize(file),
                         Created = File.GetCreationTime(file),
-                        Modified = _backend.GetLastWriteTimeUtc(file).ToLocalTime(),
+                        Modified = _driver.GetLastWriteTimeUtc(file).ToLocalTime(),
                         Accessed = File.GetLastAccessTime(file),
                         Type = "file",
 

@@ -1,4 +1,4 @@
-using System.Diagnostics.Contracts;
+﻿using System.Diagnostics.Contracts;
 using System.Drawing;
 using System.Globalization;
 using System.Net;
@@ -310,7 +310,7 @@ public static partial class Str
 
     public static string EscapeQuotes(this string str)
     {
-        return Regex.Replace(str, "\"", $"'");
+        return Regex.Replace(str, "\"", "'");
     }
 
     private static string _parseTitleSort(string? value = null, DateTime? date = null)
@@ -332,7 +332,7 @@ public static partial class Str
         value = Regex.Replace(value, @"\.+", " ");
 
         // Sanitize file name to remove unwanted characters
-        value = CleanFileName(value);
+        value = value.CleanFileName();
 
         return value.ToLower().Trim();
     }
@@ -442,25 +442,25 @@ public static partial class Str
     }
 
     public static string? FindMatchingDirectory(
-        IStorageBackend backend,
+        IStorageDriver driver,
         string rootPath,
         string expectedFolderName
     )
     {
-        if (!backend.DirectoryExists(rootPath))
+        if (!driver.DirectoryExists(rootPath))
             return null;
 
         string normalizedExpected = expectedFolderName.NormalizeForComparison();
 
         foreach (
-            string dir in backend.EnumerateFileSystemEntries(
+            string dir in driver.EnumerateFileSystemEntries(
                 rootPath,
                 "*",
                 SearchOption.TopDirectoryOnly
             )
         )
         {
-            if (!backend.DirectoryExists(dir))
+            if (!driver.DirectoryExists(dir))
                 continue;
             string dirName = Path.GetFileName(dir).OrEmpty();
             if (dirName.NormalizeForComparison() == normalizedExpected)

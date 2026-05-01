@@ -1,13 +1,13 @@
-using System.Text;
+﻿using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Storage;
-using NoMercy.Storage.Backends.S3;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Drivers.S3;
 using NoMercy.Storage.Factory;
-using NoMercy.Storage.Local;
 using NoMercy.Storage.Remote;
 
 namespace NoMercy.Tests.Storage;
@@ -16,18 +16,15 @@ namespace NoMercy.Tests.Storage;
 // Unit tests — no Docker needed
 // ============================================================================
 
-public class S3BackendConfigParsingTests
+public class S3DriverConfigParsingTests
 {
     [Fact]
-    public void S3BackendConfig_missing_bucket_throws()
+    public void S3DriverConfig_missing_bucket_throws()
     {
         string json = """{"region":"us-east-1"}""";
 
         // The factory validates bucket before constructing backend
-        StorageFactory factory = new(
-            new SystemIoStorageBackend(),
-            NullLogger<StorageFactory>.Instance
-        );
+        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
 
         Action act = () => factory.For(Ulid.NewUlid(), "s3", json, "/irrelevant");
 
@@ -35,14 +32,11 @@ public class S3BackendConfigParsingTests
     }
 
     [Fact]
-    public void S3BackendConfig_missing_region_throws()
+    public void S3DriverConfig_missing_region_throws()
     {
         string json = """{"bucket":"mybucket"}""";
 
-        StorageFactory factory = new(
-            new SystemIoStorageBackend(),
-            NullLogger<StorageFactory>.Instance
-        );
+        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
 
         Action act = () => factory.For(Ulid.NewUlid(), "s3", json, "/irrelevant");
 
@@ -54,10 +48,7 @@ public class S3BackendConfigParsingTests
     {
         string json = """{"bucket":"mybucket","region":"auto"}""";
 
-        StorageFactory factory = new(
-            new SystemIoStorageBackend(),
-            NullLogger<StorageFactory>.Instance
-        );
+        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
 
         Action act = () => factory.For(Ulid.NewUlid(), "r2", json, "/irrelevant");
 
@@ -67,10 +58,7 @@ public class S3BackendConfigParsingTests
     [Fact]
     public void Null_configJson_for_s3_throws()
     {
-        StorageFactory factory = new(
-            new SystemIoStorageBackend(),
-            NullLogger<StorageFactory>.Instance
-        );
+        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
 
         Action act = () => factory.For(Ulid.NewUlid(), "s3", null, "/irrelevant");
 
@@ -80,10 +68,7 @@ public class S3BackendConfigParsingTests
     [Fact]
     public void Malformed_configJson_for_s3_throws_ArgumentException()
     {
-        StorageFactory factory = new(
-            new SystemIoStorageBackend(),
-            NullLogger<StorageFactory>.Instance
-        );
+        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
 
         Action act = () => factory.For(Ulid.NewUlid(), "s3", "not-json{{{", "/irrelevant");
 
@@ -99,10 +84,7 @@ public class S3BackendConfigParsingTests
         string json =
             """{"bucket":"test","region":"us-east-1","endpoint":"http://localhost:9000"}""";
 
-        StorageFactory factory = new(
-            new SystemIoStorageBackend(),
-            NullLogger<StorageFactory>.Instance
-        );
+        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
 
         IStorage storage = factory.For(Ulid.NewUlid(), "s3", json, "/irrelevant");
 
@@ -115,10 +97,7 @@ public class S3BackendConfigParsingTests
         string json =
             """{"bucket":"test","region":"auto","endpoint":"https://account.r2.cloudflarestorage.com"}""";
 
-        StorageFactory factory = new(
-            new SystemIoStorageBackend(),
-            NullLogger<StorageFactory>.Instance
-        );
+        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
 
         IStorage storage = factory.For(Ulid.NewUlid(), "r2", json, "/irrelevant");
 
@@ -132,10 +111,7 @@ public class S3BackendConfigParsingTests
         string json =
             """{"bucket":"test","region":"us-east-1","endpoint":"http://localhost:9000"}""";
 
-        StorageFactory factory = new(
-            new SystemIoStorageBackend(),
-            NullLogger<StorageFactory>.Instance
-        );
+        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
 
         Action act = () => factory.For(Ulid.NewUlid(), "s3", json, "/irrelevant");
 
@@ -210,10 +186,10 @@ public sealed class MinioFixture : IAsyncLifetime
         );
     }
 
-    public S3StorageBackend BuildBackend(string? prefix = null)
+    public S3StorageDriver BuildBackend(string? prefix = null)
     {
         AmazonS3Client client = BuildClient();
-        return new S3StorageBackend(client, BucketName, prefix);
+        return new S3StorageDriver(client, BucketName, prefix);
     }
 
     private static async Task<bool> DockerAvailableAsync()
@@ -252,7 +228,7 @@ public sealed class MinioFixture : IAsyncLifetime
 }
 
 [Collection("MinioIntegration")]
-public class S3StorageBackendIntegrationTests(MinioFixture minio) : IClassFixture<MinioFixture>
+public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture<MinioFixture>
 {
     private const string SkipReason = "Docker not available";
 
@@ -261,7 +237,7 @@ public class S3StorageBackendIntegrationTests(MinioFixture minio) : IClassFixtur
     {
         Skip.If(!minio.Available, SkipReason);
 
-        S3StorageBackend backend = minio.BuildBackend();
+        S3StorageDriver backend = minio.BuildBackend();
         string path = $"roundtrip/{Ulid.NewUlid()}.txt";
         byte[] data = "hello s3"u8.ToArray();
 
@@ -287,7 +263,7 @@ public class S3StorageBackendIntegrationTests(MinioFixture minio) : IClassFixtur
     {
         Skip.If(!minio.Available, SkipReason);
 
-        S3StorageBackend backend = minio.BuildBackend();
+        S3StorageDriver backend = minio.BuildBackend();
         string path = $"large/{Ulid.NewUlid()}.bin";
 
         // 6 MB — exceeds the 5 MB multipart threshold
@@ -310,7 +286,7 @@ public class S3StorageBackendIntegrationTests(MinioFixture minio) : IClassFixtur
     {
         Skip.If(!minio.Available, SkipReason);
 
-        S3StorageBackend backend = minio.BuildBackend("enum-test");
+        S3StorageDriver backend = minio.BuildBackend("enum-test");
         string prefix = $"dir-{Ulid.NewUlid()}";
 
         // Write two files under the prefix
@@ -339,7 +315,7 @@ public class S3StorageBackendIntegrationTests(MinioFixture minio) : IClassFixtur
     {
         Skip.If(!minio.Available, SkipReason);
 
-        S3StorageBackend backend = minio.BuildBackend();
+        S3StorageDriver backend = minio.BuildBackend();
         string src = $"move/{Ulid.NewUlid()}-src.txt";
         string dst = $"move/{Ulid.NewUlid()}-dst.txt";
         byte[] data = "move me"u8.ToArray();
@@ -360,7 +336,7 @@ public class S3StorageBackendIntegrationTests(MinioFixture minio) : IClassFixtur
     {
         Skip.If(!minio.Available, SkipReason);
 
-        S3StorageBackend backend = minio.BuildBackend();
+        S3StorageDriver backend = minio.BuildBackend();
         string src = $"copy/{Ulid.NewUlid()}-src.txt";
         string dst = $"copy/{Ulid.NewUlid()}-dst.txt";
         byte[] data = "copy me"u8.ToArray();
@@ -382,7 +358,7 @@ public class S3StorageBackendIntegrationTests(MinioFixture minio) : IClassFixtur
     {
         Skip.If(!minio.Available, SkipReason);
 
-        S3StorageBackend backend = minio.BuildBackend();
+        S3StorageDriver backend = minio.BuildBackend();
         string path = $"stream/{Ulid.NewUlid()}.bin";
         byte[] data = new byte[2 * 1024 * 1024];
         new Random(7).NextBytes(data);
@@ -403,7 +379,7 @@ public class S3StorageBackendIntegrationTests(MinioFixture minio) : IClassFixtur
     {
         Skip.If(!minio.Available, SkipReason);
 
-        S3StorageBackend backend = minio.BuildBackend();
+        S3StorageDriver backend = minio.BuildBackend();
         string path = $"nooverwrite/{Ulid.NewUlid()}.txt";
         byte[] data = "original"u8.ToArray();
 

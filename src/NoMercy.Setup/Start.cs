@@ -1,8 +1,8 @@
-using NoMercy.Networking;
+﻿using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 using NoMercyQueue;
 using Serilog.Events;
@@ -68,9 +68,9 @@ public class Start
                 // LOCAL-ONLY: Start.cs is in NoMercy.Setup which cannot reference NoMercy.Providers (circular).
                 () =>
                 {
-                    IStorageBackend backend = new SystemIoStorageBackend();
-                    IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
-                    return new Binaries(backend, storage).DownloadAll();
+                    IStorageDriver driver = new LocalStorageDriver();
+                    IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+                    return new Binaries(driver, storage).DownloadAll();
                 },
                 CanDefer: false,
                 Phase: 2,

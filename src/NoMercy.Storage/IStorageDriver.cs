@@ -3,11 +3,11 @@ namespace NoMercy.Storage;
 /// <summary>
 /// Low-level filesystem primitives that <see cref="LocalStorage"/>
 /// depends on. Default implementation
-/// <see cref="SystemIoStorageBackend"/> wraps <see cref="System.IO"/>;
+/// <see cref="LocalStorageDriver"/> wraps <see cref="System.IO"/>;
 /// tests inject a fake to exercise <see cref="LocalStorage"/>
 /// contracts without touching real disk.
 /// </summary>
-public interface IStorageBackend
+public interface IStorageDriver
 {
     bool FileExists(string path);
     bool DirectoryExists(string path);
@@ -41,7 +41,7 @@ public interface IStorageBackend
 
     /// <summary>
     /// Returns true when <paramref name="path"/> is flagged as hidden
-    /// or system by the backend. Used by browse/picker code to skip
+    /// or system by the driver. Used by browse/picker code to skip
     /// OS-managed entries (Windows Hidden/System attributes, etc.).
     /// Returns false when the path does not exist or cannot be queried.
     /// </summary>

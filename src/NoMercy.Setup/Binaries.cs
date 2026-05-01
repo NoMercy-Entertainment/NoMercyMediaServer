@@ -1,4 +1,5 @@
-using System.Globalization;
+﻿using System.Globalization;
+using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Extensions;
@@ -26,7 +27,7 @@ public enum ServerUpdateResult
 
 public class Binaries
 {
-    private readonly IStorageBackend _backend;
+    private readonly IStorageDriver _driver;
     private readonly IStorage _storage;
     private readonly HttpClient _httpClient;
 
@@ -44,9 +45,9 @@ public class Binaries
     private const string GithubCloudflaredApiUrl =
         "https://api.github.com/repos/cloudflare/cloudflared/releases/latest";
 
-    public Binaries(IStorageBackend backend, IStorage storage)
+    public Binaries(IStorageDriver driver, IStorage storage)
     {
-        _backend = backend;
+        _driver = driver;
         _storage = storage;
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -62,7 +63,7 @@ public class Binaries
         string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
         if (
             !string.IsNullOrEmpty(installDir)
-            && _backend.FileExists(Path.Combine(installDir, executableName))
+            && _driver.FileExists(Path.Combine(installDir, executableName))
         )
             return true;
 
@@ -79,7 +80,7 @@ public class Binaries
                 Path.GetFullPath(AppFiles.BinariesPath),
                 StringComparison.OrdinalIgnoreCase
             )
-            && _backend.FileExists(Path.Combine(ownDir, executableName))
+            && _driver.FileExists(Path.Combine(ownDir, executableName))
         )
             return true;
 
@@ -143,8 +144,8 @@ public class Binaries
 
                 if (
                     response.StatusCode
-                    is System.Net.HttpStatusCode.Forbidden
-                        or System.Net.HttpStatusCode.TooManyRequests
+                    is HttpStatusCode.Forbidden
+                        or HttpStatusCode.TooManyRequests
                 )
                 {
                     TimeSpan waitTime = backoff;
@@ -513,7 +514,7 @@ public class Binaries
             return ServerUpdateResult.UseInstaller;
         }
 
-        string? onDiskVersion = Software.GetFileVersion(_backend, AppFiles.ServerExePath);
+        string? onDiskVersion = Software.GetFileVersion(_driver, AppFiles.ServerExePath);
         if (
             onDiskVersion is not null
             && string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase)
@@ -992,7 +993,7 @@ public class Binaries
     {
         string destinationPath = Path.Combine(AppFiles.FfmpegFolder, modelName + ".bin");
 
-        await using Stream destinationStream = _backend.OpenWrite(destinationPath, overwrite: true);
+        await using Stream destinationStream = _driver.OpenWrite(destinationPath, overwrite: true);
 
         foreach (Uri partUrl in partUrls)
         {
@@ -1001,7 +1002,7 @@ public class Binaries
                 Path.GetFileName(partUrl.ToString())
             );
 
-            await using Stream partStream = _backend.OpenRead(partPath);
+            await using Stream partStream = _driver.OpenRead(partPath);
             await partStream.CopyToAsync(destinationStream);
         }
 

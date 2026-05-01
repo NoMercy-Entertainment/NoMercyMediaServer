@@ -1,5 +1,5 @@
-using NoMercy.Storage;
-using NoMercy.Storage.Local;
+﻿using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Storage;
@@ -7,7 +7,7 @@ namespace NoMercy.Tests.Storage;
 /// <summary>
 /// Full end-to-end exercise of <see cref="LocalStorage"/> against a
 /// real temp directory using the real
-/// <see cref="SystemIoStorageBackend"/>.
+/// <see cref="LocalStorageDriver"/>.
 /// </summary>
 public class LocalStorageIntegrationTests : IDisposable
 {
@@ -18,9 +18,9 @@ public class LocalStorageIntegrationTests : IDisposable
     {
         _root = Path.Combine(Path.GetTempPath(), "nm-storage-it-" + Path.GetRandomFileName());
         Directory.CreateDirectory(_root);
-        SystemIoStorageBackend backend = new();
-        StoragePathGuard guard = new([_root], backend);
-        _storage = new LocalStorage(backend, guard);
+        LocalStorageDriver driver = new();
+        StoragePathGuard guard = new([_root], driver);
+        _storage = new LocalStorage(driver, guard);
     }
 
     public void Dispose()

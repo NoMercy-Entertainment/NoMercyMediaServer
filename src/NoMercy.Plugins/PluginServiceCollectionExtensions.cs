@@ -1,9 +1,9 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 
 namespace NoMercy.Plugins;
@@ -22,12 +22,12 @@ public static class PluginServiceCollectionExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             ILogger<PluginManager> logger = sp.GetRequiredService<ILogger<PluginManager>>();
-            IStorageBackend backend = sp.GetRequiredService<IStorageBackend>();
+            IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
             IStorage storage = new LocalStorage(
-                backend,
-                new StoragePathGuard([pluginsPath], backend)
+                driver,
+                new StoragePathGuard([pluginsPath], driver)
             );
-            return new PluginManager(eventBus, sp, logger, pluginsPath, storage, backend);
+            return new PluginManager(eventBus, sp, logger, pluginsPath, storage, driver);
         });
 
         return services;

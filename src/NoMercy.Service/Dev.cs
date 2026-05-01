@@ -1,9 +1,9 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 
 namespace NoMercy.Service;
@@ -89,8 +89,8 @@ public static class Dev
 
     private static IStorage CreateStorage()
     {
-        IStorageBackend backend = new SystemIoStorageBackend();
-        return new LocalStorage(backend, new StoragePathGuard([], backend));
+        IStorageDriver driver = new LocalStorageDriver();
+        return new LocalStorage(driver, new StoragePathGuard([], driver));
     }
 
     private static Task DeleteEmptyPlaylists(string episodeFolder)

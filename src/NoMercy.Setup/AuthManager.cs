@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -18,7 +18,7 @@ namespace NoMercy.Setup;
 public class AuthManager
 {
     private readonly AppDbContext _appContext;
-    private readonly IStorageBackend _backend;
+    private readonly IStorageDriver _driver;
 
     private readonly object _authReadyLock = new();
     private TaskCompletionSource _authReadyTcs = new(
@@ -26,10 +26,10 @@ public class AuthManager
     );
     private CancellationTokenSource? _refreshCts;
 
-    public AuthManager(AppDbContext appContext, IStorageBackend backend)
+    public AuthManager(AppDbContext appContext, IStorageDriver driver)
     {
         _appContext = appContext;
-        _backend = backend;
+        _driver = driver;
     }
 
     // ── Public API ───────────────────────────────────────────────────────────
@@ -52,10 +52,7 @@ public class AuthManager
 
         if (string.IsNullOrEmpty(accessToken))
         {
-            Logger.Auth(
-                "No cached token in DB — authentication required through /setup UI",
-                LogEventLevel.Information
-            );
+            Logger.Auth("No cached token in DB — authentication required through /setup UI");
             return false;
         }
 
@@ -85,7 +82,7 @@ public class AuthManager
 
         if (!string.IsNullOrEmpty(refreshToken))
         {
-            Logger.Auth("Token expired — attempting refresh", LogEventLevel.Information);
+            Logger.Auth("Token expired — attempting refresh");
             bool refreshed = await TryRefreshToken(refreshToken);
             if (refreshed)
             {
@@ -289,9 +286,7 @@ public class AuthManager
                     $"Token exchange failed ({(int)response.StatusCode}): {content}"
                 );
 
-            AuthResponse? data = Newtonsoft.Json.JsonConvert.DeserializeObject<AuthResponse>(
-                content
-            );
+            AuthResponse? data = JsonConvert.DeserializeObject<AuthResponse>(content);
             if (data?.AccessToken is null)
                 throw new InvalidOperationException("Token response missing access_token");
 
@@ -408,13 +403,13 @@ public class AuthManager
         string tokenFilePath = AppFiles.TokenFile;
 #pragma warning restore CS0618
 
-        if (!_backend.FileExists(tokenFilePath))
+        if (!_driver.FileExists(tokenFilePath))
             return;
 
         try
         {
             string fileContents;
-            using (StreamReader reader = new(_backend.OpenRead(tokenFilePath)))
+            using (StreamReader reader = new(_driver.OpenRead(tokenFilePath)))
                 fileContents = reader.ReadToEnd();
             if (string.IsNullOrWhiteSpace(fileContents) || fileContents.Trim() == "{}")
             {
@@ -432,10 +427,7 @@ public class AuthManager
             // Store synchronously via blocking call during migration
             StoreTokensAsync(tokenData).GetAwaiter().GetResult();
             SecureDeleteFile(tokenFilePath);
-            Logger.Auth(
-                "Migrated legacy token.json to encrypted DB storage",
-                LogEventLevel.Information
-            );
+            Logger.Auth("Migrated legacy token.json to encrypted DB storage");
         }
         catch (Exception ex)
         {
@@ -590,10 +582,10 @@ public class AuthManager
     {
         try
         {
-            if (!_backend.FileExists(path))
+            if (!_driver.FileExists(path))
                 return;
 
-            long fileLength = _backend.GetFileSize(path);
+            long fileLength = _driver.GetFileSize(path);
             if (fileLength > 0)
             {
                 using Stream stream = new FileStream(
@@ -613,7 +605,7 @@ public class AuthManager
                 stream.Flush();
             }
 
-            _backend.DeleteFile(path);
+            _driver.DeleteFile(path);
         }
         catch (Exception ex)
         {

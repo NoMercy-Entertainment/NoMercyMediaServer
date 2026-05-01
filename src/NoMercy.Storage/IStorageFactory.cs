@@ -10,16 +10,16 @@ public interface IStorageFactory
 {
     /// <summary>
     /// Returns an <see cref="IStorage"/> configured for the given folder.
-    /// Cached on <c>(folderId, backendType, configJsonHash)</c> — repeated
+    /// Cached on <c>(folderId, driverType, configJsonHash)</c> — repeated
     /// calls with the same triple return the same instance. A config change
     /// produces a different hash and therefore a fresh instance without
     /// needing an explicit <see cref="Invalidate"/> call.
     /// </summary>
-    IStorage For(Ulid folderId, string backendType, string? backendConfigJson, string folderPath);
+    IStorage For(Ulid folderId, string driverType, string? driverConfigJson, string folderPath);
 
     /// <summary>
     /// Drops every cached <see cref="IStorage"/> whose key starts with
-    /// <paramref name="folderId"/>. Call when a folder's backend config
+    /// <paramref name="folderId"/>. Call when a folder's driver config
     /// changes or when the folder is deleted.
     /// </summary>
     void Invalidate(Ulid folderId);

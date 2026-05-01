@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace NoMercy.Database.Migrations
 {
     [DbContext(typeof(MediaContext))]
-    [Migration("20260430195424_AddFolderBackendColumns")]
-    partial class AddFolderBackendColumns
+    [Migration("20260430200000_RenameFolderBackendColumnsToDriver")]
+    partial class RenameFolderBackendColumnsToDriver
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -174,10 +174,10 @@ namespace NoMercy.Database.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("BackendConfig")
+                    b.Property<string>("DriverConfig")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("BackendType")
+                    b.Property<string>("DriverType")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -189,7 +189,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BackendType");
+                    b.HasIndex("DriverType");
 
                     b.HasIndex("Path")
                         .IsUnique();

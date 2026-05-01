@@ -1,7 +1,7 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem.FileSystem;
@@ -13,11 +13,11 @@ public class FilePermissions
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // LOCAL-ONLY: FilePermissions is a static class in NmSystem; no reference to NoMercy.Providers.
-            IStorageBackend backend = new SystemIoStorageBackend();
+            IStorageDriver driver = new LocalStorageDriver();
 
-            if (backend.FileExists(path))
+            if (driver.FileExists(path))
                 await Shell.ExecAsync("chmod", $"+x \"{path}\"");
-            else if (backend.DirectoryExists(path))
+            else if (driver.DirectoryExists(path))
                 await Shell.ExecAsync("chmod", $"-R +x \"{path}\"");
 
             Logger.System($"Set execution permissions for {path}", LogEventLevel.Verbose);

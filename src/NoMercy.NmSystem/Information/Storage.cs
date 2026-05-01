@@ -1,6 +1,8 @@
+﻿using System.ComponentModel;
 using System.Management;
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 
 namespace NoMercy.NmSystem.Information;
@@ -50,7 +52,7 @@ public class Storage
     {
         List<StorageDevice> devices = [];
 
-        string output = SystemCalls.Shell.ExecCommand("df -k");
+        string output = Shell.ExecCommand("df -k");
         string[] lines = output.Split('\n');
         foreach (string line in lines.Skip(1))
         {
@@ -77,33 +79,33 @@ public class Storage
 
     #region Space Information
 
-    public static long GetUsedSpace(IStorageBackend backend, string path)
+    public static long GetUsedSpace(IStorageDriver driver, string path)
     {
         long totalSpace = GetTotalSpace(path);
-        long freeSpace = GetFreeSpace(backend, path);
+        long freeSpace = GetFreeSpace(driver, path);
         return totalSpace - freeSpace;
     }
 
-    private static long GetFreeSpace(IStorageBackend backend, string path)
+    private static long GetFreeSpace(IStorageDriver driver, string path)
     {
         if (Software.IsWindows)
-            return GetWindowsFreeSpace(backend, path);
+            return GetWindowsFreeSpace(driver, path);
 
         if (Software.IsLinux || Software.IsMac)
-            return GetUnixFreeSpace(backend, path);
+            return GetUnixFreeSpace(driver, path);
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
     }
 
-    private static long GetWindowsFreeSpace(IStorageBackend backend, string path)
+    private static long GetWindowsFreeSpace(IStorageDriver driver, string path)
     {
-        if (!backend.DirectoryExists(path))
+        if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
         if (GetDiskFreeSpaceEx(path, out ulong freeBytesAvailable, out _, out _))
             return (long)freeBytesAvailable;
 
-        throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+        throw new Win32Exception(Marshal.GetLastWin32Error());
     }
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -133,15 +135,15 @@ public class Storage
     [DllImport("libc.so.6", EntryPoint = "statvfs", SetLastError = true)]
     private static extern int statvfs(string path, out Statvfs buf);
 
-    private static long GetUnixFreeSpace(IStorageBackend backend, string path)
+    private static long GetUnixFreeSpace(IStorageDriver driver, string path)
     {
-        if (!backend.DirectoryExists(path))
+        if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
         if (statvfs(path, out Statvfs stat) == 0)
             return (long)(stat.f_bavail * stat.f_frsize);
 
-        throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+        throw new Win32Exception(Marshal.GetLastWin32Error());
     }
 
     private static long GetTotalSpace(string path)
@@ -150,14 +152,14 @@ public class Storage
         {
             if (GetDiskFreeSpaceEx(path, out _, out ulong totalBytes, out _))
                 return (long)totalBytes;
-            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            throw new Win32Exception(Marshal.GetLastWin32Error());
         }
 
         if (Software.IsLinux || Software.IsMac)
         {
             if (statvfs(path, out Statvfs stat) == 0)
                 return (long)(stat.f_blocks * stat.f_frsize);
-            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            throw new Win32Exception(Marshal.GetLastWin32Error());
         }
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
@@ -167,20 +169,20 @@ public class Storage
 
     #region File System Information
 
-    public static string GetFileSystemType(IStorageBackend backend, string path)
+    public static string GetFileSystemType(IStorageDriver driver, string path)
     {
         if (Software.IsWindows)
-            return GetWindowsFileSystemType(backend, path);
+            return GetWindowsFileSystemType(driver, path);
 
         if (Software.IsLinux || Software.IsMac)
-            return GetUnixFileSystemType(backend, path);
+            return GetUnixFileSystemType(driver, path);
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
     }
 
-    private static string GetWindowsFileSystemType(IStorageBackend backend, string path)
+    private static string GetWindowsFileSystemType(IStorageDriver driver, string path)
     {
-        if (!backend.DirectoryExists(path))
+        if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
 #pragma warning disable CA1416
@@ -198,12 +200,12 @@ public class Storage
         throw new("File system type not found.");
     }
 
-    private static string GetUnixFileSystemType(IStorageBackend backend, string path)
+    private static string GetUnixFileSystemType(IStorageDriver driver, string path)
     {
-        if (!backend.DirectoryExists(path))
+        if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
-        string output = SystemCalls.Shell.ExecCommand($"df -T {path} | awk 'NR==2 {{print $2}}'");
+        string output = Shell.ExecCommand($"df -T {path} | awk 'NR==2 {{print $2}}'");
         return output.Trim();
     }
 
@@ -212,34 +214,34 @@ public class Storage
     #region Disk Usage by Directory
 
     public static Dictionary<string, long> GetDiskUsageByDirectory(
-        IStorageBackend backend,
+        IStorageDriver driver,
         string path,
         CancellationToken ct = default
     )
     {
-        if (!backend.DirectoryExists(path))
+        if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
         Dictionary<string, long> directorySizes = new();
         foreach (
-            string dir in backend
+            string dir in driver
                 .EnumerateFileSystemEntries(path, "*", SearchOption.TopDirectoryOnly)
-                .Where(e => backend.DirectoryExists(e))
+                .Where(e => driver.DirectoryExists(e))
         )
         {
             ct.ThrowIfCancellationRequested();
-            long size = GetDirectorySize(backend, dir, ct);
+            long size = GetDirectorySize(driver, dir, ct);
             directorySizes.Add(dir, size);
         }
 
         return directorySizes;
     }
 
-    private static long GetDirectorySize(IStorageBackend backend, string path, CancellationToken ct)
+    private static long GetDirectorySize(IStorageDriver driver, string path, CancellationToken ct)
     {
         long size = 0;
         foreach (
-            string entry in backend.EnumerateFileSystemEntries(
+            string entry in driver.EnumerateFileSystemEntries(
                 path,
                 "*",
                 SearchOption.AllDirectories
@@ -247,8 +249,8 @@ public class Storage
         )
         {
             ct.ThrowIfCancellationRequested();
-            if (backend.FileExists(entry))
-                size += backend.GetFileSize(entry);
+            if (driver.FileExists(entry))
+                size += driver.GetFileSize(entry);
         }
 
         return size;

@@ -1,15 +1,15 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Setup;
 
 public static class DesktopIconCreator
 {
     // LOCAL-ONLY: DesktopIconCreator is in NoMercy.Setup which cannot reference NoMercy.Providers (circular).
-    private static IStorageBackend _backend => new SystemIoStorageBackend();
+    private static IStorageDriver _driver => new LocalStorageDriver();
 
     public static void CreateDesktopIcon(string appName, string appPath, string iconPath)
     {
@@ -71,16 +71,16 @@ public static class DesktopIconCreator
             end tell";
 
             string scriptPath = "/tmp/CreateShortcut.scpt";
-            using (Stream scriptStream = _backend.OpenWrite(scriptPath, overwrite: true))
+            using (Stream scriptStream = _driver.OpenWrite(scriptPath, overwrite: true))
             using (StreamWriter scriptWriter = new(scriptStream, Encoding.UTF8, leaveOpen: true))
                 scriptWriter.Write(script);
             using (Process? osascriptProc = Process.Start("osascript", scriptPath))
                 osascriptProc?.WaitForExit();
 
-            if (!string.IsNullOrEmpty(iconPath) && _backend.FileExists(iconPath))
+            if (!string.IsNullOrEmpty(iconPath) && _driver.FileExists(iconPath))
             {
                 string iconDest = Path.Combine(aliasPath, "Icon.icns");
-                _backend.CopyFile(iconPath, iconDest, overwrite: true);
+                _driver.CopyFile(iconPath, iconDest, overwrite: true);
 
                 using (
                     Process? shProc = Process.Start(
@@ -116,7 +116,7 @@ public static class DesktopIconCreator
                 Type=Application
                 Terminal=false";
 
-            using (Stream shortcutStream = _backend.OpenWrite(shortcutPath, overwrite: true))
+            using (Stream shortcutStream = _driver.OpenWrite(shortcutPath, overwrite: true))
             using (
                 StreamWriter shortcutWriter = new(shortcutStream, Encoding.UTF8, leaveOpen: true)
             )

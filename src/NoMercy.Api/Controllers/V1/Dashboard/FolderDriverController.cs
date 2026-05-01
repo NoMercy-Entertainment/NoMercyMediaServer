@@ -17,27 +17,27 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/folders", Order = 10)]
-public class FolderBackendController(
+public class FolderDriverController(
     FolderRepository folderRepository,
     IStorageFactory storageFactory
 ) : BaseController
 {
-    private static readonly string[] AllowedBackendTypes = ["local", "smb", "nfs", "s3", "r2"];
+    private static readonly string[] AllowedDriverTypes = ["local", "smb", "nfs", "s3", "r2"];
 
-    private static readonly string[] UnimplementedBackendTypes = [];
+    private static readonly string[] UnimplementedDriverTypes = [];
 
     // -----------------------------------------------------------------------
-    // GET /api/v1/dashboard/folders/backends
+    // GET /api/v1/dashboard/folders/drivers
     // -----------------------------------------------------------------------
 
     [HttpGet]
-    [Route("backends")]
-    public IActionResult GetBackendTypes()
+    [Route("drivers")]
+    public IActionResult GetDriverTypes()
     {
         if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view backend types");
+            return UnauthorizedResponse("You do not have permission to view driver types");
 
-        BackendTypeMetadataDto[] metadata =
+        DriverMetadataDto[] metadata =
         [
             new()
             {
@@ -103,51 +103,51 @@ public class FolderBackendController(
     }
 
     // -----------------------------------------------------------------------
-    // GET /api/v1/dashboard/folders/{id}/backend
+    // GET /api/v1/dashboard/folders/{id}/driver
     // -----------------------------------------------------------------------
 
     [HttpGet]
-    [Route("{id:ulid}/backend")]
-    public async Task<IActionResult> GetBackend(Ulid id)
+    [Route("{id:ulid}/driver")]
+    public async Task<IActionResult> GetDriver(Ulid id)
     {
         if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view folder backend config");
+            return UnauthorizedResponse("You do not have permission to view folder driver config");
 
         Folder? folder = await folderRepository.GetFolderByIdAsync(id);
         if (folder is null)
             return NotFoundResponse("Folder not found");
 
-        JObject? configObject = ParseConfigJson(folder.BackendConfig);
+        JObject? configObject = ParseConfigJson(folder.DriverConfig);
 
         return Ok(
-            new FolderBackendDto { BackendType = folder.BackendType, BackendConfig = configObject }
+            new FolderDriverDto { DriverType = folder.DriverType, DriverConfig = configObject }
         );
     }
 
     // -----------------------------------------------------------------------
-    // PUT /api/v1/dashboard/folders/{id}/backend
+    // PUT /api/v1/dashboard/folders/{id}/driver
     // -----------------------------------------------------------------------
 
     [HttpPut]
-    [Route("{id:ulid}/backend")]
-    public async Task<IActionResult> UpdateBackend(
+    [Route("{id:ulid}/driver")]
+    public async Task<IActionResult> UpdateDriver(
         Ulid id,
-        [FromBody] UpdateFolderBackendRequestDto request
+        [FromBody] UpdateFolderDriverRequestDto request
     )
     {
         if (!User.IsModerator())
             return UnauthorizedResponse(
-                "You do not have permission to update folder backend config"
+                "You do not have permission to update folder driver config"
             );
 
-        string normalizedType = (request.BackendType ?? string.Empty).Trim().ToLowerInvariant();
+        string normalizedType = (request.DriverType ?? string.Empty).Trim().ToLowerInvariant();
 
-        if (!AllowedBackendTypes.Contains(normalizedType))
+        if (!AllowedDriverTypes.Contains(normalizedType))
             return BadRequestResponse(
-                $"Invalid backend_type '{request.BackendType}'. Allowed values: {string.Join(", ", AllowedBackendTypes)}."
+                $"Invalid driver_type '{request.DriverType}'. Allowed values: {string.Join(", ", AllowedDriverTypes)}."
             );
 
-        string? validationError = ValidateConfig(normalizedType, request.BackendConfig);
+        string? validationError = ValidateConfig(normalizedType, request.DriverConfig);
         if (validationError is not null)
             return BadRequestResponse(validationError);
 
@@ -155,26 +155,26 @@ public class FolderBackendController(
         if (folder is null)
             return NotFoundResponse("Folder not found");
 
-        string? serializedConfig = request.BackendConfig is not null
-            ? JsonConvert.SerializeObject(request.BackendConfig)
+        string? serializedConfig = request.DriverConfig is not null
+            ? JsonConvert.SerializeObject(request.DriverConfig)
             : null;
 
-        folder.BackendType = normalizedType;
-        folder.BackendConfig = serializedConfig;
+        folder.DriverType = normalizedType;
+        folder.DriverConfig = serializedConfig;
 
         await folderRepository.UpdateFolderAsync(folder);
 
         storageFactory.Invalidate(id);
 
-        JObject? configObject = ParseConfigJson(folder.BackendConfig);
+        JObject? configObject = ParseConfigJson(folder.DriverConfig);
 
         string[] warnings = BuildWarnings(normalizedType);
 
         return Ok(
-            new FolderBackendResponseDto
+            new FolderDriverResponseDto
             {
-                BackendType = folder.BackendType,
-                BackendConfig = configObject,
+                DriverType = folder.DriverType,
+                DriverConfig = configObject,
                 Warnings = warnings,
             }
         );
@@ -199,9 +199,9 @@ public class FolderBackendController(
         }
     }
 
-    private static string? ValidateConfig(string backendType, JObject? config)
+    private static string? ValidateConfig(string driverType, JObject? config)
     {
-        switch (backendType)
+        switch (driverType)
         {
             case "local":
                 if (config is null)
@@ -209,58 +209,58 @@ public class FolderBackendController(
 
                 string? rootPath = config["rootPath"]?.Value<string>();
                 if (rootPath is not null && string.IsNullOrWhiteSpace(rootPath))
-                    return "backend_config.rootPath must be a non-empty string when provided.";
+                    return "driver_config.rootPath must be a non-empty string when provided.";
 
                 return null;
 
             case "smb":
                 if (config is null)
-                    return "backend_config is required for 'smb' and must include 'mountPath'.";
+                    return "driver_config is required for 'smb' and must include 'mountPath'.";
 
                 string? mountPath = config["mountPath"]?.Value<string>();
                 if (string.IsNullOrWhiteSpace(mountPath))
-                    return "backend_config.mountPath must be a non-empty string for 'smb'.";
+                    return "driver_config.mountPath must be a non-empty string for 'smb'.";
 
                 return null;
 
             case "nfs":
                 if (config is null)
-                    return "backend_config is required for 'nfs' and must include 'server' and 'export'.";
+                    return "driver_config is required for 'nfs' and must include 'server' and 'export'.";
 
                 string? nfsServer = config["server"]?.Value<string>();
                 string? nfsExport = config["export"]?.Value<string>();
 
                 if (string.IsNullOrWhiteSpace(nfsServer))
-                    return "backend_config.server must be a non-empty string for 'nfs'.";
+                    return "driver_config.server must be a non-empty string for 'nfs'.";
 
                 if (string.IsNullOrWhiteSpace(nfsExport))
-                    return "backend_config.export must be a non-empty string for 'nfs'.";
+                    return "driver_config.export must be a non-empty string for 'nfs'.";
 
                 int? nfsVersion = config["version"]?.Value<int?>();
                 if (nfsVersion.HasValue && nfsVersion != 3 && nfsVersion != 4)
-                    return "backend_config.version must be 3 or 4 for 'nfs'.";
+                    return "driver_config.version must be 3 or 4 for 'nfs'.";
 
                 return null;
 
             case "s3":
             case "r2":
                 if (config is null)
-                    return $"backend_config is required for '{backendType}' and must include 'bucket' and 'region'.";
+                    return $"driver_config is required for '{driverType}' and must include 'bucket' and 'region'.";
 
                 string? bucket = config["bucket"]?.Value<string>();
                 string? region = config["region"]?.Value<string>();
 
                 if (string.IsNullOrWhiteSpace(bucket))
-                    return $"backend_config.bucket must be a non-empty string for '{backendType}'.";
+                    return $"driver_config.bucket must be a non-empty string for '{driverType}'.";
 
                 if (string.IsNullOrWhiteSpace(region))
-                    return $"backend_config.region must be a non-empty string for '{backendType}'.";
+                    return $"driver_config.region must be a non-empty string for '{driverType}'.";
 
-                if (backendType == "r2")
+                if (driverType == "r2")
                 {
                     string? endpoint = config["endpoint"]?.Value<string>();
                     if (string.IsNullOrWhiteSpace(endpoint))
-                        return "backend_config.endpoint is required for 'r2' (set to your R2 endpoint URL).";
+                        return "driver_config.endpoint is required for 'r2' (set to your R2 endpoint URL).";
                 }
 
                 return null;
@@ -270,14 +270,14 @@ public class FolderBackendController(
         }
     }
 
-    private static string[] BuildWarnings(string backendType)
+    private static string[] BuildWarnings(string driverType)
     {
-        if (!UnimplementedBackendTypes.Contains(backendType))
+        if (!UnimplementedDriverTypes.Contains(driverType))
             return [];
 
         return
         [
-            $"{backendType} backend driver is not yet implemented; folder operations will fail until the driver lands.",
+            $"{driverType} storage driver is not yet implemented; folder operations will fail until the driver lands.",
         ];
     }
 }

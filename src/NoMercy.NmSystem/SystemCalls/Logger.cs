@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -6,7 +6,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.LogEnrichers;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 using Serilog;
 using Serilog.Events;
@@ -421,8 +421,8 @@ public static class Logger
     {
         string logDirectoryPath = AppFiles.LogPath;
         // LOCAL-ONLY: Logger is a static class in NmSystem; no reference to NoMercy.Providers.
-        IStorageBackend backend = new SystemIoStorageBackend();
-        IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
+        IStorageDriver driver = new LocalStorageDriver();
+        IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
         List<LogEntry> logs = await LogReader.GetLogsAsync(
             storage,
             logDirectoryPath,

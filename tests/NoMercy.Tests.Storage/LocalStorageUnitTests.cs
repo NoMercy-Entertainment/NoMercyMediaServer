@@ -1,31 +1,31 @@
-using Moq;
+﻿using Moq;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Storage;
 
 public class LocalStorageUnitTests
 {
-    private static (LocalStorage storage, Mock<IStorageBackend> backend) Build()
+    private static (LocalStorage storage, Mock<IStorageDriver> driver) Build()
     {
-        Mock<IStorageBackend> backend = new(MockBehavior.Loose);
-        backend
+        Mock<IStorageDriver> driver = new(MockBehavior.Loose);
+        driver
             .Setup(b => b.GetFullPath(It.IsAny<string>()))
             .Returns<string>(p => Path.GetFullPath(p));
-        backend.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
+        driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
 
-        StoragePathGuard guard = new([], backend.Object);
-        LocalStorage storage = new(backend.Object, guard);
-        return (storage, backend);
+        StoragePathGuard guard = new([], driver.Object);
+        LocalStorage storage = new(driver.Object, guard);
+        return (storage, driver);
     }
 
     [Fact]
     public async Task ReadAsync_pulls_full_stream_from_backend()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
         byte[] payload = [0x01, 0x02, 0x03, 0x04, 0x05];
-        backend.Setup(b => b.OpenRead(It.IsAny<string>())).Returns(() => new MemoryStream(payload));
+        driver.Setup(b => b.OpenRead(It.IsAny<string>())).Returns(() => new MemoryStream(payload));
 
         byte[] result = await storage.ReadAsync("anywhere/file.bin", CancellationToken.None);
 
@@ -35,23 +35,23 @@ public class LocalStorageUnitTests
     [Fact]
     public async Task WriteAsync_creates_parent_directory_when_missing()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
-        backend.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(false);
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
+        driver.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(false);
         MemoryStream sink = new();
-        backend.Setup(b => b.OpenWrite(It.IsAny<string>(), true)).Returns(sink);
+        driver.Setup(b => b.OpenWrite(It.IsAny<string>(), true)).Returns(sink);
 
         await storage.WriteAsync("nested/dir/file.bin", [0xAA], CancellationToken.None);
 
-        backend.Verify(b => b.CreateDirectory(It.IsAny<string>()), Times.Once);
+        driver.Verify(b => b.CreateDirectory(It.IsAny<string>()), Times.Once);
         sink.ToArray().Should().Equal(0xAA);
     }
 
     [Fact]
     public async Task ExistsAsync_returns_true_for_file_or_directory()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
-        backend.Setup(b => b.FileExists(It.IsAny<string>())).Returns(false);
-        backend.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(true);
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
+        driver.Setup(b => b.FileExists(It.IsAny<string>())).Returns(false);
+        driver.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(true);
 
         bool result = await storage.ExistsAsync("some/dir", CancellationToken.None);
 
@@ -61,56 +61,56 @@ public class LocalStorageUnitTests
     [Fact]
     public async Task DeleteAsync_no_op_when_file_missing()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
-        backend.Setup(b => b.FileExists(It.IsAny<string>())).Returns(false);
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
+        driver.Setup(b => b.FileExists(It.IsAny<string>())).Returns(false);
 
         await storage.DeleteAsync("missing.bin", CancellationToken.None);
 
-        backend.Verify(b => b.DeleteFile(It.IsAny<string>()), Times.Never);
+        driver.Verify(b => b.DeleteFile(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public async Task DeleteAsync_calls_backend_when_file_present()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
-        backend.Setup(b => b.FileExists(It.IsAny<string>())).Returns(true);
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
+        driver.Setup(b => b.FileExists(It.IsAny<string>())).Returns(true);
 
         await storage.DeleteAsync("present.bin", CancellationToken.None);
 
-        backend.Verify(b => b.DeleteFile(It.IsAny<string>()), Times.Once);
+        driver.Verify(b => b.DeleteFile(It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
     public async Task MoveAsync_validates_both_paths_and_ensures_parent()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
-        backend.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(false);
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
+        driver.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(false);
 
         await storage.MoveAsync("a/file", "b/sub/file", CancellationToken.None);
 
-        backend.Verify(
+        driver.Verify(
             b => b.CreateDirectory(It.Is<string>(s => s.EndsWith(Path.Combine("b", "sub")))),
             Times.Once
         );
-        backend.Verify(b => b.MoveFile(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        driver.Verify(b => b.MoveFile(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
     public async Task CopyAsync_uses_overwrite_true()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
-        backend.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(true);
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
+        driver.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(true);
 
         await storage.CopyAsync("src/a", "dst/b", CancellationToken.None);
 
-        backend.Verify(b => b.CopyFile(It.IsAny<string>(), It.IsAny<string>(), true), Times.Once);
+        driver.Verify(b => b.CopyFile(It.IsAny<string>(), It.IsAny<string>(), true), Times.Once);
     }
 
     [Fact]
     public async Task SizeAsync_returns_backend_size()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
-        backend.Setup(b => b.GetFileSize(It.IsAny<string>())).Returns(1234);
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
+        driver.Setup(b => b.GetFileSize(It.IsAny<string>())).Returns(1234);
 
         long result = await storage.SizeAsync("file.bin", CancellationToken.None);
 
@@ -120,9 +120,9 @@ public class LocalStorageUnitTests
     [Fact]
     public async Task LastModifiedAsync_returns_utc_offset()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
         DateTime utc = new(2026, 04, 24, 12, 00, 00, DateTimeKind.Utc);
-        backend.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(utc);
+        driver.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(utc);
 
         DateTimeOffset result = await storage.LastModifiedAsync("file.bin", CancellationToken.None);
 
@@ -133,12 +133,12 @@ public class LocalStorageUnitTests
     [Fact]
     public async Task ListAsync_yields_entries_with_correct_metadata()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
         string root = Path.Combine(Path.GetTempPath(), "nm-listing");
         string fileA = Path.Combine(root, "a.txt");
         string subDir = Path.Combine(root, "sub");
 
-        backend
+        driver
             .Setup(b =>
                 b.EnumerateFileSystemEntries(
                     It.IsAny<string>(),
@@ -147,10 +147,10 @@ public class LocalStorageUnitTests
                 )
             )
             .Returns([fileA, subDir]);
-        backend.Setup(b => b.DirectoryExists(fileA)).Returns(false);
-        backend.Setup(b => b.DirectoryExists(subDir)).Returns(true);
-        backend.Setup(b => b.GetFileSize(fileA)).Returns(99);
-        backend.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(DateTime.UtcNow);
+        driver.Setup(b => b.DirectoryExists(fileA)).Returns(false);
+        driver.Setup(b => b.DirectoryExists(subDir)).Returns(true);
+        driver.Setup(b => b.GetFileSize(fileA)).Returns(99);
+        driver.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(DateTime.UtcNow);
 
         List<StorageEntry> result = [];
         await foreach (
@@ -169,7 +169,7 @@ public class LocalStorageUnitTests
     [Fact]
     public async Task HashAsync_unsupported_algorithm_throws()
     {
-        (LocalStorage storage, Mock<IStorageBackend> _) = Build();
+        (LocalStorage storage, Mock<IStorageDriver> _) = Build();
 
         Func<Task> act = () => storage.HashAsync("x", "sha1", CancellationToken.None);
 
@@ -182,8 +182,8 @@ public class LocalStorageUnitTests
     public async Task HashAsync_sha256_matches_known_vector()
     {
         // SHA-256("abc") = ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
-        backend
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
+        driver
             .Setup(b => b.OpenRead(It.IsAny<string>()))
             .Returns(() => new MemoryStream("abc"u8.ToArray()));
 
@@ -196,8 +196,8 @@ public class LocalStorageUnitTests
     public async Task HashAsync_md5_matches_known_vector()
     {
         // MD5("") = d41d8cd98f00b204e9800998ecf8427e
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
-        backend.Setup(b => b.OpenRead(It.IsAny<string>())).Returns(() => new MemoryStream([]));
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
+        driver.Setup(b => b.OpenRead(It.IsAny<string>())).Returns(() => new MemoryStream([]));
 
         string digest = await storage.HashAsync("file", "md5", CancellationToken.None);
 
@@ -207,7 +207,7 @@ public class LocalStorageUnitTests
     [Fact]
     public async Task AcquireLocalPathAsync_returns_lease_with_canonical_path_and_noop_dispose()
     {
-        (LocalStorage storage, Mock<IStorageBackend> _) = Build();
+        (LocalStorage storage, Mock<IStorageDriver> _) = Build();
 
         await using LocalPathLease lease = await storage.AcquireLocalPathAsync(
             "some/file.bin",
@@ -220,11 +220,11 @@ public class LocalStorageUnitTests
     [Fact]
     public async Task Guard_rejects_invalid_path_before_backend_invoked()
     {
-        (LocalStorage storage, Mock<IStorageBackend> backend) = Build();
+        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
 
         Func<Task> act = () => storage.ReadAsync("bad\0path", CancellationToken.None);
 
         await act.Should().ThrowAsync<StoragePathNotAllowedException>();
-        backend.Verify(b => b.OpenRead(It.IsAny<string>()), Times.Never);
+        driver.Verify(b => b.OpenRead(It.IsAny<string>()), Times.Never);
     }
 }

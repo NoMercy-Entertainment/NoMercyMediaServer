@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -9,7 +9,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 
 namespace NoMercy.Launcher.ViewModels;
@@ -166,9 +166,9 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         {
             string logPath = AppFiles.LogPath;
             // LOCAL-ONLY: Launcher is a separate GUI process; NoMercy.Service DI is not available here.
-            IStorageBackend backend = new SystemIoStorageBackend();
-            IStorage storage = new LocalStorage(backend, new StoragePathGuard([], backend));
-            if (!backend.DirectoryExists(logPath))
+            IStorageDriver driver = new LocalStorageDriver();
+            IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+            if (!driver.DirectoryExists(logPath))
             {
                 StatusText = "No log directory found";
                 return;
