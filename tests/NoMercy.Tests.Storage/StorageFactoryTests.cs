@@ -71,20 +71,46 @@ public class StorageFactoryTests
     }
 
     // -----------------------------------------------------------------------
-    // SMB / NFS — treated as local
+    // SMB — OS-mount backend, still treated as local
     // -----------------------------------------------------------------------
 
-    [Theory]
-    [InlineData("smb")]
-    [InlineData("nfs")]
-    public void For_smb_nfs_returns_IStorage(string backendType)
+    [Fact]
+    public void For_smb_returns_IStorage()
     {
         StorageFactory factory = Factory();
         string root = Path.GetTempPath();
 
-        IStorage storage = factory.For(Ulid.NewUlid(), backendType, null, root);
+        IStorage storage = factory.For(Ulid.NewUlid(), "smb", null, root);
 
         storage.Should().NotBeNull().And.BeAssignableTo<IStorage>();
+    }
+
+    // -----------------------------------------------------------------------
+    // NFS — in-process driver; requires valid server + export in config
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void For_nfs_without_config_throws_ArgumentException()
+    {
+        StorageFactory factory = Factory();
+
+        Action act = () => factory.For(Ulid.NewUlid(), "nfs", null, "/irrelevant");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void For_nfs_with_valid_config_parses_without_throwing_at_construction()
+    {
+        // Config parsing succeeds; DllNotFoundException from missing libnfs is
+        // expected in this environment and is considered a clean skip scenario.
+        StorageFactory factory = Factory();
+        string json = """{"server":"nas.local","export":"/media"}""";
+
+        Action act = () => factory.For(Ulid.NewUlid(), "nfs", json, "/irrelevant");
+
+        // Should throw DllNotFoundException (no libnfs installed) but NOT ArgumentException.
+        act.Should().NotThrow<ArgumentException>();
     }
 
     // -----------------------------------------------------------------------

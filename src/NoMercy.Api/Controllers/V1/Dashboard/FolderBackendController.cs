@@ -2,12 +2,10 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Storage;
@@ -58,9 +56,18 @@ public class FolderBackendController(
             new()
             {
                 Type = "nfs",
-                DisplayName = "NFS (OS mount)",
+                DisplayName = "NFS (in-process, no OS mount required)",
                 Available = true,
-                ConfigSchema = new() { { "mountPath", "string" } },
+                ConfigSchema = new()
+                {
+                    { "server", "string (required) — hostname or IP of NFS server" },
+                    { "export", "string (required) — export path, e.g. /exports/media" },
+                    { "version", "int? (default 3) — NFS version: 3 or 4" },
+                    { "uid", "int? — AUTH_UNIX user ID" },
+                    { "gid", "int? — AUTH_UNIX group ID" },
+                    { "port", "int? (default 2049) — NFS port" },
+                    { "mountPort", "int? — mount protocol port (NFS3 only)" },
+                },
             },
             new()
             {
@@ -207,13 +214,31 @@ public class FolderBackendController(
                 return null;
 
             case "smb":
-            case "nfs":
                 if (config is null)
-                    return $"backend_config is required for '{backendType}' and must include 'mountPath'.";
+                    return "backend_config is required for 'smb' and must include 'mountPath'.";
 
                 string? mountPath = config["mountPath"]?.Value<string>();
                 if (string.IsNullOrWhiteSpace(mountPath))
-                    return $"backend_config.mountPath must be a non-empty string for '{backendType}'.";
+                    return "backend_config.mountPath must be a non-empty string for 'smb'.";
+
+                return null;
+
+            case "nfs":
+                if (config is null)
+                    return "backend_config is required for 'nfs' and must include 'server' and 'export'.";
+
+                string? nfsServer = config["server"]?.Value<string>();
+                string? nfsExport = config["export"]?.Value<string>();
+
+                if (string.IsNullOrWhiteSpace(nfsServer))
+                    return "backend_config.server must be a non-empty string for 'nfs'.";
+
+                if (string.IsNullOrWhiteSpace(nfsExport))
+                    return "backend_config.export must be a non-empty string for 'nfs'.";
+
+                int? nfsVersion = config["version"]?.Value<int?>();
+                if (nfsVersion.HasValue && nfsVersion != 3 && nfsVersion != 4)
+                    return "backend_config.version must be 3 or 4 for 'nfs'.";
 
                 return null;
 

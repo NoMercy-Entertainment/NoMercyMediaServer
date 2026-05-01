@@ -84,8 +84,10 @@ public sealed class StorageFactory : IStorageFactory
         {
             case "local":
             case "smb":
-            case "nfs":
                 return BuildLocal(folderId, normalizedType, backendConfigJson, folderPath);
+
+            case "nfs":
+                return BuildNfs(folderId, backendConfigJson);
 
             case "s3":
             case "r2":
@@ -97,6 +99,20 @@ public sealed class StorageFactory : IStorageFactory
                     nameof(backendType)
                 );
         }
+    }
+
+    private IStorage BuildNfs(Ulid folderId, string? backendConfigJson)
+    {
+        if (string.IsNullOrWhiteSpace(backendConfigJson))
+            throw new ArgumentException(
+                $"backend_config is required for 'nfs' (folder {folderId}). "
+                    + "Supply at minimum: server and export.",
+                nameof(backendConfigJson)
+            );
+
+        NfsBackendConfig nfsConfig = NfsBackendConfig.Parse(backendConfigJson, folderId);
+        NfsStorageBackend nfsBackend = new(nfsConfig);
+        return new RemoteStorage(nfsBackend);
     }
 
     private IStorage BuildLocal(
