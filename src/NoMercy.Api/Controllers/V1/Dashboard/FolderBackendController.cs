@@ -26,7 +26,7 @@ public class FolderBackendController(
 {
     private static readonly string[] AllowedBackendTypes = ["local", "smb", "nfs", "s3", "r2"];
 
-    private static readonly string[] UnimplementedBackendTypes = ["s3", "r2"];
+    private static readonly string[] UnimplementedBackendTypes = [];
 
     // -----------------------------------------------------------------------
     // GET /api/v1/dashboard/folders/backends
@@ -66,26 +66,28 @@ public class FolderBackendController(
             {
                 Type = "s3",
                 DisplayName = "S3-compatible",
-                Available = false,
+                Available = true,
                 ConfigSchema = new()
                 {
                     { "bucket", "string" },
                     { "region", "string" },
                     { "prefix", "string?" },
                     { "credentialsRef", "string?" },
+                    { "endpoint", "string?" },
                 },
             },
             new()
             {
                 Type = "r2",
                 DisplayName = "Cloudflare R2",
-                Available = false,
+                Available = true,
                 ConfigSchema = new()
                 {
                     { "bucket", "string" },
                     { "region", "string" },
                     { "prefix", "string?" },
                     { "credentialsRef", "string?" },
+                    { "endpoint", "string (required for R2)" },
                 },
             },
         ];
@@ -228,6 +230,13 @@ public class FolderBackendController(
 
                 if (string.IsNullOrWhiteSpace(region))
                     return $"backend_config.region must be a non-empty string for '{backendType}'.";
+
+                if (backendType == "r2")
+                {
+                    string? endpoint = config["endpoint"]?.Value<string>();
+                    if (string.IsNullOrWhiteSpace(endpoint))
+                        return "backend_config.endpoint is required for 'r2' (set to your R2 endpoint URL).";
+                }
 
                 return null;
 

@@ -18,15 +18,29 @@ public sealed class StorageFactory : IStorageFactory
     private readonly IStorageBackend _backend;
     private readonly ILogger<StorageFactory> _logger;
 
+    /// <summary>
+    /// Optional resolver that maps a <c>credentialsRef</c> key to an
+    /// (accessKey, secretKey) pair. Supply this at the DI registration
+    /// site (e.g. from <c>CredentialManager.Credential</c> in
+    /// <c>NoMercy.Helpers</c>). When null, the AWS default credential
+    /// chain is used for S3/R2 backends.
+    /// </summary>
+    private readonly Func<string, (string AccessKey, string SecretKey)?>? _credentialsResolver;
+
     // Cache key = (folderId, backendType, sha256 of configJson).
     // Encoding config changes into the key means stale instances are
     // abandoned automatically — no explicit Invalidate needed for updates.
     private readonly ConcurrentDictionary<string, IStorage> _cache = new();
 
-    public StorageFactory(IStorageBackend backend, ILogger<StorageFactory> logger)
+    public StorageFactory(
+        IStorageBackend backend,
+        ILogger<StorageFactory> logger,
+        Func<string, (string AccessKey, string SecretKey)?>? credentialsResolver = null
+    )
     {
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _credentialsResolver = credentialsResolver;
     }
 
     public IStorage For(
@@ -75,10 +89,7 @@ public sealed class StorageFactory : IStorageFactory
 
             case "s3":
             case "r2":
-                throw new NotSupportedException(
-                    $"Backend type '{normalizedType}' is reserved for a future driver. "
-                        + $"Folder {folderId} cannot be opened until the driver lands."
-                );
+                return BuildS3(folderId, normalizedType, backendConfigJson);
 
             default:
                 throw new ArgumentException(
@@ -134,6 +145,91 @@ public sealed class StorageFactory : IStorageFactory
         }
 
         return folderPath;
+    }
+
+    private IStorage BuildS3(Ulid folderId, string backendType, string? backendConfigJson)
+    {
+        if (string.IsNullOrWhiteSpace(backendConfigJson))
+            throw new ArgumentException(
+                $"backend_config is required for '{backendType}' (folder {folderId}).",
+                nameof(backendConfigJson)
+            );
+
+        S3BackendConfig? config;
+        try
+        {
+            config = JsonSerializer.Deserialize<S3BackendConfig>(
+                backendConfigJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException(
+                $"Failed to parse backend_config for folder {folderId} (type={backendType}): {ex.Message}",
+                nameof(backendConfigJson),
+                ex
+            );
+        }
+
+        if (config is null)
+            throw new ArgumentException(
+                $"backend_config deserialized to null for folder {folderId} (type={backendType}).",
+                nameof(backendConfigJson)
+            );
+
+        if (string.IsNullOrWhiteSpace(config.Bucket))
+            throw new ArgumentException(
+                $"backend_config.bucket is required for '{backendType}' (folder {folderId}).",
+                nameof(backendConfigJson)
+            );
+
+        if (string.IsNullOrWhiteSpace(config.Region))
+            throw new ArgumentException(
+                $"backend_config.region is required for '{backendType}' (folder {folderId}).",
+                nameof(backendConfigJson)
+            );
+
+        if (backendType == "r2" && string.IsNullOrWhiteSpace(config.Endpoint))
+            throw new ArgumentException(
+                $"backend_config.endpoint is required for 'r2' (folder {folderId}). "
+                    + "Set it to your account's R2 endpoint URL (https://<account-id>.r2.cloudflarestorage.com).",
+                nameof(backendConfigJson)
+            );
+
+        string? accessKey = null;
+        string? secretKey = null;
+
+        if (!string.IsNullOrWhiteSpace(config.CredentialsRef) && _credentialsResolver is not null)
+        {
+            (string AccessKey, string SecretKey)? creds = _credentialsResolver(
+                config.CredentialsRef
+            );
+            if (creds is not null)
+            {
+                accessKey = creds.Value.AccessKey;
+                secretKey = creds.Value.SecretKey;
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "credentials_ref '{CredentialsRef}' not found in secrets store for folder {FolderId}; falling back to default credential chain",
+                    config.CredentialsRef,
+                    folderId
+                );
+            }
+        }
+
+        S3StorageBackend s3Backend = new(
+            config.Bucket,
+            config.Region,
+            config.Prefix,
+            config.Endpoint,
+            accessKey,
+            secretKey
+        );
+
+        return new RemoteStorage(s3Backend);
     }
 
     private static string BuildCacheKey(Ulid folderId, string backendType, string? configJson)

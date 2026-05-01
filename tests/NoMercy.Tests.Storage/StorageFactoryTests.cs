@@ -88,20 +88,48 @@ public class StorageFactoryTests
     }
 
     // -----------------------------------------------------------------------
-    // S3 / R2 — reserved, must throw
+    // S3 / R2 — now implemented; null config throws ArgumentException
     // -----------------------------------------------------------------------
 
     [Theory]
     [InlineData("s3")]
     [InlineData("r2")]
-    public void For_s3_r2_throws_NotSupportedException(string backendType)
+    public void For_s3_r2_null_config_throws_ArgumentException(string backendType)
     {
         StorageFactory factory = Factory();
         Ulid id = Ulid.NewUlid();
 
+        // null config is invalid — bucket + region are required
         Action act = () => factory.For(id, backendType, null, Path.GetTempPath());
 
-        act.Should().Throw<NotSupportedException>().WithMessage($"*'{backendType}'*");
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Theory]
+    [InlineData("s3")]
+    public void For_s3_valid_config_returns_RemoteStorage(string backendType)
+    {
+        StorageFactory factory = Factory();
+        Ulid id = Ulid.NewUlid();
+
+        string json =
+            $"{{\"bucket\":\"test\",\"region\":\"us-east-1\",\"endpoint\":\"http://localhost:9000\"}}";
+
+        IStorage storage = factory.For(id, backendType, json, Path.GetTempPath());
+
+        storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
+    }
+
+    [Fact]
+    public void For_r2_without_endpoint_throws_ArgumentException()
+    {
+        StorageFactory factory = Factory();
+        Ulid id = Ulid.NewUlid();
+
+        string json = "{\"bucket\":\"test\",\"region\":\"auto\"}";
+        Action act = () => factory.For(id, "r2", json, Path.GetTempPath());
+
+        act.Should().Throw<ArgumentException>().WithMessage("*endpoint*");
     }
 
     // -----------------------------------------------------------------------
