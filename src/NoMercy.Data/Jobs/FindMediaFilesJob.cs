@@ -60,9 +60,11 @@ public class FindMediaFilesJob : IShouldQueue
             return;
 
         IStorageDriver storageDriver = new LocalStorageDriver();
+        InlineDriverConfigResolver driverConfigResolver = new(context);
         IStorageFactory storageFactory = new StorageFactory(
             storageDriver,
-            NullLogger<StorageFactory>.Instance
+            NullLogger<StorageFactory>.Instance,
+            driverConfigResolver
         );
         await using FileLogic file = new(Id, library, context, storageFactory, storageDriver);
         await file.Process();
@@ -111,5 +113,21 @@ public class FindMediaFilesJob : IShouldQueue
                     ],
                 }
             );
+    }
+
+    /// <summary>
+    /// Inline resolver that queries drivers from an already-open MediaContext.
+    /// Used here to avoid requiring IDbContextFactory in a self-contained job.
+    /// </summary>
+    private sealed class InlineDriverConfigResolver(MediaContext context) : IDriverConfigResolver
+    {
+        public (string Type, string? ConfigJson)? Resolve(Ulid driverId)
+        {
+            NoMercy.Database.Models.Storage.Driver? driver = context
+                .Drivers.AsNoTracking()
+                .FirstOrDefault(d => d.Id == driverId);
+
+            return driver is null ? null : (driver.Type, driver.Config);
+        }
     }
 }

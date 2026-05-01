@@ -10,14 +10,14 @@ public interface IStorageFactory
 {
     /// <summary>
     /// Returns an <see cref="IStorage"/> configured for the given folder.
-    /// When <paramref name="driverId"/> is <c>null</c>, the built-in local
-    /// driver is used with <paramref name="folderPath"/> as the root.
-    /// When non-null, the named driver is resolved via
-    /// <see cref="IDriverConfigResolver"/> and the appropriate backend is
-    /// constructed. Instances are cached on
-    /// <c>(folderId, driverId, configJsonHash)</c>.
+    /// <paramref name="driverId"/> is always required — every folder must
+    /// have an assigned driver. The driver type and config are resolved via
+    /// <see cref="IDriverConfigResolver"/>. <paramref name="subPath"/> is
+    /// the folder-relative sub-path inside the driver root; pass an empty
+    /// string for the driver root itself. Instances are cached on
+    /// <c>(folderId, driverType, configJsonHash)</c>.
     /// </summary>
-    IStorage For(Ulid folderId, Ulid? driverId, string folderPath);
+    IStorage For(Ulid folderId, Ulid driverId, string subPath);
 
     /// <summary>
     /// Drops every cached <see cref="IStorage"/> whose key starts with

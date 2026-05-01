@@ -13,8 +13,8 @@ using NoMercy.Storage.Validation;
 namespace NoMercy.Storage.Factory;
 
 /// <summary>
-/// Parsed representation of the optional JSON config for local-disk folders.
-/// When <see cref="RootPath"/> is set it overrides <c>folderPath</c>.
+/// Parsed representation of the required JSON config for local-disk drivers.
+/// <see cref="RootPath"/> is the absolute path to the local mount or directory.
 /// </summary>
 internal sealed record LocalDriverConfig(string? RootPath);
 
@@ -26,7 +26,6 @@ public sealed class StorageFactory : IStorageFactory
     /// <summary>
     /// Resolves a driver ID to its (type, configJson). Supplied at DI
     /// registration from a higher-level project that has DB access.
-    /// When null, only built-in local (driverId == null) is supported.
     /// </summary>
     private readonly IDriverConfigResolver? _driverConfigResolver;
 
@@ -36,7 +35,7 @@ public sealed class StorageFactory : IStorageFactory
     /// </summary>
     private readonly ICredentialResolver? _credentialResolver;
 
-    // Cache key = "{folderId}:{driverId|local}:{sha256 of resolved configJson}".
+    // Cache key = "{folderId}:{driverType}:{sha256 of resolved configJson}".
     private readonly ConcurrentDictionary<string, IStorage> _cache = new();
 
     public StorageFactory(
@@ -52,47 +51,39 @@ public sealed class StorageFactory : IStorageFactory
         _credentialResolver = credentialResolver;
     }
 
-    public IStorage For(Ulid folderId, Ulid? driverId, string folderPath)
+    public IStorage For(Ulid folderId, Ulid driverId, string subPath)
     {
         string driverType = "local";
         string? configJson = null;
 
-        if (driverId is not null)
+        if (_driverConfigResolver is null)
         {
-            if (_driverConfigResolver is null)
+            _logger.LogWarning(
+                "Folder {FolderId} has DriverId {DriverId} but no IDriverConfigResolver is registered; falling back to built-in local",
+                folderId,
+                driverId
+            );
+        }
+        else
+        {
+            (string Type, string? ConfigJson)? resolved = _driverConfigResolver.Resolve(driverId);
+            if (resolved is null)
             {
                 _logger.LogWarning(
-                    "Folder {FolderId} has DriverId {DriverId} but no IDriverConfigResolver is registered; falling back to built-in local",
-                    folderId,
-                    driverId
+                    "Driver {DriverId} not found for folder {FolderId}; falling back to built-in local",
+                    driverId,
+                    folderId
                 );
             }
             else
             {
-                (string Type, string? ConfigJson)? resolved = _driverConfigResolver.Resolve(
-                    driverId.Value
-                );
-                if (resolved is null)
-                {
-                    _logger.LogWarning(
-                        "Driver {DriverId} not found for folder {FolderId}; falling back to built-in local",
-                        driverId,
-                        folderId
-                    );
-                }
-                else
-                {
-                    driverType = resolved.Value.Type;
-                    configJson = resolved.Value.ConfigJson;
-                }
+                driverType = resolved.Value.Type;
+                configJson = resolved.Value.ConfigJson;
             }
         }
 
         string cacheKey = BuildCacheKey(folderId, driverType, configJson);
-        return _cache.GetOrAdd(
-            cacheKey,
-            _ => Build(folderId, driverType, configJson, folderPath)
-        );
+        return _cache.GetOrAdd(cacheKey, _ => Build(folderId, driverType, configJson, subPath));
     }
 
     public void Invalidate(Ulid folderId)
@@ -109,11 +100,56 @@ public sealed class StorageFactory : IStorageFactory
 
     // -----------------------------------------------------------------------
 
+    /// <summary>
+    /// Joins a driver root and a folder sub-path using the correct separator
+    /// for the given driver type. For local/nfs: <see cref="Path.Combine"/>.
+    /// For s3/r2: prefix + "/" + subPath with de-duped slashes.
+    /// For webdav: URL-style join.
+    /// An empty <paramref name="subPath"/> returns <paramref name="root"/> unchanged.
+    /// </summary>
+    internal static string JoinRoot(string root, string subPath, string driverType)
+    {
+        if (string.IsNullOrEmpty(subPath))
+            return root;
+
+        switch (driverType)
+        {
+            case "local":
+                return Path.Combine(root, subPath);
+
+            case "nfs":
+            {
+                // NFS export paths are always Unix-style; use forward slashes.
+                string trimmedRoot = root.TrimEnd('/');
+                string trimmedSub = subPath.TrimStart('/');
+                return $"{trimmedRoot}/{trimmedSub}";
+            }
+
+            case "s3":
+            case "r2":
+            {
+                string trimmedRoot = root.TrimEnd('/');
+                string trimmedSub = subPath.TrimStart('/');
+                return $"{trimmedRoot}/{trimmedSub}";
+            }
+
+            case "webdav":
+            {
+                string trimmedRoot = root.TrimEnd('/');
+                string trimmedSub = subPath.TrimStart('/');
+                return $"{trimmedRoot}/{trimmedSub}";
+            }
+
+            default:
+                return Path.Combine(root, subPath);
+        }
+    }
+
     private IStorage Build(
         Ulid folderId,
         string driverType,
         string? driverConfigJson,
-        string folderPath
+        string subPath
     )
     {
         string normalizedType = driverType.Trim().ToLowerInvariant();
@@ -121,18 +157,17 @@ public sealed class StorageFactory : IStorageFactory
         switch (normalizedType)
         {
             case "local":
-            case "smb":
-                return BuildLocal(folderId, normalizedType, driverConfigJson, folderPath);
+                return BuildLocal(folderId, driverConfigJson, subPath);
 
             case "nfs":
-                return BuildNfs(folderId, driverConfigJson);
+                return BuildNfs(folderId, driverConfigJson, subPath);
 
             case "s3":
             case "r2":
-                return BuildS3(folderId, normalizedType, driverConfigJson);
+                return BuildS3(folderId, normalizedType, driverConfigJson, subPath);
 
             case "webdav":
-                return BuildWebDav(folderId, driverConfigJson);
+                return BuildWebDav(folderId, driverConfigJson, subPath);
 
             default:
                 throw new ArgumentException(
@@ -142,7 +177,44 @@ public sealed class StorageFactory : IStorageFactory
         }
     }
 
-    private IStorage BuildNfs(Ulid folderId, string? driverConfigJson)
+    private IStorage BuildLocal(Ulid folderId, string? driverConfigJson, string subPath)
+    {
+        if (string.IsNullOrWhiteSpace(driverConfigJson))
+            throw new ArgumentException(
+                $"driver_config is required for 'local' (folder {folderId}). "
+                    + "Supply: {{\"rootPath\": \"<absolute path>\"}}.",
+                nameof(driverConfigJson)
+            );
+
+        LocalDriverConfig? config;
+        try
+        {
+            config = JsonSerializer.Deserialize<LocalDriverConfig>(
+                driverConfigJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException(
+                $"Failed to parse driver_config for folder {folderId} (type=local): {ex.Message}",
+                nameof(driverConfigJson),
+                ex
+            );
+        }
+
+        if (config is null || string.IsNullOrWhiteSpace(config.RootPath))
+            throw new ArgumentException(
+                $"driver_config.rootPath is required for 'local' (folder {folderId}).",
+                nameof(driverConfigJson)
+            );
+
+        string allowedRoot = config.RootPath;
+        StoragePathGuard guard = new([allowedRoot], _driver);
+        return new LocalStorage(_driver, guard);
+    }
+
+    private IStorage BuildNfs(Ulid folderId, string? driverConfigJson, string subPath)
     {
         if (string.IsNullOrWhiteSpace(driverConfigJson))
             throw new ArgumentException(
@@ -152,56 +224,24 @@ public sealed class StorageFactory : IStorageFactory
             );
 
         NfsDriverConfig nfsConfig = NfsDriverConfig.Parse(driverConfigJson, folderId);
+
+        // Append the folder sub-path to the NFS export path when non-empty.
+        if (!string.IsNullOrEmpty(subPath))
+        {
+            string combinedExport = JoinRoot(nfsConfig.Export, subPath, "nfs");
+            nfsConfig = nfsConfig with { Export = combinedExport };
+        }
+
         NfsStorageDriver nfsDriver = new(nfsConfig);
         return new RemoteStorage(nfsDriver);
     }
 
-    private IStorage BuildLocal(
+    private IStorage BuildS3(
         Ulid folderId,
         string driverType,
         string? driverConfigJson,
-        string folderPath
+        string subPath
     )
-    {
-        string allowedRoot = ResolveLocalRoot(folderId, driverType, driverConfigJson, folderPath);
-        StoragePathGuard guard = new([allowedRoot], _driver);
-        return new LocalStorage(_driver, guard);
-    }
-
-    private string ResolveLocalRoot(
-        Ulid folderId,
-        string driverType,
-        string? driverConfigJson,
-        string folderPath
-    )
-    {
-        if (string.IsNullOrWhiteSpace(driverConfigJson))
-            return folderPath;
-
-        try
-        {
-            LocalDriverConfig? config = JsonSerializer.Deserialize<LocalDriverConfig>(
-                driverConfigJson,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-            );
-
-            if (config?.RootPath is not null && !string.IsNullOrWhiteSpace(config.RootPath))
-                return config.RootPath;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Failed to parse driver_config for folder {FolderId} (type={DriverType}); falling back to folder path",
-                folderId,
-                driverType
-            );
-        }
-
-        return folderPath;
-    }
-
-    private IStorage BuildS3(Ulid folderId, string driverType, string? driverConfigJson)
     {
         if (string.IsNullOrWhiteSpace(driverConfigJson))
             throw new ArgumentException(
@@ -251,6 +291,11 @@ public sealed class StorageFactory : IStorageFactory
                 nameof(driverConfigJson)
             );
 
+        // Combine driver prefix with folder sub-path.
+        string effectivePrefix = string.IsNullOrEmpty(subPath)
+            ? (config.Prefix ?? string.Empty)
+            : JoinRoot(config.Prefix ?? string.Empty, subPath, driverType);
+
         string? accessKey = null;
         string? secretKey = null;
 
@@ -277,7 +322,7 @@ public sealed class StorageFactory : IStorageFactory
         S3StorageDriver s3Driver = new(
             config.Bucket,
             config.Region,
-            config.Prefix,
+            effectivePrefix,
             config.Endpoint,
             accessKey,
             secretKey
@@ -286,7 +331,7 @@ public sealed class StorageFactory : IStorageFactory
         return new RemoteStorage(s3Driver);
     }
 
-    private IStorage BuildWebDav(Ulid folderId, string? driverConfigJson)
+    private IStorage BuildWebDav(Ulid folderId, string? driverConfigJson, string subPath)
     {
         if (string.IsNullOrWhiteSpace(driverConfigJson))
             throw new ArgumentException(
@@ -296,12 +341,20 @@ public sealed class StorageFactory : IStorageFactory
             );
 
         // Adapt ICredentialResolver to the Func<string, (string, string)?> the WebDav driver expects.
-        Func<string, (string AccessKey, string SecretKey)?>? resolverFunc =
-            _credentialResolver is null
-                ? null
-                : key => _credentialResolver.Resolve(key);
+        Func<string, (string AccessKey, string SecretKey)?>? resolverFunc = _credentialResolver
+            is null
+            ? null
+            : key => _credentialResolver.Resolve(key);
 
         WebDavDriverConfig webDavConfig = WebDavDriverConfig.Parse(driverConfigJson, folderId);
+
+        // Append sub-path to the WebDAV base URL when non-empty.
+        if (!string.IsNullOrEmpty(subPath))
+        {
+            string combinedUrl = JoinRoot(webDavConfig.Url, subPath, "webdav");
+            webDavConfig = webDavConfig with { Url = combinedUrl };
+        }
+
         WebDavStorageDriver webDavDriver = new(webDavConfig, resolverFunc);
         return new RemoteStorage(webDavDriver);
     }

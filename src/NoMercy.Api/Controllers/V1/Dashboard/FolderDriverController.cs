@@ -55,7 +55,7 @@ public class FolderDriverController(
 
         FolderDriverInfoDto info = new()
         {
-            DriverId = folder.Driver?.Id.ToString(),
+            DriverId = folder.DriverId.ToString(),
             DriverName = folder.Driver?.Name,
             DriverType = folder.Driver?.Type,
         };
@@ -65,39 +65,33 @@ public class FolderDriverController(
 
     // -----------------------------------------------------------------------
     // PUT /api/v1/dashboard/folders/{id}/driver
-    // Assigns (or removes) a named driver instance from a folder.
-    // Body: { "driver_id": "<ulid>" | null }
+    // Reassigns the driver instance for a folder.
+    // Body: { "driver_id": "<ulid>" }  — driver_id is required; every folder
+    // must always have a driver.
     // -----------------------------------------------------------------------
 
     [HttpPut]
     [Route("{id:ulid}/driver")]
-    public async Task<IActionResult> AssignDriver(
-        Ulid id,
-        [FromBody] FolderDriverAssignDto request
-    )
+    public async Task<IActionResult> AssignDriver(Ulid id, [FromBody] FolderDriverAssignDto request)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update folder driver");
+
+        if (string.IsNullOrWhiteSpace(request.DriverId))
+            return BadRequestResponse("driver_id is required. Every folder must have a driver.");
+
+        if (!Ulid.TryParse(request.DriverId, out Ulid driverId))
+            return BadRequestResponse("driver_id is not a valid ULID.");
 
         Folder? folder = await folderRepository.GetFolderByIdAsync(id);
         if (folder is null)
             return NotFoundResponse("Folder not found");
 
-        if (request.DriverId is not null)
-        {
-            if (!Ulid.TryParse(request.DriverId, out Ulid driverId))
-                return BadRequestResponse("driver_id is not a valid ULID.");
+        bool exists = await driverRepository.DriverExistsAsync(driverId);
+        if (!exists)
+            return NotFoundResponse($"Driver '{request.DriverId}' not found.");
 
-            bool exists = await driverRepository.DriverExistsAsync(driverId);
-            if (!exists)
-                return NotFoundResponse($"Driver '{request.DriverId}' not found.");
-
-            folder.DriverId = driverId;
-        }
-        else
-        {
-            folder.DriverId = null;
-        }
+        folder.DriverId = driverId;
 
         await folderRepository.UpdateFolderAsync(folder);
 
@@ -105,7 +99,7 @@ public class FolderDriverController(
 
         FolderDriverInfoDto info = new()
         {
-            DriverId = folder.DriverId?.ToString(),
+            DriverId = folder.DriverId.ToString(),
             DriverName = folder.Driver?.Name,
             DriverType = folder.Driver?.Type,
         };

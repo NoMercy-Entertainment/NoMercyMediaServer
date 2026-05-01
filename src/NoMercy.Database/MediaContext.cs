@@ -81,13 +81,15 @@ public class MediaContext : DbContext
         // Driver.Config is free-form JSON — no max-length cap.
         modelBuilder.Entity<Driver>().Property(d => d.Config).HasMaxLength(int.MaxValue);
 
-        // Folder.DriverId FK — SET NULL when the Driver is deleted.
+        // Folder.DriverId FK — Restrict deletion if any folder references the driver.
+        // The DriversController already returns 409 before reaching DELETE, so Restrict
+        // is the correct DB-level enforcement: drivers cannot be deleted while in use.
         modelBuilder
             .Entity<Folder>()
             .HasOne(f => f.Driver)
             .WithMany(d => d.Folders)
             .HasForeignKey(f => f.DriverId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Metadata owns its AudioTrack — delete the track when metadata is removed.
         modelBuilder

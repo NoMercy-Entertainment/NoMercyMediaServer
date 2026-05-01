@@ -10,15 +10,7 @@ namespace NoMercy.Api.Services;
 /// </summary>
 public static class DriverTypeMetadata
 {
-    public static readonly string[] AllowedTypes =
-    [
-        "local",
-        "smb",
-        "nfs",
-        "s3",
-        "r2",
-        "webdav",
-    ];
+    public static readonly string[] AllowedTypes = ["local", "nfs", "s3", "r2", "webdav"];
 
     public static readonly DriverMetadataDto[] All =
     [
@@ -27,14 +19,10 @@ public static class DriverTypeMetadata
             Type = "local",
             DisplayName = "Local disk",
             Available = true,
-            ConfigSchema = new() { { "rootPath", "string?" } },
-        },
-        new()
-        {
-            Type = "smb",
-            DisplayName = "SMB/CIFS (OS mount)",
-            Available = true,
-            ConfigSchema = new() { { "mountPath", "string" } },
+            ConfigSchema = new()
+            {
+                { "rootPath", "string (required) — absolute path to the local mount or directory" },
+            },
         },
         new()
         {
@@ -115,21 +103,11 @@ public static class DriverTypeMetadata
         {
             case "local":
                 if (config is null)
-                    return null;
+                    return "config is required for 'local' and must include 'rootPath'.";
 
                 string? rootPath = config["rootPath"]?.Value<string>();
-                if (rootPath is not null && string.IsNullOrWhiteSpace(rootPath))
-                    return "config.rootPath must be a non-empty string when provided.";
-
-                return null;
-
-            case "smb":
-                if (config is null)
-                    return "config is required for 'smb' and must include 'mountPath'.";
-
-                string? mountPath = config["mountPath"]?.Value<string>();
-                if (string.IsNullOrWhiteSpace(mountPath))
-                    return "config.mountPath must be a non-empty string for 'smb'.";
+                if (string.IsNullOrWhiteSpace(rootPath))
+                    return "config.rootPath must be a non-empty string for 'local'.";
 
                 return null;
 

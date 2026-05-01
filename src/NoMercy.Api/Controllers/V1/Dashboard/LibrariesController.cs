@@ -581,9 +581,17 @@ public class LibrariesController(
         if (library is null)
             return NotFoundResponse("Library not found");
 
+        if (request.DriverId == default)
+            return BadRequestResponse("driver_id is required. Every folder must have a driver.");
+
         try
         {
-            Folder folder = new() { Id = Ulid.NewUlid(), Path = request.Path };
+            Folder folder = new()
+            {
+                Id = Ulid.NewUlid(),
+                Path = request.Path,
+                DriverId = request.DriverId,
+            };
 
             await folderRepository.AddFolderAsync(folder);
         }
