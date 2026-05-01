@@ -52,8 +52,7 @@ public class ShowManager(
         {
             IStorage folderStorage = _storageFactory.For(
                 folderLibrary.Folder.Id,
-                folderLibrary.Folder.DriverType,
-                folderLibrary.Folder.DriverConfig,
+                folderLibrary.Folder.DriverId,
                 folderLibrary.Folder.Path
             );
             string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));

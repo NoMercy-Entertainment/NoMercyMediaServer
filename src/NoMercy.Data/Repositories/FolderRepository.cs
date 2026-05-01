@@ -10,6 +10,7 @@ public class FolderRepository(MediaContext context)
     {
         return await context
             .Folders.Where(folder => folder.Id == folderId)
+            .Include(folder => folder.Driver)
             .Include(folder => folder.FolderLibraries)
                 .ThenInclude(folderLibrary => folderLibrary.Library)
             .FirstOrDefaultAsync();

@@ -151,12 +151,7 @@ public partial class FileLogic(
 
         string subtitleFolder = Path.Combine(hostFolder, "subtitles");
 
-        IStorage storage = _storageFactory.For(
-            folder.Id,
-            folder.DriverType,
-            folder.DriverConfig,
-            folder.Path
-        );
+        IStorage storage = _storageFactory.For(folder.Id, folder.DriverId, folder.Path);
         if (await storage.ExistsAsync(subtitleFolder, CancellationToken.None))
         {
             IReadOnlyList<StorageEntry> subtitleEntries = storage.List(subtitleFolder, "*", false);
@@ -307,8 +302,7 @@ public partial class FileLogic(
         {
             IStorage folderStorage = _storageFactory.For(
                 rootFolder.Id,
-                rootFolder.DriverType,
-                rootFolder.DriverConfig,
+                rootFolder.DriverId,
                 rootFolder.Path
             );
             string path = Path.Combine(rootFolder.Path, folder);
@@ -326,8 +320,7 @@ public partial class FileLogic(
                     {
                         Path = path,
                         Id = rootFolder.Id,
-                        DriverType = rootFolder.DriverType,
-                        DriverConfig = rootFolder.DriverConfig,
+                        DriverId = rootFolder.DriverId,
                     }
                 );
         }

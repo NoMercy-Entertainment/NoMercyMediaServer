@@ -12,6 +12,8 @@ using NoMercy.Providers.TMDB.Client.Mocks;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Setup;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Factory;
 
 namespace NoMercy.Tests.MediaProcessing.Movies;
 

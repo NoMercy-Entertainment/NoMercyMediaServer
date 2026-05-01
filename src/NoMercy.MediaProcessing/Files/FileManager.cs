@@ -36,7 +36,7 @@ public partial class FileManager(
     private readonly IStorageDriver _storageDriver = storageDriver;
 
     private IStorage StorageFor(Folder folder) =>
-        _storageFactory.For(folder.Id, folder.DriverType, folder.DriverConfig, folder.Path);
+        _storageFactory.For(folder.Id, folder.DriverId, folder.Path);
 
     private int Id { get; set; }
     private Movie? Movie { get; set; }
@@ -984,8 +984,7 @@ public partial class FileManager(
                     {
                         Path = path,
                         Id = rootFolder.Id,
-                        DriverType = rootFolder.DriverType,
-                        DriverConfig = rootFolder.DriverConfig,
+                        DriverId = rootFolder.DriverId,
                     }
                 );
         }

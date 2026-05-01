@@ -171,12 +171,7 @@ namespace NoMercy.Database.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("DriverConfig")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DriverType")
-                        .IsRequired()
-                        .HasMaxLength(256)
+                    b.Property<string>("DriverId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Path")
@@ -186,12 +181,50 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DriverType");
+                    b.HasIndex("DriverId");
 
                     b.HasIndex("Path")
                         .IsUnique();
 
                     b.ToTable("Folders");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Storage.Driver", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Config")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Type");
+
+                    b.ToTable("Drivers");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Libraries.FolderLibrary", b =>
@@ -4078,6 +4111,16 @@ namespace NoMercy.Database.Migrations
                         });
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.Libraries.Folder", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Storage.Driver", "Driver")
+                        .WithMany("Folders")
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Driver");
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.Libraries.FolderLibrary", b =>
                 {
                     b.HasOne("NoMercy.Database.Models.Libraries.Folder", "Folder")
@@ -5645,6 +5688,11 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("EncoderProfileFolder");
 
                     b.Navigation("FolderLibraries");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Storage.Driver", b =>
+                {
+                    b.Navigation("Folders");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Libraries.Language", b =>

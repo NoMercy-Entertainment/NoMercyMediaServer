@@ -153,8 +153,7 @@ public class VideoEncodeJob : AbstractEncoderJob
                 // to the destination. For now source == destination (same folder).
                 IStorage folderStorage = StorageFactory.For(
                     folder.Id,
-                    folder.DriverType,
-                    folder.DriverConfig,
+                    folder.DriverId,
                     folder.Path
                 );
 

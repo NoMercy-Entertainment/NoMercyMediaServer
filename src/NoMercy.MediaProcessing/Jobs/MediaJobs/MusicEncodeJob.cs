@@ -124,8 +124,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                 // For now source == destination (same folder).
                 IStorage folderStorage = StorageFactory.For(
                     folder.Id,
-                    folder.DriverType,
-                    folder.DriverConfig,
+                    folder.DriverId,
                     folder.Path
                 );
 

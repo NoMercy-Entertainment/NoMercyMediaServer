@@ -1,12 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Storage;
 
 namespace NoMercy.Database.Models.Libraries;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Path), IsUnique = true)]
-[Index(nameof(DriverType))]
+[Index(nameof(DriverId))]
 public class Folder
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -16,11 +18,11 @@ public class Folder
     [JsonProperty("path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonProperty("driver_type")]
-    public string DriverType { get; set; } = "local";
+    [JsonProperty("driver_id")]
+    public Ulid? DriverId { get; set; }
 
-    [JsonProperty("driver_config")]
-    public string? DriverConfig { get; set; }
+    [JsonProperty("driver")]
+    public Driver? Driver { get; set; }
 
     [JsonProperty("encoder_profile_folder")]
     public ICollection<EncoderProfileFolder> EncoderProfileFolder { get; set; } = [];

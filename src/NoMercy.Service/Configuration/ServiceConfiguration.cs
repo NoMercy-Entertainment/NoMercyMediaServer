@@ -57,6 +57,8 @@ using NoMercy.Service.Extensions;
 using NoMercy.Service.Workers;
 using NoMercy.Setup;
 using NoMercy.Setup.Cast;
+using NoMercy.Data.Resolvers;
+using NoMercy.Helpers;
 using NoMercy.Storage;
 using NoMercyQueue.Extensions;
 using Serilog.Events;
@@ -490,6 +492,7 @@ public static class ServiceConfiguration
         services.AddScoped<MediaProcessingLibraryRepository>();
         services.AddScoped<DeviceRepository>();
         services.AddScoped<FolderRepository>();
+        services.AddScoped<DriverRepository>();
         services.AddScoped<MediaProcessingFileRepository>();
         services.AddScoped<IFileRepository, MediaProcessingFileRepository>();
         services.AddScoped<FilesystemRepository>();
@@ -528,6 +531,13 @@ public static class ServiceConfiguration
 
         services.AddMediaServerQueue();
         services.AddSingleton<JobDispatcher>();
+
+        // Storage driver resolvers — registered before AddNoMercyEncoder so
+        // the TryAdd inside AddNoMercyStorage picks them up via GetService<>.
+        services.AddSingleton<IDriverConfigResolver>(sp =>
+            new DriverConfigResolver(sp.GetRequiredService<IDbContextFactory<MediaContext>>())
+        );
+        services.AddSingleton<ICredentialResolver, CredentialResolver>();
 
         services.AddNoMercyEncoder(opts =>
         {

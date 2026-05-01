@@ -155,43 +155,54 @@ public class WebDavDriverConfigParsingTests
 
 public class WebDavStorageDriverFactoryTests
 {
-    private static StorageFactory Factory() =>
-        new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
+    private static StorageFactory FactoryWithConfig(string type, string? config)
+    {
+        Mock<IDriverConfigResolver> resolver = new();
+        resolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
+        return new StorageFactory(
+            new LocalStorageDriver(),
+            NullLogger<StorageFactory>.Instance,
+            resolver.Object
+        );
+    }
 
     [Fact]
     public void For_webdav_without_config_throws_ArgumentException()
     {
-        StorageFactory factory = Factory();
-        Action act = () => factory.For(Ulid.NewUlid(), "webdav", null, "/irrelevant");
+        StorageFactory factory = FactoryWithConfig("webdav", null);
+        Ulid driverId = Ulid.NewUlid();
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void For_webdav_missing_url_throws_ArgumentException()
     {
-        StorageFactory factory = Factory();
-        string json = """{"username":"user"}""";
-        Action act = () => factory.For(Ulid.NewUlid(), "webdav", json, "/irrelevant");
+        StorageFactory factory = FactoryWithConfig("webdav", """{"username":"user"}""");
+        Ulid driverId = Ulid.NewUlid();
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
         act.Should().Throw<ArgumentException>().WithMessage("*url*");
     }
 
     [Fact]
     public void For_webdav_both_auth_schemes_throws_ArgumentException()
     {
-        StorageFactory factory = Factory();
         string json =
             """{"url":"http://dav.example.com/","username":"u","passwordRef":"p","bearerTokenRef":"b"}""";
-        Action act = () => factory.For(Ulid.NewUlid(), "webdav", json, "/irrelevant");
+        StorageFactory factory = FactoryWithConfig("webdav", json);
+        Ulid driverId = Ulid.NewUlid();
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void For_webdav_valid_config_returns_RemoteStorage()
     {
-        StorageFactory factory = Factory();
         string json = """{"url":"http://dav.example.com/files/"}""";
+        StorageFactory factory = FactoryWithConfig("webdav", json);
+        Ulid driverId = Ulid.NewUlid();
 
-        IStorage storage = factory.For(Ulid.NewUlid(), "webdav", json, "/irrelevant");
+        IStorage storage = factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
@@ -199,8 +210,9 @@ public class WebDavStorageDriverFactoryTests
     [Fact]
     public void For_webdav_malformed_config_throws_ArgumentException()
     {
-        StorageFactory factory = Factory();
-        Action act = () => factory.For(Ulid.NewUlid(), "webdav", "{{{bad json", "/irrelevant");
+        StorageFactory factory = FactoryWithConfig("webdav", "{{{bad json");
+        Ulid driverId = Ulid.NewUlid();
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
         act.Should().Throw<ArgumentException>();
     }
 }

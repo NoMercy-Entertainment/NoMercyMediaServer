@@ -14,8 +14,7 @@ namespace NoMercy.Storage.Factory;
 
 /// <summary>
 /// Parsed representation of the optional JSON config for local-disk folders.
-/// When <see cref="RootPath"/> is set it overrides <c>folderPath</c>
-/// (useful when the library root is a remapped symlink location).
+/// When <see cref="RootPath"/> is set it overrides <c>folderPath</c>.
 /// </summary>
 internal sealed record LocalDriverConfig(string? RootPath);
 
@@ -25,41 +24,74 @@ public sealed class StorageFactory : IStorageFactory
     private readonly ILogger<StorageFactory> _logger;
 
     /// <summary>
-    /// Optional resolver that maps a <c>credentialsRef</c> key to an
-    /// (accessKey, secretKey) pair. Supply this at the DI registration
-    /// site (e.g. from <c>CredentialManager.Credential</c> in
-    /// <c>NoMercy.Helpers</c>). When null, the AWS default credential
-    /// chain is used for S3/R2 drivers.
+    /// Resolves a driver ID to its (type, configJson). Supplied at DI
+    /// registration from a higher-level project that has DB access.
+    /// When null, only built-in local (driverId == null) is supported.
     /// </summary>
-    private readonly Func<string, (string AccessKey, string SecretKey)?>? _credentialsResolver;
+    private readonly IDriverConfigResolver? _driverConfigResolver;
 
-    // Cache key = (folderId, driverType, sha256 of configJson).
-    // Encoding config changes into the key means stale instances are
-    // abandoned automatically — no explicit Invalidate needed for updates.
+    /// <summary>
+    /// Resolves a <c>credentialsRef</c> key to an (accessKey, secretKey) pair.
+    /// When null, the AWS default credential chain is used for S3/R2.
+    /// </summary>
+    private readonly ICredentialResolver? _credentialResolver;
+
+    // Cache key = "{folderId}:{driverId|local}:{sha256 of resolved configJson}".
     private readonly ConcurrentDictionary<string, IStorage> _cache = new();
 
     public StorageFactory(
         IStorageDriver driver,
         ILogger<StorageFactory> logger,
-        Func<string, (string AccessKey, string SecretKey)?>? credentialsResolver = null
+        IDriverConfigResolver? driverConfigResolver = null,
+        ICredentialResolver? credentialResolver = null
     )
     {
         _driver = driver ?? throw new ArgumentNullException(nameof(driver));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _credentialsResolver = credentialsResolver;
+        _driverConfigResolver = driverConfigResolver;
+        _credentialResolver = credentialResolver;
     }
 
-    public IStorage For(
-        Ulid folderId,
-        string driverType,
-        string? driverConfigJson,
-        string folderPath
-    )
+    public IStorage For(Ulid folderId, Ulid? driverId, string folderPath)
     {
-        string cacheKey = BuildCacheKey(folderId, driverType, driverConfigJson);
+        string driverType = "local";
+        string? configJson = null;
+
+        if (driverId is not null)
+        {
+            if (_driverConfigResolver is null)
+            {
+                _logger.LogWarning(
+                    "Folder {FolderId} has DriverId {DriverId} but no IDriverConfigResolver is registered; falling back to built-in local",
+                    folderId,
+                    driverId
+                );
+            }
+            else
+            {
+                (string Type, string? ConfigJson)? resolved = _driverConfigResolver.Resolve(
+                    driverId.Value
+                );
+                if (resolved is null)
+                {
+                    _logger.LogWarning(
+                        "Driver {DriverId} not found for folder {FolderId}; falling back to built-in local",
+                        driverId,
+                        folderId
+                    );
+                }
+                else
+                {
+                    driverType = resolved.Value.Type;
+                    configJson = resolved.Value.ConfigJson;
+                }
+            }
+        }
+
+        string cacheKey = BuildCacheKey(folderId, driverType, configJson);
         return _cache.GetOrAdd(
             cacheKey,
-            _ => Build(folderId, driverType, driverConfigJson, folderPath)
+            _ => Build(folderId, driverType, configJson, folderPath)
         );
     }
 
@@ -131,10 +163,7 @@ public sealed class StorageFactory : IStorageFactory
         string folderPath
     )
     {
-        // SMB and NFS work through System.IO once the OS has the share
-        // mounted; we treat them as local until an in-process driver lands.
         string allowedRoot = ResolveLocalRoot(folderId, driverType, driverConfigJson, folderPath);
-
         StoragePathGuard guard = new([allowedRoot], _driver);
         return new LocalStorage(_driver, guard);
     }
@@ -218,16 +247,16 @@ public sealed class StorageFactory : IStorageFactory
         if (driverType == "r2" && string.IsNullOrWhiteSpace(config.Endpoint))
             throw new ArgumentException(
                 $"driver_config.endpoint is required for 'r2' (folder {folderId}). "
-                    + "Set it to your account's R2 endpoint URL (https://<account-id>.r2.cloudflarestorage.com).",
+                    + "Set it to your account's R2 endpoint URL.",
                 nameof(driverConfigJson)
             );
 
         string? accessKey = null;
         string? secretKey = null;
 
-        if (!string.IsNullOrWhiteSpace(config.CredentialsRef) && _credentialsResolver is not null)
+        if (!string.IsNullOrWhiteSpace(config.CredentialsRef) && _credentialResolver is not null)
         {
-            (string AccessKey, string SecretKey)? creds = _credentialsResolver(
+            (string AccessKey, string SecretKey)? creds = _credentialResolver.Resolve(
                 config.CredentialsRef
             );
             if (creds is not null)
@@ -266,8 +295,14 @@ public sealed class StorageFactory : IStorageFactory
                 nameof(driverConfigJson)
             );
 
+        // Adapt ICredentialResolver to the Func<string, (string, string)?> the WebDav driver expects.
+        Func<string, (string AccessKey, string SecretKey)?>? resolverFunc =
+            _credentialResolver is null
+                ? null
+                : key => _credentialResolver.Resolve(key);
+
         WebDavDriverConfig webDavConfig = WebDavDriverConfig.Parse(driverConfigJson, folderId);
-        WebDavStorageDriver webDavDriver = new(webDavConfig, _credentialsResolver);
+        WebDavStorageDriver webDavDriver = new(webDavConfig, resolverFunc);
         return new RemoteStorage(webDavDriver);
     }
 

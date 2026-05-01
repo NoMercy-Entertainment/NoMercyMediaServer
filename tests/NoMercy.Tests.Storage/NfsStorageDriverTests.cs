@@ -114,12 +114,24 @@ public class NfsDriverConfigParsingTests
         config.Export.Should().Be("/media");
     }
 
+    private static StorageFactory FactoryWithConfig(string type, string? config)
+    {
+        Mock<IDriverConfigResolver> resolver = new();
+        resolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
+        return new StorageFactory(
+            new LocalStorageDriver(),
+            NullLogger<StorageFactory>.Instance,
+            resolver.Object
+        );
+    }
+
     [Fact]
     public void StorageFactory_nfs_without_config_throws()
     {
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
+        StorageFactory factory = FactoryWithConfig("nfs", null);
+        Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(Ulid.NewUlid(), "nfs", null, "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -127,10 +139,10 @@ public class NfsDriverConfigParsingTests
     [Fact]
     public void StorageFactory_nfs_without_server_throws()
     {
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
+        StorageFactory factory = FactoryWithConfig("nfs", """{"export":"/data"}""");
+        Ulid driverId = Ulid.NewUlid();
 
-        Action act = () =>
-            factory.For(Ulid.NewUlid(), "nfs", """{"export":"/data"}""", "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>().WithMessage("*server*");
     }
@@ -138,10 +150,10 @@ public class NfsDriverConfigParsingTests
     [Fact]
     public void StorageFactory_nfs_without_export_throws()
     {
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
+        StorageFactory factory = FactoryWithConfig("nfs", """{"server":"nas.local"}""");
+        Ulid driverId = Ulid.NewUlid();
 
-        Action act = () =>
-            factory.For(Ulid.NewUlid(), "nfs", """{"server":"nas.local"}""", "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>().WithMessage("*export*");
     }

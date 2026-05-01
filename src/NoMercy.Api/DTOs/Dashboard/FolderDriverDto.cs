@@ -1,37 +1,6 @@
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace NoMercy.Api.DTOs.Dashboard;
-
-public record FolderDriverDto
-{
-    [JsonProperty("driver_type")]
-    public string DriverType { get; set; } = "local";
-
-    [JsonProperty("driver_config")]
-    public JObject? DriverConfig { get; set; }
-}
-
-public record FolderDriverResponseDto
-{
-    [JsonProperty("driver_type")]
-    public string DriverType { get; set; } = "local";
-
-    [JsonProperty("driver_config")]
-    public JObject? DriverConfig { get; set; }
-
-    [JsonProperty("warnings")]
-    public string[] Warnings { get; set; } = [];
-}
-
-public record UpdateFolderDriverRequestDto
-{
-    [JsonProperty("driver_type")]
-    public string DriverType { get; set; } = string.Empty;
-
-    [JsonProperty("driver_config")]
-    public JObject? DriverConfig { get; set; }
-}
 
 public record DriverMetadataDto
 {

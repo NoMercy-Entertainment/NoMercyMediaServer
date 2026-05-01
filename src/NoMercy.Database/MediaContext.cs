@@ -2,6 +2,7 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using NoMercy.Database.Models.Storage;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Database;
@@ -77,8 +78,16 @@ public class MediaContext : DbContext
 
         modelBuilder.Entity<Crew>().Property(t => t.JobId).IsRequired(false);
 
-        // DriverConfig is free-form JSON — no max-length cap.
-        modelBuilder.Entity<Folder>().Property(f => f.DriverConfig).HasMaxLength(int.MaxValue);
+        // Driver.Config is free-form JSON — no max-length cap.
+        modelBuilder.Entity<Driver>().Property(d => d.Config).HasMaxLength(int.MaxValue);
+
+        // Folder.DriverId FK — SET NULL when the Driver is deleted.
+        modelBuilder
+            .Entity<Folder>()
+            .HasOne(f => f.Driver)
+            .WithMany(d => d.Folders)
+            .HasForeignKey(f => f.DriverId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // Metadata owns its AudioTrack — delete the track when metadata is removed.
         modelBuilder
@@ -227,6 +236,7 @@ public class MediaContext : DbContext
         base.OnModelCreating(modelBuilder);
     }
 
+    public virtual DbSet<Driver> Drivers { get; init; }
     public virtual DbSet<ActivityLog> ActivityLogs { get; init; }
     public virtual DbSet<Cast> Casts { get; init; }
     public virtual DbSet<CertificationMovie> CertificationMovie { get; init; }

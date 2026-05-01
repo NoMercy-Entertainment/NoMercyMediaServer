@@ -18,15 +18,25 @@ namespace NoMercy.Tests.Storage;
 
 public class S3DriverConfigParsingTests
 {
+    private static StorageFactory FactoryWithConfig(string type, string? config)
+    {
+        Mock<IDriverConfigResolver> resolver = new();
+        resolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
+        return new StorageFactory(
+            new LocalStorageDriver(),
+            NullLogger<StorageFactory>.Instance,
+            resolver.Object
+        );
+    }
+
     [Fact]
     public void S3DriverConfig_missing_bucket_throws()
     {
         string json = """{"region":"us-east-1"}""";
+        StorageFactory factory = FactoryWithConfig("s3", json);
+        Ulid driverId = Ulid.NewUlid();
 
-        // The factory validates bucket before constructing backend
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
-
-        Action act = () => factory.For(Ulid.NewUlid(), "s3", json, "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>().WithMessage("*bucket*");
     }
@@ -35,10 +45,10 @@ public class S3DriverConfigParsingTests
     public void S3DriverConfig_missing_region_throws()
     {
         string json = """{"bucket":"mybucket"}""";
+        StorageFactory factory = FactoryWithConfig("s3", json);
+        Ulid driverId = Ulid.NewUlid();
 
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
-
-        Action act = () => factory.For(Ulid.NewUlid(), "s3", json, "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>().WithMessage("*region*");
     }
@@ -47,10 +57,10 @@ public class S3DriverConfigParsingTests
     public void R2_without_endpoint_throws()
     {
         string json = """{"bucket":"mybucket","region":"auto"}""";
+        StorageFactory factory = FactoryWithConfig("r2", json);
+        Ulid driverId = Ulid.NewUlid();
 
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
-
-        Action act = () => factory.For(Ulid.NewUlid(), "r2", json, "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>().WithMessage("*endpoint*");
     }
@@ -58,9 +68,10 @@ public class S3DriverConfigParsingTests
     [Fact]
     public void Null_configJson_for_s3_throws()
     {
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
+        StorageFactory factory = FactoryWithConfig("s3", null);
+        Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(Ulid.NewUlid(), "s3", null, "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -68,9 +79,10 @@ public class S3DriverConfigParsingTests
     [Fact]
     public void Malformed_configJson_for_s3_throws_ArgumentException()
     {
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
+        StorageFactory factory = FactoryWithConfig("s3", "not-json{{{");
+        Ulid driverId = Ulid.NewUlid();
 
-        Action act = () => factory.For(Ulid.NewUlid(), "s3", "not-json{{{", "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -78,15 +90,12 @@ public class S3DriverConfigParsingTests
     [Fact]
     public void S3_with_valid_config_returns_RemoteStorage()
     {
-        // This test does NOT need Docker — it just validates the factory
-        // builds a RemoteStorage instance. The backend will fail at actual
-        // S3 call time, not at construction time.
         string json =
             """{"bucket":"test","region":"us-east-1","endpoint":"http://localhost:9000"}""";
+        StorageFactory factory = FactoryWithConfig("s3", json);
+        Ulid driverId = Ulid.NewUlid();
 
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
-
-        IStorage storage = factory.For(Ulid.NewUlid(), "s3", json, "/irrelevant");
+        IStorage storage = factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
@@ -96,24 +105,23 @@ public class S3DriverConfigParsingTests
     {
         string json =
             """{"bucket":"test","region":"auto","endpoint":"https://account.r2.cloudflarestorage.com"}""";
+        StorageFactory factory = FactoryWithConfig("r2", json);
+        Ulid driverId = Ulid.NewUlid();
 
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
-
-        IStorage storage = factory.For(Ulid.NewUlid(), "r2", json, "/irrelevant");
+        IStorage storage = factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
 
-    // The old test expected NotSupportedException — now expects a working backend.
     [Fact]
     public void For_s3_r2_no_longer_throws_NotSupportedException()
     {
         string json =
             """{"bucket":"test","region":"us-east-1","endpoint":"http://localhost:9000"}""";
+        StorageFactory factory = FactoryWithConfig("s3", json);
+        Ulid driverId = Ulid.NewUlid();
 
-        StorageFactory factory = new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance);
-
-        Action act = () => factory.For(Ulid.NewUlid(), "s3", json, "/irrelevant");
+        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
 
         act.Should().NotThrow<NotSupportedException>();
     }
