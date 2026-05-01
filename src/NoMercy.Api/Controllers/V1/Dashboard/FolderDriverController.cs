@@ -22,7 +22,15 @@ public class FolderDriverController(
     IStorageFactory storageFactory
 ) : BaseController
 {
-    private static readonly string[] AllowedDriverTypes = ["local", "smb", "nfs", "s3", "r2"];
+    private static readonly string[] AllowedDriverTypes =
+    [
+        "local",
+        "smb",
+        "nfs",
+        "s3",
+        "r2",
+        "webdav",
+    ];
 
     private static readonly string[] UnimplementedDriverTypes = [];
 
@@ -95,6 +103,33 @@ public class FolderDriverController(
                     { "prefix", "string?" },
                     { "credentialsRef", "string?" },
                     { "endpoint", "string (required for R2)" },
+                },
+            },
+            new()
+            {
+                Type = "webdav",
+                DisplayName = "WebDAV (Nextcloud, ownCloud, Synology DSM, SharePoint, mod_dav)",
+                Available = true,
+                ConfigSchema = new()
+                {
+                    {
+                        "url",
+                        "string (required) — base URL of the WebDAV collection, e.g. https://nextcloud.example.com/remote.php/dav/files/user/Movies/"
+                    },
+                    { "username", "string? — Basic Auth username" },
+                    {
+                        "passwordRef",
+                        "string? — credential store key; second element of the resolved tuple is the password"
+                    },
+                    {
+                        "bearerTokenRef",
+                        "string? — credential store key for Bearer token auth (mutually exclusive with username/passwordRef)"
+                    },
+                    {
+                        "ignoreCertErrors",
+                        "bool? (default false) — skip TLS cert validation (opt-in for self-signed certs)"
+                    },
+                    { "timeoutSeconds", "int? (default 30) — HTTP request timeout" },
                 },
             },
         ];
@@ -262,6 +297,25 @@ public class FolderDriverController(
                     if (string.IsNullOrWhiteSpace(endpoint))
                         return "driver_config.endpoint is required for 'r2' (set to your R2 endpoint URL).";
                 }
+
+                return null;
+
+            case "webdav":
+                if (config is null)
+                    return "driver_config is required for 'webdav' and must include 'url'.";
+
+                string? webDavUrl = config["url"]?.Value<string>();
+                if (string.IsNullOrWhiteSpace(webDavUrl))
+                    return "driver_config.url must be a non-empty string for 'webdav'.";
+
+                bool hasBasicAuth =
+                    !string.IsNullOrWhiteSpace(config["username"]?.Value<string>())
+                    || !string.IsNullOrWhiteSpace(config["passwordRef"]?.Value<string>());
+                bool hasBearerAuth = !string.IsNullOrWhiteSpace(
+                    config["bearerTokenRef"]?.Value<string>()
+                );
+                if (hasBasicAuth && hasBearerAuth)
+                    return "driver_config for 'webdav' specifies both Basic Auth (username/passwordRef) and Bearer token (bearerTokenRef). Only one auth scheme may be set.";
 
                 return null;
 

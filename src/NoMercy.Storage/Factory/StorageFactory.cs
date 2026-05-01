@@ -3,9 +3,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.Nfs;
 using NoMercy.Storage.Drivers.S3;
-using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Drivers.WebDav;
 using NoMercy.Storage.Remote;
 using NoMercy.Storage.Validation;
 
@@ -97,6 +98,9 @@ public sealed class StorageFactory : IStorageFactory
             case "s3":
             case "r2":
                 return BuildS3(folderId, normalizedType, driverConfigJson);
+
+            case "webdav":
+                return BuildWebDav(folderId, driverConfigJson);
 
             default:
                 throw new ArgumentException(
@@ -251,6 +255,20 @@ public sealed class StorageFactory : IStorageFactory
         );
 
         return new RemoteStorage(s3Driver);
+    }
+
+    private IStorage BuildWebDav(Ulid folderId, string? driverConfigJson)
+    {
+        if (string.IsNullOrWhiteSpace(driverConfigJson))
+            throw new ArgumentException(
+                $"driver_config is required for 'webdav' (folder {folderId}). "
+                    + "Supply at minimum: url.",
+                nameof(driverConfigJson)
+            );
+
+        WebDavDriverConfig webDavConfig = WebDavDriverConfig.Parse(driverConfigJson, folderId);
+        WebDavStorageDriver webDavDriver = new(webDavConfig, _credentialsResolver);
+        return new RemoteStorage(webDavDriver);
     }
 
     private static string BuildCacheKey(Ulid folderId, string driverType, string? configJson)

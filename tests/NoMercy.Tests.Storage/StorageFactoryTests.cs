@@ -162,6 +162,42 @@ public class StorageFactoryTests
     }
 
     // -----------------------------------------------------------------------
+    // WebDAV
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void For_webdav_without_config_throws_ArgumentException()
+    {
+        StorageFactory factory = Factory();
+
+        Action act = () => factory.For(Ulid.NewUlid(), "webdav", null, "/irrelevant");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void For_webdav_missing_url_throws_ArgumentException()
+    {
+        StorageFactory factory = Factory();
+        string json = """{"username":"user"}""";
+
+        Action act = () => factory.For(Ulid.NewUlid(), "webdav", json, "/irrelevant");
+
+        act.Should().Throw<ArgumentException>().WithMessage("*url*");
+    }
+
+    [Fact]
+    public void For_webdav_valid_config_returns_RemoteStorage()
+    {
+        StorageFactory factory = Factory();
+        string json = """{"url":"http://dav.example.com/files/"}""";
+
+        IStorage storage = factory.For(Ulid.NewUlid(), "webdav", json, "/irrelevant");
+
+        storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
+    }
+
+    // -----------------------------------------------------------------------
     // Unknown driver type
     // -----------------------------------------------------------------------
 

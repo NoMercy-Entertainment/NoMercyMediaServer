@@ -1,0 +1,478 @@
+using System.Net;
+using System.Text.RegularExpressions;
+using WebDav;
+
+namespace NoMercy.Storage.Drivers.WebDav;
+
+/// <summary>
+/// <see cref="IStorageDriver"/> backed by any RFC 4918-compliant WebDAV server
+/// (Nextcloud, ownCloud, Synology DSM, SharePoint, generic mod_dav, …).
+/// </summary>
+public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
+{
+    private readonly IWebDavClient _client;
+    private readonly string _baseUrl;
+
+    // Dispose tracking — we only own the client when we created it.
+    private readonly bool _ownsClient;
+    private bool _disposed;
+
+    /// <summary>
+    /// Production constructor — builds an <see cref="IWebDavClient"/> from config.
+    /// Internal because <see cref="WebDavDriverConfig"/> is internal; callers use
+    /// <see cref="NoMercy.Storage.Factory.StorageFactory"/> instead.
+    /// </summary>
+    internal WebDavStorageDriver(
+        WebDavDriverConfig config,
+        Func<string, (string AccessKey, string SecretKey)?>? credentialsResolver = null
+    )
+    {
+        ArgumentNullException.ThrowIfNull(config);
+
+        _baseUrl = config.Url; // already normalized with trailing slash
+
+        HttpClientHandler handler = new();
+
+        if (config.IgnoreCertErrors)
+            handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+
+        ICredentials? credentials = ResolveCredentials(config, credentialsResolver);
+        if (credentials is not null)
+            handler.Credentials = credentials;
+
+        HttpClient httpClient = new(handler, disposeHandler: true)
+        {
+            Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds),
+        };
+
+        // Bearer token goes in the default request headers when Basic is not used.
+        string? bearerToken = ResolveBearerToken(config, credentialsResolver);
+        if (bearerToken is not null)
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearerToken);
+
+        WebDavClientParams clientParams = new()
+        {
+            BaseAddress = new Uri(_baseUrl),
+            Credentials = credentials,
+        };
+
+        // Pass the pre-configured HttpClient directly so our handler + auth are used.
+        _client = new WebDavClient(httpClient);
+        _ownsClient = true;
+    }
+
+    /// <summary>
+    /// Test constructor — injects a pre-configured client (e.g. pointing at
+    /// a Testcontainers WebDAV instance) and a fixed base URL.
+    /// </summary>
+    internal WebDavStorageDriver(IWebDavClient client, string baseUrl)
+    {
+        _client = client ?? throw new ArgumentNullException(nameof(client));
+        _baseUrl = baseUrl.TrimEnd('/') + "/";
+        _ownsClient = false;
+    }
+
+    // -----------------------------------------------------------------------
+    // IStorageDriver implementation
+    // -----------------------------------------------------------------------
+
+    public bool FileExists(string path)
+    {
+        string uri = ToUri(path);
+        PropfindResponse response = _client
+            .Propfind(uri, new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceOnly })
+            .GetAwaiter()
+            .GetResult();
+
+        if (!response.IsSuccessful)
+            return false;
+
+        WebDavResource? resource = response.Resources.FirstOrDefault();
+        // A 207 with a collection resource = directory, not a file.
+        return resource is not null && !resource.IsCollection;
+    }
+
+    public bool DirectoryExists(string path)
+    {
+        string uri = ToCollectionUri(path);
+        PropfindResponse response = _client
+            .Propfind(uri, new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceOnly })
+            .GetAwaiter()
+            .GetResult();
+
+        if (!response.IsSuccessful)
+            return false;
+
+        WebDavResource? resource = response.Resources.FirstOrDefault();
+        return resource is not null && resource.IsCollection;
+    }
+
+    public void CreateDirectory(string path)
+    {
+        // WebDAV MKCOL is not recursive — create each missing segment in order.
+        string normalized = path.TrimStart('/').TrimStart('\\').Replace('\\', '/');
+        string[] segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        string accumulated = string.Empty;
+        foreach (string segment in segments)
+        {
+            accumulated = string.IsNullOrEmpty(accumulated) ? segment : accumulated + "/" + segment;
+
+            string uri = ToCollectionUri(accumulated);
+
+            if (DirectoryExists(accumulated))
+                continue;
+
+            WebDavResponse response = _client.Mkcol(uri).GetAwaiter().GetResult();
+
+            // 405 Method Not Allowed = already exists (some servers respond this way).
+            if (!response.IsSuccessful && response.StatusCode != 405)
+                throw new IOException(
+                    $"WebDAV MKCOL '{uri}' failed: HTTP {response.StatusCode} — {response.Description}"
+                );
+        }
+    }
+
+    public void DeleteFile(string path)
+    {
+        string uri = ToUri(path);
+        WebDavResponse response = _client.Delete(uri).GetAwaiter().GetResult();
+
+        // 404 is idempotent — file was already gone.
+        if (!response.IsSuccessful && response.StatusCode != 404)
+            throw new IOException(
+                $"WebDAV DELETE '{uri}' failed: HTTP {response.StatusCode} — {response.Description}"
+            );
+    }
+
+    public void DeleteDirectory(string path, bool recursive)
+    {
+        string uri = ToCollectionUri(path);
+
+        if (!recursive)
+        {
+            // Reject if the collection is non-empty.
+            PropfindResponse listing = _client
+                .Propfind(
+                    uri,
+                    new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
+                )
+                .GetAwaiter()
+                .GetResult();
+
+            if (listing.IsSuccessful && listing.Resources.Count > 1)
+                throw new IOException(
+                    $"Cannot delete non-empty directory '{path}' with recursive=false."
+                );
+        }
+
+        WebDavResponse response = _client.Delete(uri).GetAwaiter().GetResult();
+
+        if (!response.IsSuccessful && response.StatusCode != 404)
+            throw new IOException(
+                $"WebDAV DELETE '{uri}' failed: HTTP {response.StatusCode} — {response.Description}"
+            );
+    }
+
+    public long GetFileSize(string path)
+    {
+        WebDavResource resource = PropfindSingle(path);
+        return resource.ContentLength ?? 0L;
+    }
+
+    public DateTime GetLastWriteTimeUtc(string path)
+    {
+        WebDavResource resource = PropfindSingle(path);
+        return resource.LastModifiedDate?.ToUniversalTime() ?? DateTime.UtcNow;
+    }
+
+    public Stream OpenRead(string path)
+    {
+        string uri = ToUri(path);
+        WebDavStreamResponse response = _client.GetRawFile(uri).GetAwaiter().GetResult();
+
+        if (!response.IsSuccessful)
+            throw new IOException(
+                $"WebDAV GET '{uri}' failed: HTTP {response.StatusCode} — {response.Description}"
+            );
+
+        return response.Stream;
+    }
+
+    public Stream OpenWrite(string path, bool overwrite)
+    {
+        string uri = ToUri(path);
+        return new WebDavUploadStream(_client, uri, overwrite);
+    }
+
+    public void MoveFile(string source, string destination)
+    {
+        string srcUri = ToUri(source);
+        string dstUri = ToUri(destination);
+
+        WebDavResponse response = _client
+            .Move(srcUri, dstUri, new MoveParameters { Overwrite = true })
+            .GetAwaiter()
+            .GetResult();
+
+        if (!response.IsSuccessful)
+            throw new IOException(
+                $"WebDAV MOVE '{srcUri}' → '{dstUri}' failed: HTTP {response.StatusCode} — {response.Description}"
+            );
+    }
+
+    public void CopyFile(string source, string destination, bool overwrite)
+    {
+        string srcUri = ToUri(source);
+        string dstUri = ToUri(destination);
+
+        WebDavResponse response = _client
+            .Copy(srcUri, dstUri, new CopyParameters { Overwrite = overwrite })
+            .GetAwaiter()
+            .GetResult();
+
+        if (!response.IsSuccessful)
+            throw new IOException(
+                $"WebDAV COPY '{srcUri}' → '{dstUri}' failed: HTTP {response.StatusCode} — {response.Description}"
+            );
+    }
+
+    public IEnumerable<string> EnumerateFileSystemEntries(
+        string directory,
+        string searchPattern,
+        SearchOption option
+    )
+    {
+        return EnumerateRecursive(directory, searchPattern, option == SearchOption.AllDirectories);
+    }
+
+    public string GetFullPath(string path)
+    {
+        // Pure URL normalization — no filesystem touch.
+        string normalized = path.TrimStart('/').TrimStart('\\').Replace('\\', '/');
+        if (string.IsNullOrEmpty(normalized))
+            return _baseUrl.TrimEnd('/');
+        return _baseUrl.TrimEnd('/') + "/" + Uri.EscapeDataString(normalized).Replace("%2F", "/");
+    }
+
+    public string? ResolveLinkTarget(string path) => null;
+
+    public bool IsHidden(string path)
+    {
+        string uri = ToUri(path);
+        PropfindResponse response = _client
+            .Propfind(uri, new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceOnly })
+            .GetAwaiter()
+            .GetResult();
+
+        if (!response.IsSuccessful)
+            return false;
+
+        WebDavResource? resource = response.Resources.FirstOrDefault();
+        return resource?.IsHidden ?? false;
+    }
+
+    public void MoveDirectory(string source, string destination)
+    {
+        string srcUri = ToCollectionUri(source);
+        string dstUri = ToCollectionUri(destination);
+
+        WebDavResponse response = _client
+            .Move(srcUri, dstUri, new MoveParameters { Overwrite = true })
+            .GetAwaiter()
+            .GetResult();
+
+        if (!response.IsSuccessful)
+            throw new IOException(
+                $"WebDAV MOVE dir '{srcUri}' → '{dstUri}' failed: HTTP {response.StatusCode} — {response.Description}"
+            );
+    }
+
+    // -----------------------------------------------------------------------
+    // IDisposable
+    // -----------------------------------------------------------------------
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        if (_ownsClient && _client is IDisposable disposable)
+            disposable.Dispose();
+    }
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
+    /// <summary>Builds the full URI for a file-like path (no trailing slash).</summary>
+    private string ToUri(string path)
+    {
+        string normalized = path.TrimStart('/').TrimStart('\\').Replace('\\', '/');
+        return _baseUrl.TrimEnd('/') + "/" + normalized;
+    }
+
+    /// <summary>Builds the full URI for a collection path (trailing slash).</summary>
+    private string ToCollectionUri(string path)
+    {
+        string normalized = path.TrimStart('/').TrimStart('\\').Replace('\\', '/').TrimEnd('/');
+        if (string.IsNullOrEmpty(normalized))
+            return _baseUrl;
+        return _baseUrl.TrimEnd('/') + "/" + normalized + "/";
+    }
+
+    /// <summary>PROPFIND Depth:0 and return the single resource, or throw.</summary>
+    private WebDavResource PropfindSingle(string path)
+    {
+        string uri = ToUri(path);
+        PropfindResponse response = _client
+            .Propfind(uri, new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceOnly })
+            .GetAwaiter()
+            .GetResult();
+
+        if (!response.IsSuccessful)
+            throw new IOException(
+                $"WebDAV PROPFIND '{uri}' failed: HTTP {response.StatusCode} — {response.Description}"
+            );
+
+        WebDavResource? resource = response.Resources.FirstOrDefault();
+        if (resource is null)
+            throw new FileNotFoundException($"WebDAV resource not found: {path}");
+
+        return resource;
+    }
+
+    private IEnumerable<string> EnumerateRecursive(
+        string directory,
+        string searchPattern,
+        bool recursive
+    )
+    {
+        string uri = ToCollectionUri(directory);
+        PropfindResponse response = _client
+            .Propfind(
+                uri,
+                new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
+            )
+            .GetAwaiter()
+            .GetResult();
+
+        if (!response.IsSuccessful)
+            yield break;
+
+        // Resources[0] is the directory itself — skip it.
+        foreach (WebDavResource resource in response.Resources.Skip(1))
+        {
+            string entryName = ExtractName(resource.Uri);
+
+            if (resource.IsCollection)
+            {
+                if (MatchesPattern(entryName, searchPattern))
+                    yield return resource.Uri;
+
+                if (recursive)
+                {
+                    // Recurse using the relative path derived from the URI.
+                    string subRelative = MakeRelative(resource.Uri);
+                    foreach (string child in EnumerateRecursive(subRelative, searchPattern, true))
+                        yield return child;
+                }
+            }
+            else
+            {
+                if (MatchesPattern(entryName, searchPattern))
+                    yield return resource.Uri;
+            }
+        }
+    }
+
+    private string MakeRelative(string absoluteUri)
+    {
+        if (absoluteUri.StartsWith(_baseUrl, StringComparison.OrdinalIgnoreCase))
+            return absoluteUri.Substring(_baseUrl.Length);
+
+        // Fall back to stripping the scheme+host prefix.
+        Uri parsed = new(absoluteUri, UriKind.RelativeOrAbsolute);
+        return parsed.IsAbsoluteUri
+            ? parsed.PathAndQuery.TrimStart('/')
+            : absoluteUri.TrimStart('/');
+    }
+
+    private static string ExtractName(string uri)
+    {
+        string trimmed = uri.TrimEnd('/');
+        int lastSlash = trimmed.LastIndexOf('/');
+        return lastSlash >= 0 ? trimmed.Substring(lastSlash + 1) : trimmed;
+    }
+
+    private static bool MatchesPattern(string name, string pattern)
+    {
+        if (pattern == "*" || string.IsNullOrEmpty(pattern))
+            return true;
+
+        string regexPattern =
+            "^"
+            + string.Concat(
+                pattern.Select(c =>
+                    c switch
+                    {
+                        '*' => ".*",
+                        '?' => ".",
+                        '.' => "\\.",
+                        _ => Regex.Escape(c.ToString()),
+                    }
+                )
+            )
+            + "$";
+
+        return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
+    }
+
+    // -----------------------------------------------------------------------
+    // Credential resolution
+    // -----------------------------------------------------------------------
+
+    private static ICredentials? ResolveCredentials(
+        WebDavDriverConfig config,
+        Func<string, (string AccessKey, string SecretKey)?>? resolver
+    )
+    {
+        if (
+            string.IsNullOrWhiteSpace(config.PasswordRef)
+            && string.IsNullOrWhiteSpace(config.Username)
+        )
+            return null;
+        if (!string.IsNullOrWhiteSpace(config.BearerTokenRef))
+            return null; // Bearer auth — handled separately
+
+        string? password = null;
+        if (!string.IsNullOrWhiteSpace(config.PasswordRef) && resolver is not null)
+        {
+            (string, string)? creds = resolver(config.PasswordRef);
+            // Tuple second element is the secret; first element unused for WebDAV.
+            password = creds?.Item2;
+        }
+
+        if (string.IsNullOrWhiteSpace(config.Username) && string.IsNullOrWhiteSpace(password))
+            return null;
+
+        return new NetworkCredential(config.Username ?? string.Empty, password ?? string.Empty);
+    }
+
+    private static string? ResolveBearerToken(
+        WebDavDriverConfig config,
+        Func<string, (string AccessKey, string SecretKey)?>? resolver
+    )
+    {
+        if (string.IsNullOrWhiteSpace(config.BearerTokenRef))
+            return null;
+        if (resolver is null)
+            return null;
+
+        (string, string)? creds = resolver(config.BearerTokenRef);
+        // Second element holds the token.
+        return creds?.Item2;
+    }
+}
