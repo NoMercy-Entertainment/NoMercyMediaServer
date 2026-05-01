@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using NoMercy.Storage;
+using NoMercy.Storage.Local;
 
 namespace NoMercy.Setup;
 
@@ -72,12 +74,7 @@ public static class DesktopIconCreator
             using (Stream scriptStream = _backend.OpenWrite(scriptPath, overwrite: true))
             using (StreamWriter scriptWriter = new(scriptStream, Encoding.UTF8, leaveOpen: true))
                 scriptWriter.Write(script);
-            using (
-                System.Diagnostics.Process? osascriptProc = System.Diagnostics.Process.Start(
-                    "osascript",
-                    scriptPath
-                )
-            )
+            using (Process? osascriptProc = Process.Start("osascript", scriptPath))
                 osascriptProc?.WaitForExit();
 
             if (!string.IsNullOrEmpty(iconPath) && _backend.FileExists(iconPath))
@@ -86,19 +83,14 @@ public static class DesktopIconCreator
                 _backend.CopyFile(iconPath, iconDest, overwrite: true);
 
                 using (
-                    System.Diagnostics.Process? shProc = System.Diagnostics.Process.Start(
+                    Process? shProc = Process.Start(
                         "sh",
                         $"-c \"cp '{iconPath}' '{aliasPath}/Icon.icns' && /usr/bin/SetFile -a C '{aliasPath}'\""
                     )
                 )
                     shProc?.WaitForExit();
 
-                using (
-                    System.Diagnostics.Process? killProc = System.Diagnostics.Process.Start(
-                        "killall",
-                        "Finder"
-                    )
-                )
+                using (Process? killProc = Process.Start("killall", "Finder"))
                     killProc?.WaitForExit();
             }
         }
@@ -129,12 +121,7 @@ public static class DesktopIconCreator
                 StreamWriter shortcutWriter = new(shortcutStream, Encoding.UTF8, leaveOpen: true)
             )
                 shortcutWriter.Write(content);
-            using (
-                System.Diagnostics.Process? chmodProc = System.Diagnostics.Process.Start(
-                    "chmod",
-                    $"+x \"{shortcutPath}\""
-                )
-            )
+            using (Process? chmodProc = Process.Start("chmod", $"+x \"{shortcutPath}\""))
                 chmodProc?.WaitForExit();
         }
         catch (Exception ex)

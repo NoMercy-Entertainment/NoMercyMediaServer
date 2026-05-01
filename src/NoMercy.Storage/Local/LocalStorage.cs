@@ -1,7 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using NoMercy.Storage.Validation;
 
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Local;
 
 /// <summary>
 /// Local-disk implementation of <see cref="IStorage"/>. Every path is

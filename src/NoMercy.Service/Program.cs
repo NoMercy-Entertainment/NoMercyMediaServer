@@ -12,12 +12,15 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Service.Configuration;
 using NoMercy.Service.Seeds;
 using NoMercy.Setup;
 using NoMercy.Storage;
+using NoMercy.Storage.Local;
+using NoMercy.Storage.Validation;
 using NoMercyQueue;
 
 namespace NoMercy.Service;
@@ -202,8 +205,7 @@ public static class Program
         // post-startup concerns belong here.
         _ = Task.Run(async () =>
         {
-            NoMercy.Networking.Discovery.INetworkDiscovery? networkDiscovery =
-                app.Services.GetService<NoMercy.Networking.Discovery.INetworkDiscovery>();
+            INetworkDiscovery? networkDiscovery = app.Services.GetService<INetworkDiscovery>();
             if (networkDiscovery is not null)
             {
                 Logger.App($"Internal Address: {networkDiscovery.InternalAddress}");

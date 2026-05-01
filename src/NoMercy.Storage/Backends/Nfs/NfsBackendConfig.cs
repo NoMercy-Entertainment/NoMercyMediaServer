@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Backends.Nfs;
 
 /// <summary>
 /// Parsed representation of the JSON <c>BackendConfig</c> for NFS folder backends.

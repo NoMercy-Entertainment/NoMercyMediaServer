@@ -3,8 +3,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using NoMercy.Storage.Backends.Nfs;
+using NoMercy.Storage.Backends.S3;
+using NoMercy.Storage.Local;
+using NoMercy.Storage.Remote;
+using NoMercy.Storage.Validation;
 
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Factory;
 
 /// <summary>
 /// Parsed representation of the optional JSON config for local-disk folders.

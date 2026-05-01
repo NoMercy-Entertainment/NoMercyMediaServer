@@ -1,4 +1,6 @@
 using NoMercy.Storage;
+using NoMercy.Storage.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Storage;
 
@@ -131,7 +133,7 @@ public class LocalStorageIntegrationTests : IDisposable
         await _storage.CopyAsync(from, to, CancellationToken.None);
 
         File.Exists(from).Should().BeTrue();
-        (await _storage.ReadAsync(to, CancellationToken.None)).Should().Equal([0x11, 0x22]);
+        (await _storage.ReadAsync(to, CancellationToken.None)).Should().Equal(0x11, 0x22);
     }
 
     [Fact]
@@ -180,7 +182,7 @@ public class LocalStorageIntegrationTests : IDisposable
         )
             recursive.Add(e);
 
-        recursive.Select(e => Path.GetFileName(e.Path)).Should().BeEquivalentTo(["a.txt", "c.txt"]);
+        recursive.Select(e => Path.GetFileName(e.Path)).Should().BeEquivalentTo("a.txt", "c.txt");
         recursive.All(e => !e.IsDirectory).Should().BeTrue();
     }
 

@@ -1,5 +1,7 @@
 using Moq;
 using NoMercy.Storage;
+using NoMercy.Storage.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Storage;
 
@@ -78,7 +80,7 @@ public class LocalStorageSyncTests
         storage.Write("nested/file.bin", [0x42, 0x43]);
 
         backend.Verify(b => b.CreateDirectory(It.IsAny<string>()), Times.Once);
-        sink.ToArray().Should().Equal([0x42, 0x43]);
+        sink.ToArray().Should().Equal(0x42, 0x43);
     }
 
     [Fact]

@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Remote;
 
 /// <summary>
 /// <see cref="IStorage"/> implementation for remote object-store backends

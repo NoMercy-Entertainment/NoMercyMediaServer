@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
+using NoMercy.Storage.Local;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem;
@@ -62,7 +63,10 @@ public static class UpdateChecker
             }
 
             // LOCAL-ONLY: UpdateChecker is a static class in NmSystem; no reference to NoMercy.Providers.
-            string? onDiskVersion = Software.GetFileVersion(new SystemIoStorageBackend(), AppFiles.ServerExePath);
+            string? onDiskVersion = Software.GetFileVersion(
+                new SystemIoStorageBackend(),
+                AppFiles.ServerExePath
+            );
 
             // Also check the installed binary (e.g. Program Files) if available
             if (
@@ -75,9 +79,12 @@ public static class UpdateChecker
                 {
                     string installedExe = Path.Combine(
                         installDir,
-                        "NoMercyMediaServer" + Information.Info.ExecSuffix
+                        "NoMercyMediaServer" + Info.ExecSuffix
                     );
-                    string? installedVersion = Software.GetFileVersion(new SystemIoStorageBackend(), installedExe);
+                    string? installedVersion = Software.GetFileVersion(
+                        new SystemIoStorageBackend(),
+                        installedExe
+                    );
                     if (
                         installedVersion is not null
                         && string.Equals(

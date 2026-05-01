@@ -1,7 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using NoMercy.Storage.Backends.Nfs.Interop;
 
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Backends.Nfs;
 
 /// <summary>
 /// <see cref="IStorageBackend"/> backed by libnfs P/Invoke — connects to an

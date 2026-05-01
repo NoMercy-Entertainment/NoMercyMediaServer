@@ -5,6 +5,10 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Storage;
+using NoMercy.Storage.Backends.S3;
+using NoMercy.Storage.Factory;
+using NoMercy.Storage.Local;
+using NoMercy.Storage.Remote;
 
 namespace NoMercy.Tests.Storage;
 

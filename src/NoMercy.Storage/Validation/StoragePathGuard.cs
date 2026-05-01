@@ -1,4 +1,4 @@
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Validation;
 
 /// <summary>
 /// Validates every path that flows through <see cref="IStorage"/>

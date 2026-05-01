@@ -4,6 +4,7 @@ using NeoSmart.SecureStore;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
+using NoMercy.Storage.Local;
 
 namespace NoMercy.Helpers;
 

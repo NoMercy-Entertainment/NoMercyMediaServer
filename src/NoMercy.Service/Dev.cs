@@ -1,14 +1,10 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.EntityFrameworkCore;
-using NoMercy.Database;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using VideoFile = NoMercy.Database.Models.Media.VideoFile;
+using NoMercy.Storage.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Service;
 
@@ -519,8 +515,7 @@ public static class Dev
                     .Replace("\\", "/");
 
                 // Parse resolution from directory name (video_1920x1080)
-                System.Text.RegularExpressions.Match resMatch =
-                    System.Text.RegularExpressions.Regex.Match(dirName, @"video_(\d+)x(\d+)");
+                Match resMatch = Regex.Match(dirName, @"video_(\d+)x(\d+)");
                 if (resMatch.Success)
                 {
                     string width = resMatch.Groups[1].Value;

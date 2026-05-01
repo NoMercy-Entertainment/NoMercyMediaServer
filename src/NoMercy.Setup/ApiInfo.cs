@@ -1,3 +1,4 @@
+using System.Text;
 using Newtonsoft.Json;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
@@ -5,6 +6,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
 using NoMercy.Storage;
+using NoMercy.Storage.Local;
 using Serilog.Events;
 using Config = NoMercy.NmSystem.Information.Config;
 
@@ -160,11 +162,7 @@ public class ApiInfo
             data.CachedAt = DateTime.UtcNow.ToString("O");
             string json = JsonConvert.SerializeObject(data, Formatting.Indented);
             await using Stream stream = Backend.OpenWrite(CacheFilePath, overwrite: true);
-            await using StreamWriter writer = new(
-                stream,
-                System.Text.Encoding.UTF8,
-                leaveOpen: true
-            );
+            await using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
             await writer.WriteAsync(json);
             await writer.FlushAsync();
         }

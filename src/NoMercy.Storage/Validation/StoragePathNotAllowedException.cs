@@ -1,4 +1,4 @@
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Validation;
 
 /// <summary>
 /// Raised when <see cref="StoragePathGuard"/> rejects a path. Surfaces

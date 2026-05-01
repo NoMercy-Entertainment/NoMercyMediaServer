@@ -1,4 +1,4 @@
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Backends.S3;
 
 /// <summary>
 /// Parsed representation of the JSON <c>BackendConfig</c> for S3-compatible

@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Backends.Nfs.Interop;
 
 /// <summary>
 /// P/Invoke bindings for libnfs (https://github.com/sahlberg/libnfs).

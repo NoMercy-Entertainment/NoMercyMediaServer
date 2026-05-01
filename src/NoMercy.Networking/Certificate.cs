@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -11,6 +12,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
+using NoMercy.Storage.Local;
 using Serilog.Events;
 using DnsHttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
@@ -277,13 +279,13 @@ public static class Certificate
     {
         using HttpResponseMessage response = await client.GetAsync(serverUrl);
 
-        if (response.StatusCode == System.Net.HttpStatusCode.Accepted) // 202 — cert not ready yet
+        if (response.StatusCode == HttpStatusCode.Accepted) // 202 — cert not ready yet
         {
             Logger.Certificate("Certificate not ready yet (202 Accepted), will retry");
             return null;
         }
 
-        if (response.StatusCode == System.Net.HttpStatusCode.GatewayTimeout)
+        if (response.StatusCode == HttpStatusCode.GatewayTimeout)
             throw new HttpRequestException("Gateway timeout waiting for certificate");
 
         response.EnsureSuccessStatusCode();

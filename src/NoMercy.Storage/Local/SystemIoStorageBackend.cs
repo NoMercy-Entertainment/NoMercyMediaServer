@@ -1,4 +1,4 @@
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Local;
 
 public sealed class SystemIoStorageBackend : IStorageBackend
 {

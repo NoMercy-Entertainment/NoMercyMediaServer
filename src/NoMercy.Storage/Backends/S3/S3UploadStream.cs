@@ -1,7 +1,7 @@
 using Amazon.S3;
 using Amazon.S3.Transfer;
 
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Backends.S3;
 
 /// <summary>
 /// Write-only stream that buffers data and uploads it to S3 on

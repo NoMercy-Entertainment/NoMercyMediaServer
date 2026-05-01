@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
+using NoMercy.Storage.Backends.Nfs.Interop;
 
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Backends.Nfs;
 
 /// <summary>
 /// Write-only <see cref="Stream"/> over a libnfs file handle.

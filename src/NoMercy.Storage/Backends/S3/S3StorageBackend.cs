@@ -4,7 +4,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 
-namespace NoMercy.Storage;
+namespace NoMercy.Storage.Backends.S3;
 
 /// <summary>
 /// <see cref="IStorageBackend"/> backed by any S3-compatible object store
