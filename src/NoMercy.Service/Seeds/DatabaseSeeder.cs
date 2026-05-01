@@ -1,3 +1,5 @@
+﻿using System.Data;
+using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
@@ -121,15 +123,15 @@ public static class DatabaseSeeder
     /// No network or auth required — safe to call right after InitSchema().
     /// Each seed is individually guarded so one failure doesn't block the rest.
     /// </summary>
-    public static async Task SeedOfflineData(IStorage storage, IStorageBackend storageBackend)
+    public static async Task SeedOfflineData(IStorage storage, IStorageDriver storageDriver)
     {
         AppDbContext appDbContext = new();
         MediaContext mediaDbContext = new();
 
         Func<Task>[] offlineSeeds =
         [
-            () => ConfigSeed.Init(appDbContext),
-            () => LibrariesSeed.Init(mediaDbContext, storage, storageBackend),
+            () => appDbContext.Init(),
+            () => LibrariesSeed.Init(mediaDbContext, storage, storageDriver),
             () => EncoderProfilesSeed.Init(mediaDbContext, storage),
             () => EncodingPresetsSeed.Init(mediaDbContext, storage),
             () => EncodingPresetsSeed.MaterializePresetsAsync(mediaDbContext),
@@ -152,11 +154,11 @@ public static class DatabaseSeeder
     /// Seed provider data (TMDB genres, languages, certifications, etc.).
     /// Requires API keys (no auth). Called early in startup before any import jobs.
     /// </summary>
-    public static async Task Run(IStorage storage, IStorageBackend storageBackend)
+    public static async Task Run(IStorage storage, IStorageDriver storageDriver)
     {
         MediaContext mediaDbContext = new();
 
-        await SeedOfflineData(storage, storageBackend);
+        await SeedOfflineData(storage, storageDriver);
 
         Func<Task>[] seeds =
         [
@@ -263,10 +265,10 @@ public static class DatabaseSeeder
         bool migrationTableExists = false;
         try
         {
-            System.Data.Common.DbConnection connection = context.Database.GetDbConnection();
-            if (connection.State != System.Data.ConnectionState.Open)
+            DbConnection connection = context.Database.GetDbConnection();
+            if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using System.Data.Common.DbCommand command = connection.CreateCommand();
+            using DbCommand command = connection.CreateCommand();
             command.CommandText =
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory'";
             migrationTableExists = Convert.ToInt64(command.ExecuteScalar()) > 0;
@@ -437,13 +439,13 @@ public static class DatabaseSeeder
 
         try
         {
-            System.Data.Common.DbConnection connection = context.Database.GetDbConnection();
-            if (connection.State != System.Data.ConnectionState.Open)
+            DbConnection connection = context.Database.GetDbConnection();
+            if (connection.State != ConnectionState.Open)
                 connection.Open();
 
-            using System.Data.Common.DbCommand command = connection.CreateCommand();
+            using DbCommand command = connection.CreateCommand();
             command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table'";
-            using System.Data.Common.DbDataReader reader = command.ExecuteReader();
+            using DbDataReader reader = command.ExecuteReader();
             while (reader.Read())
                 tables.Add(reader.GetString(0));
         }

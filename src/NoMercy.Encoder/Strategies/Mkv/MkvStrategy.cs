@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Strategies.Mkv;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Strategies.Mkv;
 
 /// <summary>
 /// Matroska single-file output. Delegates to the shared pipeline — the

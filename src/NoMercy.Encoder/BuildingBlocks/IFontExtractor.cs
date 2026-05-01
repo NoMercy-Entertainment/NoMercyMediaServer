@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.BuildingBlocks;
-
 using NoMercy.Encoder.Commands;
+
+namespace NoMercy.Encoder.BuildingBlocks;
 
 public interface IFontExtractor
 {

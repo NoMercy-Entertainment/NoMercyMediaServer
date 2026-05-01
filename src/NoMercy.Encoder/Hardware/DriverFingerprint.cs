@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Hardware;
-
 using System.Security.Cryptography;
 using System.Text;
+
+namespace NoMercy.Encoder.Hardware;
 
 public record GpuDriverInfo(string Vendor, string Model, string DriverVersion, int Index);
 

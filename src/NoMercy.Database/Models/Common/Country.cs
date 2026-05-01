@@ -25,8 +25,6 @@ public class Country
     [JsonProperty("native_name")]
     public string? NativeName { get; set; }
 
-    public Country() { }
-
     // public Country(Providers.TMDB.Models.Configuration.TmdbCountry tmdbCountry)
     // {
     //     Iso31661 = tmdbCountry.Iso31661;

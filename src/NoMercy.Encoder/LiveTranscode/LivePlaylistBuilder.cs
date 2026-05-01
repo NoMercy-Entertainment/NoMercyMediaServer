@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using System.Globalization;
 using System.Text;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 public interface ILivePlaylistBuilder
 {

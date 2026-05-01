@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.LiveTranscode.Protocol;
-
 using Newtonsoft.Json;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Encoder.LiveTranscode.Protocol;
+
+namespace NoMercy.Tests.Encoder.LiveTranscode.Protocol;
 
 public class ProtocolMessageTests
 {

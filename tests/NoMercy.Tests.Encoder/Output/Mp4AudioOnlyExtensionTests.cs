@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 /// <summary>
 /// Verifies Phase 13 audio single-file output — when an MP4 encode has no

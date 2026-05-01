@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Execution;
-
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.Execution;
 
 public record ExecutionResult(
     bool Success,

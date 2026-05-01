@@ -883,8 +883,7 @@ public class CronExpressionBuilderTests
         // Arrange - Every Friday at 6:00 PM
         CronExpressionBuilder cronExpression = new CronExpressionBuilder().Weekly(
             DayOfWeek.Friday,
-            18,
-            0
+            18
         );
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
 
@@ -927,7 +926,7 @@ public class CronExpressionBuilderTests
     public void Yearly_CronExpression_MatchesExpectedTimes()
     {
         // Arrange - December 25th at 12:00 PM
-        CronExpressionBuilder cronExpression = new CronExpressionBuilder().Yearly(12, 25, 12, 0);
+        CronExpressionBuilder cronExpression = new CronExpressionBuilder().Yearly(12, 25, 12);
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
 
         DateTime baseTime = new(2025, 9, 3, 10, 0, 0); // Sep 3, 2025 10:00 AM

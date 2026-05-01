@@ -11,12 +11,12 @@ using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Logic;
 
-public class LibraryLogic(Ulid id, MediaContext mediaContext, IStorageBackend storageBackend)
+public class LibraryLogic(Ulid id, MediaContext mediaContext, IStorageDriver storageDriver)
     : IDisposable,
         IAsyncDisposable
 {
     private readonly MediaContext _mediaContext = mediaContext;
-    private readonly IStorageBackend _storageBackend = storageBackend;
+    private readonly IStorageDriver _storageDriver = storageDriver;
     private Library Library { get; set; } = new();
 
     public Ulid Id { get; set; } = id;
@@ -79,7 +79,7 @@ public class LibraryLogic(Ulid id, MediaContext mediaContext, IStorageBackend st
 
     private async Task ScanAudioFolder(string path)
     {
-        await using MediaScan mediaScan = new(_storageBackend);
+        await using MediaScan mediaScan = new(_storageDriver);
         IEnumerable<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(path, 2)
         )

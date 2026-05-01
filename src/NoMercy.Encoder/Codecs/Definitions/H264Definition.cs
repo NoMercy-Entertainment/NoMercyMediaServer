@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Codecs.Definitions;
-
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Encoder.Codecs.Definitions;
 
 public class H264Definition : ICodecDefinition
 {

@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Profiles;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Profiles;
 
 /// <summary>
 /// MP4 is a single-file container — users who configure a multi-variant

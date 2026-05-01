@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Data.Logic;
 using NoMercy.Database;
@@ -27,7 +27,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
     public IStorageFactory StorageFactory { get; set; } = null!;
 
     [JsonIgnore]
-    public IStorageBackend StorageBackend { get; set; } = null!;
+    public IStorageDriver storageDriver { get; set; } = null!;
 
     public MusicJob()
     {
@@ -43,7 +43,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
-        StorageBackend = serviceProvider.GetRequiredService<IStorageBackend>();
+        storageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
     }
 
     public async Task Handle()
@@ -53,7 +53,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         if (Library is null)
             return;
 
-        await using MediaScan mediaScan = new(StorageBackend);
+        await using MediaScan mediaScan = new(storageDriver);
         IEnumerable<MediaFolderExtend> mediaFolder = await mediaScan
             .EnableFileListing()
             .DisableRegexFilter()

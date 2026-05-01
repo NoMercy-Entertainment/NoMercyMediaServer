@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Hardware;
-
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Hardware;
 
 public class NvencSessionCapTests
 {

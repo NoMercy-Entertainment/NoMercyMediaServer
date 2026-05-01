@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 /// <summary>
 /// VP9 has the narrowest hardware support of the video codecs: only Intel
@@ -32,7 +32,7 @@ public class Vp9ArgumentResolverTests
     public void LibVpxVp9_UsesNumericProfiles()
     {
         EncoderInfo vpx = Get("libvpx-vp9");
-        vpx.Profiles.Should().BeEquivalentTo(["profile0", "profile1", "profile2", "profile3"]);
+        vpx.Profiles.Should().BeEquivalentTo("profile0", "profile1", "profile2", "profile3");
         // "main" from H264/HEVC profile strings must fall back to profile0.
         EncoderArgumentResolver.ResolveProfile("main", vpx).Should().Be("profile0");
     }

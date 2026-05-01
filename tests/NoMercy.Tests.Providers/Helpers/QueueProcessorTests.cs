@@ -118,7 +118,7 @@ public class QueueProcessorTests
 
         List<int> executionOrder = [];
 
-        int result1 = await queue.Enqueue<int>(
+        int result1 = await queue.Enqueue(
             async () =>
             {
                 await Task.Delay(1);
@@ -129,7 +129,7 @@ public class QueueProcessorTests
             "http://test/1"
         );
 
-        int result2 = await queue.Enqueue<int>(
+        int result2 = await queue.Enqueue(
             async () =>
             {
                 await Task.Delay(1);

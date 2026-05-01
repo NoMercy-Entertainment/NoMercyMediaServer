@@ -26,9 +26,9 @@ public class AcoustIdBaseClient : IDisposable
         Id = id;
     }
 
-    private static Helpers.Queue? _queue;
+    private static Queue? _queue;
 
-    private static Helpers.Queue GetQueue()
+    private static Queue GetQueue()
     {
         return _queue ??= new(
             new()
@@ -62,7 +62,7 @@ public class AcoustIdBaseClient : IDisposable
                     && fpResult.Recordings.Any(recording => recording?.Title != null)
                 )
             )
-                return result as T;
+                return result;
 
         Logger.AcoustId(newUrl, LogEventLevel.Verbose);
 
@@ -86,7 +86,7 @@ public class AcoustIdBaseClient : IDisposable
                     && fpResult.Recordings.Any(recording => recording?.Title != null)
                 )
             )
-                return data as T;
+                return data;
         }
         catch (Exception e)
         {

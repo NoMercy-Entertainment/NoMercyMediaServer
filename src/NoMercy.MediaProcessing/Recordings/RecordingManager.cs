@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
@@ -17,6 +17,7 @@ using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using File = TagLib.File;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.MediaProcessing.Recordings;
@@ -25,10 +26,10 @@ public partial class RecordingManager(
     IRecordingRepository recordingRepository,
     IMusicGenreRepository musicGenreRepository,
     IArtistRepository artistRepository,
-    IStorageBackend storageBackend
+    IStorageDriver storageDriver
 ) : BaseManager, IRecordingManager
 {
-    private readonly IStorageBackend _storageBackend = storageBackend;
+    private readonly IStorageDriver _storageDriver = storageDriver;
 
     // public async Task StoreWithoutFiles(MusicBrainzReleaseAppends releaseAppends, Folder libraryFolder)
     // {
@@ -75,7 +76,7 @@ public partial class RecordingManager(
             LogEventLevel.Verbose
         );
 
-        MediaScan mediaScan = new(_storageBackend);
+        MediaScan mediaScan = new(_storageDriver);
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType("music")
@@ -95,7 +96,7 @@ public partial class RecordingManager(
                 );
                 if (mediaFile is null)
                     continue;
-                using TagLib.File tagFile = TagLib.File.Create(file.Path);
+                using File tagFile = File.Create(file.Path);
                 if (tagFile == null || mediaFile.FFprobe == null)
                 {
                     Logger.MusicBrainz($"File not found: {file.Name}", LogEventLevel.Error);

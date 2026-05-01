@@ -1,10 +1,11 @@
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
@@ -31,7 +32,7 @@ public class ContentAnalysisController(
     IAudioFingerprinter fingerprinter,
     IIntroDetector introDetector,
     IDbContextFactory<MediaContext> contextFactory,
-    IStorageBackend storageBackend
+    IStorageDriver storageDriver
 ) : BaseController
 {
     /// <summary>
@@ -60,7 +61,7 @@ public class ContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!storageBackend.FileExists(path))
+        if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         Guid sourceVideoFileId = new(fileId.ToByteArray());
@@ -121,7 +122,7 @@ public class ContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!storageBackend.FileExists(path))
+        if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         try
@@ -183,7 +184,7 @@ public class ContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!storageBackend.FileExists(path))
+        if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         WhisperOptions options = new(
@@ -233,7 +234,7 @@ public class ContentAnalysisController(
             return UnauthorizedResponse("Only the server owner can probe intro detection");
 
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        List<Database.Models.TvShows.Episode> encoded = await context
+        List<Episode> encoded = await context
             .Episodes.AsNoTracking()
             .Include(e => e.VideoFiles)
             .Where(e => e.SeasonId == seasonId && e.VideoFiles.Count > 0)
@@ -248,7 +249,7 @@ public class ContentAnalysisController(
         List<AudioFingerprint> intros = [];
         List<AudioFingerprint> outros = [];
 
-        foreach (Database.Models.TvShows.Episode ep in encoded)
+        foreach (Episode ep in encoded)
         {
             ct.ThrowIfCancellationRequested();
             VideoFile? source = ep.VideoFiles.FirstOrDefault();
@@ -256,7 +257,7 @@ public class ContentAnalysisController(
                 continue;
 
             string path = Path.Combine(source.HostFolder, source.Filename);
-            if (!storageBackend.FileExists(path))
+            if (!storageDriver.FileExists(path))
                 continue;
 
             try

@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.DiscRipping;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.DiscRipping;
+
+namespace NoMercy.Tests.Encoder.DiscRipping;
 
 public class DiscScannerTests
 {

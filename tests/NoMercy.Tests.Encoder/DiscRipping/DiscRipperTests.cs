@@ -1,12 +1,12 @@
-namespace NoMercy.Tests.Encoder.DiscRipping;
-
-using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.DiscRipping;
 
 /// <summary>
 /// Verifies the FFmpeg command <see cref="DiscRipper"/> builds for each
@@ -231,8 +231,8 @@ public class DiscRipperTests : IDisposable
 
     private DiscRipper BuildRipper()
     {
-        SystemIoStorageBackend backend = new();
-        LocalStorage storage = new(backend, new StoragePathGuard([], backend));
+        LocalStorageDriver driver = new();
+        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
         return new DiscRipper(
             _options,
             _processRunner.Object,

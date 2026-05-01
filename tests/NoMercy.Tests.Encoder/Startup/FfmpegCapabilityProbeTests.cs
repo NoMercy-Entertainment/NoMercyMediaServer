@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Startup;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Composition;
@@ -8,6 +6,8 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Startup;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.Startup;
 
 public class FfmpegCapabilityProbeTests
 {
@@ -42,7 +42,7 @@ public class FfmpegCapabilityProbeTests
                     It.Is<string[]>(a =>
                         a.Length == 2 && a[0] == "-hide_banner" && a[1] == "-muxers"
                     ),
-                    (string?)null,
+                    null,
                     It.IsAny<CancellationToken>()
                 )
             )
@@ -56,7 +56,7 @@ public class FfmpegCapabilityProbeTests
                 r.RunAsync(
                     "fpcalc",
                     It.Is<string[]>(a => a.Length == 1 && a[0] == "--version"),
-                    (string?)null,
+                    null,
                     It.IsAny<CancellationToken>()
                 )
             )

@@ -1,3 +1,6 @@
+using Newtonsoft.Json;
+using NoMercy.Database;
+using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
@@ -28,12 +31,12 @@ public class BootOrchestrator
         await Start.InitEssential();
 
         // Initialize TokenStore before any DB access that touches SecureValue
-        Database.TokenStore.Initialize(services);
+        TokenStore.Initialize(services);
 
         // Load SSL certificate into memory cache (from DB or legacy PEM files)
         try
         {
-            Networking.Certificate.LoadFromDb();
+            Certificate.LoadFromDb();
         }
         catch (Exception ex)
         {
@@ -50,8 +53,7 @@ public class BootOrchestrator
             // Check registration — if cert exists in DB, registration already happened
             // (cert is issued during registration). This survives process restarts
             // unlike the static Register.IsRegistered flag.
-            bool isRegistered =
-                Register.IsRegistered || Networking.Certificate.HasValidCertificate();
+            bool isRegistered = Register.IsRegistered || Certificate.HasValidCertificate();
             _setupState.DetermineInitialPhase(hasValidToken: true, isRegistered: isRegistered);
 
             if (!isRegistered)
@@ -134,8 +136,9 @@ public class BootOrchestrator
             }
 
             string json = await response.Content.ReadAsStringAsync();
-            DeviceAuthResponse? deviceResponse =
-                Newtonsoft.Json.JsonConvert.DeserializeObject<DeviceAuthResponse>(json);
+            DeviceAuthResponse? deviceResponse = JsonConvert.DeserializeObject<DeviceAuthResponse>(
+                json
+            );
 
             if (deviceResponse is null)
             {
@@ -228,7 +231,7 @@ public class BootOrchestrator
             _setupState.TransitionTo(SetupPhase.Registered);
             _setupState.SetPhaseDetail("Acquiring SSL certificate...");
 
-            bool hasCert = Networking.Certificate.HasValidCertificate();
+            bool hasCert = Certificate.HasValidCertificate();
 
             if (hasCert)
                 _setupState.TransitionTo(SetupPhase.CertificateAcquired);
@@ -287,8 +290,7 @@ public class BootOrchestrator
 
                 if (response.IsSuccessStatusCode)
                 {
-                    AuthResponse? tokens =
-                        Newtonsoft.Json.JsonConvert.DeserializeObject<AuthResponse>(json);
+                    AuthResponse? tokens = JsonConvert.DeserializeObject<AuthResponse>(json);
                     if (tokens?.AccessToken != null)
                     {
                         await _authManager.StoreTokensAsync(tokens);
@@ -299,7 +301,7 @@ public class BootOrchestrator
                     }
                 }
 
-                dynamic? error = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                dynamic? error = JsonConvert.DeserializeObject(json);
                 string? errorCode = error?.error?.ToString();
                 if (errorCode is "expired_token" or "access_denied")
                 {

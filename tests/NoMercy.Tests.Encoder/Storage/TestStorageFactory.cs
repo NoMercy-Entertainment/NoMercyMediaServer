@@ -1,6 +1,8 @@
-namespace NoMercy.Tests.Encoder.Storage;
+﻿using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
-using NoMercy.Storage;
+namespace NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// Builds a permissive <see cref="LocalStorage"/> for tests that need a
@@ -10,7 +12,7 @@ internal static class TestStorageFactory
 {
     public static LocalStorage CreateLocal()
     {
-        SystemIoStorageBackend backend = new();
-        return new LocalStorage(backend, new StoragePathGuard([], backend));
+        LocalStorageDriver driver = new();
+        return new LocalStorage(driver, new StoragePathGuard([], driver));
     }
 }

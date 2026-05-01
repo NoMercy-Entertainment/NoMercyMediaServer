@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 public class PlaylistGeneratorSubtitleTests
 {

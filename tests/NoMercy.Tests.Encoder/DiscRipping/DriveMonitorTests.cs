@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.DiscRipping;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.DiscRipping;
+
+namespace NoMercy.Tests.Encoder.DiscRipping;
 
 /// <summary>
 /// DriveMonitor reads real OS drive state via <see cref="DriveInfo.GetDrives"/>,

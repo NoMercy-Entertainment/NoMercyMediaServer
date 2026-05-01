@@ -1,10 +1,10 @@
-namespace NoMercy.Encoder.Hardware;
-
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Encoder.Composition;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Hardware;
 
 /// <summary>
 /// Persists the driver fingerprint hash to a JSON file alongside the SpeedIndex cache.

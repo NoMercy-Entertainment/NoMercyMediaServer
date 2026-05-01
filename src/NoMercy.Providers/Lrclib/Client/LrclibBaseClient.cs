@@ -19,9 +19,9 @@ public class LrclibBaseClient : IDisposable
         _client.BaseAddress ??= _baseUrl;
     }
 
-    private static Helpers.Queue? _queue;
+    private static Queue? _queue;
 
-    private static Helpers.Queue GetQueue()
+    private static Queue GetQueue()
     {
         return _queue ??= new(
             new()

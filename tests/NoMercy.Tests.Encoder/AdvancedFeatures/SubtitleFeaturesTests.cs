@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.AdvancedFeatures;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Subtitles;
+
+namespace NoMercy.Tests.Encoder.AdvancedFeatures;
 
 public class SubtitleFeaturesTests
 {

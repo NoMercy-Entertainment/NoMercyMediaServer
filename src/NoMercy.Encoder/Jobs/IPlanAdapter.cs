@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Jobs;
-
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline.Stages;
+
+namespace NoMercy.Encoder.Jobs;
 
 public interface IPlanAdapter
 {

@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.AdvancedFeatures;
-
 using NoMercy.Encoder.Audio;
+
+namespace NoMercy.Tests.Encoder.AdvancedFeatures;
 
 public class AudioFeaturesTests
 {

@@ -1,11 +1,12 @@
-namespace NoMercy.Encoder.Output;
-
 using System.Text;
 using System.Xml.Linq;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Output;
 
 public class DashOutputStrategy(IStorage storage) : IOutputStrategy
 {
@@ -102,7 +103,7 @@ public class DashOutputStrategy(IStorage storage) : IOutputStrategy
     /// </summary>
     private async Task InjectChapterEventStreamAsync(
         string mpdPath,
-        IReadOnlyList<NoMercy.Encoder.Analysis.ChapterInfo> chapters,
+        IReadOnlyList<ChapterInfo> chapters,
         CancellationToken ct
     )
     {
@@ -124,7 +125,7 @@ public class DashOutputStrategy(IStorage storage) : IOutputStrategy
 
         for (int i = 0; i < chapters.Count; i++)
         {
-            NoMercy.Encoder.Analysis.ChapterInfo chapter = chapters[i];
+            ChapterInfo chapter = chapters[i];
             long startMs = (long)chapter.Start.TotalMilliseconds;
             long endMs =
                 i + 1 < chapters.Count

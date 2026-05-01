@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Hardware;
-
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.Hardware;
 
 /// <summary>
 /// Cross-platform <see cref="IResourceMonitor"/> that reads CPU and memory

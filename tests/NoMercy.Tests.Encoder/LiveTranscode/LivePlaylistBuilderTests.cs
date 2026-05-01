@@ -1,6 +1,7 @@
-namespace NoMercy.Tests.Encoder.LiveTranscode;
-
+using System.Globalization;
 using NoMercy.Encoder.LiveTranscode;
+
+namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 public class LivePlaylistBuilderTests
 {
@@ -139,14 +140,10 @@ public class LivePlaylistBuilderTests
     [Fact]
     public void Build_InvariantCulture_AlwaysUsesDotAsDecimalSeparator()
     {
-        System.Globalization.CultureInfo prev = System
-            .Threading
-            .Thread
-            .CurrentThread
-            .CurrentCulture;
+        CultureInfo prev = Thread.CurrentThread.CurrentCulture;
         try
         {
-            System.Threading.Thread.CurrentThread.CurrentCulture = new("nl-NL");
+            Thread.CurrentThread.CurrentCulture = new("nl-NL");
 
             LivePlaylistRequest request = new(
                 SessionId: "s",
@@ -163,7 +160,7 @@ public class LivePlaylistBuilderTests
         }
         finally
         {
-            System.Threading.Thread.CurrentThread.CurrentCulture = prev;
+            Thread.CurrentThread.CurrentCulture = prev;
         }
     }
 }

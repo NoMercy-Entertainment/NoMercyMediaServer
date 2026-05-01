@@ -1,3 +1,4 @@
+﻿using System.Security.Cryptography;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -8,9 +9,11 @@ using Newtonsoft.Json;
 using NoMercy.Api.Hubs;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Helpers.Extensions;
@@ -40,7 +43,7 @@ public class EncoderContentAnalysisController(
     IIntroDetector introDetector,
     IDbContextFactory<MediaContext> contextFactory,
     IHubContext<ContentAnalysisHub> hubContext,
-    IStorageBackend storageBackend
+    IStorageDriver storageDriver
 ) : BaseController
 {
     // ─── Crop ────────────────────────────────────────────────────────────────
@@ -66,7 +69,7 @@ public class EncoderContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!storageBackend.FileExists(path))
+        if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         Guid sourceVideoFileId = new(fileId.ToByteArray());
@@ -109,7 +112,7 @@ public class EncoderContentAnalysisController(
             return UnauthorizedResponse("Only the server owner can probe intro detection");
 
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        List<Database.Models.TvShows.Episode> episodes = await context
+        List<Episode> episodes = await context
             .Episodes.AsNoTracking()
             .Include(e => e.VideoFiles)
             .Where(e => e.SeasonId == seasonId && e.VideoFiles.Count > 0)
@@ -128,13 +131,9 @@ public class EncoderContentAnalysisController(
             );
 
         // ── Fingerprinting pass ──────────────────────────────────────────────
-        List<(
-            Database.Models.TvShows.Episode Episode,
-            AudioFingerprint Intro,
-            AudioFingerprint Outro
-        )> prints = [];
+        List<(Episode Episode, AudioFingerprint Intro, AudioFingerprint Outro)> prints = [];
 
-        foreach (Database.Models.TvShows.Episode ep in episodes)
+        foreach (Episode ep in episodes)
         {
             ct.ThrowIfCancellationRequested();
             VideoFile? source = ep.VideoFiles.FirstOrDefault();
@@ -142,7 +141,7 @@ public class EncoderContentAnalysisController(
                 continue;
 
             string path = Path.Combine(source.HostFolder, source.Filename);
-            if (!storageBackend.FileExists(path))
+            if (!storageDriver.FileExists(path))
                 continue;
 
             try
@@ -204,7 +203,7 @@ public class EncoderContentAnalysisController(
 
         List<ContentSegment> toUpsert = [];
 
-        foreach ((Database.Models.TvShows.Episode ep, _, _) in prints)
+        foreach ((Episode ep, _, _) in prints)
         {
             if (introMarker is not null && !manualKeys.Contains((ep.Id, ContentSegmentType.Intro)))
             {
@@ -334,7 +333,7 @@ public class EncoderContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!storageBackend.FileExists(path))
+        if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         try
@@ -407,7 +406,7 @@ public class EncoderContentAnalysisController(
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!storageBackend.FileExists(path))
+        if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         WhisperOptions options = new(
@@ -527,7 +526,7 @@ public class EncoderContentAnalysisController(
         byte[] bytes = new byte[combined.Length * 4];
         Buffer.BlockCopy(combined, 0, bytes, 0, bytes.Length);
 
-        byte[] hash = System.Security.Cryptography.MD5.HashData(bytes);
+        byte[] hash = MD5.HashData(bytes);
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }
@@ -579,7 +578,7 @@ internal sealed class SignalRProgressObserver(
 
     public void OnCompleted() { }
 
-    public void OnError(global::NoMercy.Encoder.Errors.EncodingError error) { }
+    public void OnError(EncodingError error) { }
 
     public void OnPlanResolved(
         List<string> videoStreams,

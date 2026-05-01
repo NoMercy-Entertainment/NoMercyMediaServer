@@ -1,11 +1,12 @@
-namespace NoMercy.Encoder.Hardware;
-
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Hardware;
 
 public partial class PlatformHardwareDetector(
     IProcessRunner processRunner,
@@ -588,8 +589,8 @@ public partial class PlatformHardwareDetector(
                 if (
                     double.TryParse(
                         line.Trim(),
-                        System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
                         out double cap
                     )
                     && cap >= 8.9

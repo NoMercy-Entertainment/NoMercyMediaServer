@@ -1,13 +1,14 @@
-namespace NoMercy.Encoder.Distribution;
-
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Persistent coordinator-side registry. Wraps <see cref="InMemoryRemoteWorkerRegistry"/>
@@ -164,7 +165,7 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
                         AvailableCpuThreads: entry.AvailableCpuThreads,
                         GpuUtilization: 0
                     ),
-                    logger: new Microsoft.Extensions.Logging.Abstractions.NullLogger<HttpRemoteWorker>()
+                    logger: new NullLogger<HttpRemoteWorker>()
                 );
 
                 _inner.Register(worker);

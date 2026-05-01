@@ -1,11 +1,11 @@
-namespace NoMercy.Tests.Encoder.Storage;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Moq;
-using NoMercy.Encoder.Composition;
+﻿using Moq;
 using NoMercy.Encoder.Errors;
+using NoMercy.Encoder.Output;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
+
+namespace NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// Phase 4.15 — output path allowlist integration + stress.
@@ -34,13 +34,11 @@ public class AllowlistStressTests
     {
         // Path.GetExtension never touches the disk. This assertion documents
         // that the one file flagged by the grep (OutputArtifact.cs) is safe.
-        string mime = NoMercy.Encoder.Output.OutputArtifact.MimeFromPath("/some/path/video.mp4");
+        string mime = OutputArtifact.MimeFromPath("/some/path/video.mp4");
         mime.Should().Be("video/mp4");
 
         // Confirm it works on a path that doesn't exist on disk
-        string phantom = NoMercy.Encoder.Output.OutputArtifact.MimeFromPath(
-            "/nonexistent/path/that/does/not/exist.m3u8"
-        );
+        string phantom = OutputArtifact.MimeFromPath("/nonexistent/path/that/does/not/exist.m3u8");
         phantom.Should().Be("application/vnd.apple.mpegurl");
     }
 
@@ -76,8 +74,8 @@ public class AllowlistStressTests
             ],
         };
 
-        SystemIoStorageBackend backend = new();
-        StoragePathGuard guard = new(opts.AllowedRoots, backend);
+        LocalStorageDriver driver = new();
+        StoragePathGuard guard = new(opts.AllowedRoots, driver);
 
         guard.Enforced.Should().BeTrue();
         guard.AllowedRoots.Should().HaveCount(7);
@@ -129,8 +127,8 @@ public class AllowlistStressTests
 
     private static StoragePathGuard EnforcedGuard(string root)
     {
-        SystemIoStorageBackend backend = new();
-        return new StoragePathGuard([root], backend);
+        LocalStorageDriver driver = new();
+        return new StoragePathGuard([root], driver);
     }
 
     [Fact]
@@ -236,13 +234,13 @@ public class AllowlistStressTests
             Path.Combine(Path.GetTempPath(), "nm-stress-symlink-target", "secret.txt")
         );
 
-        Mock<IStorageBackend> backend = new(MockBehavior.Strict);
-        backend
+        Mock<IStorageDriver> driver = new(MockBehavior.Strict);
+        driver
             .Setup(b => b.GetFullPath(It.IsAny<string>()))
             .Returns<string>(p => Path.GetFullPath(p));
-        backend.Setup(b => b.ResolveLinkTarget(Path.GetFullPath(linkInside))).Returns(realOutside);
+        driver.Setup(b => b.ResolveLinkTarget(Path.GetFullPath(linkInside))).Returns(realOutside);
 
-        StoragePathGuard guard = new([root], backend.Object);
+        StoragePathGuard guard = new([root], driver.Object);
 
         Action act = () => guard.Validate(linkInside);
 
@@ -308,9 +306,9 @@ public class AllowlistStressTests
 
         try
         {
-            SystemIoStorageBackend backend = new();
-            StoragePathGuard guard = new([root], backend);
-            LocalStorage storage = new(backend, guard);
+            LocalStorageDriver driver = new();
+            StoragePathGuard guard = new([root], driver);
+            LocalStorage storage = new(driver, guard);
 
             await using LocalPathLease lease = storage.AcquireLocalPath(filePath);
 
@@ -334,9 +332,9 @@ public class AllowlistStressTests
     public void AcquireLocalPath_rejects_path_outside_allowed_root()
     {
         string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-stress-lease-deny"));
-        SystemIoStorageBackend backend = new();
-        StoragePathGuard guard = new([root], backend);
-        LocalStorage storage = new(backend, guard);
+        LocalStorageDriver driver = new();
+        StoragePathGuard guard = new([root], driver);
+        LocalStorage storage = new(driver, guard);
 
         string outside = Path.GetFullPath(
             Path.Combine(Path.GetTempPath(), "nm-stress-lease-escape", "stolen.ts")
@@ -353,9 +351,9 @@ public class AllowlistStressTests
         string root = Path.GetFullPath(
             Path.Combine(Path.GetTempPath(), "nm-stress-lease-async-" + Path.GetRandomFileName())
         );
-        SystemIoStorageBackend backend = new();
-        StoragePathGuard guard = new([root], backend);
-        LocalStorage storage = new(backend, guard);
+        LocalStorageDriver driver = new();
+        StoragePathGuard guard = new([root], driver);
+        LocalStorage storage = new(driver, guard);
 
         string escape = Path.Combine(root, "..", "outside-async.ts");
 
@@ -379,9 +377,9 @@ public class AllowlistStressTests
 
         try
         {
-            SystemIoStorageBackend backend = new();
-            StoragePathGuard guard = new([root], backend);
-            LocalStorage inner = new(backend, guard);
+            LocalStorageDriver driver = new();
+            StoragePathGuard guard = new([root], driver);
+            LocalStorage inner = new(driver, guard);
             LoggingStorage logger = new(inner);
 
             await using LocalPathLease lease = logger.AcquireLocalPath(filePath);
@@ -415,9 +413,9 @@ public class AllowlistStressTests
 
         try
         {
-            SystemIoStorageBackend backend = new();
-            StoragePathGuard guard = new([root], backend);
-            LocalStorage inner = new(backend, guard);
+            LocalStorageDriver driver = new();
+            StoragePathGuard guard = new([root], driver);
+            LocalStorage inner = new(driver, guard);
             LoggingStorage logger = new(inner);
 
             await using LocalPathLease lease = await logger.AcquireLocalPathAsync(

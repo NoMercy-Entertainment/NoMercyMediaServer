@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Execution;
-
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging;
+
+namespace NoMercy.Encoder.Execution;
 
 public class ProcessThrottle(ILogger<ProcessThrottle> logger)
 {

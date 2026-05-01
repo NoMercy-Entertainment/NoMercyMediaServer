@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +5,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 public class HttpSourceFetcherTests
 {

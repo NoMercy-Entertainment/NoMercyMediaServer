@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Notifications;
-
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
+
+namespace NoMercy.Encoder.Notifications;
 
 /// <summary>
 /// Posts one JSON payload per configured URL per encoder event. Retries each

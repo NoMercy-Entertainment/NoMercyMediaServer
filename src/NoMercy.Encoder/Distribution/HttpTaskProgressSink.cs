@@ -1,11 +1,10 @@
-namespace NoMercy.Encoder.Distribution;
-
 using System.Collections.Concurrent;
-using System.Net.Http;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Pushes per-task progress to the coordinator's

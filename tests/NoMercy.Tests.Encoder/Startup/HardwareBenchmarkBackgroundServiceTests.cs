@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Startup;
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Startup;
+
+namespace NoMercy.Tests.Encoder.Startup;
 
 public class HardwareBenchmarkBackgroundServiceTests
 {

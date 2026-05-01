@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Codecs;
-
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.Codecs;
 
 /// <summary>
 /// Maps profile-level encoding parameters (preset, profile, CRF) to the correct

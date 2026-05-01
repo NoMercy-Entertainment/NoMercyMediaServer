@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using NoMercy.Encoder.Output;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 public class OutputArtifactTests
 {

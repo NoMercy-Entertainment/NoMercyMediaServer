@@ -1,9 +1,8 @@
-namespace NoMercy.Encoder.Pipeline;
-
-using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Pipeline;
 
 public interface IEncoder
 {

@@ -431,9 +431,8 @@ public class SearchController : BaseController
         List<Movie> movies = await moviesTask;
 
         List<CardData> cardItems = tvs.Concat<dynamic>(movies)
-            .Cast<dynamic>()
             .OrderBy(item => item is Tv tv ? tv.Title : ((Movie)item).Title)
-            .Select(item => new CardData(item as dynamic, country))
+            .Select(item => new CardData(item, country))
             .ToList();
 
         ComponentEnvelope response = Component

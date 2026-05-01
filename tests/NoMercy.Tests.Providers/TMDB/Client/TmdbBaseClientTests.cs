@@ -10,8 +10,7 @@ public class TmdbBaseClientTests : TmdbTestBase
 {
     private class TestableBaseClient : TmdbBaseClient
     {
-        public TestableBaseClient()
-            : base() { }
+        public TestableBaseClient() { }
 
         public TestableBaseClient(int id, string language = "en-US")
             : base(id, language) { }
@@ -147,7 +146,7 @@ public class TmdbBaseClientTests : TmdbTestBase
         const string lang2 = "fr-FR";
 
         // Act
-        using TestableBaseClient client1 = new(id1, lang1);
+        using TestableBaseClient client1 = new(id1);
         using TestableBaseClient client2 = new(id2, lang2);
 
         // Assert

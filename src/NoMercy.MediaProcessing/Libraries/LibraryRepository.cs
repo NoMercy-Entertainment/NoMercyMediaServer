@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem;
@@ -9,14 +9,14 @@ using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Libraries;
 
-public class LibraryRepository(MediaContext context, IStorageBackend storageBackend)
+public class LibraryRepository(MediaContext context, IStorageDriver storageDriver)
     : ILibraryRepository
 {
-    private readonly IStorageBackend _storageBackend = storageBackend;
+    private readonly IStorageDriver _storageDriver = storageDriver;
 
     public async Task<IEnumerable<MediaFolderExtend>> GetRootFoldersAsync(string path)
     {
-        await using MediaScan mediaScan = new(_storageBackend);
+        await using MediaScan mediaScan = new(_storageDriver);
         return (await mediaScan.DisableRegexFilter().Process(path, 2))
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();

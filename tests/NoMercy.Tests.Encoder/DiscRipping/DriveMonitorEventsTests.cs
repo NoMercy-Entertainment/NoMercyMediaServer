@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.DiscRipping;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.DiscRipping;
+
+namespace NoMercy.Tests.Encoder.DiscRipping;
 
 /// <summary>
 /// Verifies the event payload shape produced by <see cref="DriveMonitor"/> and the

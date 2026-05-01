@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -9,6 +7,8 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 public class TaskProgressTests
 {
@@ -195,7 +195,7 @@ public class TaskProgressTests
                     CancellationToken _
                 ) =>
                 {
-                    onProgress?.Invoke(MakeProgress(50));
+                    onProgress?.Invoke(MakeProgress());
                     return Task.FromResult(
                         new ExecutionResult(
                             Success: true,

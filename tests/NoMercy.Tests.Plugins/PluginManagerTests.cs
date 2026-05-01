@@ -5,7 +5,6 @@ using NoMercy.Events;
 using NoMercy.Events.Plugins;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
-using NoMercy.Storage;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;

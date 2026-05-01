@@ -28,9 +28,9 @@ public class TadbBaseClient : IDisposable
         Id = id;
     }
 
-    private static Helpers.Queue? _queue;
+    private static Queue? _queue;
 
-    private static Helpers.Queue GetQueue()
+    private static Queue GetQueue()
     {
         return _queue ??= new(
             new()

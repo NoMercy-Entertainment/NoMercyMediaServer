@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Execution;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Commands;
@@ -7,6 +5,8 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Tests.Encoder.Execution;
 
 public class FfmpegExecutorTests
 {

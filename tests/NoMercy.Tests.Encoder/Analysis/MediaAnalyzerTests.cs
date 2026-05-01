@@ -1,10 +1,9 @@
-namespace NoMercy.Tests.Encoder.Analysis;
-
-using System.IO;
 using Moq;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Analysis;
 
 public class MediaAnalyzerTests
 {

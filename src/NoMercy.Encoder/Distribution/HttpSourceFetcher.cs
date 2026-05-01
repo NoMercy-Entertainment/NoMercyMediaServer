@@ -1,11 +1,10 @@
-namespace NoMercy.Encoder.Distribution;
-
-using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Downloads task source files from the coordinator over HTTP when the

@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.BuildingBlocks.Drm;
-
 using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.BuildingBlocks.Drm;
 
 public class Aes128HlsDrmProcessorTests
 {

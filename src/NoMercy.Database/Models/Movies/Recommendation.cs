@@ -48,9 +48,4 @@ public class Recommendation : ColorPaletteTimeStamps
     [ForeignKey("RecommendationTo")]
     public int? MovieToId { get; set; }
     public Movie? MovieTo { get; set; }
-
-    public Recommendation()
-    {
-        //
-    }
 }

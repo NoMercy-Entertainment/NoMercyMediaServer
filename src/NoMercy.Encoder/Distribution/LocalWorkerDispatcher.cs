@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Distribution;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Runs every task locally on the same machine via <see cref="IFfmpegExecutor"/>.

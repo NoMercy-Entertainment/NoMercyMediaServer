@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.BuildingBlocks;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.BuildingBlocks;
 
 /// <summary>
 /// Produces a standard streaming ABR ladder below the source resolution using

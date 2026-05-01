@@ -105,7 +105,7 @@ public class TmdbErrorHandlingTests : TmdbTestBase
         Func<TmdbMovieClient> minIntConstructor = () => new(int.MinValue);
         minIntConstructor.Should().NotThrow();
 
-        Func<TmdbMovieClient> zeroConstructor = () => new(0);
+        Func<TmdbMovieClient> zeroConstructor = () => new();
         zeroConstructor.Should().NotThrow();
     }
 

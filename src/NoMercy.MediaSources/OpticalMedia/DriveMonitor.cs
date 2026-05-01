@@ -22,6 +22,7 @@ using Serilog.Events;
 using DirectoryInfo = BDInfo.IO.DirectoryInfo;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 using Shell = NoMercy.NmSystem.SystemCalls.Shell;
+using Stream = System.IO.Stream;
 
 namespace NoMercy.MediaSources.OpticalMedia;
 
@@ -363,10 +364,7 @@ public partial class DriveMonitor
             AppFiles.FfProbePath,
             $" -hide_banner -v info -i \"bluray:{path}\""
         );
-        await System.IO.File.WriteAllTextAsync(
-            Path.Combine(AppFiles.TempPath, "bdrom.json"),
-            bDRom.ToJson()
-        );
+        await File.WriteAllTextAsync(Path.Combine(AppFiles.TempPath, "bdrom.json"), bDRom.ToJson());
 
         List<BluRayPlaylist> bluRayPlaylist = ExtractBluRayPlaylists(directoryInfo, playlistString);
         await ConvertMedia(bluRayPlaylist, title, path);
@@ -393,7 +391,7 @@ public partial class DriveMonitor
 
         string encodePath = Path.Combine(AppFiles.TranscodePath, "ripper");
         Folders.EmptyFolder(encodePath);
-        System.IO.Directory.CreateDirectory(encodePath);
+        Directory.CreateDirectory(encodePath);
 
         StringBuilder sb = new();
         sb.Append(" -hide_banner -progress - ");
@@ -418,7 +416,7 @@ public partial class DriveMonitor
 
         string encodePath = Path.Combine(AppFiles.TranscodePath, "ripper");
         Folders.EmptyFolder(encodePath);
-        System.IO.Directory.CreateDirectory(encodePath);
+        Directory.CreateDirectory(encodePath);
 
         StringBuilder sb = new();
         sb.Append(" -hide_banner -progress - ");
@@ -506,11 +504,11 @@ public partial class DriveMonitor
     private static string TryGetTitle(BDROM bDRom)
     {
         string metadataFile = Path.Combine(bDRom.DirectoryMETA.FullName, "DL", "bdmt_eng.xml");
-        if (!System.IO.File.Exists(metadataFile))
+        if (!File.Exists(metadataFile))
             return bDRom.VolumeLabel;
 
-        using System.IO.Stream stream = System.IO.File.OpenRead(metadataFile);
-        using System.IO.StreamReader reader = new(stream);
+        using Stream stream = File.OpenRead(metadataFile);
+        using StreamReader reader = new(stream);
         string xmlContent = reader.ReadToEnd();
         XDocument doc = XDocument.Parse(xmlContent);
         XNamespace di = "urn:BDA:bdmv;discinfo";
@@ -561,7 +559,7 @@ public partial class DriveMonitor
     {
         string encodePath = Path.Combine(AppFiles.TranscodePath, "ripper");
         Folders.EmptyFolder(encodePath);
-        System.IO.Directory.CreateDirectory(encodePath);
+        Directory.CreateDirectory(encodePath);
 
         StringBuilder sb = new();
         sb.Append(" -hide_banner -progress - ");
@@ -582,7 +580,7 @@ public partial class DriveMonitor
     {
         string encodePath = Path.Combine(AppFiles.TranscodePath, "ripper");
         Folders.EmptyFolder(encodePath);
-        System.IO.Directory.CreateDirectory(encodePath);
+        Directory.CreateDirectory(encodePath);
 
         StringBuilder sb = new();
         sb.Append(" -hide_banner -progress - ");

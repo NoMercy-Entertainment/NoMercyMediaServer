@@ -1,3 +1,4 @@
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using I18N.DotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -19,6 +20,8 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.DiscRipping;
+using NoMercy.Encoder.Startup;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
 using NoMercy.Helpers.Extensions;
@@ -26,14 +29,15 @@ using NoMercy.Helpers.Monitoring;
 using NoMercy.Helpers.Wallpaper;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Episodes;
+using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.MediaProcessing.People;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
-using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.Networking;
 using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Connectivity.Strategies;
@@ -50,11 +54,15 @@ using NoMercy.Queue.MediaServer;
 using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
+using NoMercy.Service.Workers;
 using NoMercy.Setup;
+using NoMercy.Setup.Cast;
 using NoMercy.Storage;
 using NoMercyQueue.Extensions;
+using Serilog.Events;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using DatabaseActivity = NoMercy.Database.Activity;
+using DriveMonitor = NoMercy.MediaSources.OpticalMedia.DriveMonitor;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MediaProcessingCollectionRepository = NoMercy.MediaProcessing.Collections.CollectionRepository;
 using MediaProcessingEpisodeRepository = NoMercy.MediaProcessing.Episodes.EpisodeRepository;
@@ -65,6 +73,7 @@ using MediaProcessingPersonRepository = NoMercy.MediaProcessing.People.PersonRep
 using MediaProcessingSeasonRepository = NoMercy.MediaProcessing.Seasons.SeasonRepository;
 using MediaProcessingShowRepository = NoMercy.MediaProcessing.Shows.ShowRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
+using ResourceMonitor = NoMercy.Helpers.Monitoring.ResourceMonitor;
 
 namespace NoMercy.Service.Configuration;
 
@@ -320,12 +329,12 @@ public static class ServiceConfiguration
             IServiceScope authScope = scopeFactory.CreateScope();
             AppDbContext authDbContext =
                 authScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            IStorageBackend storageBackend = sp.GetRequiredService<IStorageBackend>();
-            return new(authDbContext, storageBackend);
+            IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
+            return new(authDbContext, storageDriver);
         });
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
-        services.AddSingleton<NoMercy.Setup.Cast.CastSessionTokenService>();
+        services.AddSingleton<CastSessionTokenService>();
 
         // Add Memory Cache with size limit to prevent unbounded growth
         services.AddMemoryCache(options =>
@@ -339,7 +348,7 @@ public static class ServiceConfiguration
         InMemoryEventBus innerBus = new();
         LoggingEventBusDecorator loggingBus = new(
             innerBus,
-            message => Logger.App(message, Serilog.Events.LogEventLevel.Verbose),
+            message => Logger.App(message, LogEventLevel.Verbose),
             // High-frequency progress events would otherwise spam the verbose
             // log every ~500ms during an encode without adding signal.
             excludedEventTypes:
@@ -365,13 +374,13 @@ public static class ServiceConfiguration
 
         // Add Singleton Services
         services.AddSingleton<AppProcessManager>();
-        services.AddSingleton<NoMercy.Helpers.Monitoring.ResourceMonitor>();
+        services.AddSingleton<ResourceMonitor>();
 
         // Network discovery (replaces static Networking.Networking IP/address members)
         services.AddSingleton<INetworkDiscovery>(sp =>
         {
-            IStorageBackend storageBackend = sp.GetRequiredService<IStorageBackend>();
-            NetworkDiscovery discovery = new(storageBackend);
+            IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
+            NetworkDiscovery discovery = new(storageDriver);
             if (!string.IsNullOrEmpty(StartupOptions.OverrideInternalIp))
                 discovery.InternalIp = StartupOptions.OverrideInternalIp;
             if (!string.IsNullOrEmpty(StartupOptions.OverrideExternalIp))
@@ -418,11 +427,8 @@ public static class ServiceConfiguration
         services.AddSingleton<DriveMonitor>();
 
         // Encoder-layer optical drive monitor + SignalR bridge
-        services.AddSingleton<
-            NoMercy.Encoder.DiscRipping.IDriveMonitor,
-            NoMercy.Encoder.DiscRipping.DriveMonitor
-        >();
-        services.AddHostedService<NoMercy.Service.Workers.DriveMonitorWorker>();
+        services.AddSingleton<IDriveMonitor, Encoder.DiscRipping.DriveMonitor>();
+        services.AddHostedService<DriveMonitorWorker>();
 
         services.AddWallpaperService();
 
@@ -521,7 +527,7 @@ public static class ServiceConfiguration
         services.AddScoped<SetupService>();
 
         services.AddMediaServerQueue();
-        services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();
+        services.AddSingleton<JobDispatcher>();
 
         services.AddNoMercyEncoder(opts =>
         {
@@ -541,14 +547,11 @@ public static class ServiceConfiguration
         // Encoder's default is a no-op (always idle) so it stays decoupled
         // from QueueRunner/SessionManager. AddSingleton after AddNoMercyEncoder
         // overrides the TryAddSingleton the encoder registered.
-        services.AddSingleton<
-            NoMercy.Encoder.Startup.IEncoderActivityProbe,
-            EncoderActivityProbe
-        >();
+        services.AddSingleton<IEncoderActivityProbe, EncoderActivityProbe>();
 
-        services.AddHostedService<MediaProcessing.EventHandlers.EncodingNotificationSubscriber>();
-        services.AddHostedService<MediaProcessing.EventHandlers.AutoEncodeSubscriber>();
-        services.AddHostedService<MediaProcessing.EventHandlers.IntroDetectionSubscriber>();
+        services.AddHostedService<EncodingNotificationSubscriber>();
+        services.AddHostedService<AutoEncodeSubscriber>();
+        services.AddHostedService<IntroDetectionSubscriber>();
 
         services.AddPluginSystem(AppFiles.PluginsPath);
 
@@ -716,8 +719,7 @@ public static class ServiceConfiguration
 
                             if (!string.IsNullOrEmpty(raw))
                             {
-                                var handler =
-                                    new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                                var handler = new JwtSecurityTokenHandler();
                                 var jwt = handler.ReadJwtToken(raw);
                                 TimeSpan expired = DateTime.UtcNow - jwt.ValidTo;
                                 tokenAge =
@@ -742,7 +744,7 @@ public static class ServiceConfiguration
 
                         Logger.Auth(
                             $"{reason} — {client} → {hub} from {remoteIp}",
-                            Serilog.Events.LogEventLevel.Warning
+                            LogEventLevel.Warning
                         );
 
                         // Activity log write removed — OnAuthenticationFailed fires for every

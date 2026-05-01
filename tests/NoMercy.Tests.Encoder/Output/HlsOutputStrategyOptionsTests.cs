@@ -1,12 +1,11 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
-using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 public class HlsOutputStrategyOptionsTests
 {

@@ -8,7 +8,7 @@ public class TestJob : IShouldQueue
     public int Priority => 0;
 
     public string Message { get; set; } = string.Empty;
-    public bool HasExecuted { get; set; } = false;
+    public bool HasExecuted { get; set; }
     public bool ShouldFail { get; set; } = false;
     public int ExecutionDelay { get; set; } = 0;
 
@@ -34,7 +34,7 @@ public class AnotherTestJob : IShouldQueue
     public int Priority => 0;
 
     public int Value { get; set; }
-    public bool HasExecuted { get; set; } = false;
+    public bool HasExecuted { get; set; }
 
     public async Task Handle()
     {

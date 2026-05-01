@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Profiles;
-
 using System.Security.Cryptography;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Profiles;
 
 /// <summary>
 /// Pins the fingerprint algorithm to SHA-256 lowercase hex so drift is caught

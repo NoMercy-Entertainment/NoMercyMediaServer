@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 /// <summary>
 /// HEVC-specific resolver behavior. Most of the CRF→flag mapping is
@@ -78,7 +78,7 @@ public class HevcArgumentResolverTests
         // a library-style profile string must fall back to the first
         // declared profile, which is "1" (= Main).
         EncoderInfo vt = Get("hevc_videotoolbox");
-        vt.Profiles.Should().BeEquivalentTo(["1", "2"]);
+        vt.Profiles.Should().BeEquivalentTo("1", "2");
         EncoderArgumentResolver.ResolveProfile("main", vt).Should().Be("1");
     }
 

@@ -115,7 +115,7 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
     public ICollection<KeywordMovie> KeywordMovies { get; set; } = [];
 
     [JsonProperty("media")]
-    public ICollection<Models.Media.Media> Media { get; set; } = [];
+    public ICollection<Media.Media> Media { get; set; } = [];
 
     [JsonProperty("images")]
     public ICollection<Image> Images { get; set; } = [];

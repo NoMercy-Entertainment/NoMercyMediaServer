@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.DiscRipping;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+
+namespace NoMercy.Encoder.DiscRipping;
 
 /// <summary>
 /// One-shot probe executed at startup to confirm the bundled nomercy-ffmpeg

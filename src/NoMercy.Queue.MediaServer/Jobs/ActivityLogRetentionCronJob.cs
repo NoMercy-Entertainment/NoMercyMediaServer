@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
+using NoMercy.Database.Models.Users;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
@@ -37,7 +38,7 @@ public class ActivityLogRetentionCronJob : ICronJobExecutor
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(
             cancellationToken
         );
-        List<Database.Models.Users.ActivityLog> stale = await ctx
+        List<ActivityLog> stale = await ctx
             .ActivityLogs.Where(x => x.CreatedAt < cutoff)
             .ToListAsync(cancellationToken);
 

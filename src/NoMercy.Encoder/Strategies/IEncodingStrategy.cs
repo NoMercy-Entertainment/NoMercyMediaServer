@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Strategies;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Strategies;
 
 /// <summary>
 /// Optional per-strategy stage overrides. Return null for a role to keep the

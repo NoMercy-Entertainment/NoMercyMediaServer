@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.LiveTranscode;
-
 using FluentAssertions.Specialized;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -11,6 +9,8 @@ using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Storage;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 public class LiveFfmpegRunnerCapTests
 {

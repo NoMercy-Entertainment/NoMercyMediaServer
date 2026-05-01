@@ -1,3 +1,5 @@
+using System.Collections.Specialized;
+using System.Web;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -74,8 +76,9 @@ public class ConsoleQrCode
         string userCode = "";
         try
         {
-            System.Collections.Specialized.NameValueCollection query =
-                System.Web.HttpUtility.ParseQueryString(new Uri(verificationUriComplete).Query);
+            NameValueCollection query = HttpUtility.ParseQueryString(
+                new Uri(verificationUriComplete).Query
+            );
             userCode = query["user_code"] ?? "";
         }
         catch

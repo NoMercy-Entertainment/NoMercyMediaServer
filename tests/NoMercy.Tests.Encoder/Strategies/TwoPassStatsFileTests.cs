@@ -1,8 +1,7 @@
-namespace NoMercy.Tests.Encoder.Strategies;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
@@ -11,6 +10,8 @@ using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.Strategies;
 
 /// <summary>
 /// Regression tests for 2-pass stats-file plumbing.
@@ -47,8 +48,8 @@ public class TwoPassStatsFileTests
                             Success: false,
                             OutputPath: null,
                             Duration: TimeSpan.Zero,
-                            Error: new NoMercy.Encoder.Errors.EncodingError(
-                                NoMercy.Encoder.Errors.EncodingErrorKind.Unknown,
+                            Error: new EncodingError(
+                                EncodingErrorKind.Unknown,
                                 "simulated failure",
                                 null,
                                 "test",

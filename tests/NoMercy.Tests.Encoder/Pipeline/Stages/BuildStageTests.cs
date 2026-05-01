@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
@@ -9,6 +7,8 @@ using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
 public class BuildStageTests
 {
@@ -78,7 +78,7 @@ public class BuildStageTests
                         BitrateKbps: 192,
                         Channels: 2,
                         SampleRate: 48000,
-                        Action: NoMercy.Encoder.Pipeline.StreamAction.Transcode,
+                        Action: StreamAction.Transcode,
                         Language: "en",
                         MapLabel: "0:a:0"
                     ),

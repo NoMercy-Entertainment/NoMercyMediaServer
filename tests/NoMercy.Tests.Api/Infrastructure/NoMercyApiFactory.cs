@@ -1,5 +1,6 @@
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -59,8 +60,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
     protected override IWebHostBuilder? CreateWebHostBuilder()
     {
-        return Microsoft
-            .AspNetCore.WebHost.CreateDefaultBuilder([])
+        return WebHost
+            .CreateDefaultBuilder([])
             .UseContentRoot(AppContext.BaseDirectory)
             .ConfigureLogging(logging => logging.ClearProviders())
             .UseStartup<Startup>()
@@ -503,7 +504,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         AppDbContext testAppContext = new();
         testAppContext.Database.EnsureCreated();
 
-        AuthManager testAuthManager = new(testAppContext, new SystemIoStorageBackend());
+        AuthManager testAuthManager = new(testAppContext, new LocalStorageDriver());
         services.AddSingleton(testAuthManager);
         services.AddSingleton(new SetupEndpoints(completedState, testAuthManager));
         services.AddSingleton(new BootOrchestrator(completedState, testAuthManager));

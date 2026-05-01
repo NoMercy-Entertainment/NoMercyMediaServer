@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using NoMercy.Launcher.Models;
 using NoMercy.Launcher.ViewModels;
 
 namespace NoMercy.Launcher.Views;
@@ -20,7 +19,7 @@ public partial class ServerControlView : UserControl
         if (ViewModel is null)
             return;
 
-        ViewModel.ShowActiveSessionDialog = async (ActivityInfo activity) =>
+        ViewModel.ShowActiveSessionDialog = async activity =>
         {
             Window? owner = TopLevel.GetTopLevel(this) as Window;
             if (owner is null)

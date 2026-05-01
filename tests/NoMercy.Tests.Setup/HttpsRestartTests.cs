@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.Setup;
@@ -48,7 +49,7 @@ public class CertificateAvailabilityTests : IDisposable
             bool result = Certificate.HasValidCertificate();
             Assert.False(result, "No certificate should be present in the test environment");
         }
-        catch (Microsoft.Data.Sqlite.SqliteException)
+        catch (SqliteException)
         {
             // Expected when Configuration table does not exist in the test environment.
             // This correctly indicates no certificate is stored in the DB.
@@ -144,7 +145,7 @@ public class HttpToHttpsTransitionTests
         {
             hasCert = Certificate.HasValidCertificate();
         }
-        catch (Microsoft.Data.Sqlite.SqliteException)
+        catch (SqliteException)
         {
             // Expected when Configuration table does not exist — treated as no cert.
         }

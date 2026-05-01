@@ -1,11 +1,11 @@
-namespace NoMercy.Tests.Encoder.Orchestration;
-
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
+
+namespace NoMercy.Tests.Encoder.Orchestration;
 
 public class StrategyResolverTests
 {

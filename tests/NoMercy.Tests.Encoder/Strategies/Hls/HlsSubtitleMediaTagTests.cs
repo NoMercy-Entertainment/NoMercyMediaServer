@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.Strategies.Hls;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Subtitles;
+
+namespace NoMercy.Tests.Encoder.Strategies.Hls;
 
 /// <summary>
 /// Verifies that the master playlist correctly emits EXT-X-MEDIA TYPE=SUBTITLES

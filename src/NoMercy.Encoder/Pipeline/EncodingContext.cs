@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Pipeline;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Pipeline;
 
 /// <summary>
 /// Per-encode context threaded through every <see cref="IPipelineStage{TIn, TOut}"/>.

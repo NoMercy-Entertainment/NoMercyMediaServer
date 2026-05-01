@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Jobs;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Jobs;
 
 public class JsonCheckpointStoreTests : IDisposable
 {

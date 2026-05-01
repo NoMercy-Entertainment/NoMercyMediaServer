@@ -1,5 +1,3 @@
-namespace NoMercy.Encoder.ContentAnalysis.Fingerprinting;
-
 using System.Globalization;
 using System.Text;
 using Microsoft.Extensions.Logging;
@@ -7,6 +5,8 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 
 /// <summary>
 /// FFmpeg-backed fingerprinter. Invokes ffmpeg with the chromaprint muxer

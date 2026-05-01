@@ -36,7 +36,7 @@ public static class Config
     public static int? StunPublicPort { get; set; }
     public static int StunPort => InternalServerPort + 1;
 
-    private static int? _internalServerPort = null;
+    private static int? _internalServerPort;
 
     public static int InternalServerPort
     {
@@ -44,7 +44,7 @@ public static class Config
         set => _internalServerPort = value;
     }
 
-    private static int? _externalServerPort = null;
+    private static int? _externalServerPort;
 
     public static int ExternalServerPort
     {
@@ -52,7 +52,7 @@ public static class Config
         set => _externalServerPort = value;
     }
 
-    private static string? _managementPipeName = null;
+    private static string? _managementPipeName;
 
     public static string ManagementPipeName
     {

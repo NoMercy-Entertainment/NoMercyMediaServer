@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿﻿using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -20,6 +20,7 @@ using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -33,15 +34,15 @@ public class VideoEncodeJob : AbstractEncoderJob
     public override async Task Handle()
     {
         // TODO: cross-backend transfer — InputFile (source) and the encode output directory
-        // both resolve through the same folder's StorageBackend today. When source and
+        // both resolve through the same folder's StorageDriver today. When source and
         // destination cross folder boundaries (e.g. source on SMB, output on local SSD),
         // AcquireLocalPathAsync on the source backend and a staged write on the destination
         // backend will be needed. Leave existing copy semantics until remote drivers land.
         await using MediaContext context = new();
 
-        await using LibraryRepository libraryRepository = new(context, StorageBackend);
-        FileRepository fileRepository = new(context, StorageBackend);
-        FileManager fileManager = new(fileRepository, StorageFactory, StorageBackend);
+        await using LibraryRepository libraryRepository = new(context, StorageDriver);
+        FileRepository fileRepository = new(context, StorageDriver);
+        FileManager fileManager = new(fileRepository, StorageFactory, StorageDriver);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)
@@ -150,10 +151,10 @@ public class VideoEncodeJob : AbstractEncoderJob
                 // map to different backends, the orchestrator will need to
                 // AcquireLocalPathAsync on the source, encode, then stream-write
                 // to the destination. For now source == destination (same folder).
-                NoMercy.Storage.IStorage folderStorage = StorageFactory.For(
+                IStorage folderStorage = StorageFactory.For(
                     folder.Id,
-                    folder.BackendType,
-                    folder.BackendConfig,
+                    folder.DriverType,
+                    folder.DriverConfig,
                     folder.Path
                 );
 

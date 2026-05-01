@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Pipeline.Optimizer;
-
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Encoder.Pipeline.Optimizer;
 
 public class GroupingStrategy
 {

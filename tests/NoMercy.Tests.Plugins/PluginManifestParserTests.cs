@@ -233,7 +233,8 @@ public class PluginManifestParserTests : IDisposable
     public async Task ParseFileAsync_FileNotFound_ThrowsFileNotFoundException()
     {
         IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
-        Func<Task> act = () => PluginManifestParser.ParseFileAsync("/nonexistent/plugin.json", storage);
+        Func<Task> act = () =>
+            PluginManifestParser.ParseFileAsync("/nonexistent/plugin.json", storage);
 
         await act.Should().ThrowAsync<FileNotFoundException>();
     }

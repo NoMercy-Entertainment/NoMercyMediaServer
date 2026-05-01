@@ -15,11 +15,8 @@ public class ParseNumbersAsInt32Converter : JsonConverter
         {
             writer.WriteValue(intValue);
         }
-        else
-        {
-            // Fallback to default serialization for other types
-            // serializer.Serialize(writer, value);
-        }
+        // Fallback to default serialization for other types
+        // serializer.Serialize(writer, value);
     }
 
     public override object? ReadJson(

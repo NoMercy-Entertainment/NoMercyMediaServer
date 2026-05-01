@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Codecs;
-
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Encoder.Codecs;
 
 public interface ICodecResolver
 {

@@ -6,7 +6,7 @@ namespace NoMercy.Providers.Lrclib.Models;
 public class LrclibSongResult
 {
     [JsonProperty("id")]
-    public int Id { get; set; } = 0;
+    public int Id { get; set; }
 
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
@@ -21,10 +21,10 @@ public class LrclibSongResult
     public string AlbumName { get; set; } = string.Empty;
 
     [JsonProperty("duration")]
-    public double Duration { get; set; } = 0.0;
+    public double Duration { get; set; }
 
     [JsonProperty("instrumental")]
-    public bool Instrumental { get; set; } = false;
+    public bool Instrumental { get; set; }
 
     [JsonProperty("plainLyrics")]
     public string PlainLyrics { get; set; } = string.Empty;

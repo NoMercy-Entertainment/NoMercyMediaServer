@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Strategies.Audio;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Strategies.Audio;
 
 /// <summary>
 /// Ogg single-file output. Container accepts vorbis (default), opus, or flac

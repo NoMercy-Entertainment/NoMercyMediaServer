@@ -41,7 +41,7 @@ public class ContentSegment
 
     [JsonProperty("movie_id")]
     public int? MovieId { get; set; }
-    public Movies.Movie? Movie { get; set; }
+    public Movie? Movie { get; set; }
 
     [JsonProperty("segment_type")]
     public ContentSegmentType SegmentType { get; set; }

@@ -1,11 +1,10 @@
-namespace NoMercy.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
+using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
@@ -13,6 +12,8 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
+
+namespace NoMercy.Encoder.Pipeline.Stages;
 
 public record ExecutionPlan(
     ExecutionGroup[] Groups,
@@ -29,7 +30,7 @@ public class PlanStage(
     ITonemapSelector tonemapSelector,
     IFfmpegCapabilities ffmpegCapabilities,
     IAbrLadderGenerator abrLadderGenerator,
-    ContentAnalysis.ICropDetector cropDetector,
+    ICropDetector cropDetector,
     ILogger<PlanStage> logger,
     IQualityScalerResolver? qualityScalerResolver = null,
     IHardwarePreferenceResolver? hardwarePreferenceResolver = null,
@@ -214,7 +215,7 @@ public class PlanStage(
 
         try
         {
-            ContentAnalysis.CropResult crop = await cropDetector
+            CropResult crop = await cropDetector
                 .DetectAsync(media.FilePath, ct)
                 .ConfigureAwait(false);
 

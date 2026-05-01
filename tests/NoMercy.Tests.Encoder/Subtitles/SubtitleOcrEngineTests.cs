@@ -1,6 +1,7 @@
-namespace NoMercy.Tests.Encoder.Subtitles;
-
+using System.Reflection;
 using NoMercy.Encoder.Subtitles;
+
+namespace NoMercy.Tests.Encoder.Subtitles;
 
 public class SubtitleOcrEngineParserTests
 {
@@ -136,11 +137,7 @@ public class SubtitleOcrEngineParserTests
         public static List<SubtitleOcrEngine.SubtitleCue> Parse(string content) =>
             (List<SubtitleOcrEngine.SubtitleCue>)
                 typeof(SubtitleOcrEngine)
-                    .GetMethod(
-                        "ParseOcrOutput",
-                        System.Reflection.BindingFlags.Static
-                            | System.Reflection.BindingFlags.NonPublic
-                    )!
+                    .GetMethod("ParseOcrOutput", BindingFlags.Static | BindingFlags.NonPublic)!
                     .Invoke(null, [content])!;
     }
 }
@@ -184,11 +181,7 @@ public class SubtitleOcrEngineEscapeFilterPathTests
         public static string EscapeFilterPath(string path) =>
             (string)
                 typeof(SubtitleOcrEngine)
-                    .GetMethod(
-                        "EscapeFilterPath",
-                        System.Reflection.BindingFlags.Static
-                            | System.Reflection.BindingFlags.NonPublic
-                    )!
+                    .GetMethod("EscapeFilterPath", BindingFlags.Static | BindingFlags.NonPublic)!
                     .Invoke(null, [path])!;
     }
 }

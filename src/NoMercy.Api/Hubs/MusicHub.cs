@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
 using NoMercy.Data.Activity;
@@ -27,7 +28,7 @@ public class MusicHub : ConnectionHub
     private readonly MusicDeviceManager _musicDeviceManager;
     private readonly MusicPlaylistManager _musicPlaylistManager;
     private readonly MusicPlaybackCommandHandler _commandHandler;
-    private readonly NoMercy.Api.Controllers.Socket.DeviceBusRegistry _busRegistry;
+    private readonly DeviceBusRegistry _busRegistry;
     private readonly CastSessionTokenService _castTokenService;
     private readonly INetworkDiscovery? _networkDiscovery;
 
@@ -42,7 +43,7 @@ public class MusicHub : ConnectionHub
         MusicPlaylistManager musicPlaylistManager,
         MusicPlaybackCommandHandler commandHandler,
         IActivityLogger activityLogger,
-        NoMercy.Api.Controllers.Socket.DeviceBusRegistry busRegistry,
+        DeviceBusRegistry busRegistry,
         CastSessionTokenService castTokenService,
         INetworkDiscovery? networkDiscovery = null
     )
@@ -707,7 +708,7 @@ public class MusicHub : ConnectionHub
                     {
                         Logger.Socket(
                             $"No Chromecast receiver discovered at {targetIp} — panel won't wake via CEC",
-                            Serilog.Events.LogEventLevel.Warning
+                            LogEventLevel.Warning
                         );
                         return;
                     }
@@ -725,7 +726,7 @@ public class MusicHub : ConnectionHub
                     {
                         Logger.Socket(
                             $"Cast token mint failed for {targetIp} — falling back to LAUNCH without customData",
-                            Serilog.Events.LogEventLevel.Warning
+                            LogEventLevel.Warning
                         );
                     }
 
@@ -749,7 +750,7 @@ public class MusicHub : ConnectionHub
                 {
                     Logger.Socket(
                         $"Server-side Cast launch failed for {targetIp}: {ex.Message}",
-                        Serilog.Events.LogEventLevel.Warning
+                        LogEventLevel.Warning
                     );
                 }
             });
@@ -1040,7 +1041,7 @@ public class MusicHub : ConnectionHub
         string listType = parts[1];
         string listId = parts[2];
         string trackId = state.CurrentItem.Id.ToString();
-        int? resumeAt = state.Time > 0 ? (int?)(state.Time / 1000) : null;
+        int? resumeAt = state.Time > 0 ? state.Time / 1000 : null;
         return CastIntent.PlayMusic(listType, listId, trackId, resumeAt);
     }
 }

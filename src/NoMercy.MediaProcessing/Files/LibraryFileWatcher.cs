@@ -15,14 +15,14 @@ namespace NoMercy.MediaProcessing.Files;
 public class LibraryFileWatcher
 {
     // ReSharper disable once InconsistentNaming
-    private static readonly Lazy<LibraryFileWatcher> _instance = new(() => new(_backendStore!));
+    private static readonly Lazy<LibraryFileWatcher> _instance = new(() => new(_driverStore!));
     public static LibraryFileWatcher Instance => _instance.Value;
 
-    private static IStorageBackend? _backendStore;
+    private static IStorageDriver? _driverStore;
 
     private static FolderWatcher? _fs;
-    private static FolderWatcher Fs => _fs ??= new(_backendStore!);
-    private static IStorageBackend StorageBackend => _backendStore!;
+    private static FolderWatcher Fs => _fs ??= new(_driverStore!);
+    private static IStorageDriver StorageDriver => _driverStore!;
 
     private static readonly Dictionary<string, FileChangeGroup> FileChangeGroups = new();
     private static readonly Lock LockObject = new();
@@ -36,9 +36,9 @@ public class LibraryFileWatcher
 
     private static List<Library> _libraries = [];
 
-    public LibraryFileWatcher(IStorageBackend storageBackend)
+    public LibraryFileWatcher(IStorageDriver storageDriver)
     {
-        _backendStore = storageBackend;
+        _driverStore = storageDriver;
         Logger.System("Starting FileSystem Watcher", LogEventLevel.Debug);
 
         Fs.OnChanged += _onFileChanged;
@@ -164,7 +164,7 @@ public class LibraryFileWatcher
 
     private static bool IsAllowedExtensionForLibrary(Library library, string path)
     {
-        if (StorageBackend.DirectoryExists(path))
+        if (StorageDriver.DirectoryExists(path))
             return true;
 
         switch (library.Type)
@@ -291,9 +291,9 @@ public class LibraryFileWatcher
         }
     }
 
-    public static void Start(IStorageBackend storageBackend)
+    public static void Start(IStorageDriver storageDriver)
     {
-        _backendStore = storageBackend;
+        _driverStore = storageDriver;
         _ = Instance;
     }
 }

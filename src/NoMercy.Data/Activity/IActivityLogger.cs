@@ -3,4 +3,4 @@
 // can continue using `using NoMercy.Data.Activity;` — the type is the same object.
 namespace NoMercy.Data.Activity;
 
-public interface IActivityLogger : NoMercy.Database.Activity.IActivityLogger { }
+public interface IActivityLogger : Database.Activity.IActivityLogger { }

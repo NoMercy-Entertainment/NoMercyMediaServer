@@ -69,7 +69,7 @@ public static class CacheController
     public static bool Read<T>(string url, out T? value, bool xml = false)
         where T : class?
     {
-        if (Config.IsDev == false)
+        if (!Config.IsDev)
         {
             value = default;
             return false;
@@ -100,7 +100,7 @@ public static class CacheController
             T? data;
             try
             {
-                string d = System.Text.Encoding.UTF8.GetString(storage.Read(fullname));
+                string d = Encoding.UTF8.GetString(storage.Read(fullname));
                 data = xml ? d.FromXml<T>() : d.FromJson<T>();
             }
             catch (Exception)
@@ -132,7 +132,7 @@ public static class CacheController
 
     public static async Task Write(string url, string data)
     {
-        if (Config.IsDev == false)
+        if (!Config.IsDev)
             return;
 
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
@@ -168,7 +168,7 @@ public static class CacheController
     internal static void PruneCache(string cachePath, long maxSizeBytes)
     {
         DirectoryInfo cacheDir = new(cachePath);
-        if (cacheDir.Exists == false)
+        if (!cacheDir.Exists)
             return;
 
         FileInfo[] files = cacheDir.GetFiles().OrderBy(f => f.CreationTime).ToArray();

@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Profiles;
-
 using System.Security.Cryptography;
 using System.Text;
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
 /// Factory for the 12 built-in encoding presets that ship with NoMercy.

@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Strategies;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
@@ -11,6 +9,8 @@ using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Strategies;
 
 /// <summary>
 /// Covers the MP4 / DASH siblings that share <see cref="TwoPassStrategyBase"/>

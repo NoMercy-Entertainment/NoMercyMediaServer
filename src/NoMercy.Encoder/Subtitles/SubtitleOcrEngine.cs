@@ -1,5 +1,3 @@
-namespace NoMercy.Encoder.Subtitles;
-
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -9,6 +7,8 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Subtitles;
 
 /// <summary>
 /// Converts bitmap subtitle tracks (PGS / VobSub / DVB) into text subtitle files

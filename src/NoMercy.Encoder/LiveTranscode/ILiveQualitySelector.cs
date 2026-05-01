@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 public interface ILiveQualitySelector
 {

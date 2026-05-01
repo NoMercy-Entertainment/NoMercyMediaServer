@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Pipeline;
-
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.Pipeline;
 
 /// <summary>
 /// Projects an <see cref="ExecutionPlan"/> (internal execution graph) into

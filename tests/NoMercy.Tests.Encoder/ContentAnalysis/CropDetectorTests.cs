@@ -1,11 +1,11 @@
-namespace NoMercy.Tests.Encoder.ContentAnalysis;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.ContentAnalysis;
 
 public class CropDetectorTests
 {

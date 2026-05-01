@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿﻿using System.Diagnostics;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -18,6 +18,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -32,11 +33,11 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
     public override async Task Handle()
     {
         // TODO: cross-backend transfer — MediaFile.Path (source) and FolderMetaData.BasePath
-        // (encode output) both resolve through the same folder's StorageBackend today. When
+        // (encode output) both resolve through the same folder's StorageDriver today. When
         // source and destination cross folder boundaries, staged copy semantics will be needed.
         await using MediaContext context = new();
 
-        await using LibraryRepository libraryRepository = new(context, StorageBackend);
+        await using LibraryRepository libraryRepository = new(context, StorageDriver);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)
@@ -121,10 +122,10 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                 // TODO: cross-backend transfer — when source and output folders
                 // map to different backends, staged copy semantics will be needed.
                 // For now source == destination (same folder).
-                NoMercy.Storage.IStorage folderStorage = StorageFactory.For(
+                IStorage folderStorage = StorageFactory.For(
                     folder.Id,
-                    folder.BackendType,
-                    folder.BackendConfig,
+                    folder.DriverType,
+                    folder.DriverConfig,
                     folder.Path
                 );
 
@@ -230,10 +231,10 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
             recordingRepository,
             musicGenreRepository,
             artistRepository,
-            StorageBackend
+            StorageDriver
         );
 
-        await using MediaScan mediaScan = new(StorageBackend);
+        await using MediaScan mediaScan = new(StorageDriver);
 
         // V3 encoder writes to BasePath — scan picks up all encoded output in that folder
         MediaFolderExtend mediaFolder = (

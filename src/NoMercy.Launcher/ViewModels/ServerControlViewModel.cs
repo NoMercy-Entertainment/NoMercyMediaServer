@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Newtonsoft.Json;
 using NoMercy.Launcher.Models;
 using NoMercy.Launcher.Services;
 using NoMercy.NmSystem.Extensions;
@@ -310,7 +311,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     public async Task ToggleAutoStartAsync(bool enabled)
     {
-        await _serverConnection.PostAsync("/manage/autostart", new { enabled }, default);
+        await _serverConnection.PostAsync("/manage/autostart", new { enabled });
 
         await RefreshStatusAsync();
     }
@@ -352,9 +353,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
             {
                 try
                 {
-                    result = Newtonsoft.Json.JsonConvert.DeserializeObject<UpdateCheckResult>(
-                        downloadBody
-                    );
+                    result = JsonConvert.DeserializeObject<UpdateCheckResult>(downloadBody);
                 }
                 catch
                 {
@@ -510,7 +509,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
         try
         {
-            dynamic? obj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+            dynamic? obj = JsonConvert.DeserializeObject(json);
             return obj?.message?.ToString();
         }
         catch

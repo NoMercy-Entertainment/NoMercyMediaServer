@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Api.Middleware;
-
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -13,6 +11,8 @@ using NoMercy.Api.Middleware;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 using Xunit;
+
+namespace NoMercy.Tests.Api.Middleware;
 
 [Trait("Category", "Unit")]
 public class HmacValidationMiddlewareTests

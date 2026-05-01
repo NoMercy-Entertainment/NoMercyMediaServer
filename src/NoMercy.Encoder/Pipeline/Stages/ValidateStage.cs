@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.Pipeline.Stages;
 
 public record ValidateInput(MediaInfo Media, EncodingProfile Profile);
 

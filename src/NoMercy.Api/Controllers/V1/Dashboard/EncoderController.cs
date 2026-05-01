@@ -7,6 +7,7 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
+using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Profiles;
@@ -72,7 +73,7 @@ public class EncoderController(EncoderRepository encoderRepository, CodecRegistr
                         Channels: 2,
                         SampleRateHz: 48000,
                         AllowedLanguages: [],
-                        Loudness: NoMercy.Encoder.Audio.LoudnessMode.None
+                        Loudness: LoudnessMode.None
                     ),
                 ],
                 SubtitleOutputs: []

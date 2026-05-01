@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
@@ -36,16 +36,16 @@ public class MovieManagerTests
         _movieRepositoryMock = new();
         _movieClientMock = new();
 
-        IStorageBackend storageBackend = new SystemIoStorageBackend();
+        IStorageDriver storageDriver = new LocalStorageDriver();
         IStorageFactory storageFactory = new StorageFactory(
-            storageBackend,
+            storageDriver,
             NullLogger<StorageFactory>.Instance
         );
         _movieManager = new(
             _movieRepositoryMock.Object,
             jobDispatcherMock.Object,
             storageFactory,
-            storageBackend
+            storageDriver
         );
         _movieAppends = mockDataProvider.MockMovieAppendsResponse()!;
         _library = new() { Id = new(), Title = "Test Library" };

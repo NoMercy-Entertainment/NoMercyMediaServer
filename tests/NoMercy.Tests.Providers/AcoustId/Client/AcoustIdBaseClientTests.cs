@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using NoMercy.Providers.AcoustId.Client;
 
 namespace NoMercy.Tests.Providers.AcoustId.Client;
@@ -29,7 +30,7 @@ public class AcoustIdBaseClientTests
 
         // Get is async, so we need to find the state machine type
         Type? stateMachineType = getMethod
-            .GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>()
+            .GetCustomAttribute<AsyncStateMachineAttribute>()
             ?.StateMachineType;
 
         Assert.NotNull(stateMachineType);
@@ -99,8 +100,8 @@ public class AcoustIdBaseClientTests
 
         Assert.NotNull(getMethod);
 
-        System.Runtime.CompilerServices.AsyncStateMachineAttribute? attr =
-            getMethod.GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>();
+        AsyncStateMachineAttribute? attr =
+            getMethod.GetCustomAttribute<AsyncStateMachineAttribute>();
 
         Assert.NotNull(attr);
     }
@@ -137,7 +138,7 @@ public class AcoustIdBaseClientTests
         Assert.NotNull(getMethod);
 
         Type? stateMachineType = getMethod
-            .GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>()
+            .GetCustomAttribute<AsyncStateMachineAttribute>()
             ?.StateMachineType;
         Assert.NotNull(stateMachineType);
 

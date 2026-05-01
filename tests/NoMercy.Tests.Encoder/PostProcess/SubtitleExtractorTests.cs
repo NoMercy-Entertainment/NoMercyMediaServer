@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.PostProcess;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.PostProcess;
+
+namespace NoMercy.Tests.Encoder.PostProcess;
 
 public class SubtitleExtractorTests
 {

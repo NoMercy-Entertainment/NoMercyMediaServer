@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Output;
-
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.Output;
 
 public interface IOutputStrategyFactory
 {

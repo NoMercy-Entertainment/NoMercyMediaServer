@@ -1,11 +1,13 @@
-namespace NoMercy.Encoder.Hardware;
-
+using System.Diagnostics;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Hardware;
 
 /// <summary>
 /// Runs short calibration encodes to populate <see cref="SpeedIndex"/>.
@@ -399,7 +401,7 @@ public class HardwareBenchmark(
                 lastFrame = snapshot.Frame;
         }
 
-        System.Diagnostics.Stopwatch wall = System.Diagnostics.Stopwatch.StartNew();
+        Stopwatch wall = Stopwatch.StartNew();
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
             arguments,
@@ -482,7 +484,7 @@ public class HardwareBenchmark(
         args.Add("lavfi");
         args.Add("-i");
         args.Add(
-            $"testsrc=duration={sourceSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)}:size={width}x{height}:rate={SourceFrameRate.ToString(System.Globalization.CultureInfo.InvariantCulture)}"
+            $"testsrc=duration={sourceSeconds.ToString(CultureInfo.InvariantCulture)}:size={width}x{height}:rate={SourceFrameRate.ToString(CultureInfo.InvariantCulture)}"
         );
 
         // Upload lavfi frames to the GPU before the encoder consumes them.
@@ -528,7 +530,7 @@ public class HardwareBenchmark(
         // slow encoders bail early (60 frames).
         (_, int maxFrames) = CalibrationProfile(target.Encoder);
         args.Add("-frames:v");
-        args.Add(maxFrames.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        args.Add(maxFrames.ToString(CultureInfo.InvariantCulture));
 
         args.Add("-f");
         args.Add("null");
@@ -550,9 +552,7 @@ public class HardwareBenchmark(
         if (target.Encoder.RequiredVendor is not GpuVendor vendor)
             return;
 
-        string deviceArg = target.VendorIndex.ToString(
-            System.Globalization.CultureInfo.InvariantCulture
-        );
+        string deviceArg = target.VendorIndex.ToString(CultureInfo.InvariantCulture);
 
         switch (vendor)
         {
@@ -621,9 +621,7 @@ public class HardwareBenchmark(
         )
         {
             args.Add("-gpu");
-            args.Add(
-                target.VendorIndex.ToString(System.Globalization.CultureInfo.InvariantCulture)
-            );
+            args.Add(target.VendorIndex.ToString(CultureInfo.InvariantCulture));
         }
     }
 

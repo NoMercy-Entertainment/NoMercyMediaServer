@@ -1,5 +1,4 @@
-namespace NoMercy.Tests.MediaProcessing.Jobs;
-
+using System.Reflection;
 using Moq;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
@@ -7,6 +6,8 @@ using NoMercy.Encoder.Progress;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+
+namespace NoMercy.Tests.MediaProcessing.Jobs;
 
 [Collection("EventBusProvider")]
 public class EventBusProgressObserverTests
@@ -17,10 +18,7 @@ public class EventBusProgressObserverTests
         // Reach an unconfigured state by reflection — EventBusProvider has no Reset(),
         // so we clear the backing field directly.
         typeof(EventBusProvider)
-            .GetField(
-                "_instance",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
-            )!
+            .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
             .SetValue(null, null);
 
         EventBusProgressObserver observer = new(jobId: 1, title: "Test Movie");

@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.Hardware;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Hardware;
 
 public class BenchmarkJobTrackerTests
 {
@@ -43,7 +43,7 @@ public class BenchmarkJobTrackerTests
 
         BenchmarkJobStatus status = tracker.Start(codecs, resolutions);
 
-        status.RequestedCodecs.Should().BeEquivalentTo(["H264", "Av1"]);
+        status.RequestedCodecs.Should().BeEquivalentTo("H264", "Av1");
         status.RequestedResolutions.Should().BeEquivalentTo([1920, 1280]);
     }
 

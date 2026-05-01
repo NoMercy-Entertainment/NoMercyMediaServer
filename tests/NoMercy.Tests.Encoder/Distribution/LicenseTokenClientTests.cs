@@ -1,10 +1,9 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using NoMercy.Encoder.Distribution;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 /// <summary>
 /// Unit tests for <see cref="LicenseTokenClient"/>.

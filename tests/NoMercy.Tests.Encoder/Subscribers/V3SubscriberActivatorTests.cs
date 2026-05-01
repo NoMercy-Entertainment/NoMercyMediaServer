@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Subscribers;
-
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Subscribers;
 using NoMercy.Events;
+
+namespace NoMercy.Tests.Encoder.Subscribers;
 
 public class V3SubscriberActivatorTests
 {

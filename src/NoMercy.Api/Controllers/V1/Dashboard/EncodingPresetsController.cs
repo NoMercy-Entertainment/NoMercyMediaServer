@@ -1,4 +1,4 @@
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +9,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
@@ -28,7 +29,7 @@ public class EncodingPresetsController(
     IMediaAnalyzer mediaAnalyzer,
     IDbContextFactory<MediaContext> contextFactory,
     IHttpClientFactory httpClientFactory,
-    IStorageBackend storageBackend
+    IStorageDriver storageDriver
 ) : BaseController
 {
     [Obsolete("Use GET /api/v1/encoder/profiles")]
@@ -131,16 +132,15 @@ public class EncodingPresetsController(
 
         if (existing.IsBuiltIn)
         {
-            NoMercy.Encoder.Errors.ValidationEnvelope envelope =
-                NoMercy.Encoder.Errors.ValidationEnvelope.FromRules([
-                    new NoMercy.Encoder.Errors.EncoderRule(
-                        NoMercy.Encoder.Errors.EncoderRuleId.ProfileBuiltinReadonly,
-                        NoMercy.Encoder.Errors.EncoderRuleSeverity.Error,
-                        "id",
-                        "Built-in presets are read-only — clone the preset to edit it.",
-                        $"POST /api/v1/dashboard/encoding/presets/{id}/clone to make an editable copy."
-                    ),
-                ]);
+            ValidationEnvelope envelope = ValidationEnvelope.FromRules([
+                new EncoderRule(
+                    EncoderRuleId.ProfileBuiltinReadonly,
+                    EncoderRuleSeverity.Error,
+                    "id",
+                    "Built-in presets are read-only — clone the preset to edit it.",
+                    $"POST /api/v1/dashboard/encoding/presets/{id}/clone to make an editable copy."
+                ),
+            ]);
             return UnprocessableEntity(envelope);
         }
 
@@ -465,9 +465,7 @@ public class EncodingPresetsController(
         // Forward to the new envelope-producing path, then project back to the
         // legacy (IsValid, ValidationError[]) shape so existing dashboard
         // clients keep working without modification.
-        NoMercy.Encoder.Errors.ValidationEnvelope envelope = profileValidator.ValidateAsEnvelope(
-            profile
-        );
+        ValidationEnvelope envelope = profileValidator.ValidateAsEnvelope(profile);
 
         object[] errors = envelope
             .Errors.Select(e => (object)new { field = e.Field, message = e.Message })
@@ -527,15 +525,12 @@ public class EncodingPresetsController(
             return BadRequestResponse("profile_json deserialized to null");
 
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        Database.Models.Media.VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(
-            v => v.Id == fileId,
-            ct
-        );
+        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(v => v.Id == fileId, ct);
         if (file is null)
             return NotFoundResponse("Video file not found");
 
         string path = Path.Combine(file.HostFolder, file.Filename);
-        if (!storageBackend.FileExists(path))
+        if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         NoMercy.Encoder.Analysis.MediaInfo media;
@@ -803,7 +798,7 @@ public class EncodingPresetsController(
         // user's output will be smaller than they expected. Warn.
         if (media.VideoStreams.Count > 0)
         {
-            NoMercy.Encoder.Analysis.VideoStreamInfo src = media.VideoStreams[0];
+            VideoStreamInfo src = media.VideoStreams[0];
             foreach (VideoOutput v in profile.VideoOutputs)
             {
                 int targetH = v.Height ?? v.Width * 9 / 16;
@@ -930,7 +925,7 @@ public class EncodingPresetsController(
             StreamAction.Extract =>
                 $"Source {source.Codec} subtitle extracted to a WebVTT/SRT sidecar next to the playlist.",
             StreamAction.Transcode when target.Mode == SubtitleMode.BurnIn =>
-                $"Subtitle burned into the video frame (BurnIn mode).",
+                "Subtitle burned into the video frame (BurnIn mode).",
             StreamAction.Transcode when !source.IsTextBased =>
                 $"Bitmap subtitle ({source.Codec}) cannot be embedded in {format} — burning into video.",
             StreamAction.Transcode => $"Transcoding {source.Codec} subtitle to {target.Codec}.",

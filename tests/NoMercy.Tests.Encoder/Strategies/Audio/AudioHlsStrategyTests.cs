@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Strategies.Audio;
-
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Audio;
+
+namespace NoMercy.Tests.Encoder.Strategies.Audio;
 
 public class AudioHlsStrategyTests
 {

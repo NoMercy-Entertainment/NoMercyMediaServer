@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Execution;
-
 using NoMercy.Encoder.Execution;
+
+namespace NoMercy.Tests.Encoder.Execution;
 
 public class EncoderProcessRegistryTests
 {

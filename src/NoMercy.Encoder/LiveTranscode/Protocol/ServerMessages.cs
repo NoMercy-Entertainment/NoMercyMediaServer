@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.LiveTranscode.Protocol;
-
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.LiveTranscode.Protocol;
 
 public record SessionCreatedMessage(
     string SessionId,

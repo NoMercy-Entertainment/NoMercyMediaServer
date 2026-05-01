@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.BuildingBlocks;
-
 using NoMercy.Encoder.Analysis;
+
+namespace NoMercy.Encoder.BuildingBlocks;
 
 public interface IChapterWriter
 {

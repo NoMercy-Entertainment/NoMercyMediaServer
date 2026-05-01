@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
@@ -11,8 +9,9 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Tests.Encoder.Pipeline.Stages;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 /// <summary>
 /// Regression tests for capped-CRF rate control (Phase 3.10 fix).

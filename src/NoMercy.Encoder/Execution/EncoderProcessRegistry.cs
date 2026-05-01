@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Execution;
-
 using System.Collections.Concurrent;
+
+namespace NoMercy.Encoder.Execution;
 
 public class EncoderProcessRegistry : IEncoderProcessRegistry
 {

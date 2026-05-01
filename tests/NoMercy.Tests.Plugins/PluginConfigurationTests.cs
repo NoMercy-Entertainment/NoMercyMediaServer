@@ -1,7 +1,6 @@
 using FluentAssertions;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
-using NoMercy.Storage;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -50,7 +49,8 @@ public class PluginConfigurationTests : IDisposable
     [Fact]
     public void Constructor_NullPath_ThrowsArgumentException()
     {
-        Action act = () => new PluginConfiguration(null!, TestStorageHelper.CreateStorage(_tempDir));
+        Action act = () =>
+            new PluginConfiguration(null!, TestStorageHelper.CreateStorage(_tempDir));
 
         act.Should().Throw<ArgumentException>();
     }
@@ -98,7 +98,7 @@ public class PluginConfigurationTests : IDisposable
         loaded!.ApiKey.Should().Be("test-key-123");
         loaded.MaxRetries.Should().Be(5);
         loaded.Enabled.Should().BeFalse();
-        loaded.Tags.Should().BeEquivalentTo(["tag1", "tag2"]);
+        loaded.Tags.Should().BeEquivalentTo("tag1", "tag2");
     }
 
     [Fact]
@@ -201,7 +201,10 @@ public class PluginConfigurationTests : IDisposable
     {
         string nestedDir = Path.Combine(_tempDir, "nested", "deep");
         Directory.CreateDirectory(nestedDir);
-        PluginConfiguration nestedConfig = new(nestedDir, TestStorageHelper.CreateStorage(nestedDir));
+        PluginConfiguration nestedConfig = new(
+            nestedDir,
+            TestStorageHelper.CreateStorage(nestedDir)
+        );
 
         nestedConfig.SaveConfiguration(new TestConfig { ApiKey = "nested" });
 

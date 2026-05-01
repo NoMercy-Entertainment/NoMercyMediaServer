@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Pipeline;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
@@ -11,7 +9,6 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
-using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
@@ -19,7 +16,10 @@ using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
+using NoMercy.Tests.Encoder.Pipeline.Stages;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Pipeline;
 
 public class EncoderTests
 {
@@ -30,7 +30,7 @@ public class EncoderTests
     private readonly Mock<ICodecResolver> _codecResolver = new();
     private readonly Mock<IHardwareCapabilities> _hardware = new();
 
-    private readonly Encoder _encoder;
+    private readonly NoMercy.Encoder.Pipeline.Encoder _encoder;
 
     public EncoderTests()
     {
@@ -61,7 +61,7 @@ public class EncoderTests
             new TonemapSelector(),
             new Mock<IFfmpegCapabilities>().Object,
             new AbrLadderGenerator(),
-            new Stages.NoOpCropDetector(),
+            new NoOpCropDetector(),
             NullLogger<PlanStage>.Instance
         );
         OutputStrategyFactory outputFactory = new([
@@ -98,7 +98,7 @@ public class EncoderTests
             buildStage,
             executeStage,
             finalizeStage,
-            NullLogger<Encoder>.Instance
+            NullLogger<NoMercy.Encoder.Pipeline.Encoder>.Instance
         );
     }
 

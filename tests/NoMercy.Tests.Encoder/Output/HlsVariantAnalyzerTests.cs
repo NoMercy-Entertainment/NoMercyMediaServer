@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using NoMercy.Encoder.Output;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 /// <summary>
 /// HlsVariantAnalyzer reads a variant's .m3u8 and segment files to

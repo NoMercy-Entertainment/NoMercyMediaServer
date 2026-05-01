@@ -92,7 +92,7 @@ public class NmCardDto
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(certificationTv => new RatingClass()
+            .Select(certificationTv => new RatingClass
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
@@ -129,7 +129,7 @@ public class NmCardDto
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(certificationTv => new RatingClass()
+            .Select(certificationTv => new RatingClass
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
@@ -175,7 +175,7 @@ public class NmCardDto
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(certificationTv => new RatingClass()
+            .Select(certificationTv => new RatingClass
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
@@ -227,7 +227,7 @@ public class NmCardDto
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(certificationTv => new RatingClass()
+            .Select(certificationTv => new RatingClass
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
@@ -411,7 +411,7 @@ public class NmCardDto
                             certificationTv.Certification.Iso31661 == "US"
                             || certificationTv.Certification.Iso31661 == country
                         )
-                        .Select(certificationTv => new RatingClass()
+                        .Select(certificationTv => new RatingClass
                         {
                             Rating = certificationTv.Certification.Rating,
                             Iso31661 = certificationTv.Certification.Iso31661,
@@ -428,7 +428,7 @@ public class NmCardDto
                                     certificationMovie.Certification.Iso31661 == "US"
                                     || certificationMovie.Certification.Iso31661 == country
                                 )
-                                .Select(certificationTv => new RatingClass()
+                                .Select(certificationTv => new RatingClass
                                 {
                                     Rating = certificationTv.Certification.Rating,
                                     Iso31661 = certificationTv.Certification.Iso31661,
@@ -477,7 +477,7 @@ public class NmCardDto
                     certificationMovie.Certification.Iso31661 == "US"
                     || certificationMovie.Certification.Iso31661 == country
                 )
-                .Select(certificationTv => new RatingClass()
+                .Select(certificationTv => new RatingClass
                 {
                     Rating = certificationTv.Certification.Rating,
                     Iso31661 = certificationTv.Certification.Iso31661,
@@ -509,7 +509,7 @@ public class NmCardDto
                     certificationMovie.Certification.Iso31661 == "US"
                     || certificationMovie.Certification.Iso31661 == country
                 )
-                .Select(certificationTv => new RatingClass()
+                .Select(certificationTv => new RatingClass
                 {
                     Rating = certificationTv.Certification.Rating,
                     Iso31661 = certificationTv.Certification.Iso31661,
@@ -544,7 +544,7 @@ public class NmCardDto
                     certificationMovie.Certification.Iso31661 == "US"
                     || certificationMovie.Certification.Iso31661 == country
                 )
-                .Select(certificationTv => new RatingClass()
+                .Select(certificationTv => new RatingClass
                 {
                     Rating = certificationTv.Certification.Rating,
                     Iso31661 = certificationTv.Certification.Iso31661,

@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 public class CodecRegistryTests
 {

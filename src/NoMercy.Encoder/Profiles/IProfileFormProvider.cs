@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Profiles;
-
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.Profiles;
 
 public interface IProfileFormProvider
 {

@@ -1,14 +1,15 @@
-namespace NoMercy.Tests.Encoder.Profiles;
-
 using System.Security.Cryptography;
 using System.Text;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
+using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Signers;
 using Org.BouncyCastle.Security;
+
+namespace NoMercy.Tests.Encoder.Profiles;
 
 public class ProfileSignatureVerifierTests
 {
@@ -25,7 +26,7 @@ public class ProfileSignatureVerifierTests
     {
         Ed25519KeyPairGenerator generator = new();
         generator.Init(new Ed25519KeyGenerationParameters(new SecureRandom()));
-        Org.BouncyCastle.Crypto.AsymmetricCipherKeyPair pair = generator.GenerateKeyPair();
+        AsymmetricCipherKeyPair pair = generator.GenerateKeyPair();
         return ((Ed25519PublicKeyParameters)pair.Public, (Ed25519PrivateKeyParameters)pair.Private);
     }
 

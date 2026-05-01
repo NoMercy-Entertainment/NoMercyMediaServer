@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using I18N.DotNet;
 using Microsoft.AspNetCore.Http;
 using NoMercy.Api.Middleware;
 using NoMercy.NmSystem.Extensions;
@@ -64,12 +65,12 @@ public class LocalizationMiddlewareTests
         DefaultHttpContext context1 = new();
         context1.Request.Headers["Accept-Language"] = "de-DE";
         await middleware.InvokeAsync(context1);
-        I18N.DotNet.ILocalizer firstLocalizer = LocalizationHelper.GlobalLocalizer;
+        ILocalizer firstLocalizer = LocalizationHelper.GlobalLocalizer;
 
         DefaultHttpContext context2 = new();
         context2.Request.Headers["Accept-Language"] = "de-DE";
         await middleware.InvokeAsync(context2);
-        I18N.DotNet.ILocalizer secondLocalizer = LocalizationHelper.GlobalLocalizer;
+        ILocalizer secondLocalizer = LocalizationHelper.GlobalLocalizer;
 
         Assert.Same(firstLocalizer, secondLocalizer);
     }
@@ -82,12 +83,12 @@ public class LocalizationMiddlewareTests
         DefaultHttpContext context1 = new();
         context1.Request.Headers["Accept-Language"] = "fr-FR";
         await middleware.InvokeAsync(context1);
-        I18N.DotNet.ILocalizer frLocalizer = LocalizationHelper.GlobalLocalizer;
+        ILocalizer frLocalizer = LocalizationHelper.GlobalLocalizer;
 
         DefaultHttpContext context2 = new();
         context2.Request.Headers["Accept-Language"] = "es-ES";
         await middleware.InvokeAsync(context2);
-        I18N.DotNet.ILocalizer esLocalizer = LocalizationHelper.GlobalLocalizer;
+        ILocalizer esLocalizer = LocalizationHelper.GlobalLocalizer;
 
         Assert.NotSame(frLocalizer, esLocalizer);
     }

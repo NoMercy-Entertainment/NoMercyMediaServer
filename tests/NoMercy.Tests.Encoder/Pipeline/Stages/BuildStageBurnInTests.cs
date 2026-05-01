@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
@@ -14,6 +12,8 @@ using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
 public class BuildStageBurnInTests
 {

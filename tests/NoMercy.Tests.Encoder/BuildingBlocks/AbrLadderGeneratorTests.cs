@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.BuildingBlocks;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.BuildingBlocks;
 
 public class AbrLadderGeneratorTests
 {

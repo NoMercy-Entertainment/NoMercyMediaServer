@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Startup;
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Startup;
+
+namespace NoMercy.Tests.Encoder.Startup;
 
 public class HardwareInitializationServiceTests
 {

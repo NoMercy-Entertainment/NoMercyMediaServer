@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Subtitles;
-
 using NoMercy.Encoder.Subtitles;
+
+namespace NoMercy.Tests.Encoder.Subtitles;
 
 /// <summary>
 /// PgsBurnInFilterBuilder produces a <c>-filter_complex</c> overlay chain

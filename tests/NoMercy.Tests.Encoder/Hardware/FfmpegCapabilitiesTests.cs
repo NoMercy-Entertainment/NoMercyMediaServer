@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Hardware;
-
 using Moq;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
+
+namespace NoMercy.Tests.Encoder.Hardware;
 
 public class FfmpegCapabilitiesTests
 {
@@ -85,7 +85,7 @@ public class FfmpegCapabilitiesTests
                 r.RunAsync(
                     "ffmpeg",
                     It.Is<string[]>(args => args.Length == 1 && args[0] == flag),
-                    (string?)null,
+                    null,
                     It.IsAny<CancellationToken>()
                 )
             )

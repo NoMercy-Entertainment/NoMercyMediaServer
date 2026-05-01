@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Jobs;
-
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Jobs;
 
 /// <summary>
 /// Persists job checkpoints as JSON files next to the encode output.

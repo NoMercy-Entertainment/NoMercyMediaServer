@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.PostProcess;
-
 using System.Text;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.PostProcess;
 
 public class ChapterWriter(IStorage storage) : IChapterWriter
 {

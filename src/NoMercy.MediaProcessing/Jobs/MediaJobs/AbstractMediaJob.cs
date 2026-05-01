@@ -23,7 +23,7 @@ public abstract class AbstractMediaJob : IShouldQueue, IJobStorageInjector
     public IStorageFactory StorageFactory { get; set; } = null!;
 
     [JsonIgnore]
-    public IStorageBackend StorageBackend { get; set; } = null!;
+    public IStorageDriver StorageDriver { get; set; } = null!;
 
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
@@ -33,7 +33,7 @@ public abstract class AbstractMediaJob : IShouldQueue, IJobStorageInjector
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
-        StorageBackend = serviceProvider.GetRequiredService<IStorageBackend>();
+        StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
     }
 
     public void Dispose() { }

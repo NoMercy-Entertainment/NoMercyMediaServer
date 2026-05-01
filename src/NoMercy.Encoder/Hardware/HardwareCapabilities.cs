@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Hardware;
-
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.Hardware;
 
 public class HardwareCapabilities(IReadOnlyList<GpuDevice> Gpus, int CpuCores)
     : IHardwareCapabilities

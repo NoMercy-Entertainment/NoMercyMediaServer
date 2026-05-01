@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.ContentAnalysis;
-
 using NoMercy.Encoder.Subtitles;
+
+namespace NoMercy.Tests.Encoder.ContentAnalysis;
 
 /// <summary>
 /// Unit tests for <see cref="OcrImagePreprocessor.PreprocessForOcr"/>.

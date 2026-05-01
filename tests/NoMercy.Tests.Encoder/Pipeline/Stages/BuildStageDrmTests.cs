@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks.Drm;
@@ -12,6 +10,8 @@ using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
 public class BuildStageDrmTests
 {

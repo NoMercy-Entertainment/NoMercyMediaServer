@@ -1,4 +1,5 @@
-using System.Net;
+﻿using System.Net;
+using System.Net.Sockets;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -42,7 +43,7 @@ public class EndToEndSetupFlowTests : IAsyncLifetime
 
     private static int GetAvailablePort()
     {
-        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
@@ -215,7 +216,7 @@ public class EndToEndSseFlowTests : IAsyncLifetime
 
     private static int GetAvailablePort()
     {
-        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
@@ -392,7 +393,7 @@ public class EndToEndMiddlewareFlowTests
         dbContext.Database.OpenConnection();
         dbContext.Database.EnsureCreated();
 
-        AuthManager authManager = new(dbContext, new SystemIoStorageBackend());
+        AuthManager authManager = new(dbContext, new LocalStorageDriver());
         return new(state, authManager);
     }
 
@@ -548,7 +549,7 @@ public class EndToEndErrorRecoveryTests : IAsyncLifetime
 
     private static int GetAvailablePort()
     {
-        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();

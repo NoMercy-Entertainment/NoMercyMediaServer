@@ -1,14 +1,16 @@
-using NoMercy.Storage;
+﻿using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Plugins;
 
 internal static class TestStorageHelper
 {
-    public static IStorageBackend CreateBackend() => new SystemIoStorageBackend();
+    public static IStorageDriver CreateBackend() => new LocalStorageDriver();
 
     public static IStorage CreateStorage(string rootPath)
     {
-        IStorageBackend backend = CreateBackend();
-        return new LocalStorage(backend, new StoragePathGuard([rootPath], backend));
+        IStorageDriver driver = CreateBackend();
+        return new LocalStorage(driver, new StoragePathGuard([rootPath], driver));
     }
 }

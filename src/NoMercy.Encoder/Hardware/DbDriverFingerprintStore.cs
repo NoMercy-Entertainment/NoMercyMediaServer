@@ -1,5 +1,3 @@
-namespace NoMercy.Encoder.Hardware;
-
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -8,6 +6,8 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Encoder.Composition;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Hardware;
 
 /// <summary>
 /// Persists the driver fingerprint hash in the application database

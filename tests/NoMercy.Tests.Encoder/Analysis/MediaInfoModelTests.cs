@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Analysis;
-
 using NoMercy.Encoder.Analysis;
+
+namespace NoMercy.Tests.Encoder.Analysis;
 
 public class MediaInfoModelTests
 {

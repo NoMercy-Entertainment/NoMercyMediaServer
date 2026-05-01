@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 public class Av1DefinitionTests
 {
@@ -86,7 +86,7 @@ public class Av1DefinitionTests
         EncoderInfo nvenc = _definition.Encoders.Single(e => e.FfmpegName == "av1_nvenc");
 
         nvenc.RequiredVendor.Should().Be(GpuVendor.Nvidia);
-        nvenc.Presets.Should().BeEquivalentTo(["p1", "p2", "p3", "p4", "p5", "p6", "p7"]);
+        nvenc.Presets.Should().BeEquivalentTo("p1", "p2", "p3", "p4", "p5", "p6", "p7");
         // AV1 NVENC: main profile only
         nvenc.Profiles.Should().ContainSingle(p => p == "main");
         nvenc.QualityRange.Min.Should().Be(0);
@@ -122,7 +122,7 @@ public class Av1DefinitionTests
 
         qsv.RequiredVendor.Should().Be(GpuVendor.Intel);
         qsv.Presets.Should()
-            .BeEquivalentTo(["veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"]);
+            .BeEquivalentTo("veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow");
         qsv.Profiles.Should().Contain("main");
         qsv.QualityRange.Min.Should().Be(1);
         qsv.QualityRange.Max.Should().Be(51);

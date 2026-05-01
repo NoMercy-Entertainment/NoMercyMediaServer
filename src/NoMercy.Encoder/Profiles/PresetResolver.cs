@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Profiles;
-
 using Newtonsoft.Json;
+
+namespace NoMercy.Encoder.Profiles;
 
 public record PresetResolveRequest(string Name, string ProfileJson, string? ParentName = null);
 

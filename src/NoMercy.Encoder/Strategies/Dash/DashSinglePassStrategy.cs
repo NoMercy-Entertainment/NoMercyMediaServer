@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Strategies.Dash;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Strategies.Dash;
 
 /// <summary>
 /// DASH single-pass output. Delegates to the shared pipeline — the

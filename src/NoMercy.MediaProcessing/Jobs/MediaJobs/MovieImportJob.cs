@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------------------------------------------------
+﻿﻿// ---------------------------------------------------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -29,15 +29,15 @@ public class MovieImportJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        FileRepository fileRepository = new(context, StorageBackend);
-        FileManager fileManager = new(fileRepository, StorageFactory, StorageBackend);
+        FileRepository fileRepository = new(context, StorageDriver);
+        FileManager fileManager = new(fileRepository, StorageFactory, StorageDriver);
 
         MovieRepository movieRepository = new(context);
         MovieManager movieManager = new(
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            StorageBackend
+            StorageDriver
         );
 
         Library? movieLibrary = await context

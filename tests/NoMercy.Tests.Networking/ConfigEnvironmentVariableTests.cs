@@ -1,3 +1,4 @@
+using System.Reflection;
 using NoMercy.NmSystem.Information;
 using Xunit;
 
@@ -15,7 +16,7 @@ public class ConfigEnvironmentVariableTests
     {
         // TokenClientSecret property should no longer exist — the Keycloak client
         // is now a public client using PKCE, so no client secret is needed.
-        System.Reflection.PropertyInfo? prop = typeof(Config).GetProperty("TokenClientSecret");
+        PropertyInfo? prop = typeof(Config).GetProperty("TokenClientSecret");
         Assert.Null(prop);
     }
 
@@ -46,7 +47,7 @@ public class ConfigEnvironmentVariableTests
     [Fact]
     public void AuthBaseDevUrl_Removed()
     {
-        System.Reflection.PropertyInfo? devUrlProp = typeof(Config).GetProperty("AuthBaseDevUrl");
+        PropertyInfo? devUrlProp = typeof(Config).GetProperty("AuthBaseDevUrl");
         Assert.Null(devUrlProp);
     }
 }

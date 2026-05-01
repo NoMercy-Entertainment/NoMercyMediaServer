@@ -1,5 +1,3 @@
-namespace NoMercy.Encoder.Output;
-
 using System.Text;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
@@ -7,6 +5,8 @@ using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Output;
 
 public class Mp4OutputStrategy(IStorage storage, IFfmpegExecutor? ffmpegExecutor = null)
     : IOutputStrategy

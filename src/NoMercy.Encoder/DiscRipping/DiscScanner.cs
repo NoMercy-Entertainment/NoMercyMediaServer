@@ -1,11 +1,13 @@
-namespace NoMercy.Encoder.DiscRipping;
-
+using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Infrastructure;
+
+namespace NoMercy.Encoder.DiscRipping;
 
 /// <summary>
 /// Enumerates titles on a Blu-ray or DVD by invoking FFprobe against the
@@ -129,8 +131,8 @@ public class DiscScanner(
                 format.TryGetProperty("duration", out JsonElement durationElement)
                 && double.TryParse(
                     durationElement.GetString(),
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
                     out double seconds
                 )
             )
@@ -267,8 +269,8 @@ public class DiscScanner(
             chapter.TryGetProperty("start_time", out JsonElement s)
             && double.TryParse(
                 s.GetString(),
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
                 out double startParsed
             )
         )
@@ -279,8 +281,8 @@ public class DiscScanner(
             chapter.TryGetProperty("end_time", out JsonElement e)
             && double.TryParse(
                 e.GetString(),
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
                 out double endParsed
             )
         )
@@ -354,10 +356,7 @@ public class DiscScanner(
         foreach (string line in stderr.Split('\n'))
         {
             // Look for a line containing a 32-char hex string — the AACS volume ID.
-            System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(
-                line,
-                @"[0-9A-Fa-f]{32}"
-            );
+            Match m = Regex.Match(line, @"[0-9A-Fa-f]{32}");
             if (m.Success)
                 return m.Value.ToUpperInvariant();
         }

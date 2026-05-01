@@ -1,10 +1,10 @@
-namespace NoMercy.Encoder.Strategies.Mp4;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Strategies.Mp4;
 
 /// <summary>
 /// MP4 2-pass strategy — pass 1 / pass 2 pattern produces a single faststart

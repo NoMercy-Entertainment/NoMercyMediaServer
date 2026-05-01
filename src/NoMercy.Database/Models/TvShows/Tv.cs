@@ -131,7 +131,7 @@ public class Tv : ColorPaletteTimeStamps, IHasLibrary
     public ICollection<KeywordTv> KeywordTvs { get; set; } = [];
 
     [JsonProperty("medias")]
-    public ICollection<Models.Media.Media> Media { get; set; } = [];
+    public ICollection<Media.Media> Media { get; set; } = [];
 
     [JsonProperty("images")]
     public ICollection<Image> Images { get; set; } = [];

@@ -1,13 +1,14 @@
-namespace NoMercy.Tests.Encoder.Orchestration;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.Orchestration;
 
 public class EncodingOrchestratorTests
 {
@@ -88,10 +89,7 @@ public class EncodingOrchestratorTests
 
         await orchestrator.EncodeAsync(request, progress.Object);
 
-        progress.Verify(
-            p => p.OnError(It.IsAny<NoMercy.Encoder.Errors.EncodingError>()),
-            Times.Once
-        );
+        progress.Verify(p => p.OnError(It.IsAny<EncodingError>()), Times.Once);
     }
 
     [Fact]

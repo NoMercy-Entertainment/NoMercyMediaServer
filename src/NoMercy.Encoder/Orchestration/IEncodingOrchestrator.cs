@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Orchestration;
-
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Orchestration;
 
 /// <summary>
 /// Top-level entry point for an encode job. Resolves the strategy matching

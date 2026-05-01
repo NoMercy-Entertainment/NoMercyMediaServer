@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Distribution;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Jobs;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Dispatches tasks across registered remote workers using

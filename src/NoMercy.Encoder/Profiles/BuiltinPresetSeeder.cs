@@ -1,11 +1,11 @@
-namespace NoMercy.Encoder.Profiles;
-
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+
+namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
 /// Hosted service that upserts the 12 built-in encoding presets into the

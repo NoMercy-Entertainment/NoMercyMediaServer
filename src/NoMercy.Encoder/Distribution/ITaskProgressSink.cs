@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Distribution;
-
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Receives per-task progress events while a task is executing. Remote

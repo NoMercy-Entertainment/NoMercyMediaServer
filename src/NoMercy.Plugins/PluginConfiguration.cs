@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Storage;
@@ -37,7 +38,7 @@ public class PluginConfiguration : IPluginConfiguration
             }
 
             byte[] bytes = _storage.Read(_configFilePath);
-            string json = System.Text.Encoding.UTF8.GetString(bytes);
+            string json = Encoding.UTF8.GetString(bytes);
             return JsonSerializer.Deserialize<T>(json, JsonOptions);
         }
     }
@@ -68,7 +69,7 @@ public class PluginConfiguration : IPluginConfiguration
             }
 
             string json = JsonSerializer.Serialize(configuration, JsonOptions);
-            _storage.Write(_configFilePath, System.Text.Encoding.UTF8.GetBytes(json));
+            _storage.Write(_configFilePath, Encoding.UTF8.GetBytes(json));
         }
     }
 

@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs.Definitions;
+
+namespace NoMercy.Encoder.Codecs;
 
 public class CodecRegistry
 {

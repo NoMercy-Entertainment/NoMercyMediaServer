@@ -1,5 +1,3 @@
-namespace NoMercy.Encoder.Pipeline;
-
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
@@ -9,6 +7,8 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Pipeline;
 
 public class Encoder(
     AnalyzeStage analyzeStage,

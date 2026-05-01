@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Composition;
-
 using NoMercy.Encoder.Composition;
+
+namespace NoMercy.Tests.Encoder.Composition;
 
 /// <summary>
 /// EncoderOptions is the DI-registered config object every encoder

@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Hardware;
-
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -7,6 +5,8 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Hardware;
 
 public class PlatformHardwareDetectorTests
 {

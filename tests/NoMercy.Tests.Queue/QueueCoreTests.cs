@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -484,7 +485,7 @@ public class QueueCoreTests
     // Test implementations
     // =========================================================================
 
-    private sealed class TestJob : NoMercyQueue.Core.Interfaces.IShouldQueue
+    private sealed class TestJob : IShouldQueue
     {
         public string QueueName => "test-queue";
         public int Priority => 5;
@@ -512,10 +513,9 @@ public class QueueCoreTests
 
     private sealed class TestSerializer : IJobSerializer
     {
-        public string Serialize(object job) => System.Text.Json.JsonSerializer.Serialize(job);
+        public string Serialize(object job) => JsonSerializer.Serialize(job);
 
-        public T Deserialize<T>(string data) =>
-            System.Text.Json.JsonSerializer.Deserialize<T>(data)!;
+        public T Deserialize<T>(string data) => JsonSerializer.Deserialize<T>(data)!;
     }
 
     private sealed class SerializableData

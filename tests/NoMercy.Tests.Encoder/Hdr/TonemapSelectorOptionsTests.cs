@@ -1,9 +1,10 @@
-namespace NoMercy.Tests.Encoder.Hdr;
-
 using Moq;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.Hdr;
+
 using HdrOptions = NoMercy.Encoder.Profiles.HdrOptions;
 
 /// <summary>

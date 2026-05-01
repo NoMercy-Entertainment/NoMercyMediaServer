@@ -1,11 +1,11 @@
-namespace NoMercy.Tests.Encoder.BuildingBlocks.Drm;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.BuildingBlocks.Drm;
 
 public class CencDrmProcessorTests
 {

@@ -27,7 +27,7 @@ public class TmdbMovieClientTests : TmdbTestBase
     public void Constructor_WithZeroId_SetsIdToZero()
     {
         // Arrange & Act
-        using TmdbMovieClient client = new(0);
+        using TmdbMovieClient client = new();
 
         // Assert
         client.Id.Should().Be(0);

@@ -36,7 +36,7 @@ public class TvdbBaseClient : IDisposable
         Id = id;
     }
 
-    private static Helpers.Queue? _queue;
+    private static Queue? _queue;
 
     private async Task Login()
     {
@@ -63,7 +63,7 @@ public class TvdbBaseClient : IDisposable
         return false;
     }
 
-    protected static Helpers.Queue GetQueue()
+    protected static Queue GetQueue()
     {
         return _queue ??= new(
             new()

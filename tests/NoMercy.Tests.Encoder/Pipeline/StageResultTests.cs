@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Pipeline;
-
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Tests.Encoder.Pipeline;
 
 public class StageResultTests
 {

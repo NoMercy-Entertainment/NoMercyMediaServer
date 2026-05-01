@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -9,6 +7,8 @@ using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 /// <summary>
 /// End-to-end protocol test. Runs a simulated coordinator + worker in

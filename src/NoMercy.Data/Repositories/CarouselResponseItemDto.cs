@@ -168,7 +168,7 @@ public record CarouselResponseItemDto
     public CarouselResponseItemDto(ArtistCardDto artist)
     {
         ColorPalette = !string.IsNullOrEmpty(artist.ColorPalette)
-            ? Newtonsoft.Json.JsonConvert.DeserializeObject<IColorPalettes>(artist.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(artist.ColorPalette)
             : null;
         Cover = artist.Cover ?? artist.ThumbImagePath;
         Cover = Cover is not null
@@ -188,7 +188,7 @@ public record CarouselResponseItemDto
     public CarouselResponseItemDto(AlbumCardDto album)
     {
         ColorPalette = !string.IsNullOrEmpty(album.ColorPalette)
-            ? Newtonsoft.Json.JsonConvert.DeserializeObject<IColorPalettes>(album.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(album.ColorPalette)
             : null;
         Cover = album.Cover is not null
             ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
@@ -207,7 +207,7 @@ public record CarouselResponseItemDto
     public CarouselResponseItemDto(PlaylistCardDto playlist)
     {
         ColorPalette = !string.IsNullOrEmpty(playlist.ColorPalette)
-            ? Newtonsoft.Json.JsonConvert.DeserializeObject<IColorPalettes>(playlist.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(playlist.ColorPalette)
             : null;
         Cover = playlist.Cover is not null
             ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString()

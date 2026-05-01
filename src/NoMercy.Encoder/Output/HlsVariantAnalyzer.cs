@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Output;
-
 using System.Globalization;
 using System.Text;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Output;
 
 /// <summary>
 /// Parses an HLS variant playlist (.m3u8) and its segment files

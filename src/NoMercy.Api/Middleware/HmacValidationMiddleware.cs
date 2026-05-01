@@ -1,11 +1,12 @@
-namespace NoMercy.Api.Middleware;
-
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
+
+namespace NoMercy.Api.Middleware;
 
 /// <summary>
 /// Validates HMAC signatures on inbound requests routed to
@@ -101,10 +102,8 @@ public class HmacValidationMiddleware(
         }
 
         if (
-            !context.Request.Headers.TryGetValue(
-                "X-NoMercy-Timestamp",
-                out Microsoft.Extensions.Primitives.StringValues tsHeader
-            ) || !long.TryParse(tsHeader.ToString(), out long timestamp)
+            !context.Request.Headers.TryGetValue("X-NoMercy-Timestamp", out StringValues tsHeader)
+            || !long.TryParse(tsHeader.ToString(), out long timestamp)
         )
         {
             await WriteHmacError(
@@ -116,10 +115,8 @@ public class HmacValidationMiddleware(
         }
 
         if (
-            !context.Request.Headers.TryGetValue(
-                "X-NoMercy-Signature",
-                out Microsoft.Extensions.Primitives.StringValues sigHeader
-            ) || string.IsNullOrWhiteSpace(sigHeader.ToString())
+            !context.Request.Headers.TryGetValue("X-NoMercy-Signature", out StringValues sigHeader)
+            || string.IsNullOrWhiteSpace(sigHeader.ToString())
         )
         {
             await WriteHmacError(

@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
@@ -10,6 +8,8 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
 public class PlanStageMapLabelTests
 {
@@ -122,7 +122,7 @@ public class PlanStageMapLabelTests
     public async Task BuildOutputPlan_SingleVideoSameResolution_UsesFilterLabel()
     {
         // Profile output exactly matches source — previously this used "0:v:0", now must use "[v0]"
-        MediaInfo media = BuildMediaInfo(1920, 1080);
+        MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "SameRes",
@@ -173,7 +173,7 @@ public class PlanStageMapLabelTests
     [Fact]
     public async Task BuildOutputPlan_MultipleVideos_UsesIncrementingLabels()
     {
-        MediaInfo media = BuildMediaInfo(1920, 1080);
+        MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "ABR",

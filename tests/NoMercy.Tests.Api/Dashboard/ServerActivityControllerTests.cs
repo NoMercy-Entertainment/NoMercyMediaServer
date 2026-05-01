@@ -1,10 +1,8 @@
 using System.Net;
-using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.NmSystem.Information;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 

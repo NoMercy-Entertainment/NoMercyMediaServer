@@ -1,12 +1,13 @@
-namespace NoMercy.Tests.Encoder.Jobs;
-
+using System.Text;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Profiles;
 
+namespace NoMercy.Tests.Encoder.Jobs;
+
 public class JobSerializerTests
 {
-    private readonly byte[] _signingKey = System.Text.Encoding.UTF8.GetBytes(
+    private readonly byte[] _signingKey = Encoding.UTF8.GetBytes(
         "test-signing-key-32-bytes-long!!"
     );
     private readonly JobSerializer _serializer = new();
@@ -44,7 +45,7 @@ public class JobSerializerTests
         EncodingJob job = CreateTestJob();
         string serialized = _serializer.Serialize(job, _signingKey);
 
-        byte[] wrongKey = System.Text.Encoding.UTF8.GetBytes("wrong-signing-key-32-bytes-long!");
+        byte[] wrongKey = Encoding.UTF8.GetBytes("wrong-signing-key-32-bytes-long!");
         EncodingJob? result = _serializer.Deserialize(serialized, wrongKey);
 
         result.Should().BeNull();

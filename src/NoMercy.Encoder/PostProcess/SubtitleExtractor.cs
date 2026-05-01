@@ -1,10 +1,10 @@
-namespace NoMercy.Encoder.PostProcess;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Subtitles;
+
+namespace NoMercy.Encoder.PostProcess;
 
 public class SubtitleExtractor : ISubtitleExtractor
 {

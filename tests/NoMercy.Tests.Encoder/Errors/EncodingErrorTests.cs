@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Errors;
-
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Tests.Encoder.Errors;
 
 public class EncodingErrorTests
 {

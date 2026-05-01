@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.DiscRipping;
-
 using NoMercy.Encoder.DiscRipping;
+
+namespace NoMercy.Tests.Encoder.DiscRipping;
 
 /// <summary>
 /// Tests the real <see cref="DiscScanner.Parse"/> JSON pipeline against

@@ -1,11 +1,12 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 public class LocalWorkerDispatcherTests
 {
@@ -18,7 +19,7 @@ public class LocalWorkerDispatcherTests
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
-                    It.IsAny<Action<NoMercy.Encoder.Progress.EncodingProgress>>(),
+                    It.IsAny<Action<EncodingProgress>>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
@@ -47,7 +48,7 @@ public class LocalWorkerDispatcherTests
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
-                    It.IsAny<Action<NoMercy.Encoder.Progress.EncodingProgress>>(),
+                    It.IsAny<Action<EncodingProgress>>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 ),
@@ -65,7 +66,7 @@ public class LocalWorkerDispatcherTests
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
-                    It.IsAny<Action<NoMercy.Encoder.Progress.EncodingProgress>>(),
+                    It.IsAny<Action<EncodingProgress>>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
@@ -74,7 +75,7 @@ public class LocalWorkerDispatcherTests
                 async (
                     FfmpegCommand _,
                     TimeSpan _,
-                    Action<NoMercy.Encoder.Progress.EncodingProgress>? _,
+                    Action<EncodingProgress>? _,
                     string? corrId,
                     CancellationToken _
                 ) =>
@@ -110,7 +111,7 @@ public class LocalWorkerDispatcherTests
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
-                    It.IsAny<Action<NoMercy.Encoder.Progress.EncodingProgress>>(),
+                    It.IsAny<Action<EncodingProgress>>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
@@ -158,7 +159,7 @@ public class LocalWorkerDispatcherTests
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
-                    It.IsAny<Action<NoMercy.Encoder.Progress.EncodingProgress>>(),
+                    It.IsAny<Action<EncodingProgress>>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )

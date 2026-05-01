@@ -44,7 +44,7 @@ internal static partial class LogsCommand
         command.Options.Add(typeOption);
 
         command.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 int tail = parseResult.GetValue(tailOption);
@@ -78,7 +78,7 @@ internal static partial class LogsCommand
                 try
                 {
                     using HttpResponseMessage response = await ipc.GetStreamAsync(
-                        $"/manage/logs/stream?backfill=0",
+                        "/manage/logs/stream?backfill=0",
                         ct
                     );
 

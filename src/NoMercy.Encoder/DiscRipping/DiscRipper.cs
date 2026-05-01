@@ -1,11 +1,10 @@
-namespace NoMercy.Encoder.DiscRipping;
-
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
-using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.DiscRipping;
 
 /// <summary>
 /// Rips optical-disc titles to intermediate MKV files on disk. Each title
@@ -156,14 +155,7 @@ public class DiscRipper(
             // Surface structured AACS / BD+ errors when the rip fails mid-stream.
             if (request.DrivePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
             {
-                try
-                {
-                    DiscScanner.ClassifyBluRayStderr(request.DrivePath, result.StdErr);
-                }
-                catch (EncoderRuntimeException)
-                {
-                    throw; // Structured error — let it propagate to the caller.
-                }
+                DiscScanner.ClassifyBluRayStderr(request.DrivePath, result.StdErr);
             }
 
             return new(

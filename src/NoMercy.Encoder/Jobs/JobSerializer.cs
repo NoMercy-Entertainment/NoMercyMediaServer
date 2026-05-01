@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Jobs;
-
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
+
+namespace NoMercy.Encoder.Jobs;
 
 public class JobSerializer : IJobSerializer
 {

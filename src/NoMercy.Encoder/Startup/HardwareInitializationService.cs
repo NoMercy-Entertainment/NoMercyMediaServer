@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Startup;
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Encoder.Startup;
 
 public class HardwareInitializationService(
     IHardwareDetector hardwareDetector,

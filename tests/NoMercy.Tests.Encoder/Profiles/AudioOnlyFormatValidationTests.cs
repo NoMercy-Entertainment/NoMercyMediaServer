@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Profiles;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Profiles;
 
 /// <summary>
 /// Audio-only single-file containers (Mp3 / Flac / Ogg) have tight codec

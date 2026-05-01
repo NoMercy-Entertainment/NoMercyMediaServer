@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 using Moq;
 using NoMercy.Api.Controllers.V1.Encoder;
 using NoMercy.Api.Hubs;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Progress;
 using Xunit;
 
@@ -75,9 +76,7 @@ public class WhisperProgressObserverTests
         observer.OnStageStarted("stage");
         observer.OnStageCompleted("stage", TimeSpan.Zero);
         observer.OnCompleted();
-        observer.OnError(
-            new(NoMercy.Encoder.Errors.EncodingErrorKind.Unknown, "msg", null, null, false)
-        );
+        observer.OnError(new(EncodingErrorKind.Unknown, "msg", null, null, false));
         observer.OnPlanResolved([], [], [], false, false);
     }
 }

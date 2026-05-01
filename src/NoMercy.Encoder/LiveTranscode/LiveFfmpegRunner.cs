@@ -1,12 +1,13 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using System.Globalization;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 public class LiveFfmpegRunner(
     IProcessRunner processRunner,
@@ -305,7 +306,7 @@ public class LiveFfmpegRunner(
         try
         {
             using Stream stream = storage.OpenRead(playlistPath);
-            using StreamReader reader = new(stream, System.Text.Encoding.UTF8);
+            using StreamReader reader = new(stream, Encoding.UTF8);
             List<string> lineList = [];
             while (reader.ReadLine() is string rawLine)
                 lineList.Add(rawLine);

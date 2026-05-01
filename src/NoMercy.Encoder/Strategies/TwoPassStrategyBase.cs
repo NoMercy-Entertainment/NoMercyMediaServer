@@ -1,11 +1,11 @@
-namespace NoMercy.Encoder.Strategies;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Strategies;
 
 /// <summary>
 /// Shared 2-pass orchestration: pass 1 video-only analysis → checkpoint →
@@ -82,11 +82,7 @@ public abstract class TwoPassStrategyBase(
                 return;
 
             foreach (
-                NoMercy.Storage.StorageEntry entry in stor.List(
-                        outputDirectory,
-                        "*",
-                        recursive: true
-                    )
+                StorageEntry entry in stor.List(outputDirectory, "*", recursive: true)
                     .Where(e => !e.IsDirectory)
             )
             {

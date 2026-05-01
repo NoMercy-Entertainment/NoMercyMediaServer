@@ -11,7 +11,7 @@ internal static class AutoStartCommand
         Command statusCmd = new("status") { Description = "Check if autostart is enabled" };
 
         statusCmd.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
@@ -34,7 +34,7 @@ internal static class AutoStartCommand
         Command enableCmd = new("enable") { Description = "Enable autostart" };
 
         enableCmd.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 return await SetAutoStart(parseResult, pipeOption, true, ct);
             }
@@ -43,7 +43,7 @@ internal static class AutoStartCommand
         Command disableCmd = new("disable") { Description = "Disable autostart" };
 
         disableCmd.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 return await SetAutoStart(parseResult, pipeOption, false, ct);
             }

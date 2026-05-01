@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
@@ -396,8 +397,6 @@ public class TrayIconManager
 
     private static void OpenUrl(string url)
     {
-        System.Diagnostics.Process.Start(
-            new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }
-        );
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 }

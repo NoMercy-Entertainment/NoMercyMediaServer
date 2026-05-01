@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.DiscRipping;
-
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.DiscRipping;
 
 /// <summary>
 /// Thrown by <see cref="DiscRipper"/> when a rip is requested for a drive

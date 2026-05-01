@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.BuildingBlocks.Drm;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.BuildingBlocks.Drm;
 
 /// <summary>
 /// CENC raw-key packaging via shaka-packager.
@@ -116,7 +116,7 @@ public class CencDrmProcessor(
             string.Join(" ", args)
         );
 
-        Infrastructure.ProcessResult result = await processRunner
+        ProcessResult result = await processRunner
             .RunAsync(
                 packagerPath,
                 [.. args],

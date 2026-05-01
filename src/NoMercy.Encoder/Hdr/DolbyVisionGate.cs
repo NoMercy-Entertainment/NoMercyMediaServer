@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Hdr;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.Hdr;
 
 /// <summary>
 /// Result of evaluating whether a Dolby Vision RPU can survive into the output.

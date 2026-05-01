@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using NoMercy.Encoder.Output;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 /// <summary>
 /// TemplateResolver drives the output file paths. Every variant / audio /

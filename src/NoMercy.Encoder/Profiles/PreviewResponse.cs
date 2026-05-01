@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Profiles;
-
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
 /// Full preview payload returned by <c>POST /api/v1/encoder/profiles/{id}/preview</c>.

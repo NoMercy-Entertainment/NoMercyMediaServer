@@ -1,4 +1,4 @@
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -40,7 +40,7 @@ public class LibrariesController(
     LanguageRepository languageRepository,
     IDbContextFactory<MediaContext> mediaContextFactory,
     IActivityLogger activityLogger,
-    IStorageBackend storageBackend,
+    IStorageDriver storageDriver,
     IStorageFactory storageFactory
 ) : BaseController
 {
@@ -829,8 +829,8 @@ public class LibrariesController(
         {
             await using MediaContext mediaContext = new();
 
-            FileRepository fileRepository = new(mediaContext, storageBackend);
-            FileManager fileManager = new(fileRepository, storageFactory, storageBackend);
+            FileRepository fileRepository = new(mediaContext, storageDriver);
+            FileManager fileManager = new(fileRepository, storageFactory, storageDriver);
 
             await fileManager.MoveToLibraryFolder(request.Id, folder);
 

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -27,7 +27,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 public class SpecialsController(
     MediaContext mediaContext,
     IDbContextFactory<MediaContext> contextFactory,
-    IStorageBackend storageBackend
+    IStorageDriver storageDriver
 ) : BaseController
 {
     [HttpGet]
@@ -342,7 +342,7 @@ public class SpecialsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan the special");
 
-        LibraryLogic specialLogic = new(id, mediaContext, storageBackend);
+        LibraryLogic specialLogic = new(id, mediaContext, storageDriver);
 
         if (await specialLogic.Process())
             return Ok(

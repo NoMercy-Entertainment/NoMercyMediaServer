@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Startup;
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Encoder.Startup;
 
 /// <summary>
 /// Runs hardware benchmark calibration lazily, never during boot or during

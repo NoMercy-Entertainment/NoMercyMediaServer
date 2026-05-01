@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Profiles;
-
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Profiles;
 
 /// <summary>
 /// V1 audio profiles don't store a bitrate — ProfileMapper has to pick one.

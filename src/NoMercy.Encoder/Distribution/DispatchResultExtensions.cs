@@ -1,6 +1,7 @@
-namespace NoMercy.Encoder.Distribution;
-
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Projection helpers that map between <see cref="DispatchResult"/> (the
@@ -28,19 +29,19 @@ public static class DispatchResultExtensions
         bool succeeded = dispatch.Success;
         string status = succeeded ? "success" : "failed";
 
-        NoMercy.Encoder.Errors.EncoderErrorShape? enrichedError = null;
-        NoMercy.Encoder.Errors.EncodingError? legacyError = null;
+        EncoderErrorShape? enrichedError = null;
+        EncodingError? legacyError = null;
 
         if (!succeeded && dispatch.Error is not null)
         {
-            enrichedError = new NoMercy.Encoder.Errors.EncoderErrorShape(
-                Id: NoMercy.Encoder.Errors.EncoderRuleId.EncoderInitFailed,
+            enrichedError = new EncoderErrorShape(
+                Id: EncoderRuleId.EncoderInitFailed,
                 Message: dispatch.Error,
                 Suggestion: null,
                 Details: dispatch.WorkerId is null ? null : new { Worker = dispatch.WorkerId }
             );
-            legacyError = new NoMercy.Encoder.Errors.EncodingError(
-                Kind: NoMercy.Encoder.Errors.EncodingErrorKind.Unknown,
+            legacyError = new EncodingError(
+                Kind: EncodingErrorKind.Unknown,
                 Message: dispatch.Error,
                 FfmpegStderr: null,
                 StageName: dispatch.WorkerId ?? "remote",

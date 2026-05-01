@@ -36,9 +36,9 @@ public class TmdbBaseClient : IDisposable
         Id = id;
     }
 
-    private static Helpers.Queue? _queue;
+    private static Queue? _queue;
 
-    protected static Helpers.Queue GetQueue()
+    protected static Queue GetQueue()
     {
         return _queue ??= new(
             new()

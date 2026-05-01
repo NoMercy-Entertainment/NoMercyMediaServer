@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Progress;
-
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.Progress;
 
 public interface IProgressObserver
 {

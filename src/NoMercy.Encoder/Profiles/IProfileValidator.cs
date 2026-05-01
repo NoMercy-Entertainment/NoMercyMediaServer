@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Profiles;
-
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.Profiles;
 
 public interface IProfileValidator
 {

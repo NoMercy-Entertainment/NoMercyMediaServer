@@ -126,7 +126,7 @@ public class SqliteQueueContext : IQueueContext
             .ToList()
             .Select(e => new QueueJobModel
             {
-                Id = (int)e.Id,
+                Id = e.Id,
                 Priority = e.Priority,
                 Queue = e.Queue,
                 Payload = e.Payload,

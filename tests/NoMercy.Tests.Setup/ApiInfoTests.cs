@@ -1,3 +1,4 @@
+using System.Reflection;
 using Newtonsoft.Json;
 using NoMercy.Setup;
 using NoMercy.Setup.Dto;
@@ -283,9 +284,9 @@ public class ApiInfoNoEnvironmentExitTests
     public void RequestInfo_DoesNotContainEnvironmentExit()
     {
         // Verify via reflection that the method exists and is async
-        System.Reflection.MethodInfo? method = typeof(ApiInfo).GetMethod(
+        MethodInfo? method = typeof(ApiInfo).GetMethod(
             "RequestInfo",
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
+            BindingFlags.Public | BindingFlags.Static
         );
 
         Assert.NotNull(method);
@@ -295,9 +296,9 @@ public class ApiInfoNoEnvironmentExitTests
     [Fact]
     public void ApiInfo_HasKeysLoadedProperty()
     {
-        System.Reflection.PropertyInfo? prop = typeof(ApiInfo).GetProperty(
+        PropertyInfo? prop = typeof(ApiInfo).GetProperty(
             "KeysLoaded",
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
+            BindingFlags.Public | BindingFlags.Static
         );
 
         Assert.NotNull(prop);

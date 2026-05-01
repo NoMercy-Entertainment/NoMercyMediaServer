@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 public class LiveSession : ILiveSession
 {

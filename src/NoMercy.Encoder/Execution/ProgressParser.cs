@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Execution;
-
 using System.Globalization;
+
+namespace NoMercy.Encoder.Execution;
 
 public record FfmpegProgressSnapshot(
     int Frame,

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -203,7 +204,7 @@ public class TasksController(
                     {
                         ProgressData = new
                         {
-                            Id = job.Id,
+                            job.Id,
                             Status = "running",
                             Title = GetTitle(folders, job),
                             Message = "Encoding video",
@@ -263,8 +264,7 @@ public class TasksController(
             {
                 try
                 {
-                    using System.Diagnostics.Process ffmpegProcess =
-                        System.Diagnostics.Process.GetProcessById(pid);
+                    using Process ffmpegProcess = Process.GetProcessById(pid);
                     ffmpegProcess.Kill(entireProcessTree: true);
                 }
                 catch (Exception)

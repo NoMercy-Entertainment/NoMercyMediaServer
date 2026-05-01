@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.LiveTranscode;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
+
+namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 public class PlaybackDecisionEngineTests
 {

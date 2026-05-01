@@ -1,10 +1,10 @@
-namespace NoMercy.Encoder.Strategies.Hls;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Strategies.Hls;
 
 /// <summary>
 /// HLS 2-pass strategy. Pass 1 performs video-only analysis to a stats file,

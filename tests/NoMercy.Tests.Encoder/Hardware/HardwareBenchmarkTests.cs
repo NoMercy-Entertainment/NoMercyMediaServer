@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Hardware;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
+
+namespace NoMercy.Tests.Encoder.Hardware;
 
 public class HardwareBenchmarkTests
 {
@@ -259,7 +259,7 @@ public class HardwareBenchmarkTests
 
         nvencH264.Should().HaveCount(2);
         nvencH264.Select(c => c.VendorIndex).Should().BeEquivalentTo([0, 1]);
-        nvencH264.Select(c => c.Device!.Name).Should().BeEquivalentTo(["RTX 4080", "RTX 3060"]);
+        nvencH264.Select(c => c.Device!.Name).Should().BeEquivalentTo("RTX 4080", "RTX 3060");
     }
 
     [Fact]

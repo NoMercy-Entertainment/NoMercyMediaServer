@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Startup;
-
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.Startup;
 
 /// <summary>
 /// Probes for optional runtime dependencies (fpcalc, whisper.cpp model,

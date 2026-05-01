@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------------------------------------------------
+﻿﻿// ---------------------------------------------------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -23,12 +23,12 @@ public class FileRescanJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        LibraryRepository libraryRepository = new(context, StorageBackend);
+        LibraryRepository libraryRepository = new(context, StorageDriver);
         LibraryManager libraryManager = new(
             libraryRepository,
             jobDispatcher,
             context,
-            StorageBackend,
+            StorageDriver,
             StorageFactory
         );
 

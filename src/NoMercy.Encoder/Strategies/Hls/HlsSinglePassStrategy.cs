@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Strategies.Hls;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Strategies.Hls;
 
 /// <summary>
 /// HLS single-pass strategy. Currently delegates to the shared 6-stage

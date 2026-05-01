@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Pipeline;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
+
+namespace NoMercy.Encoder.Pipeline;
 
 public class StreamActionResolver
 {

@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.AdvancedFeatures;
-
 using Moq;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
+
+namespace NoMercy.Tests.Encoder.AdvancedFeatures;
 
 public class HdrFeaturesTests
 {

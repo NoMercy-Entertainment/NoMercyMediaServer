@@ -20,11 +20,6 @@ public class MusicGenre
     public ICollection<MusicGenreTrack> MusicGenreTracks { get; set; } = [];
     public ICollection<MusicGenreReleaseGroup> MusicGenreReleaseGroups { get; set; } = [];
 
-    public MusicGenre()
-    {
-        //
-    }
-
     // public MusicGenre(Providers.MusicBrainz.Models.MusicBrainzGenre musicBrainzGenre)
     // {
     //     Id = musicBrainzGenre.Id;

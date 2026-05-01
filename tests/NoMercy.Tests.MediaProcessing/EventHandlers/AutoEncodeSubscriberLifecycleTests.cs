@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.MediaProcessing.EventHandlers;
-
-using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.MediaProcessing.EventHandlers;
 
 /// <summary>
 /// Lifecycle / wiring tests for <see cref="AutoEncodeSubscriber"/>. The
@@ -22,11 +22,8 @@ public class AutoEncodeSubscriberLifecycleTests
     [Fact]
     public async Task Start_SubscribesToMediaFilesScannedEvent()
     {
-        IStorageBackend storageBackend = new SystemIoStorageBackend();
-        IStorage storage = new LocalStorage(
-            storageBackend,
-            new StoragePathGuard([], storageBackend)
-        );
+        IStorageDriver storageDriver = new LocalStorageDriver();
+        IStorage storage = new LocalStorage(storageDriver, new StoragePathGuard([], storageDriver));
         InMemoryEventBus bus = new();
         AutoEncodeSubscriber subscriber = new(
             bus,
@@ -50,7 +47,7 @@ public class AutoEncodeSubscriberLifecycleTests
     [Fact]
     public async Task Stop_DisposesSubscriptions_EventBusNoLongerCalls()
     {
-        IStorageBackend storageBackend2 = new SystemIoStorageBackend();
+        IStorageDriver storageBackend2 = new LocalStorageDriver();
         IStorage storage2 = new LocalStorage(
             storageBackend2,
             new StoragePathGuard([], storageBackend2)
@@ -72,7 +69,7 @@ public class AutoEncodeSubscriberLifecycleTests
     [Fact]
     public async Task MultipleStartStopCycles_DoNotLeakSubscriptions()
     {
-        IStorageBackend storageBackend3 = new SystemIoStorageBackend();
+        IStorageDriver storageBackend3 = new LocalStorageDriver();
         IStorage storage3 = new LocalStorage(
             storageBackend3,
             new StoragePathGuard([], storageBackend3)

@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Hardware;
-
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Hardware;
 
 public class DriverFingerprintTests
 {
@@ -33,7 +33,7 @@ public class DriverFingerprintTests
     [Fact]
     public void ComputeHash_ChangesWhenDriverVersionChanges()
     {
-        DriverFingerprint fp1 = new([Nvidia("31.0.15.4601")]);
+        DriverFingerprint fp1 = new([Nvidia()]);
         DriverFingerprint fp2 = new([Nvidia("31.0.15.5000")]);
 
         fp1.ComputeHash().Should().NotBe(fp2.ComputeHash());

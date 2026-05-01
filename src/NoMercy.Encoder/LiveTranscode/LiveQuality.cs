@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 public record LiveQuality(
     string Id,

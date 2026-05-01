@@ -108,8 +108,7 @@ public class HomeRepositoryTests : IDisposable
             _context,
             SeedConstants.UserId,
             "en",
-            10,
-            0
+            10
         );
 
         Assert.Equal(2, genres.Count);
@@ -124,8 +123,7 @@ public class HomeRepositoryTests : IDisposable
             _context,
             SeedConstants.UserId,
             "en",
-            1,
-            0
+            1
         );
 
         Assert.Single(genres);

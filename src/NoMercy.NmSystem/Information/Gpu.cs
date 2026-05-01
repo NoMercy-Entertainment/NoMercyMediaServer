@@ -1,4 +1,5 @@
 using System.Management;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -43,15 +44,13 @@ public static class Gpu
 
     private static List<string> GetGpuVendorsLinux()
     {
-        string output = SystemCalls.Shell.ExecCommand(
-            "lspci | grep -i 'VGA' | awk -F ': ' '{print $2}'"
-        );
+        string output = Shell.ExecCommand("lspci | grep -i 'VGA' | awk -F ': ' '{print $2}'");
         return output.Split('\n').Where(v => !string.IsNullOrEmpty(v)).ToList();
     }
 
     private static List<string> GetGpuVendorsMac()
     {
-        string output = SystemCalls.Shell.ExecCommand(
+        string output = Shell.ExecCommand(
             "system_profiler SPDisplaysDataType | grep 'Chipset Model' | awk -F ': ' '{print $2}'"
         );
         return output.Split('\n').Where(v => !string.IsNullOrEmpty(v)).ToList();
@@ -101,7 +100,7 @@ public static class Gpu
 
     private static List<string> GetGpuNamesLinux()
     {
-        string output = SystemCalls.Shell.ExecCommand("lspci | grep 'VGA'");
+        string output = Shell.ExecCommand("lspci | grep 'VGA'");
         return output.Split('\n').Where(v => !string.IsNullOrEmpty(v)).ToList();
     }
 
@@ -109,9 +108,7 @@ public static class Gpu
     {
         List<string> gpus = [];
 
-        string systemProfilerOutput = SystemCalls.Shell.ExecCommand(
-            "system_profiler SPDisplaysDataType"
-        );
+        string systemProfilerOutput = Shell.ExecCommand("system_profiler SPDisplaysDataType");
 
         string[] lines = systemProfilerOutput.Split('\n');
         foreach (string line in lines)

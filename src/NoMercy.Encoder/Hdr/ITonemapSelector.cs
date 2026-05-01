@@ -1,9 +1,10 @@
-namespace NoMercy.Encoder.Hdr;
-
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
-using ProfileHdrOptions = NoMercy.Encoder.Profiles.HdrOptions;
+
+namespace NoMercy.Encoder.Hdr;
+
+using ProfileHdrOptions = Profiles.HdrOptions;
 
 public interface ITonemapSelector
 {

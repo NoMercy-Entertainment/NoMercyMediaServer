@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Helpers;
@@ -169,25 +170,25 @@ public class PluginController(IPluginManager pluginManager) : BaseController
 
 public record PluginInfoDto
 {
-    [Newtonsoft.Json.JsonProperty("id")]
+    [JsonProperty("id")]
     public Guid Id { get; init; }
 
-    [Newtonsoft.Json.JsonProperty("name")]
+    [JsonProperty("name")]
     public string Name { get; init; } = null!;
 
-    [Newtonsoft.Json.JsonProperty("description")]
+    [JsonProperty("description")]
     public string Description { get; init; } = null!;
 
-    [Newtonsoft.Json.JsonProperty("version")]
+    [JsonProperty("version")]
     public string Version { get; init; } = null!;
 
-    [Newtonsoft.Json.JsonProperty("status")]
+    [JsonProperty("status")]
     public string Status { get; init; } = null!;
 
-    [Newtonsoft.Json.JsonProperty("author")]
+    [JsonProperty("author")]
     public string? Author { get; init; }
 
-    [Newtonsoft.Json.JsonProperty("project_url")]
+    [JsonProperty("project_url")]
     public string? ProjectUrl { get; init; }
 
     public PluginInfoDto() { }

@@ -1,11 +1,11 @@
-namespace NoMercy.Encoder.Subtitles;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Subtitles;
 
 /// <summary>
 /// Produces a WebVTT or SRT subtitle file by running FFmpeg's <c>whisper</c>

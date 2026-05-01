@@ -1,11 +1,11 @@
-namespace NoMercy.Encoder.Hardware;
-
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Hardware;
 
 /// <summary>
 /// Persists <see cref="SpeedIndex"/> measurements to a single JSON file at

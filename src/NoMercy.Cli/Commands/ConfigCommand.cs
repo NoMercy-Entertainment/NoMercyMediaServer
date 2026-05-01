@@ -12,7 +12,7 @@ internal static class ConfigCommand
         Command getCmd = new("get") { Description = "Show current configuration" };
 
         getCmd.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
@@ -50,7 +50,7 @@ internal static class ConfigCommand
         setCmd.Arguments.Add(valArg);
 
         setCmd.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 string key = parseResult.GetValue(keyArg)!;

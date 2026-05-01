@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Commands;
-
 using System.Globalization;
+
+namespace NoMercy.Encoder.Commands;
 
 public class FfmpegCommandBuilder
 {

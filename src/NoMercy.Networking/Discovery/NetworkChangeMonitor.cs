@@ -1,8 +1,12 @@
+using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
 using NoMercy.Networking.Connectivity;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -83,9 +87,9 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
 
                 foreach (UnicastIPAddressInformation addr in nic.GetIPProperties().UnicastAddresses)
                 {
-                    if (addr.Address.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
+                    if (addr.Address.AddressFamily != AddressFamily.InterNetwork)
                         continue;
-                    if (System.Net.IPAddress.IsLoopback(addr.Address))
+                    if (IPAddress.IsLoopback(addr.Address))
                         continue;
 
                     return addr.Address.ToString();
@@ -106,21 +110,18 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         {
             Dictionary<string, string> serverData = new()
             {
-                { "id", NmSystem.Information.Info.DeviceId.ToString() },
-                { "name", NmSystem.Information.Info.DeviceName },
+                { "id", Info.DeviceId.ToString() },
+                { "name", Info.DeviceName },
                 { "internal_ip", _networkDiscovery.InternalIp },
                 { "internal_ipv6", _networkDiscovery.InternalIpV6.OrEmpty() },
                 { "external_ipv6", _networkDiscovery.ExternalIpV6.OrEmpty() },
-                { "internal_port", NmSystem.Information.Config.InternalServerPort.ToString() },
-                { "external_port", NmSystem.Information.Config.ExternalServerPort.ToString() },
-                { "version", NmSystem.Information.Software.Version!.ToString() },
-                { "platform", NmSystem.Information.Info.Platform },
-                { "stun_public_ip", NmSystem.Information.Config.StunPublicIp.OrEmpty() },
-                {
-                    "stun_public_port",
-                    (NmSystem.Information.Config.StunPublicPort?.ToString()).OrEmpty()
-                },
-                { "stun_nat_type", NmSystem.Information.Config.NatStatus.ToString() },
+                { "internal_port", Config.InternalServerPort.ToString() },
+                { "external_port", Config.ExternalServerPort.ToString() },
+                { "version", Software.Version!.ToString() },
+                { "platform", Info.Platform },
+                { "stun_public_ip", Config.StunPublicIp.OrEmpty() },
+                { "stun_public_port", (Config.StunPublicPort?.ToString()).OrEmpty() },
+                { "stun_nat_type", Config.NatStatus.ToString() },
             };
 
             Logger.Register("Your IP address has changed, updating server information...");
@@ -132,15 +133,15 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                 return;
             }
 
-            GenericHttpClient authClient = new(NmSystem.Information.Config.ApiServerBaseUrl);
-            authClient.SetDefaultHeaders(NmSystem.Information.Config.UserAgent, token);
+            GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+            authClient.SetDefaultHeaders(Config.UserAgent, token);
             string response = await authClient.SendAndReadAsync(
                 HttpMethod.Post,
                 "ping",
                 new FormUrlEncodedContent(serverData)
             );
 
-            object? data = Newtonsoft.Json.JsonConvert.DeserializeObject(response);
+            object? data = JsonConvert.DeserializeObject(response);
 
             if (data == null)
                 throw new("Failed to update server information");

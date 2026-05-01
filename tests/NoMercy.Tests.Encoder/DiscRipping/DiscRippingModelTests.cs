@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.DiscRipping;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.DiscRipping;
 
 public class DiscRippingModelTests
 {
@@ -373,7 +373,7 @@ public class DiscRippingModelTests
         );
 
         request.DrivePath.Should().Be("/dev/sr0");
-        request.SelectedTitleIndices.Should().Equal([0, 1]);
+        request.SelectedTitleIndices.Should().Equal(0, 1);
         request.MetadataId.Should().Be("tmdb:603");
         request.Custom.Should().BeNull();
         request.LibraryId.Should().Be(libraryId);

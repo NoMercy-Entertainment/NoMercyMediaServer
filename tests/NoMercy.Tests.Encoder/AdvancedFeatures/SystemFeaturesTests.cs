@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.AdvancedFeatures;
-
 using NoMercy.Encoder.SystemFeatures;
+
+namespace NoMercy.Tests.Encoder.AdvancedFeatures;
 
 public class SystemFeaturesTests
 {

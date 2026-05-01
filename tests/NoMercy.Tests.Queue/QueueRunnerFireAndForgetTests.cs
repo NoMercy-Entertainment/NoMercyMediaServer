@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
@@ -123,9 +124,7 @@ public class QueueRunnerFireAndForgetTests
 
         // Check for volatile modifier via attributes
         Assert.True(
-            isInitialized
-                .GetRequiredCustomModifiers()
-                .Any(t => t == typeof(System.Runtime.CompilerServices.IsVolatile))
+            isInitialized.GetRequiredCustomModifiers().Any(t => t == typeof(IsVolatile))
                 || isInitialized.FieldType == typeof(bool),
             "_isInitialized should be volatile"
         );

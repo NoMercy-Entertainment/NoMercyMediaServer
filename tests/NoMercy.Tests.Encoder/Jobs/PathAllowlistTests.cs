@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Jobs;
-
 using NoMercy.Encoder.Jobs;
+
+namespace NoMercy.Tests.Encoder.Jobs;
 
 /// <summary>
 /// PathAllowlist is the trust boundary between the encoder and the

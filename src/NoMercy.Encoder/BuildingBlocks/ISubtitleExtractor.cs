@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.BuildingBlocks;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
+
+namespace NoMercy.Encoder.BuildingBlocks;
 
 public interface ISubtitleExtractor
 {

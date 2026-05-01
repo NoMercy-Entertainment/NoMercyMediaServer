@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Pipeline.Stages;
 
 public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<AnalyzeStage> logger)
     : IPipelineStage<string, MediaInfo>,
@@ -131,7 +131,7 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
                     "analyze",
                     "analyze.chapter_count",
                     $"{info.Chapters.Count} chapter(s) detected.",
-                    new { Count = info.Chapters.Count }
+                    new { info.Chapters.Count }
                 )
             );
         }

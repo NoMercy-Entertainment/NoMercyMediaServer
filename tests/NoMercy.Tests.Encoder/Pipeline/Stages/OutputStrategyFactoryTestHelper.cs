@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Pipeline.Stages;
-
 using NoMercy.Encoder.Output;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
 internal static class OutputStrategyFactoryTestHelper
 {

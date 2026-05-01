@@ -1,11 +1,11 @@
-namespace NoMercy.Encoder.Execution;
-
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Execution;
 
 public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor> logger)
     : IFfmpegExecutor

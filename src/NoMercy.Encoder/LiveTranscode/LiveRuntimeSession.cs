@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using System.Collections.Concurrent;
 using NoMercy.Encoder.Analysis;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 public sealed class LiveRuntimeSession : IAsyncDisposable
 {

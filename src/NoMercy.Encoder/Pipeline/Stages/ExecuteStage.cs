@@ -1,10 +1,10 @@
-namespace NoMercy.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Pipeline.Stages;
 
 public record ExecuteInput(
     FfmpegCommand[] Commands,

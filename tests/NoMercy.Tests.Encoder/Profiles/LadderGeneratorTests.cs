@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.Profiles;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Profiles;
 
 public class LadderGeneratorTests
 {
@@ -172,7 +172,7 @@ public class LadderGeneratorTests
     public void Generate_h264_uses_h264_bitrate_column()
     {
         IReadOnlyList<VideoOutput> result = _gen.Generate(
-            Reference(VideoCodecType.H264),
+            Reference(),
             Source(1920, 1080),
             null,
             Sink()
@@ -188,7 +188,7 @@ public class LadderGeneratorTests
     public void Generate_hevc_uses_60_percent_of_h264()
     {
         IReadOnlyList<VideoOutput> h264Result = _gen.Generate(
-            Reference(VideoCodecType.H264),
+            Reference(),
             Source(1920, 1080),
             null,
             Sink()
@@ -237,7 +237,7 @@ public class LadderGeneratorTests
     {
         ScopedDecisionLog sink = Sink();
 
-        _gen.Generate(Reference(), Source(1920, 1080), null, sink, ComplexityHint.Auto);
+        _gen.Generate(Reference(), Source(1920, 1080), null, sink);
 
         IReadOnlyList<DecisionLog> decisions = sink.Snapshot();
         Assert.Contains(decisions, d => d.Key == "plan.ladder_complexity_unknown");

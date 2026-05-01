@@ -61,9 +61,4 @@ public class Media : ColorPaletteTimeStamps
     [JsonProperty("video_file_id")]
     public Ulid? VideoFileId { get; set; }
     public VideoFile? VideoFile { get; set; }
-
-    public Media()
-    {
-        //
-    }
 }

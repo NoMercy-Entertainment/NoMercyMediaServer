@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Hardware;
-
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.Hardware;
 
 /// <summary>
 /// Snapshot of a single benchmark job's lifecycle.

@@ -40,9 +40,9 @@ public class MusicBrainzBaseClient : IDisposable
         client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", Config.UserAgent);
     }
 
-    private static Helpers.Queue? _queue;
+    private static Queue? _queue;
 
-    private static Helpers.Queue GetQueue()
+    private static Queue GetQueue()
     {
         return _queue ??= new(
             new()

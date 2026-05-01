@@ -373,7 +373,7 @@ public class QueryOutputTests : IDisposable
         HomeRepository repository = new();
         _interceptor.Clear();
 
-        await repository.GetHomeGenresAsync(_context, SeedConstants.UserId, "en", 10, 0);
+        await repository.GetHomeGenresAsync(_context, SeedConstants.UserId, "en", 10);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -642,7 +642,7 @@ public class QueryOutputTests : IDisposable
         CollectionRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetCollectionItems(SeedConstants.UserId, "en", "US", 10, 0);
+        await repository.GetCollectionItems(SeedConstants.UserId, "en", "US", 10);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -726,7 +726,7 @@ public class QueryOutputTests : IDisposable
         SpecialRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetSpecialItems(SeedConstants.UserId, "en", "US", 10, 0);
+        await repository.GetSpecialItems(SeedConstants.UserId, "en", "US", 10);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -989,7 +989,7 @@ public class QueryOutputTests : IDisposable
         HomeRepository repository = new();
         _interceptor.Clear();
 
-        await repository.GetHomeGenresAsync(_context, SeedConstants.UserId, "en", 10, 0);
+        await repository.GetHomeGenresAsync(_context, SeedConstants.UserId, "en", 10);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);

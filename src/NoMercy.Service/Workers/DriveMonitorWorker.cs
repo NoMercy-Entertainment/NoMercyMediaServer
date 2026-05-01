@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.DiscRipping;
 using NoMercy.Events;
 using NoMercy.Events.DriveMonitor;
@@ -41,7 +39,7 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
                         Method = methodName,
                         Drive = evt.Drive.Path,
                         VolumeLabel = evt.Drive.Label,
-                        HasDisc = evt.Drive.HasDisc,
+                        evt.Drive.HasDisc,
                         DiscType = evt.Drive.DiscType.ToString(),
                         Timestamp = DateTime.UtcNow,
                     },

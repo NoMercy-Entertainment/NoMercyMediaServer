@@ -18,6 +18,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 using Serilog.Events;
+using SixLabors.ImageSharp;
 using SubtitlesParserV2;
 using SubtitlesParserV2.Models;
 using Image = SixLabors.ImageSharp.Image;
@@ -28,14 +29,14 @@ namespace NoMercy.MediaProcessing.Files;
 public partial class FileManager(
     IFileRepository fileRepository,
     IStorageFactory storageFactory,
-    IStorageBackend storageBackend
+    IStorageDriver storageDriver
 ) : IFileManager
 {
     private readonly IStorageFactory _storageFactory = storageFactory;
-    private readonly IStorageBackend _storageBackend = storageBackend;
+    private readonly IStorageDriver _storageDriver = storageDriver;
 
     private IStorage StorageFor(Folder folder) =>
-        _storageFactory.For(folder.Id, folder.BackendType, folder.BackendConfig, folder.Path);
+        _storageFactory.For(folder.Id, folder.DriverType, folder.DriverConfig, folder.Path);
 
     private int Id { get; set; }
     private Movie? Movie { get; set; }
@@ -165,7 +166,7 @@ public partial class FileManager(
                 if (!folderStorage.Exists(path))
                 {
                     string? match = Str.FindMatchingDirectory(
-                        _storageBackend,
+                        _storageDriver,
                         libraryFolder.Folder.Path,
                         tv.Folder.Replace("/", "")
                     );
@@ -189,7 +190,7 @@ public partial class FileManager(
                 if (!folderStorage.Exists(path))
                 {
                     string? match = Str.FindMatchingDirectory(
-                        _storageBackend,
+                        _storageDriver,
                         libraryFolder.Folder.Path,
                         movie.Folder.Replace("/", "")
                     );
@@ -759,7 +760,7 @@ public partial class FileManager(
 
     private static (int Width, int Height) GetImageDimensions(string filePath)
     {
-        SixLabors.ImageSharp.ImageInfo info = Image.Identify(filePath);
+        ImageInfo info = Image.Identify(filePath);
 
         return (info.Width, info.Height);
     }
@@ -925,7 +926,7 @@ public partial class FileManager(
 
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Library library, string path)
     {
-        MediaScan mediaScan = new(_storageBackend);
+        MediaScan mediaScan = new(_storageDriver);
 
         int depth = library.Type switch
         {
@@ -972,7 +973,7 @@ public partial class FileManager(
 
             if (!folderStorage.Exists(path))
             {
-                string? match = Str.FindMatchingDirectory(_storageBackend, rootFolder.Path, folder);
+                string? match = Str.FindMatchingDirectory(_storageDriver, rootFolder.Path, folder);
                 if (match != null)
                     path = match;
             }
@@ -983,8 +984,8 @@ public partial class FileManager(
                     {
                         Path = path,
                         Id = rootFolder.Id,
-                        BackendType = rootFolder.BackendType,
-                        BackendConfig = rootFolder.BackendConfig,
+                        DriverType = rootFolder.DriverType,
+                        DriverConfig = rootFolder.DriverConfig,
                     }
                 );
         }

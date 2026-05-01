@@ -1,5 +1,3 @@
-namespace NoMercy.MediaProcessing.EventHandlers;
-
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +10,8 @@ using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.Storage;
+
+namespace NoMercy.MediaProcessing.EventHandlers;
 
 /// <summary>
 /// Wires <see cref="EncodingCompletedEvent"/> to the chromaprint-based
@@ -266,7 +266,7 @@ public class IntroDetectionSubscriber(
         // The subscriber fingerprints the ORIGINAL source (not HLS output)
         // so the timestamps it detects are meaningful against the full
         // timeline the player sees. Use the first non-empty VideoFile.
-        foreach (Database.Models.Media.VideoFile file in episode.VideoFiles)
+        foreach (VideoFile file in episode.VideoFiles)
         {
             if (
                 string.IsNullOrWhiteSpace(file.HostFolder)
@@ -274,7 +274,7 @@ public class IntroDetectionSubscriber(
             )
                 continue;
 
-            string path = System.IO.Path.Combine(file.HostFolder, file.Filename);
+            string path = Path.Combine(file.HostFolder, file.Filename);
             if (_storage.Exists(path))
                 return path;
         }
@@ -282,7 +282,7 @@ public class IntroDetectionSubscriber(
         return null;
     }
 
-    private static TimeSpan ParseDuration(Database.Models.Media.VideoFile? file)
+    private static TimeSpan ParseDuration(VideoFile? file)
     {
         if (file is null || string.IsNullOrWhiteSpace(file.Duration))
             return TimeSpan.Zero;

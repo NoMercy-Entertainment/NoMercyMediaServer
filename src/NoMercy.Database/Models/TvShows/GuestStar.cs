@@ -27,9 +27,4 @@ public class GuestStar
     [JsonProperty("person_id")]
     public int PersonId { get; set; }
     public Person Person { get; set; } = null!;
-
-    public GuestStar()
-    {
-        //
-    }
 }

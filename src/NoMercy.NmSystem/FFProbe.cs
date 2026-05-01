@@ -1,4 +1,7 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
+using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -111,8 +114,8 @@ public static class FfProbe
             if (
                 double.TryParse(
                     raw.Format.Duration,
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
                     out double seconds
                 )
             )
@@ -162,7 +165,6 @@ public static class FfProbe
                 if (attempt < MaxRetries)
                 {
                     await Task.Delay(500, ct);
-                    continue;
                 }
             }
             catch (Exception ex)
@@ -175,7 +177,6 @@ public static class FfProbe
                 {
                     int delayMs = IsResourceExhaustionError(ex) ? 2000 * attempt : 500;
                     await Task.Delay(delayMs, ct);
-                    continue;
                 }
             }
         }
@@ -186,7 +187,7 @@ public static class FfProbe
     private static bool IsResourceExhaustionError(Exception ex)
     {
         // Win32 ERROR_COMMITMENT_LIMIT (paging file too small) and similar resource errors
-        return ex is System.ComponentModel.Win32Exception win32Ex
+        return ex is Win32Exception win32Ex
             ? win32Ex.NativeErrorCode is 1455 or 8 // ERROR_COMMITMENT_LIMIT or ERROR_NOT_ENOUGH_MEMORY
             : ex.Message.Contains("paging file", StringComparison.OrdinalIgnoreCase)
                 || ex.Message.Contains("wisselbestand", StringComparison.OrdinalIgnoreCase)
@@ -248,72 +249,72 @@ public static class FfProbe
 // Internal JSON deserialization types for raw ffprobe output
 internal class FfProbeRawResult
 {
-    [Newtonsoft.Json.JsonProperty("streams")]
+    [JsonProperty("streams")]
     public FfProbeRawStream[]? Streams { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("format")]
+    [JsonProperty("format")]
     public FfProbeRawFormat? Format { get; set; }
 }
 
 internal class FfProbeRawFormat
 {
-    [Newtonsoft.Json.JsonProperty("filename")]
+    [JsonProperty("filename")]
     public string? Filename { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("format_name")]
+    [JsonProperty("format_name")]
     public string? FormatName { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("format_long_name")]
+    [JsonProperty("format_long_name")]
     public string? FormatLongName { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("duration")]
+    [JsonProperty("duration")]
     public string? Duration { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("bit_rate")]
+    [JsonProperty("bit_rate")]
     public string? BitRate { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("tags")]
+    [JsonProperty("tags")]
     public Dictionary<string, string>? Tags { get; set; }
 }
 
 internal class FfProbeRawStream
 {
-    [Newtonsoft.Json.JsonProperty("index")]
+    [JsonProperty("index")]
     public int Index { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("codec_name")]
+    [JsonProperty("codec_name")]
     public string? CodecName { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("codec_type")]
+    [JsonProperty("codec_type")]
     public string? CodecType { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("width")]
+    [JsonProperty("width")]
     public int Width { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("height")]
+    [JsonProperty("height")]
     public int Height { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("pix_fmt")]
+    [JsonProperty("pix_fmt")]
     public string? PixFmt { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("color_space")]
+    [JsonProperty("color_space")]
     public string? ColorSpace { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("color_transfer")]
+    [JsonProperty("color_transfer")]
     public string? ColorTransfer { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("color_primaries")]
+    [JsonProperty("color_primaries")]
     public string? ColorPrimaries { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("channels")]
+    [JsonProperty("channels")]
     public long? Channels { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("bit_rate")]
+    [JsonProperty("bit_rate")]
     public long? BitRate { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("sample_rate")]
+    [JsonProperty("sample_rate")]
     public long? SampleRate { get; set; }
 
-    [Newtonsoft.Json.JsonProperty("tags")]
+    [JsonProperty("tags")]
     public Dictionary<string, string>? Tags { get; set; }
 }

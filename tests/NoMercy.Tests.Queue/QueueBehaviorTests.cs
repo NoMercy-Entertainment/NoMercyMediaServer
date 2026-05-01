@@ -96,9 +96,8 @@ public class QueueBehaviorTests : IDisposable
         Assert.Equal(1, attempt1.Attempts);
         try
         {
-            NoMercyQueue.Core.Interfaces.IShouldQueue exec1 =
-                (NoMercyQueue.Core.Interfaces.IShouldQueue)
-                    SerializationHelper.Deserialize<object>(attempt1.Payload);
+            IShouldQueue exec1 = (IShouldQueue)
+                SerializationHelper.Deserialize<object>(attempt1.Payload);
             await exec1.Handle();
         }
         catch (Exception ex)
@@ -114,9 +113,8 @@ public class QueueBehaviorTests : IDisposable
         Assert.Equal(2, attempt2.Attempts);
         try
         {
-            NoMercyQueue.Core.Interfaces.IShouldQueue exec2 =
-                (NoMercyQueue.Core.Interfaces.IShouldQueue)
-                    SerializationHelper.Deserialize<object>(attempt2.Payload);
+            IShouldQueue exec2 = (IShouldQueue)
+                SerializationHelper.Deserialize<object>(attempt2.Payload);
             await exec2.Handle();
         }
         catch (Exception ex)

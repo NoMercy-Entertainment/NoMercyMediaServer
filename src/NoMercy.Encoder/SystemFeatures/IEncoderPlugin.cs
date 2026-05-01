@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.SystemFeatures;
-
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Encoder.SystemFeatures;
 
 public interface IEncoderPlugin
 {

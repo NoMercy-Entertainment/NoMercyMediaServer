@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.BuildingBlocks;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.BuildingBlocks;
 
 /// <summary>
 /// Generates an adaptive-bitrate quality ladder from a single reference video

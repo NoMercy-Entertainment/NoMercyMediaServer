@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 /// <summary>
 /// Every H264 encoder family uses different flags for the same profile-level

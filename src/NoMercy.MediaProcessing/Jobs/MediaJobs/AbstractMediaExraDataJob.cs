@@ -31,14 +31,14 @@ public abstract class AbstractMediaExraDataJob<T> : IShouldQueue, IJobStorageInj
     public IStorageFactory StorageFactory { get; set; } = null!;
 
     [JsonIgnore]
-    public IStorageBackend StorageBackend { get; set; } = null!;
+    public IStorageDriver StorageDriver { get; set; } = null!;
 
     public abstract Task Handle();
 
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
-        StorageBackend = serviceProvider.GetRequiredService<IStorageBackend>();
+        StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
     }
 
     public void Dispose()

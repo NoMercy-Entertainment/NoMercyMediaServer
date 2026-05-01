@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Subscribers;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
@@ -9,6 +7,8 @@ using NoMercy.Encoder.Subscribers;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
+
+namespace NoMercy.Tests.Encoder.Subscribers;
 
 public class OcrPostEncodeSubscriberTests
 {

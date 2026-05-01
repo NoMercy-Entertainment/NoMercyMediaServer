@@ -1,10 +1,10 @@
-namespace NoMercy.Encoder.PostProcess;
-
 using System.Text;
 using Newtonsoft.Json;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.PostProcess;
 
 public class FontExtractor(IStorage storage) : IFontExtractor
 {

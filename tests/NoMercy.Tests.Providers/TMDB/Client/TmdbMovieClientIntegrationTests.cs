@@ -20,7 +20,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task Details_WithRealApi_ReturnsActualMovieDetails()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbMovieDetails? result = await client.Details();
@@ -40,7 +40,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task WithAllAppends_WithRealApi_ReturnsCompleteData()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbMovieAppends? result = await client.WithAllAppends();
@@ -64,7 +64,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task Credits_WithRealApi_ReturnsActualCredits()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbMovieCredits? result = await client.Credits();
@@ -94,7 +94,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task ExternalIds_WithRealApi_ReturnsValidExternalIds()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbMovieExternalIds? result = await client.ExternalIds();
@@ -111,7 +111,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task Images_WithRealApi_ReturnsImageData()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbImages? result = await client.Images();
@@ -133,7 +133,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task Keywords_WithRealApi_ReturnsKeywords()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbMovieKeywords? result = await client.Keywords();
@@ -174,7 +174,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task MultipleMovies_WithRealApi_ReturnDifferentData()
     {
         // Arrange
-        using TmdbMovieClient client1 = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client1 = CreateRealMovieClient();
         using TmdbMovieClient client2 = CreateRealMovieClient(AnotherWellKnownMovieId);
 
         // Act
@@ -194,7 +194,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task Changes_WithRealApi_ReturnsChangesData()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
         string startDate = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
         string endDate = DateTime.Now.ToString("yyyy-MM-dd");
 
@@ -233,7 +233,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task RateLimiting_MultipleQuickCalls_HandlesGracefully()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act - Make multiple quick calls to test rate limiting
         Task<TmdbMovieDetails?>[] tasks = Enumerable

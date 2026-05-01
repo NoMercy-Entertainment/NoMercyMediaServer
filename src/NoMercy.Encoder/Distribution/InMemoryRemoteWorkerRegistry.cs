@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Distribution;
-
 using System.Collections.Concurrent;
 using NoMercy.Encoder.Jobs;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Thread-safe registry populated at runtime by the worker-registration

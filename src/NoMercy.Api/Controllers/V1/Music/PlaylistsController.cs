@@ -148,7 +148,7 @@ public class PlaylistsController : BaseController
 
         await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music-playlists"] });
 
-        return Ok(new StatusResponseDto<Playlist>() { Data = playlist, Status = "ok" });
+        return Ok(new StatusResponseDto<Playlist> { Data = playlist, Status = "ok" });
     }
 
     [HttpPatch]

@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.DiscRipping;
-
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
+
+namespace NoMercy.Encoder.DiscRipping;
 
 /// <summary>
 /// Polls the OS for optical-drive state every few seconds and emits

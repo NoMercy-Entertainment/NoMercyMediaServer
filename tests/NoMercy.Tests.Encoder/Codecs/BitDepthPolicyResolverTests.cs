@@ -1,10 +1,9 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
-using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 public class BitDepthPolicyResolverTests
 {
@@ -175,7 +174,7 @@ public class BitDepthPolicyResolverTests
     public void PreferSoftware_switches_to_SW_handle_keeps_10bit()
     {
         IDecisionLogSink sink = MakeSink();
-        ResolvedCodec swCodec = BuildCodec("libx264", supports10Bit: true, "yuv420p10le");
+        ResolvedCodec swCodec = BuildCodec("libx264", supports10Bit: true);
 
         BitDepthResolutionResult result = _resolver.Resolve(
             requestedBitDepth: 10,

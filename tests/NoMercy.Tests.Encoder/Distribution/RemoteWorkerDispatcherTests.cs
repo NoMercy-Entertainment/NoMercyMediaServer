@@ -1,11 +1,12 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Jobs;
+using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 public class RemoteWorkerDispatcherTests
 {
@@ -131,7 +132,7 @@ public class RemoteWorkerDispatcherTests
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
-                    It.IsAny<Action<NoMercy.Encoder.Progress.EncodingProgress>>(),
+                    It.IsAny<Action<EncodingProgress>>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
@@ -346,7 +347,7 @@ public class RemoteWorkerDispatcherTests
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
-                    It.IsAny<Action<NoMercy.Encoder.Progress.EncodingProgress>>(),
+                    It.IsAny<Action<EncodingProgress>>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )

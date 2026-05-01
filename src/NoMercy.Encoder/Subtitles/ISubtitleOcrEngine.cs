@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Subtitles;
-
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.Subtitles;
 
 public interface ISubtitleOcrEngine
 {

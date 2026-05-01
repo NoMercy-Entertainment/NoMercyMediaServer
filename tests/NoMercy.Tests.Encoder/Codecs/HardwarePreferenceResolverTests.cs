@@ -1,9 +1,10 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 public class HardwarePreferenceResolverTests
 {
@@ -194,10 +195,7 @@ public class HardwarePreferenceResolverTests
         Assert.NotNull(result.Failure);
         Assert.Null(result.EncoderHandle);
         Assert.Equal(422, result.Failure.HttpStatusCode);
-        Assert.Equal(
-            NoMercy.Encoder.Errors.EncoderRuleId.HardwareForcedButUnavailable,
-            result.Failure.Shape.Id
-        );
+        Assert.Equal(EncoderRuleId.HardwareForcedButUnavailable, result.Failure.Shape.Id);
     }
 
     [Fact]
@@ -241,10 +239,7 @@ public class HardwarePreferenceResolverTests
             index,
             fsLog
         );
-        Assert.Contains(
-            "force_software",
-            fsLog.Snapshot()[0].Message + fsLog.Snapshot()[0].Data?.ToString()
-        );
+        Assert.Contains("force_software", fsLog.Snapshot()[0].Message + fsLog.Snapshot()[0].Data);
 
         // PreferQuality
         ScopedDecisionLog pqLog = NewLog();

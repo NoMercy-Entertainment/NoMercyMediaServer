@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.Jobs;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Jobs;
 
 public class BatchEncodingRequestTests
 {

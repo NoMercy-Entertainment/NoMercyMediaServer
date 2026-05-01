@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Hdr;
-
 using Moq;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
+
+namespace NoMercy.Tests.Encoder.Hdr;
 
 /// <summary>
 /// The tonemap selector is the switchboard between HDR source and SDR

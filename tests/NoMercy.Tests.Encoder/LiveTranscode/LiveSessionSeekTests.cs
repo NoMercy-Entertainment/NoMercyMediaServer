@@ -1,8 +1,7 @@
-namespace NoMercy.Tests.Encoder.LiveTranscode;
-
-using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
+
+namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 /// <summary>
 /// Verifies that SeekAsync tears down the current runner and spawns a new one.

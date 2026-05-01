@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.ContentAnalysis;
-
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
+
+namespace NoMercy.Tests.Encoder.ContentAnalysis;
 
 /// <summary>
 /// Covers the intro-detection algorithm with synthetic fingerprints — the

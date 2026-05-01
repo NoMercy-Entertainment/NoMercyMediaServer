@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.BuildingBlocks;
-
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
+
+namespace NoMercy.Tests.Encoder.BuildingBlocks;
 
 /// <summary>
 /// Verifies that encoder building-block interfaces can be replaced by a

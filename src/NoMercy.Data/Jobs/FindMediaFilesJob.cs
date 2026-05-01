@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Data.Logic;
 using NoMercy.Database;
@@ -10,8 +10,8 @@ using NoMercy.Events.Library;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Factory;
-using NoMercy.Storage.Local;
 using NoMercy.Storage.Validation;
 using NoMercyQueue.Core.Interfaces;
 
@@ -59,12 +59,12 @@ public class FindMediaFilesJob : IShouldQueue
         if (library == null)
             return;
 
-        IStorageBackend storageBackend = new SystemIoStorageBackend();
+        IStorageDriver storageDriver = new LocalStorageDriver();
         IStorageFactory storageFactory = new StorageFactory(
-            storageBackend,
+            storageDriver,
             NullLogger<StorageFactory>.Instance
         );
-        await using FileLogic file = new(Id, library, context, storageFactory, storageBackend);
+        await using FileLogic file = new(Id, library, context, storageFactory, storageDriver);
         await file.Process();
 
         if (file.Files.Count > 0)

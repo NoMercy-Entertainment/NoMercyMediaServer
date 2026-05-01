@@ -78,7 +78,7 @@ public class Episode : ColorPaletteTimeStamps
     public ICollection<VideoFile> VideoFiles { get; set; } = [];
 
     [JsonProperty("medias")]
-    public ICollection<Models.Media.Media> Media { get; set; } = [];
+    public ICollection<Media.Media> Media { get; set; } = [];
 
     [JsonProperty("images")]
     public ICollection<Image> Images { get; set; } = [];
@@ -88,8 +88,6 @@ public class Episode : ColorPaletteTimeStamps
 
     [JsonProperty("translations")]
     public ICollection<Translation> Translations { get; set; } = [];
-
-    public Episode() { }
 
     public string CreateFolderName()
     {

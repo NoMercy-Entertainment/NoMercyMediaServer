@@ -1,11 +1,11 @@
-namespace NoMercy.Tests.Encoder.Strategies.Mkv;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Strategies.Mkv;
 
 /// <summary>
 /// Smoke test: MkvOutputStrategy must not emit <c>-map_metadata -1</c> (which

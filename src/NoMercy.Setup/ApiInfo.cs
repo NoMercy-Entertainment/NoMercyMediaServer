@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Newtonsoft.Json;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
@@ -6,7 +6,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 using Config = NoMercy.NmSystem.Information.Config;
 
@@ -15,9 +15,9 @@ namespace NoMercy.Setup;
 public class ApiInfo
 {
     // LOCAL-ONLY: ApiInfo.RequestInfo is called in startup phase 1 before StorageProvider
-    // is initialized; threading IStorageBackend through every Program.cs startup call is
+    // is initialized; threading IStorageDriver through every Program.cs startup call is
     // disproportionate work for a read-only cache file check.
-    private static readonly IStorageBackend Backend = new SystemIoStorageBackend();
+    private static readonly IStorageDriver Backend = new LocalStorageDriver();
     public static string MakeMkvKey { get; set; } = string.Empty;
     public static string TmdbKey { get; set; } = string.Empty;
     public static string OmdbKey { get; set; } = string.Empty;

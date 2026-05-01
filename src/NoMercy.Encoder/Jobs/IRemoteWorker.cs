@@ -1,10 +1,10 @@
-namespace NoMercy.Encoder.Jobs;
-
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Jobs;
 
 public record ResourceBudgetSnapshot(
     int AvailableGpuSlots,

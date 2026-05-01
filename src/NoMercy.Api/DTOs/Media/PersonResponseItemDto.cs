@@ -4,6 +4,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.People;
 using NoMercy.Providers.TMDB.Models.People;
 using TmdbGender = NoMercy.Providers.TMDB.Models.People.TmdbGender;
+using TmdbPersonExternalIds = NoMercy.Database.Models.People.TmdbPersonExternalIds;
 
 namespace NoMercy.Api.DTOs.Media;
 
@@ -70,7 +71,7 @@ public record PersonResponseItemDto
     public Credits CombinedCredits { get; set; } = new();
 
     [JsonProperty("external_ids")]
-    public Database.Models.People.TmdbPersonExternalIds? ExternalIds { get; set; }
+    public TmdbPersonExternalIds? ExternalIds { get; set; }
 
     [JsonProperty("translations")]
     public TranslationsDto TranslationsDto { get; set; } = new();

@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Distribution;
-
 using System.Security.Cryptography;
 using System.Text;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Signs and verifies HTTP requests for distributed encoder communication.

@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Strategies.Mp4;
-
 using Moq;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
@@ -9,6 +7,8 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Strategies.Mp4;
 
 public class Mp4ChapterTests : IDisposable
 {

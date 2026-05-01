@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 /// <summary>
 /// Covers Phase 13 remaining audio-only containers — mp3, flac, ogg.

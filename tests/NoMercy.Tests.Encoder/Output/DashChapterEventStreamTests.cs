@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using System.Text;
 using System.Xml.Linq;
 using NoMercy.Encoder.Analysis;
@@ -7,6 +5,8 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 /// <summary>
 /// Verifies that <see cref="DashOutputStrategy.FinalizeAsync"/> injects an

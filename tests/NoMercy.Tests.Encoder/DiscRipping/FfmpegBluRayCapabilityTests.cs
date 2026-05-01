@@ -1,12 +1,12 @@
-namespace NoMercy.Tests.Encoder.DiscRipping;
-
-using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.DiscRipping;
 
 /// <summary>
 /// Offline tests for AACS/BD+ capability probe and error classification.
@@ -259,8 +259,8 @@ public class FfmpegBluRayCapabilityTests
         string outputDir = Path.Combine(Path.GetTempPath(), $"Rip_{Guid.NewGuid():N}");
         try
         {
-            SystemIoStorageBackend backend = new();
-            LocalStorage storage = new(backend, new StoragePathGuard([], backend));
+            LocalStorageDriver driver = new();
+            LocalStorage storage = new(driver, new StoragePathGuard([], driver));
             DriveLockRegistry lockRegistry = new();
             DiscRipper ripper = new(
                 options,
@@ -341,8 +341,8 @@ public class FfmpegBluRayCapabilityTests
         string outputDir = Path.Combine(Path.GetTempPath(), $"Rip_{Guid.NewGuid():N}");
         try
         {
-            SystemIoStorageBackend backend = new();
-            LocalStorage storage = new(backend, new StoragePathGuard([], backend));
+            LocalStorageDriver driver = new();
+            LocalStorage storage = new(driver, new StoragePathGuard([], driver));
             DriveLockRegistry lockRegistry = new();
             DiscRipper ripper = new(
                 options,
@@ -407,8 +407,8 @@ public class FfmpegBluRayCapabilityTests
         string outputDir = Path.Combine(Path.GetTempPath(), $"Rip_{Guid.NewGuid():N}");
         try
         {
-            SystemIoStorageBackend backend = new();
-            LocalStorage storage = new(backend, new StoragePathGuard([], backend));
+            LocalStorageDriver driver = new();
+            LocalStorage storage = new(driver, new StoragePathGuard([], driver));
             DriveLockRegistry lockRegistry = new();
             DiscRipper ripper = new(
                 options,

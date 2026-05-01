@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -22,11 +22,11 @@ public class MovieManager(
     IMovieRepository movieRepository,
     JobDispatcher jobDispatcher,
     IStorageFactory storageFactory,
-    IStorageBackend storageBackend
+    IStorageDriver storageDriver
 ) : BaseManager, IMovieManager
 {
     private readonly IStorageFactory _storageFactory = storageFactory;
-    private readonly IStorageBackend _storageBackend = storageBackend;
+    private readonly IStorageDriver _storageDriver = storageDriver;
 
     public async Task<TmdbMovieAppends?> Add(int id, Library library)
     {
@@ -46,8 +46,8 @@ public class MovieManager(
         {
             IStorage folderStorage = _storageFactory.For(
                 folderLibrary.Folder.Id,
-                folderLibrary.Folder.BackendType,
-                folderLibrary.Folder.BackendConfig,
+                folderLibrary.Folder.DriverType,
+                folderLibrary.Folder.DriverConfig,
                 folderLibrary.Folder.Path
             );
             string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
@@ -55,7 +55,7 @@ public class MovieManager(
             if (!folderStorage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
-                    _storageBackend,
+                    _storageDriver,
                     folderLibrary.Folder.Path,
                     baseUrl.Replace("/", "")
                 );

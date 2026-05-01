@@ -9,11 +9,11 @@ public class FolderWatcher : IDisposable
 {
     private static readonly List<IDisposable> Watchers = [];
     private static volatile FolderWatcher? _instance;
-    private readonly IStorageBackend _storageBackend;
+    private readonly IStorageDriver _storageDriver;
 
-    public FolderWatcher(IStorageBackend storageBackend)
+    public FolderWatcher(IStorageDriver storageDriver)
     {
-        _storageBackend = storageBackend;
+        _storageDriver = storageDriver;
     }
 
     public event Action<FileWatcherEventArgs>? OnChanged;
@@ -33,7 +33,7 @@ public class FolderWatcher : IDisposable
         List<Action> disposers = [];
         disposers.AddRange(
             from folder in foldersToWatch
-            where _storageBackend.DirectoryExists(folder)
+            where _storageDriver.DirectoryExists(folder)
             select CreateWatcher(folder)
         );
 
@@ -85,15 +85,15 @@ public class FolderWatcher : IDisposable
         }
 
         StowageWatcher stowageWatcher = new(storage);
-        stowageWatcher.Changed += (e) =>
+        stowageWatcher.Changed += e =>
         {
             _onFileChanged(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
         };
-        stowageWatcher.Created += (e) =>
+        stowageWatcher.Created += e =>
         {
             _onFileCreated(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
         };
-        stowageWatcher.Deleted += (e) =>
+        stowageWatcher.Deleted += e =>
         {
             _onFileDeleted(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
         };

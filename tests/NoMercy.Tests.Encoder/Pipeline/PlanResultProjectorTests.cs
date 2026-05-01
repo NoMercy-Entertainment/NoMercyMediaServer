@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Pipeline;
-
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NoMercy.Encoder.Codecs;
@@ -7,7 +5,8 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
-using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Pipeline;
 
 public class PlanResultProjectorTests
 {
@@ -224,7 +223,7 @@ public class PlanResultProjectorTests
                     ExtraFlags: new Dictionary<string, string>()
                 ),
             ],
-            audioOutputs: [BuildAudioOutput("en"), BuildAudioOutput("fr")]
+            audioOutputs: [BuildAudioOutput(), BuildAudioOutput("fr")]
         );
         EncodingContext ctx = EncodingContext.Create();
 

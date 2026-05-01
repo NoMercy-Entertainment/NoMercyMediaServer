@@ -1,10 +1,10 @@
-namespace NoMercy.Encoder.Strategies.Dash;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Strategies.Dash;
 
 /// <summary>
 /// DASH 2-pass strategy — produces a segmented MPEG-DASH output with the

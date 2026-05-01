@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.BuildingBlocks;
-
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
+
+namespace NoMercy.Encoder.BuildingBlocks;
 
 public interface IThumbnailGenerator
 {

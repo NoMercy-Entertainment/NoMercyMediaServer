@@ -1,15 +1,17 @@
-namespace NoMercy.Tests.Encoder.Integration;
-
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Startup;
+
+namespace NoMercy.Tests.Encoder.Integration;
 
 [Trait("Category", "Integration")]
 [Collection("RealEncode")]
@@ -552,9 +554,8 @@ public class RealEncodeTests : IAsyncLifetime
         foreach (EncodingProfile profile in profiles)
         {
             // Roundtrip: serialize → deserialize
-            string json = Newtonsoft.Json.JsonConvert.SerializeObject(profile);
-            EncodingProfile? deserialized =
-                Newtonsoft.Json.JsonConvert.DeserializeObject<EncodingProfile>(json);
+            string json = JsonConvert.SerializeObject(profile);
+            EncodingProfile? deserialized = JsonConvert.DeserializeObject<EncodingProfile>(json);
 
             deserialized
                 .Should()
@@ -632,9 +633,8 @@ public class RealEncodeTests : IAsyncLifetime
             SchemaVersion: 1
         );
 
-        string json = Newtonsoft.Json.JsonConvert.SerializeObject(original);
-        EncodingProfile? deserialized =
-            Newtonsoft.Json.JsonConvert.DeserializeObject<EncodingProfile>(json);
+        string json = JsonConvert.SerializeObject(original);
+        EncodingProfile? deserialized = JsonConvert.DeserializeObject<EncodingProfile>(json);
 
         deserialized.Should().NotBeNull();
         deserialized!.Name.Should().Be(original.Name);
@@ -651,7 +651,7 @@ public class RealEncodeTests : IAsyncLifetime
         deserialized.AudioOutputs.Should().HaveCount(original.AudioOutputs.Length);
         deserialized.AudioOutputs[0].Codec.Should().Be(AudioCodecType.Opus);
         deserialized.AudioOutputs[0].BitrateKbps.Should().Be(128);
-        deserialized.AudioOutputs[0].AllowedLanguages.Should().BeEquivalentTo(["eng", "und"]);
+        deserialized.AudioOutputs[0].AllowedLanguages.Should().BeEquivalentTo("eng", "und");
 
         deserialized.SubtitleOutputs.Should().HaveCount(original.SubtitleOutputs.Length);
         deserialized.SubtitleOutputs[0].Codec.Should().Be(SubtitleCodecType.WebVtt);
@@ -683,6 +683,6 @@ public class RealEncodeTests : IAsyncLifetime
             bool isHdr
         ) { }
 
-        public void OnError(NoMercy.Encoder.Errors.EncodingError error) { }
+        public void OnError(EncodingError error) { }
     }
 }

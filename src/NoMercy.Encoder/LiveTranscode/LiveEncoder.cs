@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 public class LiveEncoder(
     ILiveQualitySelector qualitySelector,

@@ -545,7 +545,7 @@ public class LibrariesController(
             );
         }
 
-        return Ok(new ComponentResponse() { Data = components });
+        return Ok(new ComponentResponse { Data = components });
     }
 
     [HttpGet]

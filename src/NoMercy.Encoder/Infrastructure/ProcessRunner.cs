@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Infrastructure;
-
 using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
+
+namespace NoMercy.Encoder.Infrastructure;
 
 public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
 {

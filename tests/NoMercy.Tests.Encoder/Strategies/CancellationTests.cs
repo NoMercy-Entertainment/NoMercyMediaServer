@@ -1,15 +1,18 @@
-namespace NoMercy.Tests.Encoder.Strategies;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Strategies;
 
 /// <summary>
 /// Verifies items 613-614 of the encoder v3 alignment plan:
@@ -142,8 +145,8 @@ public class CancellationTests : IDisposable
             .Returns(Task.CompletedTask);
 
         // Pass 1 succeeds.
-        NoMercy.Encoder.Errors.EncodingError crashError = new(
-            Kind: NoMercy.Encoder.Errors.EncodingErrorKind.ProcessCrashed,
+        EncodingError crashError = new(
+            Kind: EncodingErrorKind.ProcessCrashed,
             Message: "FFmpeg exited with code 1",
             FfmpegStderr: "Killed",
             StageName: "Execute",

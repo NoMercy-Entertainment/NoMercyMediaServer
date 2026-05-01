@@ -1,10 +1,12 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -86,8 +88,8 @@ public class PluginRepositoryTests : IDisposable
 
     private PluginRepository MakeRepo(HttpClient? client = null)
     {
-        IStorageBackend backend = TestStorageHelper.CreateBackend();
-        IStorage storage = new LocalStorage(backend, new StoragePathGuard([_tempDir], backend));
+        IStorageDriver driver = TestStorageHelper.CreateBackend();
+        IStorage storage = new LocalStorage(driver, new StoragePathGuard([_tempDir], driver));
         return new(client ?? new HttpClient(), NullLogger.Instance, _tempDir, storage);
     }
 

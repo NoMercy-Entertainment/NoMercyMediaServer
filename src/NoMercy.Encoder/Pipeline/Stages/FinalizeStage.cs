@@ -1,5 +1,3 @@
-namespace NoMercy.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Errors;
@@ -7,6 +5,8 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Pipeline.Stages;
 
 public record FinalizeInput(
     ExecutionResult[] Results,

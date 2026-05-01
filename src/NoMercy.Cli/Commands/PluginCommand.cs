@@ -10,7 +10,7 @@ internal static class PluginCommand
         Command listCmd = new("list") { Description = "List installed plugins" };
 
         listCmd.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);

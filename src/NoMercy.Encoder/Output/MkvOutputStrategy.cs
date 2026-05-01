@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Output;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Output;
 
 public class MkvOutputStrategy(IStorage storage) : IOutputStrategy
 {

@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Hardware;
-
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Hardware;
 
 public class DriverChangeDetectorTests
 {
@@ -71,7 +71,7 @@ public class DriverChangeDetectorTests
     [Fact]
     public async Task DetectAndPersistAsync_SameHash_ReturnsNotChanged()
     {
-        IReadOnlyList<GpuDevice> gpus = OneGpu("31.0.15.4601");
+        IReadOnlyList<GpuDevice> gpus = OneGpu();
 
         Mock<IHardwareDetector> detector = new();
         detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync(gpus);

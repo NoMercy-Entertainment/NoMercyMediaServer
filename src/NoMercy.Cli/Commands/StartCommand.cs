@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Diagnostics;
 using System.Reflection;
+using NoMercy.Cli.Models;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Cli.Commands;
@@ -18,7 +19,7 @@ internal static class StartCommand
         command.Options.Add(devOption);
 
         command.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 bool dev = parseResult.GetValue(devOption);
@@ -67,10 +68,7 @@ internal static class StartCommand
         try
         {
             using CliClient client = new(pipe);
-            Models.StatusResponse? status = await client.GetAsync<Models.StatusResponse>(
-                "/manage/status",
-                ct
-            );
+            StatusResponse? status = await client.GetAsync<StatusResponse>("/manage/status", ct);
             return status is not null;
         }
         catch

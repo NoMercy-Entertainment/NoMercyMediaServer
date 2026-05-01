@@ -1,5 +1,3 @@
-namespace NoMercy.MediaProcessing.EventHandlers;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -11,6 +9,8 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Storage;
+
+namespace NoMercy.MediaProcessing.EventHandlers;
 
 /// <summary>
 /// Consumer video-archiver workflow: when a newly-scanned movie or episode

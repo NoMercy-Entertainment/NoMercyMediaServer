@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Subtitles;
-
 using System.Text;
 using System.Text.RegularExpressions;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Subtitles;
 
 /// <summary>
 /// Slices a WebVTT file into per-HLS-segment .vtt files.

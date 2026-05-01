@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -32,6 +32,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
+using HttpClient = System.Net.Http.HttpClient;
 using Image = NoMercy.Database.Models.Media.Image;
 using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 
@@ -53,7 +54,7 @@ public class ServerController(
     IWallpaperService wallpaperService,
     INetworkDiscovery networkDiscovery,
     IHttpClientFactory httpClientFactory,
-    IStorageBackend storageBackend
+    IStorageDriver storageDriver
 ) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
@@ -269,7 +270,7 @@ public class ServerController(
         {
             List<FileItem> fileList = await FileRepository.GetMusicBrainzReleasesInDirectory(
                 request.Folder,
-                fileRepository.StorageBackend
+                fileRepository.StorageDriver
             );
             return Ok(
                 new DataResponseDto<FileListResponseDto>
@@ -373,9 +374,7 @@ public class ServerController(
 
             await appContext.SaveChangesAsync();
 
-            System.Net.Http.HttpClient client = httpClientFactory.CreateClient(
-                HttpClientNames.General
-            );
+            HttpClient client = httpClientFactory.CreateClient(HttpClientNames.General);
             client.BaseAddress = new(Config.ApiServerBaseUrl);
 
             string? token = Globals.Globals.AccessToken;
@@ -481,7 +480,7 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view files");
 
-        MediaScan mediaScan = new(storageBackend);
+        MediaScan mediaScan = new(storageDriver);
 
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()

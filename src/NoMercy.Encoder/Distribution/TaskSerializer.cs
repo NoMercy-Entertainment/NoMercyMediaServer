@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Distribution;
-
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
+
+namespace NoMercy.Encoder.Distribution;
 
 public class TaskSerializer : ITaskSerializer
 {

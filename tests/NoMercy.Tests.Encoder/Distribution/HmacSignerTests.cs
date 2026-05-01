@@ -1,8 +1,7 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
 using System.Text;
 using NoMercy.Encoder.Distribution;
-using Xunit;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 [Trait("Category", "Unit")]
 public class HmacSignerTests

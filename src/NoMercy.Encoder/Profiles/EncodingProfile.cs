@@ -1,6 +1,8 @@
-namespace NoMercy.Encoder.Profiles;
-
+using NoMercy.Encoder.Audio;
+using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.Profiles;
 
 public record EncodingProfile(
     Ulid Id,
@@ -14,7 +16,7 @@ public record EncodingProfile(
     EncodeMode EncodeMode = EncodeMode.SinglePass,
     bool AutoLadder = false,
     bool AutoDetectCrop = false,
-    BuildingBlocks.Drm.DrmConfig? Drm = null,
+    DrmConfig? Drm = null,
     int SchemaVersion = 1
 )
 {
@@ -124,8 +126,8 @@ public record AudioOutput(
     int Channels,
     int SampleRateHz,
     string[] AllowedLanguages,
-    Audio.LoudnessMode Loudness = Audio.LoudnessMode.None,
-    Audio.DownmixMode Downmix = Audio.DownmixMode.Auto,
+    LoudnessMode Loudness = LoudnessMode.None,
+    DownmixMode Downmix = DownmixMode.Auto,
     string? CustomPanMatrix = null,
     string SegmentNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:",
     string PlaylistNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:",

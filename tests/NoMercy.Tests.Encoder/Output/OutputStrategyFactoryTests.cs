@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 public class OutputStrategyFactoryTests
 {

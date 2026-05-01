@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Pipeline.Optimizer;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline.Optimizer;
+
+namespace NoMercy.Tests.Encoder.Pipeline.Optimizer;
 
 public class GroupingStrategyTests
 {

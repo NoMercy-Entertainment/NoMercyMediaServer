@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Subtitles;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
+
+namespace NoMercy.Tests.Encoder.Subtitles;
 
 public class SubtitleRouterTests
 {

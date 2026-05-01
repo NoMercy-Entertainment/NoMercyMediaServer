@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Distribution;
-
 using NoMercy.Encoder.Commands;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// How a strategy chose to split work across workers. <see cref="QualityVariant"/>

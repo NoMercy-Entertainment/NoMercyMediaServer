@@ -228,7 +228,7 @@ public sealed class SetupTerminalUi : IDisposable
         if (!string.IsNullOrEmpty(_setupPageUrl))
         {
             Console.WriteLine();
-            Console.WriteLine($"  Or open the setup page in your browser:");
+            Console.WriteLine("  Or open the setup page in your browser:");
             Console.WriteLine($"  {_setupPageUrl}");
         }
 

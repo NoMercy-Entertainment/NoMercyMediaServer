@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Pipeline.Stages;
-
 using NoMercy.Encoder.Analysis;
+
+namespace NoMercy.Encoder.Pipeline.Stages;
 
 /// <summary>
 /// Named alias for the analysis stage contract. Resolving

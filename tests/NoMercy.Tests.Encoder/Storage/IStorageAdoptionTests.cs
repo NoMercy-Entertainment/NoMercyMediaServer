@@ -1,18 +1,15 @@
-namespace NoMercy.Tests.Encoder.Storage;
-
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.DiscRipping;
-using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
-using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// Phase 0.3 verification — encoder code reaches IStorage instead of
@@ -38,13 +35,13 @@ public class IStorageAdoptionTests
         });
 
         // Replace IStorage with a logging decorator wrapping LocalStorage
-        // (built from the same backend the encoder defaulted to).
+        // (built from the same driver the encoder defaulted to).
         services.RemoveAll<IStorage>();
         services.AddSingleton<IStorage>(sp =>
         {
-            IStorageBackend backend = sp.GetRequiredService<IStorageBackend>();
+            IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
             StoragePathGuard guard = sp.GetRequiredService<StoragePathGuard>();
-            return new LoggingStorage(new LocalStorage(backend, guard));
+            return new LoggingStorage(new LocalStorage(driver, guard));
         });
 
         ServiceProvider provider = services.BuildServiceProvider();
@@ -91,7 +88,7 @@ public class IStorageAdoptionTests
             logger.SizeOrZero(filePath).Should().Be(2);
 
             byte[] bytes = await logger.ReadAsync(filePath, CancellationToken.None);
-            bytes.Should().Equal([0xDE, 0xAD]);
+            bytes.Should().Equal(0xDE, 0xAD);
 
             await using LocalPathLease lease = logger.AcquireLocalPath(filePath);
             lease.Path.Should().Be(Path.GetFullPath(filePath));

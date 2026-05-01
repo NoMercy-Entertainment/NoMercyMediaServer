@@ -12,6 +12,7 @@ using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using Image = NoMercy.Database.Models.Media.Image;
 
 namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 
@@ -360,7 +361,7 @@ public class ReprocessAllPalettesCronJob : ICronJobExecutor
 
     private async Task<int> ProcessImages(CancellationToken ct)
     {
-        List<NoMercy.Database.Models.Media.Image> items = _context
+        List<Image> items = _context
             .Images.Where(i => i.Site == "https://image.tmdb.org/t/p/")
             .Where(x => string.IsNullOrEmpty(x._colorPalette) && !x.FilePath.EndsWith(".svg"))
             .Where(e =>
@@ -421,7 +422,8 @@ public class ReprocessAllPalettesCronJob : ICronJobExecutor
                     string filePath = AppFiles.MusicImagesPath + item.Cover;
                     if (_storage.Exists(filePath))
                     {
-                        using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(filePath);
+                        using Image<Rgba32> image =
+                            await SixLabors.ImageSharp.Image.LoadAsync<Rgba32>(filePath);
                         item._colorPalette = BaseImageManager.GenerateColorPalette([
                             new() { Key = "cover", ImageData = image },
                         ]);

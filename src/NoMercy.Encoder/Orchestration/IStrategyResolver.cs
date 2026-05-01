@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Orchestration;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Strategies;
+
+namespace NoMercy.Encoder.Orchestration;
 
 public interface IStrategyResolver
 {

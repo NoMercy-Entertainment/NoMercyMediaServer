@@ -33,12 +33,12 @@ using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Files;
 
-public class FileRepository(MediaContext context, IStorageBackend storageBackend) : IFileRepository
+public class FileRepository(MediaContext context, IStorageDriver storageDriver) : IFileRepository
 {
     private readonly MediaContext _context = context;
-    private readonly IStorageBackend _storageBackend = storageBackend;
+    private readonly IStorageDriver _storageDriver = storageDriver;
 
-    public IStorageBackend StorageBackend => _storageBackend;
+    public IStorageDriver StorageDriver => _storageDriver;
 
     public Task<IDbContextTransaction> BeginTransactionAsync()
     {
@@ -824,8 +824,7 @@ public class FileRepository(MediaContext context, IStorageBackend storageBackend
 
             TmdbEpisodeGroupEpisode target = allEpisodes[absoluteEpisodeNumber - 1];
             Logger.App(
-                $"Resolved absolute episode {absoluteEpisodeNumber} → S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via '{absoluteGroup.Name}'",
-                LogEventLevel.Information
+                $"Resolved absolute episode {absoluteEpisodeNumber} → S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via '{absoluteGroup.Name}'"
             );
 
             // Look up the resolved episode in the DB
@@ -931,8 +930,7 @@ public class FileRepository(MediaContext context, IStorageBackend storageBackend
                 continue;
 
             Logger.App(
-                $"Resolved S{seasonNumber:D2}E{episodeNumber:D2} → TMDB S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via episode group '{groupResult.Name}'",
-                LogEventLevel.Information
+                $"Resolved S{seasonNumber:D2}E{episodeNumber:D2} → TMDB S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via episode group '{groupResult.Name}'"
             );
 
             // Look up in DB first
@@ -987,12 +985,12 @@ public class FileRepository(MediaContext context, IStorageBackend storageBackend
 
     public static async Task<List<FileItem>> GetMusicBrainzReleasesInDirectory(
         string folder,
-        IStorageBackend storageBackend
+        IStorageDriver storageDriver
     )
     {
         PrevSearchQueries.Clear();
 
-        MediaScan mediaScan = new(storageBackend);
+        MediaScan mediaScan = new(storageDriver);
         ConcurrentBag<MediaFolderExtend> mediaFolders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType("music")
@@ -1208,7 +1206,7 @@ public class FileRepository(MediaContext context, IStorageBackend storageBackend
                             {
                                 Index = 0,
                                 Language =
-                                    $"Best Match {string.Join(", ", Enumerable.Select<MusicBrainzMedia, string>(bestResult.Media, m => m.Format))}",
+                                    $"Best Match {string.Join(", ", bestResult.Media.Select<MusicBrainzMedia, string>(m => m.Format))}",
                             },
                         ],
                     },
@@ -1524,15 +1522,15 @@ public class FileRepository(MediaContext context, IStorageBackend storageBackend
             folder = "/";
         }
 
-        if (!_storageBackend.DirectoryExists(folder))
+        if (!_storageDriver.DirectoryExists(folder))
             return array;
 
         IEnumerable<string> directories;
         try
         {
-            directories = _storageBackend
+            directories = _storageDriver
                 .EnumerateFileSystemEntries(folder, "*", SearchOption.TopDirectoryOnly)
-                .Where(e => _storageBackend.DirectoryExists(e));
+                .Where(e => _storageDriver.DirectoryExists(e));
         }
         catch (IOException)
         {

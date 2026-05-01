@@ -1,5 +1,3 @@
-namespace NoMercy.Encoder.Orchestration;
-
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Errors;
@@ -10,6 +8,8 @@ using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Orchestration;
 
 public class EncodingOrchestrator(
     IStrategyResolver resolver,

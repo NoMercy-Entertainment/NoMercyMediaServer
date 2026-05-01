@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 using NoMercy.NmSystem.Information;
@@ -209,7 +210,7 @@ public class AutoStartupManager
                     <key>StandardErrorPath</key>
                     <string>{logPath}/nomercy-launcher-stderr.log</string>
                     <key>WorkingDirectory</key>
-                    <string>{System.IO.Path.GetDirectoryName(launcherPath)}</string>
+                    <string>{Path.GetDirectoryName(launcherPath)}</string>
                 </dict>
                 </plist>
                 """;
@@ -239,7 +240,7 @@ public class AutoStartupManager
                 <key>StandardErrorPath</key>
                 <string>{logPath}/nomercy-stderr.log</string>
                 <key>WorkingDirectory</key>
-                <string>{System.IO.Path.GetDirectoryName(serverPath)}</string>
+                <string>{Path.GetDirectoryName(serverPath)}</string>
             </dict>
             </plist>
             """;
@@ -471,7 +472,7 @@ public class AutoStartupManager
         if (!string.IsNullOrEmpty(processPath))
             return processPath;
 
-        return System.Reflection.Assembly.GetExecutingAssembly().Location;
+        return Assembly.GetExecutingAssembly().Location;
     }
 
     [SupportedOSPlatform("linux")]

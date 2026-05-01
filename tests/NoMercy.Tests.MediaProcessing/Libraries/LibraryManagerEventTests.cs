@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
@@ -65,14 +65,11 @@ public class LibraryManagerEventTests : IDisposable
             }
         );
 
-        IStorageBackend backend = new SystemIoStorageBackend();
-        StorageFactory storageFactory = new(
-            backend,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<StorageFactory>.Instance
-        );
-        LibraryRepository repo = new(_context, backend);
+        IStorageDriver driver = new LocalStorageDriver();
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, backend, storageFactory, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
 
         await manager.ProcessLibrary(Ulid.NewUlid());
 
@@ -111,14 +108,11 @@ public class LibraryManagerEventTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
-        IStorageBackend backend = new SystemIoStorageBackend();
-        StorageFactory storageFactory = new(
-            backend,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<StorageFactory>.Instance
-        );
-        LibraryRepository repo = new(_context, backend);
+        IStorageDriver driver = new LocalStorageDriver();
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, backend, storageFactory, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
 
         await manager.ProcessLibrary(libraryId);
 
@@ -149,14 +143,11 @@ public class LibraryManagerEventTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
-        IStorageBackend backend = new SystemIoStorageBackend();
-        StorageFactory storageFactory = new(
-            backend,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<StorageFactory>.Instance
-        );
-        LibraryRepository repo = new(_context, backend);
+        IStorageDriver driver = new LocalStorageDriver();
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, backend, storageFactory);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory);
 
         await manager.ProcessLibrary(libraryId);
     }
@@ -186,14 +177,11 @@ public class LibraryManagerEventTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
-        IStorageBackend backend = new SystemIoStorageBackend();
-        StorageFactory storageFactory = new(
-            backend,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<StorageFactory>.Instance
-        );
-        LibraryRepository repo = new(_context, backend);
+        IStorageDriver driver = new LocalStorageDriver();
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, backend, storageFactory, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
 
         await manager.ProcessLibrary(libraryId);
 
@@ -227,14 +215,11 @@ public class LibraryManagerEventTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
-        IStorageBackend backend = new SystemIoStorageBackend();
-        StorageFactory storageFactory = new(
-            backend,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<StorageFactory>.Instance
-        );
-        LibraryRepository repo = new(_context, backend);
+        IStorageDriver driver = new LocalStorageDriver();
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, backend, storageFactory, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
 
         await manager.ProcessLibrary(libraryId);
 

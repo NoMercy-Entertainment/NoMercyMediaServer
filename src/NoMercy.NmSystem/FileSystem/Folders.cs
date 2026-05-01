@@ -32,10 +32,10 @@ public static class Folders
                 Parallel.ForEach(
                     directoryInfo.GetDirectories(),
                     Config.ParallelOptions,
-                    (subDirectory) =>
+                    subDirectory =>
                         Interlocked.Add(
                             ref startDirectorySize,
-                            GetDirectorySize(subDirectory, recursive)
+                            subDirectory.GetDirectorySize(recursive)
                         )
                 );
 

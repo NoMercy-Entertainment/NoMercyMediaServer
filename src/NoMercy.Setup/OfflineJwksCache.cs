@@ -1,10 +1,10 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 
 namespace NoMercy.Setup;
@@ -13,7 +13,7 @@ public static class OfflineJwksCache
 {
     // LOCAL-ONLY: OfflineJwksCache is called during DI registration (ConfigureAuth) and
     // AuthManager.InitializeAsync — both run before StorageProvider is initialized.
-    private static readonly IStorageBackend Backend = new SystemIoStorageBackend();
+    private static readonly IStorageDriver Backend = new LocalStorageDriver();
     private static readonly object CacheLock = new();
     private static RsaSecurityKey? _cachedSigningKey;
 

@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Execution;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Execution;
+
+namespace NoMercy.Tests.Encoder.Execution;
 
 public class ProcessThrottleTests
 {

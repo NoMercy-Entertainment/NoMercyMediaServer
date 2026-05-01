@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 public class QualityScalerTests
 {
@@ -279,28 +279,28 @@ public class QualityScalerTests
     public void SvtAv1QualityScaler_passes_through_av1_crf_unchanged()
     {
         SvtAv1QualityScaler scaler = new();
-        scaler.Translate(30, 63, 63, Av1Hint("libsvtav1")).Should().Be(30);
+        scaler.Translate(30, 63, 63, Av1Hint()).Should().Be(30);
     }
 
     [Fact]
     public void SvtAv1QualityScaler_boundary_zero()
     {
         SvtAv1QualityScaler scaler = new();
-        scaler.Translate(0, 63, 63, Av1Hint("libsvtav1")).Should().Be(0);
+        scaler.Translate(0, 63, 63, Av1Hint()).Should().Be(0);
     }
 
     [Fact]
     public void SvtAv1QualityScaler_boundary_max()
     {
         SvtAv1QualityScaler scaler = new();
-        scaler.Translate(63, 63, 63, Av1Hint("libsvtav1")).Should().Be(63);
+        scaler.Translate(63, 63, 63, Av1Hint()).Should().Be(63);
     }
 
     [Fact]
     public void SvtAv1QualityScaler_boundary_mid()
     {
         SvtAv1QualityScaler scaler = new();
-        scaler.Translate(35, 63, 63, Av1Hint("libsvtav1")).Should().Be(35);
+        scaler.Translate(35, 63, 63, Av1Hint()).Should().Be(35);
     }
 
     [Fact]

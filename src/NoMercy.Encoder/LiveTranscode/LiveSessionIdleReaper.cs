@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 /// <summary>
 /// Background service that sweeps active live sessions every 30 seconds and

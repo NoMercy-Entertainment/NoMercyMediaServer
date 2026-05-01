@@ -1,12 +1,14 @@
-namespace NoMercy.Encoder.Output;
-
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Output;
 
 public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 {
@@ -284,17 +286,14 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 
             // Skip our own segment files if the language probe finds them
             // before the source — they end with _NNNNN.vtt.
-            if (
-                System.Text.RegularExpressions.Regex.IsMatch(
-                    Path.GetFileName(sourceVttPath),
-                    @"_\d{5}\.vtt$"
-                )
-            )
+            if (Regex.IsMatch(Path.GetFileName(sourceVttPath), @"_\d{5}\.vtt$"))
                 continue;
 
             string vttContent = Encoding.UTF8.GetString(storage.Read(sourceVttPath));
-            IReadOnlyList<NoMercy.Encoder.Subtitles.WebVttSegment> segments =
-                segmenter.SliceContent(vttContent, segmentDuration);
+            IReadOnlyList<WebVttSegment> segments = segmenter.SliceContent(
+                vttContent,
+                segmentDuration
+            );
 
             for (int i = 0; i < segments.Count; i++)
             {
@@ -347,8 +346,8 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             if (
                 double.TryParse(
                     value.Trim(),
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
                     out double seconds
                 )
             )

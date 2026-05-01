@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Analysis;
-
 using Newtonsoft.Json.Linq;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Analysis;
 
 public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage) : IMediaAnalyzer
 {

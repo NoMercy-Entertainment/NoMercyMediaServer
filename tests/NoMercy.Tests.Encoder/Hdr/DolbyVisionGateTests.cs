@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Hdr;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Hdr;
 
 /// <summary>
 /// Unit tests for <see cref="DolbyVisionGate.Resolve"/>.

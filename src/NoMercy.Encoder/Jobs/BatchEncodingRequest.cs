@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Jobs;
-
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Encoder.Jobs;
 
 public record BatchEncodingRequest(EncodingRequest[] Items, BatchOptions Options);
 

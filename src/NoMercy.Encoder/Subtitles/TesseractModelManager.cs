@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Subtitles;
-
 using System.Net;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Subtitles;
 
 /// <summary>
 /// Ensures Tesseract *.traineddata language models are available on disk,

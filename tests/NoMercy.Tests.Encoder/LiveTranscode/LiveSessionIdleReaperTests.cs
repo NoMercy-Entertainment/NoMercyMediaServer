@@ -1,10 +1,11 @@
-namespace NoMercy.Tests.Encoder.LiveTranscode;
-
+using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 public class LiveSessionIdleReaperTests
 {
@@ -60,9 +61,9 @@ public class LiveSessionIdleReaperTests
 
         // Touch with a timestamp in the past by calling the internal field via
         // reflection — keeps the test independent of clock skew.
-        System.Reflection.FieldInfo? field = typeof(LiveRuntimeSession).GetField(
+        FieldInfo? field = typeof(LiveRuntimeSession).GetField(
             "_lastAccessTicks",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
         if (field is null)

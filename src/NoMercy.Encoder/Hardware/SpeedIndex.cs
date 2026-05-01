@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Hardware;
-
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.Hardware;
 
 public record SpeedKey(VideoCodecType Codec, string Encoder, int Width, string? DeviceName);
 

@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Composition;
-
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Encoder.Composition;
 
 public static class EncoderProvider
 {

@@ -24,7 +24,7 @@ public class SqliteQueueContextTests : IDisposable
         // Force GC and finalization to release any outstanding handles
         GC.Collect();
         GC.WaitForPendingFinalizers();
-        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        SqliteConnection.ClearAllPools();
         if (File.Exists(_dbPath))
         {
             const int maxAttempts = 30;

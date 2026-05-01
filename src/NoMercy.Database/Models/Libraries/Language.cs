@@ -26,11 +26,6 @@ public class Language
     [JsonProperty("language_library")]
     public ICollection<LanguageLibrary> LanguageLibrary { get; set; } = [];
 
-    public Language()
-    {
-        //
-    }
-
     // public Language(Providers.TMDB.Models.Configuration.TmdbLanguage tmdbLanguage)
     // {
     //     Iso6391 = tmdbLanguage.Iso6391;

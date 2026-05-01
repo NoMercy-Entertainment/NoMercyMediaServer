@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Composition;
-
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NoMercy.Encoder.Analysis;
@@ -15,6 +13,8 @@ using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Startup;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.Composition;
 
 public class ServiceRegistrationTests
 {
@@ -96,7 +96,7 @@ public class ServiceRegistrationTests
         ServiceProvider provider = BuildProvider();
         IEncoder encoder = provider.GetRequiredService<IEncoder>();
         encoder.Should().NotBeNull();
-        encoder.Should().BeOfType<Encoder>();
+        encoder.Should().BeOfType<NoMercy.Encoder.Pipeline.Encoder>();
     }
 
     [Fact]

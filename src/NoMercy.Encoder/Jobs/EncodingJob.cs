@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Jobs;
-
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.Jobs;
 
 public record EncodingJob(
     string JobId,

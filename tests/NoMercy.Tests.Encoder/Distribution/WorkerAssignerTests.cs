@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
 using NoMercy.Encoder.Distribution;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 public class WorkerAssignerTests
 {
@@ -30,7 +30,7 @@ public class WorkerAssignerTests
             ]
         );
 
-        result.Keys.Should().BeEquivalentTo(["a", "b"]);
+        result.Keys.Should().BeEquivalentTo("a", "b");
         result["a"].Should().BeEmpty();
         result["b"].Should().BeEmpty();
     }
@@ -141,7 +141,7 @@ public class WorkerAssignerTests
         );
 
         HashSet<string> placed = result.Values.SelectMany(v => v).Select(t => t.TaskId).ToHashSet();
-        placed.Should().BeEquivalentTo(["t0", "t1", "t2", "t3", "t4"]);
+        placed.Should().BeEquivalentTo("t0", "t1", "t2", "t3", "t4");
     }
 
     private static EncodeTask MakeTask(string id, EncodeTaskType type) =>

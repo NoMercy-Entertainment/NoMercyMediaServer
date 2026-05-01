@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Jobs;
-
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Jobs;
 
 public interface IJobDispatcher
 {

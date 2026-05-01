@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
+using NoMercy.Events.Playback;
 using NoMercy.Plugins.Abstractions;
 using Xunit;
 
@@ -418,7 +419,7 @@ public class PluginAbstractionsTests
         TestPluginContext context = new(bus);
 
         List<IEvent> received = [];
-        context.EventBus.Subscribe<Events.Playback.PlaybackStartedEvent>(
+        context.EventBus.Subscribe<PlaybackStartedEvent>(
             (evt, _) =>
             {
                 received.Add(evt);
@@ -427,7 +428,7 @@ public class PluginAbstractionsTests
         );
 
         await bus.PublishAsync(
-            new Events.Playback.PlaybackStartedEvent
+            new PlaybackStartedEvent
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 1,

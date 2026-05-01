@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Profiles;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
 /// Complexity hint supplied by the caller to tune which rungs the auto-ladder

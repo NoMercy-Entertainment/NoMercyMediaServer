@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using NoMercy.Queue.MediaServer.Jobs;
+using NoMercyQueue.Core.Interfaces;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -84,7 +85,7 @@ public class CertificateRenewalCronJobTests
         CertificateRenewalCronJob job = new(logger.Object);
 
         // Assert
-        Assert.IsAssignableFrom<NoMercyQueue.Core.Interfaces.ICronJobExecutor>(job);
+        Assert.IsAssignableFrom<ICronJobExecutor>(job);
     }
 
     [Fact]

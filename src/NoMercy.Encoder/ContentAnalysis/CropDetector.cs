@@ -1,11 +1,11 @@
-namespace NoMercy.Encoder.ContentAnalysis;
-
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.ContentAnalysis;
 
 /// <summary>
 /// Detects black-bar cropping by running FFmpeg's <c>cropdetect</c> filter on a

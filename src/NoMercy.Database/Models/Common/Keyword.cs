@@ -14,9 +14,4 @@ public class Keyword
 
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
-
-    public Keyword()
-    {
-        //
-    }
 }

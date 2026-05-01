@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.Profiles;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Profiles;
 
 /// <summary>
 /// Direct-call tests for <see cref="PreviewEngine.Analyze"/>.
@@ -128,7 +128,7 @@ public class PreviewEngineTests
         new(
             Id: Ulid.NewUlid(),
             Name: "Test Profile",
-            Format: NoMercy.Encoder.Codecs.OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs: videoOutputs ?? [MakeVideoOutput()],
             AudioOutputs: audioOutputs ?? [MakeAudioOutput()],
             SubtitleOutputs: subtitleOutputs ?? []

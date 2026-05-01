@@ -12,8 +12,6 @@ public class TmdbSeasonClientTests : TmdbTestBase
     private const int InvalidTvShowId = 999999999;
     private const int InvalidSeasonNumber = 999;
 
-    public TmdbSeasonClientTests() { }
-
     #region Constructor Tests
 
     [Fact]

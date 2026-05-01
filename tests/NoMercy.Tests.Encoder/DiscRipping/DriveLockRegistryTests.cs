@@ -1,12 +1,11 @@
-namespace NoMercy.Tests.Encoder.DiscRipping;
-
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.DiscRipping;
 
 public class DriveLockRegistryTests
 {

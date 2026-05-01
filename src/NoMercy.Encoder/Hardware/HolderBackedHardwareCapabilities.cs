@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Hardware;
-
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.Hardware;
 
 /// <summary>
 /// Singleton-safe forwarding wrapper. Every read goes through to

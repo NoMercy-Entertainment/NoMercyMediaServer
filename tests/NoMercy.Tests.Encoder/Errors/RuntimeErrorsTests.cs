@@ -1,6 +1,7 @@
-namespace NoMercy.Tests.Encoder.Errors;
-
+using System.Reflection;
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Tests.Encoder.Errors;
 
 public class RuntimeErrorsTests
 {
@@ -214,9 +215,7 @@ public class RuntimeErrorsTests
 
         // Reflect over EncoderRuleId to confirm every emitted ID exists in the catalogue.
         IEnumerable<string> catalogued = typeof(EncoderRuleId)
-            .GetFields(
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
-            )
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
             .Select(f => (string)f.GetValue(null)!);
 
         foreach (EncoderRuntimeException ex in all)

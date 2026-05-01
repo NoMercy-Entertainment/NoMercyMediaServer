@@ -1,11 +1,11 @@
-namespace NoMercy.MediaProcessing.EventHandlers;
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Notifications;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
+
+namespace NoMercy.MediaProcessing.EventHandlers;
 
 /// <summary>
 /// Wires the encoder event bus to the <see cref="INotificationDispatcher"/>

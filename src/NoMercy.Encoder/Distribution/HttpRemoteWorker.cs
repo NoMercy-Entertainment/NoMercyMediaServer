@@ -1,6 +1,3 @@
-namespace NoMercy.Encoder.Distribution;
-
-using System.Net.Http;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
@@ -8,6 +5,8 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// HTTP-based remote worker. Posts signed <see cref="EncodeTask"/>

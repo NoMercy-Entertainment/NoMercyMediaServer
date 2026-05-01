@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Hardware;
-
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
+
+namespace NoMercy.Encoder.Hardware;
 
 /// <summary>
 /// Production implementation of <see cref="INvencSessionCap"/>.

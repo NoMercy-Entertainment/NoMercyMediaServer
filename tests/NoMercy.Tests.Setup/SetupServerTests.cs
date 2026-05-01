@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using NoMercy.Setup;
@@ -29,7 +30,7 @@ public class SetupServerTests : IAsyncLifetime
 
     private static int GetAvailablePort()
     {
-        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
@@ -622,7 +623,7 @@ public class SetupServerPkceTests : IAsyncLifetime
 
     private static int GetAvailablePort()
     {
-        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();

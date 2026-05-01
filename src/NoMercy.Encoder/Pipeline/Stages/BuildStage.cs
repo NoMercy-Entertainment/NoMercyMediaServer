@@ -1,8 +1,7 @@
-namespace NoMercy.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
+using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
@@ -11,6 +10,8 @@ using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Pipeline.Stages;
 
 public record BuildInput(
     ExecutionPlan Plan,
@@ -28,7 +29,7 @@ public class BuildStage(
     IFontExtractor fontExtractor,
     ISubtitleExtractor subtitleExtractor,
     IOutputStrategyFactory outputStrategyFactory,
-    IEnumerable<BuildingBlocks.Drm.IDrmProcessor> drmProcessors,
+    IEnumerable<IDrmProcessor> drmProcessors,
     ILogger<BuildStage> logger,
     IStorage storage,
     AssBurnInFilterBuilder? assBurnInFilterBuilder = null,
@@ -151,7 +152,7 @@ public class BuildStage(
                         Key: EncoderRuleId.SubtitlesBurnInPermanent,
                         Message: "Subtitle stream will be burned permanently into video frames. "
                             + "The resulting output cannot be toggled off by the client.",
-                        Data: new { SourceIndex = burnInPlan.SourceIndex }
+                        Data: new { burnInPlan.SourceIndex }
                     )
                 );
             }
@@ -303,13 +304,11 @@ public class BuildStage(
     /// </summary>
     private async Task<BuildInput> ApplyDrmPreparationAsync(BuildInput input, CancellationToken ct)
     {
-        BuildingBlocks.Drm.DrmConfig? drm = input.Plan.OutputPlan.Drm;
-        if (drm is null || drm.Method == BuildingBlocks.Drm.DrmMethod.None)
+        DrmConfig? drm = input.Plan.OutputPlan.Drm;
+        if (drm is null || drm.Method == DrmMethod.None)
             return input;
 
-        BuildingBlocks.Drm.IDrmProcessor? processor = drmProcessors.FirstOrDefault(p =>
-            p.Method == drm.Method
-        );
+        IDrmProcessor? processor = drmProcessors.FirstOrDefault(p => p.Method == drm.Method);
         if (processor is null)
         {
             logger.LogWarning(
@@ -319,7 +318,7 @@ public class BuildStage(
             return input;
         }
 
-        BuildingBlocks.Drm.DrmArtifact artifact = await processor
+        DrmArtifact artifact = await processor
             .PrepareAsync(input.OutputDirectory, drm, ct)
             .ConfigureAwait(false);
 

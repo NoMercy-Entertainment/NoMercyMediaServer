@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Strategies.Dash;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
@@ -9,6 +7,8 @@ using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Strategies.Dash;
 
 /// <summary>
 /// DASH adaptive ladders need the same multi-variant 2-pass treatment as HLS:

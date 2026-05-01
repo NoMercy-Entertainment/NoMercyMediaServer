@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.AdvancedFeatures;
-
 using NoMercy.Encoder.ContentAnalysis;
+
+namespace NoMercy.Tests.Encoder.AdvancedFeatures;
 
 public class ContentAnalysisTests
 {

@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Strategies.Mp4;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Encoder.Strategies.Mp4;
 
 /// <summary>
 /// MP4 single-file single-pass output. Delegates to the shared pipeline — the

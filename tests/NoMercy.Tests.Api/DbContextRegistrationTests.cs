@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
+using NoMercy.Database.Models.Users;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -96,7 +97,7 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
         MediaContext context = scope.ServiceProvider.GetRequiredService<MediaContext>();
 
         // Track a change on the scoped context
-        Database.Models.Users.User? user = context.Users.FirstOrDefault();
+        User? user = context.Users.FirstOrDefault();
         Assert.NotNull(user);
 
         string originalName = user.Name;
@@ -106,9 +107,7 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
 
         // Re-resolve from same scope — should be same instance with same change tracker
         MediaContext sameContext = scope.ServiceProvider.GetRequiredService<MediaContext>();
-        Database.Models.Users.User? reloaded = sameContext.Users.FirstOrDefault(u =>
-            u.Id == user.Id
-        );
+        User? reloaded = sameContext.Users.FirstOrDefault(u => u.Id == user.Id);
         Assert.NotNull(reloaded);
         Assert.Equal(tempName, reloaded.Name);
 
@@ -125,16 +124,14 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
         MediaContext ctx2 = scope.ServiceProvider.GetRequiredService<MediaContext>();
 
         // Since they're the same instance, changes tracked by ctx1 are visible to ctx2
-        Database.Models.Users.User? user = ctx1.Users.FirstOrDefault();
+        User? user = ctx1.Users.FirstOrDefault();
         Assert.NotNull(user);
 
         string originalName = user.Name;
         user.Name = "SharedTracking";
 
         // ctx2 should see the same entity with the modified name (same change tracker)
-        Database.Models.Users.User? fromCtx2 = ctx2.Users.Local.FirstOrDefault(u =>
-            u.Id == user.Id
-        );
+        User? fromCtx2 = ctx2.Users.Local.FirstOrDefault(u => u.Id == user.Id);
         Assert.NotNull(fromCtx2);
         Assert.Equal("SharedTracking", fromCtx2.Name);
 

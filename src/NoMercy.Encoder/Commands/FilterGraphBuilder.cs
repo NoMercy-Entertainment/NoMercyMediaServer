@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Commands;
-
 using NoMercy.Encoder.BuildingBlocks;
+
+namespace NoMercy.Encoder.Commands;
 
 public class FilterGraphBuilder : IFilterGraphBuilder
 {

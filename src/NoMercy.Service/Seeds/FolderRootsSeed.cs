@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -16,7 +16,7 @@ public static class FolderRootsSeed
     public static async Task Init(
         this MediaContext dbContext,
         IStorage storage,
-        IStorageBackend storageBackend
+        IStorageDriver storageDriver
     )
     {
         if (!storage.Exists(AppFiles.FolderRootsSeedFile))
@@ -44,7 +44,7 @@ public static class FolderRootsSeed
         }
 
         // Register seeded folders with the middleware so they can serve files over HTTP
-        foreach (Folder folder in folders.Where(f => storageBackend.DirectoryExists(f.Path)))
+        foreach (Folder folder in folders.Where(f => storageDriver.DirectoryExists(f.Path)))
             DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
 
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);

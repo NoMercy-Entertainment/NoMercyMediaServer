@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
+using MimeMapping;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 
@@ -74,13 +75,10 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
         try
         {
-            if (!Ulid.TryParse(rootPath, out Ulid share))
-            {
-                await next(context);
-                return;
-            }
-
-            if (!Providers.TryGetValue(share, out PhysicalFileProvider? provider))
+            if (
+                !Ulid.TryParse(rootPath, out Ulid share)
+                || !Providers.TryGetValue(share, out PhysicalFileProvider? provider)
+            )
             {
                 await next(context);
                 return;
@@ -110,7 +108,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
         long fileLength = storage.Size(filePhysicalPath);
 
-        context.Response.ContentType = MimeMapping.MimeUtility.GetMimeMapping(file.PhysicalPath);
+        context.Response.ContentType = MimeUtility.GetMimeMapping(file.PhysicalPath);
 
         bool isStreamableMedia = IsStreamableMedia(filePhysicalPath);
         bool hasRangeRequest = context.Request.Headers.TryGetValue(
@@ -140,7 +138,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
         if (hasRangeRequest)
         {
-            string?[] ranges = rangeValue.ToString().Replace("bytes=", "").Split('-').ToArray();
+            string?[] ranges = rangeValue.ToString().Replace("bytes=", "").Split('-');
 
             if (!long.TryParse(ranges[0], out start))
             {

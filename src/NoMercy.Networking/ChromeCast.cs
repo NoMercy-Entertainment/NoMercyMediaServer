@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 using NoMercy.Events;
 using NoMercy.Events.Cast;
 using NoMercy.Networking.Discovery;
@@ -9,6 +10,7 @@ using Sharpcaster;
 using Sharpcaster.Models;
 using Sharpcaster.Models.ChromecastStatus;
 using Sharpcaster.Models.Media;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace NoMercy.Networking;
 
@@ -309,7 +311,7 @@ public class ChromeCast
             );
         }
 
-        int requestId = System.Threading.Interlocked.Increment(ref _androidLaunchRequestId);
+        int requestId = Interlocked.Increment(ref _androidLaunchRequestId);
         string json = BuildLaunchJson(requestId, customData, useAndroidReceiver);
 
         string flavor = useAndroidReceiver ? "androidReceiverCompatible" : "webReceiverOnly";
@@ -358,9 +360,7 @@ public class ChromeCast
                 Logger.Ping(
                     $"LaunchAndroidReceiver: no LAUNCH ack from {target} within 5s — retrying once"
                 );
-                int retryRequestId = System.Threading.Interlocked.Increment(
-                    ref _androidLaunchRequestId
-                );
+                int retryRequestId = Interlocked.Increment(ref _androidLaunchRequestId);
                 string retryJson = BuildLaunchJson(retryRequestId, customData, useAndroidReceiver);
                 await SendLaunchAsync(client, retryRequestId, retryJson);
             }
@@ -413,7 +413,7 @@ public class ChromeCast
                     language = "en-US",
                     supportedAppTypes = new[] { "WEB" },
                 };
-            return Newtonsoft.Json.JsonConvert.SerializeObject(payload);
+            return JsonConvert.SerializeObject(payload);
         }
 
         object payloadWithCustomData = useAndroidReceiver
@@ -436,7 +436,7 @@ public class ChromeCast
                 supportedAppTypes = new[] { "WEB" },
                 customData,
             };
-        return Newtonsoft.Json.JsonConvert.SerializeObject(payloadWithCustomData);
+        return JsonConvert.SerializeObject(payloadWithCustomData);
     }
 
     private static async Task SendLaunchAsync(ChromecastClient client, int requestId, string json)
@@ -476,7 +476,7 @@ public class ChromeCast
             DeepLink = $"tv.nomercy.app://{value}/watch",
         };
 
-        string jsonElement = System.Text.Json.JsonSerializer.Serialize(customData);
+        string jsonElement = JsonSerializer.Serialize(customData);
         Media media = new() { CustomData = jsonElement };
 
         await client.MediaChannel.LoadAsync(media).ConfigureAwait(false);

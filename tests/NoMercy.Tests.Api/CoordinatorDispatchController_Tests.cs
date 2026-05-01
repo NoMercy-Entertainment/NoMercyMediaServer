@@ -8,7 +8,6 @@ using NoMercy.Api.Controllers.V1.Dashboard;
 using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
-using NoMercy.Encoder.Progress;
 using NoMercy.Helpers.Extensions;
 using Xunit;
 

@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Codecs;
-
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.Codecs;
 
 public sealed record BitDepthResolutionResult(
     int FinalBitDepth,

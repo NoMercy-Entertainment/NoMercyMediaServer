@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿﻿using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -504,7 +504,7 @@ public class AudioImportJob : AbstractMusicFolderJob
             recordingRepository,
             musicGenreRepository,
             artistRepository,
-            StorageBackend
+            StorageDriver
         );
 
         albumLibrary = _mediaContext
@@ -520,7 +520,7 @@ public class AudioImportJob : AbstractMusicFolderJob
 
     private async IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)> GetAudioFiles()
     {
-        await using MediaScan mediaScan = new(StorageBackend);
+        await using MediaScan mediaScan = new(StorageDriver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             .EnableFileListing()

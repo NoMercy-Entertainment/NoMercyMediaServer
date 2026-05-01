@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 public class PlaybackDecisionEngine : IPlaybackDecisionEngine
 {

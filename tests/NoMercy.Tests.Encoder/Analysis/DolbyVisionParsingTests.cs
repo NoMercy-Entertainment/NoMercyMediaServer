@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Analysis;
-
 using Newtonsoft.Json.Linq;
 using NoMercy.Encoder.Analysis;
+
+namespace NoMercy.Tests.Encoder.Analysis;
 
 /// <summary>
 /// Exercises the Dolby Vision extraction from ffprobe's <c>side_data_list</c>.

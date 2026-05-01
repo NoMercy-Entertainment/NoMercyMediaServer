@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.BuildingBlocks.Drm;
-
 using System.Security.Cryptography;
 using System.Text;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.BuildingBlocks.Drm;
 
 /// <summary>
 /// AES-128 HLS encryption. Writes a <c>key</c> file containing the raw

@@ -1,12 +1,11 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
 using System.Net;
-using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 /// <summary>
 /// Tests for the license-gated token-rotation behaviour added in Phase 4.9.

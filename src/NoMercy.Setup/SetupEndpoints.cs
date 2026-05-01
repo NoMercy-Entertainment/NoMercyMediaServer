@@ -7,6 +7,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Dto;
 using NoMercyQueue.Workers;
 using QRCoder;
 using Serilog.Events;
@@ -372,8 +373,8 @@ public class SetupEndpoints
                     $"Token exchange failed ({(int)tokenResponse.StatusCode}): {responseContent}"
                 );
 
-            Dto.AuthResponse tokens =
-                responseContent.FromJson<Dto.AuthResponse>()
+            AuthResponse tokens =
+                responseContent.FromJson<AuthResponse>()
                 ?? throw new InvalidOperationException("Failed to deserialize token response");
 
             await _authManager.StoreTokensAsync(tokens);
@@ -513,8 +514,8 @@ public class SetupEndpoints
                     $"Token exchange failed ({(int)tokenResponse.StatusCode}): {responseContent}"
                 );
 
-            Dto.AuthResponse tokens =
-                responseContent.FromJson<Dto.AuthResponse>()
+            AuthResponse tokens =
+                responseContent.FromJson<AuthResponse>()
                 ?? throw new InvalidOperationException("Failed to deserialize token response");
 
             await _authManager.StoreTokensAsync(tokens);
@@ -623,8 +624,8 @@ public class SetupEndpoints
 
             string deviceCodeResponse = await deviceResponse.Content.ReadAsStringAsync();
 
-            Dto.DeviceAuthResponse deviceData =
-                deviceCodeResponse.FromJson<Dto.DeviceAuthResponse>()
+            DeviceAuthResponse deviceData =
+                deviceCodeResponse.FromJson<DeviceAuthResponse>()
                 ?? throw new InvalidOperationException("Failed to get device code");
 
             context.Response.StatusCode = StatusCodes.Status200OK;
@@ -821,7 +822,7 @@ public class SetupEndpoints
 
     // ── Device grant polling ────────────────────────────────────────────────
 
-    private async Task PollDeviceGrant(Dto.DeviceAuthResponse deviceData)
+    private async Task PollDeviceGrant(DeviceAuthResponse deviceData)
     {
         if (string.IsNullOrEmpty(Config.TokenClientId))
             return;
@@ -862,8 +863,8 @@ public class SetupEndpoints
                 if (response.IsSuccessStatusCode)
                 {
                     string content = await response.Content.ReadAsStringAsync();
-                    Dto.AuthResponse data =
-                        content.FromJson<Dto.AuthResponse>()
+                    AuthResponse data =
+                        content.FromJson<AuthResponse>()
                         ?? throw new InvalidOperationException(
                             "Failed to deserialize token response"
                         );
@@ -961,10 +962,10 @@ public class SetupEndpoints
 
     private sealed class ExchangeRequest
     {
-        [Newtonsoft.Json.JsonProperty("code")]
+        [JsonProperty("code")]
         public string? Code { get; set; }
 
-        [Newtonsoft.Json.JsonProperty("state")]
+        [JsonProperty("state")]
         public string? State { get; set; }
     }
 }

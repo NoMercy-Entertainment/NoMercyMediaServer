@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Distribution;
-
 using System.Collections.Concurrent;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Thread-safe in-memory store. LRU eviction after <see cref="MaxEntries"/>

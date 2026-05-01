@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 public class H265DefinitionTests
 {
@@ -51,7 +51,7 @@ public class H265DefinitionTests
         EncoderInfo nvenc = _definition.Encoders.Single(e => e.FfmpegName == "hevc_nvenc");
 
         nvenc.RequiredVendor.Should().Be(GpuVendor.Nvidia);
-        nvenc.Presets.Should().BeEquivalentTo(["p1", "p2", "p3", "p4", "p5", "p6", "p7"]);
+        nvenc.Presets.Should().BeEquivalentTo("p1", "p2", "p3", "p4", "p5", "p6", "p7");
         nvenc.Profiles.Should().Contain("main");
         nvenc.Profiles.Should().Contain("main10");
         nvenc.Profiles.Should().Contain("rext");
@@ -69,7 +69,7 @@ public class H265DefinitionTests
         EncoderInfo amf = _definition.Encoders.Single(e => e.FfmpegName == "hevc_amf");
 
         amf.RequiredVendor.Should().Be(GpuVendor.Amd);
-        amf.Presets.Should().BeEquivalentTo(["speed", "balanced", "quality"]);
+        amf.Presets.Should().BeEquivalentTo("speed", "balanced", "quality");
         amf.Profiles.Should().Contain("main");
         amf.Profiles.Should().Contain("main10");
         amf.QualityRange.Min.Should().Be(0);
@@ -87,7 +87,7 @@ public class H265DefinitionTests
 
         qsv.RequiredVendor.Should().Be(GpuVendor.Intel);
         qsv.Presets.Should()
-            .BeEquivalentTo(["veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"]);
+            .BeEquivalentTo("veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow");
         qsv.Profiles.Should().Contain("main");
         qsv.Profiles.Should().Contain("main10");
         qsv.Profiles.Should().Contain("mainsp");
@@ -120,7 +120,7 @@ public class H265DefinitionTests
         vtb.RequiredVendor.Should().Be(GpuVendor.Apple);
         vtb.Presets.Should().BeEmpty();
         // HEVC VTB profiles are numeric: "1" = Main, "2" = Main10
-        vtb.Profiles.Should().BeEquivalentTo(["1", "2"]);
+        vtb.Profiles.Should().BeEquivalentTo("1", "2");
         vtb.QualityRange.Min.Should().Be(0);
         vtb.QualityRange.Max.Should().Be(100);
         vtb.SupportedRateControl.Should().Contain(RateControlMode.QualityLevel);

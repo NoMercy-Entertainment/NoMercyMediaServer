@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.DataProtection;
+﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
@@ -28,7 +28,7 @@ public class BootOrchestratorTests : IDisposable
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(_appContext, new SystemIoStorageBackend());
+        _authManager = new(_appContext, new LocalStorageDriver());
         _setupState = new();
         _orchestrator = new(_setupState, _authManager);
     }

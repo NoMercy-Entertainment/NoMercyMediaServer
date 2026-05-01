@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -27,7 +27,7 @@ public class LibraryManager(
     LibraryRepository libraryRepository,
     JobDispatcher jobDispatcher,
     MediaContext mediaContext,
-    IStorageBackend storageBackend,
+    IStorageDriver storageDriver,
     IStorageFactory storageFactory,
     IEventBus? eventBus = null
 ) : BaseManager, ILibraryManager
@@ -183,7 +183,7 @@ public class LibraryManager(
         HashSet<string> existingFolders
     )
     {
-        await using MediaScan mediaScan = new(storageBackend);
+        await using MediaScan mediaScan = new(storageDriver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(path, depth);
 
         List<MediaFolderExtend> newFolders = rootFolders
@@ -229,7 +229,7 @@ public class LibraryManager(
         HashSet<string> existingFolders
     )
     {
-        await using MediaScan mediaScan = new(storageBackend);
+        await using MediaScan mediaScan = new(storageDriver);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(path, depth)
         )
@@ -275,7 +275,7 @@ public class LibraryManager(
 
     private async Task<int> ScanVideoFolder(string path, int depth)
     {
-        await using MediaScan mediaScan = new(storageBackend);
+        await using MediaScan mediaScan = new(storageDriver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(path, depth);
 
         IEventBus? bus =
@@ -311,7 +311,7 @@ public class LibraryManager(
 
     private async Task<int> ScanAudioFolder(string path, int depth)
     {
-        await using MediaScan mediaScan = new(storageBackend);
+        await using MediaScan mediaScan = new(storageDriver);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(path, depth)
         )
@@ -457,8 +457,8 @@ public class LibraryManager(
             return;
         }
 
-        FileRepository fileRepository = new(mediaContext, storageBackend);
-        FileManager fileManager = new(fileRepository, storageFactory, storageBackend);
+        FileRepository fileRepository = new(mediaContext, storageDriver);
+        FileManager fileManager = new(fileRepository, storageFactory, storageDriver);
 
         await fileManager.FindFiles(id, library);
     }

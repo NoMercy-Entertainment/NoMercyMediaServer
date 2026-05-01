@@ -1,6 +1,7 @@
-namespace NoMercy.Encoder.Profiles;
-
+using System.Text;
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
 /// Result of a <see cref="IProfileResolver.Resolve"/> call.
@@ -169,7 +170,7 @@ public sealed class ProfileResolver : IProfileResolver
     private static string BuildCyclePath(List<Ulid> visitedOrder, Ulid cycleTarget)
     {
         // Build "A → B → C → A" where A is the repeated node.
-        System.Text.StringBuilder sb = new();
+        StringBuilder sb = new();
         bool found = false;
 
         foreach (Ulid id in visitedOrder)

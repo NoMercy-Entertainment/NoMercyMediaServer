@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.DiscRipping;
-
 using NoMercy.Encoder.Analysis;
+
+namespace NoMercy.Encoder.DiscRipping;
 
 public record DiscInfo(
     OpticalDiscType Type,

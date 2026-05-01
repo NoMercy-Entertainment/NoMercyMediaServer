@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Pipeline;
-
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.Pipeline;
 
 public abstract record StageResult;
 

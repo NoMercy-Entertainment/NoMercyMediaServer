@@ -1,6 +1,4 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -8,6 +6,8 @@ using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 /// <summary>
 /// Persistence tests for <see cref="JsonRemoteWorkerRegistry"/>.
@@ -45,8 +45,8 @@ public class JsonRemoteWorkerRegistryTests : IDisposable
 
     private static IStorage MakeStorage() =>
         new LocalStorage(
-            new SystemIoStorageBackend(),
-            new StoragePathGuard([], new SystemIoStorageBackend())
+            new LocalStorageDriver(),
+            new StoragePathGuard([], new LocalStorageDriver())
         );
 
     private JsonRemoteWorkerRegistry BuildRegistry() =>

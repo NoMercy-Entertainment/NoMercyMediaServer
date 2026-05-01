@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using System.Collections.Concurrent;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 public class SessionManager(LiveSessionLimits limits) : ISessionManager
 {

@@ -1,15 +1,13 @@
-namespace NoMercy.Tests.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.DependencyInjection;
-using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
-using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
+
+namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
 public class StageInterfaceTests
 {
@@ -257,9 +255,7 @@ public class StageInterfaceTests
             CancellationToken ct
         ) =>
             Task.FromResult<StageResult>(
-                new StageFailure(
-                    new(NoMercy.Encoder.Errors.EncodingErrorKind.Unknown, "stub", null, Name, false)
-                )
+                new StageFailure(new(EncodingErrorKind.Unknown, "stub", null, Name, false))
             );
     }
 }

@@ -1,6 +1,7 @@
-using Asp.Versioning.ApiExplorer;
+﻿using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.FileProviders;
 using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Hubs;
@@ -323,13 +324,13 @@ public static class ApplicationConfiguration
     {
         try
         {
-            IStorageBackend storageBackend =
-                app.ApplicationServices.GetRequiredService<IStorageBackend>();
+            IStorageDriver storageDriver =
+                app.ApplicationServices.GetRequiredService<IStorageDriver>();
             using MediaContext mediaContext = new();
             List<Folder> folderLibraries = mediaContext.Folders.ToList();
             foreach (
                 Folder folder in folderLibraries.Where(folder =>
-                    storageBackend.DirectoryExists(folder.Path)
+                    storageDriver.DirectoryExists(folder.Path)
                 )
             )
                 DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
@@ -345,7 +346,7 @@ public static class ApplicationConfiguration
                 .GetAwaiter()
                 .GetResult();
         }
-        catch (Microsoft.Data.Sqlite.SqliteException)
+        catch (SqliteException)
         {
             // Database not yet initialized (fresh install) — folders will be
             // registered when libraries are created after seeding completes.

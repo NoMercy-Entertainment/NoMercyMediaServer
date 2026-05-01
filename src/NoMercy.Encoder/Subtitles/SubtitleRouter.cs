@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Subtitles;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.Subtitles;
 
 public enum SubtitleSourceType
 {

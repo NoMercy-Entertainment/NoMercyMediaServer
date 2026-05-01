@@ -1,10 +1,9 @@
-namespace NoMercy.Encoder.Distribution;
-
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Short-lived HMAC secret issued by api.nomercy.tv for a paid licensed
@@ -140,12 +139,12 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
                 HttpStatusCode.Unauthorized => new(
                     null,
                     LicenseFailureKind.Unauthenticated,
-                    $"401 from coordinator"
+                    "401 from coordinator"
                 ),
                 HttpStatusCode.Forbidden => new(
                     null,
                     LicenseFailureKind.EntitlementRevoked,
-                    $"403 from coordinator"
+                    "403 from coordinator"
                 ),
                 _ => new(
                     null,

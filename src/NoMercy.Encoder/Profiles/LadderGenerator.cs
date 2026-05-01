@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Profiles;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
 /// Default implementation of <see cref="ILadderGenerator"/>.

@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -23,11 +23,11 @@ public class ShowManager(
     IShowRepository showRepository,
     JobDispatcher jobDispatcher,
     IStorageFactory storageFactory,
-    IStorageBackend storageBackend
+    IStorageDriver storageDriver
 ) : BaseManager, IShowManager
 {
     private readonly IStorageFactory _storageFactory = storageFactory;
-    private readonly IStorageBackend _storageBackend = storageBackend;
+    private readonly IStorageDriver _storageDriver = storageDriver;
 
     public async Task<TmdbTvShowAppends?> AddShowAsync(
         int id,
@@ -52,8 +52,8 @@ public class ShowManager(
         {
             IStorage folderStorage = _storageFactory.For(
                 folderLibrary.Folder.Id,
-                folderLibrary.Folder.BackendType,
-                folderLibrary.Folder.BackendConfig,
+                folderLibrary.Folder.DriverType,
+                folderLibrary.Folder.DriverConfig,
                 folderLibrary.Folder.Path
             );
             string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
@@ -61,7 +61,7 @@ public class ShowManager(
             if (!folderStorage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
-                    _storageBackend,
+                    _storageDriver,
                     folderLibrary.Folder.Path,
                     baseUrl.Replace("/", "")
                 );
@@ -136,7 +136,7 @@ public class ShowManager(
             showRepository,
             jobDispatcher,
             _storageFactory,
-            _storageBackend
+            _storageDriver
         );
         await showManager.StoreGenres(showAppends);
         await showManager.StoreContentRatings(showAppends);

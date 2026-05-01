@@ -26,11 +26,6 @@ public class Certification
     [JsonProperty("order")]
     public int Order { get; set; }
 
-    public Certification()
-    {
-        //
-    }
-
     // public Certification(string? country, TmdbTvShowCertification certification)
     // {
     //     Iso31661 = country;

@@ -12,7 +12,7 @@ internal static class UpdateCommand
         Command command = new("update") { Description = "Download and stage a server update" };
 
         command.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);

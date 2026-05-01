@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Pipeline.Stages;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
@@ -8,6 +6,8 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
 public class ValidateStageTests
 {

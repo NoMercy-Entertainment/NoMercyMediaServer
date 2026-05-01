@@ -14,7 +14,7 @@ public static class AniDbRandomAnime
         TaskCompletionSource<AniDBAnimeItem> tcs = new();
 
         client.FetchRandomAnime(
-            (response) =>
+            response =>
             {
                 Logger.AniDb(response.StatusCode.ToString());
                 Logger.AniDb(response.StatusMessage);

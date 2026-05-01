@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Storage;
-
 using System.Collections.Concurrent;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.Storage;
 
 /// <summary>
 /// IStorage decorator that records every call into <see cref="Calls"/>

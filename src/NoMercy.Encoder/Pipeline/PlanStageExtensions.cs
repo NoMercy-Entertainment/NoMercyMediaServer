@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Pipeline;
-
 using NoMercy.Encoder.Pipeline.Stages;
+
+namespace NoMercy.Encoder.Pipeline;
 
 /// <summary>
 /// Extension methods for <see cref="StageResult"/> that produce the

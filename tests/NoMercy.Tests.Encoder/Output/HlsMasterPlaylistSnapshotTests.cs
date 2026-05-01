@@ -1,8 +1,9 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 /// <summary>
 /// Byte-for-byte snapshot tests for the HLS master playlist.
@@ -45,7 +46,7 @@ public class HlsMasterPlaylistSnapshotTests
             "high",
             "4.0",
             tenBit: false,
-            hlsOptions: new NoMercy.Encoder.Profiles.HlsOptions { SegmentType = "fmp4" }
+            hlsOptions: new HlsOptions { SegmentType = "fmp4" }
         );
 
         string m3u8 = Generate(plan);
@@ -471,7 +472,7 @@ public class HlsMasterPlaylistSnapshotTests
         bool tenBit,
         string audioCodec = "aac",
         double frameRate = 23.976,
-        NoMercy.Encoder.Profiles.HlsOptions? hlsOptions = null
+        HlsOptions? hlsOptions = null
     )
     {
         return new(

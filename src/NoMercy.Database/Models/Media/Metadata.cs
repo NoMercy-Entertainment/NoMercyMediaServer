@@ -254,7 +254,7 @@ public class IHash
     public string FileName { get; set; } = null!;
 
     [JsonProperty("file_hash")]
-    public string? FileHash { get; set; } = null!;
+    public string? FileHash { get; set; }
 
     [JsonProperty("file_size")]
     public long? FileSize { get; set; }

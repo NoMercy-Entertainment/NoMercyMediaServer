@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.ContentAnalysis.Fingerprinting;
-
 using System.Numerics;
+
+namespace NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 
 /// <summary>
 /// Default detector — pairwise sliding-window comparison between

@@ -1,8 +1,7 @@
-namespace NoMercy.Tests.Encoder.Errors;
-
-using System.IO;
 using System.Reflection;
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Tests.Encoder.Errors;
 
 /// <summary>
 /// Generator test — Phase 4.19 of encoder-v3-alignment.md.
@@ -115,7 +114,7 @@ public class RuntimeErrorCatalogTests
         missing
             .Should()
             .BeEmpty(
-                $"The following EncoderRuleId constants are missing from docs/encoder-errors.md: "
+                "The following EncoderRuleId constants are missing from docs/encoder-errors.md: "
                     + string.Join(", ", missing)
             );
     }
@@ -135,7 +134,7 @@ public class RuntimeErrorCatalogTests
         missing
             .Should()
             .BeEmpty(
-                $"The following EncoderRuntimeErrorId constants are missing from docs/encoder-errors.md: "
+                "The following EncoderRuntimeErrorId constants are missing from docs/encoder-errors.md: "
                     + string.Join(", ", missing)
             );
     }

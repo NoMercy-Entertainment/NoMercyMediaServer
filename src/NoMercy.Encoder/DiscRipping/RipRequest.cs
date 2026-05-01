@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.DiscRipping;
-
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.DiscRipping;
 
 public enum RipMode
 {

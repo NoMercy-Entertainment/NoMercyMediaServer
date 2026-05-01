@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Subtitles;
-
 using NoMercy.Encoder.Subtitles;
+
+namespace NoMercy.Tests.Encoder.Subtitles;
 
 /// <summary>
 /// SubtitleClassifier routes subtitle streams to the correct extraction

@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.PostProcess;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.PostProcess;
 
 public class ChapterWriterTests : IDisposable
 {

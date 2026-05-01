@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Infrastructure;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Infrastructure;
+
+namespace NoMercy.Tests.Encoder.Infrastructure;
 
 public class ProcessRunnerTests
 {
@@ -66,7 +66,7 @@ public class ProcessRunnerTests
         using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(100));
 
         // 'dotnet --info' takes a moment — should be cancelled
-        Func<Task> act = () => runner.RunAsync("dotnet", ["--info"], (string?)null, cts.Token);
+        Func<Task> act = () => runner.RunAsync("dotnet", ["--info"], null, cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }

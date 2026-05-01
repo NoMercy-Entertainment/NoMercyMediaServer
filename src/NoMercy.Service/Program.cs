@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
@@ -19,7 +19,7 @@ using NoMercy.Service.Configuration;
 using NoMercy.Service.Seeds;
 using NoMercy.Setup;
 using NoMercy.Storage;
-using NoMercy.Storage.Local;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 using NoMercyQueue;
 
@@ -138,7 +138,7 @@ public static class Program
 
         // Pre-DI storage pair — used for seed calls that run before the DI
         // container is built. Same pattern as Start.cs Binaries task.
-        IStorageBackend preBootBackend = new SystemIoStorageBackend();
+        IStorageDriver preBootBackend = new LocalStorageDriver();
         IStorage preBootStorage = new LocalStorage(
             preBootBackend,
             new StoragePathGuard([], preBootBackend)
@@ -168,7 +168,7 @@ public static class Program
 
         // From this point on, use the DI-registered storage singletons.
         IStorage diStorage = app.Services.GetRequiredService<IStorage>();
-        IStorageBackend diStorageBackend = app.Services.GetRequiredService<IStorageBackend>();
+        IStorageDriver dIStorageDriver = app.Services.GetRequiredService<IStorageDriver>();
 
         // API keys are available without auth, so seed TMDB/MusicBrainz data
         // (genres, languages, etc.) now — before any import jobs can run.
@@ -176,7 +176,7 @@ public static class Program
         // to the real IHttpClientFactory (otherwise seed HTTP calls fall back
         // to a bare HttpClient with no registered headers, and MusicBrainz
         // returns 403 for anonymous UAs).
-        await DatabaseSeeder.Run(diStorage, diStorageBackend);
+        await DatabaseSeeder.Run(diStorage, dIStorageDriver);
 
         // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).
         // It returns true when interactive auth is required (setup mode).

@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------------------------------------------------
+﻿﻿// ---------------------------------------------------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ public class ReleaseImportJob : AbstractMusicFolderJob
                 .ThenInclude(f => f.Folder)
             .FirstAsync();
 
-        await using MediaScan mediaScan = new(StorageBackend);
+        await using MediaScan mediaScan = new(StorageDriver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             // .EnableFileListing()

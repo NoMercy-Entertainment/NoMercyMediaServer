@@ -4,6 +4,7 @@ using NoMercy.NmSystem.Extensions;
 using Pastel;
 using Serilog.Core;
 using Serilog.Events;
+using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.NmSystem.LogEnrichers;
 
@@ -40,7 +41,7 @@ internal class ConsoleTypeEnricher : ILogEventEnricher
 
         string type = value?.ToString().Replace("\"", "") ?? "app";
 
-        Color color = SystemCalls.Logger.GetColor(type);
+        Color color = Logger.GetColor(type);
 
         logEvent.AddOrUpdateProperty(
             propertyFactory.CreateProperty(

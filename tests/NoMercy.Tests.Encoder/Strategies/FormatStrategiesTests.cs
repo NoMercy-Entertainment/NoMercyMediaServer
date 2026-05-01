@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Strategies;
-
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
@@ -8,6 +6,8 @@ using NoMercy.Encoder.Strategies;
 using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Mkv;
 using NoMercy.Encoder.Strategies.Mp4;
+
+namespace NoMercy.Tests.Encoder.Strategies;
 
 public class FormatStrategiesTests
 {

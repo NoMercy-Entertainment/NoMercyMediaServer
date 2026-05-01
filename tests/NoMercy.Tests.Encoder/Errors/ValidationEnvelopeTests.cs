@@ -1,6 +1,7 @@
-namespace NoMercy.Tests.Encoder.Errors;
-
+using System.Reflection;
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Tests.Encoder.Errors;
 
 public class ValidationEnvelopeTests
 {
@@ -85,12 +86,12 @@ public class EncoderRuleIdCatalogueTests
     {
         // Pin the dot-separated lowercase convention so a refactor can't
         // sneak a "ProfileNameMissing" or "PROFILE_NAME_MISSING" in.
-        System.Reflection.FieldInfo[] fields = typeof(EncoderRuleId).GetFields(
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
+        FieldInfo[] fields = typeof(EncoderRuleId).GetFields(
+            BindingFlags.Public | BindingFlags.Static
         );
 
         fields.Should().NotBeEmpty();
-        foreach (System.Reflection.FieldInfo f in fields)
+        foreach (FieldInfo f in fields)
         {
             string value = (string)f.GetValue(null)!;
             value
@@ -105,8 +106,8 @@ public class EncoderRuleIdCatalogueTests
     [Fact]
     public void Every_catalogued_id_is_unique()
     {
-        System.Reflection.FieldInfo[] fields = typeof(EncoderRuleId).GetFields(
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
+        FieldInfo[] fields = typeof(EncoderRuleId).GetFields(
+            BindingFlags.Public | BindingFlags.Static
         );
 
         IEnumerable<string> values = fields.Select(f => (string)f.GetValue(null)!);

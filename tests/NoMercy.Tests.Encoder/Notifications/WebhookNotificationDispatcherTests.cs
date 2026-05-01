@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Notifications;
-
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Notifications;
+
+namespace NoMercy.Tests.Encoder.Notifications;
 
 public class WebhookNotificationDispatcherTests
 {

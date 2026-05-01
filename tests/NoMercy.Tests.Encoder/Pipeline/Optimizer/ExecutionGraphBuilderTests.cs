@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Pipeline.Optimizer;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Pipeline.Optimizer;
 
 public class ExecutionGraphBuilderTests
 {

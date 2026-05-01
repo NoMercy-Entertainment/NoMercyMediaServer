@@ -28,7 +28,7 @@ public record ComponentResponse
     /// <summary>
     /// Creates a response with a single component.
     /// </summary>
-    public static ComponentResponse From(ComponentEnvelope component) => new([component]);
+    public static ComponentResponse From(ComponentEnvelope component) => new(component);
 
     /// <summary>
     /// Creates a response with multiple components.

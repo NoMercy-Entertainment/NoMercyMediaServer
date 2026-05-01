@@ -1,9 +1,10 @@
-using System.Linq;
 using Makaretu.Dns;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
+using NoMercy.Database.Models.Users;
 using NoMercy.Networking.Devices;
+using Message = Makaretu.Dns.Message;
 
 namespace NoMercy.Networking.Discovery;
 
@@ -62,7 +63,7 @@ public sealed class MdnsDeviceScanner : IDisposable
                 return;
 
             await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-            Database.Models.Users.Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
+            Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
                 d.Fingerprint == fingerprint
             );
 

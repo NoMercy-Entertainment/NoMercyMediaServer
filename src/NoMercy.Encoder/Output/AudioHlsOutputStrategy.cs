@@ -1,10 +1,9 @@
-namespace NoMercy.Encoder.Output;
-
-using System.Text;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Output;
 
 /// <summary>
 /// Audio-only HLS output. Produces <c>audio.m3u8</c> and

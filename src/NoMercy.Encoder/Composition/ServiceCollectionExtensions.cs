@@ -1,7 +1,6 @@
-namespace NoMercy.Encoder.Composition;
-
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.BuildingBlocks.Drm;
@@ -35,6 +34,8 @@ using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Encoder.Subscribers;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Composition;
 
 public static class ServiceCollectionExtensions
 {
@@ -245,7 +246,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<CostEstimator>();
 
         // Encoder
-        services.AddTransient<IEncoder, Encoder>();
+        services.AddTransient<IEncoder, Pipeline.Encoder>();
 
         // Strategies — one per {OutputFormat, EncodeMode} tuple.
         // Plugins can register additional IEncodingStrategy impls and the resolver
@@ -317,7 +318,7 @@ public static class ServiceCollectionExtensions
                     httpClientFactory: sp.GetRequiredService<IHttpClientFactory>(),
                     serializer: sp.GetRequiredService<ITaskSerializer>(),
                     signingKey: encoderOpts.GetDistributedEncodingSigningKey(),
-                    logger: sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<JsonRemoteWorkerRegistry>>(),
+                    logger: sp.GetRequiredService<ILogger<JsonRemoteWorkerRegistry>>(),
                     storage: sp.GetRequiredService<IStorage>()
                 );
             }
@@ -365,7 +366,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IRemoteWorkerRegistry>(),
             sp.GetRequiredService<IWorkerAssigner>(),
             sp.GetRequiredService<LocalWorkerDispatcher>(),
-            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<RemoteWorkerDispatcher>>()
+            sp.GetRequiredService<ILogger<RemoteWorkerDispatcher>>()
         ));
 
         // Disc ripping — DriveMonitor is Singleton because its polling loop

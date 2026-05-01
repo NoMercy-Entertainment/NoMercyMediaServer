@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.LiveTranscode;
-
-using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 public class LiveTranscodeOrphanSweeperTests : IDisposable
 {
@@ -20,8 +20,8 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
 
     private static IStorage MakeStorage() =>
         new LocalStorage(
-            new SystemIoStorageBackend(),
-            new StoragePathGuard([], new SystemIoStorageBackend())
+            new LocalStorageDriver(),
+            new StoragePathGuard([], new LocalStorageDriver())
         );
 
     private LiveTranscodeOrphanSweeper BuildSweeper()

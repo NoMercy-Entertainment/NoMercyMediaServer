@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Codecs;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Codecs;
 
 public class Vp9DefinitionTests
 {
@@ -58,7 +58,7 @@ public class Vp9DefinitionTests
 
         qsv.RequiredVendor.Should().Be(GpuVendor.Intel);
         qsv.Presets.Should()
-            .BeEquivalentTo(["veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"]);
+            .BeEquivalentTo("veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow");
         qsv.QualityRange.Min.Should().Be(1);
         qsv.QualityRange.Max.Should().Be(51);
         qsv.MaxConcurrentSessions.Should().Be(int.MaxValue);

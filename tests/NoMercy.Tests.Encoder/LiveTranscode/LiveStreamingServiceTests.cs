@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.LiveTranscode;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 public class LiveStreamingServiceTests
 {
@@ -222,10 +222,10 @@ public class LiveStreamingServiceTests
 
         svc.Register(s1, TimeSpan.FromSeconds(6));
         svc.Register(s2, TimeSpan.FromSeconds(6));
-        svc.ActiveSessionIds.Should().BeEquivalentTo(["a", "b"]);
+        svc.ActiveSessionIds.Should().BeEquivalentTo("a", "b");
 
         await svc.RemoveAsync("a");
-        svc.ActiveSessionIds.Should().BeEquivalentTo(["b"]);
+        svc.ActiveSessionIds.Should().BeEquivalentTo("b");
     }
 
     private static async Task WaitForBufferAsync(

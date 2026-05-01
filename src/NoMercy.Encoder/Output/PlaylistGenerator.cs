@@ -1,12 +1,14 @@
-namespace NoMercy.Encoder.Output;
-
 using System.Globalization;
 using System.Text;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Subtitles;
 using NoMercy.NmSystem.Extensions;
+
+namespace NoMercy.Encoder.Output;
 
 public class PlaylistGenerator : IPlaylistGenerator
 {
@@ -183,7 +185,7 @@ public class PlaylistGenerator : IPlaylistGenerator
 
             for (int i = 0; i < chapters.Count; i++)
             {
-                NoMercy.Encoder.Analysis.ChapterInfo chapter = chapters[i];
+                ChapterInfo chapter = chapters[i];
                 double startSeconds = chapter.Start.TotalSeconds;
                 double endSeconds =
                     i + 1 < chapters.Count
@@ -270,7 +272,7 @@ public class PlaylistGenerator : IPlaylistGenerator
     /// </summary>
     public static string GenerateSubtitleMediaPlaylist(
         SubtitleOutputPlan sub,
-        IReadOnlyList<NoMercy.Encoder.Subtitles.WebVttSegment> segments,
+        IReadOnlyList<WebVttSegment> segments,
         int segmentDurationSeconds,
         string segmentUriPrefix = ""
     )
@@ -278,13 +280,13 @@ public class PlaylistGenerator : IPlaylistGenerator
         string lang = sub.Language ?? "und";
         string variant = string.IsNullOrEmpty(sub.Variant) ? "full" : sub.Variant;
 
-        System.Text.StringBuilder sb = new();
+        StringBuilder sb = new();
         sb.AppendLine("#EXTM3U");
         sb.AppendLine("#EXT-X-VERSION:3");
         sb.AppendLine($"#EXT-X-TARGETDURATION:{segmentDurationSeconds}");
         sb.AppendLine("#EXT-X-PLAYLIST-TYPE:VOD");
 
-        foreach (NoMercy.Encoder.Subtitles.WebVttSegment seg in segments)
+        foreach (WebVttSegment seg in segments)
         {
             double actualDuration = (seg.EndTime - seg.StartTime).TotalSeconds;
             string segFile = $"subs_{lang}_{variant}_{seg.Index:D5}.vtt";
@@ -312,7 +314,7 @@ public class PlaylistGenerator : IPlaylistGenerator
     )
     {
         string lang = sub.Language ?? "und";
-        System.Text.StringBuilder sb = new();
+        StringBuilder sb = new();
         sb.AppendLine("#EXTM3U");
         sb.AppendLine("#EXT-X-VERSION:3");
         sb.AppendLine($"#EXT-X-TARGETDURATION:{segmentDurationSeconds}");

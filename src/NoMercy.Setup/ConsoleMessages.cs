@@ -160,7 +160,7 @@ public abstract class ConsoleMessages
             $"{_("#00a10d")}".Pastel("#00a10d")
                 + @"     "
                 + "Welcome to NoMercy MediaServer".Pastel("#5ffa71")
-                + $"     ".Pastel("#ffffff")
+                + "     ".Pastel("#ffffff")
                 + $"{_("#00a10d")}".Pastel("#00a10d")
         );
         Console.WriteLine(

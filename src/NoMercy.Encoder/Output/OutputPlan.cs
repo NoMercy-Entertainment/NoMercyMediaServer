@@ -1,8 +1,10 @@
-namespace NoMercy.Encoder.Output;
-
+using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Encoder.Output;
 
 public record OutputPlan(
     OutputFormat Format,
@@ -21,17 +23,17 @@ public record OutputPlan(
     // resulting `-hls_key_info_file` path into each video output's extra
     // flags so ffmpeg encrypts segments inline and emits EXT-X-KEY tags
     // in the playlist automatically.
-    NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig? Drm = null,
+    DrmConfig? Drm = null,
     // HLS muxer options forwarded from the profile. Controls playlist type,
     // segment container format, and independent-segments signaling.
-    NoMercy.Encoder.Profiles.HlsOptions? HlsOptions = null,
+    HlsOptions? HlsOptions = null,
     // Chapter metadata from the source file. Output strategies use this to
     // embed chapter data in container-appropriate format:
     //   MKV  — stream-copied by FFmpeg automatically; no extra args needed.
     //   MP4  — written as ffmetadata file, injected via -i chapters.ffmeta.
     //   DASH — post-processed into <EventStream> entries in the MPD.
     //   HLS  — emitted as #EXT-X-DATERANGE tags in the master playlist.
-    IReadOnlyList<NoMercy.Encoder.Analysis.ChapterInfo>? Chapters = null
+    IReadOnlyList<ChapterInfo>? Chapters = null
 );
 
 public record VideoOutputPlan(

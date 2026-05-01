@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.Output;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Tests.Encoder.Output;
 
 /// <summary>
 /// Verifies that <see cref="PlaylistGenerator.GenerateMasterPlaylist"/> emits

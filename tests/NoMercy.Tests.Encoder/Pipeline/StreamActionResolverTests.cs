@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.Pipeline;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Pipeline;
 
 public class StreamActionResolverTests
 {

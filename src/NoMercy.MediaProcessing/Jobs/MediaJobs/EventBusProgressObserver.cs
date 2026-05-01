@@ -1,10 +1,10 @@
-namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
-
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Progress;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
+
+namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 public class EventBusProgressObserver : IProgressObserver
 {

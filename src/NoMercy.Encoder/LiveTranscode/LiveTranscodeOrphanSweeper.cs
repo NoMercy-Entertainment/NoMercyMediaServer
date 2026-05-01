@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 /// <summary>
 /// One-shot hosted service that runs once at startup and deletes any

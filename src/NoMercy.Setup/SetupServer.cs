@@ -12,6 +12,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Dto;
 using NoMercyQueue.Workers;
 using QRCoder;
 using Serilog.Events;
@@ -244,11 +245,7 @@ public class SetupServer
 
         try
         {
-            Dto.AuthResponse tokens = await ExchangeAuthorizationCode(
-                code,
-                codeVerifier,
-                redirectUri
-            );
+            AuthResponse tokens = await ExchangeAuthorizationCode(code, codeVerifier, redirectUri);
 
             if (_authManager is not null)
                 await _authManager.StoreTokensAsync(tokens);
@@ -505,8 +502,8 @@ public class SetupServer
                 new FormUrlEncodedContent(deviceCodeBody)
             );
 
-            Dto.DeviceAuthResponse deviceData =
-                deviceCodeResponse.FromJson<Dto.DeviceAuthResponse>()
+            DeviceAuthResponse deviceData =
+                deviceCodeResponse.FromJson<DeviceAuthResponse>()
                 ?? throw new("Failed to get device code");
 
             context.Response.StatusCode = StatusCodes.Status200OK;
@@ -601,7 +598,7 @@ public class SetupServer
         await WriteJsonResponse(context.Response, new { status = "unauthenticated" });
     }
 
-    private async Task PollDeviceGrant(Dto.DeviceAuthResponse deviceData)
+    private async Task PollDeviceGrant(DeviceAuthResponse deviceData)
     {
         if (string.IsNullOrEmpty(Config.TokenClientId))
             return;
@@ -632,8 +629,8 @@ public class SetupServer
                 if (response.IsSuccessStatusCode)
                 {
                     string content = await response.Content.ReadAsStringAsync();
-                    Dto.AuthResponse data =
-                        content.FromJson<Dto.AuthResponse>()
+                    AuthResponse data =
+                        content.FromJson<AuthResponse>()
                         ?? throw new("Failed to deserialize token response");
                     if (_authManager is not null)
                         await _authManager.StoreTokensAsync(data);
@@ -783,7 +780,7 @@ public class SetupServer
         _cachedSetupHtml = null;
     }
 
-    private static async Task<Dto.AuthResponse> ExchangeAuthorizationCode(
+    private static async Task<AuthResponse> ExchangeAuthorizationCode(
         string code,
         string codeVerifier,
         string redirectUri
@@ -816,7 +813,7 @@ public class SetupServer
                 $"Token exchange failed ({(int)response.StatusCode}): {content}"
             );
 
-        return content.FromJson<Dto.AuthResponse>()
+        return content.FromJson<AuthResponse>()
             ?? throw new InvalidOperationException("Failed to deserialize token response");
     }
 }

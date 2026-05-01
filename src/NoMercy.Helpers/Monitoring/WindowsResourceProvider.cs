@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using SharpGen.Runtime;
 using Vortice.DXGI;
 
 namespace NoMercy.Helpers.Monitoring;
@@ -34,10 +35,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             uint adapterIndex = 0;
             while (true)
             {
-                SharpGen.Runtime.Result hr = dxgiFactory.EnumAdapters1(
-                    adapterIndex,
-                    out IDXGIAdapter1? adapter
-                );
+                Result hr = dxgiFactory.EnumAdapters1(adapterIndex, out IDXGIAdapter1? adapter);
                 if (hr.Failure || adapter is null)
                     break;
 

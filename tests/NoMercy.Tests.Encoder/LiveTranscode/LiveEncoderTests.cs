@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.LiveTranscode;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
@@ -8,6 +6,8 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 public class LiveEncoderTests
 {
@@ -207,7 +207,7 @@ public class LiveEncoderTests
     [Fact]
     public async Task StartAsync_WithPreferredQuality_UsesItWhenAvailable()
     {
-        LiveQuality preferred = MakeQuality("1080p");
+        LiveQuality preferred = MakeQuality();
         LiveQuality fallback = MakeQuality("720p");
 
         Mock<ILiveQualitySelector> selectorMock = new();

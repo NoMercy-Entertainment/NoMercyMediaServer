@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Distribution;
-
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Distribution;
 
 public class HttpRemoteWorkerTests
 {

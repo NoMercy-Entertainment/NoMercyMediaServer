@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Startup;
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+
+namespace NoMercy.Encoder.Startup;
 
 /// <summary>
 /// Deferred background service that runs the FFmpeg capability probe

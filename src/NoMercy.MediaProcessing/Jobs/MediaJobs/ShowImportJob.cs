@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------------------------------------------------
+﻿﻿// ---------------------------------------------------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -36,12 +36,7 @@ public class ShowImportJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         ShowRepository showRepository = new(context);
-        ShowManager showManager = new(
-            showRepository,
-            jobDispatcher,
-            StorageFactory,
-            StorageBackend
-        );
+        ShowManager showManager = new(showRepository, jobDispatcher, StorageFactory, StorageDriver);
 
         SeasonRepository seasonRepository = new(context);
         SeasonManager seasonManager = new(seasonRepository, jobDispatcher);

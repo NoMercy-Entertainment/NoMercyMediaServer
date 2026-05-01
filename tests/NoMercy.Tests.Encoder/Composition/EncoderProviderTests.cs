@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.Composition;
-
 using System.Reflection;
 using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Tests.Encoder.Composition;
 
 /// <summary>
 /// Tests for EncoderProvider lifecycle: configure, resolve, guard checks.

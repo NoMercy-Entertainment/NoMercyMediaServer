@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.LiveTranscode;
-
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.LiveTranscode;
 
 /// <summary>
 /// Singleton that holds live transcode runtime state — maps a session id to

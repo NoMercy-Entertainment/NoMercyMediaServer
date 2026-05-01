@@ -1,14 +1,15 @@
-namespace NoMercy.Tests.Encoder.Strategies.Hls;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Strategies.Hls;
 
 /// <summary>
 /// Covers the multi-variant 2-pass path added in Tier 1.3 — pass 1 runs once
@@ -250,13 +251,7 @@ public class HlsMultiVariantTwoPassTests : IDisposable
             Success: false,
             OutputPath: string.Empty,
             Duration: TimeSpan.Zero,
-            Error: new(
-                NoMercy.Encoder.Errors.EncodingErrorKind.ProcessCrashed,
-                message,
-                null,
-                "Pass1",
-                false
-            ),
+            Error: new(EncodingErrorKind.ProcessCrashed, message, null, "Pass1", false),
             Metrics: new(0, 0, 0, string.Empty, null)
         );
 

@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Commands;
-
 using NoMercy.Encoder.Commands;
+
+namespace NoMercy.Tests.Encoder.Commands;
 
 public class FfmpegCommandBuilderTests
 {

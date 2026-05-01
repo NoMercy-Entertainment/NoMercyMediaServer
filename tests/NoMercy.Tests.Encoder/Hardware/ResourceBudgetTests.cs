@@ -1,7 +1,7 @@
-namespace NoMercy.Tests.Encoder.Hardware;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
+
+namespace NoMercy.Tests.Encoder.Hardware;
 
 public class ResourceBudgetTests
 {

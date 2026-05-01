@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
-using NoMercy.Storage;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;

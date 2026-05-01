@@ -1,10 +1,10 @@
-namespace NoMercy.Encoder.PostProcess;
-
 using System.Text;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.PostProcess;
 
 public class ThumbnailGenerator(IStorage storage) : IThumbnailGenerator
 {

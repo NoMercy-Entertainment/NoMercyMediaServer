@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Profiles;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.Profiles;
 
 public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
 {
@@ -1184,7 +1184,7 @@ public class ProfileValidator(CodecRegistry codecRegistry) : IProfileValidator
                 EncoderRuleSeverity.Error,
                 "VideoOutputs",
                 $"{profile.Format} is an audio-only container; video outputs are not supported.",
-                $"Remove all entries from `VideoOutputs`, or change `Format` to HLS, DASH, MKV, or MP4."
+                "Remove all entries from `VideoOutputs`, or change `Format` to HLS, DASH, MKV, or MP4."
             );
         }
 

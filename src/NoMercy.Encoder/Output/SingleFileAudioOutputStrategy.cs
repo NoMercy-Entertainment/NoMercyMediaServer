@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Output;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Output;
 
 /// <summary>
 /// Shared pipeline for single-file audio-only containers (mp3 / flac / ogg).

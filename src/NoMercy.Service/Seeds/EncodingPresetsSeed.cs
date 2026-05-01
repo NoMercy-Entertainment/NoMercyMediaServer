@@ -69,8 +69,7 @@ public static class EncodingPresetsSeed
 
                 Logger.Setup(
                     $"Encoding presets: pruned {staleBuiltInIds.Count} stale built-in(s), "
-                        + $"unbound {unboundCount} folder assignment(s), removed materialized EncoderProfile rows",
-                    LogEventLevel.Information
+                        + $"unbound {unboundCount} folder assignment(s), removed materialized EncoderProfile rows"
                 );
             }
 
@@ -161,17 +160,11 @@ public static class EncodingPresetsSeed
     /// </summary>
     public static async Task MaterializePresetsAsync(MediaContext context)
     {
-        Logger.Setup(
-            "Materializing V3 EncodingPresets into EncoderProfiles",
-            LogEventLevel.Information
-        );
+        Logger.Setup("Materializing V3 EncodingPresets into EncoderProfiles");
 
         List<EncodingPreset> presets = await context.EncodingPresets.AsNoTracking().ToListAsync();
 
-        Logger.Setup(
-            $"MaterializePresets: scanned {presets.Count} EncodingPreset row(s)",
-            LogEventLevel.Information
-        );
+        Logger.Setup($"MaterializePresets: scanned {presets.Count} EncodingPreset row(s)");
 
         List<EncoderProfile> materialized = [];
         int skippedEmpty = 0;
@@ -235,11 +228,7 @@ public static class EncodingPresetsSeed
             // of writing an empty thumbs file.
             string thumbnailJson = profile.Thumbnails is not null
                 ? JsonConvert.SerializeObject(
-                    new
-                    {
-                        Width = profile.Thumbnails.Width,
-                        IntervalSeconds = profile.Thumbnails.IntervalSeconds,
-                    }
+                    new { profile.Thumbnails.Width, profile.Thumbnails.IntervalSeconds }
                 )
                 : string.Empty;
 
@@ -298,8 +287,7 @@ public static class EncodingPresetsSeed
                 $"MaterializePresets DIAG: DB has {allExistingIds.Count} existing rows, "
                     + $"{existingIds.Count} of {materialized.Count} incoming match. "
                     + $"Sample DB id: {allExistingIds.FirstOrDefault()}, "
-                    + $"sample incoming id: {materialized.FirstOrDefault()?.Id.ToString() ?? "(none)"}",
-                LogEventLevel.Information
+                    + $"sample incoming id: {materialized.FirstOrDefault()?.Id.ToString() ?? "(none)"}"
             );
 
             int inserted = 0;
@@ -335,8 +323,7 @@ public static class EncodingPresetsSeed
                 $"MaterializePresets: {inserted} inserted, {updated} updated EncoderProfile row(s) from EncodingPresets "
                     + $"(scanned={presets.Count} empty={skippedEmpty} "
                     + $"deserializeFailures={deserializeFailures} "
-                    + $"deserializeNull={skippedDeserializeNull})",
-                LogEventLevel.Information
+                    + $"deserializeNull={skippedDeserializeNull})"
             );
         }
         catch (Exception e)

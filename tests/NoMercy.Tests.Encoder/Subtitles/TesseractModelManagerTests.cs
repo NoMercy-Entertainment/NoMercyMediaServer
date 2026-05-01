@@ -1,10 +1,10 @@
-namespace NoMercy.Tests.Encoder.Subtitles;
-
-using System.Net;
+﻿using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
+
+namespace NoMercy.Tests.Encoder.Subtitles;
 
 public class TesseractModelManagerTests : IDisposable
 {
@@ -126,8 +126,8 @@ public class TesseractModelManagerTests : IDisposable
     private TesseractModelManager BuildManager(FakeHandler handler)
     {
         HttpClient client = new(handler);
-        SystemIoStorageBackend backend = new();
-        LocalStorage storage = new(backend, new StoragePathGuard([], backend));
+        LocalStorageDriver driver = new();
+        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
         return new(_options, client, storage, NullLogger<TesseractModelManager>.Instance);
     }
 

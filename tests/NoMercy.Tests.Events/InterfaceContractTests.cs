@@ -1,3 +1,4 @@
+using System.Reflection;
 using FluentAssertions;
 using NoMercy.Events;
 using Xunit;
@@ -44,7 +45,7 @@ public class InterfaceContractTests
     public void IEventBus_HasSubscribeWithDelegateMethod()
     {
         Type busType = typeof(IEventBus);
-        System.Reflection.MethodInfo[] subscribeMethods = busType
+        MethodInfo[] subscribeMethods = busType
             .GetMethods()
             .Where(m => m.Name == "Subscribe")
             .ToArray();
@@ -75,9 +76,7 @@ public class InterfaceContractTests
         Type genericParam = handlerType.GetGenericArguments()[0];
 
         genericParam
-            .GenericParameterAttributes.HasFlag(
-                System.Reflection.GenericParameterAttributes.Contravariant
-            )
+            .GenericParameterAttributes.HasFlag(GenericParameterAttributes.Contravariant)
             .Should()
             .BeTrue("IEventHandler<TEvent> should be contravariant (in TEvent)");
     }
@@ -86,12 +85,12 @@ public class InterfaceContractTests
     public void IEventBus_SubscribeReturnsDisposable()
     {
         Type busType = typeof(IEventBus);
-        System.Reflection.MethodInfo[] subscribeMethods = busType
+        MethodInfo[] subscribeMethods = busType
             .GetMethods()
             .Where(m => m.Name == "Subscribe")
             .ToArray();
 
-        foreach (System.Reflection.MethodInfo method in subscribeMethods)
+        foreach (MethodInfo method in subscribeMethods)
         {
             method
                 .ReturnType.Should()

@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Orchestration;
-
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Strategies;
+
+namespace NoMercy.Encoder.Orchestration;
 
 /// <summary>
 /// Picks a strategy from the DI-registered <see cref="IEncodingStrategy"/>

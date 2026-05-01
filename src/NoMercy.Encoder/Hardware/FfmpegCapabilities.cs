@@ -1,8 +1,8 @@
-namespace NoMercy.Encoder.Hardware;
-
 using System.Text.RegularExpressions;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.NmSystem.Information;
+
+namespace NoMercy.Encoder.Hardware;
 
 public partial class FfmpegCapabilities(IProcessRunner processRunner) : IFfmpegCapabilities
 {

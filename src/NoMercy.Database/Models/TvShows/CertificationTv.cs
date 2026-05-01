@@ -15,9 +15,4 @@ public class CertificationTv
     [JsonProperty("tv_id")]
     public int TvId { get; set; }
     public Tv Tv { get; set; } = null!;
-
-    public CertificationTv()
-    {
-        //
-    }
 }

@@ -1,9 +1,9 @@
-namespace NoMercy.Encoder.Profiles;
-
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
+
+namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
 /// Pure, synchronous preview engine.
@@ -418,7 +418,7 @@ public static class PreviewEngine
         action switch
         {
             StreamAction.Copy =>
-                $"Source codec, resolution, and bitrate all satisfy the output profile.",
+                "Source codec, resolution, and bitrate all satisfy the output profile.",
             StreamAction.Transcode =>
                 $"Source {source.Codec} {source.Width}x{source.Height} @ {source.BitRateKbps} kbps → "
                     + $"target {target.Codec} {target.Width}x{target.Height ?? source.Height} @ {target.BitrateKbps} kbps.",
@@ -433,7 +433,7 @@ public static class PreviewEngine
         action switch
         {
             StreamAction.Copy =>
-                $"Source codec, bitrate, and channel count satisfy the output profile.",
+                "Source codec, bitrate, and channel count satisfy the output profile.",
             StreamAction.Transcode =>
                 $"Source {source.Codec} {source.Channels}ch @ {source.BitRateKbps} kbps → "
                     + $"target {target.Codec} {target.Channels}ch @ {target.BitrateKbps} kbps.",

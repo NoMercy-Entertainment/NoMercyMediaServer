@@ -3,6 +3,7 @@ using System.Security.Claims;
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Services.Video;
 using NoMercy.Data.Activity;
@@ -30,7 +31,7 @@ public class VideoHub : ConnectionHub
     private readonly VideoPlaylistManager _videoPlaylistManager;
     private readonly VideoPlaybackCommandHandler _commandHandler;
     private readonly CastSessionTokenService _castTokenService;
-    private readonly NoMercy.Api.Controllers.Socket.DeviceBusRegistry _busRegistry;
+    private readonly DeviceBusRegistry _busRegistry;
     private readonly INetworkDiscovery? _networkDiscovery;
 
     private readonly IDbContextFactory<MediaContext> _contextFactory;
@@ -47,7 +48,7 @@ public class VideoHub : ConnectionHub
         VideoPlaybackCommandHandler commandHandler,
         IActivityLogger activityLogger,
         CastSessionTokenService castTokenService,
-        NoMercy.Api.Controllers.Socket.DeviceBusRegistry busRegistry,
+        DeviceBusRegistry busRegistry,
         INetworkDiscovery? networkDiscovery = null
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
@@ -256,7 +257,7 @@ public class VideoHub : ConnectionHub
         }
         catch (Exception ex)
         {
-            Logger.App($"Error in StartPlaybackCommand");
+            Logger.App("Error in StartPlaybackCommand");
             Logger.App(ex);
 
             User? user2 = Context.User.User();
@@ -667,7 +668,7 @@ public class VideoHub : ConnectionHub
 
         string mediaType = parts[0];
         string mediaId = state.CurrentItem.Id.ToString();
-        int? resumeAt = state.Time > 0 ? (int?)(state.Time / 1000) : null;
+        int? resumeAt = state.Time > 0 ? state.Time / 1000 : null;
         return CastIntent.PlayVideo(mediaType, mediaId, resumeAt);
     }
 

@@ -1,4 +1,5 @@
 using System.Data.Common;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace NoMercy.Database;
@@ -46,7 +47,7 @@ public class SqliteConnectionInterceptor : DbConnectionInterceptor
             walCmd.CommandText = "PRAGMA journal_mode=WAL;";
             walCmd.ExecuteNonQuery();
         }
-        catch (Microsoft.Data.Sqlite.SqliteException)
+        catch (SqliteException)
         {
             // Silently skip — WAL will be set after migration completes.
         }

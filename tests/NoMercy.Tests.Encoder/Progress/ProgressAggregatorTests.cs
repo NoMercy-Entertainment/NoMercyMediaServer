@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Progress;
-
 using NoMercy.Encoder.Progress;
+
+namespace NoMercy.Tests.Encoder.Progress;
 
 public class ProgressAggregatorTests
 {

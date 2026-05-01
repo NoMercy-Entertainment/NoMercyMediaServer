@@ -1,8 +1,9 @@
-namespace NoMercy.Tests.Encoder.Profiles;
-
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Profiles;
 
 public class EncodingProfileSchemaTests
 {
@@ -253,7 +254,7 @@ public class EncodingProfileSchemaTests
         EncodingProfile source = BuildMinimalProfile();
         string fullJson = JsonConvert.SerializeObject(source);
 
-        Newtonsoft.Json.Linq.JObject obj = Newtonsoft.Json.Linq.JObject.Parse(fullJson);
+        JObject obj = JObject.Parse(fullJson);
         string[] newFields =
         [
             "Description",

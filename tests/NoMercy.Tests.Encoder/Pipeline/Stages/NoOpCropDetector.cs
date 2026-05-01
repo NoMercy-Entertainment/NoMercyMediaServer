@@ -1,6 +1,6 @@
-namespace NoMercy.Tests.Encoder.Pipeline.Stages;
-
 using NoMercy.Encoder.ContentAnalysis;
+
+namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
 /// <summary>
 /// Crop detector stub for tests that need a PlanStage but don't exercise

@@ -1,7 +1,7 @@
-namespace NoMercy.Encoder.Pipeline;
-
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Output;
+
+namespace NoMercy.Encoder.Pipeline;
 
 /// <summary>
 /// Top-level result returned by
@@ -52,7 +52,7 @@ public record EncodingResult(
     /// dashboard renders this in the collapsible "Plan" section of the
     /// job detail screen.
     /// </summary>
-    public NoMercy.Encoder.Pipeline.PlanResult? Plan { get; init; }
+    public PlanResult? Plan { get; init; }
 
     /// <summary>
     /// Every file written to the output directory, with size, SHA-256,

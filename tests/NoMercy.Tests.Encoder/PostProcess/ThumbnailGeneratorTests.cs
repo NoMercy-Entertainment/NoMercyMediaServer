@@ -1,9 +1,9 @@
-namespace NoMercy.Tests.Encoder.PostProcess;
-
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.PostProcess;
 
 public class ThumbnailGeneratorTests : IDisposable
 {
@@ -79,7 +79,7 @@ public class ThumbnailGeneratorTests : IDisposable
         );
 
         string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain($"thumbs_320");
+        args.Should().Contain("thumbs_320");
         args.Should().Contain("thumb_%04d.jpg");
     }
 

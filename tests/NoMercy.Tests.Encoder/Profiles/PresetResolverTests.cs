@@ -1,8 +1,8 @@
-namespace NoMercy.Tests.Encoder.Profiles;
-
 using Newtonsoft.Json;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
+
+namespace NoMercy.Tests.Encoder.Profiles;
 
 public class PresetResolverTests
 {

@@ -1,3 +1,4 @@
+using System.Text;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Storage;
 
@@ -218,7 +219,7 @@ public class EncoderOptions
             throw new InvalidOperationException(
                 "DistributedEncodingSigningKey not configured — set it via AddNoMercyEncoder() to enable remote workers."
             );
-        return System.Text.Encoding.UTF8.GetBytes(DistributedEncodingSigningKey);
+        return Encoding.UTF8.GetBytes(DistributedEncodingSigningKey);
     }
 
     /// <summary>

@@ -1,11 +1,12 @@
-namespace NoMercy.Encoder.Startup;
-
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
+
+namespace NoMercy.Encoder.Startup;
 
 /// <summary>
 /// Probes optional runtime dependencies and validates the installed FFmpeg
@@ -121,12 +122,7 @@ public sealed class FfmpegCapabilityProbe(
     private async Task<HashSet<string>> ProbeMuxersAsync(CancellationToken ct)
     {
         ProcessResult result = await processRunner
-            .RunAsync(
-                NoMercy.NmSystem.Information.AppFiles.FfmpegPath,
-                ["-hide_banner", "-muxers"],
-                null,
-                ct
-            )
+            .RunAsync(AppFiles.FfmpegPath, ["-hide_banner", "-muxers"], null, ct)
             .ConfigureAwait(false);
 
         HashSet<string> available = [];

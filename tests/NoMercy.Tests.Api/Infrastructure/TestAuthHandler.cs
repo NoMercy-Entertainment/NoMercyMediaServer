@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 
 namespace NoMercy.Tests.Api.Infrastructure;
 
@@ -26,10 +27,7 @@ public class TestAuthHandler(
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (
-            Request.Headers.TryGetValue(
-                TestAuthDefaults.TestAuthHeader,
-                out Microsoft.Extensions.Primitives.StringValues value
-            )
+            Request.Headers.TryGetValue(TestAuthDefaults.TestAuthHeader, out StringValues value)
             && value.ToString() == TestAuthDefaults.Deny
         )
         {

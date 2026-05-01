@@ -1,8 +1,9 @@
-namespace NoMercy.Encoder.Profiles;
-
+using Newtonsoft.Json;
 using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
+
+namespace NoMercy.Encoder.Profiles;
 
 /// <summary>
 /// Maps V1 encoder profile types (IVideoProfile, IAudioProfile, ISubtitleProfile)
@@ -244,16 +245,16 @@ public static class ProfileMapper
                     new
                     {
                         Codec = v.Codec.ToString().ToLowerInvariant(),
-                        Width = v.Width,
+                        v.Width,
                         Height = v.Height ?? 0,
                         Bitrate = v.BitrateKbps,
-                        Crf = v.Crf,
+                        v.Crf,
                         Preset = v.Preset ?? string.Empty,
                         Profile = v.Profile ?? string.Empty,
                         Level = v.Level ?? string.Empty,
                         Tune = v.Tune ?? string.Empty,
                         ColorSpace = v.ColorSpace ?? (v.TenBit ? "yuv420p10le" : "yuv420p"),
-                        ConvertHdrToSdr = v.ConvertHdrToSdr,
+                        v.ConvertHdrToSdr,
                         KeyInt = v.KeyframeIntervalSeconds,
                         SegmentName = v.SegmentNameTemplate,
                         PlaylistName = v.PlaylistNameTemplate,
@@ -268,7 +269,7 @@ public static class ProfileMapper
                     new
                     {
                         Codec = AudioCodecToV1String(a.Codec),
-                        Channels = a.Channels,
+                        a.Channels,
                         SampleRate = a.SampleRateHz,
                         Bitrate = a.BitrateKbps,
                         Loudness = (string?)null,
@@ -295,9 +296,9 @@ public static class ProfileMapper
             )
             .ToArray();
 
-        string videoJson = Newtonsoft.Json.JsonConvert.SerializeObject(videoProfiles);
-        string audioJson = Newtonsoft.Json.JsonConvert.SerializeObject(audioProfiles);
-        string subtitleJson = Newtonsoft.Json.JsonConvert.SerializeObject(subtitleProfiles);
+        string videoJson = JsonConvert.SerializeObject(videoProfiles);
+        string audioJson = JsonConvert.SerializeObject(audioProfiles);
+        string subtitleJson = JsonConvert.SerializeObject(subtitleProfiles);
 
         return (profile.Id, profile.Name, container, videoJson, audioJson, subtitleJson);
     }

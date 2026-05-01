@@ -1,5 +1,3 @@
-namespace NoMercy.Tests.Encoder.Strategies.Hls;
-
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
@@ -9,6 +7,8 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.Strategies.Hls;
 
 public class HlsTwoPassStrategyTests : IDisposable
 {

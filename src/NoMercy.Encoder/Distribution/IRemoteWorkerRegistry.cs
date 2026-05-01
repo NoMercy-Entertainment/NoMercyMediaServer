@@ -1,6 +1,6 @@
-namespace NoMercy.Encoder.Distribution;
-
 using NoMercy.Encoder.Jobs;
+
+namespace NoMercy.Encoder.Distribution;
 
 /// <summary>
 /// Source of truth for which remote workers the server currently believes it
