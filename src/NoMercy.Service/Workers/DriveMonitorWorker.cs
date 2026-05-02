@@ -17,35 +17,66 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
     {
         logger.LogInformation("DriveMonitorWorker started");
 
-        await foreach (DriveEvent evt in driveMonitor.MonitorAsync(stoppingToken))
+        // BackgroundServiceExceptionBehavior defaults to StopHost since .NET 6
+        // — letting MonitorAsync throw would tear the whole server down. Wrap
+        // the loop and back off on transient failures (USB hub flapping,
+        // permission flips). A real fatal error logs and exits cleanly.
+        while (!stoppingToken.IsCancellationRequested)
         {
-            if (!EventBusProvider.IsConfigured)
-                continue;
-
-            string methodName = evt.Type switch
+            try
             {
-                DriveEventType.DriveAdded => "drive_added",
-                DriveEventType.DriveRemoved => "drive_removed",
-                DriveEventType.DiscInserted => "disc_inserted",
-                DriveEventType.DiscEjected => "disc_ejected",
-                _ => "drive_changed",
-            };
-
-            _ = EventBusProvider.Current.PublishAsync(
-                new DriveStateChangedEvent
+                await foreach (
+                    DriveEvent evt in driveMonitor
+                        .MonitorAsync(stoppingToken)
+                        .WithCancellation(stoppingToken)
+                )
                 {
-                    DriveStateData = new
+                    if (!EventBusProvider.IsConfigured)
+                        continue;
+
+                    string methodName = evt.Type switch
                     {
-                        Method = methodName,
-                        Drive = evt.Drive.Path,
-                        VolumeLabel = evt.Drive.Label,
-                        evt.Drive.HasDisc,
-                        DiscType = evt.Drive.DiscType.ToString(),
-                        Timestamp = DateTime.UtcNow,
-                    },
-                },
-                stoppingToken
-            );
+                        DriveEventType.DriveAdded => "drive_added",
+                        DriveEventType.DriveRemoved => "drive_removed",
+                        DriveEventType.DiscInserted => "disc_inserted",
+                        DriveEventType.DiscEjected => "disc_ejected",
+                        _ => "drive_changed",
+                    };
+
+                    _ = EventBusProvider.Current.PublishAsync(
+                        new DriveStateChangedEvent
+                        {
+                            DriveStateData = new
+                            {
+                                Method = methodName,
+                                Drive = evt.Drive.Path,
+                                VolumeLabel = evt.Drive.Label,
+                                evt.Drive.HasDisc,
+                                DiscType = evt.Drive.DiscType.ToString(),
+                                Timestamp = DateTime.UtcNow,
+                            },
+                        },
+                        stoppingToken
+                    );
+                }
+                break;
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "DriveMonitorWorker iteration failed; retrying in 5s");
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
         }
 
         logger.LogInformation("DriveMonitorWorker stopped");
