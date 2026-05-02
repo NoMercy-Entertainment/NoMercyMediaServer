@@ -484,6 +484,23 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         return exports.Count > 0 ? exports : null;
     }
 
+    /// <summary>
+    /// Common NAS pseudo-fs roots to probe when the server's NFSv4 root ("/")
+    /// returns an empty listing. TrueNAS / FreeNAS expose datasets under
+    /// /mnt/&lt;pool&gt;; Synology under /volume1; Linux NFS servers commonly
+    /// export /exports or /srv. Probed in order; first non-empty wins.
+    /// </summary>
+    private static readonly string[] CommonV4Roots =
+    [
+        "/",
+        "/mnt",
+        "/volume1",
+        "/volume2",
+        "/exports",
+        "/srv",
+        "/data",
+    ];
+
     private static List<string>? TryV4RootListing(string server, ILogger log)
     {
         IntPtr ctx = LibNfs.InitContext();
@@ -520,17 +537,33 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 return null;
             }
 
-            // Walk immediate children at "/". For TrueNAS this surfaces
-            // entries like "mnt", which we then descend one level into to
-            // find real mount points (e.g. /mnt/Vault, /mnt/Vault/Media).
-            List<string> roots = [];
-            CollectV4Children(ctx, "/", maxDepth: 3, roots);
-            log.LogInformation(
-                "NFSv4 export discovery: walked v4 root of {Server}, found {Count} dirs",
-                server,
-                roots.Count
+            // Walk well-known pseudo-fs roots. Many NFSv4 servers (TrueNAS in
+            // particular) don't expose an enumerable namespace from "/" even
+            // when the mount succeeds — they only surface explicitly configured
+            // exports. Walking from /mnt, /volume1, etc. catches the common
+            // NAS layouts.
+            foreach (string probeRoot in CommonV4Roots)
+            {
+                List<string> roots = [];
+                CollectV4Children(ctx, probeRoot, maxDepth: 3, roots);
+                if (roots.Count > 0)
+                {
+                    log.LogInformation(
+                        "NFSv4 export discovery: walked {Probe} on {Server}, found {Count} dirs",
+                        probeRoot,
+                        server,
+                        roots.Count
+                    );
+                    return roots;
+                }
+            }
+
+            log.LogWarning(
+                "NFSv4 export discovery: walked v4 root + {Count} fallback paths on {Server}, all empty — server may only expose explicit export paths (try entering manually)",
+                CommonV4Roots.Length - 1,
+                server
             );
-            return roots.Count > 0 ? roots : null;
+            return null;
         }
         catch (Exception ex)
         {
