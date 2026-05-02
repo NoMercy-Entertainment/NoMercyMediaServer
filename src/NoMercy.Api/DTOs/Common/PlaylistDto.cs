@@ -6,6 +6,7 @@ namespace NoMercy.Api.DTOs.Common;
 
 public class PlaylistDto
 {
+    [JsonProperty("id")]
     public Guid Id { get; set; } = Guid.NewGuid();
 
     [JsonProperty("name")]
