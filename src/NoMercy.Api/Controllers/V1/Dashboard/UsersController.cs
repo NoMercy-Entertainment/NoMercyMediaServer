@@ -50,7 +50,9 @@ public class UsersController(
             return UnauthorizedResponse("You do not have permission to create a user");
 
         Guid userId = User.UserId();
-        User? hasPermission = mediaContext.Users.FirstOrDefault(user => user.Id.Equals(userId));
+        User? hasPermission = await mediaContext.Users.FirstOrDefaultAsync(user =>
+            user.Id.Equals(userId)
+        );
 
         if (hasPermission is null || hasPermission.Owner is false)
             return NotFoundResponse("You do not have permission to create a user");

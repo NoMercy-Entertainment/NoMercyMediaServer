@@ -176,7 +176,7 @@ public static class SpecialSeed
 
         try
         {
-            bool exists = context.Tvs.Any(x => x.Id == tv.Id);
+            bool exists = await context.Tvs.AnyAsync(x => x.Id == tv.Id);
             if (!exists)
             {
                 ShowImportJob j = new() { Id = tv.Id, LibraryId = tvLibrary.Id };
@@ -189,15 +189,15 @@ public static class SpecialSeed
         }
 
         if (item.Episodes.Length == 0)
-            item.Episodes = context
+            item.Episodes = await context
                 .Episodes.Where(x => x.TvId == tv.Id)
                 .Where(x => x.SeasonNumber == item.Seasons.First())
                 .Select(x => x.EpisodeNumber)
-                .ToArray();
+                .ToArrayAsync();
 
         foreach (int episodeNumber in item.Episodes)
         {
-            Episode? episode = context.Episodes.FirstOrDefault(x =>
+            Episode? episode = await context.Episodes.FirstOrDefaultAsync(x =>
                 x.TvId == tv.Id
                 && x.SeasonNumber == item.Seasons.First()
                 && x.EpisodeNumber == episodeNumber
