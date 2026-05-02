@@ -60,6 +60,7 @@ public class EncodingPreset
     [JsonProperty("parent_preset_id")]
     public Ulid? ParentPresetId { get; set; }
 
+    [JsonIgnore]
     public EncodingPreset? Parent { get; set; }
 
     /// <summary>Built-in presets are seeded from JSON shipped with the server

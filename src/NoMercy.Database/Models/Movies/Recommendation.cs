@@ -35,17 +35,25 @@ public class Recommendation : ColorPaletteTimeStamps
 
     [ForeignKey("TvFromId")]
     public int? TvFromId { get; set; }
+
+    [JsonIgnore]
     public Tv? TvFrom { get; set; }
 
     [ForeignKey("TvToId")]
     public int? TvToId { get; set; }
+
+    [JsonIgnore]
     public Tv? TvTo { get; set; }
 
     [ForeignKey("RecommendationFrom")]
     public int? MovieFromId { get; set; }
+
+    [JsonIgnore]
     public Movie? MovieFrom { get; set; }
 
     [ForeignKey("RecommendationTo")]
     public int? MovieToId { get; set; }
+
+    [JsonIgnore]
     public Movie? MovieTo { get; set; }
 }
