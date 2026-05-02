@@ -101,9 +101,10 @@ public static class LibrariesSeed
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
-        // Register seeded folders with the middleware so they can serve files over HTTP
-        foreach (Folder folder in folders.Where(f => storageDriver.DirectoryExists(f.Path)))
-            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+        // Register seeded folders with the middleware so they can serve files
+        // over HTTP. Per-request resolution through IStorageFactory.
+        foreach (Folder folder in folders)
+            DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
 
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);
 

@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using MimeMapping;
@@ -10,9 +9,16 @@ using NoMercy.Storage;
 
 namespace NoMercy.Api.Middleware;
 
+/// <summary>
+/// Folder routing handle: maps a folder ULID to the driver instance + sub-path
+/// the file lives under. Resolved per-request through IStorageFactory so NFS,
+/// S3, WebDAV and local backends all stream through the same path.
+/// </summary>
+public readonly record struct FolderRef(Ulid DriverId, string SubPath);
+
 public class DynamicStaticFilesMiddleware(RequestDelegate next)
 {
-    private static readonly ConcurrentDictionary<Ulid, PhysicalFileProvider> Providers = new();
+    private static readonly ConcurrentDictionary<Ulid, FolderRef> Folders = new();
 
     // Define streamable media file extensions
     private static readonly HashSet<string> StreamableExtensions = new(
@@ -39,7 +45,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         ".opus",
     };
 
-    public async Task InvokeAsync(HttpContext context, IStorage storage)
+    public async Task InvokeAsync(HttpContext context, IStorageFactory storageFactory)
     {
         if (!context.Request.Path.HasValue)
         {
@@ -76,21 +82,37 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         try
         {
             if (
-                !Ulid.TryParse(rootPath, out Ulid share)
-                || !Providers.TryGetValue(share, out PhysicalFileProvider? provider)
+                !Ulid.TryParse(rootPath, out Ulid folderId)
+                || !Folders.TryGetValue(folderId, out FolderRef folderRef)
             )
             {
                 await next(context);
                 return;
             }
 
-            string? relativePath = pathValue?[pathValue.IndexOf('/', 1)..];
-            IFileInfo? file = relativePath != null ? provider.GetFileInfo(relativePath) : null;
+            // Strip the leading "/<folderId>" segment to get the file's
+            // sub-path within the folder. URL-decode + normalise to forward
+            // slashes so storage drivers see a consistent shape.
+            string relativeWithinFolder = pathValue is null
+                ? string.Empty
+                : Uri.UnescapeDataString(pathValue[pathValue.IndexOf('/', 1)..]).TrimStart('/');
 
-            if (file?.PhysicalPath != null)
-                await ServeFile(context, file, storage);
-            else
+            // Build a per-request IStorage rooted at the folder. The factory
+            // resolves the driver row, joins driver root + folder sub-path,
+            // returns the right backend (local / nfs / s3 / r2 / webdav).
+            IStorage storage = storageFactory.For(
+                folderId: folderId,
+                driverId: folderRef.DriverId,
+                subPath: folderRef.SubPath
+            );
+
+            if (!storage.Exists(relativeWithinFolder))
+            {
                 await next(context);
+                return;
+            }
+
+            await ServeFile(context, storage, relativeWithinFolder);
         }
         catch (Exception ex)
         {
@@ -101,25 +123,25 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         }
     }
 
-    private static async Task ServeFile(HttpContext context, IFileInfo file, IStorage storage)
+    private static async Task ServeFile(HttpContext context, IStorage storage, string relativePath)
     {
-        if (file.PhysicalPath is not { } filePhysicalPath)
-            return;
+        long fileLength = storage.Size(relativePath);
 
-        long fileLength = storage.Size(filePhysicalPath);
+        context.Response.ContentType = MimeUtility.GetMimeMapping(relativePath);
 
-        context.Response.ContentType = MimeUtility.GetMimeMapping(file.PhysicalPath);
-
-        bool isStreamableMedia = IsStreamableMedia(filePhysicalPath);
+        bool isStreamableMedia = IsStreamableMedia(relativePath);
         bool hasRangeRequest = context.Request.Headers.TryGetValue(
             "Range",
             out StringValues rangeValue
         );
 
-        // Force partial content for streamable media files or when range is requested
+        // Force partial content for streamable media files or when range is requested.
+        // For non-streamable + no range, stream the whole file via the storage facade.
         if (!hasRangeRequest && !isStreamableMedia)
         {
-            await context.Response.SendFileAsync(file.PhysicalPath);
+            context.Response.ContentLength = fileLength;
+            await using Stream wholeStream = storage.OpenRead(relativePath);
+            await wholeStream.CopyToAsync(context.Response.Body);
             return;
         }
 
@@ -192,7 +214,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         context.Response.Headers.AcceptRanges = "bytes";
         context.Response.ContentLength = length;
 
-        await using Stream fs = storage.OpenRead(file.PhysicalPath);
+        await using Stream fs = storage.OpenRead(relativePath);
 
         fs.Seek(start, SeekOrigin.Begin);
         byte[] buffer = new byte[64 * 1024];
@@ -215,13 +237,18 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         return StreamableExtensions.Contains(extension);
     }
 
-    public static void AddPath(Ulid requestPath, string physicalPath)
+    /// <summary>
+    /// Register a folder for dynamic file serving. Pass the folder's ULID
+    /// (becomes the URL root segment), the driver instance it belongs to,
+    /// and its sub-path within that driver's root.
+    /// </summary>
+    public static void AddFolder(Ulid folderId, Ulid driverId, string subPath)
     {
-        Providers[requestPath] = new(physicalPath);
+        Folders[folderId] = new FolderRef(driverId, subPath ?? string.Empty);
     }
 
-    public static void RemovePath(Ulid requestPath)
+    public static void RemoveFolder(Ulid folderId)
     {
-        Providers.TryRemove(requestPath, out _);
+        Folders.TryRemove(folderId, out _);
     }
 }

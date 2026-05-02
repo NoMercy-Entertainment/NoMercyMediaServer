@@ -48,11 +48,13 @@ public record StorageProbeResponse
 
 public record StorageListRequest
 {
-    [JsonProperty("type")]
-    public string? Type { get; set; }
-
-    [JsonProperty("config")]
-    public StorageListConfigDto? Config { get; set; }
+    /// <summary>
+    /// Driver instance to browse. Server resolves type, config and any
+    /// credentials via IStorageFactory — the client never handles
+    /// secret material.
+    /// </summary>
+    [JsonProperty("driver_id")]
+    public string? DriverId { get; set; }
 
     [JsonProperty("path")]
     public string? Path { get; set; }

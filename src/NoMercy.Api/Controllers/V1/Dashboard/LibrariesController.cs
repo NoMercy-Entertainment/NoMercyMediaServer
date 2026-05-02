@@ -307,7 +307,7 @@ public class LibrariesController(
 
             // Remove all associated folders from the middleware immediately
             foreach (FolderLibrary fl in library.FolderLibraries)
-                DynamicStaticFilesMiddleware.RemovePath(fl.FolderId);
+                DynamicStaticFilesMiddleware.RemoveFolder(fl.FolderId);
 
             await using (
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
@@ -610,7 +610,7 @@ public class LibrariesController(
         await folderRepository.AddFolderLibraryAsync(folderLibrary);
 
         // Register the folder with the middleware directly so it can serve files immediately
-        DynamicStaticFilesMiddleware.AddPath(pathAsync.Id, pathAsync.Path);
+        DynamicStaticFilesMiddleware.AddFolder(pathAsync.Id, pathAsync.DriverId, pathAsync.Path);
         await using MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync();
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(refreshContext);
 
@@ -620,7 +620,8 @@ public class LibrariesController(
                 new FolderPathAddedEvent
                 {
                     RequestPath = pathAsync.Id,
-                    PhysicalPath = pathAsync.Path,
+                    DriverId = pathAsync.DriverId,
+                    SubPath = pathAsync.Path,
                 }
             );
         }
@@ -658,8 +659,8 @@ public class LibrariesController(
             await folderRepository.UpdateFolderAsync(folder);
 
             // Update the middleware directly so it can serve files from the new path immediately
-            DynamicStaticFilesMiddleware.RemovePath(folder.Id);
-            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+            DynamicStaticFilesMiddleware.RemoveFolder(folder.Id);
+            DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
             await using (
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
@@ -673,7 +674,12 @@ public class LibrariesController(
                     new FolderPathRemovedEvent { RequestPath = folder.Id }
                 );
                 await EventBusProvider.Current.PublishAsync(
-                    new FolderPathAddedEvent { RequestPath = folder.Id, PhysicalPath = folder.Path }
+                    new FolderPathAddedEvent
+                    {
+                        RequestPath = folder.Id,
+                        DriverId = folder.DriverId,
+                        SubPath = folder.Path,
+                    }
                 );
             }
 
@@ -709,7 +715,7 @@ public class LibrariesController(
             await folderRepository.DeleteFolderAsync(folder);
 
             // Remove the folder from the middleware immediately
-            DynamicStaticFilesMiddleware.RemovePath(folder.Id);
+            DynamicStaticFilesMiddleware.RemoveFolder(folder.Id);
             await using (
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )

@@ -22,7 +22,7 @@ public class FolderPathEventHandler : IDisposable
 
     internal async Task OnFolderPathAdded(FolderPathAddedEvent @event, CancellationToken ct)
     {
-        DynamicStaticFilesMiddleware.AddPath(@event.RequestPath, @event.PhysicalPath);
+        DynamicStaticFilesMiddleware.AddFolder(@event.RequestPath, @event.DriverId, @event.SubPath);
 
         await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
         IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<
@@ -34,7 +34,7 @@ public class FolderPathEventHandler : IDisposable
 
     internal async Task OnFolderPathRemoved(FolderPathRemovedEvent @event, CancellationToken ct)
     {
-        DynamicStaticFilesMiddleware.RemovePath(@event.RequestPath);
+        DynamicStaticFilesMiddleware.RemoveFolder(@event.RequestPath);
 
         await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
         IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<

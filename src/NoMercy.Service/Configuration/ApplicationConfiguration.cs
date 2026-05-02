@@ -327,13 +327,14 @@ public static class ApplicationConfiguration
             IStorageDriver storageDriver =
                 app.ApplicationServices.GetRequiredService<IStorageDriver>();
             using MediaContext mediaContext = new();
+            // Folders now reference a driver instance + sub-path; the
+            // middleware resolves the actual backend per-request through
+            // IStorageFactory, so we register every folder unconditionally
+            // (DirectoryExists check would require materialising IStorage
+            // here, which we don't have access to in the sync startup path).
             List<Folder> folderLibraries = mediaContext.Folders.ToList();
-            foreach (
-                Folder folder in folderLibraries.Where(folder =>
-                    storageDriver.DirectoryExists(folder.Path)
-                )
-            )
-                DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+            foreach (Folder folder in folderLibraries)
+                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
 
             // Refresh the cached folder IDs so AccessLogMiddleware allows
             // requests through before the background seeder finishes.

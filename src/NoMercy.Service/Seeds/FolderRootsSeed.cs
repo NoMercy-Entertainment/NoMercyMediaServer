@@ -43,9 +43,11 @@ public static class FolderRootsSeed
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
-        // Register seeded folders with the middleware so they can serve files over HTTP
-        foreach (Folder folder in folders.Where(f => storageDriver.DirectoryExists(f.Path)))
-            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+        // Register seeded folders with the middleware so they can serve files
+        // over HTTP. The middleware resolves the actual backend per-request
+        // via IStorageFactory using DriverId + sub-path.
+        foreach (Folder folder in folders)
+            DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
 
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);
     }

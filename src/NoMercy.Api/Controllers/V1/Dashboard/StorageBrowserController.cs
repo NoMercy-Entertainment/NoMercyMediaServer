@@ -4,7 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Data.Repositories;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Nfs;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -14,9 +17,19 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/storage", Order = 10)]
-public class StorageBrowserController(ILogger<StorageBrowserController> logger) : BaseController
+public class StorageBrowserController(
+    ILogger<StorageBrowserController> logger,
+    DriverRepository driverRepository,
+    IStorageFactory storageFactory
+) : BaseController
 {
     private static readonly string[] AllowedTypes = ["local", "nfs", "s3", "r2", "webdav"];
+
+    // Synthetic folder ID used for ad-hoc browsing through IStorageFactory.
+    // The factory caches by (folderId, driverType, configHash); we want a
+    // distinct slot per driver_id so different browse sessions don't share
+    // a stale cache.
+    private static Ulid SyntheticBrowseFolderId(Ulid driverId) => driverId;
 
     // -----------------------------------------------------------------------
     // POST /api/v1/dashboard/storage/probe
@@ -98,80 +111,83 @@ public class StorageBrowserController(ILogger<StorageBrowserController> logger) 
 
     // -----------------------------------------------------------------------
     // POST /api/v1/dashboard/storage/list
-    // List directory contents at a sub-path within a storage export.
+    // Universal directory browser. Takes a driver_id and resolves config
+    // (including credentials) server-side via IStorageFactory — works for
+    // every driver type (local, nfs, s3, r2, webdav) without the client
+    // ever seeing secret material.
     // -----------------------------------------------------------------------
 
     [HttpPost]
     [Route("list")]
-    public IActionResult List([FromBody] StorageListRequest request)
+    public async Task<IActionResult> List([FromBody] StorageListRequest request)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to browse storage.");
 
-        if (string.IsNullOrWhiteSpace(request.Type))
-            return BadRequestResponse("type is required.");
+        if (string.IsNullOrWhiteSpace(request.DriverId))
+            return BadRequestResponse("driver_id is required.");
 
-        string normalizedType = request.Type.Trim().ToLowerInvariant();
-        if (!AllowedTypes.Contains(normalizedType))
-            return BadRequestResponse(
-                $"Unknown type '{request.Type}'. Allowed: {string.Join(", ", AllowedTypes)}."
-            );
+        if (!Ulid.TryParse(request.DriverId, out Ulid driverId))
+            return BadRequestResponse("driver_id is not a valid ULID.");
 
-        if (request.Config is null)
-            return BadRequestResponse("config is required.");
+        Driver? driver = await driverRepository.GetDriverByIdAsync(driverId);
+        if (driver is null)
+            return NotFoundResponse($"Driver '{request.DriverId}' not found.");
 
-        if (normalizedType != "nfs")
-            return Ok(
-                new StorageListResponse
-                {
-                    Ok = false,
-                    Error = $"Browser not supported for storage type '{normalizedType}' yet.",
-                }
-            );
+        string subPath = (request.Path ?? string.Empty).Replace('\\', '/').TrimStart('/');
 
-        if (string.IsNullOrWhiteSpace(request.Config.Server))
-            return BadRequestResponse("config.server is required for NFS list.");
-
-        if (string.IsNullOrWhiteSpace(request.Config.Export))
-            return BadRequestResponse("config.export is required for NFS list.");
-
-        NfsDriverConfig config = NfsDriverConfig.For(
-            server: request.Config.Server.Trim(),
-            export: request.Config.Export.Trim(),
-            version: request.Config.Version ?? 3,
-            uid: request.Config.Uid,
-            gid: request.Config.Gid
-        );
-
-        string relativePath = request.Path ?? string.Empty;
-
-        NfsStorageDriver? driver = null;
         try
         {
-            driver = new NfsStorageDriver(config);
-            List<(string Name, bool IsDirectory)> entries = driver.ListDirectories(relativePath);
+            IStorage storage = storageFactory.For(
+                folderId: SyntheticBrowseFolderId(driverId),
+                driverId: driverId,
+                subPath: string.Empty
+            );
 
-            List<StorageEntryDto> dtos = entries
-                .Select(e => new StorageEntryDto { Name = e.Name, IsDirectory = e.IsDirectory })
-                .OrderBy(e => e.Name)
-                .ToList();
+            IReadOnlyList<StorageEntry> entries = storage.List(
+                subPath,
+                pattern: null,
+                recursive: false
+            );
+
+            List<StorageEntryDto> dtos =
+            [
+                .. entries
+                    .Select(e =>
+                    {
+                        string name = e.Path;
+                        // Storage drivers return either bare names or full
+                        // paths — normalise to bare name so the client
+                        // breadcrumb logic works the same regardless.
+                        int slash = name.LastIndexOfAny(['/', '\\']);
+                        if (slash >= 0)
+                            name = name[(slash + 1)..];
+                        return new StorageEntryDto { Name = name, IsDirectory = e.IsDirectory };
+                    })
+                    .Where(e => !string.IsNullOrEmpty(e.Name) && e.Name != "." && e.Name != "..")
+                    .OrderByDescending(e => e.IsDirectory)
+                    .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase),
+            ];
 
             return Ok(
                 new StorageListResponse
                 {
                     Ok = true,
-                    Path = relativePath,
+                    Path = subPath,
                     Entries = dtos,
                 }
             );
         }
         catch (Exception ex)
         {
+            logger.LogWarning(
+                ex,
+                "Storage list failed: driver={DriverId} type={Type} path={Path}",
+                driverId,
+                driver.Type,
+                subPath
+            );
             return Ok(new StorageListResponse { Ok = false, Error = ex.Message });
-        }
-        finally
-        {
-            driver?.Dispose();
         }
     }
 }
