@@ -59,30 +59,31 @@ internal sealed class NfsReadStream : Stream
             try
             {
                 int n;
-                _lock.Wait();
+                string? err = null;
                 try
                 {
-                    n = LibNfs.Read(_nfs, _fh, pinned, chunk);
-                }
-                finally
-                {
-                    _lock.Release();
-                }
-
-                if (n < 0)
-                {
-                    string err;
                     _lock.Wait();
                     try
                     {
-                        err = LibNfs.GetError(_nfs);
+                        n = LibNfs.Read(_nfs, _fh, pinned, chunk);
+                        if (n < 0)
+                            err = LibNfs.GetError(_nfs);
                     }
                     finally
                     {
                         _lock.Release();
                     }
-                    throw new IOException($"NFS read failed: {err}");
                 }
+                catch (ObjectDisposedException)
+                {
+                    // Driver was disposed while we were waiting on the lock.
+                    // Surface as IOException so the HTTP pipeline can finish
+                    // the response cleanly instead of crashing the host.
+                    throw new IOException("NFS driver disposed during read");
+                }
+
+                if (n < 0)
+                    throw new IOException($"NFS read failed: {err}");
                 if (n == 0)
                     break;
 
@@ -112,23 +113,30 @@ internal sealed class NfsReadStream : Stream
 
         long rc;
         string? err = null;
-        _lock.Wait();
         try
         {
-            rc = LibNfs.Lseek(
-                _nfs,
-                _fh,
-                target,
-                0 /* SEEK_SET */
-                ,
-                out _
-            );
-            if (rc < 0)
-                err = LibNfs.GetError(_nfs);
+            _lock.Wait();
+            try
+            {
+                rc = LibNfs.Lseek(
+                    _nfs,
+                    _fh,
+                    target,
+                    0 /* SEEK_SET */
+                    ,
+                    out _
+                );
+                if (rc < 0)
+                    err = LibNfs.GetError(_nfs);
+            }
+            finally
+            {
+                _lock.Release();
+            }
         }
-        finally
+        catch (ObjectDisposedException)
         {
-            _lock.Release();
+            throw new IOException("NFS driver disposed during seek");
         }
 
         if (rc < 0)

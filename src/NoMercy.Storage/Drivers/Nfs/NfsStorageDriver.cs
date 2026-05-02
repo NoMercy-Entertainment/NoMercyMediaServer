@@ -285,7 +285,17 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     $"NFS open (read) failed for '{path}': {LibNfs.GetError(_nfs)}"
                 );
 
-            return new NfsReadStream(_nfs, fh, (long)stat.Size, _lock);
+            try
+            {
+                return new NfsReadStream(_nfs, fh, (long)stat.Size, _lock);
+            }
+            catch
+            {
+                // Stream constructor failure (OOM etc.) — close the libnfs
+                // file handle so we don't leak it inside the shared context.
+                LibNfs.Close(_nfs, fh);
+                throw;
+            }
         }
         finally
         {
@@ -321,7 +331,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     );
             }
 
-            return new NfsWriteStream(_nfs, fh, _lock);
+            try
+            {
+                return new NfsWriteStream(_nfs, fh, _lock);
+            }
+            catch
+            {
+                LibNfs.Close(_nfs, fh);
+                throw;
+            }
         }
         finally
         {
@@ -745,10 +763,24 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     {
         if (_disposed)
             return;
-        _disposed = true;
 
-        LibNfs.Umount(_nfs);
-        LibNfs.DestroyContext(_nfs);
+        // Acquire the driver lock before tearing down the libnfs context so
+        // any stream call already inside LibNfs.Read/Write finishes against
+        // a valid context. Without this, Dispose can run while a stream's
+        // native call is in progress, freeing the context out from under
+        // it — same 0xC0000005 shape as the un-locked stream race.
+        _lock.Wait();
+        try
+        {
+            _disposed = true;
+            LibNfs.Umount(_nfs);
+            LibNfs.DestroyContext(_nfs);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+
         _lock.Dispose();
     }
 
@@ -877,6 +909,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 if (string.IsNullOrEmpty(name) || name == "." || name == "..")
                     continue;
 
+                // Contract: virtualPath is driver-relative (same shape FileExists/DirectoryExists accept).
                 string virtualPath = virtualDir.TrimEnd('/') + "/" + name;
                 string childNfsPath = nfsDir.TrimEnd('/') + "/" + name;
 

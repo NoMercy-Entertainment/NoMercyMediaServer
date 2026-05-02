@@ -51,16 +51,23 @@ internal sealed class NfsWriteStream : Stream
 
                 int n;
                 string? err = null;
-                _lock.Wait();
                 try
                 {
-                    n = LibNfs.Write(_nfs, _fh, pinned, chunk);
-                    if (n < 0)
-                        err = LibNfs.GetError(_nfs);
+                    _lock.Wait();
+                    try
+                    {
+                        n = LibNfs.Write(_nfs, _fh, pinned, chunk);
+                        if (n < 0)
+                            err = LibNfs.GetError(_nfs);
+                    }
+                    finally
+                    {
+                        _lock.Release();
+                    }
                 }
-                finally
+                catch (ObjectDisposedException)
                 {
-                    _lock.Release();
+                    throw new IOException("NFS driver disposed during write");
                 }
 
                 if (n < 0)
