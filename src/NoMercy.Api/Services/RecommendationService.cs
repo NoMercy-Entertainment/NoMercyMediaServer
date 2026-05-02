@@ -333,9 +333,7 @@ public class RecommendationService
                 Overview = c.Overview,
                 Poster = c.Poster,
                 Backdrop = c.Backdrop,
-                ColorPalette = !string.IsNullOrEmpty(c.ColorPalette)
-                    ? JsonConvert.DeserializeObject<IColorPalettes>(c.ColorPalette)
-                    : null,
+                ColorPalette = IColorPalettes.FromJsonOrNull(c.ColorPalette),
                 Type = c.MediaType,
                 Score = ScoreCandidate(c, profile, combinedGenreMap),
                 SourceCount = c.SourceCount,
@@ -440,7 +438,7 @@ public class RecommendationService
         string? rawPalette = isMovie
             ? sourceMoviesTask.Result.ColorPalette
             : sourceTvsTask.Result.ColorPalette;
-        IColorPalettes? colorPalette = ParsePaletteSafely(rawPalette);
+        IColorPalettes? colorPalette = IColorPalettes.FromJsonOrNull(rawPalette);
 
         if (isMovie)
         {
@@ -993,25 +991,6 @@ public class RecommendationService
         }
 
         return result.OrderByDescending(s => s.Score).ToList();
-    }
-
-    /// <summary>
-    /// Deserialize a stored color-palette JSON blob without crashing on
-    /// a corrupted row. Recommendation responses are best-effort — a bad
-    /// palette just means the card renders without a tinted background.
-    /// </summary>
-    private static IColorPalettes? ParsePaletteSafely(string? rawPalette)
-    {
-        if (string.IsNullOrEmpty(rawPalette))
-            return null;
-        try
-        {
-            return JsonConvert.DeserializeObject<IColorPalettes>(rawPalette);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
     }
 
     internal record UserAffinityProfile

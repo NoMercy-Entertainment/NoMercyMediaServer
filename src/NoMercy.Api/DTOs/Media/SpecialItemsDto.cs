@@ -278,9 +278,7 @@ public record SpecialItemsDto
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = !string.IsNullOrEmpty(c.PersonColorPalette)
-                ? JsonConvert.DeserializeObject<IColorPalettes>(c.PersonColorPalette)
-                : null,
+            ColorPalette = IColorPalettes.FromJsonOrNull(c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Character = c.Character,
@@ -295,9 +293,7 @@ public record SpecialItemsDto
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = !string.IsNullOrEmpty(c.PersonColorPalette)
-                ? JsonConvert.DeserializeObject<IColorPalettes>(c.PersonColorPalette)
-                : null,
+            ColorPalette = IColorPalettes.FromJsonOrNull(c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Job = c.Task,
@@ -381,9 +377,7 @@ public record SpecialItemsDto
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = !string.IsNullOrEmpty(c.PersonColorPalette)
-                ? JsonConvert.DeserializeObject<IColorPalettes>(c.PersonColorPalette)
-                : null,
+            ColorPalette = IColorPalettes.FromJsonOrNull(c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Character = c.Character,
@@ -398,9 +392,7 @@ public record SpecialItemsDto
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = !string.IsNullOrEmpty(c.PersonColorPalette)
-                ? JsonConvert.DeserializeObject<IColorPalettes>(c.PersonColorPalette)
-                : null,
+            ColorPalette = IColorPalettes.FromJsonOrNull(c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Job = c.Task,
