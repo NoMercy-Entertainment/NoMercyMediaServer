@@ -110,9 +110,11 @@ public static class Software
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
             string output = Shell.ExecCommand("sysctl -n kern.boottime");
-            return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(
-                long.Parse(output.Split(' ').Last())
-            );
+            // Tolerate unexpected sysctl output rather than crashing the
+            // diagnostic call; fall through to DateTime.UtcNow as a sentinel.
+            return long.TryParse(output.Split(' ').Last(), out long bootSec)
+                ? new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(bootSec)
+                : DateTime.UtcNow;
         }
         else
         {

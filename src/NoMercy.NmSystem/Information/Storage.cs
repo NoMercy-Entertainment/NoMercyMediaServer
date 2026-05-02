@@ -62,12 +62,21 @@ public class Storage
             if (parts.Length < 6)
                 continue;
 
+            // `df -k` rows for tmpfs/devfs/none can carry hyphens or non-numeric
+            // sentinels in size columns. TryParse so a single oddball line
+            // doesn't crash the whole device enumeration.
+            if (
+                !long.TryParse(parts[1], out long totalKb)
+                || !long.TryParse(parts[3], out long freeKb)
+            )
+                continue;
+
             devices.Add(
                 new()
                 {
                     Name = parts[0],
-                    TotalSpace = long.Parse(parts[1]) * 1024,
-                    FreeSpace = long.Parse(parts[3]) * 1024,
+                    TotalSpace = totalKb * 1024,
+                    FreeSpace = freeKb * 1024,
                 }
             );
         }
