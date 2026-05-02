@@ -46,11 +46,28 @@ public static class JsonHelper
         },
     };
 
+    /// <summary>
+    /// Forgiving JSON parse: null/empty input or malformed JSON both return
+    /// <c>default(T)</c> instead of throwing. Used widely on payloads we
+    /// don't fully trust (FFprobe output, persisted job payloads, third-party
+    /// API responses) where the throw path would propagate up to a generic
+    /// 500 with no useful context. Callers that need strict validation
+    /// should use <see cref="JsonConvert.DeserializeObject{T}(string)"/>
+    /// directly.
+    /// </summary>
     public static T? FromJson<T>(this string? json)
     {
-        return string.IsNullOrEmpty(json)
-            ? default
-            : JsonConvert.DeserializeObject<T>(json, Settings);
+        if (string.IsNullOrEmpty(json))
+            return default;
+
+        try
+        {
+            return JsonConvert.DeserializeObject<T>(json, Settings);
+        }
+        catch (JsonException)
+        {
+            return default;
+        }
     }
 
     public static string ToJson<T>(this T self)
