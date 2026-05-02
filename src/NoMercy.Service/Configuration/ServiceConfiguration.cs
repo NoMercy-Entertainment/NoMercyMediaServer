@@ -17,6 +17,7 @@ using NoMercy.Api.Middleware;
 using NoMercy.Api.Services;
 using NoMercy.Data.Activity;
 using NoMercy.Data.Repositories;
+using NoMercy.Data.Resolvers;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Composition;
@@ -24,6 +25,7 @@ using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Startup;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
+using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.Helpers.Wallpaper;
@@ -57,8 +59,6 @@ using NoMercy.Service.Extensions;
 using NoMercy.Service.Workers;
 using NoMercy.Setup;
 using NoMercy.Setup.Cast;
-using NoMercy.Data.Resolvers;
-using NoMercy.Helpers;
 using NoMercy.Storage;
 using NoMercyQueue.Extensions;
 using Serilog.Events;
@@ -534,9 +534,9 @@ public static class ServiceConfiguration
 
         // Storage driver resolvers — registered before AddNoMercyEncoder so
         // the TryAdd inside AddNoMercyStorage picks them up via GetService<>.
-        services.AddSingleton<IDriverConfigResolver>(sp =>
-            new DriverConfigResolver(sp.GetRequiredService<IDbContextFactory<MediaContext>>())
-        );
+        services.AddSingleton<IDriverConfigResolver>(sp => new DriverConfigResolver(
+            sp.GetRequiredService<IDbContextFactory<MediaContext>>()
+        ));
         services.AddSingleton<ICredentialResolver, CredentialResolver>();
 
         services.AddNoMercyEncoder(opts =>

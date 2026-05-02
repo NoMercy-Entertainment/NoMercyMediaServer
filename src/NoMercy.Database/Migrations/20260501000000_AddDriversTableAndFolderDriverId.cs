@@ -18,8 +18,16 @@ namespace NoMercy.Database.Migrations
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     Type = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     Config = table.Column<string>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<string>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<string>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    CreatedAt = table.Column<string>(
+                        type: "TEXT",
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
+                    UpdatedAt = table.Column<string>(
+                        type: "TEXT",
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
                 },
                 constraints: table =>
                 {
@@ -34,11 +42,7 @@ namespace NoMercy.Database.Migrations
                 unique: true
             );
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Drivers_Type",
-                table: "Drivers",
-                column: "Type"
-            );
+            migrationBuilder.CreateIndex(name: "IX_Drivers_Type", table: "Drivers", column: "Type");
 
             // Drop the old per-folder driver columns.
             migrationBuilder.DropIndex(name: "IX_Folders_DriverType", table: "Folders");
@@ -74,10 +78,7 @@ namespace NoMercy.Database.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Folders_Drivers_DriverId",
-                table: "Folders"
-            );
+            migrationBuilder.DropForeignKey(name: "FK_Folders_Drivers_DriverId", table: "Folders");
 
             migrationBuilder.DropIndex(name: "IX_Folders_DriverId", table: "Folders");
 
