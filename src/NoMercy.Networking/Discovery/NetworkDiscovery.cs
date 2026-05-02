@@ -588,14 +588,10 @@ public class NetworkDiscovery : INetworkDiscovery
 
     private static bool CheckIpv6()
     {
-        // Quick check for IPv6 support before enumerating interfaces, which is slow on some systems
+        // IPv6 enumeration is slow on some systems and currently unused — the
+        // Cloudflare tunnel + UPnP path uses IPv4. Hardcode false until the
+        // STUN / hole-punch flow needs the v6 record. Restore the interface
+        // walk (Socket.OSSupportsIPv6 + nic.Supports(IPv6)) when reactivating.
         return false;
-
-        if (!Socket.OSSupportsIPv6)
-            return false;
-
-        foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
-            if (nic.Supports(NetworkInterfaceComponent.IPv6))
-                return true;
     }
 }

@@ -1,7 +1,6 @@
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Output;
 
@@ -10,7 +9,7 @@ namespace NoMercy.Encoder.Output;
 /// <c>audio_NNN.aac</c> segments — no video, no subtitles, no master
 /// playlist. The music player (hls.js) loads <c>audio.m3u8</c> directly.
 /// </summary>
-public class AudioHlsOutputStrategy(IStorage storage) : IOutputStrategy
+public class AudioHlsOutputStrategy : IOutputStrategy
 {
     public OutputFormat Format => OutputFormat.AudioHls;
 
