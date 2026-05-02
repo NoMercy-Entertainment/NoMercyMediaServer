@@ -79,11 +79,13 @@ public class GenericHttpClient
         CancellationToken cancellationToken = default
     )
     {
-        HttpResponseMessage response;
-        if (queryParams?.Count > 0)
-            response = await SendAsync(method, endpoint, queryParams, cancellationToken);
-        else
-            response = await SendAsync(method, endpoint, content, cancellationToken);
+        // Wrap the response in 'using' so the underlying connection
+        // returns to the SocketsHttpHandler pool promptly. Without this
+        // every SendAndReadAsync call held the connection until GC.
+        using HttpResponseMessage response =
+            queryParams?.Count > 0
+                ? await SendAsync(method, endpoint, queryParams, cancellationToken)
+                : await SendAsync(method, endpoint, content, cancellationToken);
 
         string body = await response.Content.ReadAsStringAsync(cancellationToken);
 
