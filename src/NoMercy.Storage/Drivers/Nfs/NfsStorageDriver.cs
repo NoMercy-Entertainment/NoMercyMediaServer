@@ -28,6 +28,18 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 "nfs_init_context returned null — libnfs not available."
             );
 
+        // Set NFS protocol version BEFORE mount. libnfs defaults to NFSv3
+        // when not set; we call this even for v3 so the value is explicit
+        // and surfaces a clear error if the server doesn't speak that version.
+        int versionRc = LibNfs.SetVersion(_nfs, config.Version);
+        if (versionRc != 0)
+        {
+            string err = LibNfs.GetError(_nfs);
+            LibNfs.DestroyContext(_nfs);
+            _nfs = IntPtr.Zero;
+            throw new IOException($"nfs_set_version({config.Version}) failed — {err}");
+        }
+
         if (config.Uid.HasValue)
             LibNfs.SetUid(_nfs, config.Uid.Value);
         if (config.Gid.HasValue)
@@ -35,9 +47,14 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
         int rc = LibNfs.Mount(_nfs, config.Server, config.Export);
         if (rc != 0)
+        {
+            string err = LibNfs.GetError(_nfs);
+            LibNfs.DestroyContext(_nfs);
+            _nfs = IntPtr.Zero;
             throw new IOException(
-                $"NFS mount failed for {config.Server}:{config.Export} — {LibNfs.GetError(_nfs)}"
+                $"NFS{config.Version} mount failed for {config.Server}:{config.Export} — {err}"
             );
+        }
     }
 
     // -----------------------------------------------------------------------

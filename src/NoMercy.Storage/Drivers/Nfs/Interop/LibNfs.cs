@@ -65,6 +65,18 @@ internal static class LibNfs
     [DllImport(LibName, EntryPoint = "nfs_set_gid", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void SetGid(IntPtr nfs, int gid);
 
+    /// <summary>
+    /// Set the NFS protocol version (3 or 4). Must be called before
+    /// <c>nfs_mount</c>. libnfs defaults to NFSv3 when this is not set.
+    /// Returns 0 on success, negative on error.
+    /// </summary>
+    [DllImport(
+        LibName,
+        EntryPoint = "nfs_set_version",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern int SetVersion(IntPtr nfs, int version);
+
     // -----------------------------------------------------------------------
     // Error
     // -----------------------------------------------------------------------
