@@ -48,24 +48,47 @@ public class StorageBrowserController(ILogger<StorageBrowserController> logger) 
         if (string.IsNullOrWhiteSpace(request.Config.Server))
             return BadRequestResponse("config.server is required for NFS probe.");
 
+        // Two probe modes:
+        //   1. Enumerate exports — body has only `server`. Returns the
+        //      list (which may be empty) for the Browse modal to display.
+        //      Empty list is NOT a failure — TrueNAS / NFSv4-only servers
+        //      legitimately don't expose an enumerable namespace.
+        //   2. Test-mount — body has `server` + `export`. Actually mounts
+        //      the configured export to verify connectivity. This is what
+        //      the StorageModal pre-validate needs.
+        bool isMountTest = !string.IsNullOrWhiteSpace(request.Config.Export);
+
         try
         {
+            if (isMountTest)
+            {
+                NfsDriverConfig nfsConfig = NfsDriverConfig.For(
+                    server: request.Config.Server.Trim(),
+                    export: request.Config.Export!.Trim(),
+                    version: request.Config.Version ?? 3,
+                    uid: request.Config.Uid,
+                    gid: request.Config.Gid
+                );
+
+                using NfsStorageDriver driver = new(nfsConfig);
+                // Constructor throws on mount failure; reaching here = success.
+                return Ok(new StorageProbeResponse { Ok = true, Exports = [] });
+            }
+
             List<string>? exports = await NfsStorageDriver.GetExportsAsync(
                 request.Config.Server.Trim(),
                 logger: logger
             );
 
-            if (exports is null)
-                return Ok(
-                    new StorageProbeResponse
-                    {
-                        Ok = false,
-                        Error =
-                            $"No exports returned — server '{request.Config.Server}' may be unreachable or have no configured exports.",
-                    }
-                );
-
-            return Ok(new StorageProbeResponse { Ok = true, Exports = exports });
+            // Empty / null is NOT an error — server may not expose a
+            // browsable namespace. Return ok with an empty list and let
+            // the Browse modal render a manual-entry fallback.
+            return Ok(new StorageProbeResponse { Ok = true, Exports = exports ?? [] });
+        }
+        catch (IOException ex)
+        {
+            // NFS mount failure (test-mount path)
+            return Ok(new StorageProbeResponse { Ok = false, Error = ex.Message });
         }
         catch (Exception ex)
         {

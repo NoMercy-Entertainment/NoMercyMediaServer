@@ -16,8 +16,22 @@ public record StorageProbeConfigDto
     [JsonProperty("server")]
     public string? Server { get; set; }
 
+    /// <summary>
+    /// Optional. When present, the probe switches from "enumerate exports"
+    /// to "test-mount this export" mode and returns ok=true only if the
+    /// configured export actually mounts.
+    /// </summary>
+    [JsonProperty("export")]
+    public string? Export { get; set; }
+
     [JsonProperty("version")]
     public int? Version { get; set; }
+
+    [JsonProperty("uid")]
+    public int? Uid { get; set; }
+
+    [JsonProperty("gid")]
+    public int? Gid { get; set; }
 }
 
 public record StorageProbeResponse
