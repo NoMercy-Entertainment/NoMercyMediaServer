@@ -82,7 +82,12 @@ public sealed class StorageFactory : IStorageFactory
             }
         }
 
-        string cacheKey = BuildCacheKey(folderId, driverType, configJson);
+        // The cache key MUST include subPath: NFS / S3 / WebDAV storages
+        // bake the subPath into their root (Export / prefix / URL). Two
+        // callers asking for the same (folder, driver) but different subPath
+        // would otherwise share a single Storage built for whichever
+        // subPath landed first.
+        string cacheKey = BuildCacheKey(folderId, driverType, configJson, subPath);
         return _cache.GetOrAdd(cacheKey, _ => Build(folderId, driverType, configJson, subPath));
     }
 
@@ -381,13 +386,19 @@ public sealed class StorageFactory : IStorageFactory
         return new RemoteStorage(webDavDriver);
     }
 
-    private static string BuildCacheKey(Ulid folderId, string driverType, string? configJson)
+    private static string BuildCacheKey(
+        Ulid folderId,
+        string driverType,
+        string? configJson,
+        string subPath
+    )
     {
         string configHash = string.IsNullOrEmpty(configJson)
             ? "null"
             : Convert
                 .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(configJson)))
                 .ToLowerInvariant();
-        return $"{folderId}:{driverType.Trim().ToLowerInvariant()}:{configHash}";
+        string subPathKey = string.IsNullOrEmpty(subPath) ? "_" : subPath;
+        return $"{folderId}:{driverType.Trim().ToLowerInvariant()}:{configHash}:{subPathKey}";
     }
 }
