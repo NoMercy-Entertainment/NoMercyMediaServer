@@ -10,6 +10,14 @@ namespace NoMercy.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Step 0 — drop the old unique-Path index. In the new model Path is a
+            // sub-path inside the driver root, so two folders on different drivers
+            // can legitimately share the same sub-path (e.g. "" = driver root, or
+            // "Films"). Replaced after seeding by a composite unique on
+            // (DriverId, Path) so a single driver still can't have two folders at
+            // the same sub-path.
+            migrationBuilder.DropIndex(name: "IX_Folders_Path", table: "Folders");
+
             // Step 1 — seed: for every Folder that still has no DriverId, create a
             // local Driver whose Id equals the Folder's Id (deterministic — no ULID
             // generation needed in SQL), then back-fill DriverId and clear Path
@@ -57,10 +65,13 @@ namespace NoMercy.Database.Migrations
                 oldNullable: true
             );
 
+            // Composite unique index on (DriverId, Path) — also serves as the
+            // FK-supporting index, so no separate IX_Folders_DriverId is needed.
             migrationBuilder.CreateIndex(
-                name: "IX_Folders_DriverId",
+                name: "IX_Folders_DriverId_Path",
                 table: "Folders",
-                column: "DriverId"
+                columns: ["DriverId", "Path"],
+                unique: true
             );
 
             migrationBuilder.AddForeignKey(
@@ -78,7 +89,7 @@ namespace NoMercy.Database.Migrations
         {
             migrationBuilder.DropForeignKey(name: "FK_Folders_Drivers_DriverId", table: "Folders");
 
-            migrationBuilder.DropIndex(name: "IX_Folders_DriverId", table: "Folders");
+            migrationBuilder.DropIndex(name: "IX_Folders_DriverId_Path", table: "Folders");
 
             migrationBuilder.AlterColumn<string>(
                 name: "DriverId",
@@ -94,6 +105,13 @@ namespace NoMercy.Database.Migrations
                 name: "IX_Folders_DriverId",
                 table: "Folders",
                 column: "DriverId"
+            );
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Folders_Path",
+                table: "Folders",
+                column: "Path",
+                unique: true
             );
 
             migrationBuilder.AddForeignKey(

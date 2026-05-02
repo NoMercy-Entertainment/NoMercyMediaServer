@@ -187,9 +187,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DriverId");
-
-                    b.HasIndex("Path")
+                    b.HasIndex("DriverId", "Path")
                         .IsUnique();
 
                     b.ToTable("Folders");

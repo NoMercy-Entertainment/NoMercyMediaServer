@@ -7,8 +7,7 @@ using NoMercy.Database.Models.Storage;
 namespace NoMercy.Database.Models.Libraries;
 
 [PrimaryKey(nameof(Id))]
-[Index(nameof(Path), IsUnique = true)]
-[Index(nameof(DriverId))]
+[Index(nameof(DriverId), nameof(Path), IsUnique = true)]
 public class Folder
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
