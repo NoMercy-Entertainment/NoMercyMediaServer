@@ -94,9 +94,18 @@ internal static partial class LogsCommand
                             continue;
 
                         string json = line[6..];
-                        LogEntryResponse? entry = JsonConvert.DeserializeObject<LogEntryResponse>(
-                            json
-                        );
+                        LogEntryResponse? entry;
+                        try
+                        {
+                            entry = JsonConvert.DeserializeObject<LogEntryResponse>(json);
+                        }
+                        catch (JsonException)
+                        {
+                            // Truncated SSE line during a server restart — skip
+                            // and wait for the next clean event instead of
+                            // killing the whole `nomercy logs` session.
+                            continue;
+                        }
                         if (entry is null)
                             continue;
 
