@@ -83,6 +83,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Storage", "src\NoMe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Tests.Storage", "tests\NoMercy.Tests.Storage\NoMercy.Tests.Storage.csproj", "{734E6EE5-6F94-4ACB-87C1-A850AEE7D756}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.OpticalMedia", "src\NoMercy.OpticalMedia\NoMercy.OpticalMedia.csproj", "{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -549,6 +551,18 @@ Global
 		{734E6EE5-6F94-4ACB-87C1-A850AEE7D756}.Release|x64.Build.0 = Release|Any CPU
 		{734E6EE5-6F94-4ACB-87C1-A850AEE7D756}.Release|x86.ActiveCfg = Release|Any CPU
 		{734E6EE5-6F94-4ACB-87C1-A850AEE7D756}.Release|x86.Build.0 = Release|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Debug|x64.Build.0 = Debug|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Debug|x86.Build.0 = Debug|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Release|x64.ActiveCfg = Release|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Release|x64.Build.0 = Release|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Release|x86.ActiveCfg = Release|Any CPU
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -592,6 +606,7 @@ Global
 		{F9FFCD67-6DBB-4171-B503-6D5BFB172A9C} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
 		{AF646D2C-A229-4695-A466-8D208DE745C3} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
 		{734E6EE5-6F94-4ACB-87C1-A850AEE7D756} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
+		{ABC1EB5C-A2E9-4730-9DDA-44D98898F009} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {22D7A0A2-2627-4892-8844-22A1F8DFF0C3}
