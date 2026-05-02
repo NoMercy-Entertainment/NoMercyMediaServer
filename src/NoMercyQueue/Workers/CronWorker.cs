@@ -250,12 +250,21 @@ public class CronWorker : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogDebug("Job execution timed out for: {JobName}", job.Name);
+            _logger.LogWarning("Job execution timed out for: {JobName}", job.Name);
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to execute cron job: {JobName}", job.Name);
+            // Was LogDebug — invisible at default Information level, so cron
+            // failures showed up as the bare "Failed to execute …" line with no
+            // exception detail, leaving the operator no way to diagnose.
+            _logger.LogError(
+                ex,
+                "Failed to execute cron job: {JobName} — {ErrorType}: {ErrorMessage}",
+                job.Name,
+                ex.GetType().Name,
+                ex.Message
+            );
             return false;
         }
     }

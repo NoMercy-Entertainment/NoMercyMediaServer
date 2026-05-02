@@ -27,6 +27,26 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
+        try
+        {
+            await ExecuteCoreAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // Surface the inner exception under our own log channel so the
+            // CronWorker's outer wrapper can't drop the diagnostic detail.
+            _logger.LogError(
+                ex,
+                "DeviceDropRuleCronJob failed: {ErrorType} — {ErrorMessage}",
+                ex.GetType().Name,
+                ex.Message
+            );
+            throw;
+        }
+    }
+
+    private async Task ExecuteCoreAsync(CancellationToken cancellationToken)
+    {
         DateTime now = DateTime.UtcNow;
 
         List<Device> candidates = await _context
