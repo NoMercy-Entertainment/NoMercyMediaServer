@@ -548,11 +548,20 @@ public class MusicHub : ConnectionHub
         return playerState;
     }
 
-    public async Task PlaybackCommand(string command, object? data = null)
+    public async Task PlaybackCommand(string? command, object? data = null)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (string.IsNullOrEmpty(command))
+        {
+            Logger.Socket(
+                $"{user.Name}: [MusicHub.PlaybackCommand] ignored — command was null/empty",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         SemaphoreSlim userLock = GetUserLock(user.Id);
         await userLock.WaitAsync();
@@ -590,10 +599,13 @@ public class MusicHub : ConnectionHub
         }
     }
 
-    public async Task CurrentTimeCommand(int time)
+    public async Task CurrentTimeCommand(int? time)
     {
         User? user = Context.User.User();
         if (user is null)
+            return;
+
+        if (time is null)
             return;
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
@@ -601,7 +613,7 @@ public class MusicHub : ConnectionHub
             if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
                 return;
 
-            playerState.Time = time * 1000;
+            playerState.Time = time.Value * 1000;
 
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
@@ -621,16 +633,19 @@ public class MusicHub : ConnectionHub
     /// safety margin on top; if <c>CrossfadeCompleteCommand</c> never arrives within that window
     /// the server force-advances anyway.
     /// </param>
-    public Task CrossfadeStartCommand(int fadeDurationMs)
+    public Task CrossfadeStartCommand(int? fadeDurationMs)
     {
         User? user = Context.User.User();
         if (user is null)
             return Task.CompletedTask;
 
+        if (fadeDurationMs is null)
+            return Task.CompletedTask;
+
         if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             return Task.CompletedTask;
 
-        _musicPlaybackService.StartCrossfade(user.Id, client.DeviceId, fadeDurationMs);
+        _musicPlaybackService.StartCrossfade(user.Id, client.DeviceId, fadeDurationMs.Value);
         return Task.CompletedTask;
     }
 
@@ -661,11 +676,20 @@ public class MusicHub : ConnectionHub
         await _musicPlaybackService.CompleteCrossfade(user, client.DeviceId, newTrackId.Value);
     }
 
-    public async Task ChangeDeviceCommand(string deviceId)
+    public async Task ChangeDeviceCommand(string? deviceId)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (string.IsNullOrEmpty(deviceId))
+        {
+            Logger.Socket(
+                $"{user.Name}: [MusicHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         List<Device> connectedDevices = await MusicDevicesAsync();
 
@@ -822,22 +846,27 @@ public class MusicHub : ConnectionHub
         await _musicPlaybackService.UpdatePlaybackState(user, playerState);
     }
 
-    public async Task ChangeVolumeCommand(int volume)
+    public async Task ChangeVolumeCommand(int? volume)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (volume is null)
+            return;
+
+        int clamped = Math.Clamp(volume.Value, 0, 100);
 
         // Diagnostic: log which device/connection sent this command so we can
         // tell phone vs PC vs TV apart when hunting down echo loops.
         string senderDevice = Context.ConnectionId;
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? sender))
             senderDevice = $"{sender.Name}/{sender.DeviceId}/{sender.Browser}";
-        Logger.App($"ChangeVolumeCommand {volume} from {senderDevice}");
+        Logger.App($"ChangeVolumeCommand {clamped} from {senderDevice}");
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            playerState.VolumePercentage = volume;
+            playerState.VolumePercentage = clamped;
             // Fire the broadcast FIRST so clients see the new value with the
             // minimum possible latency. The in-memory state is already
             // authoritative for future broadcasts.
@@ -855,7 +884,7 @@ public class MusicHub : ConnectionHub
         // added 500+ms of wire latency per volume event on SQLite under load.
         if (CurrentDevice.TryGetValue(user.Id, out Device? device))
         {
-            device.VolumePercent = volume;
+            device.VolumePercent = clamped;
             string deviceId = device.DeviceId;
             _ = Task.Run(async () =>
             {
@@ -864,7 +893,7 @@ public class MusicHub : ConnectionHub
                     await using MediaContext mediaContext = new();
                     await mediaContext
                         .Devices.Where(d => d.DeviceId == deviceId)
-                        .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, volume));
+                        .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, clamped));
                 }
                 catch (Exception ex)
                 {

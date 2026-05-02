@@ -199,11 +199,21 @@ public class VideoHub : ConnectionHub
 
     private static readonly ConcurrentDictionary<Guid, Device> CurrentDevice = new();
 
-    public async Task StartPlaybackCommand(string type, dynamic listId, int? itemId)
+    public async Task StartPlaybackCommand(string? type, dynamic? listId, int? itemId)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (string.IsNullOrEmpty(type) || listId is null)
+        {
+            Logger.Socket(
+                $"{user.Name}: [VideoHub.StartPlaybackCommand] ignored — null arg "
+                    + $"(type='{type ?? "<null>"}', listId={(listId is null ? "<null>" : "set")})",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         string language = GetLanguageFromContext();
         string country = GetCountryFromContext();
@@ -477,11 +487,20 @@ public class VideoHub : ConnectionHub
         return playerState;
     }
 
-    public async Task PlaybackCommand(string command, object? data = null)
+    public async Task PlaybackCommand(string? command, object? data = null)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (string.IsNullOrEmpty(command))
+        {
+            Logger.Socket(
+                $"{user.Name}: [VideoHub.PlaybackCommand] ignored — command was null/empty",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         if (!_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? state))
         {
@@ -503,11 +522,20 @@ public class VideoHub : ConnectionHub
         await _videoPlaybackService.UpdatePlaybackState(user, state);
     }
 
-    public async Task ChangeDeviceCommand(string deviceId)
+    public async Task ChangeDeviceCommand(string? deviceId)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (string.IsNullOrEmpty(deviceId))
+        {
+            Logger.Socket(
+                $"{user.Name}: [VideoHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         // Extend connected-device list with owned TVs from the Devices table —
         // mirrors MusicHub.MusicDevicesAsync. Without this, the picker can't
