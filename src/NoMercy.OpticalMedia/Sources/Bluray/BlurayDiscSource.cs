@@ -37,6 +37,12 @@ public sealed partial class BlurayDiscSource(
             cancellationToken: ct
         );
 
+        // Classify protection state from the stderr — even when the disc is
+        // AACS-locked we may still have enumerable playlists (libbluray
+        // reads BDMV structure without keys), so we attach Protection to
+        // the DiscInfo rather than throwing.
+        DiscProtection? protection = ClassifyProtection(result.StdErr);
+
         // ffprobe always exits non-zero here (no input format chosen) — the
         // stderr is the payload we want regardless.
         List<(int Index, TimeSpan Duration)> playlists = ParsePlaylists(result.StdErr);
@@ -55,7 +61,14 @@ public sealed partial class BlurayDiscSource(
                     ? result.StdErr![..600]
                     : (result.StdErr ?? "(no stderr)")
             );
-            return new DiscInfo(OpticalDiscType.BluRay, drive.Label, [], null, TimeSpan.Zero);
+            return new DiscInfo(
+                OpticalDiscType.BluRay,
+                drive.Label,
+                [],
+                null,
+                TimeSpan.Zero,
+                protection
+            );
         }
 
         // Largest playlist by runtime is typically the disc's main feature
@@ -84,8 +97,67 @@ public sealed partial class BlurayDiscSource(
             AudioTracks: null,
             TotalDuration: titles.Sum(t => t.Duration.Ticks) is long ticks
                 ? TimeSpan.FromTicks(ticks)
-                : TimeSpan.Zero
+                : TimeSpan.Zero,
+            Protection: protection
         );
+    }
+
+    /// <summary>
+    /// Inspects libaacs / libbdplus stderr for the well-known "I can't
+    /// decrypt this disc" patterns. Returns null when nothing protection-y
+    /// is in the output (fully readable or non-protected disc).
+    /// </summary>
+    internal static DiscProtection? ClassifyProtection(string stderr)
+    {
+        if (string.IsNullOrEmpty(stderr))
+            return null;
+
+        // libaacs SCSI MMC handshake fail (drive can't do AACS bus key)
+        if (
+            stderr.Contains(
+                "Drive does not support reading drive certificate",
+                StringComparison.OrdinalIgnoreCase
+            )
+            || stderr.Contains(
+                "Unable to read drive certificate",
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            return new DiscProtection(
+                Kind: "AACS",
+                VolumeId: null,
+                Message: "Disc is AACS-protected and the optical drive can't establish "
+                    + "the bus key required to read encrypted units. The drive's firmware "
+                    + "likely lacks AACS-MKI-1 SCSI MMC support."
+            );
+        }
+
+        // libaacs unable to derive VUK from KEYDB (no matching entry, or
+        // entry present but key wrong)
+        if (
+            stderr.Contains("Unable to decrypt unit (AACS)", StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains("no matching certificate", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            return new DiscProtection(
+                Kind: "AACS",
+                VolumeId: null,
+                Message: "Disc is AACS-protected but no matching key was found in KEYDB.cfg."
+            );
+        }
+
+        // libbdplus
+        if (stderr.Contains("no matching converter", StringComparison.OrdinalIgnoreCase))
+        {
+            return new DiscProtection(
+                Kind: "BD+",
+                VolumeId: null,
+                Message: "Disc uses BD+ and the converter database has no entry for it."
+            );
+        }
+
+        return null;
     }
 
     public async Task<DiscTitle> ProbeTitleAsync(

@@ -8,8 +8,17 @@ public record DiscInfo(
     string? DiscLabel,
     DiscTitle[] Titles,
     DiscTrack[]? AudioTracks,
-    TimeSpan TotalDuration
+    TimeSpan TotalDuration,
+    DiscProtection? Protection = null
 );
+
+/// <summary>
+/// What's blocking decryption when a probe encountered DRM the host
+/// can't handle. Surfaces in the API so the UI can show "this disc
+/// is AACS-protected; ensure your KEYDB / drive is compatible" rather
+/// than a silent empty title list.
+/// </summary>
+public record DiscProtection(string Kind, string? VolumeId, string Message);
 
 public record DiscTitle(
     int Index,
