@@ -175,7 +175,14 @@ public static partial class Str
     {
         if (string.IsNullOrEmpty(value))
             return 0;
-        return (int)Math.Round(double.Parse(value, CultureInfo.InvariantCulture));
+        return double.TryParse(
+            value,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out double d
+        )
+            ? (int)Math.Round(d)
+            : 0;
     }
 
     public static int ToInt(this double value)
@@ -192,7 +199,14 @@ public static partial class Str
     {
         if (string.IsNullOrEmpty(value))
             return 0;
-        return double.Parse(value, CultureInfo.InvariantCulture);
+        return double.TryParse(
+            value,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out double d
+        )
+            ? d
+            : 0;
     }
 
     public static double ToDouble(this int value)
@@ -204,14 +218,16 @@ public static partial class Str
     {
         if (string.IsNullOrEmpty(value))
             return 0;
-        return long.Parse(value, CultureInfo.InvariantCulture);
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long l)
+            ? l
+            : 0;
     }
 
     public static bool ToBoolean(this string value)
     {
         if (string.IsNullOrEmpty(value))
             return false;
-        return bool.Parse(value);
+        return bool.TryParse(value, out bool b) && b;
     }
 
     public static string Spacer(string text, int padding, bool begin = false)
