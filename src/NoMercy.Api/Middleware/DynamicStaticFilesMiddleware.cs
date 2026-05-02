@@ -81,11 +81,17 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
         try
         {
-            if (
-                !Ulid.TryParse(rootPath, out Ulid folderId)
-                || !Folders.TryGetValue(folderId, out FolderRef folderRef)
-            )
+            if (!Ulid.TryParse(rootPath, out Ulid folderId))
             {
+                await next(context);
+                return;
+            }
+
+            if (!Folders.TryGetValue(folderId, out FolderRef folderRef))
+            {
+                Logger.App(
+                    $"[DynamicStaticFiles] folder {folderId} not registered (request: {context.Request.Path})"
+                );
                 await next(context);
                 return;
             }
@@ -97,17 +103,43 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
                 ? string.Empty
                 : Uri.UnescapeDataString(pathValue[pathValue.IndexOf('/', 1)..]).TrimStart('/');
 
-            // Build a per-request IStorage rooted at the folder. The factory
-            // resolves the driver row, joins driver root + folder sub-path,
-            // returns the right backend (local / nfs / s3 / r2 / webdav).
-            IStorage storage = storageFactory.For(
-                folderId: folderId,
-                driverId: folderRef.DriverId,
-                subPath: folderRef.SubPath
-            );
-
-            if (!storage.Exists(relativeWithinFolder))
+            IStorage storage;
+            try
             {
+                storage = storageFactory.For(
+                    folderId: folderId,
+                    driverId: folderRef.DriverId,
+                    subPath: folderRef.SubPath
+                );
+            }
+            catch (Exception fEx)
+            {
+                Logger.App(
+                    $"[DynamicStaticFiles] factory.For failed for folder {folderId} driver {folderRef.DriverId} subPath '{folderRef.SubPath}': {fEx.Message}"
+                );
+                await next(context);
+                return;
+            }
+
+            bool exists;
+            try
+            {
+                exists = storage.Exists(relativeWithinFolder);
+            }
+            catch (Exception eEx)
+            {
+                Logger.App(
+                    $"[DynamicStaticFiles] storage.Exists threw on '{relativeWithinFolder}' (folder {folderId}, driver {folderRef.DriverId}): {eEx.Message}"
+                );
+                await next(context);
+                return;
+            }
+
+            if (!exists)
+            {
+                Logger.App(
+                    $"[DynamicStaticFiles] not found: folder={folderId} driver={folderRef.DriverId} subPath='{folderRef.SubPath}' relative='{relativeWithinFolder}'"
+                );
                 await next(context);
                 return;
             }
