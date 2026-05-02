@@ -36,7 +36,10 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<IDiscScanner, DiscScanner>();
         services.TryAddTransient<IDiscRipper, DiscRipper>();
 
-        services.TryAddTransient<IDiscSource, BlurayDiscSource>();
+        // IDiscSource implementations — registered as IEnumerable so the
+        // factory can pick the right one per disc type.
+        services.AddTransient<IDiscSource, BlurayDiscSource>();
+        services.AddTransient<IDiscSource, Sources.Dvd.DvdDiscSource>();
         services.TryAddSingleton<DiscSourceFactory>();
         services.TryAddTransient<IDiscMetadataResolver, TmdbDiscMatcher>();
 
