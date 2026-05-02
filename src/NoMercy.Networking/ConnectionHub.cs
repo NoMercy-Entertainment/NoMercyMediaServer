@@ -80,11 +80,12 @@ public class ConnectionHub : Hub
             if (query.TryGetValue("custom_name", out StringValues customName))
                 client.CustomName = customName.ToString();
 
-            if (query.TryGetValue("client_volume", out StringValues volumePercent))
+            if (
+                query.TryGetValue("client_volume", out StringValues volumePercent)
+                && int.TryParse(volumePercent.ToString(), out int parsedVolume)
+            )
             {
-                string volumeString = volumePercent.ToString();
-                if (!string.IsNullOrEmpty(volumeString))
-                    client.VolumePercent = int.Parse(volumeString);
+                client.VolumePercent = Math.Clamp(parsedVolume, 0, 100);
             }
 
             if (query.TryGetValue("client_name", out StringValues name))
@@ -136,7 +137,9 @@ public class ConnectionHub : Hub
                 .ExecuteUpdateAsync(x => x.SetProperty(d => d.CustomName, client.CustomName));
         }
 
-        Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
+        Device? device = await mediaContext.Devices.FirstOrDefaultAsync(x =>
+            x.DeviceId == client.DeviceId
+        );
 
         // Align the in-memory client's PK with the persisted Devices.Id. The
         // Client base class assigns a fresh Ulid at construction; the upsert
@@ -173,7 +176,7 @@ public class ConnectionHub : Hub
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
         {
             await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
-            Device? device = mediaContext.Devices.FirstOrDefault(x =>
+            Device? device = await mediaContext.Devices.FirstOrDefaultAsync(x =>
                 x.DeviceId == client.DeviceId
             );
             if (device is not null)
