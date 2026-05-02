@@ -305,5 +305,6 @@ public class FileWatcherEventHandler : IDisposable
             subscription.Dispose();
         }
         _subscriptions.Clear();
+        _semaphore.Dispose();
     }
 }
