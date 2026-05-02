@@ -164,6 +164,23 @@ public partial class DriveMonitor
         if (Contents.Any(c => c.Path == path))
             return Contents.FirstOrDefault(c => c.Path == path);
 
+        // BDInfo only knows how to scan Bluray BDMV trees. Skip the legacy
+        // path for DVD / CD / unknown discs — callers should use the new
+        // IDiscSource / DiscSourceFactory pipeline (see Phase B+) for
+        // those. Returning a label-only stub keeps the legacy controller
+        // and RipperHub responses non-throwing.
+        OpticalDiscType discType = Optical.GetDiscType(drivePath);
+        if (discType != OpticalDiscType.BluRay)
+        {
+            return new MetaData
+            {
+                Title = directoryInfo.Name,
+                Path = path,
+                BluRayPlaylists = [],
+                Data = null,
+            };
+        }
+
         try
         {
             BDROM bDRom = ScanBdRom(directoryInfo);
