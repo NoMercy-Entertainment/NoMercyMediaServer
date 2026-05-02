@@ -5,7 +5,12 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.MediaSources.OpticalMedia.Dto;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.OpticalMedia.Drives;
+using NoMercy.OpticalMedia.Metadata;
+using NoMercy.OpticalMedia.Sources;
+using DriveMonitor = NoMercy.MediaSources.OpticalMedia.DriveMonitor;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -14,7 +19,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/optical")]
-public class OpticalMediaController : BaseController
+public class OpticalMediaController(
+    DiscSourceFactory discSourceFactory,
+    IDiscMetadataResolver metadataResolver,
+    IDriveMonitor driveMonitor
+) : BaseController
 {
     [HttpGet("drives")]
     public IActionResult GetOpticalDrives()
@@ -137,5 +146,67 @@ public class OpticalMediaController : BaseController
         _ = DriveMonitor.StopMedia();
 
         return Ok("Media stopped.");
+    }
+
+    /// <summary>
+    /// New full probe via NoMercy.OpticalMedia: enumerates every playlist
+    /// on the disc plus all viable TMDB candidates with confidence scores.
+    /// Replaces the legacy single-title <c>GetDriveContents</c> response
+    /// for callers that want to render a multi-title browse UI or pick
+    /// between metadata candidates.
+    /// </summary>
+    [HttpGet("{drivePath}/probe")]
+    public async Task<IActionResult> ProbeDisc(string drivePath, CancellationToken ct)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to probe optical drives");
+
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
+
+        DiscDrive? drive = driveMonitor
+            .GetDrives()
+            .FirstOrDefault(d =>
+                d.Path.TrimEnd(Path.DirectorySeparatorChar)
+                    .Equals(
+                        drivePath.TrimEnd(Path.DirectorySeparatorChar),
+                        StringComparison.OrdinalIgnoreCase
+                    )
+            );
+
+        if (drive is null)
+            return NotFoundResponse($"No optical drive found at {drivePath}");
+
+        if (!drive.HasDisc || drive.DiscType == OpticalDiscType.None)
+            return Ok(
+                new
+                {
+                    drive_path = drive.Path,
+                    label = drive.Label,
+                    has_disc = false,
+                    disc_type = drive.DiscType.ToString().ToLowerInvariant(),
+                }
+            );
+
+        IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
+        if (source is null)
+            return BadRequestResponse(
+                $"No reader registered for disc type {drive.DiscType} (yet)"
+            );
+
+        DiscInfo info = await source.ProbeAsync(drive, ct);
+        MetadataMatch[] candidates = await metadataResolver.ResolveAsync(info, ct);
+
+        return Ok(
+            new
+            {
+                drive_path = drive.Path,
+                label = drive.Label,
+                has_disc = true,
+                disc_type = drive.DiscType.ToString().ToLowerInvariant(),
+                disc = info,
+                candidates,
+            }
+        );
     }
 }
