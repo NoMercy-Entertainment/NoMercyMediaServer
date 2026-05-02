@@ -31,7 +31,6 @@ namespace NoMercy.Api.Controllers;
 [Tags("Management")]
 public class ManagementController(
     IHostApplicationLifetime appLifetime,
-    MediaContext mediaContext,
     AppDbContext appContext,
     QueueRunner queueRunner,
     IPluginManager pluginManager,
