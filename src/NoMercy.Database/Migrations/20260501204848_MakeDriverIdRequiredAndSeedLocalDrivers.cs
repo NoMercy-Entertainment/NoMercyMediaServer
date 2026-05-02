@@ -101,6 +101,34 @@ namespace NoMercy.Database.Migrations
                 oldNullable: false
             );
 
+            // Restore Path from the Driver's Config rootPath before recreating the
+            // unique index — without this every folder has Path='' and the index fails.
+            migrationBuilder.Sql(
+                """
+                UPDATE Folders
+                SET Path = json_extract(d.Config, '$.rootPath')
+                FROM Drivers d
+                WHERE d.Id = Folders.DriverId;
+                """
+            );
+
+            // Null out DriverId for auto-seeded drivers (Id == DriverId means Up()
+            // created the driver from this folder), then delete those seeded rows.
+            migrationBuilder.Sql(
+                """
+                UPDATE Folders
+                SET DriverId = NULL
+                WHERE DriverId = Id;
+                """
+            );
+
+            migrationBuilder.Sql(
+                """
+                DELETE FROM Drivers
+                WHERE Id NOT IN (SELECT DriverId FROM Folders WHERE DriverId IS NOT NULL);
+                """
+            );
+
             migrationBuilder.CreateIndex(
                 name: "IX_Folders_DriverId",
                 table: "Folders",
