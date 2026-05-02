@@ -95,9 +95,16 @@ public class HmacValidationMiddleware(
 
         if (string.IsNullOrWhiteSpace(secret))
         {
-            // Distributed encoding not configured — pass through; other auth
-            // layers still apply.
-            await next(context);
+            // Signing key absent but path is protected — reject rather than
+            // pass through. A missing key means distributed encoding is
+            // misconfigured; passing through silently would bypass all HMAC
+            // authentication on these endpoints.
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                "{\"error\":\"hmac_unavailable\",\"detail\":\"Distributed encoding signing key is not configured.\"}",
+                System.Text.Encoding.UTF8
+            );
             return;
         }
 
