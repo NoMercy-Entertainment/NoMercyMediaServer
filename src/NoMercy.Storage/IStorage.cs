@@ -111,4 +111,12 @@ public interface IStorage
     /// that accept an <see cref="IStorageDriver"/> directly.
     /// </summary>
     IStorageDriver Driver { get; }
+
+    /// <summary>
+    /// Delegates to <see cref="IStorageDriver.TryGetPresignedUrlAsync"/>.
+    /// Returns null for local / NFS / WebDAV backends; S3/R2 return a
+    /// time-limited URL the client can hit directly.
+    /// </summary>
+    Task<Uri?> TryGetPresignedUrlAsync(string path, TimeSpan ttl, CancellationToken ct) =>
+        Driver.TryGetPresignedUrlAsync(path, ttl, ct);
 }

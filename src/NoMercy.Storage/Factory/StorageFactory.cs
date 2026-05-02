@@ -308,21 +308,50 @@ public sealed class StorageFactory : IStorageFactory
         string? accessKey = null;
         string? secretKey = null;
 
-        if (!string.IsNullOrWhiteSpace(config.CredentialsRef) && _credentialResolver is not null)
+        // Credential resolution order mirrors WebDavStorageDriver: try the
+        // explicit credentials_ref first, then fall back to the per-driver key
+        // ("driver:{folderId}") that the dashboard uses by default for stored
+        // S3/R2 creds. Without this fallback the AWS SDK silently uses the
+        // default credential chain (env-vars / IAM) and surfaces "Unable to get
+        // IAM security credentials from EC2 Instance Metadata Service".
+        if (_credentialResolver is not null)
         {
-            (string AccessKey, string SecretKey)? creds = _credentialResolver.Resolve(
-                config.CredentialsRef
-            );
+            (string AccessKey, string SecretKey)? creds = null;
+
+            if (!string.IsNullOrWhiteSpace(config.CredentialsRef))
+            {
+                creds = _credentialResolver.Resolve(config.CredentialsRef);
+                if (creds is null)
+                {
+                    _logger.LogWarning(
+                        "credentials_ref '{CredentialsRef}' not found in secrets store for folder {FolderId}; trying driver:{FolderId} fallback",
+                        config.CredentialsRef,
+                        folderId
+                    );
+                }
+            }
+
+            creds ??= _credentialResolver.Resolve($"driver:{folderId}");
+
             if (creds is not null)
             {
                 accessKey = creds.Value.AccessKey;
                 secretKey = creds.Value.SecretKey;
+                // TEMP-DEBUG: surface what creds the resolver returned so we can
+                // compare against the keypair the user actually generated.
+                _logger.LogInformation(
+                    "S3/R2 cred resolved for folder {FolderId}: accessKey starts with '{AkPrefix}' len={AkLen}, secret len={SkLen}",
+                    folderId,
+                    accessKey.Length >= 4 ? accessKey.Substring(0, 4) : accessKey,
+                    accessKey.Length,
+                    secretKey.Length
+                );
             }
             else
             {
                 _logger.LogWarning(
-                    "credentials_ref '{CredentialsRef}' not found in secrets store for folder {FolderId}; falling back to default credential chain",
-                    config.CredentialsRef,
+                    "No credentials found in store for {DriverType} driver (folder {FolderId}); falling back to default credential chain",
+                    driverType,
                     folderId
                 );
             }

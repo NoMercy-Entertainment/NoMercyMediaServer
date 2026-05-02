@@ -1,28 +1,51 @@
+using System.Security.Cryptography;
+using System.Text;
 using Amazon.S3;
-using Amazon.S3.Transfer;
 
 namespace NoMercy.Storage.Drivers.S3;
 
 /// <summary>
 /// Write-only stream that buffers data and uploads it to S3 on
-/// <see cref="Dispose"/>. Writes below 5 MB use a single PUT;
-/// larger writes use multipart upload via <see cref="TransferUtility"/>.
+/// <see cref="DisposeAsync"/>. Uses raw SigV4 signed HTTP PUT instead of the
+/// AWS SDK because <see cref="AmazonS3Client"/>'s default signing path
+/// — even with <c>UseChunkEncoding=false</c>, <c>DisablePayloadSigning=true</c>
+/// and <c>DisableDefaultChecksumValidation=true</c> — sends requests that
+/// MinIO and several other S3-compatible servers reject with
+/// <c>SignatureDoesNotMatch</c>. Direct SigV4 PUT is the same protocol the
+/// SDK is supposed to use; doing it by hand sidesteps whatever extra
+/// chunking / canonicalization the SDK applies that the server doesn't
+/// accept.
 /// </summary>
 internal sealed class S3UploadStream : Stream
 {
-    private const int MultipartThresholdBytes = 5 * 1024 * 1024;
+    private static readonly HttpClient HttpClient = new();
 
-    private readonly IAmazonS3 _client;
     private readonly string _bucket;
     private readonly string _key;
+    private readonly string _endpoint;
+    private readonly string _region;
+    private readonly string _accessKey;
+    private readonly string _secretKey;
     private readonly MemoryStream _buffer = new();
     private bool _disposed;
 
-    internal S3UploadStream(IAmazonS3 client, string bucket, string key)
+    internal S3UploadStream(
+        IAmazonS3 _ /* kept for ABI compat with the previous ctor; unused */
+        ,
+        string bucket,
+        string key,
+        string endpoint,
+        string region,
+        string accessKey,
+        string secretKey
+    )
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
         _bucket = bucket ?? throw new ArgumentNullException(nameof(bucket));
         _key = key ?? throw new ArgumentNullException(nameof(key));
+        _endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
+        _region = region ?? throw new ArgumentNullException(nameof(region));
+        _accessKey = accessKey ?? throw new ArgumentNullException(nameof(accessKey));
+        _secretKey = secretKey ?? throw new ArgumentNullException(nameof(secretKey));
     }
 
     public override bool CanRead => false;
@@ -71,8 +94,7 @@ internal sealed class S3UploadStream : Stream
 
         if (disposing)
         {
-            _buffer.Seek(0, SeekOrigin.Begin);
-            UploadSync();
+            UploadAsync(CancellationToken.None).GetAwaiter().GetResult();
             _buffer.Dispose();
         }
 
@@ -85,45 +107,79 @@ internal sealed class S3UploadStream : Stream
             return;
         _disposed = true;
 
-        _buffer.Seek(0, SeekOrigin.Begin);
         await UploadAsync(CancellationToken.None);
         _buffer.Dispose();
 
         await base.DisposeAsync();
     }
 
-    private void UploadSync()
-    {
-        UploadAsync(CancellationToken.None).GetAwaiter().GetResult();
-    }
-
     private async Task UploadAsync(CancellationToken ct)
     {
-        long length = _buffer.Length;
+        byte[] payload = _buffer.ToArray();
+        string payloadHash = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
 
-        if (length < MultipartThresholdBytes)
+        Uri endpointUri = new(_endpoint.TrimEnd('/'));
+        string host = endpointUri.Host + (endpointUri.IsDefaultPort ? "" : $":{endpointUri.Port}");
+
+        string canonicalUri = "/" + Uri.EscapeDataString(_bucket) + "/" + S3SigV4.EscapeKey(_key);
+        string canonicalQs = string.Empty;
+
+        DateTime now = DateTime.UtcNow;
+        string amzDate = now.ToString("yyyyMMddTHHmmssZ");
+        string dateStamp = now.ToString("yyyyMMdd");
+
+        string canonicalHeaders =
+            $"content-length:{payload.Length}\nhost:{host}\nx-amz-content-sha256:{payloadHash}\nx-amz-date:{amzDate}\n";
+        string signedHeaders = "content-length;host;x-amz-content-sha256;x-amz-date";
+
+        string canonicalRequest = string.Join(
+            "\n",
+            "PUT",
+            canonicalUri,
+            canonicalQs,
+            canonicalHeaders,
+            signedHeaders,
+            payloadHash
+        );
+
+        string credentialScope = $"{dateStamp}/{_region}/s3/aws4_request";
+        string stringToSign = string.Join(
+            "\n",
+            "AWS4-HMAC-SHA256",
+            amzDate,
+            credentialScope,
+            Convert
+                .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest)))
+                .ToLowerInvariant()
+        );
+
+        byte[] signingKey = S3SigV4.DeriveSigningKey(_secretKey, dateStamp, _region);
+        string signature = Convert
+            .ToHexString(S3SigV4.HmacSha256(signingKey, stringToSign))
+            .ToLowerInvariant();
+
+        string authHeader =
+            $"AWS4-HMAC-SHA256 Credential={_accessKey}/{credentialScope}, "
+            + $"SignedHeaders={signedHeaders}, Signature={signature}";
+
+        Uri requestUri = new(_endpoint.TrimEnd('/') + canonicalUri);
+        using HttpRequestMessage req = new(HttpMethod.Put, requestUri)
         {
-            Amazon.S3.Model.PutObjectRequest request = new()
-            {
-                BucketName = _bucket,
-                Key = _key,
-                InputStream = _buffer,
-                AutoCloseStream = false,
-            };
-            await _client.PutObjectAsync(request, ct);
-        }
-        else
+            Content = new ByteArrayContent(payload),
+        };
+        req.Content.Headers.ContentLength = payload.Length;
+        req.Headers.TryAddWithoutValidation("Authorization", authHeader);
+        req.Headers.TryAddWithoutValidation("x-amz-content-sha256", payloadHash);
+        req.Headers.TryAddWithoutValidation("x-amz-date", amzDate);
+        req.Headers.Host = host;
+
+        using HttpResponseMessage res = await HttpClient.SendAsync(req, ct);
+        if (!res.IsSuccessStatusCode)
         {
-            TransferUtility transfer = new(_client);
-            TransferUtilityUploadRequest request = new()
-            {
-                BucketName = _bucket,
-                Key = _key,
-                InputStream = _buffer,
-                AutoCloseStream = false,
-                PartSize = MultipartThresholdBytes,
-            };
-            await transfer.UploadAsync(request, ct);
+            string body = await res.Content.ReadAsStringAsync(ct);
+            throw new IOException(
+                $"S3 PUT '{_bucket}/{_key}' failed: HTTP {(int)res.StatusCode} {res.ReasonPhrase}; body: {body}"
+            );
         }
     }
 }

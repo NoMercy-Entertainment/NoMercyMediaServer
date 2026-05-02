@@ -58,4 +58,22 @@ public interface IStorageDriver
     bool IsHidden(string path);
 
     void MoveDirectory(string source, string destination);
+
+    /// <summary>
+    /// Opens a read stream that is safe for concurrent bulk-copy use.
+    /// The default implementation delegates to <see cref="OpenRead"/>; drivers
+    /// that manage shared protocol state (e.g. NFS seqid) override this to
+    /// return a stream backed by a dedicated, short-lived connection.
+    /// </summary>
+    Stream OpenReadIsolated(string path) => OpenRead(path);
+
+    /// <summary>
+    /// Optionally return a time-limited presigned URL the client can fetch
+    /// directly from the backend, bypassing the server. Drivers that don't
+    /// support this (local, nfs, webdav by default) return null and the
+    /// middleware falls back to streaming through the server.
+    /// TTL is clamped to [60s, 24h] by the implementing driver.
+    /// </summary>
+    Task<Uri?> TryGetPresignedUrlAsync(string path, TimeSpan ttl, CancellationToken ct) =>
+        Task.FromResult<Uri?>(null);
 }

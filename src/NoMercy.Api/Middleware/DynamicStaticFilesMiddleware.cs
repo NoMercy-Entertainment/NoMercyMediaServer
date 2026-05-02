@@ -144,6 +144,18 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
                 return;
             }
 
+            Uri? presigned = await storage.TryGetPresignedUrlAsync(
+                relativeWithinFolder,
+                TimeSpan.FromHours(1),
+                context.RequestAborted
+            );
+            if (presigned is not null)
+            {
+                context.Response.StatusCode = 302;
+                context.Response.Headers.Location = presigned.ToString();
+                return;
+            }
+
             await ServeFile(context, storage, relativeWithinFolder);
         }
         catch (Exception ex)
