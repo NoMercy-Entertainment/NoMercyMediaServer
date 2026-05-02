@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
+using NoMercy.Providers.TVDB.Models.Shared;
 
-namespace NoMercy.Providers.TVDB.Models;
+namespace NoMercy.Providers.TVDB.Models.Genres;
 
 public class TvdbGenresResponse : TvdbResponse<TvdbGenre[]> { }
 
@@ -9,7 +10,7 @@ public class TvdbGenreResponse : TvdbResponse<TvdbGenre> { }
 public class TvdbGenre
 {
     [JsonProperty("id")]
-    public string Id { get; set; } = string.Empty;
+    public int Id { get; set; }
 
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;

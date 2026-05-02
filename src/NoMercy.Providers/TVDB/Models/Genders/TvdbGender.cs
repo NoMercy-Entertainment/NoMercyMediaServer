@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
+using NoMercy.Providers.TVDB.Models.Shared;
 
-namespace NoMercy.Providers.TVDB.Models;
+namespace NoMercy.Providers.TVDB.Models.Genders;
 
 public class TvdbGendersResponse : TvdbResponse<TvdbGender[]> { }
 

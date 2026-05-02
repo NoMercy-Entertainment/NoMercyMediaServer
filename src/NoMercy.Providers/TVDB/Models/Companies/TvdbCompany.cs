@@ -1,30 +1,39 @@
 using Newtonsoft.Json;
+using NoMercy.Providers.TVDB.Models.Shared;
 
-namespace NoMercy.Providers.TVDB.Models;
+namespace NoMercy.Providers.TVDB.Models.Companies;
 
 public class TvdbCompaniesResponse : TvdbResponse<TvdbCompany[]> { }
 
 public class TvdbCompanyResponse : TvdbResponse<TvdbCompany> { }
 
+public class TvdbCompanyTypesResponse : TvdbResponse<TvdbCompanyType[]> { }
+
 public class TvdbCompany
 {
-    [JsonProperty("activeDate")]
-    public string ActiveDate { get; set; } = string.Empty;
+    [JsonProperty("id")]
+    public int Id { get; set; }
 
-    [JsonProperty("aliases")]
-    public TvdbAlias[] Aliases { get; set; } = [];
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonProperty("slug")]
+    public string Slug { get; set; } = string.Empty;
 
     [JsonProperty("country")]
     public string Country { get; set; } = string.Empty;
 
-    [JsonProperty("id")]
-    public int Id { get; set; }
+    [JsonProperty("activeDate")]
+    public string? ActiveDate { get; set; }
 
     [JsonProperty("inactiveDate")]
-    public string InactiveDate { get; set; } = string.Empty;
+    public string? InactiveDate { get; set; }
 
-    [JsonProperty("name")]
-    public string Name { get; set; } = string.Empty;
+    [JsonProperty("primaryCompanyType")]
+    public int PrimaryCompanyType { get; set; }
+
+    [JsonProperty("aliases")]
+    public TvdbAlias[] Aliases { get; set; } = [];
 
     [JsonProperty("nameTranslations")]
     public string[] NameTranslations { get; set; } = [];
@@ -32,20 +41,14 @@ public class TvdbCompany
     [JsonProperty("overviewTranslations")]
     public string[] OverviewTranslations { get; set; } = [];
 
-    [JsonProperty("primaryCompanyType")]
-    public int PrimaryCompanyType { get; set; }
-
-    [JsonProperty("slug")]
-    public string Slug { get; set; } = string.Empty;
-
     [JsonProperty("parentCompany")]
     public TvdbParentCompany? ParentCompany { get; set; }
 
     [JsonProperty("tagOptions")]
-    public TvdbCharacterTagOption[] TagOptions { get; set; } = [];
+    public TvdbTagOption[] TagOptions { get; set; } = [];
 
     [JsonProperty("status")]
-    public string Status { get; set; } = string.Empty;
+    public string? Status { get; set; }
 }
 
 public class TvdbParentCompany
@@ -57,10 +60,10 @@ public class TvdbParentCompany
     public string Name { get; set; } = string.Empty;
 
     [JsonProperty("relation")]
-    public TvdbRelation TvdbRelation { get; set; } = new();
+    public TvdbCompanyRelation? Relation { get; set; }
 }
 
-public class TvdbRelation
+public class TvdbCompanyRelation
 {
     [JsonProperty("id")]
     public int Id { get; set; }
@@ -68,8 +71,6 @@ public class TvdbRelation
     [JsonProperty("typeName")]
     public string TypeName { get; set; } = string.Empty;
 }
-
-public class TvdbCompanyTypesResponse : TvdbResponse<TvdbCompanyType[]> { }
 
 public class TvdbCompanyType
 {
