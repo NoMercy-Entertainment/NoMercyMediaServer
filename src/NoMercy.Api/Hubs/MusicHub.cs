@@ -911,7 +911,18 @@ public class MusicHub : ConnectionHub
         if (user is null)
             return;
 
-        await Task.Delay(500);
+        // Wait briefly so the client's 'ConnectedDevicesState' handler is
+        // registered before the broadcast lands. If the connection drops
+        // during this window, bail out — sending state to a dead connection
+        // just throws inside the messenger.
+        try
+        {
+            await Task.Delay(500, Context.ConnectionAborted);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
         // Send updated device list to all connected devices for this user
         List<Device> connectedDevices = await MusicDevicesAsync();
