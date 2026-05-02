@@ -16,6 +16,10 @@ public interface IStorageDriver
     void DeleteDirectory(string path, bool recursive);
     long GetFileSize(string path);
     DateTime GetLastWriteTimeUtc(string path);
+
+    DateTime GetCreationTimeUtc(string path);
+
+    DateTime GetLastAccessTimeUtc(string path);
     Stream OpenRead(string path);
     Stream OpenWrite(string path, bool overwrite);
     void MoveFile(string source, string destination);

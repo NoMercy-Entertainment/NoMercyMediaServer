@@ -201,6 +201,50 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         }
     }
 
+    public DateTime GetCreationTimeUtc(string path)
+    {
+        string nfsPath = ToNfsPath(path);
+        _lock.Wait();
+        try
+        {
+            int rc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+            if (rc != 0)
+                throw new FileNotFoundException(
+                    $"NFS stat failed for '{path}': {LibNfs.GetError(_nfs)}"
+                );
+            return DateTimeOffset
+                .FromUnixTimeSeconds((long)stat.CtimeSec)
+                .AddTicks((long)(stat.CtimeNsec / 100))
+                .UtcDateTime;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public DateTime GetLastAccessTimeUtc(string path)
+    {
+        string nfsPath = ToNfsPath(path);
+        _lock.Wait();
+        try
+        {
+            int rc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+            if (rc != 0)
+                throw new FileNotFoundException(
+                    $"NFS stat failed for '{path}': {LibNfs.GetError(_nfs)}"
+                );
+            return DateTimeOffset
+                .FromUnixTimeSeconds((long)stat.AtimeSec)
+                .AddTicks((long)(stat.AtimeNsec / 100))
+                .UtcDateTime;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     public Stream OpenRead(string path)
     {
         string nfsPath = ToNfsPath(path);

@@ -210,6 +210,11 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         return response.LastModified.ToUniversalTime();
     }
 
+    // S3 does not expose ctime or atime — return LastModified as the closest equivalent.
+    public DateTime GetCreationTimeUtc(string path) => GetLastWriteTimeUtc(path);
+
+    public DateTime GetLastAccessTimeUtc(string path) => GetLastWriteTimeUtc(path);
+
     public Stream OpenRead(string path)
     {
         string key = ToKey(path);

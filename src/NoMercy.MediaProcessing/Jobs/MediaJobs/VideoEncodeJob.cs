@@ -1,4 +1,4 @@
-﻿﻿using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -200,7 +200,13 @@ public class VideoEncodeJob : AbstractEncoderJob
                 );
 
                 await PublishStageAsync(fileMetadata, "Recording encoding history");
-                await RecordEncodingHistoryAsync(context, dbProfile, result, InputFile);
+                await RecordEncodingHistoryAsync(
+                    context,
+                    dbProfile,
+                    result,
+                    InputFile,
+                    StorageDriver
+                );
 
                 await PublishStageAsync(fileMetadata, "Checking source subtitles");
                 await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile);
@@ -270,7 +276,8 @@ public class VideoEncodeJob : AbstractEncoderJob
         MediaContext context,
         EncoderProfile profile,
         EncodingResult result,
-        string inputPath
+        string inputPath,
+        IStorageDriver storageDriver
     )
     {
         try
@@ -278,9 +285,8 @@ public class VideoEncodeJob : AbstractEncoderJob
             long inputSize = 0;
             try
             {
-                FileInfo fi = new(inputPath);
-                if (fi.Exists)
-                    inputSize = fi.Length;
+                if (storageDriver.FileExists(inputPath))
+                    inputSize = storageDriver.GetFileSize(inputPath);
             }
             catch
             {

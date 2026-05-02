@@ -17,7 +17,6 @@ using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using File = TagLib.File;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.MediaProcessing.Recordings;
@@ -96,7 +95,7 @@ public partial class RecordingManager(
                 );
                 if (mediaFile is null)
                     continue;
-                using File tagFile = File.Create(file.Path);
+                TagFile? tagFile = file.TagFile;
                 if (tagFile == null || mediaFile.FFprobe == null)
                 {
                     Logger.MusicBrainz($"File not found: {file.Name}", LogEventLevel.Error);
@@ -128,15 +127,18 @@ public partial class RecordingManager(
                     Quality = (int)
                         Math.Floor(
                             (
-                                mediaFile.FFprobe?.Format.BitRate
-                                ?? tagFile.Properties.AudioBitrate * 1000
+                                (double?)mediaFile.FFprobe?.Format.BitRate
+                                ?? (double?)(tagFile!.Properties?.AudioBitrate * 1000)
+                                ?? 0.0
                             ) / 1000.0
                         ),
                     Duration = HmsRegex()
                         .Replace(
-                            (mediaFile.FFprobe?.Duration ?? tagFile.Properties.Duration).ToString(
-                                "hh\\:mm\\:ss"
-                            ),
+                            (
+                                mediaFile.FFprobe?.Duration
+                                ?? tagFile!.Properties?.Duration
+                                ?? TimeSpan.Zero
+                            ).ToString("hh\\:mm\\:ss"),
                             ""
                         ),
 

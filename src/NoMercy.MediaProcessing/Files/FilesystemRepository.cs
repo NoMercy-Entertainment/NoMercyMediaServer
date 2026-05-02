@@ -182,8 +182,9 @@ public class FilesystemRepository(IStorageDriver driver)
 
         try
         {
-            DirectoryInfo info = new(folder);
-            return info.Parent?.FullName;
+            return Path.GetDirectoryName(
+                folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            );
         }
         catch
         {

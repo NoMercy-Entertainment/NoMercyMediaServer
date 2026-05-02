@@ -18,6 +18,7 @@ using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 using DirectoryInfo = BDInfo.IO.DirectoryInfo;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
@@ -504,10 +505,11 @@ public partial class DriveMonitor
     private static string TryGetTitle(BDROM bDRom)
     {
         string metadataFile = Path.Combine(bDRom.DirectoryMETA.FullName, "DL", "bdmt_eng.xml");
-        if (!File.Exists(metadataFile))
+        LocalStorageDriver localDriver = new();
+        if (!localDriver.FileExists(metadataFile))
             return bDRom.VolumeLabel;
 
-        using Stream stream = File.OpenRead(metadataFile);
+        using Stream stream = localDriver.OpenRead(metadataFile);
         using StreamReader reader = new(stream);
         string xmlContent = reader.ReadToEnd();
         XDocument doc = XDocument.Parse(xmlContent);

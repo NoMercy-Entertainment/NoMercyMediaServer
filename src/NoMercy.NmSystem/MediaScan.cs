@@ -97,9 +97,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
             {
                 Name = Path.GetFileName(folderPath),
                 Path = folderPath,
-                Created = Directory.GetCreationTime(folderPath),
+                Created = _driver.GetCreationTimeUtc(folderPath).ToLocalTime(),
                 Modified = _driver.GetLastWriteTimeUtc(folderPath).ToLocalTime(),
-                Accessed = Directory.GetLastAccessTime(folderPath),
+                Accessed = _driver.GetLastAccessTimeUtc(folderPath).ToLocalTime(),
                 Type = "folder",
                 Parsed = new()
                 {
@@ -143,9 +143,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
                             {
                                 Name = folderName,
                                 Path = directory,
-                                Created = Directory.GetCreationTime(directory),
+                                Created = _driver.GetCreationTimeUtc(directory).ToLocalTime(),
                                 Modified = _driver.GetLastWriteTimeUtc(directory).ToLocalTime(),
-                                Accessed = Directory.GetLastAccessTime(directory),
+                                Accessed = _driver.GetLastAccessTimeUtc(directory).ToLocalTime(),
                                 Type = "folder",
                             }
                         );
@@ -173,9 +173,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         {
                             Name = folderName,
                             Path = directory,
-                            Created = Directory.GetCreationTime(directory),
+                            Created = _driver.GetCreationTimeUtc(directory).ToLocalTime(),
                             Modified = _driver.GetLastWriteTimeUtc(directory).ToLocalTime(),
-                            Accessed = Directory.GetLastAccessTime(directory),
+                            Accessed = _driver.GetLastAccessTimeUtc(directory).ToLocalTime(),
                             Type = "folder",
                             Parsed = new()
                             {
@@ -240,9 +240,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
                             {
                                 Name = folderName,
                                 Path = dir,
-                                Created = Directory.GetCreationTime(dir),
+                                Created = _driver.GetCreationTimeUtc(dir).ToLocalTime(),
                                 Modified = _driver.GetLastWriteTimeUtc(dir).ToLocalTime(),
-                                Accessed = Directory.GetLastAccessTime(dir),
+                                Accessed = _driver.GetLastAccessTimeUtc(dir).ToLocalTime(),
                                 Type = "folder",
                             }
                         );
@@ -267,9 +267,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         {
                             Name = folderName,
                             Path = directory,
-                            Created = Directory.GetCreationTime(directory),
+                            Created = _driver.GetCreationTimeUtc(directory).ToLocalTime(),
                             Modified = _driver.GetLastWriteTimeUtc(directory).ToLocalTime(),
-                            Accessed = Directory.GetLastAccessTime(directory),
+                            Accessed = _driver.GetLastAccessTimeUtc(directory).ToLocalTime(),
                             Type = "folder",
 
                             Parsed = new()
@@ -402,9 +402,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         Path = file,
                         Extension = extension,
                         Size = (int)_driver.GetFileSize(file),
-                        Created = File.GetCreationTime(file),
+                        Created = _driver.GetCreationTimeUtc(file).ToLocalTime(),
                         Modified = _driver.GetLastWriteTimeUtc(file).ToLocalTime(),
-                        Accessed = File.GetLastAccessTime(file),
+                        Accessed = _driver.GetLastAccessTimeUtc(file).ToLocalTime(),
                         Type = "file",
 
                         Parsed = movieFileExtend,

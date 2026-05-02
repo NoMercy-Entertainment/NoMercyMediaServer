@@ -16,6 +16,16 @@ public sealed class LocalStorageDriver : IStorageDriver
 
     public DateTime GetLastWriteTimeUtc(string path) => File.GetLastWriteTimeUtc(path);
 
+    // File.GetCreation*/Directory.GetCreation* are only permitted here — all callers must go through IStorageDriver.
+    public DateTime GetCreationTimeUtc(string path) =>
+        Directory.Exists(path) ? Directory.GetCreationTimeUtc(path) : File.GetCreationTimeUtc(path);
+
+    // Remote backends (S3, NFS, WebDAV) don't reliably expose atime — they return LastWriteTime as fallback.
+    public DateTime GetLastAccessTimeUtc(string path) =>
+        Directory.Exists(path)
+            ? Directory.GetLastAccessTimeUtc(path)
+            : File.GetLastAccessTimeUtc(path);
+
     public Stream OpenRead(string path) =>
         new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
 
