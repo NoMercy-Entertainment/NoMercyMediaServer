@@ -123,8 +123,10 @@ public class Track : ColorPaletteTimeStamps
         if (AlbumTrack.Count.ToString().Length > 2)
             padding = AlbumTrack.Count.ToString().Length;
 
+        // Track may be orphaned during ingest (no AlbumTrack row yet) — fall
+        // back to an empty album prefix instead of throwing.
         return string.Concat(
-            AlbumTrack.First().Album.Name,
+            AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty,
             ": ",
             DiscNumber.ToString(),
             "-",
