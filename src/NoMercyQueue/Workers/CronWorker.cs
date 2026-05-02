@@ -174,23 +174,35 @@ public class CronWorker : BackgroundService
 
                     bool success = await ExecuteJob(job, currentTime, cancellationToken);
 
+                    job.LastRun = currentTime;
+                    // Advance NextRun on BOTH success and failure — without
+                    // this, a failing cron job re-fires every 30 s (the loop's
+                    // poll interval) until it succeeds, hammering the failing
+                    // code path and flooding logs. Failures still surface via
+                    // ExecuteJob's LogError catch; the schedule shouldn't
+                    // accelerate as a side effect.
+                    job.NextRun = CronService.GetNextOccurrence(job.CronExpression, currentTime);
+
                     if (success)
                     {
-                        job.LastRun = currentTime;
-                        job.NextRun = CronService.GetNextOccurrence(
-                            job.CronExpression,
-                            currentTime
-                        );
-
                         _logger.LogDebug(
                             "Successfully executed cron job: {JobName}. Next run: {NextRun}",
                             job.Name,
                             job.NextRun
                         );
-
-                        // Update database if this is a database job
-                        UpdateDatabaseJob(job);
                     }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Cron job {JobName} failed; rescheduling for {NextRun}",
+                            job.Name,
+                            job.NextRun
+                        );
+                    }
+
+                    // Update database whether the job succeeded or not — keeps
+                    // the persisted NextRun aligned with the in-memory state.
+                    UpdateDatabaseJob(job);
                 }
 
                 // Check every 30 seconds instead of 1 minute for better precision
