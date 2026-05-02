@@ -117,9 +117,6 @@ public class SearchController : BaseController
         List<Playlist> playlists = await playlistsTask;
         List<Track> songs = await songsTask;
 
-        if (artists.Count == 0 && albums.Count == 0 && playlists.Count == 0 && songs.Count == 0)
-            return NotFoundResponse("No results found");
-
         if (albums.Count > 0)
             foreach (Album album in albums)
                 if (album.AlbumTrack.Count > 0)
@@ -327,9 +324,6 @@ public class SearchController : BaseController
         List<Album> albums = await albumsTask;
         List<Playlist> playlists = await playlistsTask;
         List<Track> songs = await songsTask;
-
-        if (artists.Count == 0 && albums.Count == 0 && playlists.Count == 0 && songs.Count == 0)
-            return NotFoundResponse("No results found");
 
         if (albums.Count > 0)
             foreach (Album album in albums)
