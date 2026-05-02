@@ -163,6 +163,7 @@ public class BuildStage(
             bool isPgsBurnIn =
                 burnInPlan is not null
                 && context.MediaInfo is not null
+                && pgsBurnInFilterBuilder is not null
                 && burnInPlan.SourceIndex < context.MediaInfo.SubtitleStreams.Count
                 && !context.MediaInfo.SubtitleStreams[burnInPlan.SourceIndex].IsTextBased;
 
@@ -170,7 +171,7 @@ public class BuildStage(
 
             if (isPgsBurnIn)
             {
-                PgsBurnInFilterChain chain = pgsBurnInFilterBuilder.Build(
+                PgsBurnInFilterChain chain = pgsBurnInFilterBuilder!.Build(
                     videoStreamIndex: 0,
                     subtitleStreamIndex: burnInPlan!.SourceIndex
                 );

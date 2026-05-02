@@ -154,7 +154,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                 }
 
                 Logger.Encoder(
-                    $"Encoded {MediaFile.Path} → {encodeResult.OutputPath} in {encodeResult.Duration.TotalSeconds:F1}s ({encodeResult.Metrics.EncoderUsed})"
+                    $"Encoded {MediaFile.Path} → {encodeResult.OutputPath} in {encodeResult.Duration.TotalSeconds:F1}s ({encodeResult.Metrics?.EncoderUsed ?? "unknown"})"
                 );
 
                 await AddRecording(folder);

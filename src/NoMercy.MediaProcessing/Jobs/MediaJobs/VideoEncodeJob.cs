@@ -196,7 +196,7 @@ public class VideoEncodeJob : AbstractEncoderJob
                 }
 
                 Logger.Encoder(
-                    $"Encoded {InputFile} → {result.OutputPath} in {result.Duration.TotalSeconds:F1}s ({result.Metrics.EncoderUsed})"
+                    $"Encoded {InputFile} → {result.OutputPath} in {result.Duration.TotalSeconds:F1}s ({result.Metrics?.EncoderUsed ?? "unknown"})"
                 );
 
                 await PublishStageAsync(fileMetadata, "Recording encoding history");
@@ -292,6 +292,12 @@ public class VideoEncodeJob : AbstractEncoderJob
             {
                 // keep inputSize = 0 when the file is inaccessible
             }
+
+            // Result.Metrics is nullable — strategies that bypass the metrics
+            // collector (e.g. dry-run / preview) leave it null. Skip the row
+            // entirely rather than NRE: history without metrics is useless.
+            if (result.Metrics is null)
+                return;
 
             double ratio =
                 inputSize > 0 && result.Metrics.OutputSizeBytes > 0
