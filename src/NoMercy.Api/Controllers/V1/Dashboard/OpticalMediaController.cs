@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Helpers.Extensions;
+using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.MediaSources.OpticalMedia.Dto;
 using NoMercy.NmSystem.Dto;
@@ -25,7 +27,8 @@ public class OpticalMediaController(
     DiscSourceFactory discSourceFactory,
     IDiscMetadataResolver metadataResolver,
     IDriveMonitor driveMonitor,
-    IDiscRipper discRipper
+    IDiscRipper discRipper,
+    JobDispatcher jobDispatcher
 ) : BaseController
 {
     [HttpGet("drives")]
@@ -259,8 +262,8 @@ public class OpticalMediaController(
         Directory.CreateDirectory(outputDir);
 
         // Spawn the rip in the background — the caller polls progress via
-        // SignalR (Phase E.3) or the encoding history endpoints once
-        // VideoEncodeJobs are enqueued in Phase E.2.
+        // SignalR (Phase E.3) or the encoding history endpoints once each
+        // ripped MKV is enqueued as a VideoEncodeJob below.
         _ = Task.Run(
             async () =>
             {
@@ -271,8 +274,26 @@ public class OpticalMediaController(
                         outputDir,
                         CancellationToken.None
                     );
-                    // TODO Phase E.2: enqueue a VideoEncodeJob per successful result
-                    // using request.LibraryId / FolderId / EncodingProfileId.
+
+                    // Only chain into the encoder for the default rip-and-encode
+                    // mode. RipToRaw leaves the MKV in the ripper folder for
+                    // the user to grab manually.
+                    if (request.Mode != RipMode.RipAndEncode)
+                        return;
+
+                    foreach (DiscRipResult res in results.Where(r => r.Success))
+                    {
+                        // The rip output sits on the local drive's transcode
+                        // path — pass sourceDriverId=null so JobDispatcher
+                        // routes it through the default local IStorage.
+                        jobDispatcher.DispatchJob<VideoEncodeJob>(
+                            request.LibraryId,
+                            request.FolderId,
+                            id: $"disc:{drive.Path.TrimEnd('\\')}:{res.TitleIndex}",
+                            inputFile: res.OutputPath,
+                            sourceDriverId: null
+                        );
+                    }
                 }
                 catch (Exception ex)
                 {
