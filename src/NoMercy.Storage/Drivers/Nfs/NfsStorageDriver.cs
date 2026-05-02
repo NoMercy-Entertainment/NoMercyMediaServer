@@ -19,7 +19,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     private readonly SemaphoreSlim _lock = new(1, 1);
     private bool _disposed;
 
-    internal NfsStorageDriver(NfsDriverConfig config)
+    public NfsStorageDriver(NfsDriverConfig config)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _nfs = LibNfs.InitContext();
@@ -371,6 +371,110 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         {
             _lock.Release();
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Export enumeration (mount-protocol, no file context needed)
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Queries the NFS server's mount daemon for its export list.
+    /// Returns an ordered list of export paths (e.g. ["/mnt/Vault/Media"]).
+    /// Returns null when the server is unreachable or returns no exports.
+    /// Wraps the blocking libnfs call in a Task with a timeout.
+    /// </summary>
+    public static async Task<List<string>?> GetExportsAsync(string server, int timeoutMs = 10_000)
+    {
+        using CancellationTokenSource cts = new(timeoutMs);
+
+        try
+        {
+            return await Task.Run(() => GetExportsBlocking(server), cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    private static List<string>? GetExportsBlocking(string server)
+    {
+        IntPtr head = LibNfs.MountGetExports(server);
+        if (head == IntPtr.Zero)
+            return null;
+
+        List<string> exports = [];
+        try
+        {
+            IntPtr current = head;
+            while (current != IntPtr.Zero)
+            {
+                LibNfs.ExportEntry entry = Marshal.PtrToStructure<LibNfs.ExportEntry>(current);
+                if (entry.ExDir != IntPtr.Zero)
+                {
+                    string? path = Marshal.PtrToStringAnsi(entry.ExDir);
+                    if (!string.IsNullOrWhiteSpace(path))
+                        exports.Add(path);
+                }
+                current = entry.ExNext;
+            }
+        }
+        finally
+        {
+            LibNfs.MountFreeExportList(head);
+        }
+
+        return exports.Count > 0 ? exports : null;
+    }
+
+    // -----------------------------------------------------------------------
+    // Directory listing helper (for storage browser)
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Lists immediate subdirectories at <paramref name="relativePath"/> within
+    /// this driver's mounted export. Hidden entries (dot-prefixed) are excluded.
+    /// </summary>
+    public List<(string Name, bool IsDirectory)> ListDirectories(string relativePath)
+    {
+        string nfsPath = string.IsNullOrWhiteSpace(relativePath) ? "/" : ToNfsPath(relativePath);
+
+        List<(string, bool)> results = [];
+        _lock.Wait();
+        try
+        {
+            int openRc = LibNfs.OpenDir(_nfs, nfsPath, out IntPtr dir);
+            if (openRc != 0)
+                return results;
+
+            try
+            {
+                while (true)
+                {
+                    IntPtr entryPtr = LibNfs.ReadDir(_nfs, dir);
+                    if (entryPtr == IntPtr.Zero)
+                        break;
+
+                    LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(entryPtr);
+                    string name = entry.Name;
+                    if (name == "." || name == ".." || name.StartsWith('.'))
+                        continue;
+
+                    if (entry.Type == LibNfs.NF3DIR)
+                        results.Add((name, true));
+                }
+            }
+            finally
+            {
+                LibNfs.CloseDir(_nfs, dir);
+            }
+        }
+        finally
+        {
+            _lock.Release();
+        }
+
+        return results;
     }
 
     // -----------------------------------------------------------------------

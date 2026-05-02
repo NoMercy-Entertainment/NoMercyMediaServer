@@ -6,7 +6,7 @@ namespace NoMercy.Storage.Drivers.Nfs;
 /// Parsed representation of the JSON <c>DriverConfig</c> for NFS folder drivers.
 /// Drives in-process NFS via libnfs P/Invoke — no OS-level mount required.
 /// </summary>
-internal sealed record NfsDriverConfig(
+public sealed record NfsDriverConfig(
     string Server,
     string Export,
     int Version,
@@ -88,7 +88,7 @@ internal sealed record NfsDriverConfig(
     // -----------------------------------------------------------------------
     // Overload for unit tests that supply individual fields without JSON
     // -----------------------------------------------------------------------
-    internal static NfsDriverConfig For(
+    public static NfsDriverConfig For(
         string server,
         string export,
         int version = 3,
@@ -96,7 +96,7 @@ internal sealed record NfsDriverConfig(
         int? gid = null,
         int port = 2049,
         int? mountPort = null
-    ) => new(server, export, version, uid, gid, port, mountPort);
+    ) => new(server, NormalizeExport(export), version, uid, gid, port, mountPort);
 
     // -----------------------------------------------------------------------
     // Raw deserialization target (snake_case keys)

@@ -201,6 +201,33 @@ internal static class LibNfs
     internal static extern int Readlink(IntPtr nfs, string path, IntPtr buf, int bufSize);
 
     // -----------------------------------------------------------------------
+    // Mount-protocol export enumeration
+    // -----------------------------------------------------------------------
+
+    [DllImport(
+        LibName,
+        EntryPoint = "mount_getexports",
+        CallingConvention = CallingConvention.Cdecl,
+        CharSet = CharSet.Ansi
+    )]
+    internal static extern IntPtr MountGetExports(string server);
+
+    [DllImport(
+        LibName,
+        EntryPoint = "mount_free_export_list",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern void MountFreeExportList(IntPtr exports);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ExportEntry
+    {
+        public IntPtr ExNext;
+        public IntPtr ExDir;
+        public IntPtr ExGroups;
+    }
+
+    // -----------------------------------------------------------------------
     // POSIX flags
     // -----------------------------------------------------------------------
 
