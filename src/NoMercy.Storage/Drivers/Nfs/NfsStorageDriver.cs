@@ -465,27 +465,48 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     {
         IntPtr ctx = LibNfs.InitContext();
         if (ctx == IntPtr.Zero)
+        {
+            Console.Error.WriteLine(
+                $"[nfs-probe] init_context failed for {server}"
+            );
             return null;
+        }
 
         try
         {
             if (LibNfs.SetVersion(ctx, 4) != 0)
+            {
+                Console.Error.WriteLine(
+                    $"[nfs-probe] nfs_set_version(4) failed: {LibNfs.GetError(ctx)}"
+                );
                 return null;
+            }
 
             // Mount the v4 pseudo-root. libnfs accepts "/" as the export
             // path for v4 to land at the server's NFSv4 PUTROOTFH.
             if (LibNfs.Mount(ctx, server, "/") != 0)
+            {
+                Console.Error.WriteLine(
+                    $"[nfs-probe] v4 mount({server}, '/') failed: {LibNfs.GetError(ctx)}"
+                );
                 return null;
+            }
 
             // Walk immediate children at "/". For TrueNAS this surfaces
             // entries like "mnt", which we then descend one level into to
             // find real mount points (e.g. /mnt/Vault, /mnt/Vault/Media).
             List<string> roots = [];
             CollectV4Children(ctx, "/", maxDepth: 3, roots);
+            Console.Error.WriteLine(
+                $"[nfs-probe] v4 root walk on {server} found {roots.Count} dirs"
+            );
             return roots.Count > 0 ? roots : null;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.Error.WriteLine(
+                $"[nfs-probe] v4 root walk threw: {ex.Message}"
+            );
             return null;
         }
         finally
