@@ -75,27 +75,30 @@ public class UserDataController(
                 "You do not have permission to remove continue watching"
             );
 
+        if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
+            return BadRequestResponse("Invalid id for the requested type");
+
         List<UserData>? userData = body.Type switch
         {
             Config.MovieMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.MovieId == int.Parse(body.Id))
+                .Where(data => data.MovieId == intId)
                 .ToListAsync(),
             Config.TvMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.TvId == int.Parse(body.Id))
+                .Where(data => data.TvId == intId)
                 .ToListAsync(),
             Config.SpecialMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.SpecialId == Ulid.Parse(body.Id))
+                .Where(data => data.SpecialId == ulidId)
                 .ToListAsync(),
             Config.CollectionMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.CollectionId == int.Parse(body.Id))
+                .Where(data => data.CollectionId == intId)
                 .ToListAsync(),
             _ => null,
         };
@@ -121,27 +124,30 @@ public class UserDataController(
         if (!User.IsAllowed())
             return UnauthenticatedResponse("You do not have permission to view watched");
 
+        if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
+            return BadRequestResponse("Invalid id for the requested type");
+
         UserData? userData = body.Type switch
         {
             Config.MovieMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.MovieId == int.Parse(body.Id))
+                .Where(data => data.MovieId == intId)
                 .FirstOrDefaultAsync(),
             Config.TvMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.TvId == int.Parse(body.Id))
+                .Where(data => data.TvId == intId)
                 .FirstOrDefaultAsync(),
             Config.SpecialMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.SpecialId == Ulid.Parse(body.Id))
+                .Where(data => data.SpecialId == ulidId)
                 .FirstOrDefaultAsync(),
             Config.CollectionMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.CollectionId == int.Parse(body.Id))
+                .Where(data => data.CollectionId == intId)
                 .FirstOrDefaultAsync(),
             _ => null,
         };
@@ -162,27 +168,30 @@ public class UserDataController(
         if (!User.IsAllowed())
             return UnauthenticatedResponse("You do not have permission to view favorites");
 
+        if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
+            return BadRequestResponse("Invalid id for the requested type");
+
         UserData? userData = body.Type switch
         {
             Config.MovieMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.MovieId == int.Parse(body.Id))
+                .Where(data => data.MovieId == intId)
                 .FirstOrDefaultAsync(),
             Config.TvMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.TvId == int.Parse(body.Id))
+                .Where(data => data.TvId == intId)
                 .FirstOrDefaultAsync(),
             Config.SpecialMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.SpecialId == Ulid.Parse(body.Id))
+                .Where(data => data.SpecialId == ulidId)
                 .FirstOrDefaultAsync(),
             Config.CollectionMediaType => await mediaContext
                 .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.CollectionId == int.Parse(body.Id))
+                .Where(data => data.CollectionId == intId)
                 .FirstOrDefaultAsync(),
             _ => null,
         };
@@ -193,5 +202,38 @@ public class UserDataController(
         return Ok(
             new StatusResponseDto<string> { Status = "ok", Message = "Item marked as favorite" }
         );
+    }
+
+    /// <summary>
+    /// Parses <see cref="FavoriteRequest.Id"/> as either an int (movie / tv /
+    /// collection) or a Ulid (special) depending on <see cref="FavoriteRequest.Type"/>.
+    /// Returns false when the id is malformed for the requested type so the
+    /// caller can short-circuit with a 400 instead of throwing FormatException
+    /// from inside an EF query.
+    /// </summary>
+    private static bool TryParseFavoriteIds(FavoriteRequest body, out int? intId, out Ulid? ulidId)
+    {
+        intId = null;
+        ulidId = null;
+        if (string.IsNullOrEmpty(body.Id))
+            return false;
+
+        switch (body.Type)
+        {
+            case Config.MovieMediaType:
+            case Config.TvMediaType:
+            case Config.CollectionMediaType:
+                if (!int.TryParse(body.Id, out int parsedInt))
+                    return false;
+                intId = parsedInt;
+                return true;
+            case Config.SpecialMediaType:
+                if (!Ulid.TryParse(body.Id, out Ulid parsedUlid))
+                    return false;
+                ulidId = parsedUlid;
+                return true;
+            default:
+                return false;
+        }
     }
 }
