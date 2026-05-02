@@ -85,7 +85,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 );
                 return false;
             }
-            return stat.FileType == LibNfs.NF3REG;
+            return stat.FileType == LibNfs.S_IFREG;
         }
         finally
         {
@@ -113,7 +113,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 );
                 return false;
             }
-            return stat.FileType == LibNfs.NF3DIR;
+            return stat.FileType == LibNfs.S_IFDIR;
         }
         finally
         {
@@ -412,7 +412,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         try
         {
             int rc = LibNfs.Lstat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
-            if (rc != 0 || stat.FileType != LibNfs.NF3LNK)
+            if (rc != 0 || stat.FileType != LibNfs.S_IFLNK)
                 return null;
 
             IntPtr buf = Marshal.AllocHGlobal(4096);
@@ -421,7 +421,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 int linkRc = LibNfs.Readlink(_nfs, nfsPath, buf, 4096);
                 if (linkRc < 0)
                     return null;
-                return Marshal.PtrToStringAnsi(buf);
+                return Marshal.PtrToStringUTF8(buf);
             }
             finally
             {
@@ -537,7 +537,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 LibNfs.ExportEntry entry = Marshal.PtrToStructure<LibNfs.ExportEntry>(current);
                 if (entry.ExDir != IntPtr.Zero)
                 {
-                    string? path = Marshal.PtrToStringAnsi(entry.ExDir);
+                    string? path = Marshal.PtrToStringUTF8(entry.ExDir);
                     if (!string.IsNullOrWhiteSpace(path))
                         exports.Add(path);
                 }
@@ -767,7 +767,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     private bool FileExistsNoLock(string nfsPath)
     {
         int rc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
-        return rc == 0 && stat.FileType == LibNfs.NF3REG;
+        return rc == 0 && stat.FileType == LibNfs.S_IFREG;
     }
 
     private void EnsureDirectoryRecursive(string nfsPath)

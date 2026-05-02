@@ -13,6 +13,10 @@ namespace NoMercy.Storage.Drivers.Nfs.Interop;
 ///   macOS    → runtimes/osx-x64/native/libnfs.dylib
 ///            → runtimes/osx-arm64/native/libnfs.dylib
 ///
+/// All <c>string</c> parameters are marshalled as UTF-8 (LPUTF8Str). NFS3/4
+/// transmits names as UTF-8 over the wire, and CharSet.Ansi would lose
+/// non-ASCII characters under Windows CP-1252 (e.g. "Käärijä", "東京").
+///
 /// For development without the NuGet package, install the system library:
 ///   Linux:   apt install libnfs-dev  (or dnf/pacman equivalent)
 ///   macOS:   brew install libnfs
@@ -21,6 +25,66 @@ namespace NoMercy.Storage.Drivers.Nfs.Interop;
 internal static class LibNfs
 {
     private const string LibName = "nfs";
+
+    /// <summary>
+    /// libnfs lives under <c>runtimes/{rid}/native/</c> but is bundled via a
+    /// plain <c>&lt;None&gt;</c> copy (not a NuGet runtime asset), so the
+    /// default .NET native-library probe doesn't pick it up under
+    /// <c>dotnet test</c>. Wire a resolver that probes the well-known
+    /// per-RID folders next to the assembly before falling back to the
+    /// default load mechanism (which still works for <c>dotnet run</c> when
+    /// the OS happens to find the file on its own search path).
+    /// </summary>
+    static LibNfs()
+    {
+        NativeLibrary.SetDllImportResolver(
+            typeof(LibNfs).Assembly,
+            (name, asm, searchPath) =>
+            {
+                if (name != LibName)
+                    return IntPtr.Zero;
+
+                string assemblyDir =
+                    Path.GetDirectoryName(asm.Location) ?? AppContext.BaseDirectory;
+                string rid =
+                    OperatingSystem.IsWindows() ? "win-x64"
+                    : OperatingSystem.IsLinux()
+                        ? (
+                            RuntimeInformation.OSArchitecture == Architecture.Arm64
+                                ? "linux-arm64"
+                                : "linux-x64"
+                        )
+                    : OperatingSystem.IsMacOS()
+                        ? (
+                            RuntimeInformation.OSArchitecture == Architecture.Arm64
+                                ? "osx-arm64"
+                                : "osx-x64"
+                        )
+                    : "win-x64";
+
+                string fileName =
+                    OperatingSystem.IsWindows() ? "nfs.dll"
+                    : OperatingSystem.IsMacOS() ? "libnfs.dylib"
+                    : "libnfs.so";
+
+                string[] candidates =
+                [
+                    Path.Combine(assemblyDir, "runtimes", rid, "native", fileName),
+                    Path.Combine(assemblyDir, fileName),
+                    Path.Combine(AppContext.BaseDirectory, "runtimes", rid, "native", fileName),
+                    Path.Combine(AppContext.BaseDirectory, fileName),
+                ];
+
+                foreach (string candidate in candidates)
+                {
+                    if (File.Exists(candidate) && NativeLibrary.TryLoad(candidate, out IntPtr h))
+                        return h;
+                }
+
+                return IntPtr.Zero;
+            }
+        );
+    }
 
     // -----------------------------------------------------------------------
     // Context lifecycle
@@ -44,13 +108,12 @@ internal static class LibNfs
     // Mount
     // -----------------------------------------------------------------------
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_mount",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int Mount(IntPtr nfs, string server, string exportPath);
+    [DllImport(LibName, EntryPoint = "nfs_mount", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int Mount(
+        IntPtr nfs,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string server,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string exportPath
+    );
 
     [DllImport(LibName, EntryPoint = "nfs_umount", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Umount(IntPtr nfs);
@@ -89,40 +152,37 @@ internal static class LibNfs
         IntPtr ptr = GetErrorPtr(nfs);
         return ptr == IntPtr.Zero
             ? "unknown error"
-            : Marshal.PtrToStringAnsi(ptr) ?? "unknown error";
+            : Marshal.PtrToStringUTF8(ptr) ?? "unknown error";
     }
 
     // -----------------------------------------------------------------------
     // Stat / attribute
     // -----------------------------------------------------------------------
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_stat64",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int Stat64(IntPtr nfs, string path, out NfsStat64 stat);
+    [DllImport(LibName, EntryPoint = "nfs_stat64", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int Stat64(
+        IntPtr nfs,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        out NfsStat64 stat
+    );
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_lstat64",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int Lstat64(IntPtr nfs, string path, out NfsStat64 stat);
+    [DllImport(LibName, EntryPoint = "nfs_lstat64", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int Lstat64(
+        IntPtr nfs,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        out NfsStat64 stat
+    );
 
     // -----------------------------------------------------------------------
     // Directory
     // -----------------------------------------------------------------------
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_opendir",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int OpenDir(IntPtr nfs, string path, out IntPtr dir);
+    [DllImport(LibName, EntryPoint = "nfs_opendir", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int OpenDir(
+        IntPtr nfs,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        out IntPtr dir
+    );
 
     [DllImport(LibName, EntryPoint = "nfs_readdir", CallingConvention = CallingConvention.Cdecl)]
     internal static extern IntPtr ReadDir(IntPtr nfs, IntPtr dir);
@@ -130,41 +190,31 @@ internal static class LibNfs
     [DllImport(LibName, EntryPoint = "nfs_closedir", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void CloseDir(IntPtr nfs, IntPtr dir);
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_mkdir",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int MkDir(IntPtr nfs, string path);
+    [DllImport(LibName, EntryPoint = "nfs_mkdir", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int MkDir(IntPtr nfs, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_rmdir",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int RmDir(IntPtr nfs, string path);
+    [DllImport(LibName, EntryPoint = "nfs_rmdir", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int RmDir(IntPtr nfs, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
 
     // -----------------------------------------------------------------------
     // File I/O
     // -----------------------------------------------------------------------
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_open",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int Open(IntPtr nfs, string path, int flags, out IntPtr fh);
+    [DllImport(LibName, EntryPoint = "nfs_open", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int Open(
+        IntPtr nfs,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        int flags,
+        out IntPtr fh
+    );
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_creat",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int Creat(IntPtr nfs, string path, int mode, out IntPtr fh);
+    [DllImport(LibName, EntryPoint = "nfs_creat", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int Creat(
+        IntPtr nfs,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        int mode,
+        out IntPtr fh
+    );
 
     [DllImport(LibName, EntryPoint = "nfs_close", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Close(IntPtr nfs, IntPtr fh);
@@ -184,33 +234,27 @@ internal static class LibNfs
         out ulong currentOffset
     );
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_unlink",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int Unlink(IntPtr nfs, string path);
+    [DllImport(LibName, EntryPoint = "nfs_unlink", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int Unlink(IntPtr nfs, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_rename",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int Rename(IntPtr nfs, string oldPath, string newPath);
+    [DllImport(LibName, EntryPoint = "nfs_rename", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int Rename(
+        IntPtr nfs,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string oldPath,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string newPath
+    );
 
     // -----------------------------------------------------------------------
     // Symlink
     // -----------------------------------------------------------------------
 
-    [DllImport(
-        LibName,
-        EntryPoint = "nfs_readlink",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
-    )]
-    internal static extern int Readlink(IntPtr nfs, string path, IntPtr buf, int bufSize);
+    [DllImport(LibName, EntryPoint = "nfs_readlink", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int Readlink(
+        IntPtr nfs,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        IntPtr buf,
+        int bufSize
+    );
 
     // -----------------------------------------------------------------------
     // Mount-protocol export enumeration
@@ -219,10 +263,11 @@ internal static class LibNfs
     [DllImport(
         LibName,
         EntryPoint = "mount_getexports",
-        CallingConvention = CallingConvention.Cdecl,
-        CharSet = CharSet.Ansi
+        CallingConvention = CallingConvention.Cdecl
     )]
-    internal static extern IntPtr MountGetExports(string server);
+    internal static extern IntPtr MountGetExports(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string server
+    );
 
     [DllImport(
         LibName,
@@ -253,12 +298,23 @@ internal static class LibNfs
     internal const int DefaultFileMode = 0x1A4; // 0644
 
     // -----------------------------------------------------------------------
-    // NFS file type constants (from nfsproto.h)
+    // NFS3 ftype3 constants — used by `nfsdirent.type` (libnfs translates v4
+    // entries to these values). DO NOT use against the POSIX `mode` field of
+    // `nfs_stat_64` — that uses the values below.
     // -----------------------------------------------------------------------
 
     internal const int NF3REG = 1;
     internal const int NF3DIR = 2;
     internal const int NF3LNK = 5;
+
+    // -----------------------------------------------------------------------
+    // POSIX file-type bits — extracted from `nfs_stat_64.mode` via `(mode >>
+    // 12) & 0xF`. Different convention from NFS3 ftype3 above.
+    // -----------------------------------------------------------------------
+
+    internal const int S_IFREG = 0x8; // regular file   (0o100000 >> 12)
+    internal const int S_IFDIR = 0x4; // directory      (0o040000 >> 12)
+    internal const int S_IFLNK = 0xA; // symbolic link  (0o120000 >> 12)
 
     // -----------------------------------------------------------------------
     // Structs
@@ -293,7 +349,9 @@ internal static class LibNfs
         public ulong Used;
 
         /// <summary>
-        /// File type extracted from Mode (top 4 bits, shifted right 12).
+        /// File type bits extracted from POSIX mode (top 4 bits, shifted
+        /// right 12). Compare against <see cref="S_IFREG"/>,
+        /// <see cref="S_IFDIR"/>, <see cref="S_IFLNK"/>.
         /// </summary>
         internal int FileType => (int)((Mode >> 12) & 0xF);
     }
@@ -317,8 +375,10 @@ internal static class LibNfs
 
     /// <summary>
     /// Read the entry name from libnfs's <c>nfsdirent.name</c> char-pointer.
-    /// libnfs owns the memory; we only marshal a copy.
+    /// libnfs owns the memory; we only marshal a copy. NFS3/NFS4 use UTF-8
+    /// over the wire, so we decode as UTF-8 (not ANSI / CP-1252) to keep
+    /// non-ASCII filenames intact (e.g. "Käärijä", "東京").
     /// </summary>
     internal static string? ReadDirentName(NfsDirent entry) =>
-        entry.Name == IntPtr.Zero ? null : Marshal.PtrToStringAnsi(entry.Name);
+        entry.Name == IntPtr.Zero ? null : Marshal.PtrToStringUTF8(entry.Name);
 }
