@@ -36,6 +36,9 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<IDiscScanner, DiscScanner>();
         services.TryAddTransient<IDiscRipper, DiscRipper>();
 
+        services.TryAddTransient<IDiscSource, BlurayDiscSource>();
+        services.TryAddSingleton<DiscSourceFactory>();
+
         return services;
     }
 }
