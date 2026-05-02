@@ -264,6 +264,13 @@ internal static class LibNfs
     // Structs
     // -----------------------------------------------------------------------
 
+    /// <summary>
+    /// libnfs <c>struct nfs_stat_64</c> from <c>libnfs.h</c>. All-uint64
+    /// layout, identical across Linux / macOS / Windows because libnfs
+    /// declares the fields explicitly as <c>uint64_t</c>. Note the field
+    /// order: the three Sec values come first, then the three Nsec values,
+    /// then <c>used</c> at the end (NOT interleaved).
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     internal struct NfsStat64
     {
@@ -278,11 +285,12 @@ internal static class LibNfs
         public ulong BlkSize;
         public ulong Blocks;
         public ulong AtimeSec;
-        public ulong AtimeNsec;
         public ulong MtimeSec;
-        public ulong MtimeNsec;
         public ulong CtimeSec;
+        public ulong AtimeNsec;
+        public ulong MtimeNsec;
         public ulong CtimeNsec;
+        public ulong Used;
 
         /// <summary>
         /// File type extracted from Mode (top 4 bits, shifted right 12).
@@ -290,15 +298,27 @@ internal static class LibNfs
         internal int FileType => (int)((Mode >> 12) & 0xF);
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    /// <summary>
+    /// libnfs <c>struct nfsdirent</c> as declared in <c>libnfs.h</c>. Only the
+    /// first four fields (next, name, inode, type) are needed by our driver;
+    /// the remaining fields (mode/size/timeval triples/uid/gid/...) are left
+    /// out because <c>struct timeval</c> width differs between Linux (long=8)
+    /// and MinGW Windows (long=4), making the tail of the struct platform-
+    /// dependent. Reading only up to <c>type</c> (offset 28) is portable.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     internal struct NfsDirent
     {
-        public long Inode;
-        public long Offset;
-        public uint RecLen;
-        public byte Type;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string Name;
+        public IntPtr Next;
+        public IntPtr Name;
+        public ulong Inode;
+        public uint Type;
     }
+
+    /// <summary>
+    /// Read the entry name from libnfs's <c>nfsdirent.name</c> char-pointer.
+    /// libnfs owns the memory; we only marshal a copy.
+    /// </summary>
+    internal static string? ReadDirentName(NfsDirent entry) =>
+        entry.Name == IntPtr.Zero ? null : Marshal.PtrToStringAnsi(entry.Name);
 }

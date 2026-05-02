@@ -660,7 +660,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     break;
 
                 LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(entryPtr);
-                string name = entry.Name;
+                string? name = LibNfs.ReadDirentName(entry);
                 if (string.IsNullOrEmpty(name) || name == "." || name == "..")
                     continue;
                 if (name.StartsWith('.'))
@@ -711,8 +711,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                         break;
 
                     LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(entryPtr);
-                    string name = entry.Name;
-                    if (name == "." || name == ".." || name.StartsWith('.'))
+                    string? name = LibNfs.ReadDirentName(entry);
+                    if (
+                        string.IsNullOrEmpty(name)
+                        || name == "."
+                        || name == ".."
+                        || name.StartsWith('.')
+                    )
                         continue;
 
                     if (entry.Type == LibNfs.NF3DIR)
@@ -805,8 +810,8 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     break;
 
                 LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(entryPtr);
-                string name = entry.Name;
-                if (name == "." || name == "..")
+                string? name = LibNfs.ReadDirentName(entry);
+                if (string.IsNullOrEmpty(name) || name == "." || name == "..")
                     continue;
 
                 string childPath = nfsPath.TrimEnd('/') + "/" + name;
@@ -868,8 +873,8 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     break;
 
                 LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(entryPtr);
-                string name = entry.Name;
-                if (name == "." || name == "..")
+                string? name = LibNfs.ReadDirentName(entry);
+                if (string.IsNullOrEmpty(name) || name == "." || name == "..")
                     continue;
 
                 string virtualPath = virtualDir.TrimEnd('/') + "/" + name;
