@@ -36,7 +36,16 @@ public class LiveSessionIdleReaper(
                 return;
             }
 
-            await SweepAsync().ConfigureAwait(false);
+            try
+            {
+                await SweepAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                // Don't let a sweep failure crash the host. Idle eviction is
+                // best-effort — log and try again next interval.
+                logger.LogWarning(ex, "LiveSessionIdleReaper sweep failed; will retry");
+            }
         }
     }
 
