@@ -213,18 +213,25 @@ public class AlbumsController : BaseController
 
         if (request.Cover is not null)
         {
+            Match coverMatch = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)");
+            if (!coverMatch.Success)
+                return BadRequestResponse("Cover must be a data:image/...;base64,... payload");
+
+            byte[] binData;
+            try
+            {
+                binData = Convert.FromBase64String(coverMatch.Groups["data"].Value);
+            }
+            catch (FormatException)
+            {
+                return BadRequestResponse("Cover payload is not valid base64");
+            }
+
             cover = $"/{slug}.jpg";
             string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
 
             await using (FileStream stream = new(filePath, FileMode.Create))
-            {
-                string base64Data = Regex
-                    .Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)")
-                    .Groups["data"]
-                    .Value;
-                byte[] binData = Convert.FromBase64String(base64Data);
                 await stream.WriteAsync(binData);
-            }
 
             colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
         }
