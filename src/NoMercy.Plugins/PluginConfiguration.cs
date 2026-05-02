@@ -39,7 +39,7 @@ public class PluginConfiguration : IPluginConfiguration
 
             byte[] bytes = _storage.Read(_configFilePath);
             string json = Encoding.UTF8.GetString(bytes);
-            return JsonSerializer.Deserialize<T>(json, JsonOptions);
+            return TryDeserialize<T>(json);
         }
     }
 
@@ -52,7 +52,24 @@ public class PluginConfiguration : IPluginConfiguration
         }
 
         string json = await _storage.ReadAllTextAsync(_configFilePath, ct);
-        return JsonSerializer.Deserialize<T>(json, JsonOptions);
+        return TryDeserialize<T>(json);
+    }
+
+    private static T? TryDeserialize<T>(string json)
+        where T : class, new()
+    {
+        // Plugin config files can drift to malformed JSON across upgrades or
+        // crashes mid-write. Treating that as 'no config' lets the plugin
+        // re-initialise with defaults instead of taking the load path down
+        // with a JsonException.
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     public void SaveConfiguration<T>(T configuration)
