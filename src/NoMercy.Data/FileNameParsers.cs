@@ -83,14 +83,22 @@ public static class FileNameParsers
 
     public static string CreateMediaFolder(Library library, TmdbMovieDetails tmdbMovie)
     {
-        string baseFolder = library.FolderLibraries.First().Folder.Path;
+        string? baseFolder = library.FolderLibraries.FirstOrDefault()?.Folder.Path;
+        if (baseFolder is null)
+            throw new InvalidOperationException(
+                $"Library '{library.Title}' has no folders assigned — cannot determine the destination folder for movie '{tmdbMovie.Title}'."
+            );
 
         return string.Concat(baseFolder, "/", CreateBaseFolder(tmdbMovie)).CleanFileName();
     }
 
     public static string CreateMediaFolder(Library library, TmdbTvShow tmdbTv)
     {
-        string baseFolder = library.FolderLibraries.First().Folder.Path;
+        string? baseFolder = library.FolderLibraries.FirstOrDefault()?.Folder.Path;
+        if (baseFolder is null)
+            throw new InvalidOperationException(
+                $"Library '{library.Title}' has no folders assigned — cannot determine the destination folder for show '{tmdbTv.Name}'."
+            );
 
         return string.Concat(baseFolder, "/", CreateBaseFolder(tmdbTv)).CleanFileName();
     }
