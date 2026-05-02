@@ -323,10 +323,17 @@ public class TrayIconManager
 
     private async void OnOpenApp(object? sender, EventArgs e)
     {
-        if (_serverConnection.IsConnected)
-            await _serverConnection.PostAsync("/manage/app/start");
-        else
-            await _processLauncher.LaunchAppAsync();
+        try
+        {
+            if (_serverConnection.IsConnected)
+                await _serverConnection.PostAsync("/manage/app/start");
+            else
+                await _processLauncher.LaunchAppAsync();
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error($"Tray OnOpenApp failed: {ex.Message}", ex);
+        }
     }
 
     private void OnOpenDashboard(object? sender, EventArgs e)
@@ -349,13 +356,27 @@ public class TrayIconManager
 
     private async void OnStartServer(object? sender, EventArgs e)
     {
-        string extraArgs = LauncherSettings.Load().StartupArguments;
-        await _processLauncher.StartServerAsync(extraArgs);
+        try
+        {
+            string extraArgs = LauncherSettings.Load().StartupArguments;
+            await _processLauncher.StartServerAsync(extraArgs);
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error($"Tray OnStartServer failed: {ex.Message}", ex);
+        }
     }
 
     private async void OnStopServer(object? sender, EventArgs e)
     {
-        await _serverConnection.PostAsync("/manage/stop");
+        try
+        {
+            await _serverConnection.PostAsync("/manage/stop");
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error($"Tray OnStopServer failed: {ex.Message}", ex);
+        }
     }
 
     private void OnToggleShowOnStartup(object? sender, EventArgs e)
