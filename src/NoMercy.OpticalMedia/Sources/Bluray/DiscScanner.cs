@@ -114,7 +114,22 @@ public class DiscScanner(
     /// </summary>
     internal static DiscInfo Parse(string json, OpticalDiscType discType)
     {
-        using JsonDocument doc = JsonDocument.Parse(json);
+        // ffprobe on a partially-readable disc occasionally returns truncated
+        // output — surface that as InvalidOperationException so the caller
+        // can log meaningfully instead of letting JsonException leak out.
+        JsonDocument doc;
+        try
+        {
+            doc = JsonDocument.Parse(json);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            throw new InvalidOperationException(
+                $"ffprobe output was not valid JSON: {ex.Message}",
+                ex
+            );
+        }
+        using JsonDocument _ = doc;
         JsonElement root = doc.RootElement;
 
         string? discLabel = null;
