@@ -6,6 +6,9 @@ namespace NoMercy.Storage.Drivers.Nfs;
 /// <summary>
 /// Read-only <see cref="Stream"/> over a libnfs file handle.
 /// Issues chunked <c>nfs_read</c> calls (32 KB per chunk).
+/// Every native call is gated on the driver's lock — the libnfs context is
+/// shared across streams and is not re-entrant; concurrent reads without
+/// the lock cause access violations inside libnfs.
 /// </summary>
 internal sealed class NfsReadStream : Stream
 {
@@ -13,15 +16,17 @@ internal sealed class NfsReadStream : Stream
 
     private readonly IntPtr _nfs;
     private readonly IntPtr _fh;
+    private readonly SemaphoreSlim _lock;
     private readonly long _length;
     private long _position;
     private bool _disposed;
 
-    internal NfsReadStream(IntPtr nfs, IntPtr fh, long length)
+    internal NfsReadStream(IntPtr nfs, IntPtr fh, long length, SemaphoreSlim driverLock)
     {
         _nfs = nfs;
         _fh = fh;
         _length = length;
+        _lock = driverLock;
     }
 
     public override bool CanRead => true;
@@ -53,9 +58,31 @@ internal sealed class NfsReadStream : Stream
             IntPtr pinned = Marshal.AllocHGlobal(chunk);
             try
             {
-                int n = LibNfs.Read(_nfs, _fh, pinned, chunk);
+                int n;
+                _lock.Wait();
+                try
+                {
+                    n = LibNfs.Read(_nfs, _fh, pinned, chunk);
+                }
+                finally
+                {
+                    _lock.Release();
+                }
+
                 if (n < 0)
-                    throw new IOException($"NFS read failed: {LibNfs.GetError(_nfs)}");
+                {
+                    string err;
+                    _lock.Wait();
+                    try
+                    {
+                        err = LibNfs.GetError(_nfs);
+                    }
+                    finally
+                    {
+                        _lock.Release();
+                    }
+                    throw new IOException($"NFS read failed: {err}");
+                }
                 if (n == 0)
                     break;
 
@@ -83,16 +110,29 @@ internal sealed class NfsReadStream : Stream
             _ => throw new ArgumentOutOfRangeException(nameof(origin)),
         };
 
-        long rc = LibNfs.Lseek(
-            _nfs,
-            _fh,
-            target,
-            0 /* SEEK_SET */
-            ,
-            out _
-        );
+        long rc;
+        string? err = null;
+        _lock.Wait();
+        try
+        {
+            rc = LibNfs.Lseek(
+                _nfs,
+                _fh,
+                target,
+                0 /* SEEK_SET */
+                ,
+                out _
+            );
+            if (rc < 0)
+                err = LibNfs.GetError(_nfs);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+
         if (rc < 0)
-            throw new IOException($"NFS lseek failed: {LibNfs.GetError(_nfs)}");
+            throw new IOException($"NFS lseek failed: {err}");
 
         _position = target;
         return _position;
@@ -111,7 +151,23 @@ internal sealed class NfsReadStream : Stream
             return;
         _disposed = true;
 
-        LibNfs.Close(_nfs, _fh);
+        try
+        {
+            _lock.Wait();
+            try
+            {
+                LibNfs.Close(_nfs, _fh);
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // Driver was disposed first — its own Dispose will tear down the
+            // context, so the fh is already gone. Nothing to do.
+        }
 
         base.Dispose(disposing);
     }

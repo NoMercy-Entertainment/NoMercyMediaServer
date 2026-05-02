@@ -7,6 +7,8 @@ namespace NoMercy.Storage.Drivers.Nfs;
 /// Write-only <see cref="Stream"/> over a libnfs file handle.
 /// Buffers in 32 KB chunks and flushes via <c>nfs_write</c>.
 /// The handle is closed (implicitly synced) on <see cref="Dispose"/>.
+/// Every native call is gated on the driver's lock — the libnfs context is
+/// shared across streams and is not re-entrant.
 /// </summary>
 internal sealed class NfsWriteStream : Stream
 {
@@ -14,12 +16,14 @@ internal sealed class NfsWriteStream : Stream
 
     private readonly IntPtr _nfs;
     private readonly IntPtr _fh;
+    private readonly SemaphoreSlim _lock;
     private bool _disposed;
 
-    internal NfsWriteStream(IntPtr nfs, IntPtr fh)
+    internal NfsWriteStream(IntPtr nfs, IntPtr fh, SemaphoreSlim driverLock)
     {
         _nfs = nfs;
         _fh = fh;
+        _lock = driverLock;
     }
 
     public override bool CanRead => false;
@@ -44,9 +48,23 @@ internal sealed class NfsWriteStream : Stream
             try
             {
                 Marshal.Copy(buffer, offset + written, pinned, chunk);
-                int n = LibNfs.Write(_nfs, _fh, pinned, chunk);
+
+                int n;
+                string? err = null;
+                _lock.Wait();
+                try
+                {
+                    n = LibNfs.Write(_nfs, _fh, pinned, chunk);
+                    if (n < 0)
+                        err = LibNfs.GetError(_nfs);
+                }
+                finally
+                {
+                    _lock.Release();
+                }
+
                 if (n < 0)
-                    throw new IOException($"NFS write failed: {LibNfs.GetError(_nfs)}");
+                    throw new IOException($"NFS write failed: {err}");
                 written += n;
             }
             finally
@@ -99,7 +117,23 @@ internal sealed class NfsWriteStream : Stream
             return;
         _disposed = true;
 
-        LibNfs.Close(_nfs, _fh);
+        try
+        {
+            _lock.Wait();
+            try
+            {
+                LibNfs.Close(_nfs, _fh);
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // Driver was disposed first — its own Dispose will tear down the
+            // context, so the fh is already gone. Nothing to do.
+        }
 
         base.Dispose(disposing);
     }

@@ -285,7 +285,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     $"NFS open (read) failed for '{path}': {LibNfs.GetError(_nfs)}"
                 );
 
-            return new NfsReadStream(_nfs, fh, (long)stat.Size);
+            return new NfsReadStream(_nfs, fh, (long)stat.Size, _lock);
         }
         finally
         {
@@ -321,7 +321,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     );
             }
 
-            return new NfsWriteStream(_nfs, fh);
+            return new NfsWriteStream(_nfs, fh, _lock);
         }
         finally
         {
