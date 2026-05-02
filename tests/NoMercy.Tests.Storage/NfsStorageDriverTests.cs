@@ -506,6 +506,53 @@ public class NfsStorageDriverIntegrationTests(NfsFixture nfs) : IClassFixture<Nf
         using NfsStorageDriver b = backend;
         b.DirectoryExists("/").Should().BeTrue();
     }
+
+    /// <summary>
+    /// Regression for the libnfs-context concurrency crash: NfsReadStream
+    /// used to call LibNfs.Read on the shared context without acquiring the
+    /// driver lock. Multiple parallel readers corrupted libnfs state and
+    /// crashed the process with 0xC0000005. This test spins up several
+    /// concurrent readers against the same driver and asserts every one
+    /// returns the full file without throwing.
+    /// </summary>
+    [SkippableFact]
+    public async Task ConcurrentReads_do_not_crash()
+    {
+        using NfsStorageDriver backend = RequireBackend();
+        string path = $"/concurrent-{Ulid.NewUlid()}.bin";
+
+        // 2 MB payload — large enough to span many 32 KB libnfs read chunks
+        // per reader so the contexts heavily interleave under the lock.
+        byte[] data = new byte[2 * 1024 * 1024];
+        new Random(42).NextBytes(data);
+
+        await using (Stream w = backend.OpenWrite(path, overwrite: true))
+            await w.WriteAsync(data);
+
+        try
+        {
+            const int readerCount = 6;
+            Task<byte[]>[] readers = new Task<byte[]>[readerCount];
+            for (int i = 0; i < readerCount; i++)
+            {
+                readers[i] = Task.Run(() =>
+                {
+                    using Stream r = backend.OpenRead(path);
+                    using MemoryStream ms = new();
+                    r.CopyTo(ms);
+                    return ms.ToArray();
+                });
+            }
+
+            byte[][] results = await Task.WhenAll(readers);
+            foreach (byte[] result in results)
+                result.Should().Equal(data);
+        }
+        finally
+        {
+            backend.DeleteFile(path);
+        }
+    }
 }
 
 [CollectionDefinition("NfsIntegration")]
