@@ -13,6 +13,12 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
 
     private static readonly object _writeLock = new();
 
+    /// <summary>
+    /// Signalled once per <see cref="Enqueue"/> call so idle workers wake
+    /// immediately instead of waiting out a fixed poll interval.
+    /// </summary>
+    internal readonly SemaphoreSlim WorkAvailable = new(0);
+
     public void ResetAllReservedJobs()
     {
         lock (_writeLock)
@@ -31,6 +37,8 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
 
             context.AddJob(queueJob);
         }
+
+        WorkAvailable.Release();
     }
 
     public QueueJobModel? Dequeue()

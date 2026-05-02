@@ -20,6 +20,7 @@ public class QueueWorker(
 
     private long? _currentJobId;
     private bool _isRunning = true;
+    private readonly CancellationTokenSource _stopCts = new();
 
     private int CurrentIndex => runner?.GetWorkerIndex(name, this) ?? -1;
 
@@ -107,14 +108,20 @@ public class QueueWorker(
                         ex
                     );
                 }
-
-                Thread.Sleep(1000);
             }
             else
             {
                 OnWorkCompleted(EventArgs.Empty);
 
-                Thread.Sleep(1000);
+                try
+                {
+                    queue.WorkAvailable.Wait(TimeSpan.FromSeconds(5), _stopCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Stop() was called — exit the loop cleanly.
+                    break;
+                }
             }
         }
     }
@@ -211,6 +218,7 @@ public class QueueWorker(
     {
         logger?.LogInformation("QueueWorker {Name} - {CurrentIndex}: stopped", name, CurrentIndex);
         _isRunning = false;
+        _stopCts.Cancel();
     }
 
     public void Restart()
