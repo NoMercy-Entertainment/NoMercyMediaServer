@@ -22,6 +22,15 @@ public class ChromeCast
     private static IEnumerable<ChromecastReceiver> _chromecastReceivers =
         new List<ChromecastReceiver>();
 
+    // Synthesized entries survive mDNS rescans (which replace _chromecastReceivers
+    // wholesale). Without this, two TVs alternate wiping each other every ping.
+    private static readonly ConcurrentDictionary<string, ChromecastReceiver> _synthesizedReceivers =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly SemaphoreSlim _rediscoveryGate = new(1, 1);
+    private static DateTime _lastRediscoveryUtc = DateTime.MinValue;
+    private static readonly TimeSpan _rediscoveryCooldown = TimeSpan.FromSeconds(30);
+
     // Per-receiver client pool keyed by receiver name. Thread-safe.
     private static readonly ConcurrentDictionary<string, ChromecastClient> ClientPool = new(
         StringComparer.OrdinalIgnoreCase
@@ -63,25 +72,42 @@ public class ChromeCast
         if (hit is not null)
             return hit;
 
-        // Cache miss — refresh and try again. Discovery takes 2-3s; this only
-        // runs when the LAN topology changed since Init().
-        Logger.Ping($"Chromecast cache miss for {ip} — refreshing mDNS");
+        // Cooldown gate: rescanning mDNS on every ping for every TV burned 2-3s
+        // per call and spammed the log. Skip the rescan if we just tried.
+        bool shouldRescan;
+        await _rediscoveryGate.WaitAsync();
         try
         {
-            _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
-            foreach (ChromecastReceiver chromecast in _chromecastReceivers)
-                Logger.Ping(
-                    $"Discovered chromecast: {chromecast.Name} @ {chromecast.DeviceUri?.Host}"
-                );
+            shouldRescan = DateTime.UtcNow - _lastRediscoveryUtc >= _rediscoveryCooldown;
+            if (shouldRescan)
+            {
+                _lastRediscoveryUtc = DateTime.UtcNow;
+                Logger.Ping($"Chromecast cache miss for {ip} — refreshing mDNS");
+                try
+                {
+                    _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
+                    foreach (ChromecastReceiver chromecast in _chromecastReceivers)
+                        Logger.Ping(
+                            $"Discovered chromecast: {chromecast.Name} @ {chromecast.DeviceUri?.Host}"
+                        );
+                }
+                catch (Exception ex)
+                {
+                    Logger.Ping($"Chromecast re-discovery failed: {ex.Message}");
+                }
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            Logger.Ping($"Chromecast re-discovery failed: {ex.Message}");
+            _rediscoveryGate.Release();
         }
 
-        string? cached = LookupNameByIp(ip);
-        if (cached is not null)
-            return cached;
+        if (shouldRescan)
+        {
+            string? cached = LookupNameByIp(ip);
+            if (cached is not null)
+                return cached;
+        }
 
         // mDNS still empty — Windows firewall / Zeroconf flakiness commonly
         // blocks the multicast scan even when the device is reachable on the
@@ -89,22 +115,27 @@ public class ChromeCast
         // Cast control port so SelectChromecast can still try a direct TCP
         // connect. The phone-to-TV cast already proved IP reachability; only
         // the discovery layer is broken.
-        ChromecastReceiver synthetic = new()
-        {
-            Name = ip,
-            DeviceUri = new Uri($"https://{ip}"),
-            Port = 8009,
-            Model = "Chromecast",
-            Version = "0",
-            Status = string.Empty,
-            ExtraInformation = new Dictionary<string, string>(),
-        };
-        List<ChromecastReceiver> merged = new(_chromecastReceivers) { synthetic };
-        _chromecastReceivers = merged;
-        Logger.Ping(
-            $"Synthesized Chromecast receiver for {ip}:8009 — mDNS unavailable, will attempt direct connect"
+        ChromecastReceiver synthetic = _synthesizedReceivers.GetOrAdd(
+            ip,
+            key =>
+            {
+                Logger.Ping(
+                    $"Synthesized Chromecast receiver for {key}:8009 — mDNS unavailable, will attempt direct connect"
+                );
+                return new ChromecastReceiver
+                {
+                    Name = key,
+                    DeviceUri = new Uri($"https://{key}"),
+                    Port = 8009,
+                    Model = "Chromecast",
+                    Version = "0",
+                    Status = string.Empty,
+                    ExtraInformation = new Dictionary<string, string>(),
+                };
+            }
         );
-        return ip;
+
+        return synthetic.Name;
     }
 
     private static string? LookupNameByIp(string ip)
@@ -118,7 +149,9 @@ public class ChromeCast
                 return receiver.Name;
         }
 
-        return null;
+        return _synthesizedReceivers.TryGetValue(ip, out ChromecastReceiver? synthetic)
+            ? synthetic.Name
+            : null;
     }
 
     // --- Pool helpers ---
