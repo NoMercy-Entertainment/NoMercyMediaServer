@@ -21,30 +21,42 @@
 
   <!-- libnfs native binaries — built by packages/nomercy-libnfs/scripts/build.sh -->
   <!-- Condition="Exists(...)" keeps the project buildable when output/ is empty.  -->
+  <!-- On Windows, P/Invoke `[DllImport("nfs")]` looks for "nfs.dll" exactly       -->
+  <!-- (no lib prefix). Linux/macOS auto-prepend "lib" so libnfs.{so,dylib} works. -->
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/win-x64/libnfs.dll"
-          Condition="Exists('$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/win-x64/libnfs.dll')"
-          Link="runtimes/win-x64/native/libnfs.dll">
+    <None
+      Include="$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/win-x64/libnfs.dll"
+      Condition="Exists('$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/win-x64/libnfs.dll')"
+      Link="runtimes/win-x64/native/nfs.dll"
+    >
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/linux-x64/libnfs.so"
-          Condition="Exists('$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/linux-x64/libnfs.so')"
-          Link="runtimes/linux-x64/native/libnfs.so">
+    <None
+      Include="$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/linux-x64/libnfs.so"
+      Condition="Exists('$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/linux-x64/libnfs.so')"
+      Link="runtimes/linux-x64/native/libnfs.so"
+    >
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/linux-arm64/libnfs.so"
-          Condition="Exists('$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/linux-arm64/libnfs.so')"
-          Link="runtimes/linux-arm64/native/libnfs.so">
+    <None
+      Include="$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/linux-arm64/libnfs.so"
+      Condition="Exists('$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/linux-arm64/libnfs.so')"
+      Link="runtimes/linux-arm64/native/libnfs.so"
+    >
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/osx-x64/libnfs.dylib"
-          Condition="Exists('$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/osx-x64/libnfs.dylib')"
-          Link="runtimes/osx-x64/native/libnfs.dylib">
+    <None
+      Include="$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/osx-x64/libnfs.dylib"
+      Condition="Exists('$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/osx-x64/libnfs.dylib')"
+      Link="runtimes/osx-x64/native/libnfs.dylib"
+    >
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/osx-arm64/libnfs.dylib"
-          Condition="Exists('$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/osx-arm64/libnfs.dylib')"
-          Link="runtimes/osx-arm64/native/libnfs.dylib">
+    <None
+      Include="$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/osx-arm64/libnfs.dylib"
+      Condition="Exists('$(MSBuildThisFileDirectory)../../../../packages/nomercy-libnfs/output/osx-arm64/libnfs.dylib')"
+      Link="runtimes/osx-arm64/native/libnfs.dylib"
+    >
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
