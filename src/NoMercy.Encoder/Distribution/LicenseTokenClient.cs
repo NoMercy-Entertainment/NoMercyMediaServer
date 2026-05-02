@@ -127,9 +127,7 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
         try
         {
             HttpRequestMessage request = BuildRequest(HttpMethod.Post, TokenEndpoint);
-            request.Content = JsonContent.Create(
-                new TokenRequestBody(CertPem: _certPem, KeyPem: _keyPem)
-            );
+            request.Content = JsonContent.Create(new TokenRequestBody(CertPem: _certPem));
 
             HttpResponseMessage response = await _http.SendAsync(request, ct).ConfigureAwait(false);
 
@@ -260,9 +258,12 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
 
     // ── Wire-format DTOs (private — not part of the public API) ─────────────
 
+    // Only the public certificate is sent to the coordinator. The private key
+    // stays on the device — it must never transit the network in the request
+    // body. If mTLS is needed, configure the HttpClient with an X509Certificate2
+    // at the transport layer instead.
     private sealed record TokenRequestBody(
-        [property: JsonPropertyName("cert_pem")] string? CertPem,
-        [property: JsonPropertyName("key_pem")] string? KeyPem
+        [property: JsonPropertyName("cert_pem")] string? CertPem
     );
 
     private sealed record IntrospectRequestBody([property: JsonPropertyName("token")] string Token);
