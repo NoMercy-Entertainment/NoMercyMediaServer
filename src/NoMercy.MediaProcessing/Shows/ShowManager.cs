@@ -44,7 +44,7 @@ public class ShowManager(
             return null;
 
         string baseUrl = BaseUrl(showAppends.Name, showAppends.FirstAirDate);
-        string mediaType = showRepository.GetMediaType(showAppends);
+        string mediaType = await showRepository.GetMediaTypeAsync(showAppends);
 
         DateTime folderCreatedAt = DateTime.UtcNow;
 

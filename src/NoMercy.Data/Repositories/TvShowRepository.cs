@@ -256,7 +256,7 @@ public class TvShowRepository(MediaContext context)
         if (show == null)
             return;
 
-        bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+        bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
         // Require Japanese origin to avoid false positives on western co-productions
         if (

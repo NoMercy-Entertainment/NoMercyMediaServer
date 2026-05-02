@@ -33,7 +33,7 @@ public interface IShowRepository
         IEnumerable<CertificationCriteria> certificationCriteria
     );
 
-    string GetMediaType(TmdbTvShowAppends show);
+    Task<string> GetMediaTypeAsync(TmdbTvShowAppends show);
     Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias);
     Task StoreCompanyTvs(List<CompanyTv> companyTvs);
 }
