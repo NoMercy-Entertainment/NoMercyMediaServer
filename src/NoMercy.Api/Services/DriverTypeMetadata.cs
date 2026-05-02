@@ -27,7 +27,7 @@ public static class DriverTypeMetadata
         new()
         {
             Type = "nfs",
-            DisplayName = "NFS (in-process, no OS mount required)",
+            DisplayName = "NFS",
             Available = true,
             ConfigSchema = new()
             {
@@ -71,7 +71,7 @@ public static class DriverTypeMetadata
         new()
         {
             Type = "webdav",
-            DisplayName = "WebDAV (Nextcloud, ownCloud, Synology DSM, SharePoint, mod_dav)",
+            DisplayName = "WebDAV",
             Available = true,
             ConfigSchema = new()
             {
