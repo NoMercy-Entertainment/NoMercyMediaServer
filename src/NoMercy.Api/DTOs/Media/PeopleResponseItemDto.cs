@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.People;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.Api.DTOs.Media;
 
@@ -80,9 +81,7 @@ public record PeopleResponseItemDto
         Name = person.Name;
         Biography = biography;
         Adult = person.Adult;
-        AlsoKnownAs = person.AlsoKnownAs is null
-            ? []
-            : JsonConvert.DeserializeObject<string[]>(person.AlsoKnownAs);
+        AlsoKnownAs = person.AlsoKnownAs.FromJson<string[]>() ?? [];
         Birthday = person.BirthDay;
         DeathDay = person.DeathDay;
         Gender = person.Gender;
