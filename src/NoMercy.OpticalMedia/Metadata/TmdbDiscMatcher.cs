@@ -26,15 +26,53 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
     public async Task<MetadataMatch[]> ResolveAsync(DiscInfo disc, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(disc.DiscLabel))
+        {
+            logger.LogInformation(
+                "TMDB resolve skipped — disc has no label (type={Type})",
+                disc.Type
+            );
             return [];
+        }
 
-        string query = NormalizeLabel(disc.DiscLabel);
-        if (string.IsNullOrWhiteSpace(query))
+        string fullQuery = NormalizeLabel(disc.DiscLabel);
+        if (string.IsNullOrWhiteSpace(fullQuery))
+        {
+            logger.LogInformation(
+                "TMDB resolve skipped — normalised label is empty (raw={Raw})",
+                disc.DiscLabel
+            );
             return [];
+        }
 
+        // Try the full normalised query first ("Avatar Book 1"). If TMDB
+        // doesn't have anything indexed under that exact phrase, fall back
+        // to just the first word ("Avatar") which usually pulls the show
+        // root with all season variants. The user can then pick from the
+        // candidate list.
         List<MetadataMatch> all = new();
-        all.AddRange(await SearchAsync(query, MediaType.Movie, ct));
-        all.AddRange(await SearchAsync(query, MediaType.TvShow, ct));
+        all.AddRange(await SearchAsync(fullQuery, MediaType.Movie, ct));
+        all.AddRange(await SearchAsync(fullQuery, MediaType.TvShow, ct));
+
+        if (all.Count == 0)
+        {
+            string firstWord = fullQuery.Split(' ', 2)[0];
+            if (!firstWord.Equals(fullQuery, StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogInformation(
+                    "TMDB resolve fallback for '{Query}' → '{FirstWord}'",
+                    fullQuery,
+                    firstWord
+                );
+                all.AddRange(await SearchAsync(firstWord, MediaType.Movie, ct));
+                all.AddRange(await SearchAsync(firstWord, MediaType.TvShow, ct));
+            }
+        }
+
+        logger.LogInformation(
+            "TMDB resolve for '{Query}': {Count} candidates total",
+            fullQuery,
+            all.Count
+        );
 
         return all.OrderByDescending(m => m.Confidence).ToArray();
     }
@@ -59,7 +97,13 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "TMDB search failed for {Type} '{Query}'", type, query);
+            logger.LogInformation(
+                ex,
+                "TMDB search failed for {Type} '{Query}': {Message}",
+                type,
+                query,
+                ex.Message
+            );
             return [];
         }
     }
