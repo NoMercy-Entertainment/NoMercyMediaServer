@@ -6,8 +6,9 @@ namespace NoMercy.Encoder.Subtitles;
 ///
 /// <para>Escaping rules (FFmpeg filter graph):</para>
 /// <list type="bullet">
-///   <item>Backslashes are doubled: <c>\</c> → <c>\\</c></item>
-///   <item>Colons are escaped with a backslash: <c>:</c> → <c>\:</c></item>
+///   <item>Backslashes are doubled: <c>\</c> to <c>\\</c></item>
+///   <item>Single quotes are escaped: <c>'</c> to <c>\'</c></item>
+///   <item>Colons are escaped with a backslash: <c>:</c> to <c>\:</c></item>
 ///   <item>The path is wrapped in single quotes so the filter graph
 ///         parser treats it as a literal argument.</item>
 /// </list>
@@ -49,18 +50,22 @@ public sealed class AssBurnInFilterBuilder
     }
 
     /// <summary>
-    /// Applies FFmpeg filter-graph escaping: backslashes doubled, colons
-    /// escaped. Forward slashes are left untouched — they are valid on all
-    /// platforms in FFmpeg filter arguments.
+    /// Applies FFmpeg filter-graph path escaping per the FFmpeg spec.
+    /// Escape order: backslashes first, then single quotes, then colons.
+    /// Forward slashes are left untouched.
     /// </summary>
     internal static string EscapeForFilterGraph(string path)
     {
-        // Normalise Windows separators to forward slashes first so that
-        // the subsequent backslash-doubling pass only sees intentional
-        // backslashes (there are none after normalisation on a pure path).
+        // Normalise Windows separators first so the backslash-doubling
+        // pass only sees intentional backslashes (none on a pure path).
         string normalised = path.Replace('\\', '/');
 
-        // Escape colons — e.g. "C:/movies" → "C\:/movies"
-        return normalised.Replace(":", "\\:");
+        // Order is critical: \ -> \\ must precede escaping other chars.
+        string escaped = normalised
+            .Replace("\\", "\\\\") // \ -> \\ (no-op on normalised path)
+            .Replace("'", "\\'") // ' -> \' (apostrophe in filename)
+            .Replace(":", "\\:"); // : -> \: (drive letter / stream specifier)
+
+        return escaped;
     }
 }

@@ -806,9 +806,8 @@ public class BuildStage(
         }
 
         // Generic text subtitle fallback: subtitles= filter with stream-index.
-        // FFmpeg filter path escaping: normalise separators, then escape colons.
-        string normalized = inputPath.Replace('\\', '/');
-        string escaped = normalized.Replace(":", "\\:");
+        // Delegate to shared escape logic so both code paths stay in sync.
+        string escaped = AssBurnInFilterBuilder.EscapeForFilterGraph(inputPath);
 
         return $"subtitles='{escaped}':si={burnIn.SourceIndex}";
     }
