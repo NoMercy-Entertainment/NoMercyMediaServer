@@ -37,9 +37,12 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<IDiscRipper, DiscRipper>();
 
         // IDiscSource implementations — registered as IEnumerable so the
-        // factory can pick the right one per disc type.
+        // factory can pick the right one per disc type. CdDiscSource
+        // covers both audio and data CDs since OpticalDiscType.Cd doesn't
+        // differentiate.
         services.AddTransient<IDiscSource, BlurayDiscSource>();
         services.AddTransient<IDiscSource, Sources.Dvd.DvdDiscSource>();
+        services.AddTransient<IDiscSource, Sources.AudioCd.CdDiscSource>();
         services.TryAddSingleton<DiscSourceFactory>();
         services.TryAddTransient<IDiscMetadataResolver, TmdbDiscMatcher>();
 
