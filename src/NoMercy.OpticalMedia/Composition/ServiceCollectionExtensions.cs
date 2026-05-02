@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
 
         services.TryAddTransient<IDiscSource, BlurayDiscSource>();
         services.TryAddSingleton<DiscSourceFactory>();
+        services.TryAddTransient<IDiscMetadataResolver, TmdbDiscMatcher>();
 
         return services;
     }
