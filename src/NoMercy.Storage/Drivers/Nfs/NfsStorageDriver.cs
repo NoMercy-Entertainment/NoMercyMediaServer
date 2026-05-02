@@ -416,6 +416,23 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     private static List<string>? GetExportsBlocking(string server)
     {
+        // Path 1 — NFSv3 mount protocol (port 111 portmap → mountd).
+        // This is the "official" way but requires the server to register
+        // mountd with rpcbind. TrueNAS / vanilla NFSv4-only servers often
+        // skip this, returning an empty list.
+        List<string>? v3 = TryV3MountGetExports(server);
+        if (v3 is { Count: > 0 })
+            return v3;
+
+        // Path 2 — NFSv4 pseudo-fs walk. Mount the server's root as v4 and
+        // list immediate sub-directories. On TrueNAS/Linux with NFSv4 only,
+        // this surfaces real exports (e.g. /mnt/Vault/Media) via the
+        // pseudo-filesystem the v4 server exposes from /.
+        return TryV4RootListing(server);
+    }
+
+    private static List<string>? TryV3MountGetExports(string server)
+    {
         IntPtr head = LibNfs.MountGetExports(server);
         if (head == IntPtr.Zero)
             return null;
@@ -442,6 +459,77 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         }
 
         return exports.Count > 0 ? exports : null;
+    }
+
+    private static List<string>? TryV4RootListing(string server)
+    {
+        IntPtr ctx = LibNfs.InitContext();
+        if (ctx == IntPtr.Zero)
+            return null;
+
+        try
+        {
+            if (LibNfs.SetVersion(ctx, 4) != 0)
+                return null;
+
+            // Mount the v4 pseudo-root. libnfs accepts "/" as the export
+            // path for v4 to land at the server's NFSv4 PUTROOTFH.
+            if (LibNfs.Mount(ctx, server, "/") != 0)
+                return null;
+
+            // Walk immediate children at "/". For TrueNAS this surfaces
+            // entries like "mnt", which we then descend one level into to
+            // find real mount points (e.g. /mnt/Vault, /mnt/Vault/Media).
+            List<string> roots = [];
+            CollectV4Children(ctx, "/", maxDepth: 3, roots);
+            return roots.Count > 0 ? roots : null;
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            LibNfs.DestroyContext(ctx);
+        }
+    }
+
+    private static void CollectV4Children(IntPtr ctx, string path, int maxDepth, List<string> sink)
+    {
+        if (maxDepth <= 0)
+            return;
+        if (LibNfs.OpenDir(ctx, path, out IntPtr dir) != 0)
+            return;
+
+        try
+        {
+            while (true)
+            {
+                IntPtr entryPtr = LibNfs.ReadDir(ctx, dir);
+                if (entryPtr == IntPtr.Zero)
+                    break;
+
+                LibNfs.NfsDirent entry = Marshal.PtrToStructure<LibNfs.NfsDirent>(entryPtr);
+                string name = entry.Name;
+                if (string.IsNullOrEmpty(name) || name == "." || name == "..")
+                    continue;
+                if (name.StartsWith('.'))
+                    continue;
+                if (entry.Type != LibNfs.NF3DIR)
+                    continue;
+
+                string child = path == "/" ? "/" + name : path + "/" + name;
+                sink.Add(child);
+
+                // Descend one more level so /mnt/Vault/Media-style mount
+                // points are captured even when only /mnt is listed at root.
+                CollectV4Children(ctx, child, maxDepth - 1, sink);
+            }
+        }
+        finally
+        {
+            LibNfs.CloseDir(ctx, dir);
+        }
     }
 
     // -----------------------------------------------------------------------
