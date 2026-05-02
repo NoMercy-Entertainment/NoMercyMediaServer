@@ -162,10 +162,19 @@ public partial class SubtitleOcrEngine(
             Match ptsMatch = PtsTimeRegex().Match(line);
             if (ptsMatch.Success)
             {
-                latestPts = double.Parse(
-                    ptsMatch.Groups["pts"].Value,
-                    CultureInfo.InvariantCulture
-                );
+                // FFmpeg lavfi.ocr output occasionally emits non-numeric PTS
+                // tokens for malformed PGS streams. TryParse + skip keeps the
+                // OCR pipeline running across the bad line instead of taking
+                // the whole subtitle pass down with FormatException.
+                if (
+                    double.TryParse(
+                        ptsMatch.Groups["pts"].Value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out double parsedPts
+                    )
+                )
+                    latestPts = parsedPts;
                 continue;
             }
 
