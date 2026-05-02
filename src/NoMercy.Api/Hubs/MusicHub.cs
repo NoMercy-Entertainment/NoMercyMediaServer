@@ -69,11 +69,27 @@ public class MusicHub : ConnectionHub
         return CommandLocks.GetOrAdd(userId, _ => new(1, 1));
     }
 
-    public async Task StartPlaybackCommand(string type, Guid listId, Guid trackId)
+    public async Task StartPlaybackCommand(string? type, Guid? listId, Guid? trackId)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        // Guard: clients occasionally send null for one of these (e.g. an
+        // artist with no tracks → trackId is undefined on the client side
+        // → null on the wire). Without this check the SignalR-generated
+        // invocation thunk NREs while unboxing null into the value-type
+        // parameter, before the method body even runs.
+        if (string.IsNullOrEmpty(type) || listId is null || trackId is null)
+        {
+            Logger.Socket(
+                $"{user.Name}: [MusicHub.StartPlaybackCommand] ignored — null arg "
+                    + $"(type='{type ?? "<null>"}', listId={listId?.ToString() ?? "<null>"}, "
+                    + $"trackId={trackId?.ToString() ?? "<null>"})",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         SemaphoreSlim userLock = GetUserLock(user.Id);
         await userLock.WaitAsync();
@@ -82,8 +98,14 @@ public class MusicHub : ConnectionHub
             string country = GetCountryFromContext();
 
             (PlaylistTrackDto item, List<PlaylistTrackDto> playlist) =
-                await _musicPlaylistManager.GetPlaylist(user.Id, type, listId, trackId, country);
-            await HandlePlaybackState(user, type, listId, item, playlist);
+                await _musicPlaylistManager.GetPlaylist(
+                    user.Id,
+                    type,
+                    listId.Value,
+                    trackId.Value,
+                    country
+                );
+            await HandlePlaybackState(user, type, listId.Value, item, playlist);
         }
         catch (ArgumentException ex)
         {
@@ -618,16 +640,25 @@ public class MusicHub : ConnectionHub
     /// zero, and broadcasts the updated state to all connected clients.
     /// </summary>
     /// <param name="newTrackId">The <see cref="Guid"/> of the track that is now playing.</param>
-    public async Task CrossfadeCompleteCommand(Guid newTrackId)
+    public async Task CrossfadeCompleteCommand(Guid? newTrackId)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
 
+        if (newTrackId is null)
+        {
+            Logger.Socket(
+                $"{user.Name}: [MusicHub.CrossfadeCompleteCommand] ignored — newTrackId was null",
+                LogEventLevel.Warning
+            );
+            return;
+        }
+
         if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             return;
 
-        await _musicPlaybackService.CompleteCrossfade(user, client.DeviceId, newTrackId);
+        await _musicPlaybackService.CompleteCrossfade(user, client.DeviceId, newTrackId.Value);
     }
 
     public async Task ChangeDeviceCommand(string deviceId)
