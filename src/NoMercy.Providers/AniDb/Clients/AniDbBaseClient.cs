@@ -70,7 +70,10 @@ public class AniDbBaseClient
 
     public static Task Init()
     {
-        return new(() =>
+        // Was `new Task(...)` — a cold task that never runs unless .Start()
+        // is called. Any `await Init()` would have hung forever. Run on the
+        // thread pool so the connect/login finishes off-thread.
+        return Task.Run(() =>
         {
             try
             {
