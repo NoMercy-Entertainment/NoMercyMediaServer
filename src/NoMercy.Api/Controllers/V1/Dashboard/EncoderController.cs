@@ -20,8 +20,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/encoderprofiles", Order = 10)]
-public class EncoderController(EncoderRepository encoderRepository, CodecRegistry codecRegistry)
-    : BaseController
+public class EncoderController(
+    EncoderRepository encoderRepository,
+    EncodingPresetRepository presetRepository,
+    CodecRegistry codecRegistry
+) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index()
@@ -34,6 +37,12 @@ public class EncoderController(EncoderRepository encoderRepository, CodecRegistr
         return Ok(new { data = encoderProfiles });
     }
 
+    /// <remarks>
+    /// Deprecated: Use POST /api/v1/encoder/profiles instead.
+    /// This endpoint writes to both the legacy EncoderProfiles table and the
+    /// current EncodingPresets table to avoid silent data loss during migration.
+    /// </remarks>
+    [Obsolete("Use POST /api/v1/encoder/profiles")]
     [HttpPost]
     public async Task<IActionResult> Create()
     {
@@ -42,12 +51,12 @@ public class EncoderController(EncoderRepository encoderRepository, CodecRegistr
 
         try
         {
-            int encoderProfiles = await encoderRepository.GetEncoderProfileCountAsync();
+            int encoderProfileCount = await encoderRepository.GetEncoderProfileCountAsync();
 
             Ulid profileId = Ulid.NewUlid();
             EncodingProfile v3Profile = new(
                 Id: profileId,
-                Name: $"Profile {encoderProfiles}",
+                Name: $"Profile {encoderProfileCount}",
                 Format: OutputFormat.Hls,
                 VideoOutputs:
                 [
@@ -79,21 +88,35 @@ public class EncoderController(EncoderRepository encoderRepository, CodecRegistr
                 SubtitleOutputs: []
             );
 
-            EncoderProfile profile = new()
+            string profileJson = JsonConvert.SerializeObject(v3Profile);
+
+            // Legacy row — kept for old clients that may read this table.
+            EncoderProfile legacyProfile = new()
             {
                 Id = profileId,
-                Name = $"Profile {encoderProfiles}",
+                Name = $"Profile {encoderProfileCount}",
                 Container = "m3u8",
-                Param = JsonConvert.SerializeObject(v3Profile),
+                Param = profileJson,
             };
 
-            await encoderRepository.AddEncoderProfileAsync(profile);
+            await encoderRepository.AddEncoderProfileAsync(legacyProfile);
+
+            // V3 row — the active encoder pipeline reads from EncodingPresets.
+            EncodingPreset preset = new()
+            {
+                Id = profileId,
+                Name = $"Profile {encoderProfileCount}",
+                ProfileJson = profileJson,
+                IsBuiltIn = false,
+            };
+
+            await presetRepository.CreateAsync(preset);
 
             return Ok(
                 new StatusResponseDto<EncoderProfile>
                 {
                     Status = "ok",
-                    Data = profile,
+                    Data = legacyProfile,
                     Message = "Successfully created a new encoder profile.",
                     Args = [],
                 }
