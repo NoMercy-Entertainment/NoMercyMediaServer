@@ -46,6 +46,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<DiscSourceFactory>();
         services.TryAddTransient<IDiscMetadataResolver, TmdbDiscMatcher>();
 
+        services.TryAddTransient<Live.ILiveDiscSession, Live.LiveDiscSession>();
+
         return services;
     }
 }
