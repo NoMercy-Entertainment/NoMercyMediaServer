@@ -50,6 +50,14 @@ public record UpdateDriverRequestDto
     [JsonProperty("name")]
     public string? Name { get; set; }
 
+    /// <summary>
+    /// Optional. Allows switching driver type (e.g. local → nfs) on update.
+    /// Validation runs against the new type. Existing folders attached to
+    /// this driver will resolve via the new backend on next access.
+    /// </summary>
+    [JsonProperty("type")]
+    public string? Type { get; set; }
+
     [JsonProperty("config")]
     public JObject? Config { get; set; }
 

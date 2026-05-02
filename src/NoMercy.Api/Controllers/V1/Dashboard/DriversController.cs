@@ -132,10 +132,7 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
 
         await driverRepository.CreateDriverAsync(driver);
 
-        return StatusCode(
-            StatusCodes.Status201Created,
-            MapToDto(driver)
-        );
+        return StatusCode(StatusCodes.Status201Created, MapToDto(driver));
     }
 
     // -----------------------------------------------------------------------
@@ -165,6 +162,19 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
                 return ConflictResponse($"A driver named '{trimmedName}' already exists.");
 
             driver.Name = trimmedName;
+        }
+
+        // Allow type change. UI lets the user switch backend in the form;
+        // server must honour it or we silently validate against the old
+        // type and reject configs that are valid for the new one.
+        if (request.Type is not null)
+        {
+            string normalizedType = request.Type.Trim().ToLowerInvariant();
+            if (!DriverTypeMetadata.AllowedTypes.Contains(normalizedType))
+                return BadRequestResponse(
+                    $"Invalid type '{request.Type}'. Allowed values: {string.Join(", ", DriverTypeMetadata.AllowedTypes)}."
+                );
+            driver.Type = normalizedType;
         }
 
         JObject? configToStore = request.Config;
