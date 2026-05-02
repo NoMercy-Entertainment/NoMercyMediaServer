@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
@@ -19,7 +18,7 @@ namespace NoMercy.OpticalMedia.Sources.Dvd;
 /// Unlike Bluray's AACS, DVD CSS is reliably decrypted on every drive
 /// libdvdcss supports, so unprotected playback / rip is the default path.
 /// </summary>
-public sealed partial class DvdDiscSource(
+public sealed class DvdDiscSource(
     EncoderOptions options,
     IProcessRunner processRunner,
     ILogger<DvdDiscSource> logger
@@ -31,28 +30,104 @@ public sealed partial class DvdDiscSource(
     {
         string drivePath = ToDvdPath(drive.Path);
 
-        // Without -title libdvdread enumerates all titles in stderr. The
-        // dvdvideo demuxer needs to be selected explicitly with -f.
-        ProcessResult result = await processRunner.RunAsync(
-            options.FfprobePath,
-            ["-hide_banner", "-v", "info", "-f", "dvdvideo", "-i", drivePath],
-            workingDirectory: null,
-            cancellationToken: ct
-        );
+        // libdvdread doesn't enumerate titles in a single call — it expects
+        // the caller to walk titles 1..N sequentially. We probe each title
+        // with -show_format until ffprobe emits "Title N not found" on
+        // stderr, which is the enumeration boundary.
+        List<DiscTitle> titles = new();
+        DiscProtection? protection = null;
+        for (int titleIdx = 1; titleIdx <= MaxTitleProbes; titleIdx++)
+        {
+            ProcessResult result = await processRunner.RunAsync(
+                options.FfprobePath,
+                [
+                    "-hide_banner",
+                    "-v",
+                    "error",
+                    "-f",
+                    "dvdvideo",
+                    "-title",
+                    titleIdx.ToString(CultureInfo.InvariantCulture),
+                    "-print_format",
+                    "json",
+                    "-show_format",
+                    "-i",
+                    drivePath,
+                ],
+                workingDirectory: null,
+                cancellationToken: ct
+            );
 
-        DiscProtection? protection = ClassifyProtection(result.StdErr);
-        List<(int Index, TimeSpan Duration, int Chapters)> titles = ParseTitles(result.StdErr);
+            // Capture protection state from the first probe — same stderr
+            // signatures every iteration anyway.
+            protection ??= ClassifyProtection(result.StdErr);
+
+            if (
+                !string.IsNullOrEmpty(result.StdErr)
+                && result.StdErr.Contains(
+                    $"Title {titleIdx} not found",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            {
+                // Boundary hit — stop walking.
+                break;
+            }
+
+            if (string.IsNullOrWhiteSpace(result.StdOut))
+                continue;
+
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(result.StdOut);
+                if (!doc.RootElement.TryGetProperty("format", out JsonElement format))
+                    continue;
+
+                TimeSpan duration = TimeSpan.Zero;
+                if (
+                    format.TryGetProperty("duration", out JsonElement dur)
+                    && double.TryParse(
+                        dur.GetString(),
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out double seconds
+                    )
+                )
+                {
+                    duration = TimeSpan.FromSeconds(seconds);
+                }
+
+                titles.Add(
+                    new DiscTitle(
+                        Index: titleIdx,
+                        Name: $"Title {titleIdx:D2}",
+                        Duration: duration,
+                        VideoStreams: [],
+                        AudioStreams: [],
+                        Subtitles: [],
+                        Chapters: [],
+                        EstimatedSizeBytes: 0,
+                        IsMainFeature: false
+                    )
+                );
+            }
+            catch (JsonException ex)
+            {
+                logger.LogInformation(
+                    ex,
+                    "DVD title {Title} probe parse failed for {Drive}",
+                    titleIdx,
+                    drive.Path
+                );
+            }
+        }
 
         if (titles.Count == 0)
         {
             logger.LogInformation(
-                "DVD probe parsed 0 titles for {Drive} | exit={Exit} stderr_len={StdErrLen} stderr_head={StdErrHead}",
+                "DVD probe found 0 titles for {Drive}: {Protection}",
                 drive.Path,
-                result.ExitCode,
-                result.StdErr?.Length ?? 0,
-                (result.StdErr ?? "").Length > 600
-                    ? result.StdErr![..600]
-                    : (result.StdErr ?? "(no stderr)")
+                protection?.Message ?? "(no protection detected)"
             );
             return new DiscInfo(
                 OpticalDiscType.Dvd,
@@ -64,33 +139,32 @@ public sealed partial class DvdDiscSource(
             );
         }
 
+        // Flag the longest title as the main feature.
         TimeSpan maxDuration = titles.Max(t => t.Duration);
-        DiscTitle[] discTitles = titles
-            .Select(t => new DiscTitle(
-                Index: t.Index,
-                Name: $"Title {t.Index:D2}",
-                Duration: t.Duration,
-                VideoStreams: [],
-                AudioStreams: [],
-                Subtitles: [],
-                Chapters: [],
-                EstimatedSizeBytes: 0,
-                IsMainFeature: t.Duration == maxDuration
-            ))
+        DiscTitle[] flagged = titles
+            .Select(t => t with { IsMainFeature = t.Duration == maxDuration })
             .OrderByDescending(t => t.Duration)
             .ToArray();
 
         return new DiscInfo(
             Type: OpticalDiscType.Dvd,
             DiscLabel: drive.Label,
-            Titles: discTitles,
+            Titles: flagged,
             AudioTracks: null,
-            TotalDuration: discTitles.Sum(t => t.Duration.Ticks) is long ticks
+            TotalDuration: flagged.Sum(t => t.Duration.Ticks) is long ticks
                 ? TimeSpan.FromTicks(ticks)
                 : TimeSpan.Zero,
             Protection: protection
         );
     }
+
+    /// <summary>
+    /// DVD-Video has at most 99 titles; in practice retail discs rarely
+    /// exceed the low double digits. We cap the walk to keep cold probes
+    /// fast — single-title discs walk one ffprobe; full retail discs
+    /// walk ~30 in the worst case.
+    /// </summary>
+    private const int MaxTitleProbes = 50;
 
     public async Task<DiscTitle> ProbeTitleAsync(
         DiscDrive drive,
@@ -155,51 +229,6 @@ public sealed partial class DvdDiscSource(
             );
             return empty;
         }
-    }
-
-    /// <summary>
-    /// Pulls title lines out of libdvdread's stderr. The demuxer prints one
-    /// line per title with index, runtime, chapter count. Pattern:
-    ///   <c>[dvdvideo @ ...] title 1, runtime 1:42:31, chapters 28</c>
-    /// (exact format may vary between fork builds; the regex tolerates
-    /// optional whitespace and varied separators).
-    /// </summary>
-    internal static List<(int Index, TimeSpan Duration, int Chapters)> ParseTitles(string stderr)
-    {
-        List<(int, TimeSpan, int)> titles = new();
-        if (string.IsNullOrEmpty(stderr))
-            return titles;
-
-        foreach (Match match in TitleRegex().Matches(stderr))
-        {
-            string indexText = match.Groups["index"].Value;
-            string durText = match.Groups["duration"].Value;
-            string chaptersText = match.Groups["chapters"].Value;
-
-            if (
-                !int.TryParse(
-                    indexText,
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out int idx
-                )
-            )
-                continue;
-            if (!TryParseHmsDuration(durText, out TimeSpan dur))
-                continue;
-            int chapters = 0;
-            if (!string.IsNullOrEmpty(chaptersText))
-                int.TryParse(
-                    chaptersText,
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out chapters
-                );
-
-            titles.Add((idx, dur, chapters));
-        }
-
-        return titles.DistinctBy(t => t.Item1).ToList();
     }
 
     /// <summary>
@@ -268,18 +297,13 @@ public sealed partial class DvdDiscSource(
 
     private static string ToDvdPath(string mountPath)
     {
-        // The dvdvideo demuxer accepts a plain mount path (with trailing
-        // separator) or a "dvd:" URL — both work. Plain path is most
-        // portable, no protocol-handler dependency.
+        // libdvdread's filesystem-fallback path needs to point at the
+        // VIDEO_TS folder, not the disc root. Without it libdvdcss tries
+        // raw block reads and fails on any drive that doesn't expose the
+        // SCSI MMC interface (virtual drives, some USB enclosures).
         if (mountPath.StartsWith("dvd:", StringComparison.OrdinalIgnoreCase))
             return mountPath;
         string trimmed = mountPath.TrimEnd('\\', '/');
-        return $"{trimmed}/";
+        return $"{trimmed}/VIDEO_TS/";
     }
-
-    [GeneratedRegex(
-        @"title\s+(?<index>\d+)[,:\s]+(?:runtime|length|duration)?\s*(?<duration>\d{1,}:\d{1,}:\d{1,})(?:[,\s]+chapters?\s+(?<chapters>\d+))?",
-        RegexOptions.IgnoreCase
-    )]
-    private static partial Regex TitleRegex();
 }
