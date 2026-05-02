@@ -77,9 +77,13 @@ public static class ProfileMapper
     private static VideoOutput MapVideo(V1VideoProfile v)
     {
         VideoCodecType codec = ParseVideoCodec(v.Codec);
+        // ColorSpace is declared non-nullable on V1VideoProfile but the V1 DB
+        // schema permits null. Defend the .Contains call here rather than
+        // tightening every job-side mapper.
+        string colorSpace = v.ColorSpace ?? string.Empty;
         bool tenBit =
-            v.ColorSpace.Contains("10", StringComparison.Ordinal)
-            || v.ColorSpace.Contains("p010", StringComparison.OrdinalIgnoreCase);
+            colorSpace.Contains("10", StringComparison.Ordinal)
+            || colorSpace.Contains("p010", StringComparison.OrdinalIgnoreCase);
 
         Dictionary<string, string>? customArgs =
             v.CustomArguments.Length > 0
