@@ -60,17 +60,15 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
             return;
         }
 
-        Guid userId = Guid.Parse(claim);
-
-        if (userId == Guid.Empty)
+        if (!Guid.TryParse(claim, out Guid userId) || userId == Guid.Empty)
         {
-            Logger.Http("Unauthorized request, guid empty: " + url);
+            Logger.Http("Unauthorized request, guid malformed or empty: " + url);
             await WriteProblemAsync(
                 context,
                 statusCode: (int)HttpStatusCode.Forbidden,
                 type: "https://nomercy.tv/problems/invalid-token",
                 title: "Invalid token",
-                detail: "The token subject (sub) resolved to an empty GUID. The token may be malformed.",
+                detail: "The token subject (sub) is not a valid GUID. The token may be malformed.",
                 authError: "INVALID_TOKEN"
             );
             return;

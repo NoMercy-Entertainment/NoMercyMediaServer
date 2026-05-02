@@ -83,12 +83,22 @@ public class VideoHub : ConnectionHub
 
         int? movieId = request.PlaylistType == Config.MovieMediaType ? request.TmdbId : null;
         int? tvId = request.PlaylistType == Config.TvMediaType ? request.TmdbId : null;
-        int? collectionId =
-            request.PlaylistType == Config.CollectionMediaType
-                ? int.Parse(request.PlaylistId)
-                : null;
-        Ulid? specialId =
-            request.PlaylistType == Config.SpecialMediaType ? Ulid.Parse(request.PlaylistId) : null;
+
+        int? collectionId = null;
+        if (request.PlaylistType == Config.CollectionMediaType)
+        {
+            if (!int.TryParse(request.PlaylistId, out int parsed))
+                return;
+            collectionId = parsed;
+        }
+
+        Ulid? specialId = null;
+        if (request.PlaylistType == Config.SpecialMediaType)
+        {
+            if (!Ulid.TryParse(request.PlaylistId, out Ulid parsed))
+                return;
+            specialId = parsed;
+        }
 
         if (movieId is not null && !await mediaContext.Movies.AnyAsync(m => m.Id == movieId))
             return;
@@ -171,9 +181,9 @@ public class VideoHub : ConnectionHub
 
     public async Task RemoveWatched(VideoProgressRequest request)
     {
-        Guid userId = Guid.Parse(
-            (Context.User?.FindFirstValue(ClaimTypes.NameIdentifier)).OrEmpty()
-        );
+        string? guid = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(guid, out Guid userId))
+            return;
 
         User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
