@@ -49,6 +49,12 @@ public class EncoderRuntimeExceptionMiddleware
                 LogEventLevel.Warning
             );
 
+            // Response already in flight — can't safely overwrite headers.
+            // Let the exception bubble to GlobalExceptionHandlerMiddleware,
+            // which will also short-circuit and just close the connection.
+            if (context.Response.HasStarted)
+                throw;
+
             context.Response.StatusCode = ex.HttpStatusCode;
             context.Response.ContentType = MediaTypeNames.Application.Json;
 

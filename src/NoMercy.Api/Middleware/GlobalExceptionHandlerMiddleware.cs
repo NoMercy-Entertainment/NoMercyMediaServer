@@ -41,6 +41,13 @@ public class GlobalExceptionHandlerMiddleware
             string traceId = context.TraceIdentifier;
             Logger.App($"[{traceId}] Unhandled exception: {ex}", LogEventLevel.Error);
 
+            // Headers already flushed (e.g. mid-stream of a media response) —
+            // there's nothing more we can do without throwing again from
+            // inside the catch and corrupting the response. Just log and
+            // let Kestrel close the connection.
+            if (context.Response.HasStarted)
+                return;
+
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             context.Response.ContentType = MediaTypeNames.Application.Json;
 
