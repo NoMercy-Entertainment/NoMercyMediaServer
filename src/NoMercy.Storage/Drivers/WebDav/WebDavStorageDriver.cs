@@ -21,11 +21,10 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
     /// Production constructor — builds an <see cref="IWebDavClient"/> from config.
     /// Internal because <see cref="WebDavDriverConfig"/> is internal; callers use
     /// <see cref="NoMercy.Storage.Factory.StorageFactory"/> instead.
+    /// Credentials (username / password) must already be set on the config by the factory
+    /// before this constructor is called.
     /// </summary>
-    internal WebDavStorageDriver(
-        WebDavDriverConfig config,
-        Func<string, (string AccessKey, string SecretKey)?>? credentialsResolver = null
-    )
+    internal WebDavStorageDriver(WebDavDriverConfig config)
     {
         ArgumentNullException.ThrowIfNull(config);
 
@@ -36,25 +35,13 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         if (config.IgnoreCertErrors)
             handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
 
-        ICredentials? credentials = ResolveCredentials(config, credentialsResolver);
+        ICredentials? credentials = BuildCredentials(config.Username, config.Password);
         if (credentials is not null)
             handler.Credentials = credentials;
 
         HttpClient httpClient = new(handler, disposeHandler: true)
         {
             Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds),
-        };
-
-        // Bearer token goes in the default request headers when Basic is not used.
-        string? bearerToken = ResolveBearerToken(config, credentialsResolver);
-        if (bearerToken is not null)
-            httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearerToken);
-
-        WebDavClientParams clientParams = new()
-        {
-            BaseAddress = new Uri(_baseUrl),
-            Credentials = credentials,
         };
 
         // Pass the pre-configured HttpClient directly so our handler + auth are used.
@@ -186,6 +173,11 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         WebDavResource resource = PropfindSingle(path);
         return resource.LastModifiedDate?.ToUniversalTime() ?? DateTime.UtcNow;
     }
+
+    // WebDAV does not expose ctime or atime — return LastModified as the closest equivalent.
+    public DateTime GetCreationTimeUtc(string path) => GetLastWriteTimeUtc(path);
+
+    public DateTime GetLastAccessTimeUtc(string path) => GetLastWriteTimeUtc(path);
 
     public Stream OpenRead(string path)
     {
@@ -431,48 +423,14 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
     }
 
     // -----------------------------------------------------------------------
-    // Credential resolution
+    // Credential helpers
     // -----------------------------------------------------------------------
 
-    private static ICredentials? ResolveCredentials(
-        WebDavDriverConfig config,
-        Func<string, (string AccessKey, string SecretKey)?>? resolver
-    )
+    private static ICredentials? BuildCredentials(string? username, string? password)
     {
-        if (
-            string.IsNullOrWhiteSpace(config.PasswordRef)
-            && string.IsNullOrWhiteSpace(config.Username)
-        )
-            return null;
-        if (!string.IsNullOrWhiteSpace(config.BearerTokenRef))
-            return null; // Bearer auth — handled separately
-
-        string? password = null;
-        if (!string.IsNullOrWhiteSpace(config.PasswordRef) && resolver is not null)
-        {
-            (string, string)? creds = resolver(config.PasswordRef);
-            // Tuple second element is the secret; first element unused for WebDAV.
-            password = creds?.Item2;
-        }
-
-        if (string.IsNullOrWhiteSpace(config.Username) && string.IsNullOrWhiteSpace(password))
+        if (string.IsNullOrWhiteSpace(username) && string.IsNullOrWhiteSpace(password))
             return null;
 
-        return new NetworkCredential(config.Username ?? string.Empty, password ?? string.Empty);
-    }
-
-    private static string? ResolveBearerToken(
-        WebDavDriverConfig config,
-        Func<string, (string AccessKey, string SecretKey)?>? resolver
-    )
-    {
-        if (string.IsNullOrWhiteSpace(config.BearerTokenRef))
-            return null;
-        if (resolver is null)
-            return null;
-
-        (string, string)? creds = resolver(config.BearerTokenRef);
-        // Second element holds the token.
-        return creds?.Item2;
+        return new NetworkCredential(username ?? string.Empty, password ?? string.Empty);
     }
 }

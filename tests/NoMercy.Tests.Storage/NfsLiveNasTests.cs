@@ -1,5 +1,7 @@
 using System.Net.Sockets;
+using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Nfs;
+using NoMercy.Storage.Remote;
 
 namespace NoMercy.Tests.Storage;
 
@@ -233,6 +235,29 @@ public class NfsLiveNasTests(LiveNasFixture fix) : IClassFixture<LiveNasFixture>
     }
 
     // --- Listing returns correct directory flag ------------------------------
+
+    // --- RemoteStorage.List path (mirrors the API browser exactly) ----------
+
+    [SkippableFact]
+    public void RemoteStorage_List_marks_subdirs_correctly()
+    {
+        Skip.If(!fix.Reachable, Skip_Unreachable);
+        using NfsStorageDriver driver = Mount();
+        RemoteStorage rs = new(driver);
+
+        IReadOnlyList<StorageEntry> entries = rs.List("Music", pattern: null, recursive: false);
+        entries.Should().NotBeEmpty();
+
+        // 'Music' on the export contains alphabet directories (#, A, B, ...).
+        // Every direct child should report IsDirectory == true.
+        IReadOnlyList<StorageEntry> dirs = [.. entries.Where(e => e.IsDirectory)];
+        dirs.Should()
+            .HaveCountGreaterThan(
+                0,
+                "RemoteStorage.List uses driver.DirectoryExists(entryPath) to set IsDirectory; "
+                    + "if Stat64 returns wrong mode bits or fails for nested paths, this stays empty"
+            );
+    }
 
     [SkippableFact]
     public void ListDirectories_marks_subdirs_as_directories()

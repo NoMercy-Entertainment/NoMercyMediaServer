@@ -214,7 +214,7 @@ public class StorageFactoryTests
     [Fact]
     public void For_webdav_missing_url_throws_ArgumentException()
     {
-        string json = """{"username":"user"}""";
+        string json = """{"ignoreCertErrors":false}""";
         StorageFactory factory = Factory(resolver: StubResolver("webdav", json));
 
         Action act = () => factory.For(Ulid.NewUlid(), Ulid.NewUlid(), "/irrelevant");

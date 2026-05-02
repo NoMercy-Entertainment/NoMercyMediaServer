@@ -2,7 +2,9 @@ using System.Net;
 using System.Text;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.WebDav;
@@ -21,7 +23,8 @@ public class WebDavDriverConfigParsingTests
     [Fact]
     public void Parse_missing_url_throws()
     {
-        Action act = () => WebDavDriverConfig.Parse("""{"username":"user"}""", Ulid.NewUlid());
+        Action act = () =>
+            WebDavDriverConfig.Parse("""{"ignoreCertErrors":false}""", Ulid.NewUlid());
         act.Should().Throw<ArgumentException>().WithMessage("*url*");
     }
 
@@ -47,19 +50,6 @@ public class WebDavDriverConfigParsingTests
     }
 
     [Fact]
-    public void Parse_both_basic_and_bearer_throws()
-    {
-        string json =
-            """{"url":"http://dav.example.com/","username":"u","passwordRef":"p","bearerTokenRef":"b"}""";
-        Action act = () => WebDavDriverConfig.Parse(json, Ulid.NewUlid());
-        act.Should()
-            .Throw<ArgumentException>()
-            .WithMessage("*Basic Auth*")
-            .And.Message.Should()
-            .Contain("Bearer");
-    }
-
-    [Fact]
     public void Parse_invalid_timeout_throws()
     {
         string json = """{"url":"http://dav.example.com/","timeoutSeconds":0}""";
@@ -77,8 +67,7 @@ public class WebDavDriverConfigParsingTests
 
         config.Url.Should().Be("http://dav.example.com/files/");
         config.Username.Should().BeNull();
-        config.PasswordRef.Should().BeNull();
-        config.BearerTokenRef.Should().BeNull();
+        config.Password.Should().BeNull();
         config.IgnoreCertErrors.Should().BeFalse();
         config.TimeoutSeconds.Should().Be(30);
     }
@@ -92,31 +81,6 @@ public class WebDavDriverConfigParsingTests
         );
 
         config.Url.Should().EndWith("/");
-    }
-
-    [Fact]
-    public void Parse_basic_auth_fields_accepted()
-    {
-        WebDavDriverConfig config = WebDavDriverConfig.Parse(
-            """{"url":"http://dav.example.com/","username":"alice","passwordRef":"vault/alice"}""",
-            Ulid.NewUlid()
-        );
-
-        config.Username.Should().Be("alice");
-        config.PasswordRef.Should().Be("vault/alice");
-        config.BearerTokenRef.Should().BeNull();
-    }
-
-    [Fact]
-    public void Parse_bearer_auth_field_accepted()
-    {
-        WebDavDriverConfig config = WebDavDriverConfig.Parse(
-            """{"url":"http://dav.example.com/","bearerTokenRef":"tokens/mytoken"}""",
-            Ulid.NewUlid()
-        );
-
-        config.BearerTokenRef.Should().Be("tokens/mytoken");
-        config.Username.Should().BeNull();
     }
 
     [Fact]
@@ -151,6 +115,70 @@ public class WebDavDriverConfigParsingTests
 
         config.TimeoutSeconds.Should().Be(60);
     }
+
+    [Fact]
+    public void Parse_legacy_username_field_emits_warning_and_succeeds()
+    {
+        Mock<ILogger> logger = new();
+        string json =
+            """{"url":"http://dav.example.com/","username":"alice","passwordRef":"vault/alice"}""";
+
+        WebDavDriverConfig config = WebDavDriverConfig.Parse(json, Ulid.NewUlid(), logger.Object);
+
+        // Legacy fields are ignored — credentials not on the config.
+        config.Username.Should().BeNull();
+        config.Password.Should().BeNull();
+
+        // Logger should have received a warning.
+        logger.Verify(
+            l =>
+                l.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("deprecated")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()
+                ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void Parse_legacy_bearerTokenRef_emits_warning_and_succeeds()
+    {
+        Mock<ILogger> logger = new();
+        string json = """{"url":"http://dav.example.com/","bearerTokenRef":"tokens/mytoken"}""";
+
+        WebDavDriverConfig config = WebDavDriverConfig.Parse(json, Ulid.NewUlid(), logger.Object);
+
+        config.Username.Should().BeNull();
+        config.Password.Should().BeNull();
+
+        logger.Verify(
+            l =>
+                l.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("deprecated")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()
+                ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public void For_helper_sets_username_and_password()
+    {
+        WebDavDriverConfig config = WebDavDriverConfig.For(
+            "http://dav.example.com/",
+            username: "alice",
+            password: "s3cr3t"
+        );
+
+        config.Username.Should().Be("alice");
+        config.Password.Should().Be("s3cr3t");
+    }
 }
 
 public class WebDavStorageDriverFactoryTests
@@ -178,21 +206,10 @@ public class WebDavStorageDriverFactoryTests
     [Fact]
     public void For_webdav_missing_url_throws_ArgumentException()
     {
-        StorageFactory factory = FactoryWithConfig("webdav", """{"username":"user"}""");
+        StorageFactory factory = FactoryWithConfig("webdav", """{"ignoreCertErrors":false}""");
         Ulid driverId = Ulid.NewUlid();
         Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
         act.Should().Throw<ArgumentException>().WithMessage("*url*");
-    }
-
-    [Fact]
-    public void For_webdav_both_auth_schemes_throws_ArgumentException()
-    {
-        string json =
-            """{"url":"http://dav.example.com/","username":"u","passwordRef":"p","bearerTokenRef":"b"}""";
-        StorageFactory factory = FactoryWithConfig("webdav", json);
-        Ulid driverId = Ulid.NewUlid();
-        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
-        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -214,6 +231,29 @@ public class WebDavStorageDriverFactoryTests
         Ulid driverId = Ulid.NewUlid();
         Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
         act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void For_webdav_credential_resolver_injects_username_and_password()
+    {
+        string json = """{"url":"http://dav.example.com/files/"}""";
+
+        Mock<IDriverConfigResolver> driverResolver = new();
+        driverResolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns(("webdav", json));
+
+        Mock<ICredentialResolver> credResolver = new();
+        credResolver.Setup(r => r.Resolve(It.IsAny<string>())).Returns(("alice", "s3cr3t"));
+
+        StorageFactory factory = new(
+            new LocalStorageDriver(),
+            NullLogger<StorageFactory>.Instance,
+            driverResolver.Object,
+            credResolver.Object
+        );
+
+        // Construction must not throw.
+        IStorage storage = factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
+        storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
 }
 
@@ -274,15 +314,8 @@ public sealed class WebDavFixture : IAsyncLifetime
 
     public WebDavStorageDriver BuildDriver()
     {
-        WebDavDriverConfig config = WebDavDriverConfig.For(
-            BaseUrl!,
-            username: Username,
-            passwordRef: null,
-            ignoreCertErrors: false,
-            timeoutSeconds: 30
-        );
-
-        // Resolve password directly — no credential store in tests.
+        // Integration tests inject an already-configured WebDavClient directly,
+        // bypassing the factory credential flow.
         WebDavClient client = new(
             new WebDavClientParams
             {
@@ -479,7 +512,6 @@ public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
         WebDavStorageDriver driver = new(badClient, webDav.BaseUrl!);
 
         // Propfind on root with wrong creds should return an HTTP error (401/403).
-        Action act = () => driver.DirectoryExists("/");
         // Some servers return 401 as non-successful; the driver returns false (not exception)
         // because FileExists/DirectoryExists swallow non-success responses.
         bool result = driver.DirectoryExists("/");

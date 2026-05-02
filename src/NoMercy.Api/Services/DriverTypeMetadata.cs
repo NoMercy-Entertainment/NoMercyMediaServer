@@ -77,16 +77,7 @@ public static class DriverTypeMetadata
             {
                 {
                     "url",
-                    "string (required) — base URL, e.g. https://nextcloud.example.com/remote.php/dav/files/user/Movies/"
-                },
-                { "username", "string? — Basic Auth username" },
-                {
-                    "passwordRef",
-                    "string? — credential store key; resolved tuple second element is the password"
-                },
-                {
-                    "bearerTokenRef",
-                    "string? — credential store key for Bearer token auth (mutually exclusive with username/passwordRef)"
+                    "string (required) — base URL of the WebDAV collection, e.g. https://nextcloud.example.com/remote.php/dav/files/user/Movies/"
                 },
                 {
                     "ignoreCertErrors",
@@ -160,15 +151,6 @@ public static class DriverTypeMetadata
                 string? webDavUrl = config["url"]?.Value<string>();
                 if (string.IsNullOrWhiteSpace(webDavUrl))
                     return "config.url must be a non-empty string for 'webdav'.";
-
-                bool hasBasicAuth =
-                    !string.IsNullOrWhiteSpace(config["username"]?.Value<string>())
-                    || !string.IsNullOrWhiteSpace(config["passwordRef"]?.Value<string>());
-                bool hasBearerAuth = !string.IsNullOrWhiteSpace(
-                    config["bearerTokenRef"]?.Value<string>()
-                );
-                if (hasBasicAuth && hasBearerAuth)
-                    return "config for 'webdav' specifies both Basic Auth (username/passwordRef) and Bearer token (bearerTokenRef). Only one auth scheme may be set.";
 
                 return null;
 
