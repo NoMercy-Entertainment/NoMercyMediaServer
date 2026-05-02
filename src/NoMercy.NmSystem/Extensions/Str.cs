@@ -249,9 +249,16 @@ public static partial class Str
         return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
     }
 
-    public static Guid ToGuid(this string id)
+    /// <summary>
+    /// Parses a Guid string. Returns <see cref="Guid.Empty"/> when the input
+    /// cannot be parsed so call sites that previously crashed on a malformed
+    /// id surface as a 'no match' instead. Callers that need strict
+    /// validation should use <see cref="Guid.TryParse(string?, out Guid)"/>
+    /// directly.
+    /// </summary>
+    public static Guid ToGuid(this string? id)
     {
-        return Guid.Parse(id);
+        return Guid.TryParse(id, out Guid parsed) ? parsed : Guid.Empty;
     }
 
     public static string ToUtf8(this string value)
