@@ -49,7 +49,14 @@ public class Binaries
     {
         _driver = driver;
         _storage = storage;
-        _httpClient = new HttpClient();
+        _httpClient = new HttpClient
+        {
+            // Default HttpClient.Timeout is 100s which is fine for API calls
+            // but binary downloads can be hundreds of MB. Cap at 10 minutes
+            // so a stuck CDN connection eventually surfaces as a TaskCanceled
+            // instead of pinning the setup phase forever.
+            Timeout = TimeSpan.FromMinutes(10),
+        };
         _httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
     }
 
