@@ -161,6 +161,12 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
         context.Response.ContentType = MimeUtility.GetMimeMapping(relativePath);
 
+        // Tell ResponseCachingMiddleware not to wrap the body. Without this
+        // header it still allocates the cache stream wrapper around every
+        // FLAC / video chunk we write — pointless overhead since media
+        // responses are too large to ever cache (cap is 64 MB by default).
+        context.Response.Headers.CacheControl = "no-store";
+
         bool isStreamableMedia = IsStreamableMedia(relativePath);
         bool hasRangeRequest = context.Request.Headers.TryGetValue(
             "Range",
