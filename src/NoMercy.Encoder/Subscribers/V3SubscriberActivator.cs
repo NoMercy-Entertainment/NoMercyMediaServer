@@ -31,14 +31,29 @@ internal sealed class V3SubscriberActivator(
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _autoEncode = services.GetRequiredService<AutoEncodeSubscriber>();
-        _introDetect = services.GetRequiredService<IntroDetectSubscriber>();
-        _ocrPostEncode = services.GetRequiredService<OcrPostEncodeSubscriber>();
-        _cropDetect = services.GetRequiredService<CropDetectSubscriber>();
+        try
+        {
+            _autoEncode = services.GetRequiredService<AutoEncodeSubscriber>();
+            _introDetect = services.GetRequiredService<IntroDetectSubscriber>();
+            _ocrPostEncode = services.GetRequiredService<OcrPostEncodeSubscriber>();
+            _cropDetect = services.GetRequiredService<CropDetectSubscriber>();
 
-        logger.LogInformation(
-            "V3 encoder subscribers activated (auto_encode, intro_detect, ocr_post_encode, crop_detect)"
-        );
+            logger.LogInformation(
+                "V3 encoder subscribers activated (auto_encode, intro_detect, ocr_post_encode, crop_detect)"
+            );
+        }
+        catch (Exception ex)
+        {
+            // Resolving any of these can throw if the encoder DI graph is
+            // mid-migration or a plugin tampered with the registration. The
+            // server can still serve media without the V3 subscribers; don't
+            // let StopHost-on-throw take the process down for an optional
+            // post-encode pipeline.
+            logger.LogError(
+                ex,
+                "V3 subscriber activation failed; encoder pipeline runs without them"
+            );
+        }
         return Task.CompletedTask;
     }
 
