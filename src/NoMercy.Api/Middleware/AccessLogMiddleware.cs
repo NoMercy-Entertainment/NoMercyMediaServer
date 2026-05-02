@@ -116,8 +116,7 @@ public class AccessLogMiddleware
             return;
         }
 
-        Guid userId = Guid.Parse(guid);
-        if (userId == Guid.Empty)
+        if (!Guid.TryParse(guid, out Guid userId) || userId == Guid.Empty)
         {
             if (ignoreIfGuest)
             {
@@ -125,13 +124,15 @@ public class AccessLogMiddleware
                 return;
             }
 
-            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (Empty GUID)");
+            Logger.Http(
+                $"Unknown: {context.Connection.RemoteIpAddress}: {path} (Malformed or empty GUID)"
+            );
             await WriteProblemAsync(
                 context,
                 statusCode: 401,
                 type: "https://nomercy.tv/problems/invalid-token",
                 title: "Invalid token",
-                detail: "The token subject (sub) resolved to an empty GUID. The token may be malformed.",
+                detail: "The token subject (sub) is not a valid GUID. The token may be malformed.",
                 authError: "INVALID_TOKEN"
             );
             return;

@@ -30,7 +30,13 @@ public class HubErrorLoggingFilter : IHubFilter
             return await next(invocationContext);
         }
 
-        Guid userId = Guid.Parse(guid);
+        if (!Guid.TryParse(guid, out Guid userId))
+        {
+            Logger.Socket(
+                $"[{hubName}] Malformed user GUID claim '{guid}' on connection {connectionId}"
+            );
+            return await next(invocationContext);
+        }
         User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user == null)
