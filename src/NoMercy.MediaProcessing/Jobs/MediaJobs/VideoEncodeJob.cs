@@ -33,11 +33,6 @@ public class VideoEncodeJob : AbstractEncoderJob
 
     public override async Task Handle()
     {
-        // TODO: cross-backend transfer — InputFile (source) and the encode output directory
-        // both resolve through the same folder's StorageDriver today. When source and
-        // destination cross folder boundaries (e.g. source on SMB, output on local SSD),
-        // AcquireLocalPathAsync on the source backend and a staged write on the destination
-        // backend will be needed. Leave existing copy semantics until remote drivers land.
         await using MediaContext context = new();
 
         await using LibraryRepository libraryRepository = new(context, StorageDriver);
@@ -145,25 +140,27 @@ public class VideoEncodeJob : AbstractEncoderJob
                         "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
                     );
 
-                // Resolve per-folder storage so the encoder operates under the
-                // correct backend (local / SMB / S3 / etc.) and path guard.
-                // TODO: cross-backend transfer — when source and output folders
-                // map to different backends, the orchestrator will need to
-                // AcquireLocalPathAsync on the source, encode, then stream-write
-                // to the destination. For now source == destination (same folder).
-                IStorage folderStorage = StorageFactory.For(
+                // Destination storage: the library folder the encoded output lands in.
+                IStorage destinationStorage = StorageFactory.For(
                     folder.Id,
                     folder.DriverId,
                     folder.Path
                 );
+
+                // Source storage: when SourceDriverId is set the input file lives on
+                // a different driver (e.g. a Vault NFS share). Resolve the root-level
+                // storage for that driver so AcquireLocalPathAsync can stage the file.
+                IStorage sourceStorage = SourceDriverId.HasValue
+                    ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
+                    : destinationStorage;
 
                 EncodingRequest request = new(
                     InputPath: InputFile,
                     OutputDirectory: fileMetadata.Path,
                     Profile: encodingProfile,
                     MediaTitle: fileMetadata.FileName,
-                    SourceStorage: folderStorage,
-                    DestinationStorage: folderStorage
+                    SourceStorage: sourceStorage,
+                    DestinationStorage: destinationStorage
                 );
 
                 IEncoderProcessRegistry? processRegistry =
@@ -209,7 +206,7 @@ public class VideoEncodeJob : AbstractEncoderJob
                 );
 
                 await PublishStageAsync(fileMetadata, "Checking source subtitles");
-                await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile);
+                await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
 
                 await PublishStageAsync(fileMetadata, "Refreshing library");
                 fileManager.FilterFiles(fileMetadata.FileName);
@@ -337,7 +334,11 @@ public class VideoEncodeJob : AbstractEncoderJob
     /// (PGS / VobSub / DVB) into WebVTT via Tesseract OCR. No-op when the encoder
     /// analyzer isn't wired in the DI container or the source has no bitmap subs.
     /// </summary>
-    private async Task RunBitmapSubtitleOcrAsync(FileMetadata fileMetadata, string inputPath)
+    private async Task RunBitmapSubtitleOcrAsync(
+        FileMetadata fileMetadata,
+        string inputPath,
+        IStorage sourceStorage
+    )
     {
         IMediaAnalyzer? analyzer = EncoderProvider.ResolveService<IMediaAnalyzer>();
         ISubtitleOcrEngine? ocrEngine = EncoderProvider.ResolveService<ISubtitleOcrEngine>();
@@ -348,7 +349,11 @@ public class VideoEncodeJob : AbstractEncoderJob
         MediaInfo mediaInfo;
         try
         {
-            mediaInfo = await analyzer.AnalyzeAsync(inputPath, CancellationToken.None);
+            mediaInfo = await analyzer.AnalyzeAsync(
+                inputPath,
+                sourceStorage,
+                CancellationToken.None
+            );
         }
         catch (Exception ex)
         {
@@ -424,7 +429,10 @@ public class VideoEncodeJob : AbstractEncoderJob
 
         string title = movie?.CreateTitle() ?? episode!.CreateTitle();
         string fileName = movie?.CreateFileName() ?? episode!.CreateFileName();
-        string basePath = Path.Combine(folder.Path, folderName);
+        // Destination storage is already rooted at folder.Path (via StorageFactory.For).
+        // Pass only folderName so paths stay relative to the storage root — avoids
+        // double-prefix on NFS (export/folder.Path/folder.Path/folderName).
+        string basePath = folderName;
         int baseId = movie?.Id ?? episode!.Id;
         string? imgPath = movie?.Backdrop ?? episode?.Still;
 

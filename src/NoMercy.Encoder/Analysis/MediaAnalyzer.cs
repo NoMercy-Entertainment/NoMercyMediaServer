@@ -17,9 +17,16 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage) : IMe
         "-show_chapters",
     ];
 
-    public async Task<MediaInfo> AnalyzeAsync(string filePath, CancellationToken ct = default)
+    public async Task<MediaInfo> AnalyzeAsync(string filePath, CancellationToken ct = default) =>
+        await AnalyzeAsync(filePath, storage, ct);
+
+    public async Task<MediaInfo> AnalyzeAsync(
+        string filePath,
+        IStorage sourceStorage,
+        CancellationToken ct = default
+    )
     {
-        await using LocalPathLease inputLease = storage.AcquireLocalPath(filePath);
+        await using LocalPathLease inputLease = sourceStorage.AcquireLocalPath(filePath);
         string[] arguments = [.. FfprobeArgs, inputLease.Path];
         ProcessResult result = await processRunner.RunAsync("ffprobe", arguments, null, ct);
 

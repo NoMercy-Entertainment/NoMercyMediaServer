@@ -33,7 +33,8 @@ public class JobDispatcher
         Ulid libraryId,
         Ulid folderId,
         string id,
-        string inputFile
+        string inputFile,
+        Ulid? sourceDriverId = null
     )
         where TJob : AbstractEncoderJob, new()
     {
@@ -43,6 +44,7 @@ public class JobDispatcher
             FolderId = folderId,
             Id = id,
             InputFile = inputFile,
+            SourceDriverId = sourceDriverId,
         };
         Dispatcher.Dispatch(job);
     }

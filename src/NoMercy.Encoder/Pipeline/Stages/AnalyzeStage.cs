@@ -42,7 +42,7 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
 
         try
         {
-            MediaInfo info = await analyzer.AnalyzeAsync(inputPath, ct);
+            MediaInfo info = await analyzer.AnalyzeAsync(inputPath, effectiveStorage, ct);
             logger.LogInformation(
                 "[{CorrelationId}] Analysis complete: {Video}v {Audio}a {Sub}s {Duration}",
                 context.CorrelationId,

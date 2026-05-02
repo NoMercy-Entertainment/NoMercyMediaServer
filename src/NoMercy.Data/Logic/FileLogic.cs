@@ -45,7 +45,7 @@ public partial class FileLogic(
 
         foreach (Folder folder in Folders)
         {
-            ConcurrentBag<MediaFolderExtend> files = await GetFiles(folder.Path);
+            ConcurrentBag<MediaFolderExtend> files = await GetFiles(folder);
 
             if (!files.IsEmpty)
                 Files.AddRange(files);
@@ -261,9 +261,11 @@ public partial class FileLogic(
         }
     }
 
-    private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(string path)
+    private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Folder folder)
     {
-        MediaScan mediaScan = new(_storageDriver);
+        // Resolve the per-folder driver so NFS/SMB folders use the right backend.
+        IStorage folderStorage = _storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+        MediaScan mediaScan = new(folderStorage.Driver);
 
         int depth = Library.Type switch
         {
@@ -276,7 +278,7 @@ public partial class FileLogic(
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType(Library.Type)
-            .Process(path, depth);
+            .Process(folder.Path, depth);
 
         await mediaScan.DisposeAsync();
 

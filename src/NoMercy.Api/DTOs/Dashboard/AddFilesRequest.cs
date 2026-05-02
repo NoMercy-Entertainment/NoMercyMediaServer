@@ -10,6 +10,9 @@ public record AddFilesRequest
     [JsonProperty("folder_id")]
     public Ulid FolderId { get; set; }
 
+    [JsonProperty("source_driver_id")]
+    public string? SourceDriverId { get; set; }
+
     [JsonProperty("files")]
     public AddFile[] Files { get; set; } = [];
 }

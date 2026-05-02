@@ -9,4 +9,7 @@ public record FileListRequest
 
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
+
+    [JsonProperty("driver_id")]
+    public string? DriverId { get; set; }
 }

@@ -223,4 +223,6 @@ public sealed class LoggingStorage(IStorage inner) : IStorage
         Calls.Add($"MoveDirectory:{from}→{to}");
         inner.MoveDirectory(from, to);
     }
+
+    public IStorageDriver Driver => inner.Driver;
 }

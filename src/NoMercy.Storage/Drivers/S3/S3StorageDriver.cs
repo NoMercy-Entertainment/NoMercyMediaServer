@@ -308,7 +308,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     : relPath;
 
                 if (MatchesPattern(fileName, searchPattern))
-                    results.Add(obj.Key);
+                    results.Add(relPath);
             }
 
             if (!recursive)
@@ -321,7 +321,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                         : relPath;
 
                     if (MatchesPattern(dirName, searchPattern))
-                        results.Add(commonPrefix);
+                        results.Add(relPath);
                 }
             }
 

@@ -163,23 +163,43 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         return (movie, show, type);
     }
 
+    /// <summary>
+    /// Extracts the underlying <see cref="IStorageDriver"/> from an <see cref="IStorage"/>
+    /// instance. Used by callers (e.g. <see cref="MediaScan"/>) that accept the lower-level
+    /// interface directly.
+    /// </summary>
+    public static IStorageDriver StorageDriverFromStorage(IStorage storage) => storage.Driver;
+
     public FileInfo[] GetVideoFilesInDirectory(string directoryPath)
     {
-        DirectoryInfo directoryInfo = new(directoryPath);
-        return directoryInfo
-            .GetFiles()
-            .Where(file => file.Extension is ".mkv" or ".mp4" or ".avi" or ".webm" or ".flv")
+        return _storageDriver
+            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.TopDirectoryOnly)
+            .Where(p => !_storageDriver.DirectoryExists(p))
+            .Where(p =>
+            {
+                string ext = Path.GetExtension(p);
+                return ext is ".mkv" or ".mp4" or ".avi" or ".webm" or ".flv";
+            })
+            .Select(p => new FileInfo(p))
             .ToArray();
     }
 
     public FileInfo[] GetAudioFilesInDirectory(string directoryPath)
     {
-        DirectoryInfo directoryInfo = new(directoryPath);
-        return directoryInfo
-            .GetFiles()
-            .Where(file => file.Extension is ".mp3" or ".flac" or ".wav" or ".m4a")
+        return _storageDriver
+            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.TopDirectoryOnly)
+            .Where(p => !_storageDriver.DirectoryExists(p))
+            .Where(p =>
+            {
+                string ext = Path.GetExtension(p);
+                return ext is ".mp3" or ".flac" or ".wav" or ".m4a";
+            })
+            .Select(p => new FileInfo(p))
             .ToArray();
     }
+
+    private static readonly string[] VideoExtensions = [".mkv", ".mp4", ".avi", ".webm", ".flv"];
+    private static readonly string[] AudioExtensions = [".mp3", ".flac", ".wav", ".m4a"];
 
     public async Task<List<FileItem>> GetFilesInDirectory(string directoryPath, string libraryType)
     {
@@ -253,6 +273,248 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         }
 
         return fileList.OrderBy(file => file.Name).ToList();
+    }
+
+    /// <summary>
+    /// Driver-aware variant of <see cref="GetFilesInDirectory"/>. Uses
+    /// <paramref name="storage"/> to enumerate entries so the path never
+    /// touches the local filesystem — required for NFS / S3 / WebDAV sources.
+    /// ffprobe receives a real local path via <see cref="IStorage.AcquireLocalPath"/>.
+    /// </summary>
+    public async Task<List<FileItem>> GetFilesInDirectory(
+        string directoryPath,
+        string libraryType,
+        IStorage storage
+    )
+    {
+        IReadOnlyList<StorageEntry> allEntries = storage.List(
+            directoryPath,
+            pattern: null,
+            recursive: false
+        );
+
+        StorageEntry[] videoEntries = allEntries
+            .Where(e =>
+                !e.IsDirectory
+                && VideoExtensions.Contains(
+                    Path.GetExtension(e.Path),
+                    StringComparer.OrdinalIgnoreCase
+                )
+            )
+            .ToArray();
+
+        StorageEntry[] audioEntries = allEntries
+            .Where(e =>
+                !e.IsDirectory
+                && AudioExtensions.Contains(
+                    Path.GetExtension(e.Path),
+                    StringComparer.OrdinalIgnoreCase
+                )
+            )
+            .ToArray();
+
+        ConcurrentBag<FileItem> fileList = [];
+
+        if (videoEntries.Length == 0 && audioEntries.Length == 0)
+            return fileList.ToList();
+
+        if (audioEntries.Length > 0 && videoEntries.Length == 0)
+        {
+            // Use the same audio pattern as the local path, but derive folder
+            // name from the driver-relative directoryPath.
+            string folderName = Path.GetFileName(directoryPath.TrimEnd('/', '\\'));
+
+            const string pattern =
+                @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]|\[(?<releaseType>Singles)\])\s?(?<album>.*)?";
+
+            Match match = Regex.Match(directoryPath, pattern);
+
+            int year = match.Groups["year"].Success
+                ? Convert.ToInt32(match.Groups["year"].Value)
+                : 0;
+
+            string albumName = match.Groups["album"].Success
+                ? match.Groups["album"].Value
+                : Regex.Replace(folderName, @"\[\d{4}\]\s?", "");
+
+            await Parallel.ForEachAsync(
+                audioEntries,
+                Config.ParallelOptions,
+                (entry, _) =>
+                {
+                    string name = Path.GetFileName(entry.Path);
+                    fileList.Add(
+                        new()
+                        {
+                            Size = entry.SizeBytes,
+                            Mode = 0,
+                            Name = entry.Path,
+                            Parent = directoryPath,
+                            Parsed = new(directoryPath)
+                            {
+                                Title = albumName + " - " + Path.GetFileNameWithoutExtension(name),
+                                Year = year.ToString(),
+                                IsSeries = false,
+                                IsSuccess = true,
+                            },
+                            Match = new() { Title = albumName },
+                            Path = entry.Path,
+                        }
+                    );
+                    return ValueTask.CompletedTask;
+                }
+            );
+        }
+        else if (videoEntries.Length > 0)
+        {
+            foreach (StorageEntry entry in videoEntries)
+            {
+                try
+                {
+                    await ProcessVideoStorageEntry(_context, libraryType, entry, storage, fileList);
+                }
+                catch (Exception e)
+                {
+                    Logger.App(e.Message, LogEventLevel.Error);
+                }
+            }
+        }
+
+        return fileList.OrderBy(file => file.Name).ToList();
+    }
+
+    private static async Task<bool> ProcessVideoStorageEntry(
+        MediaContext ctx,
+        string libraryType,
+        StorageEntry entry,
+        IStorage storage,
+        ConcurrentBag<FileItem> fileList
+    )
+    {
+        string entryPath = entry.Path;
+        string fileName = Path.GetFileName(entryPath);
+        string? directoryName = Path.GetDirectoryName(
+            entryPath.Replace('/', Path.DirectorySeparatorChar)
+        );
+
+        // Build a synthetic FileInfo-like object using storage metadata so the
+        // parsing helpers stay unchanged. We do not touch raw System.IO here.
+        string rawFileName = Path.GetFileNameWithoutExtension(fileName);
+
+        int? overrideTmdbId = rawFileName.TryGetTmdbHint();
+
+        string cleanedForYear = Str.RemoveBracketedString().Replace(rawFileName, string.Empty);
+        string? extractedYear = cleanedForYear.TryGetYear();
+
+        string title = entryPath.Replace("v2", "");
+        title = Str.RemoveBracketedString().Replace(title, string.Empty);
+
+        // Acquire a real local path for ffprobe — for NFS this stages to a
+        // temp file; for local storage it returns the validated path as-is.
+        LocalPathLease localLease = await storage.AcquireLocalPathAsync(
+            entryPath,
+            CancellationToken.None
+        );
+
+        FfProbeData ffprobeData;
+        try
+        {
+            ffprobeData = await FfProbe.CreateAsync(localLease.Path);
+        }
+        finally
+        {
+            await localLease.DisposeAsync();
+        }
+
+        MovieFile parsed = ParseVideoFileName(fileName, directoryName, title);
+
+        parsed.Year = extractedYear ?? parsed.Year;
+        if (parsed.Title == null)
+            return true;
+
+        parsed.Title = Str.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
+
+        bool seasonExplicit = parsed.Season.HasValue;
+
+        if (parsed.Episode.HasValue && !parsed.Season.HasValue)
+            parsed.Season = 1;
+
+        if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
+        {
+            Regex regex = Str.MatchNumbers();
+            Match numberMatch = regex.Match(parsed.Title);
+            if (numberMatch.Success)
+            {
+                parsed.Season = 1;
+                parsed.Episode = int.Parse(numberMatch.Value);
+                parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
+            }
+        }
+
+        (MovieOrEpisode episodeMatch, string? imdbId)? result = libraryType switch
+        {
+            Config.AnimeMediaType or Config.TvMediaType => await ResolveShowEpisodeAsync(
+                ctx,
+                libraryType,
+                parsed,
+                ffprobeData.Format.Duration,
+                overrideTmdbId,
+                seasonExplicit
+            ),
+            Config.MovieMediaType => await ResolveMovieMatchAsync(
+                ctx,
+                libraryType,
+                parsed,
+                ffprobeData.Format.Duration,
+                overrideTmdbId
+            ),
+            _ => null,
+        };
+
+        if (result == null)
+            return true;
+
+        parsed.ImdbId = result.Value.imdbId;
+
+        // For driver-relative paths the "parent" is the directory that contains
+        // the season folder, i.e. one level above directoryName.
+        string? parentPath = string.IsNullOrEmpty(directoryName)
+            ? "/"
+            : Path.GetDirectoryName(directoryName.TrimEnd('/', '\\'))?.Replace('\\', '/') ?? "/";
+
+        fileList.Add(
+            new()
+            {
+                Size = entry.SizeBytes,
+                Mode = 0,
+                Name = Path.GetFileNameWithoutExtension(fileName),
+                Parent = parentPath,
+                Parsed = parsed,
+                Match = result.Value.episodeMatch,
+                Path = entryPath,
+                Streams = new()
+                {
+                    Video = ffprobeData.VideoStreams.Select(video => new Video
+                    {
+                        Index = video.Index,
+                        Width = video.Width,
+                        Height = video.Height,
+                    }),
+                    Audio = ffprobeData.AudioStreams.Select(stream => new Audio
+                    {
+                        Index = stream.Index,
+                        Language = stream.Language,
+                    }),
+                    Subtitle = ffprobeData.SubtitleStreams.Select(stream => new Subtitle
+                    {
+                        Index = stream.Index,
+                        Language = stream.Language ?? "und",
+                    }),
+                },
+            }
+        );
+
+        return false;
     }
 
     private async Task<bool> ProcessVideoFileInfo(
@@ -330,10 +592,17 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         return false;
     }
 
-    private static MovieFile ParseVideoFileName(FileInfo file, string title)
+    private static MovieFile ParseVideoFileName(FileInfo file, string title) =>
+        ParseVideoFileName(file.Name, file.DirectoryName, title);
+
+    private static MovieFile ParseVideoFileName(
+        string fileNameWithExt,
+        string? directoryName,
+        string title
+    )
     {
         string cleanedFileName = Str.RemoveBracketedString()
-            .Replace(Path.GetFileNameWithoutExtension(file.Name), string.Empty)
+            .Replace(Path.GetFileNameWithoutExtension(fileNameWithExt), string.Empty)
             .Trim();
 
         // S##E## at start of filename (e.g. "S01E01-some.title.mkv")
@@ -342,7 +611,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         {
             return new(title)
             {
-                Title = ExtractTitleFromFolder(file),
+                Title = ExtractTitleFromFolder(directoryName),
                 Season = int.Parse(epMatch.Groups[1].Value),
                 Episode = int.Parse(epMatch.Groups[2].Value),
                 IsSeries = true,
@@ -367,7 +636,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 showTitle = showTitle[..yearInEpisodeTitle.Index].TrimEnd('-', '.', '_', ' ');
 
             if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
-                showTitle = ExtractTitleFromFolder(file);
+                showTitle = ExtractTitleFromFolder(directoryName);
 
             return new(title)
             {
@@ -395,7 +664,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 showTitle = showTitle[..yearInSeasonTitle.Index].TrimEnd('-', '.', '_', ' ');
 
             if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
-                showTitle = ExtractTitleFromFolder(file);
+                showTitle = ExtractTitleFromFolder(directoryName);
 
             return new(title)
             {
@@ -412,9 +681,12 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         return movieDetector.GetInfo(title);
     }
 
-    private static string ExtractTitleFromFolder(FileInfo file)
+    private static string ExtractTitleFromFolder(FileInfo file) =>
+        ExtractTitleFromFolder(file.DirectoryName);
+
+    private static string ExtractTitleFromFolder(string? directoryName)
     {
-        string? folderName = Path.GetFileName(file.DirectoryName);
+        string? folderName = Path.GetFileName(directoryName);
         if (string.IsNullOrWhiteSpace(folderName))
             return "";
 

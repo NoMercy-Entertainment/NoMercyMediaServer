@@ -404,3 +404,95 @@ public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture
 // Required by xUnit to share the fixture across the collection
 [CollectionDefinition("MinioIntegration")]
 public class MinioIntegrationCollection : ICollectionFixture<MinioFixture> { }
+
+// ============================================================================
+// Unit tests — EnumerateFileSystemEntries contract (no Docker)
+// ============================================================================
+
+public class S3EnumerateContractTests
+{
+    private static S3StorageDriver BuildDriver(
+        Mock<IAmazonS3> mockClient,
+        string bucket,
+        string prefix
+    )
+    {
+        return new S3StorageDriver(mockClient.Object, bucket, prefix);
+    }
+
+    [Fact]
+    public void EnumerateFileSystemEntries_strips_prefix_from_file_keys()
+    {
+        Mock<IAmazonS3> mock = new();
+
+        ListObjectsV2Response listResponse = new()
+        {
+            S3Objects = [new S3Object { Key = "media/folder/file.mp3" }],
+            CommonPrefixes = ["media/folder/"],
+            IsTruncated = false,
+        };
+
+        mock.Setup(c =>
+                c.ListObjectsV2Async(It.Is<ListObjectsV2Request>(r => r.Delimiter == "/"), default)
+            )
+            .ReturnsAsync(listResponse);
+
+        S3StorageDriver driver = BuildDriver(mock, "test-bucket", "media");
+
+        List<string> entries = driver
+            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
+            .ToList();
+
+        entries.Should().Contain("folder/file.mp3");
+        entries.Should().Contain("folder");
+        entries.Should().NotContain(e => e.StartsWith("media/"));
+    }
+
+    [Fact]
+    public void EnumerateFileSystemEntries_DirectoryExists_roundtrip()
+    {
+        Mock<IAmazonS3> mock = new();
+
+        // Enumerate call
+        ListObjectsV2Response listResponse = new()
+        {
+            S3Objects = [],
+            CommonPrefixes = ["media/folder/"],
+            IsTruncated = false,
+        };
+
+        mock.Setup(c =>
+                c.ListObjectsV2Async(It.Is<ListObjectsV2Request>(r => r.Delimiter == "/"), default)
+            )
+            .ReturnsAsync(listResponse);
+
+        // DirectoryExists call — expects prefix "media/folder/" (ToKey("folder") = "media/folder/")
+        ListObjectsV2Response existsResponse = new()
+        {
+            S3Objects = [new S3Object { Key = "media/folder/track.mp3" }],
+            CommonPrefixes = [],
+            IsTruncated = false,
+        };
+
+        mock.Setup(c =>
+                c.ListObjectsV2Async(
+                    It.Is<ListObjectsV2Request>(r => r.Prefix == "media/folder/" && r.MaxKeys == 1),
+                    default
+                )
+            )
+            .ReturnsAsync(existsResponse);
+
+        S3StorageDriver driver = BuildDriver(mock, "test-bucket", "media");
+
+        List<string> entries = driver
+            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
+            .ToList();
+
+        string dirEntry = entries.Single(e => e == "folder");
+        bool exists = driver.DirectoryExists(dirEntry);
+
+        exists
+            .Should()
+            .BeTrue("round-trip from EnumerateFileSystemEntries to DirectoryExists must work");
+    }
+}

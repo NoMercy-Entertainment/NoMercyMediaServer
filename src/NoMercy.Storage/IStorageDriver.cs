@@ -24,6 +24,12 @@ public interface IStorageDriver
     Stream OpenWrite(string path, bool overwrite);
     void MoveFile(string source, string destination);
     void CopyFile(string source, string destination, bool overwrite);
+
+    /// <summary>
+    /// Returns entries as driver-relative paths in the same form that
+    /// <see cref="FileExists"/> and <see cref="DirectoryExists"/> accept on this driver.
+    /// Implementations MUST NOT include the driver-configured prefix / base URL / mount root.
+    /// </summary>
     IEnumerable<string> EnumerateFileSystemEntries(
         string directory,
         string searchPattern,

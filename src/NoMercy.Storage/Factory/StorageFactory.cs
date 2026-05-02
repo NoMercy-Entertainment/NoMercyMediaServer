@@ -214,7 +214,11 @@ public sealed class StorageFactory : IStorageFactory
                 nameof(driverConfigJson)
             );
 
-        string allowedRoot = config.RootPath;
+        // Incorporate the folder sub-path so callers can pass paths relative
+        // to the storage root (consistent with NFS/S3/WebDAV behaviour).
+        string allowedRoot = string.IsNullOrEmpty(subPath)
+            ? config.RootPath
+            : JoinRoot(config.RootPath, subPath, "local");
         StoragePathGuard guard = new([allowedRoot], _driver);
         return new LocalStorage(_driver, guard);
     }

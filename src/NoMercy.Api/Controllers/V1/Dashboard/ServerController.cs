@@ -54,7 +54,8 @@ public class ServerController(
     IWallpaperService wallpaperService,
     INetworkDiscovery networkDiscovery,
     IHttpClientFactory httpClientFactory,
-    IStorageDriver storageDriver
+    IStorageDriver storageDriver,
+    IStorageFactory storageFactory
 ) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
@@ -203,12 +204,42 @@ public class ServerController(
         if (library == null)
             return NotFoundResponse("Library not found");
 
+        // Determine whether the folder lives on a remote driver. When it does,
+        // the path from filelist is already driver-relative — do not call
+        // Path.GetFullPath, which would prepend the process working directory.
+        Folder? folder = await context
+            .Folders.AsNoTracking()
+            .Include(f => f.Driver)
+            .FirstOrDefaultAsync(f => f.Id == request.FolderId);
+
+        bool isRemoteDriver =
+            folder?.Driver is not null
+            && !string.Equals(folder.Driver.Type, "local", StringComparison.OrdinalIgnoreCase);
+
+        // When source_driver_id is provided (NFS/SMB source different from the
+        // destination library folder), the path is driver-relative and must not
+        // be expanded via Path.GetFullPath.
+        Ulid? sourceDriverId = null;
+        bool isRemoteSource = false;
+        if (!string.IsNullOrWhiteSpace(request.SourceDriverId))
+        {
+            if (Ulid.TryParse(request.SourceDriverId, out Ulid parsedSourceDriver))
+            {
+                sourceDriverId = parsedSourceDriver;
+                isRemoteSource = true;
+            }
+        }
+
         try
         {
             if (library.Type == "music")
             {
                 Logger.App("Adding music files to library", LogEventLevel.Verbose);
-                string directoryPath = Path.GetFullPath(request.Files[0].Path);
+                string directoryPath =
+                    isRemoteDriver || isRemoteSource
+                        ? request.Files[0].Path
+                        : Path.GetFullPath(request.Files[0].Path);
+
                 jobDispatcher.DispatchJob<ReleaseImportJob>(
                     library.Id,
                     request.FolderId,
@@ -221,12 +252,15 @@ public class ServerController(
 
             foreach (AddFile file in request.Files)
             {
-                string filePath = Path.GetFullPath(file.Path);
+                string filePath =
+                    isRemoteDriver || isRemoteSource ? file.Path : Path.GetFullPath(file.Path);
+
                 jobDispatcher.DispatchJob<VideoEncodeJob>(
                     library.Id,
                     request.FolderId,
                     file.Id,
-                    filePath
+                    filePath,
+                    sourceDriverId
                 );
             }
             return Ok(request);
@@ -259,6 +293,9 @@ public class ServerController(
         }
     }
 
+    // Synthetic folder ID for ad-hoc filelist browse — mirrors StorageBrowserController's pattern.
+    private static Ulid SyntheticFileListFolderId(Ulid driverId) => driverId;
+
     [HttpPost]
     [Route("filelist")]
     public async Task<IActionResult> FileList([FromBody] FileListRequest request)
@@ -266,11 +303,28 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view files");
 
+        IStorage? resolvedStorage = null;
+        if (!string.IsNullOrWhiteSpace(request.DriverId))
+        {
+            if (!Ulid.TryParse(request.DriverId, out Ulid driverId))
+                return BadRequestResponse("driver_id is not a valid ULID.");
+
+            resolvedStorage = storageFactory.For(
+                folderId: SyntheticFileListFolderId(driverId),
+                driverId: driverId,
+                subPath: string.Empty
+            );
+        }
+
         if (request.Type == "music")
         {
+            IStorageDriver effectiveDriver = resolvedStorage is not null
+                ? FileRepository.StorageDriverFromStorage(resolvedStorage)
+                : fileRepository.StorageDriver;
+
             List<FileItem> fileList = await FileRepository.GetMusicBrainzReleasesInDirectory(
                 request.Folder,
-                fileRepository.StorageDriver
+                effectiveDriver
             );
             return Ok(
                 new DataResponseDto<FileListResponseDto>
@@ -285,10 +339,13 @@ public class ServerController(
         }
         else
         {
-            List<FileItem> fileList = await fileRepository.GetFilesInDirectory(
-                request.Folder,
-                request.Type
-            );
+            List<FileItem> fileList = resolvedStorage is not null
+                ? await fileRepository.GetFilesInDirectory(
+                    request.Folder,
+                    request.Type,
+                    resolvedStorage
+                )
+                : await fileRepository.GetFilesInDirectory(request.Folder, request.Type);
 
             return Ok(
                 new DataResponseDto<FileListResponseDto>

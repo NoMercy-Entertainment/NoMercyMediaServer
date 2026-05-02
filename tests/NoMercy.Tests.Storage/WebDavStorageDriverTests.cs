@@ -521,3 +521,121 @@ public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
 
 [CollectionDefinition("WebDavIntegration")]
 public class WebDavIntegrationCollection : ICollectionFixture<WebDavFixture> { }
+
+// ============================================================================
+// Unit tests — EnumerateFileSystemEntries contract (no Docker)
+// ============================================================================
+
+public class WebDavEnumerateContractTests
+{
+    private const string BaseUrl = "https://nas.local/dav/";
+
+    private static WebDavStorageDriver BuildDriver(Mock<IWebDavClient> mockClient)
+    {
+        return new WebDavStorageDriver(mockClient.Object, BaseUrl);
+    }
+
+    private static WebDavResource MakeResource(string absoluteUri, bool isCollection)
+    {
+        WebDavResource.Builder builder = new WebDavResource.Builder().WithUri(absoluteUri);
+        if (isCollection)
+            builder.IsCollection();
+        else
+            builder.IsNotCollection();
+        return builder.Build();
+    }
+
+    private static PropfindResponse MakePropfindResponse(
+        int statusCode,
+        IEnumerable<WebDavResource> resources
+    )
+    {
+        return new PropfindResponse(statusCode, resources);
+    }
+
+    [Fact]
+    public void EnumerateFileSystemEntries_returns_relative_paths_not_absolute_uris()
+    {
+        Mock<IWebDavClient> mock = new();
+
+        PropfindResponse enumResponse = MakePropfindResponse(
+            207,
+            [
+                MakeResource("https://nas.local/dav/", isCollection: true), // dir itself — skipped
+                MakeResource("https://nas.local/dav/folder/file.mp3", isCollection: false),
+                MakeResource("https://nas.local/dav/folder/", isCollection: true),
+            ]
+        );
+
+        mock.Setup(c =>
+                c.Propfind(
+                    It.Is<string>(u => u == BaseUrl),
+                    It.Is<PropfindParameters>(p =>
+                        p.ApplyTo == ApplyTo.Propfind.ResourceAndChildren
+                    )
+                )
+            )
+            .ReturnsAsync(enumResponse);
+
+        WebDavStorageDriver driver = BuildDriver(mock);
+
+        List<string> entries = driver
+            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
+            .ToList();
+
+        entries.Should().Contain("folder/file.mp3");
+        entries.Should().Contain("folder");
+        entries.Should().NotContain(e => e.StartsWith("https://"));
+    }
+
+    [Fact]
+    public void EnumerateFileSystemEntries_DirectoryExists_roundtrip()
+    {
+        Mock<IWebDavClient> mock = new();
+
+        PropfindResponse enumResponse = MakePropfindResponse(
+            207,
+            [
+                MakeResource("https://nas.local/dav/", isCollection: true),
+                MakeResource("https://nas.local/dav/music/", isCollection: true),
+            ]
+        );
+
+        mock.Setup(c =>
+                c.Propfind(
+                    It.Is<string>(u => u == BaseUrl),
+                    It.Is<PropfindParameters>(p =>
+                        p.ApplyTo == ApplyTo.Propfind.ResourceAndChildren
+                    )
+                )
+            )
+            .ReturnsAsync(enumResponse);
+
+        // DirectoryExists calls Propfind on "https://nas.local/dav/music/" with ResourceOnly
+        PropfindResponse existsResponse = MakePropfindResponse(
+            207,
+            [MakeResource("https://nas.local/dav/music/", isCollection: true)]
+        );
+
+        mock.Setup(c =>
+                c.Propfind(
+                    It.Is<string>(u => u == "https://nas.local/dav/music/"),
+                    It.Is<PropfindParameters>(p => p.ApplyTo == ApplyTo.Propfind.ResourceOnly)
+                )
+            )
+            .ReturnsAsync(existsResponse);
+
+        WebDavStorageDriver driver = BuildDriver(mock);
+
+        List<string> entries = driver
+            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
+            .ToList();
+
+        string dirEntry = entries.Single(e => e == "music");
+        bool exists = driver.DirectoryExists(dirEntry);
+
+        exists
+            .Should()
+            .BeTrue("round-trip from EnumerateFileSystemEntries to DirectoryExists must work");
+    }
+}

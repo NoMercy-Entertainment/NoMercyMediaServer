@@ -32,6 +32,14 @@ public abstract class AbstractEncoderJob : IShouldQueue, IJobStorageInjector
 
     public string InputFile { get; set; } = string.Empty;
 
+    /// <summary>
+    /// When the source file lives on a remote driver (NFS / SMB / S3),
+    /// this holds the driver's <see cref="Ulid"/> so <see cref="Handle"/>
+    /// can acquire a local lease via the correct backend.
+    /// Null means "use the destination folder's driver" (same-driver encode).
+    /// </summary>
+    public Ulid? SourceDriverId { get; set; }
+
     public abstract Task Handle();
 
     public void InjectStorageServices(IServiceProvider serviceProvider)

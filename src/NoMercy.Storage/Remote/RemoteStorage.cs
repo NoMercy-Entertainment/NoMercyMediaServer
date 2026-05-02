@@ -18,6 +18,8 @@ public sealed class RemoteStorage : IStorage
         _driver = driver ?? throw new ArgumentNullException(nameof(driver));
     }
 
+    public IStorageDriver Driver => _driver;
+
     public async Task<byte[]> ReadAsync(string path, CancellationToken ct)
     {
         await using Stream stream = _driver.OpenRead(path);

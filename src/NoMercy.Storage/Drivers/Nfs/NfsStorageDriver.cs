@@ -808,7 +808,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             return;
 
         int checkRc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 existing);
-        if (checkRc == 0 && existing.FileType == LibNfs.NF3DIR)
+        if (checkRc == 0 && existing.FileType == LibNfs.S_IFDIR)
             return;
 
         string parent = System.IO.Path.GetDirectoryName(nfsPath)?.Replace('\\', '/') ?? "/";
@@ -816,11 +816,16 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             EnsureDirectoryRecursive(parent);
 
         int mkRc = LibNfs.MkDir(_nfs, nfsPath);
-        if (
-            mkRc != 0
-            && !LibNfs.GetError(_nfs).Contains("EEXIST", StringComparison.OrdinalIgnoreCase)
-        )
-            throw new IOException($"NFS mkdir failed for '{nfsPath}': {LibNfs.GetError(_nfs)}");
+        if (mkRc != 0)
+        {
+            string mkErr = LibNfs.GetError(_nfs);
+            // NFSv3 reports EEXIST; NFSv4 reports NFS4ERR_EXIST — treat both as success.
+            bool alreadyExists =
+                mkErr.Contains("EEXIST", StringComparison.OrdinalIgnoreCase)
+                || mkErr.Contains("EXIST", StringComparison.OrdinalIgnoreCase);
+            if (!alreadyExists)
+                throw new IOException($"NFS mkdir failed for '{nfsPath}': {mkErr}");
+        }
     }
 
     private void DeleteDirectoryRecursive(string nfsPath)

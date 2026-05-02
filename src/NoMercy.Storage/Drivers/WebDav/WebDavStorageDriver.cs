@@ -361,21 +361,21 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
 
             if (resource.IsCollection)
             {
+                // Strip trailing slash so consumers get a consistent basename via LastIndexOf('/').
+                string relPath = MakeRelative(resource.Uri).TrimEnd('/');
                 if (MatchesPattern(entryName, searchPattern))
-                    yield return resource.Uri;
+                    yield return relPath;
 
                 if (recursive)
                 {
-                    // Recurse using the relative path derived from the URI.
-                    string subRelative = MakeRelative(resource.Uri);
-                    foreach (string child in EnumerateRecursive(subRelative, searchPattern, true))
+                    foreach (string child in EnumerateRecursive(relPath, searchPattern, true))
                         yield return child;
                 }
             }
             else
             {
                 if (MatchesPattern(entryName, searchPattern))
-                    yield return resource.Uri;
+                    yield return MakeRelative(resource.Uri);
             }
         }
     }

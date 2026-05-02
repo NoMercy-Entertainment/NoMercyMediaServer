@@ -105,4 +105,10 @@ public interface IStorage
     Task MoveDirectoryAsync(string from, string to, CancellationToken ct);
 
     void MoveDirectory(string from, string to);
+
+    /// <summary>
+    /// The underlying low-level driver. Used by consumers (e.g. MediaScan)
+    /// that accept an <see cref="IStorageDriver"/> directly.
+    /// </summary>
+    IStorageDriver Driver { get; }
 }

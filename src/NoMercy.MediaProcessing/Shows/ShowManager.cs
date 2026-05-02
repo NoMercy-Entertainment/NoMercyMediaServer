@@ -71,8 +71,7 @@ public class ShowManager(
             if (!folderStorage.Exists(folderName))
                 continue;
 
-            DirectoryInfo folderInfo = new(folderName);
-            folderCreatedAt = folderInfo.CreationTimeUtc;
+            folderCreatedAt = folderStorage.Driver.GetCreationTimeUtc(folderName);
 
             if (folderCreatedAt != DateTime.UtcNow)
                 break;

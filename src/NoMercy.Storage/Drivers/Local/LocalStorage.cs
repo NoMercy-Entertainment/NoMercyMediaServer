@@ -22,6 +22,8 @@ public sealed class LocalStorage : IStorage
         _guard = guard ?? throw new ArgumentNullException(nameof(guard));
     }
 
+    public IStorageDriver Driver => _driver;
+
     public async Task<byte[]> ReadAsync(string path, CancellationToken ct)
     {
         string safe = _guard.Validate(path);
