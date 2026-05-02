@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Storage.Drivers.Nfs.Interop;
 
 namespace NoMercy.Storage.Drivers.Nfs;
@@ -400,38 +402,59 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     /// Returns null when the server is unreachable or returns no exports.
     /// Wraps the blocking libnfs call in a Task with a timeout.
     /// </summary>
-    public static async Task<List<string>?> GetExportsAsync(string server, int timeoutMs = 10_000)
+    public static async Task<List<string>?> GetExportsAsync(
+        string server,
+        int timeoutMs = 10_000,
+        ILogger? logger = null
+    )
     {
+        ILogger log = logger ?? NullLogger.Instance;
         using CancellationTokenSource cts = new(timeoutMs);
 
         try
         {
-            return await Task.Run(() => GetExportsBlocking(server), cts.Token);
+            return await Task.Run(() => GetExportsBlocking(server, log), cts.Token);
         }
         catch (OperationCanceledException)
         {
+            log.LogWarning(
+                "NFS export discovery timed out after {Timeout}ms for {Server}",
+                timeoutMs,
+                server
+            );
             return null;
         }
     }
 
-    private static List<string>? GetExportsBlocking(string server)
+    private static List<string>? GetExportsBlocking(string server, ILogger log)
     {
         // Path 1 — NFSv3 mount protocol (port 111 portmap → mountd).
         // This is the "official" way but requires the server to register
         // mountd with rpcbind. TrueNAS / vanilla NFSv4-only servers often
         // skip this, returning an empty list.
-        List<string>? v3 = TryV3MountGetExports(server);
+        List<string>? v3 = TryV3MountGetExports(server, log);
         if (v3 is { Count: > 0 })
+        {
+            log.LogInformation(
+                "NFS export discovery: v3 mount-protocol returned {Count} exports for {Server}",
+                v3.Count,
+                server
+            );
             return v3;
+        }
+        log.LogInformation(
+            "NFS export discovery: v3 mount-protocol returned no exports for {Server}, falling back to v4 root walk",
+            server
+        );
 
         // Path 2 — NFSv4 pseudo-fs walk. Mount the server's root as v4 and
         // list immediate sub-directories. On TrueNAS/Linux with NFSv4 only,
         // this surfaces real exports (e.g. /mnt/Vault/Media) via the
         // pseudo-filesystem the v4 server exposes from /.
-        return TryV4RootListing(server);
+        return TryV4RootListing(server, log);
     }
 
-    private static List<string>? TryV3MountGetExports(string server)
+    private static List<string>? TryV3MountGetExports(string server, ILogger log)
     {
         IntPtr head = LibNfs.MountGetExports(server);
         if (head == IntPtr.Zero)
@@ -461,13 +484,14 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         return exports.Count > 0 ? exports : null;
     }
 
-    private static List<string>? TryV4RootListing(string server)
+    private static List<string>? TryV4RootListing(string server, ILogger log)
     {
         IntPtr ctx = LibNfs.InitContext();
         if (ctx == IntPtr.Zero)
         {
-            Console.Error.WriteLine(
-                $"[nfs-probe] init_context failed for {server}"
+            log.LogWarning(
+                "NFSv4 export discovery: nfs_init_context returned null for {Server}",
+                server
             );
             return null;
         }
@@ -476,8 +500,10 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         {
             if (LibNfs.SetVersion(ctx, 4) != 0)
             {
-                Console.Error.WriteLine(
-                    $"[nfs-probe] nfs_set_version(4) failed: {LibNfs.GetError(ctx)}"
+                log.LogWarning(
+                    "NFSv4 export discovery: nfs_set_version(4) failed for {Server} — {Error}",
+                    server,
+                    LibNfs.GetError(ctx)
                 );
                 return null;
             }
@@ -486,8 +512,10 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             // path for v4 to land at the server's NFSv4 PUTROOTFH.
             if (LibNfs.Mount(ctx, server, "/") != 0)
             {
-                Console.Error.WriteLine(
-                    $"[nfs-probe] v4 mount({server}, '/') failed: {LibNfs.GetError(ctx)}"
+                log.LogWarning(
+                    "NFSv4 export discovery: nfs_mount({Server}, '/') failed — {Error}",
+                    server,
+                    LibNfs.GetError(ctx)
                 );
                 return null;
             }
@@ -497,16 +525,16 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             // find real mount points (e.g. /mnt/Vault, /mnt/Vault/Media).
             List<string> roots = [];
             CollectV4Children(ctx, "/", maxDepth: 3, roots);
-            Console.Error.WriteLine(
-                $"[nfs-probe] v4 root walk on {server} found {roots.Count} dirs"
+            log.LogInformation(
+                "NFSv4 export discovery: walked v4 root of {Server}, found {Count} dirs",
+                server,
+                roots.Count
             );
             return roots.Count > 0 ? roots : null;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(
-                $"[nfs-probe] v4 root walk threw: {ex.Message}"
-            );
+            log.LogWarning(ex, "NFSv4 export discovery threw for {Server}", server);
             return null;
         }
         finally

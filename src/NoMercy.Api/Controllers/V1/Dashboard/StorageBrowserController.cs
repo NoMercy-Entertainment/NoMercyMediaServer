@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Storage.Drivers.Nfs;
@@ -13,7 +14,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/storage", Order = 10)]
-public class StorageBrowserController : BaseController
+public class StorageBrowserController(ILogger<StorageBrowserController> logger) : BaseController
 {
     private static readonly string[] AllowedTypes = ["local", "nfs", "s3", "r2", "webdav"];
 
@@ -50,7 +51,8 @@ public class StorageBrowserController : BaseController
         try
         {
             List<string>? exports = await NfsStorageDriver.GetExportsAsync(
-                request.Config.Server.Trim()
+                request.Config.Server.Trim(),
+                logger: logger
             );
 
             if (exports is null)
