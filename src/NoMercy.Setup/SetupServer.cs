@@ -610,13 +610,17 @@ public class SetupServer
             deviceData.DeviceCode
         );
 
-        DateTime expiresAt = DateTime.Now.AddSeconds(deviceData.ExpiresIn);
+        DateTime expiresAt = DateTime.UtcNow.AddSeconds(deviceData.ExpiresIn);
         GenericHttpClient authClient = new(Config.AuthBaseUrl);
         authClient.SetDefaultHeaders(Config.UserAgent);
 
-        while (DateTime.Now < expiresAt)
+        // Server-supplied interval — clamp so a hostile or buggy IDP can't
+        // tight-loop us (interval=0) or stall the setup phase (huge value).
+        int intervalSec = Math.Clamp(deviceData.Interval, 1, 30);
+
+        while (DateTime.UtcNow < expiresAt)
         {
-            await Task.Delay(deviceData.Interval * 1000);
+            await Task.Delay(intervalSec * 1000);
 
             try
             {

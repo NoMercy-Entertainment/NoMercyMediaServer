@@ -840,14 +840,18 @@ public class SetupEndpoints
         );
 
         string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
-        DateTime expiresAt = DateTime.Now.AddSeconds(deviceData.ExpiresIn);
+        DateTime expiresAt = DateTime.UtcNow.AddSeconds(deviceData.ExpiresIn);
 
         using SystemHttpClient httpClient = new();
         httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
 
-        while (DateTime.Now < expiresAt)
+        // Clamp the server-supplied interval so a hostile or buggy IDP can't
+        // tight-loop us (interval=0) or stall the setup phase (huge value).
+        int intervalSec = Math.Clamp(deviceData.Interval, 1, 30);
+
+        while (DateTime.UtcNow < expiresAt)
         {
-            await Task.Delay(deviceData.Interval * 1000);
+            await Task.Delay(intervalSec * 1000);
 
             // Stop polling if auth completed via another path (browser login, silent SSO)
             if (_state.IsAuthenticated || _state.CurrentPhase == SetupPhase.Complete)
