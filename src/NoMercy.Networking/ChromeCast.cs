@@ -220,6 +220,17 @@ public class ChromeCast
             string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)
         );
 
+        // Fall back to synthesized receivers — when mDNS is blocked (Windows
+        // firewall / multicast scoping issues), FindReceiverNameByIpAsync
+        // produces a synthetic record keyed by IP. Without this lookup the
+        // Cast launch path always returned "Chromecast not found" even
+        // though a synthetic was available for direct connect.
+        if (
+            receiver == null
+            && _synthesizedReceivers.TryGetValue(name, out ChromecastReceiver? synthetic)
+        )
+            receiver = synthetic;
+
         if (receiver == null)
         {
             Logger.Ping($"Chromecast not found: {name}");
