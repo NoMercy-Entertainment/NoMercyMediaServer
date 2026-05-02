@@ -6,23 +6,32 @@ namespace NoMercy.Api.Controllers.Socket;
 
 public static class LogBroadcaster
 {
+    private static readonly Lock Sync = new();
     private static bool _broadcasting;
     private static IClientMessenger? _clientMessenger;
 
     public static void StartBroadcasting(IClientMessenger clientMessenger)
     {
-        if (_broadcasting)
-            return;
-        _clientMessenger = clientMessenger;
-        _broadcasting = true;
-        Logger.LogEmitted += OnLogEmitted;
+        lock (Sync)
+        {
+            if (_broadcasting)
+                return;
+            _clientMessenger = clientMessenger;
+            _broadcasting = true;
+            Logger.LogEmitted += OnLogEmitted;
+        }
     }
 
     public static void StopBroadcasting()
     {
-        _broadcasting = false;
-        Logger.LogEmitted -= OnLogEmitted;
-        _clientMessenger = null;
+        lock (Sync)
+        {
+            if (!_broadcasting)
+                return;
+            _broadcasting = false;
+            Logger.LogEmitted -= OnLogEmitted;
+            _clientMessenger = null;
+        }
     }
 
     private static void OnLogEmitted(LogEntry entry)

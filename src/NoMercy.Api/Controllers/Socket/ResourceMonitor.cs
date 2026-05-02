@@ -7,27 +7,60 @@ namespace NoMercy.Api.Controllers.Socket;
 
 public static class ResourceMonitor
 {
+    private static readonly Lock Sync = new();
     private static bool _broadcasting;
     private static CancellationTokenSource? _cancellationTokenSource;
     private static IClientMessenger? _clientMessenger;
 
     public static void StartBroadcasting(IClientMessenger clientMessenger)
     {
-        if (_broadcasting)
-            return;
-        _clientMessenger = clientMessenger;
+        lock (Sync)
+        {
+            if (_broadcasting)
+                return;
+            _clientMessenger = clientMessenger;
+            _broadcasting = true;
+            // Replace any leaked CTS from a previous Start/Stop cycle.
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = new();
+        }
+
         Logger.Socket("Starting resource monitoring broadcast");
-        _broadcasting = true;
-        _cancellationTokenSource = new();
-        Task.Run(() => BroadcastLoop(_cancellationTokenSource.Token));
+        CancellationToken token = _cancellationTokenSource.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await BroadcastLoop(token);
+            }
+            catch (Exception ex)
+            {
+                Logger.Socket(
+                    $"Resource monitor broadcast loop crashed: {ex.Message}",
+                    LogEventLevel.Error
+                );
+            }
+        });
     }
 
     public static void StopBroadcasting()
     {
-        Logger.Socket("Stopping resource monitoring broadcast");
-        _broadcasting = false;
+        lock (Sync)
+        {
+            if (!_broadcasting)
+                return;
+            _broadcasting = false;
+        }
 
-        _cancellationTokenSource?.Cancel();
+        Logger.Socket("Stopping resource monitoring broadcast");
+        try
+        {
+            _cancellationTokenSource?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // CTS already disposed — nothing to cancel.
+        }
     }
 
     private static async Task BroadcastLoop(CancellationToken cancellationToken)
@@ -45,15 +78,16 @@ public static class ResourceMonitor
                         resourceData
                     );
 
-                // at least one second between broadcasts
                 int delay = 1000 - (int)(DateTime.Now - time).TotalMilliseconds;
                 if (delay > 0)
                     await Task.Delay(delay, cancellationToken);
             }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
             catch (Exception e)
             {
-                if (e.Message == "A task was canceled.")
-                    return;
                 Logger.Socket(
                     $"Error broadcasting resource data: {e.Message}",
                     LogEventLevel.Error

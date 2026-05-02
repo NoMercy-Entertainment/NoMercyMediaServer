@@ -263,7 +263,7 @@ public class TvShowsController(
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
-            bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+            bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
             // Require Japanese origin to avoid false positives on western co-productions
             if (
@@ -324,7 +324,7 @@ public class TvShowsController(
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
-            bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+            bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
             if (
                 isAnime

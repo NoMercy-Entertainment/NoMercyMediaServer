@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
+﻿using System.Net;
+using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -116,13 +117,16 @@ public class TmdbBaseClient : IDisposable
             return null;
         }
         catch (HttpRequestException ex)
-            when (ex.Message.Contains("404")
-                || ex.Message.Contains("422")
-                || ex.Message.Contains("400")
+            when (ex.StatusCode
+                    is HttpStatusCode.NotFound
+                        or HttpStatusCode.UnprocessableEntity
+                        or HttpStatusCode.BadRequest
             )
         {
-            // Handle common HTTP errors gracefully - return null for not found, unprocessable entity, or bad request
-            Logger.MovieDb($"HTTP error for {newUrl}: {ex.Message}", LogEventLevel.Debug);
+            // Soft-fail on TMDB "no data" status codes via StatusCode (not
+            // ex.Message.Contains) — message-matching false-positives on URLs
+            // that contain "404" etc. as path segments.
+            Logger.MovieDb($"HTTP {ex.StatusCode} for {newUrl}", LogEventLevel.Debug);
             return null;
         }
     }
