@@ -82,7 +82,7 @@ public class HttpSourceFetcher(
 
         logger.LogInformation("Fetching source for task {TaskId} from coordinator", task.TaskId);
 
-        HttpResponseMessage response = await http.SendAsync(
+        using HttpResponseMessage response = await http.SendAsync(
                 request,
                 HttpCompletionOption.ResponseHeadersRead,
                 ct

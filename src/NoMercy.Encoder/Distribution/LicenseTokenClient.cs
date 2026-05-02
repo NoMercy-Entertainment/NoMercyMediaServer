@@ -129,7 +129,9 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
             HttpRequestMessage request = BuildRequest(HttpMethod.Post, TokenEndpoint);
             request.Content = JsonContent.Create(new TokenRequestBody(CertPem: _certPem));
 
-            HttpResponseMessage response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+            using HttpResponseMessage response = await _http
+                .SendAsync(request, ct)
+                .ConfigureAwait(false);
 
             return response.StatusCode switch
             {
@@ -183,7 +185,9 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
             HttpRequestMessage request = BuildRequest(HttpMethod.Post, IntrospectEndpoint);
             request.Content = JsonContent.Create(new IntrospectRequestBody(Token: token));
 
-            HttpResponseMessage response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+            using HttpResponseMessage response = await _http
+                .SendAsync(request, ct)
+                .ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.OK)
             {

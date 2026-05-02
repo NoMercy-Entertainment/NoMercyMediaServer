@@ -249,7 +249,7 @@ public class WorkerSelfRegistrationService(
                 gpus = capabilities.Gpus,
             };
 
-            HttpResponseMessage response = await http.PostAsJsonAsync(
+            using HttpResponseMessage response = await http.PostAsJsonAsync(
                     "api/v1/distribution/workers/register",
                     payload,
                     ct
@@ -290,7 +290,7 @@ public class WorkerSelfRegistrationService(
                 gpu_utilization = 0.0,
             };
 
-            HttpResponseMessage response = await http.PostAsJsonAsync(
+            using HttpResponseMessage response = await http.PostAsJsonAsync(
                     $"api/v1/distribution/workers/{options.WorkerId}/heartbeat",
                     payload,
                     ct

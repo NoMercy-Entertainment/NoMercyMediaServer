@@ -64,7 +64,7 @@ public class HttpTaskProgressSink(
                 duration_seconds = progress.DurationSeconds,
             };
 
-            HttpResponseMessage response = await http.PostAsJsonAsync(
+            using HttpResponseMessage response = await http.PostAsJsonAsync(
                 $"api/v1/distribution/workers/{options.WorkerId}/tasks/{taskId}/progress",
                 payload
             );
