@@ -544,7 +544,7 @@ public static partial class Str
         return (int)Math.Round(hms);
     }
 
-    public static int ToMilliSeconds(this string hms)
+    public static int ToMilliSeconds(this string? hms)
     {
         return hms.ToSeconds() * 1000;
     }
