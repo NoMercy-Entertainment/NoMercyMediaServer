@@ -58,6 +58,7 @@ public class FolderDriverController(
             DriverId = folder.DriverId.ToString(),
             DriverName = folder.Driver?.Name,
             DriverType = folder.Driver?.Type,
+            Path = folder.Path,
         };
 
         return Ok(info);
@@ -65,9 +66,11 @@ public class FolderDriverController(
 
     // -----------------------------------------------------------------------
     // PUT /api/v1/dashboard/folders/{id}/driver
-    // Reassigns the driver instance for a folder.
-    // Body: { "driver_id": "<ulid>" }  — driver_id is required; every folder
-    // must always have a driver.
+    // Reassigns the driver and/or sub-path for a folder.
+    // Body: { "driver_id": "<ulid>", "path": "<sub-path>" }
+    //   driver_id — required; every folder must have a driver.
+    //   path      — optional. null = leave existing path unchanged. ""
+    //               (empty string) means the driver root itself.
     // -----------------------------------------------------------------------
 
     [HttpPut]
@@ -92,6 +95,8 @@ public class FolderDriverController(
             return NotFoundResponse($"Driver '{request.DriverId}' not found.");
 
         folder.DriverId = driverId;
+        if (request.Path is not null)
+            folder.Path = request.Path;
 
         await folderRepository.UpdateFolderAsync(folder);
 
@@ -102,6 +107,7 @@ public class FolderDriverController(
             DriverId = folder.DriverId.ToString(),
             DriverName = folder.Driver?.Name,
             DriverType = folder.Driver?.Type,
+            Path = folder.Path,
         };
 
         return Ok(info);

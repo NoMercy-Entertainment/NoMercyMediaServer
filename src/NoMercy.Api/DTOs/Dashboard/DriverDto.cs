@@ -70,6 +70,14 @@ public record FolderDriverAssignDto
 {
     [JsonProperty("driver_id")]
     public string? DriverId { get; set; }
+
+    /// <summary>
+    /// Optional sub-path within the driver root. When null the existing
+    /// folder path is preserved; when non-null (including empty string)
+    /// it replaces the folder path.
+    /// </summary>
+    [JsonProperty("path")]
+    public string? Path { get; set; }
 }
 
 public record FolderDriverInfoDto
@@ -82,4 +90,7 @@ public record FolderDriverInfoDto
 
     [JsonProperty("driver_type")]
     public string? DriverType { get; set; }
+
+    [JsonProperty("path")]
+    public string Path { get; set; } = string.Empty;
 }
