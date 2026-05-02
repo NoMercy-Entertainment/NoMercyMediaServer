@@ -159,7 +159,7 @@ public class FolderWatcher : IDisposable
     {
         if (_instance is null)
             return;
-        string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
+        string current = e.FullPath + DateTime.UtcNow.ToString("HHmmssddMMyyyy");
 
         if (e.ChangeType != WatcherChangeTypes.Changed || _instance._prevChanged == current)
             return;
@@ -176,7 +176,7 @@ public class FolderWatcher : IDisposable
     {
         if (_instance is null)
             return;
-        string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
+        string current = e.FullPath + DateTime.UtcNow.ToString("HHmmssddMMyyyy");
 
         if (e.ChangeType != WatcherChangeTypes.Created || _instance._prevCreated == current)
             return;
@@ -193,7 +193,7 @@ public class FolderWatcher : IDisposable
     {
         if (_instance is null)
             return;
-        string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
+        string current = e.FullPath + DateTime.UtcNow.ToString("HHmmssddMMyyyy");
 
         if (e.ChangeType != WatcherChangeTypes.Deleted || _instance._prevDeleted == current)
             return;
@@ -210,7 +210,7 @@ public class FolderWatcher : IDisposable
     {
         if (_instance is null)
             return;
-        string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
+        string current = e.FullPath + DateTime.UtcNow.ToString("HHmmssddMMyyyy");
 
         if (e.ChangeType != WatcherChangeTypes.Renamed || _instance._prevRenamed == current)
             return;
