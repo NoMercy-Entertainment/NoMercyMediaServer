@@ -44,37 +44,48 @@ public partial class DriveMonitor
 
         driveMonitor.OnMediaInserted += async (drive, label) =>
         {
-            Logger.Ripper($"Media inserted: {drive} ({label})");
+            try
+            {
+                Logger.Ripper($"Media inserted: {drive} ({label})");
 
-            if (EventBusProvider.IsConfigured)
-                _ = EventBusProvider.Current.PublishAsync(
-                    new DriveStateChangedEvent
-                    {
-                        DriveStateData = new DriveState
+                if (EventBusProvider.IsConfigured)
+                    _ = EventBusProvider.Current.PublishAsync(
+                        new DriveStateChangedEvent
                         {
-                            Open = false,
-                            Path = drive.TrimEnd(Path.DirectorySeparatorChar),
-                            Label = label,
-                            MetaData = null,
-                        },
-                    }
-                );
+                            DriveStateData = new DriveState
+                            {
+                                Open = false,
+                                Path = drive.TrimEnd(Path.DirectorySeparatorChar),
+                                Label = label,
+                                MetaData = null,
+                            },
+                        }
+                    );
 
-            MetaData? metaData = label is not null ? await GetDriveMetadata(drive) : null;
+                MetaData? metaData = label is not null ? await GetDriveMetadata(drive) : null;
 
-            if (EventBusProvider.IsConfigured)
-                _ = EventBusProvider.Current.PublishAsync(
-                    new DriveStateChangedEvent
-                    {
-                        DriveStateData = new DriveState
+                if (EventBusProvider.IsConfigured)
+                    _ = EventBusProvider.Current.PublishAsync(
+                        new DriveStateChangedEvent
                         {
-                            Open = false,
-                            Path = drive.TrimEnd(Path.DirectorySeparatorChar),
-                            Label = label,
-                            MetaData = metaData,
-                        },
-                    }
-                );
+                            DriveStateData = new DriveState
+                            {
+                                Open = false,
+                                Path = drive.TrimEnd(Path.DirectorySeparatorChar),
+                                Label = label,
+                                MetaData = metaData,
+                            },
+                        }
+                    );
+            }
+            catch (Exception ex)
+            {
+                // Async-void event handler: an unhandled throw would walk the
+                // AppDomain unhandled-exception path and tear down the host.
+                // Disc reads can fail randomly (scratched media, drive busy);
+                // log and let the next event drive recovery.
+                Logger.Ripper($"OnMediaInserted handler failed for {drive}: {ex.Message}");
+            }
         };
 
         driveMonitor.OnMediaEjected += drive =>
