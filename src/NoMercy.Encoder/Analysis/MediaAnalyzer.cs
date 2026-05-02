@@ -40,7 +40,23 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage) : IMe
 
     internal static MediaInfo ParseFfprobeJson(string json, string filePath)
     {
-        JObject root = JObject.Parse(json);
+        // ffprobe occasionally produces partial output on a damaged container
+        // (truncated mkv tail, EAGAIN mid-write). Surface that as an
+        // InvalidOperationException with the file path attached so the
+        // caller can log meaningfully instead of dropping a raw
+        // JsonReaderException with no context.
+        JObject root;
+        try
+        {
+            root = JObject.Parse(json);
+        }
+        catch (Newtonsoft.Json.JsonException ex)
+        {
+            throw new InvalidOperationException(
+                $"ffprobe output for '{filePath}' was not valid JSON: {ex.Message}",
+                ex
+            );
+        }
         JArray streams = root["streams"] as JArray ?? [];
         JArray chapters = root["chapters"] as JArray ?? [];
         JObject format = root["format"] as JObject ?? new JObject();
