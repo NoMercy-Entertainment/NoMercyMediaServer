@@ -57,6 +57,10 @@ public static class UsersSeed
             Logger.Setup($"Found {serverUsers.Length} users", LogEventLevel.Verbose);
 
             User[] users = serverUsers
+                // Skip rows whose UserId can't be parsed — a single bad row
+                // from the upstream API used to abort the whole seed via
+                // FormatException, leaving the server with no users at all.
+                .Where(serverUser => Guid.TryParse(serverUser.UserId, out _))
                 .Select(serverUser => new User
                 {
                     Id = Guid.Parse(serverUser.UserId),
