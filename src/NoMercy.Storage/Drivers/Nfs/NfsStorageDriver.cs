@@ -19,11 +19,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     private readonly NfsDriverConfig _config;
     private readonly IntPtr _nfs;
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly ILogger _log;
     private bool _disposed;
 
-    public NfsStorageDriver(NfsDriverConfig config)
+    public NfsStorageDriver(NfsDriverConfig config, ILogger? log = null)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
+        _log = log ?? NullLogger.Instance;
         _nfs = LibNfs.InitContext();
         if (_nfs == IntPtr.Zero)
             throw new InvalidOperationException(
@@ -71,7 +73,18 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         {
             int rc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
+            {
+                _log.LogDebug(
+                    "NFS stat (file) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
+                    nfsPath,
+                    _config.Server,
+                    _config.Export,
+                    _config.Version,
+                    rc,
+                    LibNfs.GetError(_nfs)
+                );
                 return false;
+            }
             return stat.FileType == LibNfs.NF3REG;
         }
         finally
@@ -88,7 +101,18 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         {
             int rc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
+            {
+                _log.LogDebug(
+                    "NFS stat (dir) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
+                    nfsPath,
+                    _config.Server,
+                    _config.Export,
+                    _config.Version,
+                    rc,
+                    LibNfs.GetError(_nfs)
+                );
                 return false;
+            }
             return stat.FileType == LibNfs.NF3DIR;
         }
         finally
@@ -822,7 +846,18 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     {
         int openRc = LibNfs.OpenDir(_nfs, nfsDir, out IntPtr dir);
         if (openRc != 0)
+        {
+            _log.LogWarning(
+                "NFS opendir failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
+                nfsDir,
+                _config.Server,
+                _config.Export,
+                _config.Version,
+                openRc,
+                LibNfs.GetError(_nfs)
+            );
             return;
+        }
 
         try
         {

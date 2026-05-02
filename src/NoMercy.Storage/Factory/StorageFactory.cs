@@ -232,7 +232,7 @@ public sealed class StorageFactory : IStorageFactory
             nfsConfig = nfsConfig with { Export = combinedExport };
         }
 
-        NfsStorageDriver nfsDriver = new(nfsConfig);
+        NfsStorageDriver nfsDriver = new(nfsConfig, _logger);
         return new RemoteStorage(nfsDriver);
     }
 
@@ -340,13 +340,35 @@ public sealed class StorageFactory : IStorageFactory
                 nameof(driverConfigJson)
             );
 
-        // Adapt ICredentialResolver to the Func<string, (string, string)?> the WebDav driver expects.
-        Func<string, (string AccessKey, string SecretKey)?>? resolverFunc = _credentialResolver
-            is null
-            ? null
-            : key => _credentialResolver.Resolve(key);
+        WebDavDriverConfig webDavConfig = WebDavDriverConfig.Parse(
+            driverConfigJson,
+            folderId,
+            _logger
+        );
 
-        WebDavDriverConfig webDavConfig = WebDavDriverConfig.Parse(driverConfigJson, folderId);
+        string? username = null;
+        string? password = null;
+
+        if (_credentialResolver is not null)
+        {
+            (string AccessKey, string SecretKey)? creds = _credentialResolver.Resolve(
+                $"driver:{folderId}"
+            );
+            if (creds is not null)
+            {
+                username = creds.Value.AccessKey;
+                password = creds.Value.SecretKey;
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "No credentials found in store for WebDAV driver (folder {FolderId}); connecting anonymously",
+                    folderId
+                );
+            }
+        }
+
+        webDavConfig = webDavConfig with { Username = username, Password = password };
 
         // Append sub-path to the WebDAV base URL when non-empty.
         if (!string.IsNullOrEmpty(subPath))
@@ -355,7 +377,7 @@ public sealed class StorageFactory : IStorageFactory
             webDavConfig = webDavConfig with { Url = combinedUrl };
         }
 
-        WebDavStorageDriver webDavDriver = new(webDavConfig, resolverFunc);
+        WebDavStorageDriver webDavDriver = new(webDavConfig);
         return new RemoteStorage(webDavDriver);
     }
 
