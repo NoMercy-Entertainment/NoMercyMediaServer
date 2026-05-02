@@ -226,9 +226,7 @@ public record SpecialItemsDto
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
-                ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
-                : null,
+            ColorPalette = IColorPalettes.FromJsonOrNull(i.ColorPalette),
         });
 
         Posters = movie.Posters.Select(i => new ImageDto
@@ -244,15 +242,11 @@ public record SpecialItemsDto
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
-                ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
-                : null,
+            ColorPalette = IColorPalettes.FromJsonOrNull(i.ColorPalette),
         });
 
         MediaType = Config.MovieMediaType;
-        ColorPalette = !string.IsNullOrEmpty(movie.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(movie.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(movie.ColorPalette);
         Poster = movie.Poster;
         Type = Config.MovieMediaType;
         Link = new($"/movie/{movie.Id}", UriKind.Relative);
@@ -335,9 +329,7 @@ public record SpecialItemsDto
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
-                ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
-                : null,
+            ColorPalette = IColorPalettes.FromJsonOrNull(i.ColorPalette),
         });
 
         Posters = tv.Posters.Select(i => new ImageDto
@@ -353,15 +345,11 @@ public record SpecialItemsDto
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
-                ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
-                : null,
+            ColorPalette = IColorPalettes.FromJsonOrNull(i.ColorPalette),
         });
 
         MediaType = "tv";
-        ColorPalette = !string.IsNullOrEmpty(tv.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(tv.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(tv.ColorPalette);
         Poster = tv.Poster;
         Type = "tv";
         Link = new($"/tv/{tv.Id}", UriKind.Relative);

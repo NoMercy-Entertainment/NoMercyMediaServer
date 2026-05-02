@@ -16,10 +16,7 @@ public class ColorPalettes
     [NotMapped]
     public IColorPalettes? ColorPalette
     {
-        get =>
-            _colorPalette != string.Empty
-                ? JsonConvert.DeserializeObject<IColorPalettes>(_colorPalette)
-                : null;
+        get => IColorPalettes.FromJsonOrNull(_colorPalette);
         set => _colorPalette = JsonConvert.SerializeObject(value);
     }
 }

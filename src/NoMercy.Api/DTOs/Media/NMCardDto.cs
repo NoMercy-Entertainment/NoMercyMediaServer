@@ -255,9 +255,7 @@ public class NmCardDto
         NumberOfItems = 1;
         HaveItems = movie.VideoFileCount;
 
-        ColorPalette = !string.IsNullOrEmpty(movie.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(movie.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(movie.ColorPalette);
 
         if (movie.CertificationRating != null)
         {
@@ -289,9 +287,7 @@ public class NmCardDto
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.EpisodesWithVideo;
 
-        ColorPalette = !string.IsNullOrEmpty(tv.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(tv.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(tv.ColorPalette);
 
         if (tv.CertificationRating != null)
         {
@@ -354,9 +350,7 @@ public class NmCardDto
         CreatedAt = dto.CreatedAt;
         HaveItems = dto.HaveMovies + dto.HaveEpisodes;
 
-        ColorPalette = !string.IsNullOrEmpty(dto.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(dto.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(dto.ColorPalette);
 
         if (dto.CertificationRating != null)
         {
@@ -590,9 +584,7 @@ public class NmCardDto
         NumberOfItems = 1;
         HaveItems = movie.VideoFileCount;
 
-        ColorPalette = !string.IsNullOrEmpty(movie.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(movie.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(movie.ColorPalette);
 
         if (movie.CertificationRating != null)
         {
@@ -623,9 +615,7 @@ public class NmCardDto
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.EpisodesWithVideo;
 
-        ColorPalette = !string.IsNullOrEmpty(tv.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(tv.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(tv.ColorPalette);
 
         if (tv.CertificationRating != null)
         {

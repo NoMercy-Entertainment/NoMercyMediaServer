@@ -292,9 +292,7 @@ public record SpecialResponseItemDto
         Type = "specials";
         MediaType = "specials";
         Link = new($"/specials/{Id}", UriKind.Relative);
-        ColorPalette = !string.IsNullOrEmpty(detail.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(detail.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(detail.ColorPalette);
         Backdrops = backdrops;
         Posters = posters;
         Cast = cast;

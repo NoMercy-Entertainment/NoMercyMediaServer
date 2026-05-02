@@ -21,4 +21,24 @@ public class IColorPalettes
 
     [JsonProperty("cover", NullValueHandling = NullValueHandling.Ignore)]
     public PaletteColors? Cover { get; set; }
+
+    /// <summary>
+    /// Forgiving deserializer for the persisted color-palette JSON. Returns
+    /// null for empty/missing/malformed strings so a corrupted DB row never
+    /// takes a card render down. Use this everywhere instead of calling
+    /// <see cref="JsonConvert.DeserializeObject{T}(string)"/> directly.
+    /// </summary>
+    public static IColorPalettes? FromJsonOrNull(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return null;
+        try
+        {
+            return JsonConvert.DeserializeObject<IColorPalettes>(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 }

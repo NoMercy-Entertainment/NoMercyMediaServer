@@ -86,9 +86,7 @@ public record AlbumsResponseItemDto
         Cover = !string.IsNullOrEmpty(album.Cover)
             ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
             : null;
-        ColorPalette = !string.IsNullOrEmpty(album.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(album.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(album.ColorPalette);
         if (ColorPalette is not null && !string.IsNullOrEmpty(album.BackgroundImageColorPalette))
         {
             IColorPalettes? bgPalette = JsonConvert.DeserializeObject<IColorPalettes>(

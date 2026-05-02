@@ -171,9 +171,7 @@ public record GenreRowItemDto
         Tags = [];
         Videos = [];
 
-        ColorPalette = !string.IsNullOrEmpty(movie.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(movie.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(movie.ColorPalette);
 
         if (movie.CertificationRating != null)
         {
@@ -208,9 +206,7 @@ public record GenreRowItemDto
         Tags = [];
         Videos = [];
 
-        ColorPalette = !string.IsNullOrEmpty(tv.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(tv.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(tv.ColorPalette);
 
         if (tv.CertificationRating != null)
         {
