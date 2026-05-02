@@ -360,7 +360,19 @@ public class VideoPlaylistResponseDto
         string baseFolder = $"/{videoFile.Share}{videoFile.Folder}";
 
         string subtitles = videoFile.Subtitles ?? "[]";
-        List<Subtitle>? subtitleList = JsonConvert.DeserializeObject<List<Subtitle>>(subtitles);
+        // Subtitles is a string column on VideoFile that can drift to
+        // malformed JSON across schema migrations or partial writes. Treat
+        // a parse failure as 'no subtitle tracks' rather than crashing the
+        // playlist response.
+        List<Subtitle>? subtitleList;
+        try
+        {
+            subtitleList = JsonConvert.DeserializeObject<List<Subtitle>>(subtitles);
+        }
+        catch (JsonException)
+        {
+            subtitleList = null;
+        }
 
         List<IVideoTrack> textTracks = [];
 
