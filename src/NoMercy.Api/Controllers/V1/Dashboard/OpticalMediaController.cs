@@ -6,9 +6,11 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.MediaSources.OpticalMedia.Dto;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Metadata;
+using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
 using DriveMonitor = NoMercy.MediaSources.OpticalMedia.DriveMonitor;
 
@@ -22,7 +24,8 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 public class OpticalMediaController(
     DiscSourceFactory discSourceFactory,
     IDiscMetadataResolver metadataResolver,
-    IDriveMonitor driveMonitor
+    IDriveMonitor driveMonitor,
+    IDiscRipper discRipper
 ) : BaseController
 {
     [HttpGet("drives")]
@@ -190,9 +193,7 @@ public class OpticalMediaController(
 
         IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
         if (source is null)
-            return BadRequestResponse(
-                $"No reader registered for disc type {drive.DiscType} (yet)"
-            );
+            return BadRequestResponse($"No reader registered for disc type {drive.DiscType} (yet)");
 
         DiscInfo info = await source.ProbeAsync(drive, ct);
         MetadataMatch[] candidates = await metadataResolver.ResolveAsync(info, ct);
@@ -206,6 +207,90 @@ public class OpticalMediaController(
                 disc_type = drive.DiscType.ToString().ToLowerInvariant(),
                 disc = info,
                 candidates,
+            }
+        );
+    }
+
+    /// <summary>
+    /// Starts a stream-copy rip of the requested titles into MKV intermediates.
+    /// Each rip emits a <c>DiscRipResult</c> the caller can inspect; failures
+    /// surface AACS / BD+ / read-error classifications via <c>Error</c>. The
+    /// resulting MKVs land in <c>{TranscodePath}/ripper/{Drive}/title_{N}.mkv</c>;
+    /// downstream encoding is wired up by the caller (a <c>VideoEncodeJob</c>
+    /// per output, in Phase E.2).
+    /// </summary>
+    [HttpPost("{drivePath}/rip")]
+    public async Task<IActionResult> RipDisc(
+        string drivePath,
+        [FromBody] RipRequest request,
+        CancellationToken ct
+    )
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to rip optical drives");
+
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
+
+        if (request.SelectedTitleIndices.Length == 0)
+            return BadRequestResponse("At least one title must be selected");
+
+        DiscDrive? drive = driveMonitor
+            .GetDrives()
+            .FirstOrDefault(d =>
+                d.Path.TrimEnd(Path.DirectorySeparatorChar)
+                    .Equals(
+                        drivePath.TrimEnd(Path.DirectorySeparatorChar),
+                        StringComparison.OrdinalIgnoreCase
+                    )
+            );
+
+        if (drive is null || !drive.HasDisc)
+            return NotFoundResponse($"No disc loaded in {drivePath}");
+
+        // Resolve the rip output dir under the per-drive ripper folder. Phase
+        // A.9 will move this to IStorage; for now use AppFiles to mirror the
+        // existing legacy DriveMonitor.PlayDvd / PlayCd output path.
+        string sanitisedDrive = drive
+            .Path.TrimEnd(Path.DirectorySeparatorChar)
+            .Replace(":", "")
+            .Replace(Path.DirectorySeparatorChar, '_');
+        string outputDir = Path.Combine(AppFiles.TranscodePath, "ripper", sanitisedDrive);
+        Directory.CreateDirectory(outputDir);
+
+        // Spawn the rip in the background — the caller polls progress via
+        // SignalR (Phase E.3) or the encoding history endpoints once
+        // VideoEncodeJobs are enqueued in Phase E.2.
+        _ = Task.Run(
+            async () =>
+            {
+                try
+                {
+                    DiscRipResult[] results = await discRipper.RipAsync(
+                        request,
+                        outputDir,
+                        CancellationToken.None
+                    );
+                    // TODO Phase E.2: enqueue a VideoEncodeJob per successful result
+                    // using request.LibraryId / FolderId / EncodingProfileId.
+                }
+                catch (Exception ex)
+                {
+                    // The DiscRipper logs internally — keep the task body
+                    // resilient so a rip crash doesn't take down the host.
+                    _ = ex;
+                }
+            },
+            ct
+        );
+
+        return Accepted(
+            new
+            {
+                drive_path = drive.Path,
+                output_dir = outputDir,
+                titles_queued = request.SelectedTitleIndices.Length,
+                mode = request.Mode.ToString(),
             }
         );
     }
