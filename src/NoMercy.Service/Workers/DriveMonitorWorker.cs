@@ -1,6 +1,10 @@
-using NoMercy.Encoder.DiscRipping;
 using NoMercy.Events;
 using NoMercy.Events.DriveMonitor;
+using NoMercy.OpticalMedia.Drives;
+using NoMercy.OpticalMedia.Metadata;
+using NoMercy.OpticalMedia.Rip;
+using NoMercy.OpticalMedia.Sources;
+using NoMercy.OpticalMedia.Sources.Bluray;
 
 namespace NoMercy.Service.Workers;
 

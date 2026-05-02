@@ -8,7 +8,6 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
-using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
@@ -369,16 +368,9 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ILogger<RemoteWorkerDispatcher>>()
         ));
 
-        // Disc ripping — DriveMonitor is Singleton because its polling loop
-        // holds state (last-seen drives) across MonitorAsync() enumerations.
-        // DriveLockRegistry is Singleton so all callers share the same set of
-        // per-drive locks; it prevents two simultaneous rips on the same
-        // physical drive regardless of how many DiscRipper transient instances
-        // are active concurrently.
-        services.AddTransient<IDiscScanner, DiscScanner>();
-        services.AddSingleton<IDriveMonitor, DriveMonitor>();
-        services.AddSingleton<DriveLockRegistry>();
-        services.AddTransient<IDiscRipper, DiscRipper>();
+        // Disc ripping registrations moved to NoMercy.OpticalMedia/Composition/
+        // ServiceCollectionExtensions.AddNoMercyOpticalMedia(); call that from
+        // the host alongside AddNoMercyEncoder().
 
         // V3 event-bus subscribers — registered as singletons so the activator
         // can resolve them once at start-up (their constructors subscribe to

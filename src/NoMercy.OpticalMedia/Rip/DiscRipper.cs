@@ -2,9 +2,12 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.OpticalMedia.Drives;
+using NoMercy.OpticalMedia.Sources;
+using NoMercy.OpticalMedia.Sources.Bluray;
 using NoMercy.Storage;
 
-namespace NoMercy.Encoder.DiscRipping;
+namespace NoMercy.OpticalMedia.Rip;
 
 /// <summary>
 /// Rips optical-disc titles to intermediate MKV files on disk. Each title

@@ -157,7 +157,7 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
             .FirstOrDefaultAsync(f => f.Id == MovieFolderId);
 
         Assert.NotNull(folder);
-        Assert.Equal("local", folder!.DriverType);
+        Assert.Equal("local", folder!.Driver?.Type);
     }
 
     [Fact]

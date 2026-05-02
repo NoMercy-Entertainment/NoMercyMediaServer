@@ -1,6 +1,7 @@
 using NoMercy.Encoder.Analysis;
+using NoMercy.NmSystem.Dto;
 
-namespace NoMercy.Encoder.DiscRipping;
+namespace NoMercy.OpticalMedia.Sources;
 
 public record DiscInfo(
     OpticalDiscType Type,

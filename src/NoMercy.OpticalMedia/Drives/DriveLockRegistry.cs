@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace NoMercy.Encoder.DiscRipping;
+namespace NoMercy.OpticalMedia.Drives;
 
 /// <summary>
 /// Singleton registry that enforces one active rip per physical drive at a

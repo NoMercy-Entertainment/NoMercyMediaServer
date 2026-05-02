@@ -1,6 +1,7 @@
 using NoMercy.Encoder.Profiles;
+using NoMercy.OpticalMedia.Metadata;
 
-namespace NoMercy.Encoder.DiscRipping;
+namespace NoMercy.OpticalMedia.Sources;
 
 public enum RipMode
 {

@@ -1,4 +1,4 @@
-namespace NoMercy.Encoder.DiscRipping;
+namespace NoMercy.OpticalMedia.Metadata;
 
 public enum MediaType
 {

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 
-namespace NoMercy.Encoder.DiscRipping;
+namespace NoMercy.OpticalMedia.Capabilities;
 
 /// <summary>
 /// One-shot probe executed at startup to confirm the bundled nomercy-ffmpeg

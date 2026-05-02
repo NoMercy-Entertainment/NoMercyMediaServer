@@ -1,6 +1,6 @@
 using NoMercy.Encoder.Errors;
 
-namespace NoMercy.Encoder.DiscRipping;
+namespace NoMercy.OpticalMedia.Drives;
 
 /// <summary>
 /// Thrown by <see cref="DiscRipper"/> when a rip is requested for a drive

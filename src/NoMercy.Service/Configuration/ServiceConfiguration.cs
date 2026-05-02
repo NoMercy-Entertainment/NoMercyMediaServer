@@ -21,7 +21,6 @@ using NoMercy.Data.Resolvers;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Composition;
-using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Startup;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
@@ -50,6 +49,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.OpticalMedia.Composition;
 using NoMercy.Plugins;
 using NoMercy.Providers.Helpers;
 using NoMercy.Queue.MediaServer;
@@ -426,10 +426,9 @@ public static class ServiceConfiguration
 
         services.AddSingleton<StorageMonitor>();
         services.AddSingleton<ChromeCast>();
-        services.AddSingleton<DriveMonitor>();
 
-        // Encoder-layer optical drive monitor + SignalR bridge
-        services.AddSingleton<IDriveMonitor, Encoder.DiscRipping.DriveMonitor>();
+        // Optical-disc detection + scanning + ripping (NoMercy.OpticalMedia)
+        services.AddNoMercyOpticalMedia();
         services.AddHostedService<DriveMonitorWorker>();
 
         services.AddWallpaperService();

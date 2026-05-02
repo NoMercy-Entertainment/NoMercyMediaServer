@@ -1,4 +1,6 @@
-namespace NoMercy.Encoder.DiscRipping;
+using NoMercy.OpticalMedia.Sources;
+
+namespace NoMercy.OpticalMedia.Rip;
 
 /// <summary>
 /// Rips one or more titles from an optical disc to intermediate MKV files

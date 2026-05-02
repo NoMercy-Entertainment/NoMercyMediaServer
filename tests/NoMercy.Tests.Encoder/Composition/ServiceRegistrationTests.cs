@@ -13,6 +13,7 @@ using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Startup;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Encoder.Composition;
 

@@ -348,7 +348,8 @@ public class LiveFfmpegRunnerTests
             SampleRate: 48000,
             BitRateKbps: 3000,
             Language: "eng",
-            IsDefault: true
+            IsDefault: true,
+            IsForced: false
         );
         return new(
             FilePath: "/media/test.mkv",

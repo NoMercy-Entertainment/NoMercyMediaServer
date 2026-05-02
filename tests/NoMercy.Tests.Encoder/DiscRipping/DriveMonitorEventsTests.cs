@@ -1,5 +1,11 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using NoMercy.Encoder.DiscRipping;
+using NoMercy.NmSystem.Dto;
+using NoMercy.OpticalMedia.Drives;
+using NoMercy.OpticalMedia.Drives.Backends;
+using NoMercy.OpticalMedia.Metadata;
+using NoMercy.OpticalMedia.Rip;
+using NoMercy.OpticalMedia.Sources;
+using NoMercy.OpticalMedia.Sources.Bluray;
 
 namespace NoMercy.Tests.Encoder.DiscRipping;
 
@@ -95,7 +101,7 @@ public class DriveMonitorEventsTests
     [Fact]
     public void GetDrives_AllReturnedDrivesHaveNonEmptyPath()
     {
-        DriveMonitor monitor = new(NullLogger<DriveMonitor>.Instance);
+        DriveMonitor monitor = new(new PollingDriveBackend());
 
         IReadOnlyList<DiscDrive> drives = monitor.GetDrives();
 
@@ -108,7 +114,7 @@ public class DriveMonitorEventsTests
     [Fact]
     public void GetDrives_DiscTypeIsNoneWhenNoDisc()
     {
-        DriveMonitor monitor = new(NullLogger<DriveMonitor>.Instance);
+        DriveMonitor monitor = new(new PollingDriveBackend());
 
         IReadOnlyList<DiscDrive> drives = monitor.GetDrives();
 

@@ -4,10 +4,16 @@ using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
-using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.OpticalMedia.Drives;
+using NoMercy.OpticalMedia.Metadata;
+using NoMercy.OpticalMedia.Rip;
+using NoMercy.OpticalMedia.Sources;
+using NoMercy.OpticalMedia.Sources.Bluray;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.Storage;
 

@@ -1,4 +1,6 @@
-namespace NoMercy.Encoder.DiscRipping;
+using NoMercy.OpticalMedia.Sources;
+
+namespace NoMercy.OpticalMedia.Metadata;
 
 public interface IDiscMetadataResolver
 {

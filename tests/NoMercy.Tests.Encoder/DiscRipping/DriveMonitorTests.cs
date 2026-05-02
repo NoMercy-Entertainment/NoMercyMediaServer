@@ -1,5 +1,10 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using NoMercy.Encoder.DiscRipping;
+using NoMercy.OpticalMedia.Drives;
+using NoMercy.OpticalMedia.Drives.Backends;
+using NoMercy.OpticalMedia.Metadata;
+using NoMercy.OpticalMedia.Rip;
+using NoMercy.OpticalMedia.Sources;
+using NoMercy.OpticalMedia.Sources.Bluray;
 
 namespace NoMercy.Tests.Encoder.DiscRipping;
 
@@ -15,7 +20,7 @@ public class DriveMonitorTests
     [Fact]
     public void GetDrives_ReturnsOpticalDrivesOnly()
     {
-        DriveMonitor monitor = new(NullLogger<DriveMonitor>.Instance);
+        DriveMonitor monitor = new(new PollingDriveBackend());
 
         IReadOnlyList<DiscDrive> drives = monitor.GetDrives();
 
@@ -31,7 +36,7 @@ public class DriveMonitorTests
     [Fact]
     public async Task MonitorAsync_CancellationEndsEnumeration()
     {
-        DriveMonitor monitor = new(NullLogger<DriveMonitor>.Instance);
+        DriveMonitor monitor = new(new PollingDriveBackend());
 
         using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(100));
         List<DriveEvent> events = [];
@@ -49,7 +54,7 @@ public class DriveMonitorTests
     [Fact]
     public async Task MonitorAsync_AlreadyCancelledToken_ExitsImmediately()
     {
-        DriveMonitor monitor = new(NullLogger<DriveMonitor>.Instance);
+        DriveMonitor monitor = new(new PollingDriveBackend());
 
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();

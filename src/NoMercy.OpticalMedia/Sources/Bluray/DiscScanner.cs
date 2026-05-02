@@ -6,8 +6,9 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.NmSystem.Dto;
 
-namespace NoMercy.Encoder.DiscRipping;
+namespace NoMercy.OpticalMedia.Sources.Bluray;
 
 /// <summary>
 /// Enumerates titles on a Blu-ray or DVD by invoking FFprobe against the

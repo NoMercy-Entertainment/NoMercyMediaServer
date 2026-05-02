@@ -1,8 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using NoMercy.Encoder.Composition;
-using NoMercy.Encoder.DiscRipping;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.OpticalMedia.Drives;
+using NoMercy.OpticalMedia.Metadata;
+using NoMercy.OpticalMedia.Rip;
+using NoMercy.OpticalMedia.Sources;
+using NoMercy.OpticalMedia.Sources.Bluray;
 using NoMercy.Storage;
 
 namespace NoMercy.Tests.Encoder.DiscRipping;
