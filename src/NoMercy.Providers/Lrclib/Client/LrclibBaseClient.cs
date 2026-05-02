@@ -1,3 +1,4 @@
+using System.Net;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -9,8 +10,10 @@ namespace NoMercy.Providers.Lrclib.Client;
 
 public class LrclibBaseClient : IDisposable
 {
-    private readonly Uri _baseUrl = new("https://lrclib.net/api/get");
+    private const int MaxRetries = 10;
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
 
+    private readonly Uri _baseUrl = new("https://lrclib.net/api/get");
     private readonly HttpClient _client;
 
     public LrclibBaseClient()
@@ -44,7 +47,6 @@ public class LrclibBaseClient : IDisposable
         where T : class
     {
         query ??= new();
-
         string newUrl = url.ToQueryUri(query);
 
         if (CacheController.Read(newUrl, out T? result))
@@ -52,33 +54,34 @@ public class LrclibBaseClient : IDisposable
 
         Logger.MusicBrainz(_baseUrl + newUrl, LogEventLevel.Verbose);
 
-        T? data;
-
-        string? response;
         try
         {
-            response = await GetQueue()
+            string response = await GetQueue()
                 .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
             await CacheController.Write(newUrl, response);
-
-            data = response.FromJson<T>();
+            return response.FromJson<T>();
         }
-        catch (Exception e)
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            if (e.Message.Contains("503"))
-            {
-                Task.Delay(5000).Wait();
-                return await Get<T>(url, query, priority, retry + 1);
-            }
-
-            if (retry == 10)
-                throw;
-
-            Task.Delay(5000).Wait();
+            // Lrclib returns 404 for tracks with no lyrics — treat as "no
+            // result" so callers can fall through to the next provider
+            // instead of catching exceptions.
+            return null;
+        }
+        catch (HttpRequestException ex) when (retry < MaxRetries)
+        {
+            Logger.MusicBrainz(
+                $"Lrclib {ex.StatusCode} retry {retry + 1}/{MaxRetries} for {newUrl}",
+                LogEventLevel.Debug
+            );
+            await Task.Delay(RetryDelay);
             return await Get<T>(url, query, priority, retry + 1);
         }
-
-        return data ?? throw new($"Failed to parse {response}");
+        catch (TaskCanceledException) when (retry < MaxRetries)
+        {
+            await Task.Delay(RetryDelay);
+            return await Get<T>(url, query, priority, retry + 1);
+        }
     }
 
     public void Dispose()

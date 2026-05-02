@@ -102,7 +102,8 @@ public class TvdbBaseClient : IDisposable
             loginClient.BaseAddress ??= _baseUrl;
 
             using JsonContent content = JsonContent.Create(new { apikey = ApiInfo.TvdbKey });
-            using HttpRequestMessage request = new(HttpMethod.Post, "login") { Content = content };
+            using HttpRequestMessage request = new(HttpMethod.Post, "login");
+            request.Content = content;
             using HttpResponseMessage response = await loginClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)

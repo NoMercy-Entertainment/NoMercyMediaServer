@@ -39,30 +39,29 @@ public class OpenSubtitlesBaseClient : IDisposable
         where T1 : class
         where T2 : class
     {
-        StringContent content = new(query.ToXml(), Encoding.UTF8, "text/xml");
-
-        Logger.OpenSubs(content.ReadAsStringAsync().Result);
+        string xml = query.ToXml();
+        Logger.OpenSubs(xml);
 
         string newUrl = QueryHelpers.AddQueryString(
             url,
-            new Dictionary<string, string?> { { "query", query.ToXml() } }
+            new Dictionary<string, string?> { { "query", xml } }
         );
-        // if (CacheController.Read(newUrl, out T2? result, true)) return result;
 
-        string response = await GetQueue()
-            .Enqueue(
-                () => _client.PostAsync(url, content).Result.Content.ReadAsStringAsync(),
-                newUrl,
-                priority
-            );
+        string response = await GetQueue().Enqueue(() => SendAsync(url, xml), newUrl, priority);
 
         await CacheController.Write(newUrl, response);
 
         Logger.OpenSubs(response);
 
-        T2? data = response.FromXml<T2>();
+        return response.FromXml<T2>();
+    }
 
-        return data;
+    private async Task<string> SendAsync(string url, string xml)
+    {
+        using StringContent content = new(xml, Encoding.UTF8, "text/xml");
+        using HttpResponseMessage response = await _client.PostAsync(url, content);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync();
     }
 
     public void Dispose()

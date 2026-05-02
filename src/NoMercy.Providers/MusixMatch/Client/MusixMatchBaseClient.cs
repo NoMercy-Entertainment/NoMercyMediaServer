@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
+﻿using System.Net;
+using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
@@ -62,14 +63,26 @@ public class MusixMatchBaseClient : IDisposable
 
         Logger.MusixMatch(_baseUrl + newUrl, LogEventLevel.Verbose);
 
-        string response = await GetQueue()
-            .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+        try
+        {
+            string response = await GetQueue()
+                .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
-        await CacheController.Write(newUrl, response);
-
-        T? data = response.FromJson<T>();
-
-        return data;
+            await CacheController.Write(newUrl, response);
+            return response.FromJson<T>();
+        }
+        catch (HttpRequestException ex)
+            when (ex.StatusCode
+                    is HttpStatusCode.NotFound
+                        or HttpStatusCode.BadRequest
+                        or HttpStatusCode.Unauthorized
+            )
+        {
+            // MusixMatch returns 401 when its rolling user-token rotates;
+            // soft-fail so callers can fall through to other lyric sources.
+            Logger.MusixMatch($"HTTP {ex.StatusCode} for {newUrl}", LogEventLevel.Debug);
+            return null;
+        }
     }
 
     public void Dispose()

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
+﻿using System.Net;
+using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
@@ -57,14 +58,20 @@ public class CoverArtBaseClient : IDisposable
 
         Logger.CoverArt(_baseUrl + newUrl, LogEventLevel.Verbose);
 
-        string response = await GetQueue()
-            .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+        try
+        {
+            string response = await GetQueue()
+                .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
-        await CacheController.Write(newUrl, response);
-
-        T? data = response.FromJson<T>();
-
-        return data;
+            await CacheController.Write(newUrl, response);
+            return response.FromJson<T>();
+        }
+        catch (HttpRequestException ex)
+            when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
+        {
+            // CoverArtArchive 404s when no front cover exists — soft-fail.
+            return null;
+        }
     }
 
     public void Dispose()
