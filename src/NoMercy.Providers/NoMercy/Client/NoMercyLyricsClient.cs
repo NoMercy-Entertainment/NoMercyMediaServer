@@ -12,8 +12,11 @@ public static partial class NoMercyLyricsClient
 {
     public static async Task<dynamic?> SearchLyrics(Track track)
     {
-        MusixmatchClient musixmatchClient = new();
-        LrclibClient lrclibClient = new();
+        // `using` so an exception mid-search doesn't leak the HttpClient
+        // wrappers — manual Dispose at the end of the method only ran on the
+        // happy path.
+        using MusixmatchClient musixmatchClient = new();
+        using LrclibClient lrclibClient = new();
         dynamic? lyric = null;
         int recursiveCount = 0;
         string artistNames = string.Join(
@@ -139,8 +142,6 @@ public static partial class NoMercyLyricsClient
                 break;
             recursiveCount += 1;
         }
-        musixmatchClient.Dispose();
-        lrclibClient.Dispose();
         return lyric;
     }
 
