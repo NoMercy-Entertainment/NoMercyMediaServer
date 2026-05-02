@@ -251,6 +251,19 @@ public class OpticalMediaController(
         if (drive is null || !drive.HasDisc)
             return NotFoundResponse($"No disc loaded in {drivePath}");
 
+        // Fail fast if the disc is DRM-locked the host can't read. The
+        // background rip task would otherwise spin up ffmpeg and fail with
+        // an opaque "stream copy 0 bytes written" — much worse UX.
+        IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
+        if (source is not null)
+        {
+            DiscInfo precheck = await source.ProbeAsync(drive, ct);
+            if (precheck.Protection is not null)
+                return BadRequestResponse(
+                    $"Cannot rip — disc is {precheck.Protection.Kind}-protected: {precheck.Protection.Message}"
+                );
+        }
+
         // Resolve the rip output dir under the per-drive ripper folder. Phase
         // A.9 will move this to IStorage; for now use AppFiles to mirror the
         // existing legacy DriveMonitor.PlayDvd / PlayCd output path.
