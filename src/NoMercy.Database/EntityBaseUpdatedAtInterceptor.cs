@@ -22,7 +22,9 @@ public class EntityBaseUpdatedAtInterceptor : SaveChangesInterceptor
 
         foreach (Timestamps entry in entries)
         {
-            entry.UpdatedAt = DateTime.Now;
+            // CreatedAt comes from SQLite's CURRENT_TIMESTAMP (UTC). Mixing
+            // DateTime.Now here introduced a TZ drift on every save.
+            entry.UpdatedAt = DateTime.UtcNow;
         }
 
         return await base.SavingChangesAsync(eventData, result, cancellationToken);
