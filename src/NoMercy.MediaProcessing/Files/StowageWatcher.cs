@@ -173,9 +173,31 @@ internal class StowageWatcher : IDisposable
         );
     }
 
+    private bool _disposed;
+
     public void Dispose()
     {
-        _cts?.Cancel();
-        _runTask?.Wait();
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        try
+        {
+            _cts?.Cancel();
+        }
+        catch (ObjectDisposedException) { }
+
+        try
+        {
+            _runTask?.Wait(TimeSpan.FromSeconds(5));
+        }
+        catch (AggregateException ae)
+            when (ae.InnerExceptions.All(e => e is OperationCanceledException))
+        {
+            // Expected when cancellation cooperatively stopped the loop.
+        }
+
+        _cts?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

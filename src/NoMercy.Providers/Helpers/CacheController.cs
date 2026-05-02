@@ -167,27 +167,41 @@ public static class CacheController
 
     internal static void PruneCache(string cachePath, long maxSizeBytes)
     {
-        DirectoryInfo cacheDir = new(cachePath);
-        if (!cacheDir.Exists)
+        // Cache lives behind IStorage so remote drivers (S3/R2/SMB/NFS) hit
+        // the same path-validation seam as everything else. Don't reach
+        // through to System.IO.* here — that would silently bypass the
+        // facade if the cache path ever moved off local disk.
+        IStorage storage = Storage;
+        IReadOnlyList<StorageEntry> entries;
+        try
+        {
+            entries = storage.List(cachePath, pattern: null, recursive: false);
+        }
+        catch (DirectoryNotFoundException)
+        {
             return;
+        }
 
-        FileInfo[] files = cacheDir.GetFiles().OrderBy(f => f.CreationTime).ToArray();
+        StorageEntry[] files = entries
+            .Where(e => !e.IsDirectory)
+            .OrderBy(e => e.LastModified)
+            .ToArray();
 
-        long totalSize = files.Sum(f => f.Length);
+        long totalSize = files.Sum(f => f.SizeBytes);
 
-        foreach (FileInfo file in files)
+        foreach (StorageEntry file in files)
         {
             if (totalSize <= maxSizeBytes)
                 break;
 
             try
             {
-                totalSize -= file.Length;
-                file.Delete();
+                totalSize -= file.SizeBytes;
+                storage.Delete(file.Path);
             }
             catch (Exception)
             {
-                // File may be locked by another operation
+                // File may be locked or already removed; skip.
             }
         }
     }
