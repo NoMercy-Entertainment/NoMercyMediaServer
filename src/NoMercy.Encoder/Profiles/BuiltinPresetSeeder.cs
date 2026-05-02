@@ -32,6 +32,26 @@ public sealed class BuiltinPresetSeeder(
 {
     public async Task StartAsync(CancellationToken ct)
     {
+        try
+        {
+            await SeedAsync(ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Shutdown — fall through.
+        }
+        catch (Exception ex)
+        {
+            // Don't crash the host on a seeder failure: missing presets just
+            // means the dashboard list starts empty, the user can still ship
+            // their own profile. .NET 6+ defaults to StopHost on a hosted
+            // service throw, which is the wrong tradeoff for cosmetic seed.
+            logger.LogError(ex, "BuiltinPresetSeeder failed; continuing without preset upserts");
+        }
+    }
+
+    private async Task SeedAsync(CancellationToken ct)
+    {
         await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
         MediaContext context = scope.ServiceProvider.GetRequiredService<MediaContext>();
 
