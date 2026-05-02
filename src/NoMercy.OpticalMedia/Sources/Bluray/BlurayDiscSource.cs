@@ -42,10 +42,18 @@ public sealed partial class BlurayDiscSource(
         List<(int Index, TimeSpan Duration)> playlists = ParsePlaylists(result.StdErr);
         if (playlists.Count == 0)
         {
-            logger.LogWarning(
-                "Bluray probe yielded no playlists for {Drive}: {Stderr}",
+            // Loud warning at INFO level so we always see it in the log when
+            // a probe came back empty — separate from the per-message format
+            // so existing log-grep filters don't swallow it.
+            logger.LogInformation(
+                "Bluray probe parsed 0 playlists for {Drive} | exit={Exit} stdout_len={StdOutLen} stderr_len={StdErrLen} stderr_head={StdErrHead}",
                 drive.Path,
-                TrimStderr(result.StdErr)
+                result.ExitCode,
+                result.StdOut?.Length ?? 0,
+                result.StdErr?.Length ?? 0,
+                (result.StdErr ?? "").Length > 600
+                    ? result.StdErr![..600]
+                    : (result.StdErr ?? "(no stderr)")
             );
             return new DiscInfo(OpticalDiscType.BluRay, drive.Label, [], null, TimeSpan.Zero);
         }
@@ -214,7 +222,10 @@ public sealed partial class BlurayDiscSource(
     {
         if (mountPath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
             return mountPath;
-        return $"bluray:{mountPath.TrimEnd('\\', '/')}";
+        // libbluray needs a trailing separator on Windows: "bluray:D:/" works,
+        // "bluray:D:" never enumerates playlists.
+        string trimmed = mountPath.TrimEnd('\\', '/');
+        return $"bluray:{trimmed}/";
     }
 
     private static string TrimStderr(string stdErr)
