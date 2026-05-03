@@ -50,7 +50,19 @@ public static class LogReader
 
         try
         {
-            await using Stream fileStream = storage.OpenRead(filePath);
+            // Serilog holds log.txt open with FileShare.ReadWrite|Delete (we
+            // pass shared:true to the file sink). storage.OpenRead defaults
+            // to FileShare.Read, which the OS rejects against Serilog's live
+            // writer — every reload of the dashboard's log view hit
+            // 'The process cannot access the file ... because it is being
+            // used by another process'. Open the log file directly with
+            // ReadWrite|Delete so co-existing readers/writers don't collide.
+            await using FileStream fileStream = new(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete
+            );
             using StreamReader reader = new(fileStream);
 
             while (await reader.ReadLineAsync() is { } line)
