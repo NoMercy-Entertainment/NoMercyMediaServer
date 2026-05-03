@@ -331,13 +331,14 @@ public partial class FileManager(
 
     private async Task StoreVideoItem(MediaFile item)
     {
-        Folder? folder = Folders.FirstOrDefault(folder => item.Path.Contains(folder.Path));
+        string itemPath = item.Path.Replace('\\', '/');
+        Folder? folder = Folders.FirstOrDefault(f =>
+            itemPath.Contains(f.Path.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase)
+        );
         if (folder == null)
             return;
 
         IStorage storage = StorageFor(folder);
-
-        string itemPath = item.Path.Replace('\\', '/');
         string fileName = "/" + Path.GetFileName(itemPath);
         string hostFolder = itemPath.Replace(fileName, "");
         string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
