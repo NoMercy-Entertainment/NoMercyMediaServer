@@ -6,6 +6,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem;
@@ -373,9 +374,13 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     {
                         if (isVideoFile || isAudioFile)
                         {
-                            ffprobe = await FfProbe.CreateAsync(file, cancellationToken);
+                            ffprobe = await FfProbe.CreateAsync(_driver, file, cancellationToken);
                             if (isAudioFile)
-                                tagFile = TagFile.Create(file);
+                            {
+                                // TagFile needs random access — only safe on local FS.
+                                if (_driver is LocalStorageDriver)
+                                    tagFile = TagFile.Create(file);
+                            }
                         }
                     }
                     catch (Exception e)

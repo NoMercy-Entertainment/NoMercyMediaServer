@@ -6,6 +6,8 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem;
@@ -20,6 +22,34 @@ public static class FfProbe
         try
         {
             string json = await RunFfprobeWithRetry(file, ct);
+            if (string.IsNullOrEmpty(json))
+                return new() { ErrorData = ["ffprobe returned empty output"] };
+
+            FfProbeRawResult? raw = json.FromJson<FfProbeRawResult>();
+            if (raw is null)
+                return new() { ErrorData = ["Failed to parse ffprobe output"] };
+
+            return BuildFfProbeData(file, raw);
+        }
+        catch (Exception ex)
+        {
+            Logger.App($"FfProbe failed for: {file}: {ex.Message}", LogEventLevel.Warning);
+            return new() { ErrorData = [ex.Message] };
+        }
+    }
+
+    public static async Task<FfProbeData> CreateAsync(
+        IStorageDriver driver,
+        string file,
+        CancellationToken ct = default
+    )
+    {
+        if (driver is LocalStorageDriver)
+            return await CreateAsync(file, ct);
+
+        try
+        {
+            string json = await RunFfprobeStdinWithRetry(driver, file, ct);
             if (string.IsNullOrEmpty(json))
                 return new() { ErrorData = ["ffprobe returned empty output"] };
 
@@ -242,6 +272,156 @@ public static class FfProbe
         {
             FfProbeThrottle.Release();
             process?.Dispose();
+        }
+    }
+
+    private static async Task<string> RunFfprobeStdinWithRetry(
+        IStorageDriver driver,
+        string file,
+        CancellationToken ct
+    )
+    {
+        for (int attempt = 1; attempt <= MaxRetries; attempt++)
+        {
+            try
+            {
+                return await RunFfprobeStdin(driver, file, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.App(
+                    $"ffprobe stdin timed out for {file} (attempt {attempt}/{MaxRetries})",
+                    LogEventLevel.Warning
+                );
+                if (attempt < MaxRetries)
+                    await Task.Delay(500, ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.App(
+                    $"ffprobe stdin failed for {file}: {ex.Message} (attempt {attempt}/{MaxRetries})",
+                    LogEventLevel.Warning
+                );
+                if (attempt < MaxRetries)
+                {
+                    int delayMs = IsResourceExhaustionError(ex) ? 2000 * attempt : 500;
+                    await Task.Delay(delayMs, ct);
+                }
+            }
+        }
+
+        return string.Empty;
+    }
+
+    // Pipes the file's contents through ffprobe stdin. ffprobe reads only what
+    // it needs to populate format/streams (typically a few MB of header) and
+    // then exits — the stdin pump aborts on the broken pipe rather than
+    // streaming the whole multi-GB file across NFS.
+    private static async Task<string> RunFfprobeStdin(
+        IStorageDriver driver,
+        string file,
+        CancellationToken ct
+    )
+    {
+        bool acquired = await FfProbeThrottle.WaitAsync(TimeSpan.FromSeconds(60), ct);
+        if (!acquired)
+            throw new TimeoutException("Throttle timeout waiting for ffprobe slot");
+
+        Process? process = null;
+        try
+        {
+            using CancellationTokenSource timeoutCts = new(ExecutionTimeoutMs);
+            using CancellationTokenSource linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+            process = new();
+            process.StartInfo = new()
+            {
+                WindowStyle = ProcessWindowStyle.Hidden,
+                FileName = AppFiles.FfProbePath,
+                Arguments =
+                    "-hide_banner -v quiet -show_format -show_streams -print_format json -i pipe:0",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            process.Start();
+
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(linkedCts.Token);
+            Task pumpTask = PumpStdinAsync(driver, file, process, linkedCts.Token);
+
+            string stdOut = await stdoutTask;
+
+            try
+            {
+                await pumpTask;
+            }
+            catch
+            {
+                // Pump aborts on broken pipe / process exit — expected.
+            }
+
+            bool exited = process.WaitForExit(ExecutionTimeoutMs);
+            if (!exited)
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch (InvalidOperationException) { }
+                throw new OperationCanceledException("ffprobe did not exit within timeout");
+            }
+
+            return stdOut;
+        }
+        finally
+        {
+            FfProbeThrottle.Release();
+            process?.Dispose();
+        }
+    }
+
+    private static async Task PumpStdinAsync(
+        IStorageDriver driver,
+        string file,
+        Process process,
+        CancellationToken ct
+    )
+    {
+        const int BufferSize = 256 * 1024;
+        byte[] buffer = new byte[BufferSize];
+
+        await using Stream src = driver.OpenReadIsolated(file);
+        Stream stdin = process.StandardInput.BaseStream;
+
+        try
+        {
+            while (!ct.IsCancellationRequested && !process.HasExited)
+            {
+                int read = await src.ReadAsync(buffer.AsMemory(0, BufferSize), ct);
+                if (read == 0)
+                    break;
+                await stdin.WriteAsync(buffer.AsMemory(0, read), ct);
+            }
+            await stdin.FlushAsync(ct);
+        }
+        catch (IOException)
+        {
+            // ffprobe closed its stdin — it has what it needs.
+        }
+        finally
+        {
+            try
+            {
+                process.StandardInput.Close();
+            }
+            catch
+            {
+                // ignored
+            }
         }
     }
 }
