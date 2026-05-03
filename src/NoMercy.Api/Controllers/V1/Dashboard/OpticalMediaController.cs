@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -11,6 +12,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.OpticalMedia.Drives;
+using NoMercy.OpticalMedia.Live;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
@@ -28,7 +30,8 @@ public class OpticalMediaController(
     IDiscMetadataResolver metadataResolver,
     IDriveMonitor driveMonitor,
     IDiscRipper discRipper,
-    JobDispatcher jobDispatcher
+    JobDispatcher jobDispatcher,
+    ILiveDiscSession liveDiscSession
 ) : BaseController
 {
     [HttpGet("drives")]
@@ -274,6 +277,13 @@ public class OpticalMediaController(
         string outputDir = Path.Combine(AppFiles.TranscodePath, "ripper", sanitisedDrive);
         Directory.CreateDirectory(outputDir);
 
+        // Inject the resolved disc type so DiscRipper can pick the right
+        // ffmpeg input shape — the body the client sent rarely includes one.
+        RipRequest enriched = request with
+        {
+            DiscType = drive.DiscType,
+        };
+
         // Spawn the rip in the background — the caller polls progress via
         // SignalR (Phase E.3) or the encoding history endpoints once each
         // ripped MKV is enqueued as a VideoEncodeJob below.
@@ -283,7 +293,7 @@ public class OpticalMediaController(
                 try
                 {
                     DiscRipResult[] results = await discRipper.RipAsync(
-                        request,
+                        enriched,
                         outputDir,
                         CancellationToken.None
                     );
@@ -291,7 +301,7 @@ public class OpticalMediaController(
                     // Only chain into the encoder for the default rip-and-encode
                     // mode. RipToRaw leaves the MKV in the ripper folder for
                     // the user to grab manually.
-                    if (request.Mode != RipMode.RipAndEncode)
+                    if (enriched.Mode != RipMode.RipAndEncode)
                         return;
 
                     foreach (DiscRipResult res in results.Where(r => r.Success))
@@ -300,8 +310,8 @@ public class OpticalMediaController(
                         // path — pass sourceDriverId=null so JobDispatcher
                         // routes it through the default local IStorage.
                         jobDispatcher.DispatchJob<VideoEncodeJob>(
-                            request.LibraryId,
-                            request.FolderId,
+                            enriched.LibraryId,
+                            enriched.FolderId,
                             id: $"disc:{drive.Path.TrimEnd('\\')}:{res.TitleIndex}",
                             inputFile: res.OutputPath,
                             sourceDriverId: null

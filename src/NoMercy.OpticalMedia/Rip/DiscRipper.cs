@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.OpticalMedia.Sources.Bluray;
@@ -87,18 +88,34 @@ public class DiscRipper(
     {
         string outputPath = Path.Combine(outputDirectory, $"title_{titleIndex:D2}.mkv");
 
+        OpticalDiscType discType = ResolveDiscType(request);
+        string inputUrl = BuildInputUrl(request.DrivePath, discType, titleIndex);
+
         List<string> args = ["-y", "-hide_banner"];
 
-        // libbluray/libdvdread support selecting a specific playlist/title
-        // via the -playlist flag on the bluray: protocol.
-        if (request.DrivePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
+        // Per-disc-type input flags. Bluray uses the bluray: protocol with
+        // -playlist; DVD needs -f dvdvideo + -title since libdvdread doesn't
+        // accept paths via the protocol layer; CD reads via libcdio.
+        switch (discType)
         {
-            args.Add("-playlist");
-            args.Add(titleIndex.ToString());
+            case OpticalDiscType.BluRay:
+                args.Add("-playlist");
+                args.Add(titleIndex.ToString());
+                break;
+            case OpticalDiscType.Dvd:
+                args.Add("-f");
+                args.Add("dvdvideo");
+                args.Add("-title");
+                args.Add(titleIndex.ToString());
+                break;
+            case OpticalDiscType.Cd:
+                args.Add("-f");
+                args.Add("libcdio");
+                break;
         }
 
         args.Add("-i");
-        args.Add(request.DrivePath);
+        args.Add(inputUrl);
 
         // Map only the audio / subtitle streams the user opted into.
         args.Add("-map");
@@ -161,6 +178,17 @@ public class DiscRipper(
                 DiscScanner.ClassifyBluRayStderr(request.DrivePath, result.StdErr);
             }
 
+            string stderrTail =
+                string.IsNullOrEmpty(result.StdErr) ? "(no stderr)"
+                : result.StdErr.Length > 800 ? result.StdErr[^800..]
+                : result.StdErr;
+            logger.LogInformation(
+                "ffmpeg rip failed exit={Exit} args=[{Args}] stderr_tail={Stderr}",
+                result.ExitCode,
+                string.Join(" ", args),
+                stderrTail
+            );
+
             return new(
                 TitleIndex: titleIndex,
                 OutputPath: outputPath,
@@ -189,6 +217,47 @@ public class DiscRipper(
             OutputSizeBytes: size,
             Error: null
         );
+    }
+
+    /// <summary>
+    /// Resolves the disc type the rip should use. Prefers the
+    /// <see cref="RipRequest.DiscType"/> the caller populated; falls back
+    /// to sniffing the drive-path prefix for raw API calls that don't
+    /// supply it.
+    /// </summary>
+    private static OpticalDiscType ResolveDiscType(RipRequest request)
+    {
+        if (request.DiscType != OpticalDiscType.None)
+            return request.DiscType;
+        if (request.DrivePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
+            return OpticalDiscType.BluRay;
+        if (request.DrivePath.StartsWith("dvd:", StringComparison.OrdinalIgnoreCase))
+            return OpticalDiscType.Dvd;
+        return OpticalDiscType.None;
+    }
+
+    /// <summary>
+    /// Builds the ffmpeg <c>-i</c> URL for the disc + title. Bluray expects
+    /// <c>bluray:&lt;mount&gt;/</c> with a trailing separator; DVD points at
+    /// the VIDEO_TS folder so libdvdread's filesystem fallback works on
+    /// virtual / USB drives that don't expose SCSI MMC; CD passes the raw
+    /// device path to libcdio.
+    /// </summary>
+    private static string BuildInputUrl(string drivePath, OpticalDiscType discType, int titleIndex)
+    {
+        if (drivePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
+            return drivePath;
+        if (drivePath.StartsWith("dvd:", StringComparison.OrdinalIgnoreCase))
+            return drivePath;
+
+        string trimmed = drivePath.TrimEnd('\\', '/');
+        return discType switch
+        {
+            OpticalDiscType.BluRay => $"bluray:{trimmed}/",
+            OpticalDiscType.Dvd => $"{trimmed}/VIDEO_TS/",
+            OpticalDiscType.Cd => drivePath,
+            _ => drivePath,
+        };
     }
 
     /// <summary>
