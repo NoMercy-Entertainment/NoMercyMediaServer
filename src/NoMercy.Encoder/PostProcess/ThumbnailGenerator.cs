@@ -46,7 +46,14 @@ public class ThumbnailGenerator(IStorage storage) : IThumbnailGenerator
     {
         string thumbDir = Path.Combine(outputDirectory, $"thumbs_{plan.Width}");
         (int gridWidth, int gridHeight) = ComputeGrid(imageCount);
-        string spriteFile = Path.Combine(outputDirectory, $"thumbs_{plan.Width}.webp");
+        // Sprite filename must match what WriteVttCueFileAsync embeds in the
+        // VTT cues (thumbs_WIDTHxHEIGHT.webp). Without the height suffix the
+        // sprite lands on disk as `thumbs_320.webp` while the player follows
+        // the VTT and asks for `thumbs_320x178.webp` — 404 every hover.
+        string spriteFile = Path.Combine(
+            outputDirectory,
+            $"thumbs_{plan.Width}x{plan.Height}.webp"
+        );
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
             .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
