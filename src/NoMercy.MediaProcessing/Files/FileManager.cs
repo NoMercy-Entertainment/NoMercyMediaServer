@@ -599,7 +599,7 @@ public partial class FileManager(
             if (!match.Success)
                 continue;
 
-            string path = storage.CombinePath(hostFolder, subtitleEntry.Path);
+            string path = subtitleEntry.Path;
 
             // Reject binary subtitle formats we can't stream as HLS sidecars; accept
             // every text format (vtt, ass, srt, ssa, sub, idx, webvtt).
@@ -698,7 +698,7 @@ public partial class FileManager(
         IReadOnlyList<StorageEntry> fontFiles = storage.List(fontFolder, null, recursive: false);
         foreach (StorageEntry fontEntry in fontFiles.Where(e => !e.IsDirectory))
         {
-            string path = storage.CombinePath(hostFolder, fontEntry.Path);
+            string path = fontEntry.Path;
             fonts.Add(
                 new()
                 {
