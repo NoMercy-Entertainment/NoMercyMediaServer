@@ -68,51 +68,40 @@ public partial class FileManager(
                 Files.AddRange(files);
         }
 
-        // Wrap delete + insert in a transaction so old records are preserved if insert fails
-        await using IDbContextTransaction transaction =
-            await fileRepository.BeginTransactionAsync();
-        try
+        // Delete old records first as a single committed step, then insert each
+        // new record in its own SaveChangesAsync. A single wrapping transaction
+        // around 80 NFS/S3 reads holds the SQLite writer lock for the entire
+        // scan and hides every insert until commit, so partial progress is
+        // invisible and the writer blocks every other workload.
+        if (Filter is null)
         {
-            // Only clear all existing records during a full rescan (no filter).
-            // When a filter is set (e.g. after encoding a single episode), we just upsert
-            // the new files without deleting the rest of the show's records.
-            if (Filter is null)
-            {
-                switch (library.Type)
-                {
-                    case Config.MovieMediaType:
-                        await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
-                        break;
-                    case Config.TvMediaType:
-                    case Config.AnimeMediaType:
-                        await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
-                        break;
-                }
-            }
-
             switch (library.Type)
             {
                 case Config.MovieMediaType:
-                    await StoreMovie();
+                    await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
                     break;
                 case Config.TvMediaType:
                 case Config.AnimeMediaType:
-                    await StoreTvShow();
-                    break;
-                case Config.MusicMediaType:
-                    await StoreMusic();
-                    break;
-                default:
-                    Logger.App("Unknown library type");
+                    await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
                     break;
             }
-
-            await transaction.CommitAsync();
         }
-        catch
+
+        switch (library.Type)
         {
-            await transaction.RollbackAsync();
-            throw;
+            case Config.MovieMediaType:
+                await StoreMovie();
+                break;
+            case Config.TvMediaType:
+            case Config.AnimeMediaType:
+                await StoreTvShow();
+                break;
+            case Config.MusicMediaType:
+                await StoreMusic();
+                break;
+            default:
+                Logger.App("Unknown library type");
+                break;
         }
 
         // Publish refresh events only after successful commit
@@ -314,8 +303,14 @@ public partial class FileManager(
         if (items.Count == 0)
             return;
 
+        int idx = 0;
         foreach (MediaFile item in items)
         {
+            idx++;
+            Logger.App(
+                $"[StoreVideoItem] {idx}/{items.Count} {Path.GetFileName(item.Path)}",
+                LogEventLevel.Information
+            );
             await StoreVideoItem(item);
         }
 

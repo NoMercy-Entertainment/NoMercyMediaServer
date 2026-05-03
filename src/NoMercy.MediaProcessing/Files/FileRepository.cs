@@ -55,7 +55,10 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         {
             _context.VideoFiles.Add(videoFile);
             await _context.SaveChangesAsync();
-            Logger.App($"[StoreVideoFile] inserted {videoFile.Filename}", LogEventLevel.Verbose);
+            Logger.App(
+                $"[StoreVideoFile] inserted {videoFile.Filename}",
+                LogEventLevel.Information
+            );
             return;
         }
 
@@ -74,7 +77,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         existing.MetadataId = videoFile.MetadataId;
 
         await _context.SaveChangesAsync();
-        Logger.App($"[StoreVideoFile] updated {videoFile.Filename}", LogEventLevel.Verbose);
+        Logger.App($"[StoreVideoFile] updated {videoFile.Filename}", LogEventLevel.Information);
     }
 
     public async Task<Ulid> StoreMetadata(Metadata metadata)
@@ -89,7 +92,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             await _context.SaveChangesAsync();
             Logger.App(
                 $"[StoreMetadata] inserted {metadata.Filename} (id={metadata.Id})",
-                LogEventLevel.Verbose
+                LogEventLevel.Information
             );
             return metadata.Id;
         }
@@ -113,7 +116,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         await _context.SaveChangesAsync();
         Logger.App(
             $"[StoreMetadata] updated {metadata.Filename} (id={existing.Id})",
-            LogEventLevel.Verbose
+            LogEventLevel.Information
         );
         return existing.Id;
     }
