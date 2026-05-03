@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 using NoMercy.Events;
@@ -214,6 +215,54 @@ public class ChromeCast
         return client;
     }
 
+    // Sharpcaster's HeartbeatChannel raises Elapsed as async-void on a
+    // System.Timers.Timer. When the cast TV drops, SslStream.WriteAsync
+    // throws, the unhandled exception escapes via Task.ThrowAsync onto a
+    // ThreadPool worker, and the runtime terminates the process. We disable
+    // the heartbeat via reflection — the Cast TV will time the connection
+    // out on its own; our next send attempt fails with a catchable
+    // exception instead of killing the host.
+    private static void DisableSharpcasterHeartbeat(ChromecastClient client)
+    {
+        try
+        {
+            object? channels = client
+                .GetType()
+                .GetProperty("Channels", BindingFlags.Public | BindingFlags.Instance)
+                ?.GetValue(client);
+
+            if (channels is not System.Collections.IEnumerable enumerable)
+                return;
+
+            foreach (object? channel in enumerable)
+            {
+                if (
+                    channel is null
+                    || !channel.GetType().Name.Contains("Heartbeat", StringComparison.Ordinal)
+                )
+                    continue;
+
+                foreach (
+                    FieldInfo field in channel
+                        .GetType()
+                        .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+                )
+                {
+                    object? value = field.GetValue(channel);
+                    if (value is System.Timers.Timer timer)
+                    {
+                        timer.Stop();
+                        timer.Dispose();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Ping($"DisableSharpcasterHeartbeat failed: {ex.Message}");
+        }
+    }
+
     private static async Task<ChromecastClient?> GetOrCreateClientAsync(string name)
     {
         ChromecastReceiver? receiver = _chromecastReceivers.FirstOrDefault(x =>
@@ -246,6 +295,10 @@ public class ChromeCast
         ChromecastClient newClient = BuildClient(name);
         Logger.Ping($"Connecting to chromecast: {name}");
         await newClient.ConnectChromecast(receiver);
+
+        // Disable Sharpcaster's internal heartbeat after Connect — the timer
+        // is only constructed once Connect spins up the channels.
+        DisableSharpcasterHeartbeat(newClient);
 
         // Another thread may have won the race; prefer theirs and dispose ours.
         if (ClientPool.TryAdd(name, newClient))
