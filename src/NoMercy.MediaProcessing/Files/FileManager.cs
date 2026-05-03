@@ -852,9 +852,20 @@ public partial class FileManager(
         List<IVideoTrack> tracks = [];
 
         IReadOnlyList<StorageEntry> files = storage.List(hostFolder, null, recursive: false);
+
+        // Index every thumb/sprite candidate first so we can pair a VTT with
+        // a same-stem WEBP. Stale VTT files from a previous re-encode (e.g.
+        // thumbs_320x178.vtt) used to be registered alongside the live sprite
+        // (thumbs_320x180.webp), and the player followed the VTT's cues to a
+        // non-existent webp — 404 every hover.
+        Dictionary<string, string> spriteByStem = new(StringComparer.OrdinalIgnoreCase);
+        List<(string Name, string Stem)> vttCandidates = [];
+
         foreach (StorageEntry entry in files.Where(e => !e.IsDirectory))
         {
             string name = Path.GetFileName(entry.Path);
+            string stem = Path.GetFileNameWithoutExtension(name);
+
             if (name.StartsWith("chapter"))
                 tracks.Add(new() { File = "/" + name, Kind = "chapters" });
             else if (name.StartsWith("skipper"))
@@ -866,14 +877,26 @@ public partial class FileManager(
                     || name.StartsWith("thumb")
                 ) && entry.Path.EndsWith("vtt")
             )
-                tracks.Add(new() { File = "/" + name, Kind = "thumbnails" });
+                vttCandidates.Add((name, stem));
             else if (
                 (name.StartsWith("sprite") || name.StartsWith("thumb"))
                 && entry.Path.EndsWith("webp")
             )
+            {
+                spriteByStem[stem] = name;
                 tracks.Add(new() { File = "/" + name, Kind = "sprite" });
+            }
             else if (name.StartsWith("fonts"))
                 tracks.Add(new() { File = "/" + name, Kind = "fonts" });
+        }
+
+        // Only register VTTs whose basename has a matching sprite WEBP on
+        // disk. Drops stale VTTs left behind when the sprite was re-rendered
+        // at a different dimension and the old VTT wasn't cleaned up.
+        foreach ((string name, string stem) in vttCandidates)
+        {
+            if (spriteByStem.ContainsKey(stem))
+                tracks.Add(new() { File = "/" + name, Kind = "thumbnails" });
         }
 
         return tracks;
