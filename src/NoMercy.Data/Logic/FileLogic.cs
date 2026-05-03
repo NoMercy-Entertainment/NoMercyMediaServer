@@ -144,10 +144,12 @@ public partial class FileLogic(
 
         string fileName = "/" + Path.GetFileName(item.Path);
         string hostFolder = item.Path.Replace(fileName, "");
+        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
+        int showIdx = string.IsNullOrEmpty(showName)
+            ? -1
+            : item.Path.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
         string baseFolder =
-            "/"
-            + (Movie?.Folder ?? Show?.Folder).OrEmpty().Replace("/", "")
-            + item.Path.Replace(folder.Path, "").Replace(fileName, "");
+            showIdx >= 0 ? ("/" + item.Path[showIdx..]).Replace(fileName, "") : hostFolder;
 
         string subtitleFolder = hostFolder.TrimEnd('/') + "/subtitles";
 
