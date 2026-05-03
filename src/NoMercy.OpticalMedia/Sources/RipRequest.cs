@@ -39,7 +39,26 @@ public record RipRequest(
     OpticalDiscType DiscType = OpticalDiscType.None
 );
 
-public record CustomMetadata(string Title, int? Year, MediaType Type, string? PosterUrl);
+public record CustomMetadata(
+    string Title,
+    int? Year,
+    MediaType Type,
+    string? PosterUrl,
+    /// <summary>
+    /// For TV-show rips: season number to file the ripped titles under.
+    /// Null for movies (or when the user is OK with the rip going into a
+    /// "specials" / Season 00 bucket).
+    /// </summary>
+    int? SeasonNumber = null,
+    /// <summary>
+    /// For TV-show rips with multiple selected titles: the episode number
+    /// of the first title in <see cref="RipRequest.SelectedTitleIndices"/>.
+    /// Subsequent titles get +1, +2 etc. Disc rips usually map title order
+    /// → episode order (especially anime / season-discs), so the user just
+    /// supplies the start.
+    /// </summary>
+    int? EpisodeStartNumber = null
+);
 
 public record AudioTrackSelection(int StreamIndex, bool Include);
 

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -5,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Events;
+using NoMercy.Events.FileWatcher;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -29,7 +32,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/optical")]
-public class OpticalMediaController(
+public partial class OpticalMediaController(
     DiscSourceFactory discSourceFactory,
     IDiscMetadataResolver metadataResolver,
     IDriveMonitor driveMonitor,
@@ -275,8 +278,11 @@ public class OpticalMediaController(
 
         // Validate the destination — when the user wants RipAndEncode the
         // controller has to know which folder + driver to upload the rip
-        // into so the encoder can find the file via its driver.
+        // into so the encoder can find the file via its driver. We also
+        // need the library to know the media type (movie / tv / anime / music)
+        // so we can compose a TMDB-style path the FileWatcher recognises.
         Folder? targetFolder = null;
+        Library? targetLibrary = null;
         if (request.Mode == RipMode.RipAndEncode)
         {
             await using MediaContext lookupContext = new();
@@ -287,6 +293,11 @@ public class OpticalMediaController(
                     $"FolderId {request.FolderId} does not match any library folder. "
                         + "RipAndEncode needs a real folder so the rip output lands somewhere "
                         + "the encoder can read it via the folder's driver."
+                );
+            targetLibrary = await libraryRepository.GetLibraryByIdWithFolders(request.LibraryId);
+            if (targetLibrary is null)
+                return BadRequestResponse(
+                    $"LibraryId {request.LibraryId} does not match any library."
                 );
         }
 
@@ -307,10 +318,13 @@ public class OpticalMediaController(
             DiscType = drive.DiscType,
         };
 
-        // Spawn the rip in the background — the caller polls progress via
-        // SignalR (Phase E.3) or the encoding history endpoints once each
-        // ripped MKV is enqueued as a VideoEncodeJob below.
+        // Spawn the rip in the background. After each title rips successfully
+        // we upload to the chosen folder via its driver, then publish a
+        // FileCreatedEvent so the existing FileWatcher → MediaScan → AutoEncode
+        // pipeline picks the new file up exactly as it would for a file
+        // dropped into the library through any other channel.
         Folder? folderForBackground = targetFolder;
+        Library? libraryForBackground = targetLibrary;
         _ = Task.Run(
             async () =>
             {
@@ -322,30 +336,39 @@ public class OpticalMediaController(
                         CancellationToken.None
                     );
 
-                    // Only chain into the encoder for the default rip-and-encode
-                    // mode. RipToRaw leaves the MKV in the ripper folder for
-                    // the user to grab manually.
-                    if (enriched.Mode != RipMode.RipAndEncode || folderForBackground is null)
+                    if (
+                        enriched.Mode != RipMode.RipAndEncode
+                        || folderForBackground is null
+                        || libraryForBackground is null
+                    )
                         return;
 
-                    // The folder's IStorage handles whatever driver the user
-                    // chose — local FS, NFS, S3, R2, WebDAV. Each successful
-                    // rip uploads via that storage and dispatches the encode
-                    // with the driver-relative path the encoder pipeline
-                    // already understands (mirrors AutoEncodeSubscriber).
                     IStorage folderStorage = storageFactory.For(
                         folderForBackground.Id,
                         folderForBackground.DriverId,
                         folderForBackground.Path
                     );
 
-                    foreach (DiscRipResult res in results.Where(r => r.Success))
+                    DiscRipResult[] successes = results.Where(r => r.Success).ToArray();
+                    int batchIndex = 0;
+                    HashSet<string> notifiedFolders = new(StringComparer.OrdinalIgnoreCase);
+                    foreach (DiscRipResult res in successes)
                     {
-                        string folderRelative = $"disc-rips/title_{res.TitleIndex:D2}.mkv";
-                        await folderStorage.CreateDirectoryAsync(
-                            "disc-rips",
-                            CancellationToken.None
+                        string folderRelative = BuildOutputPath(
+                            enriched,
+                            libraryForBackground.Type,
+                            res.TitleIndex,
+                            batchIndex
                         );
+                        batchIndex++;
+
+                        // Make sure parent dirs exist on the destination driver.
+                        string parentRelative = ParentRelative(folderRelative);
+                        if (!string.IsNullOrEmpty(parentRelative))
+                            await folderStorage.CreateDirectoryAsync(
+                                parentRelative,
+                                CancellationToken.None
+                            );
 
                         await using (
                             FileStream src = new(res.OutputPath, FileMode.Open, FileAccess.Read)
@@ -361,25 +384,29 @@ public class OpticalMediaController(
                             await src.CopyToAsync(dst, CancellationToken.None);
                         }
 
-                        // The encoder pipeline expects driver-relative paths
-                        // (everything below the driver root, including the
-                        // folder's own sub-path). Folder.Path is already that
-                        // sub-path — combine the two with a forward slash to
-                        // match the format that AutoEncodeSubscriber uses.
-                        string driverRelativeInput = string.IsNullOrEmpty(folderForBackground.Path)
-                            ? folderRelative
-                            : $"{folderForBackground.Path.TrimEnd('/')}/{folderRelative}";
-
-                        jobDispatcher.DispatchJob<VideoEncodeJob>(
-                            enriched.LibraryId,
-                            folderForBackground.Id,
-                            id: $"disc-{Ulid.NewUlid()}",
-                            inputFile: driverRelativeInput,
-                            sourceDriverId: folderForBackground.DriverId
+                        // Wake the FileWatcher pipeline. We use the
+                        // driver-mounted (host-visible) folder path so
+                        // MediaScan can crawl it the same way it would for
+                        // a regular file-system event. For local-driver
+                        // folders that's the absolute path; for NFS / S3
+                        // it's the driver's mount root + sub-path.
+                        string watcherFolderHost = ResolveHostPath(
+                            folderStorage,
+                            ParentRelative(folderRelative)
                         );
+                        if (EventBusProvider.IsConfigured && notifiedFolders.Add(watcherFolderHost))
+                        {
+                            await EventBusProvider.Current.PublishAsync(
+                                new FileCreatedEvent
+                                {
+                                    FolderPath = watcherFolderHost,
+                                    LibraryId = libraryForBackground.Id,
+                                    LibraryType = libraryForBackground.Type,
+                                }
+                            );
+                        }
 
-                        // Local rip cache served its purpose — drop it. The
-                        // encoder reads from the folder's driver now.
+                        // Local rip cache served its purpose — drop it.
                         try
                         {
                             System.IO.File.Delete(res.OutputPath);
@@ -392,9 +419,6 @@ public class OpticalMediaController(
                 }
                 catch (Exception ex)
                 {
-                    // Loud log so the rip-encode chain doesn't silently swallow
-                    // upload / dispatch failures. The Task.Run wrapper still
-                    // catches so a crash here can't tear the host down.
                     Console.Error.WriteLine(
                         $"[optical-rip] background task failed for {drive.Path}: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"
                     );
@@ -413,4 +437,93 @@ public class OpticalMediaController(
             }
         );
     }
+
+    /// <summary>
+    /// Builds the folder-relative output path for a ripped title in the
+    /// shape <see cref="MediaScan"/> can match against TMDB:
+    /// movies → <c>{Title} ({Year})/{Title} ({Year}).mkv</c>;
+    /// TV/anime → <c>{Title} ({Year})/Season {SS}/{Title} S{SS}E{EE}.mkv</c>.
+    /// Falls back to <c>disc-rips/title_NN.mkv</c> when no Custom metadata
+    /// was supplied — that lands as an unmatched file the user can rename
+    /// manually in the dashboard.
+    /// </summary>
+    internal static string BuildOutputPath(
+        RipRequest request,
+        string libraryType,
+        int titleIndex,
+        int batchIndex
+    )
+    {
+        CustomMetadata? meta = request.Custom;
+        if (meta is null || string.IsNullOrWhiteSpace(meta.Title))
+            return $"disc-rips/title_{titleIndex:D2}.mkv";
+
+        string safeTitle = SanitizeForPath(meta.Title);
+        string yearSuffix = meta.Year is { } year ? $" ({year})" : "";
+        string showRoot = $"{safeTitle}{yearSuffix}";
+
+        switch (libraryType)
+        {
+            case "tv":
+            case "anime":
+            {
+                int season = meta.SeasonNumber ?? 1;
+                int episode = (meta.EpisodeStartNumber ?? 1) + batchIndex;
+                string seasonDir = $"Season {season:D2}";
+                string fileName = $"{safeTitle} S{season:D2}E{episode:D2}.mkv";
+                return $"{showRoot}/{seasonDir}/{fileName}";
+            }
+            case "movie":
+            {
+                // Multi-disc movies: append " - Disc N" so the user sees both
+                // titles as siblings instead of fighting for one slot.
+                string suffix = batchIndex == 0 ? "" : $" - Disc {batchIndex + 1}";
+                return $"{showRoot}/{safeTitle}{yearSuffix}{suffix}.mkv";
+            }
+            default:
+                return $"disc-rips/title_{titleIndex:D2}.mkv";
+        }
+    }
+
+    private static string ParentRelative(string folderRelative)
+    {
+        int slash = folderRelative.LastIndexOf('/');
+        return slash <= 0 ? "" : folderRelative[..slash];
+    }
+
+    /// <summary>
+    /// Translates a folder-relative sub-path back to the host-visible path
+    /// that the FileWatcher expects. Local storage exposes a real absolute
+    /// path via <see cref="IStorage.GetFullPath"/>; remote drivers throw,
+    /// in which case we fall back to the sub-path itself (which the watcher
+    /// will treat as relative to its own scan root).
+    /// </summary>
+    private static string ResolveHostPath(IStorage storage, string subPath)
+    {
+        try
+        {
+            return storage.GetFullPath(subPath);
+        }
+        catch
+        {
+            return subPath;
+        }
+    }
+
+    /// <summary>
+    /// Strips characters that break common filesystems (NTFS, APFS) and the
+    /// MediaScan regex. Keeps spaces, dots, parentheses, and dashes —
+    /// matches the existing library naming convention seen in VideoFiles.
+    /// </summary>
+    private static string SanitizeForPath(string input)
+    {
+        string trimmed = InvalidFsChars().Replace(input, " ").Trim();
+        return WhitespaceRun().Replace(trimmed, " ");
+    }
+
+    [GeneratedRegex(@"[<>:""/\\|?*\x00-\x1F]")]
+    private static partial Regex InvalidFsChars();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRun();
 }
