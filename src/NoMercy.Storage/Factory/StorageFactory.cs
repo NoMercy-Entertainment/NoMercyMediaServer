@@ -123,25 +123,18 @@ public sealed class StorageFactory : IStorageFactory
                 return Path.Combine(root, subPath);
 
             case "nfs":
-            {
-                // NFS export paths are always Unix-style; use forward slashes.
-                string trimmedRoot = root.TrimEnd('/');
-                string trimmedSub = subPath.TrimStart('/');
-                return $"{trimmedRoot}/{trimmedSub}";
-            }
-
             case "s3":
             case "r2":
-            {
-                string trimmedRoot = root.TrimEnd('/');
-                string trimmedSub = subPath.TrimStart('/');
-                return $"{trimmedRoot}/{trimmedSub}";
-            }
-
             case "webdav":
             {
-                string trimmedRoot = root.TrimEnd('/');
-                string trimmedSub = subPath.TrimStart('/');
+                // Remote drivers always speak forward slashes. Replace any
+                // Windows backslashes the caller may have introduced via
+                // Path.Combine on a server-side path — without this the NFS
+                // mount call ends up with a malformed export like
+                // '/mnt/vault/Media/Anime/Anime\Black.Butler.(2008)' and
+                // libnfs rejects the mount outright.
+                string trimmedRoot = root.Replace('\\', '/').TrimEnd('/');
+                string trimmedSub = subPath.Replace('\\', '/').TrimStart('/');
                 return $"{trimmedRoot}/{trimmedSub}";
             }
 
