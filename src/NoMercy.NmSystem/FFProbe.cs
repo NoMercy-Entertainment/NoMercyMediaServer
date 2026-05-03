@@ -223,7 +223,10 @@ public static class FfProbe
         CancellationToken ct
     )
     {
-        await using Stream s = driver.OpenReadIsolated(path);
+        // HLS playlists are small; use the shared driver context (serialized
+        // by the driver's own lock) instead of OpenReadIsolated to avoid
+        // libnfs NFSv4 session contention across parallel scan workers.
+        await using Stream s = driver.OpenRead(path);
         using StreamReader reader = new(s);
         return await reader.ReadToEndAsync(ct);
     }

@@ -359,6 +359,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         }
     }
 
+    // Serialize libnfs context init/mount/open across all OpenReadIsolated
+    // calls. Even with separate contexts, libnfs internal state (especially
+    // NFSv4 session/clientid bookkeeping) does not survive concurrent
+    // mount+open sequences from the same process — they trip BAD_SEQID(-22)
+    // and EXPIRED(-11) at random under parallel scan workers.
+    private static readonly SemaphoreSlim _isolatedOpenGate = new(1, 1);
+
     /// <inheritdoc/>
     /// Opens a dedicated libnfs context for this call so concurrent
     /// AcquireLocalPath invocations cannot corrupt each other's NFSv4
@@ -367,64 +374,75 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     {
         string nfsPath = ToNfsPath(path);
 
-        IntPtr ctx = LibNfs.InitContext();
-        if (ctx == IntPtr.Zero)
-            throw new InvalidOperationException(
-                "nfs_init_context returned null for isolated read context."
-            );
-
+        _isolatedOpenGate.Wait();
+        IntPtr ctx;
+        IntPtr fh;
+        long fileSize;
         try
         {
-            int versionRc = LibNfs.SetVersion(ctx, _config.Version);
-            if (versionRc != 0)
-                throw new IOException(
-                    $"Isolated NFS nfs_set_version({_config.Version}) failed — {LibNfs.GetError(ctx)}"
-                );
-
-            if (_config.Uid.HasValue)
-                LibNfs.SetUid(ctx, _config.Uid.Value);
-            if (_config.Gid.HasValue)
-                LibNfs.SetGid(ctx, _config.Gid.Value);
-
-            int mountRc = LibNfs.Mount(ctx, _config.Server, _config.Export);
-            if (mountRc != 0)
-                throw new IOException(
-                    $"Isolated NFS mount failed for {_config.Server}:{_config.Export} — {LibNfs.GetError(ctx)}"
-                );
-
-            // Stat via shared context (cheap, not seqid-sensitive).
-            long fileSize;
-            _lock.Wait();
-            try
-            {
-                int statRc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
-                if (statRc != 0)
-                    throw new FileNotFoundException($"NFS file not found: '{path}'");
-                fileSize = (long)stat.Size;
-            }
-            finally
-            {
-                _lock.Release();
-            }
-
-            int openRc = LibNfs.Open(ctx, nfsPath, LibNfs.O_RDONLY, out IntPtr fh);
-            if (openRc != 0)
-                throw new IOException(
-                    $"NFS open (read) failed for '{path}': {LibNfs.GetError(ctx)}"
+            ctx = LibNfs.InitContext();
+            if (ctx == IntPtr.Zero)
+                throw new InvalidOperationException(
+                    "nfs_init_context returned null for isolated read context."
                 );
 
             try
             {
-                return new IsolatedNfsReadStream(ctx, fh, fileSize);
+                int versionRc = LibNfs.SetVersion(ctx, _config.Version);
+                if (versionRc != 0)
+                    throw new IOException(
+                        $"Isolated NFS nfs_set_version({_config.Version}) failed — {LibNfs.GetError(ctx)}"
+                    );
+
+                if (_config.Uid.HasValue)
+                    LibNfs.SetUid(ctx, _config.Uid.Value);
+                if (_config.Gid.HasValue)
+                    LibNfs.SetGid(ctx, _config.Gid.Value);
+
+                int mountRc = LibNfs.Mount(ctx, _config.Server, _config.Export);
+                if (mountRc != 0)
+                    throw new IOException(
+                        $"Isolated NFS mount failed for {_config.Server}:{_config.Export} — {LibNfs.GetError(ctx)}"
+                    );
+
+                _lock.Wait();
+                try
+                {
+                    int statRc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+                    if (statRc != 0)
+                        throw new FileNotFoundException($"NFS file not found: '{path}'");
+                    fileSize = (long)stat.Size;
+                }
+                finally
+                {
+                    _lock.Release();
+                }
+
+                int openRc = LibNfs.Open(ctx, nfsPath, LibNfs.O_RDONLY, out fh);
+                if (openRc != 0)
+                    throw new IOException(
+                        $"NFS open (read) failed for '{path}': {LibNfs.GetError(ctx)}"
+                    );
             }
             catch
             {
-                LibNfs.Close(ctx, fh);
+                LibNfs.Umount(ctx);
+                LibNfs.DestroyContext(ctx);
                 throw;
             }
         }
+        finally
+        {
+            _isolatedOpenGate.Release();
+        }
+
+        try
+        {
+            return new IsolatedNfsReadStream(ctx, fh, fileSize);
+        }
         catch
         {
+            LibNfs.Close(ctx, fh);
             LibNfs.Umount(ctx);
             LibNfs.DestroyContext(ctx);
             throw;

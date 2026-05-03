@@ -6,6 +6,7 @@ using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Libraries;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -20,6 +21,11 @@ public class FileRescanJob : AbstractMediaJob
 
     public override async Task Handle()
     {
+        Logger.App(
+            $"[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}",
+            Serilog.Events.LogEventLevel.Information
+        );
+
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
