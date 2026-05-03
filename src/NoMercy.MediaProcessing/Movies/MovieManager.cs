@@ -47,7 +47,7 @@ public class MovieManager(
             IStorage folderStorage = _storageFactory.For(
                 folderLibrary.Folder.Id,
                 folderLibrary.Folder.DriverId,
-                folderLibrary.Folder.Path
+                string.Empty
             );
             string folderName = folderStorage.CombinePath(
                 folderLibrary.Folder.Path,

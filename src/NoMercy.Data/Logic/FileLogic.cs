@@ -142,18 +142,19 @@ public partial class FileLogic(
 
         List<Subtitle> subtitles = [];
 
-        string fileName = "/" + Path.GetFileName(item.Path);
-        string hostFolder = item.Path.Replace(fileName, "");
+        string itemPath = item.Path.Replace('\\', '/');
+        string fileName = "/" + Path.GetFileName(itemPath);
+        string hostFolder = itemPath.Replace(fileName, "");
         string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
         int showIdx = string.IsNullOrEmpty(showName)
             ? -1
-            : item.Path.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
+            : itemPath.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
         string baseFolder =
-            showIdx >= 0 ? ("/" + item.Path[showIdx..]).Replace(fileName, "") : hostFolder;
+            showIdx >= 0 ? ("/" + itemPath[showIdx..]).Replace(fileName, "") : hostFolder;
 
         string subtitleFolder = hostFolder.TrimEnd('/') + "/subtitles";
 
-        IStorage storage = _storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+        IStorage storage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         if (await storage.ExistsAsync(subtitleFolder, CancellationToken.None))
         {
             IReadOnlyList<StorageEntry> subtitleEntries = storage.List(subtitleFolder, "*", false);
@@ -266,7 +267,7 @@ public partial class FileLogic(
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Folder folder)
     {
         // Resolve the per-folder driver so NFS/SMB folders use the right backend.
-        IStorage folderStorage = _storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+        IStorage folderStorage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         MediaScan mediaScan = new(folderStorage.Driver);
 
         int depth = Library.Type switch
@@ -307,7 +308,7 @@ public partial class FileLogic(
             IStorage folderStorage = _storageFactory.For(
                 rootFolder.Id,
                 rootFolder.DriverId,
-                rootFolder.Path
+                string.Empty
             );
             string path = folderStorage.CombinePath(rootFolder.Path, folder);
 

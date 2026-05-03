@@ -36,7 +36,7 @@ public partial class FileManager(
     private readonly IStorageDriver _storageDriver = storageDriver;
 
     private IStorage StorageFor(Folder folder) =>
-        _storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+        _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
 
     private int Id { get; set; }
     private Movie? Movie { get; set; }
@@ -337,14 +337,15 @@ public partial class FileManager(
 
         IStorage storage = StorageFor(folder);
 
-        string fileName = "/" + Path.GetFileName(item.Path);
-        string hostFolder = item.Path.Replace(fileName, "");
+        string itemPath = item.Path.Replace('\\', '/');
+        string fileName = "/" + Path.GetFileName(itemPath);
+        string hostFolder = itemPath.Replace(fileName, "");
         string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
         int showIdx = string.IsNullOrEmpty(showName)
             ? -1
-            : item.Path.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
+            : itemPath.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
         string baseFolder =
-            showIdx >= 0 ? ("/" + item.Path[showIdx..]).Replace(fileName, "") : hostFolder;
+            showIdx >= 0 ? ("/" + itemPath[showIdx..]).Replace(fileName, "") : hostFolder;
 
         List<Subtitle> subtitles = GetSubtitles(storage, hostFolder);
 

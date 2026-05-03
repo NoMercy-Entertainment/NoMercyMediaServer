@@ -346,7 +346,7 @@ public partial class OpticalMediaController(
                     IStorage folderStorage = storageFactory.For(
                         folderForBackground.Id,
                         folderForBackground.DriverId,
-                        folderForBackground.Path
+                        string.Empty
                     );
 
                     DiscRipResult[] successes = results.Where(r => r.Success).ToArray();
