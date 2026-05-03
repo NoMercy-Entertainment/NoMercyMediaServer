@@ -82,7 +82,8 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             return; // real work in progress — no need to renew separately
         try
         {
-            int rc = LibNfs.Stat64(_nfs, "/", out LibNfs.NfsStat64 _);
+            int rc = LibNfs.Stat64(_nfs, "/", out LibNfs.NfsStat64 stat);
+            _ = stat;
             if (rc != 0)
             {
                 _log.LogDebug(
@@ -117,15 +118,21 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             int rc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
             {
-                _log.LogDebug(
-                    "NFS stat (file) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
-                    nfsPath,
-                    _config.Server,
-                    _config.Export,
-                    _config.Version,
-                    rc,
-                    LibNfs.GetError(_nfs)
-                );
+                // NFS4ERR_NOENT (-2) is the expected "no, that path doesn't
+                // exist" outcome of a probe call — not an error. Real failures
+                // (permission denied, RPC trouble, server gone) keep logging.
+                if (rc != -2)
+                {
+                    _log.LogDebug(
+                        "NFS stat (file) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
+                        nfsPath,
+                        _config.Server,
+                        _config.Export,
+                        _config.Version,
+                        rc,
+                        LibNfs.GetError(_nfs)
+                    );
+                }
                 return false;
             }
             return stat.FileType == LibNfs.S_IFREG;
@@ -145,15 +152,21 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             int rc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
             {
-                _log.LogDebug(
-                    "NFS stat (dir) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
-                    nfsPath,
-                    _config.Server,
-                    _config.Export,
-                    _config.Version,
-                    rc,
-                    LibNfs.GetError(_nfs)
-                );
+                // NFS4ERR_NOENT (-2) is the expected "no, that path doesn't
+                // exist" outcome of a probe call — not an error. Real failures
+                // keep logging.
+                if (rc != -2)
+                {
+                    _log.LogDebug(
+                        "NFS stat (dir) failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
+                        nfsPath,
+                        _config.Server,
+                        _config.Export,
+                        _config.Version,
+                        rc,
+                        LibNfs.GetError(_nfs)
+                    );
+                }
                 return false;
             }
             return stat.FileType == LibNfs.S_IFDIR;
@@ -343,6 +356,78 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         finally
         {
             _lock.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    /// Opens a dedicated libnfs context for this call so concurrent
+    /// AcquireLocalPath invocations cannot corrupt each other's NFSv4
+    /// open-seqid sequence (NFS4ERR_BAD_SEQID).
+    public Stream OpenReadIsolated(string path)
+    {
+        string nfsPath = ToNfsPath(path);
+
+        IntPtr ctx = LibNfs.InitContext();
+        if (ctx == IntPtr.Zero)
+            throw new InvalidOperationException(
+                "nfs_init_context returned null for isolated read context."
+            );
+
+        try
+        {
+            int versionRc = LibNfs.SetVersion(ctx, _config.Version);
+            if (versionRc != 0)
+                throw new IOException(
+                    $"Isolated NFS nfs_set_version({_config.Version}) failed — {LibNfs.GetError(ctx)}"
+                );
+
+            if (_config.Uid.HasValue)
+                LibNfs.SetUid(ctx, _config.Uid.Value);
+            if (_config.Gid.HasValue)
+                LibNfs.SetGid(ctx, _config.Gid.Value);
+
+            int mountRc = LibNfs.Mount(ctx, _config.Server, _config.Export);
+            if (mountRc != 0)
+                throw new IOException(
+                    $"Isolated NFS mount failed for {_config.Server}:{_config.Export} — {LibNfs.GetError(ctx)}"
+                );
+
+            // Stat via shared context (cheap, not seqid-sensitive).
+            long fileSize;
+            _lock.Wait();
+            try
+            {
+                int statRc = LibNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+                if (statRc != 0)
+                    throw new FileNotFoundException($"NFS file not found: '{path}'");
+                fileSize = (long)stat.Size;
+            }
+            finally
+            {
+                _lock.Release();
+            }
+
+            int openRc = LibNfs.Open(ctx, nfsPath, LibNfs.O_RDONLY, out IntPtr fh);
+            if (openRc != 0)
+                throw new IOException(
+                    $"NFS open (read) failed for '{path}': {LibNfs.GetError(ctx)}"
+                );
+
+            try
+            {
+                return new IsolatedNfsReadStream(ctx, fh, fileSize);
+            }
+            catch
+            {
+                LibNfs.Close(ctx, fh);
+                throw;
+            }
+        }
+        catch
+        {
+            LibNfs.Umount(ctx);
+            LibNfs.DestroyContext(ctx);
+            throw;
         }
     }
 
