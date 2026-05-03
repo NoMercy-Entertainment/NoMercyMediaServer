@@ -306,6 +306,11 @@ public partial class FileManager(
             .Where(mediaFolder => mediaFolder.Parsed is not null)
             .ToList();
 
+        Logger.App(
+            $"[StoreTvShow] {Show?.Title} ({Show?.Id}): {items.Count} candidate files across {Folders.Count} folder(s)",
+            LogEventLevel.Information
+        );
+
         if (items.Count == 0)
             return;
 
@@ -336,7 +341,13 @@ public partial class FileManager(
             itemPath.Contains(f.Path.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase)
         );
         if (folder == null)
+        {
+            Logger.App(
+                $"[StoreVideoItem] no Folders match for {itemPath} — skipping (Folders={string.Join(", ", Folders.Select(f => f.Path))})",
+                LogEventLevel.Warning
+            );
             return;
+        }
 
         IStorage storage = StorageFor(folder);
         string fileName = "/" + Path.GetFileName(itemPath);

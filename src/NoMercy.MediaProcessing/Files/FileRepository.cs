@@ -47,71 +47,75 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
     public async Task StoreVideoFile(VideoFile videoFile)
     {
-        await _context
-            .VideoFiles.Upsert(videoFile)
-            .On(vf => vf.Filename)
-            .WhenMatched(
-                (vs, vi) =>
-                    new()
-                    {
-                        EpisodeId = vi.EpisodeId,
-                        MovieId = vi.MovieId,
-                        Folder = vi.Folder,
-                        HostFolder = vi.HostFolder,
-                        Filename = vi.Filename,
-                        Share = vi.Share,
-                        Duration = vi.Duration,
-                        Chapters = vi.Chapters,
-                        Languages = vi.Languages,
-                        Quality = vi.Quality,
-                        Subtitles = vi.Subtitles,
-                        _tracks = vi._tracks,
-                        MetadataId = vi.MetadataId,
-                    }
-            )
-            .RunAsync();
+        VideoFile? existing = await _context.VideoFiles.FirstOrDefaultAsync(v =>
+            v.Filename == videoFile.Filename
+        );
+
+        if (existing is null)
+        {
+            _context.VideoFiles.Add(videoFile);
+            await _context.SaveChangesAsync();
+            Logger.App($"[StoreVideoFile] inserted {videoFile.Filename}", LogEventLevel.Verbose);
+            return;
+        }
+
+        existing.EpisodeId = videoFile.EpisodeId;
+        existing.MovieId = videoFile.MovieId;
+        existing.Folder = videoFile.Folder;
+        existing.HostFolder = videoFile.HostFolder;
+        existing.Filename = videoFile.Filename;
+        existing.Share = videoFile.Share;
+        existing.Duration = videoFile.Duration;
+        existing.Chapters = videoFile.Chapters;
+        existing.Languages = videoFile.Languages;
+        existing.Quality = videoFile.Quality;
+        existing.Subtitles = videoFile.Subtitles;
+        existing._tracks = videoFile._tracks;
+        existing.MetadataId = videoFile.MetadataId;
+
+        await _context.SaveChangesAsync();
+        Logger.App($"[StoreVideoFile] updated {videoFile.Filename}", LogEventLevel.Verbose);
     }
 
     public async Task<Ulid> StoreMetadata(Metadata metadata)
     {
-        await _context
-            .Metadata.Upsert(metadata)
-            .On(mf => new { mf.Filename, mf.HostFolder })
-            .WhenMatched(
-                (ms, mi) =>
-                    new()
-                    {
-                        AudioTrackId = mi.AudioTrackId,
-                        Duration = mi.Duration,
-                        Filename = mi.Filename,
-                        Folder = mi.Folder,
-                        FolderSize = mi.FolderSize,
-                        HostFolder = mi.HostFolder,
-                        Type = mi.Type,
-                        _audio = mi._audio,
-                        _chapters = mi._chapters,
-                        _chapters_file = mi._chapters_file,
-                        _fonts = mi._fonts,
-                        _fonts_file = mi._fonts_file,
-                        _previews = mi._previews,
-                        _subtitles = mi._subtitles,
-                        _video = mi._video,
-                    }
-            )
-            .RunAsync();
+        Metadata? existing = await _context.Metadata.FirstOrDefaultAsync(m =>
+            m.Filename == metadata.Filename && m.HostFolder == metadata.HostFolder
+        );
 
-        Ulid id = await _context
-            .Metadata.Where(m => m.Filename == metadata.Filename)
-            .Where(m => m.HostFolder == metadata.HostFolder)
-            .Select(m => m.Id)
-            .FirstOrDefaultAsync();
-
-        if (id == default)
-            throw new InvalidOperationException(
-                $"Metadata upsert succeeded but record not found for Filename={metadata.Filename}, HostFolder={metadata.HostFolder}"
+        if (existing is null)
+        {
+            _context.Metadata.Add(metadata);
+            await _context.SaveChangesAsync();
+            Logger.App(
+                $"[StoreMetadata] inserted {metadata.Filename} (id={metadata.Id})",
+                LogEventLevel.Verbose
             );
+            return metadata.Id;
+        }
 
-        return id;
+        existing.AudioTrackId = metadata.AudioTrackId;
+        existing.Duration = metadata.Duration;
+        existing.Filename = metadata.Filename;
+        existing.Folder = metadata.Folder;
+        existing.FolderSize = metadata.FolderSize;
+        existing.HostFolder = metadata.HostFolder;
+        existing.Type = metadata.Type;
+        existing._audio = metadata._audio;
+        existing._chapters = metadata._chapters;
+        existing._chapters_file = metadata._chapters_file;
+        existing._fonts = metadata._fonts;
+        existing._fonts_file = metadata._fonts_file;
+        existing._previews = metadata._previews;
+        existing._subtitles = metadata._subtitles;
+        existing._video = metadata._video;
+
+        await _context.SaveChangesAsync();
+        Logger.App(
+            $"[StoreMetadata] updated {metadata.Filename} (id={existing.Id})",
+            LogEventLevel.Verbose
+        );
+        return existing.Id;
     }
 
     public async Task<Episode?> GetEpisode(int? showId, MediaFile item)
