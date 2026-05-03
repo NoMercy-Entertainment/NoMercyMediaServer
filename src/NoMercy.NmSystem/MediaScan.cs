@@ -373,13 +373,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     {
                         if (isVideoFile || isAudioFile)
                         {
-                            await using LocalPathLease lease = await _driver.AcquireLocalPathAsync(
-                                file,
-                                cancellationToken
-                            );
-                            ffprobe = await FfProbe.CreateAsync(lease.Path, cancellationToken);
+                            ffprobe = await FfProbe.CreateAsync(file, cancellationToken);
                             if (isAudioFile)
-                                tagFile = TagFile.Create(lease.Path);
+                                tagFile = TagFile.Create(file);
                         }
                     }
                     catch (Exception e)
