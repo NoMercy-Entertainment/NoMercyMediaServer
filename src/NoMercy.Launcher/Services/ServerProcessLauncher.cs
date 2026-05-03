@@ -21,6 +21,12 @@ public class ServerProcessLauncher
         if (IsServerProcessRunning)
             return Task.FromResult(false);
 
+        // Wipe stale log files so the new run's logs aren't buried under
+        // the previous execution's. Best-effort: any file held by another
+        // process (a stray Rider-launched server, the CLI's logs SSE
+        // stream) is skipped, the start still proceeds.
+        ClearLogsDirectory();
+
         // Prefer the binary next to the Launcher (installer deployment),
         // then fall back to the binaries path (standalone deployment)
         ProcessStartInfo? startInfo =
@@ -206,6 +212,41 @@ public class ServerProcessLauncher
 
         if (File.Exists(tempPath))
             await ApplyUpdateAsync();
+    }
+
+    /// <summary>
+    /// Deletes every <c>log*.txt</c> in <see cref="AppFiles.LogPath"/> so
+    /// the next server run starts with a clean slate. Files held by another
+    /// process are skipped — the start path stays unblocked.
+    /// </summary>
+    private static void ClearLogsDirectory()
+    {
+        try
+        {
+            string logDir = AppFiles.LogPath;
+            if (!Directory.Exists(logDir))
+                return;
+
+            foreach (string file in Directory.EnumerateFiles(logDir, "log*.txt"))
+            {
+                try
+                {
+                    File.Delete(file);
+                }
+                catch (IOException)
+                {
+                    // Locked by a still-running server / CLI — leave it.
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Permission denied — skip rather than crash the launch.
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error("Failed to clear log directory before server start", ex);
+        }
     }
 
     /// <summary>
