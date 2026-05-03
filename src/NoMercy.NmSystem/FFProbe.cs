@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -47,6 +48,12 @@ public static class FfProbe
         if (driver is LocalStorageDriver)
             return await CreateAsync(file, ct);
 
+        // HLS playlists reference segments by relative URI; ffprobe needs URL
+        // context to fetch them. stdin pipe has none, so it hangs waiting
+        // for segment data. Parse the playlist directly instead.
+        if (Path.GetExtension(file).Equals(".m3u8", StringComparison.OrdinalIgnoreCase))
+            return await ParseHlsAsync(driver, file, ct);
+
         try
         {
             string json = await RunFfprobeStdinWithRetry(driver, file, ct);
@@ -64,6 +71,161 @@ public static class FfProbe
             Logger.App($"FfProbe failed for: {file}: {ex.Message}", LogEventLevel.Warning);
             return new() { ErrorData = [ex.Message] };
         }
+    }
+
+    private static async Task<FfProbeData> ParseHlsAsync(
+        IStorageDriver driver,
+        string masterPath,
+        CancellationToken ct
+    )
+    {
+        try
+        {
+            string masterText = await ReadAllTextAsync(driver, masterPath, ct);
+
+            FfProbeVideoStream? videoStream = null;
+            FfProbeAudioStream? audioStream = null;
+            string? variantUri = null;
+            int? width = null;
+            int? height = null;
+            string? videoCodec = null;
+            string? audioCodec = null;
+
+            string[] lines = masterText.Split('\n');
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i].TrimEnd('\r');
+                if (line.StartsWith("#EXT-X-STREAM-INF", StringComparison.Ordinal))
+                {
+                    Match res = Regex.Match(line, "RESOLUTION=(\\d+)x(\\d+)");
+                    if (res.Success)
+                    {
+                        width = int.Parse(res.Groups[1].Value);
+                        height = int.Parse(res.Groups[2].Value);
+                    }
+                    Match codecs = Regex.Match(line, "CODECS=\"([^\"]+)\"");
+                    if (codecs.Success)
+                    {
+                        string[] codecList = codecs.Groups[1].Value.Split(',');
+                        foreach (string codec in codecList)
+                        {
+                            string c = codec.Trim();
+                            if (c.StartsWith("avc", StringComparison.OrdinalIgnoreCase))
+                                videoCodec = "h264";
+                            else if (
+                                c.StartsWith("hvc", StringComparison.OrdinalIgnoreCase)
+                                || c.StartsWith("hev", StringComparison.OrdinalIgnoreCase)
+                            )
+                                videoCodec = "hevc";
+                            else if (c.StartsWith("av01", StringComparison.OrdinalIgnoreCase))
+                                videoCodec = "av1";
+                            else if (c.StartsWith("mp4a", StringComparison.OrdinalIgnoreCase))
+                                audioCodec = "aac";
+                            else if (c.StartsWith("opus", StringComparison.OrdinalIgnoreCase))
+                                audioCodec = "opus";
+                        }
+                    }
+
+                    if (i + 1 < lines.Length)
+                    {
+                        string next = lines[i + 1].TrimEnd('\r').Trim();
+                        if (!string.IsNullOrEmpty(next) && !next.StartsWith('#'))
+                            variantUri = next;
+                    }
+                    break;
+                }
+            }
+
+            if (width is not null && height is not null)
+                videoStream = new()
+                {
+                    Index = 0,
+                    CodecName = videoCodec,
+                    Width = width.Value,
+                    Height = height.Value,
+                };
+            if (audioCodec is not null)
+                audioStream = new()
+                {
+                    Index = 1,
+                    CodecName = audioCodec,
+                    Language = "und",
+                    Tags = new(),
+                };
+
+            TimeSpan duration = TimeSpan.Zero;
+            if (variantUri is not null)
+            {
+                string masterDir = Path.GetDirectoryName(masterPath)!.Replace('\\', '/');
+                string variantPath = variantUri.StartsWith('/')
+                    ? variantUri
+                    : masterDir.TrimEnd('/') + "/" + variantUri;
+                duration = await SumExtinfDurationAsync(driver, variantPath, ct);
+            }
+
+            FfProbeFormat format = new() { Filename = masterPath, Duration = duration };
+
+            return new()
+            {
+                FilePath = masterPath,
+                Duration = duration,
+                Format = format,
+                VideoStreams = videoStream is not null ? [videoStream] : [],
+                AudioStreams = audioStream is not null ? [audioStream] : [],
+                SubtitleStreams = [],
+                ImageStreams = [],
+                PrimaryVideoStream = videoStream,
+                PrimaryAudioStream = audioStream,
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.App($"HLS parse failed for {masterPath}: {ex.Message}", LogEventLevel.Warning);
+            return new() { ErrorData = [ex.Message] };
+        }
+    }
+
+    private static async Task<TimeSpan> SumExtinfDurationAsync(
+        IStorageDriver driver,
+        string playlistPath,
+        CancellationToken ct
+    )
+    {
+        if (!driver.FileExists(playlistPath))
+            return TimeSpan.Zero;
+
+        string text = await ReadAllTextAsync(driver, playlistPath, ct);
+        double total = 0;
+        foreach (string raw in text.Split('\n'))
+        {
+            string line = raw.TrimEnd('\r');
+            if (!line.StartsWith("#EXTINF:", StringComparison.Ordinal))
+                continue;
+            string tail = line["#EXTINF:".Length..];
+            int comma = tail.IndexOf(',');
+            string num = comma >= 0 ? tail[..comma] : tail;
+            if (
+                double.TryParse(
+                    num,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out double secs
+                )
+            )
+                total += secs;
+        }
+        return TimeSpan.FromSeconds(total);
+    }
+
+    private static async Task<string> ReadAllTextAsync(
+        IStorageDriver driver,
+        string path,
+        CancellationToken ct
+    )
+    {
+        await using Stream s = driver.OpenReadIsolated(path);
+        using StreamReader reader = new(s);
+        return await reader.ReadToEndAsync(ct);
     }
 
     private static FfProbeData BuildFfProbeData(string file, FfProbeRawResult raw)
