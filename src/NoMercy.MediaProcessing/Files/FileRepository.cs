@@ -414,22 +414,16 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         string title = entryPath.Replace("v2", "");
         title = Str.RemoveBracketedString().Replace(title, string.Empty);
 
-        // Acquire a real local path for ffprobe — for NFS this stages to a
-        // temp file; for local storage it returns the validated path as-is.
-        LocalPathLease localLease = await storage.AcquireLocalPathAsync(
+        // Driver-aware FfProbe — local files probe directly; remote files
+        // stream the header via stdin pipe (HLS playlists parse manually).
+        // Old code called AcquireLocalPathAsync which copied the entire file
+        // from NFS to disk before probing, turning a 30-file list into a
+        // 5-minute round trip when the NAS only needed a few KB of header.
+        FfProbeData ffprobeData = await FfProbe.CreateAsync(
+            storage.Driver,
             entryPath,
             CancellationToken.None
         );
-
-        FfProbeData ffprobeData;
-        try
-        {
-            ffprobeData = await FfProbe.CreateAsync(localLease.Path);
-        }
-        finally
-        {
-            await localLease.DisposeAsync();
-        }
 
         MovieFile parsed = ParseVideoFileName(fileName, directoryName, title);
 
