@@ -142,14 +142,14 @@ public partial class FileLogic(
 
         List<Subtitle> subtitles = [];
 
-        string fileName = Path.DirectorySeparatorChar + Path.GetFileName(item.Path);
+        string fileName = "/" + Path.GetFileName(item.Path);
         string hostFolder = item.Path.Replace(fileName, "");
         string baseFolder =
-            Path.DirectorySeparatorChar
+            "/"
             + (Movie?.Folder ?? Show?.Folder).OrEmpty().Replace("/", "")
             + item.Path.Replace(folder.Path, "").Replace(fileName, "");
 
-        string subtitleFolder = Path.Combine(hostFolder, "subtitles");
+        string subtitleFolder = hostFolder.TrimEnd('/') + "/subtitles";
 
         IStorage storage = _storageFactory.For(folder.Id, folder.DriverId, folder.Path);
         if (await storage.ExistsAsync(subtitleFolder, CancellationToken.None))
@@ -307,7 +307,7 @@ public partial class FileLogic(
                 rootFolder.DriverId,
                 rootFolder.Path
             );
-            string path = Path.Combine(rootFolder.Path, folder);
+            string path = rootFolder.Path.TrimEnd('/') + "/" + folder.TrimStart('/');
 
             if (!folderStorage.Exists(path))
             {

@@ -115,7 +115,7 @@ public class AutoEncodeSubscriber(
                 if (folder is null)
                     continue;
 
-                string filePath = Path.Combine(file.HostFolder, file.Filename);
+                string filePath = file.HostFolder.TrimEnd('/') + "/" + file.Filename.TrimStart('/');
                 dispatcher.DispatchJob<VideoEncodeJob>(
                     evt.LibraryId,
                     folder.Id,
