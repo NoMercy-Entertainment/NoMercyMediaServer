@@ -1034,15 +1034,19 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         int openRc = LibNfs.OpenDir(_nfs, nfsDir, out IntPtr dir);
         if (openRc != 0)
         {
-            _log.LogWarning(
-                "NFS opendir failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
-                nfsDir,
-                _config.Server,
-                _config.Export,
-                _config.Version,
-                openRc,
-                LibNfs.GetError(_nfs)
-            );
+            // -20 (NFS4ERR_NOTDIR / ENOTDIR) just means the caller (or the
+            // recursion below) probed a path that turned out to be a file —
+            // not a real failure, and noisy at Warning level.
+            if (openRc != -20)
+                _log.LogWarning(
+                    "NFS opendir failed for '{Path}' on {Server}:{Export} (v{Version}, rc={Rc}): {Error}",
+                    nfsDir,
+                    _config.Server,
+                    _config.Export,
+                    _config.Version,
+                    openRc,
+                    LibNfs.GetError(_nfs)
+                );
             return;
         }
 
@@ -1066,8 +1070,15 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 if (MatchesPattern(name, searchPattern))
                     results.Add(virtualPath);
 
-                if (option == SearchOption.AllDirectories && entry.Type == LibNfs.NF3DIR)
-                    CollectEntries(childNfsPath, virtualPath, searchPattern, option, results);
+                if (option == SearchOption.AllDirectories)
+                {
+                    // entry.Type from libnfs's nfsdirent has been unreliable
+                    // for NFSv4 in practice — verify with Stat64 before
+                    // recursing so we never opendir a regular file.
+                    int statRc = LibNfs.Stat64(_nfs, childNfsPath, out LibNfs.NfsStat64 childStat);
+                    if (statRc == 0 && childStat.FileType == LibNfs.S_IFDIR)
+                        CollectEntries(childNfsPath, virtualPath, searchPattern, option, results);
+                }
             }
         }
         finally
