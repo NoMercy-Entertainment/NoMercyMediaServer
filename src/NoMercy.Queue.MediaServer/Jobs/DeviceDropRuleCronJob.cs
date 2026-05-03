@@ -80,12 +80,18 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
             string lanIp = d.LanIp;
             string? fingerprint = d.Fingerprint;
 
+            // EF/SQLite can't translate `now - column >= TimeSpan` — that
+            // showed up as a runtime InvalidOperationException ("The LINQ
+            // expression … could not be translated"). Pre-compute the cutoff
+            // and compare DateTime <= DateTime, which translates cleanly.
+            DateTime efuseCutoff = now - EFuseWindow;
+
             bool slotReclaimed = await _context
                 .Devices.Where(o =>
                     o.LanIp == lanIp
                     && o.Fingerprint != fingerprint
                     && o.MdnsSeenAt != null
-                    && now - o.MdnsSeenAt >= EFuseWindow
+                    && o.MdnsSeenAt <= efuseCutoff
                 )
                 .AnyAsync(cancellationToken);
 
