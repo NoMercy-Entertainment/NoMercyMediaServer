@@ -164,7 +164,12 @@ public class PlaylistGenerator : IPlaylistGenerator
                 Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
             string playlistFile = Path.GetFileName(playlistResolved);
 
-            string videoRange = video.TenBit ? "PQ" : "SDR";
+            // VIDEO-RANGE labels the colour pipeline (PQ/HLG = HDR transfer,
+            // SDR otherwise) — not the bit depth. 10-bit anime / 10-bit BT.709
+            // remux is SDR; mislabelling them as PQ makes hls.js reject the
+            // master with manifestIncompatibleCodecsError because the segments'
+            // actual transfer characteristics don't match.
+            string videoRange = video.IsHdrOutput ? "PQ" : "SDR";
             string frameRate = video.FrameRate.ToString("F3", CultureInfo.InvariantCulture);
 
             string subsAttr =
