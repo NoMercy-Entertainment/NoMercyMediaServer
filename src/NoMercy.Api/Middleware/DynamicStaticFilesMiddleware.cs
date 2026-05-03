@@ -199,6 +199,18 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
     {
         long fileLength = storage.Size(relativePath);
 
+        // Surface storage-reported zero — empty bodies on m3u8 / vtt /
+        // fonts.json requests almost always trace back to either an encoder
+        // that hasn't flushed yet or an NFS metadata cache lying. Logging it
+        // here narrows triage in one step instead of guessing.
+        if (fileLength == 0)
+        {
+            Logger.App(
+                $"[DynamicStaticFiles] storage reports 0 bytes for '{context.Request.Path}' (driver={storage.GetType().Name})",
+                Serilog.Events.LogEventLevel.Warning
+            );
+        }
+
         context.Response.ContentType = MimeUtility.GetMimeMapping(relativePath);
 
         // Tell ResponseCachingMiddleware not to wrap the body. Without this
