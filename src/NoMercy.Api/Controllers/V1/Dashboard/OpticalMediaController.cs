@@ -2,10 +2,13 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.MediaSources.OpticalMedia.Dto;
 using NoMercy.NmSystem.Dto;
@@ -16,6 +19,7 @@ using NoMercy.OpticalMedia.Live;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
+using NoMercy.Storage;
 using DriveMonitor = NoMercy.MediaSources.OpticalMedia.DriveMonitor;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -31,7 +35,9 @@ public class OpticalMediaController(
     IDriveMonitor driveMonitor,
     IDiscRipper discRipper,
     JobDispatcher jobDispatcher,
-    ILiveDiscSession liveDiscSession
+    ILiveDiscSession liveDiscSession,
+    IStorageFactory storageFactory,
+    IStorageDriver localStorageDriver
 ) : BaseController
 {
     [HttpGet("drives")]
@@ -267,9 +273,26 @@ public class OpticalMediaController(
                 );
         }
 
-        // Resolve the rip output dir under the per-drive ripper folder. Phase
-        // A.9 will move this to IStorage; for now use AppFiles to mirror the
-        // existing legacy DriveMonitor.PlayDvd / PlayCd output path.
+        // Validate the destination — when the user wants RipAndEncode the
+        // controller has to know which folder + driver to upload the rip
+        // into so the encoder can find the file via its driver.
+        Folder? targetFolder = null;
+        if (request.Mode == RipMode.RipAndEncode)
+        {
+            await using MediaContext lookupContext = new();
+            LibraryRepository libraryRepository = new(lookupContext, localStorageDriver);
+            targetFolder = await libraryRepository.GetLibraryFolder(request.FolderId);
+            if (targetFolder is null)
+                return BadRequestResponse(
+                    $"FolderId {request.FolderId} does not match any library folder. "
+                        + "RipAndEncode needs a real folder so the rip output lands somewhere "
+                        + "the encoder can read it via the folder's driver."
+                );
+        }
+
+        // Local rip cache — ffmpeg always writes here first; for RipAndEncode
+        // we then upload to the target folder via its driver. Per-drive
+        // subdir keeps concurrent rips from different discs separated.
         string sanitisedDrive = drive
             .Path.TrimEnd(Path.DirectorySeparatorChar)
             .Replace(":", "")
@@ -287,6 +310,7 @@ public class OpticalMediaController(
         // Spawn the rip in the background — the caller polls progress via
         // SignalR (Phase E.3) or the encoding history endpoints once each
         // ripped MKV is enqueued as a VideoEncodeJob below.
+        Folder? folderForBackground = targetFolder;
         _ = Task.Run(
             async () =>
             {
@@ -301,28 +325,79 @@ public class OpticalMediaController(
                     // Only chain into the encoder for the default rip-and-encode
                     // mode. RipToRaw leaves the MKV in the ripper folder for
                     // the user to grab manually.
-                    if (enriched.Mode != RipMode.RipAndEncode)
+                    if (enriched.Mode != RipMode.RipAndEncode || folderForBackground is null)
                         return;
+
+                    // The folder's IStorage handles whatever driver the user
+                    // chose — local FS, NFS, S3, R2, WebDAV. Each successful
+                    // rip uploads via that storage and dispatches the encode
+                    // with the driver-relative path the encoder pipeline
+                    // already understands (mirrors AutoEncodeSubscriber).
+                    IStorage folderStorage = storageFactory.For(
+                        folderForBackground.Id,
+                        folderForBackground.DriverId,
+                        folderForBackground.Path
+                    );
 
                     foreach (DiscRipResult res in results.Where(r => r.Success))
                     {
-                        // The rip output sits on the local drive's transcode
-                        // path — pass sourceDriverId=null so JobDispatcher
-                        // routes it through the default local IStorage.
+                        string folderRelative = $"disc-rips/title_{res.TitleIndex:D2}.mkv";
+                        await folderStorage.CreateDirectoryAsync(
+                            "disc-rips",
+                            CancellationToken.None
+                        );
+
+                        await using (
+                            FileStream src = new(res.OutputPath, FileMode.Open, FileAccess.Read)
+                        )
+                        await using (
+                            System.IO.Stream dst = await folderStorage.OpenWriteAsync(
+                                folderRelative,
+                                overwrite: true,
+                                CancellationToken.None
+                            )
+                        )
+                        {
+                            await src.CopyToAsync(dst, CancellationToken.None);
+                        }
+
+                        // The encoder pipeline expects driver-relative paths
+                        // (everything below the driver root, including the
+                        // folder's own sub-path). Folder.Path is already that
+                        // sub-path — combine the two with a forward slash to
+                        // match the format that AutoEncodeSubscriber uses.
+                        string driverRelativeInput = string.IsNullOrEmpty(folderForBackground.Path)
+                            ? folderRelative
+                            : $"{folderForBackground.Path.TrimEnd('/')}/{folderRelative}";
+
                         jobDispatcher.DispatchJob<VideoEncodeJob>(
                             enriched.LibraryId,
-                            enriched.FolderId,
-                            id: $"disc:{drive.Path.TrimEnd('\\')}:{res.TitleIndex}",
-                            inputFile: res.OutputPath,
-                            sourceDriverId: null
+                            folderForBackground.Id,
+                            id: $"disc-{Ulid.NewUlid()}",
+                            inputFile: driverRelativeInput,
+                            sourceDriverId: folderForBackground.DriverId
                         );
+
+                        // Local rip cache served its purpose — drop it. The
+                        // encoder reads from the folder's driver now.
+                        try
+                        {
+                            System.IO.File.Delete(res.OutputPath);
+                        }
+                        catch
+                        {
+                            // best effort; a stale cache file isn't fatal.
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
-                    // The DiscRipper logs internally — keep the task body
-                    // resilient so a rip crash doesn't take down the host.
-                    _ = ex;
+                    // Loud log so the rip-encode chain doesn't silently swallow
+                    // upload / dispatch failures. The Task.Run wrapper still
+                    // catches so a crash here can't tear the host down.
+                    Console.Error.WriteLine(
+                        $"[optical-rip] background task failed for {drive.Path}: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"
+                    );
                 }
             },
             ct
