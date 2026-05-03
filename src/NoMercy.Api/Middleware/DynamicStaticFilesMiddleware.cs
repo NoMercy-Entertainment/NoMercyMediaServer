@@ -158,10 +158,38 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
             await ServeFile(context, storage, relativeWithinFolder);
         }
+        catch (FileNotFoundException ex)
+        {
+            // Race: file vanished between Exists() and Size()/OpenRead().
+            // Translate to 404 instead of an opaque 500.
+            Logger.App(
+                $"[DynamicStaticFiles] file vanished mid-serve for '{context.Request.Path}': {ex.Message}",
+                Serilog.Events.LogEventLevel.Warning
+            );
+            if (!context.Response.HasStarted)
+                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+        }
+        catch (IOException ex)
+        {
+            // Storage-layer failure (NFS hiccup, S3 throttling, disk error).
+            Logger.App(
+                $"[DynamicStaticFiles] storage IO failure for '{context.Request.Path}': {ex.Message}",
+                Serilog.Events.LogEventLevel.Warning
+            );
+            if (!context.Response.HasStarted)
+                context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
+        }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Client disconnected mid-stream — no response to send.
+        }
         catch (Exception ex)
         {
+            // Promote to Error so the stack trace reaches the log sink instead
+            // of being filtered at default Information level.
             Logger.App(
-                $"DynamicStaticFilesMiddleware unhandled exception for path '{context.Request.Path}': {ex}"
+                $"[DynamicStaticFiles] unhandled exception for path '{context.Request.Path}': {ex}",
+                Serilog.Events.LogEventLevel.Error
             );
             throw;
         }
