@@ -487,7 +487,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             {
                 Size = entry.SizeBytes,
                 Mode = 0,
-                Name = Path.GetFileNameWithoutExtension(fileName),
+                Name = BuildEpisodeCardLabel(result.Value.episodeMatch, fileName),
                 Parent = parentPath,
                 Parsed = parsed,
                 Match = result.Value.episodeMatch,
@@ -515,6 +515,31 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         );
 
         return false;
+    }
+
+    /// <summary>
+    /// Renders the consistent "<show> SxxExx <episode title>" label used by
+    /// the filelist UI cards. Falls back to the bare filename for
+    /// movies / unmatched items so the operator always sees something.
+    /// </summary>
+    private static string BuildEpisodeCardLabel(MovieOrEpisode match, string fileName)
+    {
+        if (
+            !string.IsNullOrWhiteSpace(match.ShowName)
+            && match.SeasonNumber > 0
+            && match.EpisodeNumber > 0
+        )
+        {
+            string label = $"{match.ShowName} S{match.SeasonNumber:D2}E{match.EpisodeNumber:D2}";
+            if (!string.IsNullOrWhiteSpace(match.Title))
+                label += $" {match.Title}";
+            return label;
+        }
+
+        if (!string.IsNullOrWhiteSpace(match.Title))
+            return match.Title;
+
+        return Path.GetFileNameWithoutExtension(fileName);
     }
 
     private async Task<bool> ProcessVideoFileInfo(
@@ -867,10 +892,19 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             await ctx.SaveChangesAsync();
         }
 
+        // Prefer the DB row over the search-side TmdbTvShow.Name — the local
+        // Tv table is the source of truth for show metadata after a scan, and
+        // a freshly added show may have been written by EnsureShowInLibraryAsync
+        // above.
+        string? showName =
+            await ctx.Tvs.Where(t => t.Id == show.Id).Select(t => t.Title).FirstOrDefaultAsync()
+            ?? show.Name;
+
         MovieOrEpisode match = new()
         {
             Id = episode.Id,
             Title = episode.Title.OrEmpty(),
+            ShowName = showName,
             EpisodeNumber = episode.EpisodeNumber,
             SeasonNumber = episode.SeasonNumber,
             Still = episode.Still,
@@ -1011,7 +1045,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         {
             Size = file.Length,
             Mode = (int)file.Attributes,
-            Name = Path.GetFileNameWithoutExtension(file.Name),
+            Name = BuildEpisodeCardLabel(match, file.Name),
             Parent = parentPath,
             Parsed = parsed,
             Match = match,

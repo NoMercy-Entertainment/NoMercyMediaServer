@@ -10,6 +10,15 @@ public record MovieOrEpisode
     [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
+    /// <summary>
+    /// English show name for episodes (empty for movies). Populated from TMDB
+    /// so the filelist UI can render the consistent
+    /// "<show> SxxExx <episode title>" label even when the source filename
+    /// uses a transliterated / fan-sub name.
+    /// </summary>
+    [JsonProperty("show_name")]
+    public string? ShowName { get; set; }
+
     [JsonProperty("duration")]
     public TimeSpan? Duration { get; set; }
 
