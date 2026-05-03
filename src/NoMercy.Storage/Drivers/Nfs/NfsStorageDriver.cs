@@ -16,10 +16,17 @@ namespace NoMercy.Storage.Drivers.Nfs;
 /// </summary>
 public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 {
+    // NFS4 servers reap idle client state after ~90s by default
+    // (CB_PATH_DOWN / NFS4ERR_EXPIRED). Keep-alive at 30s leaves headroom for
+    // packet loss and clock skew. NFS3 has no lease state so the ping is a
+    // harmless GETATTR there.
+    private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(30);
+
     private readonly NfsDriverConfig _config;
     private readonly IntPtr _nfs;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ILogger _log;
+    private readonly Timer? _keepAlive;
     private bool _disposed;
 
     public NfsStorageDriver(NfsDriverConfig config, ILogger? log = null)
@@ -58,6 +65,42 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             throw new IOException(
                 $"NFS{config.Version} mount failed for {config.Server}:{config.Export} — {err}"
             );
+        }
+
+        // Idle client state on NFS4 expires after ~90s, after which any open
+        // returns NFS4ERR_EXPIRED. Stat the export root every 30s so the
+        // server treats us as alive even when no streaming reads are in
+        // flight (typical between user sessions).
+        _keepAlive = new Timer(KeepAliveTick, null, KeepAliveInterval, KeepAliveInterval);
+    }
+
+    private void KeepAliveTick(object? _)
+    {
+        if (_disposed)
+            return;
+        if (!_lock.Wait(TimeSpan.Zero))
+            return; // real work in progress — no need to renew separately
+        try
+        {
+            int rc = LibNfs.Stat64(_nfs, "/", out LibNfs.NfsStat64 _);
+            if (rc != 0)
+            {
+                _log.LogDebug(
+                    "NFS keep-alive stat / failed on {Server}:{Export} (rc={Rc}): {Error}",
+                    _config.Server,
+                    _config.Export,
+                    rc,
+                    LibNfs.GetError(_nfs)
+                );
+            }
+        }
+        catch
+        {
+            // Best effort — never let the timer crash the process.
+        }
+        finally
+        {
+            _lock.Release();
         }
     }
 
@@ -763,6 +806,10 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     {
         if (_disposed)
             return;
+
+        // Stop the keep-alive timer first so it can't fire mid-teardown and
+        // call into a context we're about to free.
+        _keepAlive?.Dispose();
 
         // Acquire the driver lock before tearing down the libnfs context so
         // any stream call already inside LibNfs.Read/Write finishes against
