@@ -58,7 +58,11 @@ public partial class FileManager(
 
         foreach (Folder folder in Folders)
         {
-            ConcurrentBag<MediaFolderExtend> files = await GetFiles(library, folder.Path);
+            // Pass the whole folder so GetFiles can resolve the right driver
+            // (local / NFS / S3) for it. Hardcoding _storageDriver was
+            // scanning every library against the local disk regardless of
+            // its actual backend — NFS NAS and S3 buckets returned 0 files.
+            ConcurrentBag<MediaFolderExtend> files = await GetFiles(library, folder);
 
             if (!files.IsEmpty)
                 Files.AddRange(files);
@@ -947,9 +951,14 @@ public partial class FileManager(
         (Movie, Show, Type) = await fileRepository.MediaType(id, library);
     }
 
-    private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Library library, string path)
+    private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Library library, Folder folder)
     {
-        MediaScan mediaScan = new(_storageDriver);
+        // Resolve the driver this folder actually lives on (local, NFS, S3,
+        // WebDAV, …) — the injected _storageDriver is just whatever was
+        // bound at startup and doesn't necessarily match this folder's
+        // backend.
+        IStorage folderStorage = StorageFor(folder);
+        MediaScan mediaScan = new(folderStorage.Driver);
 
         int depth = library.Type switch
         {
@@ -963,7 +972,7 @@ public partial class FileManager(
             .DisableRegexFilter()
             .FilterByMediaType(library.Type)
             .FilterByFileName(Filter)
-            .Process(path, depth);
+            .Process(folder.Path, depth);
 
         await mediaScan.DisposeAsync();
 
