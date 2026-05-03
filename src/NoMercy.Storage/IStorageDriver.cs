@@ -76,4 +76,30 @@ public interface IStorageDriver
     /// </summary>
     Task<Uri?> TryGetPresignedUrlAsync(string path, TimeSpan ttl, CancellationToken ct) =>
         Task.FromResult<Uri?>(null);
+
+    /// <summary>
+    /// Path separator the driver speaks. Local on Windows is '\\'; remote
+    /// drivers (NFS / S3 / R2 / WebDAV) all use '/' regardless of host OS.
+    /// Callers building paths for storage operations should use this instead
+    /// of <see cref="Path.DirectorySeparatorChar"/>.
+    /// </summary>
+    char DirectorySeparator => '/';
+
+    /// <summary>
+    /// Joins a parent path and a child segment using the driver's
+    /// <see cref="DirectorySeparator"/>. Trims redundant separators on both
+    /// sides so the result is canonical. Replaces every storage-path
+    /// <c>Path.Combine</c> in the codebase.
+    /// </summary>
+    string CombinePath(string parent, string child)
+    {
+        char sep = DirectorySeparator;
+        if (string.IsNullOrEmpty(child))
+            return parent;
+        if (string.IsNullOrEmpty(parent))
+            return child;
+        string trimmedParent = parent.TrimEnd('/', '\\');
+        string trimmedChild = child.TrimStart('/', '\\');
+        return $"{trimmedParent}{sep}{trimmedChild}";
+    }
 }

@@ -55,8 +55,10 @@ public class ShowManager(
                 folderLibrary.Folder.DriverId,
                 folderLibrary.Folder.Path
             );
-            string folderName =
-                folderLibrary.Folder.Path.TrimEnd('/') + "/" + baseUrl.Replace("/", "");
+            string folderName = folderStorage.CombinePath(
+                folderLibrary.Folder.Path,
+                baseUrl.Replace("/", "")
+            );
 
             if (!folderStorage.Exists(folderName))
             {

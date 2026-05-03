@@ -95,21 +95,15 @@ public class WorkerSourceController(
         // Library membership check — only serve paths the server already
         // knows about. Prevents using the signed endpoint as a generic
         // file-read oracle if someone obtains the signing key.
+        // VideoFile.HostFolder/Filename are normalised to forward-slash by
+        // model setters, so a single forward-slash comparison covers both
+        // Windows hosts and Linux workers.
+        string normalizedPath = path.Replace('\\', '/');
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         bool isKnownFile = await context.VideoFiles.AnyAsync(
-            v => v.HostFolder + Path.DirectorySeparatorChar + v.Filename == path,
+            v => v.HostFolder + "/" + v.Filename == normalizedPath,
             ct
         );
-        if (!isKnownFile)
-        {
-            // Try forward-slash variant too — Windows hosts may store with
-            // backslashes while workers (Linux) might request with slashes.
-            string altPath = path.Replace('\\', '/');
-            isKnownFile = await context.VideoFiles.AnyAsync(
-                v => (v.HostFolder.Replace('\\', '/') + "/" + v.Filename) == altPath,
-                ct
-            );
-        }
 
         if (!isKnownFile)
         {

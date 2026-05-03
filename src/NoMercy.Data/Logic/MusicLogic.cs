@@ -410,7 +410,9 @@ public partial class MusicLogic : IAsyncDisposable
             return musicBrainzRelease;
 
         string folder =
-            mediaFile.Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
+            mediaFile
+                .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                ?.Replace("\\" + mediaFile.Name, "")
             ?? string.Empty;
 
         Album insert = new()
@@ -604,7 +606,9 @@ public partial class MusicLogic : IAsyncDisposable
             Logger.App($"File Match: {file}", LogEventLevel.Verbose);
             FfProbeData ffProbeData = await FfProbe.CreateAsync(file);
             string folder =
-                mediaFile.Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
+                mediaFile
+                    .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                    ?.Replace("\\" + mediaFile.Name, "")
                 ?? string.Empty;
 
             insert.Filename = "/" + Path.GetFileName(file);

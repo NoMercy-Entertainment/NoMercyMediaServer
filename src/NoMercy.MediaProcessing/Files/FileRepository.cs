@@ -393,9 +393,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     {
         string entryPath = entry.Path;
         string fileName = Path.GetFileName(entryPath);
-        string? directoryName = Path.GetDirectoryName(
-            entryPath.Replace('/', Path.DirectorySeparatorChar)
-        );
+        string? directoryName = Path.GetDirectoryName(entryPath)?.Replace('\\', '/');
 
         // Build a synthetic FileInfo-like object using storage metadata so the
         // parsing helpers stay unchanged. We do not touch raw System.IO here.

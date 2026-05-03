@@ -119,4 +119,23 @@ public interface IStorage
     /// </summary>
     Task<Uri?> TryGetPresignedUrlAsync(string path, TimeSpan ttl, CancellationToken ct) =>
         Driver.TryGetPresignedUrlAsync(path, ttl, ct);
+
+    /// <summary>Driver's path separator. Convenience pass-through.</summary>
+    char DirectorySeparator => Driver.DirectorySeparator;
+
+    /// <summary>Driver-aware path join. Convenience pass-through.</summary>
+    string CombinePath(string parent, string child) => Driver.CombinePath(parent, child);
+
+    /// <summary>
+    /// Resolves a storage-relative path to the absolute local filesystem
+    /// path that would be written for that key. Only meaningful for
+    /// <see cref="LocalStorage"/>; all other backends throw
+    /// <see cref="NotSupportedException"/>. Used by the encoder
+    /// orchestrator's same-volume rename fast-path.
+    /// </summary>
+    string GetFullPath(string path) =>
+        throw new NotSupportedException(
+            $"{GetType().Name} does not support GetFullPath. "
+                + "This method is only valid for LocalStorage."
+        );
 }

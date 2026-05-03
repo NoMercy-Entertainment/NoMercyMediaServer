@@ -307,7 +307,7 @@ public partial class FileLogic(
                 rootFolder.DriverId,
                 rootFolder.Path
             );
-            string path = rootFolder.Path.TrimEnd('/') + "/" + folder.TrimStart('/');
+            string path = folderStorage.CombinePath(rootFolder.Path, folder);
 
             if (!folderStorage.Exists(path))
             {

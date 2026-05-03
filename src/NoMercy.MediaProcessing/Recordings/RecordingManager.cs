@@ -108,10 +108,10 @@ public partial class RecordingManager(
                 );
 
                 string path =
-                    mediaFile.Parsed?.FilePath.Replace(
-                        Path.DirectorySeparatorChar + mediaFile.Name,
-                        ""
-                    ) ?? string.Empty;
+                    mediaFile
+                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                        ?.Replace("\\" + mediaFile.Name, "")
+                    ?? string.Empty;
 
                 Track insert = new()
                 {
@@ -407,12 +407,14 @@ public partial class RecordingManager(
 
                     FolderId = libraryFolder.Id,
                     Folder = mediaFile
-                        .Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
-                        .Replace(libraryFolder.Path, "")
-                        .Replace("\\", "/"),
+                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                        ?.Replace("\\" + mediaFile.Name, "")
+                        ?.Replace(libraryFolder.Path, "")
+                        ?.Replace("\\", "/"),
                     HostFolder = mediaFile
-                        .Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
-                        .PathName()!,
+                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                        ?.Replace("\\" + mediaFile.Name, "")
+                        ?.PathName()!,
 
                     LibraryId = libraryFolder.FolderLibraries.FirstOrDefault()!.LibraryId,
                 };
@@ -426,7 +428,9 @@ public partial class RecordingManager(
         }
 
         string path =
-            mediaFile.Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
+            mediaFile
+                .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                ?.Replace("\\" + mediaFile.Name, "")
             ?? string.Empty;
 
         Track insert = new()
