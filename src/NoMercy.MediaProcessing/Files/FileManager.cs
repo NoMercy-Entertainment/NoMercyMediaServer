@@ -422,11 +422,11 @@ public partial class FileManager(
             {
                 FileName = "/" + Path.GetFileName(chaptersFile.File).Replace("\\", "/"),
                 FileSize = storage.SizeOrZero(
-                    Path.Combine(hostFolder, Path.GetFileName(chaptersFile.File))
+                    JoinForward(hostFolder, Path.GetFileName(chaptersFile.File))
                 ),
                 FileHash = ComputeFileHash(
                     storage,
-                    Path.Combine(hostFolder, Path.GetFileName(chaptersFile.File))
+                    JoinForward(hostFolder, Path.GetFileName(chaptersFile.File))
                 ),
             }
             : null;
@@ -437,11 +437,11 @@ public partial class FileManager(
             {
                 FileName = "/" + Path.GetFileName(file.File).Replace("\\", "/"),
                 FileSize = storage.SizeOrZero(
-                    Path.Combine(hostFolder, Path.GetFileName(file.File).OrEmpty())
+                    JoinForward(hostFolder, Path.GetFileName(file.File).OrEmpty())
                 ),
                 FileHash = ComputeFileHash(
                     storage,
-                    Path.Combine(hostFolder, Path.GetFileName(file.File).OrEmpty())
+                    JoinForward(hostFolder, Path.GetFileName(file.File).OrEmpty())
                 ),
             })
             .FirstOrDefault();
@@ -579,7 +579,7 @@ public partial class FileManager(
     {
         List<ISubtitle> subtitles = [];
 
-        string subtitleFolder = Path.Combine(hostFolder, "subtitles");
+        string subtitleFolder = JoinForward(hostFolder, "subtitles");
 
         if (!storage.Exists(subtitleFolder))
             return subtitles;
@@ -597,7 +597,7 @@ public partial class FileManager(
             if (!match.Success)
                 continue;
 
-            string path = Path.Combine(hostFolder, subtitleEntry.Path);
+            string path = JoinForward(hostFolder, subtitleEntry.Path);
 
             // Reject binary subtitle formats we can't stream as HLS sidecars; accept
             // every text format (vtt, ass, srt, ssa, sub, idx, webvtt).
@@ -634,11 +634,11 @@ public partial class FileManager(
             {
                 ImageFileName = "/" + (Path.GetFileName(file.File).OrEmpty()).Replace("\\", "/"),
                 ImageFileSize = storage.SizeOrZero(
-                    Path.Combine(hostFolder, Path.GetFileName(file.File).OrEmpty())
+                    JoinForward(hostFolder, Path.GetFileName(file.File).OrEmpty())
                 ),
                 ImageFileHash = ComputeFileHash(
                     storage,
-                    Path.Combine(hostFolder, Path.GetFileName(file.File).OrEmpty())
+                    JoinForward(hostFolder, Path.GetFileName(file.File).OrEmpty())
                 ),
             });
 
@@ -648,19 +648,19 @@ public partial class FileManager(
             {
                 Width = GetImageDimensionsFromVtt(
                     storage,
-                    Path.Combine(hostFolder, Path.GetFileName(file.File).OrEmpty())
+                    JoinForward(hostFolder, Path.GetFileName(file.File).OrEmpty())
                 ).Width,
                 Height = GetImageDimensionsFromVtt(
                     storage,
-                    Path.Combine(hostFolder, Path.GetFileName(file.File).OrEmpty())
+                    JoinForward(hostFolder, Path.GetFileName(file.File).OrEmpty())
                 ).Height,
                 TimeFileName = "/" + (Path.GetFileName(file.File).OrEmpty()).Replace("\\", "/"),
                 TimeFileSize = storage.SizeOrZero(
-                    Path.Combine(hostFolder, Path.GetFileName(file.File).OrEmpty())
+                    JoinForward(hostFolder, Path.GetFileName(file.File).OrEmpty())
                 ),
                 TimeFileHash = ComputeFileHash(
                     storage,
-                    Path.Combine(hostFolder, Path.GetFileName(file.File).OrEmpty())
+                    JoinForward(hostFolder, Path.GetFileName(file.File).OrEmpty())
                 ),
             });
 
@@ -686,7 +686,7 @@ public partial class FileManager(
 
     private List<IFont> GetFontHashList(IStorage storage, string hostFolder)
     {
-        string fontFolder = Path.Combine(hostFolder, "fonts");
+        string fontFolder = JoinForward(hostFolder, "fonts");
 
         List<IFont> fonts = [];
 
@@ -696,7 +696,7 @@ public partial class FileManager(
         IReadOnlyList<StorageEntry> fontFiles = storage.List(fontFolder, null, recursive: false);
         foreach (StorageEntry fontEntry in fontFiles.Where(e => !e.IsDirectory))
         {
-            string path = Path.Combine(hostFolder, fontEntry.Path);
+            string path = JoinForward(hostFolder, fontEntry.Path);
             fonts.Add(
                 new()
                 {
@@ -717,7 +717,7 @@ public partial class FileManager(
         string file
     )
     {
-        string path = Path.Combine(hostFolder, file);
+        string path = JoinForward(hostFolder, file);
 
         List<IChapter> chapters = [];
 
@@ -839,13 +839,13 @@ public partial class FileManager(
         if (item == null)
             return null;
 
-        string path = Path.Combine(
+        string path = JoinForward(
             hostFolder,
             Path.GetFileName(item.File).OrEmpty().Replace("/", "")
         );
         return new IHash
             {
-                FileName = Path.DirectorySeparatorChar + Path.GetFileName(item.File),
+                FileName = "/" + Path.GetFileName(item.File),
                 FileSize = storage.SizeOrZero(path),
                 FileHash = ComputeFileHash(storage, path),
             } as T;
@@ -908,7 +908,7 @@ public partial class FileManager(
 
     private static List<Subtitle> GetSubtitles(IStorage storage, string hostFolder)
     {
-        string subtitleFolder = Path.Combine(hostFolder, "subtitles");
+        string subtitleFolder = JoinForward(hostFolder, "subtitles");
 
         List<Subtitle> subtitles = [];
 
@@ -1002,7 +1002,7 @@ public partial class FileManager(
         foreach (Folder rootFolder in rootFolders)
         {
             IStorage folderStorage = StorageFor(rootFolder);
-            string path = Path.Combine(rootFolder.Path, folder);
+            string path = JoinForward(rootFolder.Path, folder);
 
             if (!folderStorage.Exists(path))
             {
@@ -1025,6 +1025,12 @@ public partial class FileManager(
 
         return folders;
     }
+
+    // Storage paths are forward-slash everywhere — Path.Combine on Windows
+    // injects '\' which then breaks downstream string-Contains comparisons
+    // and remote-driver path resolution.
+    private static string JoinForward(string a, string b) =>
+        a.Replace('\\', '/').TrimEnd('/') + "/" + b.Replace('\\', '/').TrimStart('/');
 
     private static string ComputeFileHash(IStorage storage, string filePath)
     {
