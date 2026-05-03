@@ -8,6 +8,10 @@ using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Drivers.Nfs;
+using NoMercy.Storage.Drivers.S3;
+using NoMercy.Storage.Drivers.WebDav;
 
 namespace NoMercy.Encoder.Orchestration;
 
@@ -87,9 +91,8 @@ public class EncodingOrchestrator(
         // Resolve per-request storages. Jobs supply per-folder IStorage instances
         // that enforce path guards and backend routing. Fall back to the DI singleton
         // for callers that do not set per-folder storage (live transcoder, tests, etc.).
-        // TODO: cross-backend — when source != destination the orchestrator will need
-        // to AcquireLocalPathAsync on sourceStorage, run the encode, then stream the
-        // output to destinationStorage. Leave copy semantics for the remote-driver follow-up.
+        // Cross-backend: source staged via AcquireLocalPathAsync; remote destination
+        // gets a local temp working dir, then artifacts upload via destinationStorage.
         IStorage sourceStorage = request.SourceStorage ?? storage;
         IStorage destinationStorage =
             request.DestinationStorage ?? request.SourceStorage ?? storage;
@@ -98,8 +101,161 @@ public class EncodingOrchestrator(
 
         try
         {
-            EncodingResult result = await strategy.EncodeAsync(request, progress, ct);
-            wall.Stop();
+            await using LocalPathLease lease = await sourceStorage.AcquireLocalPathAsync(
+                request.InputPath,
+                ct
+            );
+
+            EncodingResult result;
+
+            Directory.CreateDirectory(NoMercy.Storage.StoragePaths.TranscodeRoot);
+            string tempDir = Path.Combine(
+                NoMercy.Storage.StoragePaths.TranscodeRoot,
+                $"nomercy-enc-{Ulid.NewUlid()}"
+            );
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                // Strategy always writes to a local temp dir so ffmpeg has a
+                // real filesystem path regardless of backend type. SourceStorage
+                // also swaps to the DI LocalStorage so stages can probe the
+                // staged input via FileExists/OpenRead. After encoding the
+                // publish loop moves or copies artifacts to the real destination.
+                EncodingRequest stagedRequest = request with
+                {
+                    InputPath = lease.Path,
+                    OutputDirectory = tempDir,
+                    SourceStorage = storage,
+                    DestinationStorage = storage,
+                };
+
+                result = await strategy.EncodeAsync(stagedRequest, progress, ct);
+                wall.Stop();
+
+                if (result.Success)
+                {
+                    // Decide stage name before entering the loop so the UI
+                    // shows an accurate label from the first notification.
+                    bool isLocalDest = destinationStorage is LocalStorage;
+                    bool sameVolume = false;
+
+                    if (isLocalDest)
+                    {
+                        // Probe the first file to determine whether source
+                        // temp dir and destination share a volume. If temp dir
+                        // is empty this stays false and we fall through to copy.
+                        string? firstFile = Directory
+                            .EnumerateFiles(tempDir, "*", SearchOption.AllDirectories)
+                            .FirstOrDefault();
+                        if (firstFile is not null)
+                        {
+                            // Compute the destination absolute path for the probe file.
+                            string probeRel = Path.GetRelativePath(tempDir, firstFile)
+                                .Replace('\\', '/');
+                            string probeDest = string.Join(
+                                '/',
+                                request.OutputDirectory.TrimEnd('/'),
+                                probeRel.TrimStart('/')
+                            );
+                            try
+                            {
+                                string destAbs = destinationStorage.GetFullPath(probeDest);
+                                sameVolume = string.Equals(
+                                    Path.GetPathRoot(firstFile),
+                                    Path.GetPathRoot(destAbs),
+                                    StringComparison.OrdinalIgnoreCase
+                                );
+                            }
+                            catch (NotSupportedException) { }
+                        }
+                    }
+
+                    string stageName = ResolvePublishStageName(destinationStorage, sameVolume);
+                    progress?.OnStageStarted(stageName);
+                    Stopwatch stageWatch = Stopwatch.StartNew();
+                    try
+                    {
+                        foreach (
+                            string localFile in Directory.EnumerateFiles(
+                                tempDir,
+                                "*",
+                                SearchOption.AllDirectories
+                            )
+                        )
+                        {
+                            string rel = Path.GetRelativePath(tempDir, localFile)
+                                .Replace('\\', '/');
+                            string remoteDest = string.Join(
+                                '/',
+                                request.OutputDirectory.TrimEnd('/'),
+                                rel.TrimStart('/')
+                            );
+
+                            if (sameVolume)
+                            {
+                                // Same-volume atomic rename — near-zero cost.
+                                bool moved = false;
+                                try
+                                {
+                                    string destAbs = destinationStorage.GetFullPath(remoteDest);
+                                    Directory.CreateDirectory(Path.GetDirectoryName(destAbs)!);
+                                    File.Move(localFile, destAbs, overwrite: true);
+                                    moved = true;
+                                }
+                                catch (IOException)
+                                {
+                                    // Cross-volume race or permission edge-case —
+                                    // fall through to the copy path below.
+                                }
+
+                                if (moved)
+                                    continue;
+                            }
+
+                            // Remote backend OR fallback from a failed move. Ensure the
+                            // parent directory exists on the destination — NFS creat
+                            // returns NF4ERR_NOENT(-2) when the enclosing dir is
+                            // missing, so without this the first segment write blows
+                            // up on every fresh show / season folder.
+                            string? remoteParent = Path.GetDirectoryName(remoteDest)
+                                ?.Replace('\\', '/');
+                            if (!string.IsNullOrEmpty(remoteParent))
+                                destinationStorage.CreateDirectory(remoteParent);
+
+                            await using FileStream src = File.OpenRead(localFile);
+                            await using Stream dst = await destinationStorage.OpenWriteAsync(
+                                remoteDest,
+                                overwrite: true,
+                                ct
+                            );
+                            await src.CopyToAsync(dst, ct);
+                        }
+                        stageWatch.Stop();
+                        progress?.OnStageCompleted(stageName, stageWatch.Elapsed);
+                    }
+                    catch
+                    {
+                        stageWatch.Stop();
+                        throw;
+                    }
+                }
+            }
+            finally
+            {
+                try
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+                catch (Exception cleanEx)
+                {
+                    logger.LogWarning(
+                        cleanEx,
+                        "Could not clean up temp encode dir {TempDir}",
+                        tempDir
+                    );
+                }
+            }
 
             if (!result.Success)
             {
@@ -366,5 +522,25 @@ public class EncodingOrchestrator(
             );
         }
         return total;
+    }
+
+    private static string ResolvePublishStageName(IStorage dest, bool sameVolume)
+    {
+        if (dest is LocalStorage)
+        {
+            return sameVolume
+                ? "Publishing artifacts (same-volume rename)"
+                : "Publishing artifacts to local";
+        }
+
+        string backendLabel = dest.Driver switch
+        {
+            NfsStorageDriver => "NFS",
+            S3StorageDriver => "S3",
+            WebDavStorageDriver => "WebDAV",
+            _ => dest.Driver.GetType().Name,
+        };
+
+        return $"Publishing artifacts to {backendLabel}";
     }
 }
