@@ -37,6 +37,29 @@ public interface IStorageDriver
     );
 
     /// <summary>
+    /// Returns matching entries with size, last-modified, and is-directory in
+    /// a single round trip when the driver can do it (S3 ListObjectsV2, etc.).
+    /// Default implementation falls back to <see cref="EnumerateFileSystemEntries"/>
+    /// + N×GetFileSize/GetLastWriteTimeUtc/DirectoryExists, which is what
+    /// <see cref="Remote.RemoteStorage"/>.List used to do unconditionally —
+    /// fine for libnfs but pathological for HTTP backends.
+    /// </summary>
+    IEnumerable<StorageEntryInfo> EnumerateEntries(
+        string directory,
+        string searchPattern,
+        SearchOption option
+    )
+    {
+        foreach (string entry in EnumerateFileSystemEntries(directory, searchPattern, option))
+        {
+            bool isDir = DirectoryExists(entry);
+            long size = isDir ? 0L : GetFileSize(entry);
+            DateTime utc = GetLastWriteTimeUtc(entry);
+            yield return new StorageEntryInfo(entry, isDir, size, utc);
+        }
+    }
+
+    /// <summary>
     /// Returns the canonical (absolute, normalized) path. Pure string
     /// transformation — does not touch the filesystem.
     /// </summary>

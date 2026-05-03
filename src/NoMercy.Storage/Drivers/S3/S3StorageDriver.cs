@@ -600,6 +600,169 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         return results;
     }
 
+    /// <summary>
+    /// Batched listing path. ListObjectsV2 / EnumerateRaw already returns
+    /// Size + LastModified for every object in the same response — emit them
+    /// directly instead of forcing RemoteStorage.List into N×HEAD calls per
+    /// file (which turned a 200-segment video_*/ into a 2-3 minute round trip).
+    /// </summary>
+    public IEnumerable<StorageEntryInfo> EnumerateEntries(
+        string directory,
+        string searchPattern,
+        SearchOption option
+    )
+    {
+        string prefix = ToKey(directory).TrimEnd('/');
+        if (!string.IsNullOrEmpty(prefix))
+            prefix += "/";
+
+        bool recursive = option == SearchOption.AllDirectories;
+
+        return HasRawCredentials
+            ? EnumerateEntriesRaw(prefix, searchPattern, recursive)
+            : EnumerateEntriesSdk(prefix, searchPattern, recursive);
+    }
+
+    private IEnumerable<StorageEntryInfo> EnumerateEntriesSdk(
+        string prefix,
+        string searchPattern,
+        bool recursive
+    )
+    {
+        string? continuationToken = null;
+        List<StorageEntryInfo> results = [];
+
+        do
+        {
+            ListObjectsV2Request request = new()
+            {
+                BucketName = _bucket,
+                Prefix = prefix,
+                ContinuationToken = continuationToken,
+                MaxKeys = 1000,
+            };
+
+            if (!recursive)
+                request.Delimiter = "/";
+
+            ListObjectsV2Response response = _client!
+                .ListObjectsV2Async(request)
+                .GetAwaiter()
+                .GetResult();
+
+            foreach (S3Object obj in response.S3Objects)
+            {
+                if (obj.Key.EndsWith("/", StringComparison.Ordinal))
+                    continue;
+
+                string relPath = FromKey(obj.Key);
+                string fileName = relPath.Contains('/')
+                    ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                    : relPath;
+
+                if (!MatchesPattern(fileName, searchPattern))
+                    continue;
+
+                results.Add(
+                    new StorageEntryInfo(
+                        relPath,
+                        IsDirectory: false,
+                        Size: obj.Size,
+                        LastWriteUtc: obj.LastModified is DateTime lm
+                            ? lm.ToUniversalTime()
+                            : DateTime.UtcNow
+                    )
+                );
+            }
+
+            if (!recursive)
+            {
+                foreach (string commonPrefix in response.CommonPrefixes)
+                {
+                    string relPath = FromKey(commonPrefix.TrimEnd('/'));
+                    string dirName = relPath.Contains('/')
+                        ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                        : relPath;
+
+                    if (MatchesPattern(dirName, searchPattern))
+                        results.Add(
+                            new StorageEntryInfo(
+                                relPath,
+                                IsDirectory: true,
+                                Size: 0L,
+                                LastWriteUtc: DateTime.UtcNow
+                            )
+                        );
+                }
+            }
+
+            continuationToken =
+                response.IsTruncated == true ? response.NextContinuationToken : null;
+        } while (continuationToken is not null);
+
+        return results;
+    }
+
+    private IEnumerable<StorageEntryInfo> EnumerateEntriesRaw(
+        string prefix,
+        string searchPattern,
+        bool recursive
+    )
+    {
+        string? continuationToken = null;
+        List<StorageEntryInfo> results = [];
+
+        do
+        {
+            (
+                List<(string Key, long Size, DateTime LastModified)> files,
+                List<string> dirs,
+                string? next
+            ) = ListPageRawWithMeta(prefix, delimiter: recursive ? null : "/", continuationToken);
+
+            foreach ((string key, long size, DateTime lastModified) in files)
+            {
+                string relPath = FromKey(key);
+                string fileName = relPath.Contains('/')
+                    ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                    : relPath;
+                if (MatchesPattern(fileName, searchPattern))
+                    results.Add(
+                        new StorageEntryInfo(
+                            relPath,
+                            IsDirectory: false,
+                            Size: size,
+                            LastWriteUtc: lastModified
+                        )
+                    );
+            }
+
+            if (!recursive)
+            {
+                foreach (string commonPrefix in dirs)
+                {
+                    string relPath = FromKey(commonPrefix.TrimEnd('/'));
+                    string dirName = relPath.Contains('/')
+                        ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                        : relPath;
+                    if (MatchesPattern(dirName, searchPattern))
+                        results.Add(
+                            new StorageEntryInfo(
+                                relPath,
+                                IsDirectory: true,
+                                Size: 0L,
+                                LastWriteUtc: DateTime.UtcNow
+                            )
+                        );
+                }
+            }
+
+            continuationToken = next;
+        } while (continuationToken is not null);
+
+        return results;
+    }
+
     // -----------------------------------------------------------------------
     // IStorageDriver — misc
     // -----------------------------------------------------------------------
@@ -837,6 +1000,101 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             .Select(e => e.Element(ns + "Key")?.Value ?? string.Empty)
             .Where(k => !string.IsNullOrEmpty(k) && !k.EndsWith("/", StringComparison.Ordinal))
             .ToList();
+
+        List<string> dirs = doc.Descendants(ns + "CommonPrefixes")
+            .Select(e => e.Element(ns + "Prefix")?.Value ?? string.Empty)
+            .Where(p => !string.IsNullOrEmpty(p))
+            .ToList();
+
+        string? next = doc.Descendants(ns + "NextContinuationToken").FirstOrDefault()?.Value;
+
+        return (files, dirs, next);
+    }
+
+    private (
+        List<(string Key, long Size, DateTime LastModified)> Files,
+        List<string> Dirs,
+        string? Next
+    ) ListPageRawWithMeta(string prefix, string? delimiter, string? continuationToken)
+    {
+        StringBuilder qs = new();
+        qs.Append("list-type=2");
+        if (!string.IsNullOrEmpty(prefix))
+            qs.Append("&prefix=").Append(Uri.EscapeDataString(prefix));
+        if (!string.IsNullOrEmpty(delimiter))
+            qs.Append("&delimiter=").Append(Uri.EscapeDataString(delimiter));
+        qs.Append("&max-keys=1000");
+        if (!string.IsNullOrEmpty(continuationToken))
+            qs.Append("&continuation-token=").Append(Uri.EscapeDataString(continuationToken));
+
+        string canonicalQs = BuildSortedQueryString(qs.ToString());
+
+        (string authHeader, string amzDate) = S3SigV4.SignHeaderRequest(
+            "GET",
+            _endpoint!,
+            _bucket,
+            string.Empty,
+            canonicalQs,
+            _region!,
+            _accessKey!,
+            _secretKey!,
+            DateTime.UtcNow
+        );
+
+        string listUrl =
+            _endpoint!.TrimEnd('/') + "/" + Uri.EscapeDataString(_bucket) + "/?" + canonicalQs;
+
+        using HttpRequestMessage req = new(HttpMethod.Get, listUrl);
+        req.Headers.TryAddWithoutValidation("Authorization", authHeader);
+        req.Headers.TryAddWithoutValidation(
+            "x-amz-content-sha256",
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+        req.Headers.TryAddWithoutValidation("x-amz-date", amzDate);
+        req.Headers.Host = S3SigV4.HostFromEndpoint(_endpoint!);
+
+        using HttpResponseMessage res = Http.Send(req);
+        if (!res.IsSuccessStatusCode)
+        {
+            string body = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            throw new IOException(
+                $"S3 LIST '{listUrl}' failed: HTTP {(int)res.StatusCode} {res.ReasonPhrase}; body: {body}"
+            );
+        }
+
+        string xml = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        return ParseListXmlWithMeta(xml);
+    }
+
+    private static (
+        List<(string Key, long Size, DateTime LastModified)> Files,
+        List<string> Dirs,
+        string? Next
+    ) ParseListXmlWithMeta(string xml)
+    {
+        XDocument doc = XDocument.Parse(xml);
+        XNamespace ns = "http://s3.amazonaws.com/doc/2006-03-01/";
+
+        List<(string, long, DateTime)> files = [];
+        foreach (XElement e in doc.Descendants(ns + "Contents"))
+        {
+            string key = e.Element(ns + "Key")?.Value ?? string.Empty;
+            if (string.IsNullOrEmpty(key) || key.EndsWith("/", StringComparison.Ordinal))
+                continue;
+
+            long size = long.TryParse(e.Element(ns + "Size")?.Value, out long s) ? s : 0L;
+            DateTime lastModified = DateTime.TryParse(
+                e.Element(ns + "LastModified")?.Value,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal
+                    | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                out DateTime lm
+            )
+                ? lm
+                : DateTime.UtcNow;
+
+            files.Add((key, size, lastModified));
+        }
 
         List<string> dirs = doc.Descendants(ns + "CommonPrefixes")
             .Select(e => e.Element(ns + "Prefix")?.Value ?? string.Empty)

@@ -135,9 +135,10 @@ public sealed class RemoteStorage : IStorage
     /// </summary>
     public async Task<LocalPathLease> AcquireLocalPathAsync(string path, CancellationToken ct)
     {
-        string tmp = Path.Combine(Path.GetTempPath(), $"nomercy-remote-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(StoragePaths.TempRoot);
+        string tmp = Path.Combine(StoragePaths.TempRoot, $"nomercy-remote-{Guid.NewGuid():N}");
 
-        await using Stream src = _driver.OpenRead(path);
+        await using Stream src = _driver.OpenReadIsolated(path);
         await using FileStream dst = new(
             tmp,
             FileMode.Create,
@@ -219,14 +220,19 @@ public sealed class RemoteStorage : IStorage
             : SearchOption.TopDirectoryOnly;
         string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
 
+        // Drivers with batched listing (e.g. S3 ListObjectsV2) override
+        // EnumerateEntries to return size + mtime in the original page
+        // instead of fanning out to N×HEAD per file.
         List<StorageEntry> entries = [];
-        foreach (string entry in _driver.EnumerateFileSystemEntries(path, effectivePattern, option))
+        foreach (StorageEntryInfo info in _driver.EnumerateEntries(path, effectivePattern, option))
         {
-            bool isDir = _driver.DirectoryExists(entry);
-            long size = isDir ? 0L : _driver.GetFileSize(entry);
-            DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             entries.Add(
-                new StorageEntry(entry, isDir, size, new DateTimeOffset(utc, TimeSpan.Zero))
+                new StorageEntry(
+                    info.Path,
+                    info.IsDirectory,
+                    info.Size,
+                    new DateTimeOffset(info.LastWriteUtc, TimeSpan.Zero)
+                )
             );
         }
         return entries;
@@ -234,9 +240,10 @@ public sealed class RemoteStorage : IStorage
 
     public LocalPathLease AcquireLocalPath(string path)
     {
-        string tmp = Path.Combine(Path.GetTempPath(), $"nomercy-remote-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(StoragePaths.TempRoot);
+        string tmp = Path.Combine(StoragePaths.TempRoot, $"nomercy-remote-{Guid.NewGuid():N}");
 
-        using Stream src = _driver.OpenRead(path);
+        using Stream src = _driver.OpenReadIsolated(path);
         using FileStream dst = new(tmp, FileMode.Create, FileAccess.Write, FileShare.None);
         src.CopyTo(dst);
 

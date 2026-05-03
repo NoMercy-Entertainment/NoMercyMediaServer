@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NoMercy.NmSystem.Lifecycle;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 using Exception = System.Exception;
@@ -11,7 +12,8 @@ public class QueueWorker(
     string name = "default",
     QueueRunner? runner = null,
     ILogger<QueueWorker>? logger = null,
-    IServiceScopeFactory? scopeFactory = null
+    IServiceScopeFactory? scopeFactory = null,
+    IServerReadinessGate? readinessGate = null
 )
 {
     private const int MaxTransientRetries = 5;
@@ -39,15 +41,37 @@ public class QueueWorker(
 
     public event WorkCompletedEventHandler WorkCompleted = delegate { };
 
-    public void Start()
+    public async Task StartAsync(CancellationToken stopToken)
     {
-        // Per-worker start not logged — summary in QueueRunner.Initialize()
+        if (readinessGate is not null)
+        {
+            NoMercy.NmSystem.SystemCalls.Logger.App(
+                $"[QueueWorker {name}] awaiting readiness gate",
+                Serilog.Events.LogEventLevel.Information
+            );
+            await readinessGate.WaitForReadyAsync(stopToken).ConfigureAwait(false);
+            NoMercy.NmSystem.SystemCalls.Logger.App(
+                $"[QueueWorker {name}] gate resolved, entering poll loop",
+                Serilog.Events.LogEventLevel.Information
+            );
+        }
 
-        Thread.CurrentThread.Priority = ThreadPriority.Lowest;
+        if (stopToken.IsCancellationRequested)
+            return;
 
-        while (_isRunning)
+        bool firstPoll = true;
+        while (_isRunning && !stopToken.IsCancellationRequested)
         {
             QueueJobModel? job = queue.ReserveJob(name, _currentJobId);
+
+            if (firstPoll)
+            {
+                NoMercy.NmSystem.SystemCalls.Logger.App(
+                    $"[QueueWorker {name}] first ReserveJob → {(job is null ? "null" : "id=" + job.Id)}",
+                    Serilog.Events.LogEventLevel.Information
+                );
+                firstPoll = false;
+            }
 
             if (job != null)
             {
@@ -115,7 +139,7 @@ public class QueueWorker(
 
                 try
                 {
-                    queue.WorkAvailable.Wait(TimeSpan.FromSeconds(5), _stopCts.Token);
+                    queue.WorkAvailable.Wait(TimeSpan.FromSeconds(5), stopToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -219,12 +243,6 @@ public class QueueWorker(
         logger?.LogInformation("QueueWorker {Name} - {CurrentIndex}: stopped", name, CurrentIndex);
         _isRunning = false;
         _stopCts.Cancel();
-    }
-
-    public void Restart()
-    {
-        Stop();
-        Start();
     }
 
     public void StopWhenReady()
