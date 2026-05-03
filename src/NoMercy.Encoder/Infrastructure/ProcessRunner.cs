@@ -200,6 +200,15 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             await killRegistration.DisposeAsync();
         }
 
+        // WaitForExitAsync returns when the process exits but does NOT wait
+        // for the redirected output/error streams to drain or for the OS to
+        // finalize the exit code — that's a known .NET race documented at
+        // https://learn.microsoft.com/dotnet/api/system.diagnostics.process.waitforexit.
+        // The sync WaitForExit() with no timeout completes those steps;
+        // skipping it is what produced spurious exit -1 readings on long
+        // ffmpeg runs (rip cut at 32:24 of 40:23 with no actual error).
+        process.WaitForExit();
+
         stopwatch.Stop();
 
         int exitCode = killedBySignal ? 0 : process.ExitCode;
