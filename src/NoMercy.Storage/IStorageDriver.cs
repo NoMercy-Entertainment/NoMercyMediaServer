@@ -68,6 +68,42 @@ public interface IStorageDriver
     Stream OpenReadIsolated(string path) => OpenRead(path);
 
     /// <summary>
+    /// Materializes <paramref name="path"/> as a real local file path that
+    /// can be passed to a child process (ffprobe, fpcalc, whisper, etc.).
+    /// Local drivers return the path as-is; remote drivers stage to a temp
+    /// file via <see cref="OpenReadIsolated"/> and clean it up on dispose.
+    /// </summary>
+    async Task<LocalPathLease> AcquireLocalPathAsync(string path, CancellationToken ct)
+    {
+        Directory.CreateDirectory(StoragePaths.TempRoot);
+        string tmp = Path.Combine(
+            StoragePaths.TempRoot,
+            $"nomercy-probe-{Guid.NewGuid():N}{Path.GetExtension(path)}"
+        );
+
+        await using (Stream src = OpenReadIsolated(path))
+        await using (FileStream dst = new(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+            await src.CopyToAsync(dst, ct);
+
+        return new LocalPathLease(
+            tmp,
+            () =>
+            {
+                try
+                {
+                    if (File.Exists(tmp))
+                        File.Delete(tmp);
+                }
+                catch
+                {
+                    // best-effort cleanup
+                }
+                return ValueTask.CompletedTask;
+            }
+        );
+    }
+
+    /// <summary>
     /// Optionally return a time-limited presigned URL the client can fetch
     /// directly from the backend, bypassing the server. Drivers that don't
     /// support this (local, nfs, webdav by default) return null and the

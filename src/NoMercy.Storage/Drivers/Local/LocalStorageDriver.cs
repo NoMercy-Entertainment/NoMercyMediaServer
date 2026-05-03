@@ -43,6 +43,10 @@ public sealed class LocalStorageDriver : IStorageDriver
             useAsync: true
         );
 
+    // Local files are already on local FS; no staging needed.
+    public Task<LocalPathLease> AcquireLocalPathAsync(string path, CancellationToken ct) =>
+        Task.FromResult(new LocalPathLease(path));
+
     public void MoveFile(string source, string destination) =>
         File.Move(source, destination, overwrite: false);
 
