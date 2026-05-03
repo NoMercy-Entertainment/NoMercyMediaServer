@@ -924,7 +924,20 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     {
         string normalized = path.Replace('\\', '/');
         if (!normalized.StartsWith('/'))
-            return "/" + normalized;
+            normalized = "/" + normalized;
+
+        // libnfs paths are relative to the mounted Export. Strip a matching
+        // Export prefix so callers can pass absolute server paths.
+        string export = _config.Export.TrimEnd('/');
+        if (export.Length > 0 && normalized.StartsWith(export, StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[export.Length..];
+            if (normalized.Length == 0)
+                return "/";
+            if (!normalized.StartsWith('/'))
+                normalized = "/" + normalized;
+        }
+
         return normalized;
     }
 
