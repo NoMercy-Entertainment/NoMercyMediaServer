@@ -953,11 +953,8 @@ public partial class FileManager(
 
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Library library, Folder folder)
     {
-        // Resolve the driver this folder actually lives on (local, NFS, S3,
-        // WebDAV, …) — the injected _storageDriver is just whatever was
-        // bound at startup and doesn't necessarily match this folder's
-        // backend.
-        IStorage folderStorage = StorageFor(folder);
+        // Mount at configured root; MediaScan walks via absolute paths.
+        IStorage folderStorage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         MediaScan mediaScan = new(folderStorage.Driver);
 
         int depth = library.Type switch
@@ -996,7 +993,11 @@ public partial class FileManager(
         }
 
         using MediaContext mediaContext = new();
-        Folder[] rootFolders = mediaContext.FolderLibrary.Select(f => f.Folder).ToArray();
+        Folder[] rootFolders = mediaContext
+            .FolderLibrary.Include(fl => fl.Folder)
+                .ThenInclude(fl => fl.Driver)
+            .Select(f => f.Folder)
+            .ToArray();
 
         foreach (Folder rootFolder in rootFolders)
         {
@@ -1017,6 +1018,7 @@ public partial class FileManager(
                         Path = path,
                         Id = rootFolder.Id,
                         DriverId = rootFolder.DriverId,
+                        Driver = rootFolder.Driver,
                     }
                 );
         }

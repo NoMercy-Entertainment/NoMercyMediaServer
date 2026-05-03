@@ -192,7 +192,8 @@ public class LibraryManager(
         HashSet<string> existingFolders
     )
     {
-        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+        // Mount at configured root; MediaScan walks via absolute paths.
+        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(folder.Path, depth);
 
@@ -239,7 +240,8 @@ public class LibraryManager(
         HashSet<string> existingFolders
     )
     {
-        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+        // Mount at configured root; MediaScan walks via absolute paths.
+        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(folder.Path, depth)
@@ -286,7 +288,8 @@ public class LibraryManager(
 
     private async Task<int> ScanVideoFolder(Folder folder, int depth)
     {
-        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+        // Mount at configured root; MediaScan walks via absolute paths.
+        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(folder.Path, depth);
 
@@ -323,7 +326,8 @@ public class LibraryManager(
 
     private async Task<int> ScanAudioFolder(Folder folder, int depth)
     {
-        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+        // Mount at configured root; MediaScan walks via absolute paths.
+        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
         List<MediaFolderExtend> rootFolders = (
             await mediaScan.DisableRegexFilter().Process(folder.Path, depth)
