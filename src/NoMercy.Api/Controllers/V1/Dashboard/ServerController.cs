@@ -341,11 +341,7 @@ public class ServerController(
             return Ok(
                 new DataResponseDto<FileListResponseDto>
                 {
-                    Data = new()
-                    {
-                        Status = "ok",
-                        Files = fileList.OrderBy(file => file.Path).ToList(),
-                    },
+                    Data = new() { Status = "ok", Files = SortFileList(fileList) },
                 }
             );
         }
@@ -367,15 +363,22 @@ public class ServerController(
             return Ok(
                 new DataResponseDto<FileListResponseDto>
                 {
-                    Data = new()
-                    {
-                        Status = "ok",
-                        Files = fileList.OrderBy(file => file.Path).ToList(),
-                    },
+                    Data = new() { Status = "ok", Files = SortFileList(fileList) },
                 }
             );
         }
     }
+
+    // Order by show → season → episode → path so SxxExx files line up the way
+    // the operator expects (S01E01 before S01E10 before S02E01); falls back to
+    // Path string for files without a season/episode match.
+    private static List<FileItem> SortFileList(List<FileItem> files) =>
+        files
+            .OrderBy(f => f.Parsed?.Title ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(f => f.Parsed?.Season ?? int.MaxValue)
+            .ThenBy(f => f.Parsed?.Episode ?? int.MaxValue)
+            .ThenBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     [NonAction]
     private string DeviceName()

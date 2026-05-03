@@ -520,24 +520,18 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     }
 
     /// <summary>
-    /// Replaces parsed.Title with the consistent "<show> SxxExx <episode title>"
-    /// label so filelist cards match Stoney's on-disk file naming convention.
+    /// Replaces parsed.Title with the canonical TMDB English show name so the
+    /// dashboard's '<parsed.title> SxxExx - <match.title>' template renders a
+    /// label consistent with Stoney's file-naming convention even when the
+    /// source filename uses a transliterated / fan-sub title.
     /// Movies and unmatched items keep their filename-derived parsed.Title.
     /// </summary>
     private static void ApplyEpisodeCardLabel(MovieFile parsed, MovieOrEpisode match)
     {
-        if (
-            string.IsNullOrWhiteSpace(match.ShowName)
-            || match.SeasonNumber <= 0
-            || match.EpisodeNumber <= 0
-        )
+        if (string.IsNullOrWhiteSpace(match.ShowName))
             return;
 
-        string label = $"{match.ShowName} S{match.SeasonNumber:D2}E{match.EpisodeNumber:D2}";
-        if (!string.IsNullOrWhiteSpace(match.Title))
-            label += $" {match.Title}";
-
-        parsed.Title = label;
+        parsed.Title = match.ShowName;
     }
 
     private async Task<bool> ProcessVideoFileInfo(
