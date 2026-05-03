@@ -505,7 +505,13 @@ public static class FfProbe
                 WindowStyle = ProcessWindowStyle.Hidden,
                 FileName = AppFiles.FfProbePath,
                 Arguments =
-                    "-hide_banner -v quiet -show_format -show_streams -print_format json -i pipe:0",
+                    // Cap probe budget: stdin can't seek, so without a hard limit
+                    // ffprobe reads to EOF when it can't find duration in the
+                    // header. 5 MB / 5 s is plenty for any container's format
+                    // and stream metadata; missing scan-derived stats are
+                    // acceptable for filelist (we only need codecs/resolution/
+                    // duration-from-header).
+                    "-hide_banner -v quiet -probesize 5M -analyzeduration 5M -show_format -show_streams -print_format json -i pipe:0",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 RedirectStandardInput = true,

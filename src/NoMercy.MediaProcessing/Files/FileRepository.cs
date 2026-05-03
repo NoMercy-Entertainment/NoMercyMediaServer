@@ -414,16 +414,17 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         string title = entryPath.Replace("v2", "");
         title = Str.RemoveBracketedString().Replace(title, string.Empty);
 
-        // Driver-aware FfProbe — local files probe directly; remote files
-        // stream the header via stdin pipe (HLS playlists parse manually).
-        // Old code called AcquireLocalPathAsync which copied the entire file
-        // from NFS to disk before probing, turning a 30-file list into a
-        // 5-minute round trip when the NAS only needed a few KB of header.
-        FfProbeData ffprobeData = await FfProbe.CreateAsync(
-            storage.Driver,
-            entryPath,
-            CancellationToken.None
-        );
+        // Filelist runs FOR EVERY FILE the user wants to triage; ffprobe over
+        // a non-seekable stdin pipe scans to EOF on container formats whose
+        // duration lives at end-of-file (mp4 mvhd, etc.) — 30 s/file on NFS.
+        // The encode queue probes the full file later anyway. Skip ffprobe
+        // here for remote drivers; the only reliable consumer of Streams in
+        // the filelist response is the local-encode pre-flight which still
+        // works end-to-end for LocalStorage.
+        FfProbeData ffprobeData =
+            storage.Driver is NoMercy.Storage.Drivers.Local.LocalStorageDriver
+                ? await FfProbe.CreateAsync(entryPath)
+                : new FfProbeData();
 
         MovieFile parsed = ParseVideoFileName(fileName, directoryName, title);
 

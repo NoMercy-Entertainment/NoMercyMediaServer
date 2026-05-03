@@ -303,6 +303,12 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view files");
 
+        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        Logger.App(
+            $"[FileList] folder={request.Folder} type={request.Type} driver={request.DriverId}",
+            Serilog.Events.LogEventLevel.Information
+        );
+
         IStorage? resolvedStorage = null;
         if (!string.IsNullOrWhiteSpace(request.DriverId))
         {
@@ -326,6 +332,12 @@ public class ServerController(
                 request.Folder,
                 effectiveDriver
             );
+
+            Logger.App(
+                $"[FileList] returned {fileList.Count} entries in {sw.ElapsedMilliseconds}ms (music)",
+                Serilog.Events.LogEventLevel.Information
+            );
+
             return Ok(
                 new DataResponseDto<FileListResponseDto>
                 {
@@ -346,6 +358,11 @@ public class ServerController(
                     resolvedStorage
                 )
                 : await fileRepository.GetFilesInDirectory(request.Folder, request.Type);
+
+            Logger.App(
+                $"[FileList] returned {fileList.Count} entries in {sw.ElapsedMilliseconds}ms",
+                Serilog.Events.LogEventLevel.Information
+            );
 
             return Ok(
                 new DataResponseDto<FileListResponseDto>
