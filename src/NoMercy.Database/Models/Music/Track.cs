@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Database.Internal;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Database.Models.Music;
@@ -74,11 +75,23 @@ public class Track : ColorPaletteTimeStamps
         set => _lyrics = JsonConvert.SerializeObject(value);
     }
 
+    private string? _folder;
+
     [JsonProperty("folder")]
-    public string? Folder { get; set; }
+    public string? Folder
+    {
+        get => _folder;
+        set => _folder = PathNormalizer.NormalizeNullable(value);
+    }
+
+    private string? _hostFolder;
 
     [JsonProperty("host_folder")]
-    public string? HostFolder { get; set; }
+    public string? HostFolder
+    {
+        get => _hostFolder;
+        set => _hostFolder = PathNormalizer.NormalizeNullable(value);
+    }
 
     [JsonProperty("folder_id")]
     public Ulid FolderId { get; set; }

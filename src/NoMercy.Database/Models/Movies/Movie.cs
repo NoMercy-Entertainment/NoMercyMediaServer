@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Database.Internal;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Database.Models.Movies;
@@ -31,8 +32,14 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("show")]
     public bool Show { get; set; }
 
+    private string? _folder;
+
     [JsonProperty("folder")]
-    public string? Folder { get; set; }
+    public string? Folder
+    {
+        get => _folder;
+        set => _folder = PathNormalizer.NormalizeNullable(value);
+    }
 
     [JsonProperty("adult")]
     public bool Adult { get; set; }

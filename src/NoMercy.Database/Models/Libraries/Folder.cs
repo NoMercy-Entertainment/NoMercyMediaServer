@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Database.Internal;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Storage;
 
@@ -14,8 +15,14 @@ public class Folder
     [JsonProperty("id")]
     public Ulid Id { get; set; }
 
+    private string _path = string.Empty;
+
     [JsonProperty("path")]
-    public string Path { get; set; } = string.Empty;
+    public string Path
+    {
+        get => _path;
+        set => _path = PathNormalizer.Normalize(value);
+    }
 
     [JsonProperty("driver_id")]
     public Ulid DriverId { get; set; }

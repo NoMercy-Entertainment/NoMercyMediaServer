@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Database.Internal;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Database.Models.TvShows;
@@ -29,8 +30,14 @@ public class Tv : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("have_episodes")]
     public int? HaveEpisodes { get; set; }
 
+    private string? _folder;
+
     [JsonProperty("folder")]
-    public string? Folder { get; set; }
+    public string? Folder
+    {
+        get => _folder;
+        set => _folder = PathNormalizer.NormalizeNullable(value);
+    }
 
     [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
