@@ -37,6 +37,13 @@ public class ChromeCast
         StringComparer.OrdinalIgnoreCase
     );
 
+    // Per-name connect gate so concurrent callers (VideoHub, MusicHub × 2
+    // observed in practice) don't each open a wasted TCP connection to the
+    // same TV. First caller wins, others wait and read from ClientPool.
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _connectGates = new(
+        StringComparer.OrdinalIgnoreCase
+    );
+
     // Tracks which receiver was most recently selected (for compat callers that
     // call SelectChromecast then Launch/CastPlaylist without passing a name).
     [ThreadStatic]
@@ -116,25 +123,34 @@ public class ChromeCast
         // Cast control port so SelectChromecast can still try a direct TCP
         // connect. The phone-to-TV cast already proved IP reachability; only
         // the discovery layer is broken.
-        ChromecastReceiver synthetic = _synthesizedReceivers.GetOrAdd(
-            ip,
-            key =>
+        // ConcurrentDictionary.GetOrAdd may invoke the factory multiple times
+        // under concurrent miss; we want the "Synthesized..." log emitted at
+        // most once per IP per process. Build candidate first, then TryAdd.
+        if (!_synthesizedReceivers.TryGetValue(ip, out ChromecastReceiver? synthetic))
+        {
+            ChromecastReceiver candidate = new()
+            {
+                Name = ip,
+                DeviceUri = new Uri($"https://{ip}"),
+                Port = 8009,
+                Model = "Chromecast",
+                Version = "0",
+                Status = string.Empty,
+                ExtraInformation = new Dictionary<string, string>(),
+            };
+
+            if (_synthesizedReceivers.TryAdd(ip, candidate))
             {
                 Logger.Ping(
-                    $"Synthesized Chromecast receiver for {key}:8009 — mDNS unavailable, will attempt direct connect"
+                    $"Synthesized Chromecast receiver for {ip}:8009 — mDNS unavailable, will attempt direct connect"
                 );
-                return new ChromecastReceiver
-                {
-                    Name = key,
-                    DeviceUri = new Uri($"https://{key}"),
-                    Port = 8009,
-                    Model = "Chromecast",
-                    Version = "0",
-                    Status = string.Empty,
-                    ExtraInformation = new Dictionary<string, string>(),
-                };
+                synthetic = candidate;
             }
-        );
+            else
+            {
+                synthetic = _synthesizedReceivers[ip];
+            }
+        }
 
         return synthetic.Name;
     }
@@ -215,13 +231,8 @@ public class ChromeCast
         return client;
     }
 
-    // Sharpcaster's HeartbeatChannel raises Elapsed as async-void on a
-    // System.Timers.Timer. When the cast TV drops, SslStream.WriteAsync
-    // throws, the unhandled exception escapes via Task.ThrowAsync onto a
-    // ThreadPool worker, and the runtime terminates the process. We disable
-    // the heartbeat via reflection — the Cast TV will time the connection
-    // out on its own; our next send attempt fails with a catchable
-    // exception instead of killing the host.
+    // Sharpcaster heartbeat: stop the outbound Timer AND drop the channel
+    // from the dispatch list — both paths are async-void into ThreadPool.
     private static void DisableSharpcasterHeartbeat(ChromecastClient client)
     {
         try
@@ -231,16 +242,20 @@ public class ChromeCast
                 .GetProperty("Channels", BindingFlags.Public | BindingFlags.Instance)
                 ?.GetValue(client);
 
-            if (channels is not System.Collections.IEnumerable enumerable)
+            if (channels is not System.Collections.IList channelList)
                 return;
 
-            foreach (object? channel in enumerable)
+            List<object> heartbeats = [];
+
+            foreach (object? channel in channelList)
             {
                 if (
                     channel is null
                     || !channel.GetType().Name.Contains("Heartbeat", StringComparison.Ordinal)
                 )
                     continue;
+
+                heartbeats.Add(channel);
 
                 foreach (
                     FieldInfo field in channel
@@ -256,6 +271,9 @@ public class ChromeCast
                     }
                 }
             }
+
+            foreach (object heartbeat in heartbeats)
+                channelList.Remove(heartbeat);
         }
         catch (Exception ex)
         {
@@ -292,28 +310,31 @@ public class ChromeCast
         if (ClientPool.TryGetValue(name, out ChromecastClient? existing))
             return existing;
 
-        ChromecastClient newClient = BuildClient(name);
-        Logger.Ping($"Connecting to chromecast: {name}");
-        await newClient.ConnectChromecast(receiver);
-
-        // Disable Sharpcaster's internal heartbeat after Connect — the timer
-        // is only constructed once Connect spins up the channels.
-        DisableSharpcasterHeartbeat(newClient);
-
-        // Another thread may have won the race; prefer theirs and dispose ours.
-        if (ClientPool.TryAdd(name, newClient))
-            return newClient;
-
+        // Serialize per-name so 3 concurrent callers don't each open a TCP
+        // connection. First caller does the work; the rest wait, then read
+        // from ClientPool (which the winner populated below).
+        SemaphoreSlim gate = _connectGates.GetOrAdd(name, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
         try
         {
-            await newClient.DisconnectAsync();
-        }
-        catch
-        {
-            // best-effort dispose of the losing client
-        }
+            if (ClientPool.TryGetValue(name, out ChromecastClient? raced))
+                return raced;
 
-        return ClientPool[name];
+            ChromecastClient newClient = BuildClient(name);
+            Logger.Ping($"Connecting to chromecast: {name}");
+            await newClient.ConnectChromecast(receiver);
+
+            // Disable Sharpcaster's internal heartbeat after Connect — the
+            // timer is only constructed once Connect spins up the channels.
+            DisableSharpcasterHeartbeat(newClient);
+
+            ClientPool[name] = newClient;
+            return newClient;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     // --- Public API (name-explicit overloads) ---
