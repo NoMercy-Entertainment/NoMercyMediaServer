@@ -11,12 +11,11 @@ public record MovieOrEpisode
     public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// English show name for episodes (empty for movies). Populated from TMDB
-    /// so the filelist UI can render the consistent
-    /// "<show> SxxExx <episode title>" label even when the source filename
-    /// uses a transliterated / fan-sub name.
+    /// English show name for episodes — server-side only, not emitted in the
+    /// API response (the API surfaces this baked into MovieFile.Title via the
+    /// filelist's '<show> SxxExx <episode title>' label).
     /// </summary>
-    [JsonProperty("show_name")]
+    [JsonIgnore]
     public string? ShowName { get; set; }
 
     [JsonProperty("duration")]

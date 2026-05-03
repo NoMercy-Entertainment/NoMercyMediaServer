@@ -482,12 +482,14 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             ? "/"
             : Path.GetDirectoryName(directoryName.TrimEnd('/', '\\'))?.Replace('\\', '/') ?? "/";
 
+        ApplyEpisodeCardLabel(parsed, result.Value.episodeMatch);
+
         fileList.Add(
             new()
             {
                 Size = entry.SizeBytes,
                 Mode = 0,
-                Name = BuildEpisodeCardLabel(result.Value.episodeMatch, fileName),
+                Name = Path.GetFileNameWithoutExtension(fileName),
                 Parent = parentPath,
                 Parsed = parsed,
                 Match = result.Value.episodeMatch,
@@ -518,28 +520,24 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     }
 
     /// <summary>
-    /// Renders the consistent "<show> SxxExx <episode title>" label used by
-    /// the filelist UI cards. Falls back to the bare filename for
-    /// movies / unmatched items so the operator always sees something.
+    /// Replaces parsed.Title with the consistent "<show> SxxExx <episode title>"
+    /// label so filelist cards match Stoney's on-disk file naming convention.
+    /// Movies and unmatched items keep their filename-derived parsed.Title.
     /// </summary>
-    private static string BuildEpisodeCardLabel(MovieOrEpisode match, string fileName)
+    private static void ApplyEpisodeCardLabel(MovieFile parsed, MovieOrEpisode match)
     {
         if (
-            !string.IsNullOrWhiteSpace(match.ShowName)
-            && match.SeasonNumber > 0
-            && match.EpisodeNumber > 0
+            string.IsNullOrWhiteSpace(match.ShowName)
+            || match.SeasonNumber <= 0
+            || match.EpisodeNumber <= 0
         )
-        {
-            string label = $"{match.ShowName} S{match.SeasonNumber:D2}E{match.EpisodeNumber:D2}";
-            if (!string.IsNullOrWhiteSpace(match.Title))
-                label += $" {match.Title}";
-            return label;
-        }
+            return;
 
+        string label = $"{match.ShowName} S{match.SeasonNumber:D2}E{match.EpisodeNumber:D2}";
         if (!string.IsNullOrWhiteSpace(match.Title))
-            return match.Title;
+            label += $" {match.Title}";
 
-        return Path.GetFileNameWithoutExtension(fileName);
+        parsed.Title = label;
     }
 
     private async Task<bool> ProcessVideoFileInfo(
@@ -1041,11 +1039,13 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             ? "/"
             : Path.GetDirectoryName(Path.Combine(file.DirectoryName, ".."));
 
+        ApplyEpisodeCardLabel(parsed, match);
+
         return new()
         {
             Size = file.Length,
             Mode = (int)file.Attributes,
-            Name = BuildEpisodeCardLabel(match, file.Name),
+            Name = Path.GetFileNameWithoutExtension(file.Name),
             Parent = parentPath,
             Parsed = parsed,
             Match = match,
