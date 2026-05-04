@@ -287,14 +287,26 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
 
     private static DriverDto MapToDto(Driver driver)
     {
-        bool hasCredentialsRef = false;
+        // Resolve the credentials_configured flag against the secrets store —
+        // not against the mere presence of a credentialsRef key in Config.
+        // A wiped or blank entry leaves the ref in place but the values gone,
+        // and previously surfaced as "credentials_configured: true" in the
+        // dashboard while the AWS SDK refused with "access key has length 0."
+        bool hasCredentialsConfigured = false;
         if (!string.IsNullOrWhiteSpace(driver.Config))
         {
             try
             {
                 JObject? parsed = JObject.Parse(driver.Config);
                 string? credRef = parsed?["credentialsRef"]?.Value<string>();
-                hasCredentialsRef = !string.IsNullOrWhiteSpace(credRef);
+                if (!string.IsNullOrWhiteSpace(credRef))
+                {
+                    UserPass? stored = CredentialManager.Credential(credRef);
+                    hasCredentialsConfigured =
+                        stored is not null
+                        && !string.IsNullOrEmpty(stored.Username)
+                        && !string.IsNullOrEmpty(stored.Password);
+                }
             }
             catch (JsonException) { }
         }
@@ -315,7 +327,7 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
             Name = driver.Name,
             Type = driver.Type,
             Config = configObj,
-            CredentialsConfigured = hasCredentialsRef,
+            CredentialsConfigured = hasCredentialsConfigured,
             FolderCount = driver.Folders.Count,
             CreatedAt = driver.CreatedAt,
             UpdatedAt = driver.UpdatedAt,
