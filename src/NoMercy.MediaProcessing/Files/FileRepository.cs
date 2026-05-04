@@ -329,7 +329,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         {
             // Use the same audio pattern as the local path, but derive folder
             // name from the driver-relative directoryPath.
-            string folderName = Path.GetFileName(directoryPath.TrimEnd('/', '\\'));
+            string folderName = StoragePathHelpers.GetName(directoryPath);
 
             const string pattern =
                 @"(?<library_folder>.+?)[\\\/]((?<letter>.{1})?|\[(?<type>.+?)\])[\\\/](?<artist>.+?)?[\\\/]?(\[(?<year>\d{4})\]|\[(?<releaseType>Singles)\])\s?(?<album>.*)?";
@@ -349,7 +349,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 Config.ParallelOptions,
                 (entry, _) =>
                 {
-                    string name = Path.GetFileName(entry.Path);
+                    string name = StoragePathHelpers.GetName(entry.Path);
                     fileList.Add(
                         new()
                         {
@@ -359,7 +359,10 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                             Parent = directoryPath,
                             Parsed = new(directoryPath)
                             {
-                                Title = albumName + " - " + Path.GetFileNameWithoutExtension(name),
+                                Title =
+                                    albumName
+                                    + " - "
+                                    + StoragePathHelpers.GetNameWithoutExtension(entry.Path),
                                 Year = year.ToString(),
                                 IsSeries = false,
                                 IsSuccess = true,
@@ -399,12 +402,12 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     )
     {
         string entryPath = entry.Path;
-        string fileName = Path.GetFileName(entryPath);
-        string? directoryName = Path.GetDirectoryName(entryPath)?.Replace('\\', '/');
+        string fileName = StoragePathHelpers.GetName(entryPath);
+        string? directoryName = StoragePathHelpers.GetParent(entryPath);
 
         // Build a synthetic FileInfo-like object using storage metadata so the
         // parsing helpers stay unchanged. We do not touch raw System.IO here.
-        string rawFileName = Path.GetFileNameWithoutExtension(fileName);
+        string rawFileName = StoragePathHelpers.GetNameWithoutExtension(entryPath);
 
         int? overrideTmdbId = rawFileName.TryGetTmdbHint();
 
@@ -480,7 +483,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         // the season folder, i.e. one level above directoryName.
         string? parentPath = string.IsNullOrEmpty(directoryName)
             ? "/"
-            : Path.GetDirectoryName(directoryName.TrimEnd('/', '\\'))?.Replace('\\', '/') ?? "/";
+            : StoragePathHelpers.GetParent(directoryName) ?? "/";
 
         ApplyEpisodeCardLabel(parsed, result.Value.episodeMatch);
 
@@ -489,7 +492,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             {
                 Size = entry.SizeBytes,
                 Mode = 0,
-                Name = Path.GetFileNameWithoutExtension(fileName),
+                Name = StoragePathHelpers.GetNameWithoutExtension(fileName),
                 Parent = parentPath,
                 Parsed = parsed,
                 Match = result.Value.episodeMatch,
@@ -1749,8 +1752,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         string newFilename
     )
     {
-        string newFolder =
-            "/" + Path.GetFileName(Path.GetDirectoryName(newHostFolder + "/placeholder"));
+        string newFolder = "/" + StoragePathHelpers.GetName(newHostFolder);
 
         return await _context
             .VideoFiles.Where(vf => vf.HostFolder == oldHostFolder && vf.Filename == oldFilename)

@@ -123,7 +123,7 @@ public partial class RecordingManager(
                     DiscNumber = musicBrainzMedia.Position,
                     TrackNumber = musicBrainzTrack.Position,
 
-                    Filename = "/" + Path.GetFileName(mediaFile.Path),
+                    Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path),
                     Quality = (int)
                         Math.Floor(
                             (
@@ -441,7 +441,7 @@ public partial class RecordingManager(
             DiscNumber = mediaFile.Parsed?.DiscNumber ?? 0,
             TrackNumber = mediaFile.Parsed?.TrackNumber ?? 0,
 
-            Filename = "/" + Path.GetFileName(mediaFile.Path),
+            Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path),
             Quality = (int)
                 Math.Floor(
                     (

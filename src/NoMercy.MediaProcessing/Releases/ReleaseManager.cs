@@ -9,6 +9,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -135,7 +136,8 @@ public class ReleaseManager(
         {
             Logger.MusicBrainz($"Storing Release: {releaseAppends.Title}", LogEventLevel.Verbose);
 
-            string folder = Path.GetDirectoryName(mediaFile.Path.Replace(libraryFolder.Path, ""))
+            string folder = StoragePathHelpers
+                .GetParent(mediaFile.Path.Replace(libraryFolder.Path, ""))
                 .OrEmpty();
 
             Album release = new()

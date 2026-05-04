@@ -274,7 +274,7 @@ public class IntroDetectionSubscriber(
             )
                 continue;
 
-            string path = Path.Combine(file.HostFolder, file.Filename);
+            string path = _storage.CombinePath(file.HostFolder, file.Filename);
             if (_storage.Exists(path))
                 return path;
         }

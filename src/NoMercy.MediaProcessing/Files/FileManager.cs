@@ -345,7 +345,7 @@ public partial class FileManager(
         }
 
         IStorage storage = StorageFor(folder);
-        string fileName = "/" + Path.GetFileName(itemPath);
+        string fileName = "/" + storage.GetName(itemPath);
         string hostFolder = itemPath.Replace(fileName, "");
         string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
         int showIdx = string.IsNullOrEmpty(showName)
@@ -491,10 +491,10 @@ public partial class FileManager(
         foreach (
             StorageEntry dir in storage
                 .List(hostFolder, null, recursive: false)
-                .Where(e => e.IsDirectory && Path.GetFileName(e.Path).StartsWith("video_"))
+                .Where(e => e.IsDirectory && storage.GetName(e.Path).StartsWith("video_"))
         )
         {
-            string dirName = Path.GetFileName(dir.Path);
+            string dirName = storage.GetName(dir.Path);
             Match match = VideoDirectoryRegex().Match(dirName);
             if (!match.Success)
                 continue;
@@ -543,10 +543,10 @@ public partial class FileManager(
         foreach (
             StorageEntry dir in storage
                 .List(hostFolder, null, recursive: false)
-                .Where(e => e.IsDirectory && Path.GetFileName(e.Path).StartsWith("audio_"))
+                .Where(e => e.IsDirectory && storage.GetName(e.Path).StartsWith("audio_"))
         )
         {
-            string dirName = Path.GetFileName(dir.Path);
+            string dirName = storage.GetName(dir.Path);
             Match match = AudioDirectoryRegex().Match(dirName);
             if (!match.Success)
                 continue;
@@ -619,8 +619,7 @@ public partial class FileManager(
                 {
                     Language = match.Groups["lang"].Value,
                     Type = match.Groups["type"].Value,
-                    FileName =
-                        "/" + Path.Combine("subtitles", Path.GetFileName(path)).Replace("\\", "/"),
+                    FileName = "/" + storage.CombinePath("subtitles", storage.GetName(path)),
                     FileHash = ComputeFileHash(storage, path),
                     FileSize = subtitleEntry.SizeBytes,
                     Codec = ext,
@@ -709,8 +708,7 @@ public partial class FileManager(
             fonts.Add(
                 new()
                 {
-                    FileName =
-                        "/" + Path.Combine("fonts", Path.GetFileName(path)).Replace("\\", "/"),
+                    FileName = "/" + storage.CombinePath("fonts", storage.GetName(path)),
                     FileHash = ComputeFileHash(storage, path),
                     FileSize = fontEntry.SizeBytes,
                 }
@@ -876,8 +874,8 @@ public partial class FileManager(
 
         foreach (StorageEntry entry in files.Where(e => !e.IsDirectory))
         {
-            string name = Path.GetFileName(entry.Path);
-            string stem = Path.GetFileNameWithoutExtension(name);
+            string name = storage.GetName(entry.Path);
+            string stem = storage.GetNameWithoutExtension(entry.Path);
 
             if (name.StartsWith("chapter"))
                 tracks.Add(new() { File = "/" + name, Kind = "chapters" });
