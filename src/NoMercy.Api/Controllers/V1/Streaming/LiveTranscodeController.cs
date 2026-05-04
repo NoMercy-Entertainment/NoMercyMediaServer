@@ -86,6 +86,7 @@ public class LiveTranscodeController(
             context,
             videoFileId,
             userId,
+            storage,
             ct
         );
 
@@ -317,6 +318,7 @@ public class LiveTranscodeController(
         MediaContext context,
         Ulid videoFileId,
         Guid userId,
+        IStorage fileStorage,
         CancellationToken ct
     )
     {
@@ -331,7 +333,7 @@ public class LiveTranscodeController(
         if (!allowed)
             return null;
 
-        string inputPath = Path.Combine(file.HostFolder, file.Filename);
+        string inputPath = fileStorage.CombinePath(file.HostFolder, file.Filename);
         return new(file, inputPath);
     }
 

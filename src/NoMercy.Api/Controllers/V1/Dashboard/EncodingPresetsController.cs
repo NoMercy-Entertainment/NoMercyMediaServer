@@ -529,7 +529,7 @@ public class EncodingPresetsController(
         if (file is null)
             return NotFoundResponse("Video file not found");
 
-        string path = Path.Combine(file.HostFolder, file.Filename);
+        string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
         if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 

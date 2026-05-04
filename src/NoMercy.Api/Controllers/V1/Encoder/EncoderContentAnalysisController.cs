@@ -68,7 +68,7 @@ public class EncoderContentAnalysisController(
         if (file is null)
             return NotFoundResponse("Video file not found");
 
-        string path = Path.Combine(file.HostFolder, file.Filename);
+        string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
         if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
@@ -140,7 +140,7 @@ public class EncoderContentAnalysisController(
             if (source is null)
                 continue;
 
-            string path = Path.Combine(source.HostFolder, source.Filename);
+            string path = storageDriver.CombinePath(source.HostFolder, source.Filename);
             if (!storageDriver.FileExists(path))
                 continue;
 
@@ -332,7 +332,7 @@ public class EncoderContentAnalysisController(
         if (file is null)
             return NotFoundResponse("Video file not found");
 
-        string path = Path.Combine(file.HostFolder, file.Filename);
+        string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
         if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
@@ -405,7 +405,7 @@ public class EncoderContentAnalysisController(
         if (file is null)
             return NotFoundResponse("Video file not found");
 
-        string path = Path.Combine(file.HostFolder, file.Filename);
+        string path = storageDriver.CombinePath(file.HostFolder, file.Filename);
         if (!storageDriver.FileExists(path))
             return NotFoundResponse($"Source file missing on disk: {path}");
 
