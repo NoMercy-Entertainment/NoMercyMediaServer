@@ -211,7 +211,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             );
         }
 
-        context.Response.ContentType = MimeUtility.GetMimeMapping(relativePath);
+        context.Response.ContentType = ResolveContentType(relativePath);
 
         // Tell ResponseCachingMiddleware not to wrap the body. Without this
         // header it still allocates the cache stream wrapper around every
@@ -325,6 +325,41 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
     {
         string extension = Path.GetExtension(filePath);
         return StreamableExtensions.Contains(extension);
+    }
+
+    // MimeMapping (the NuGet package) doesn't know about subtitle/font/HLS
+    // formats and defaults them to application/octet-stream — which the
+    // browser refuses to render as text. Override the handful that matter
+    // and fall back to the library for everything else.
+    private static readonly Dictionary<string, string> ContentTypeOverrides = new(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        // Subtitles
+        [".ass"] = "text/x-ssa; charset=utf-8",
+        [".ssa"] = "text/x-ssa; charset=utf-8",
+        [".srt"] = "application/x-subrip; charset=utf-8",
+        [".vtt"] = "text/vtt; charset=utf-8",
+        [".sub"] = "text/plain; charset=utf-8",
+        [".idx"] = "text/plain; charset=utf-8",
+        [".sup"] = "application/octet-stream",
+        // HLS
+        [".m3u8"] = "application/vnd.apple.mpegurl",
+        [".m3u"] = "application/vnd.apple.mpegurl",
+        [".ts"] = "video/mp2t",
+        // Fonts (encoder-extracted attachments)
+        [".otf"] = "font/otf",
+        [".ttf"] = "font/ttf",
+        [".woff"] = "font/woff",
+        [".woff2"] = "font/woff2",
+    };
+
+    private static string ResolveContentType(string filePath)
+    {
+        string ext = Path.GetExtension(filePath);
+        if (ContentTypeOverrides.TryGetValue(ext, out string? mapped))
+            return mapped;
+        return MimeUtility.GetMimeMapping(filePath);
     }
 
     /// <summary>
