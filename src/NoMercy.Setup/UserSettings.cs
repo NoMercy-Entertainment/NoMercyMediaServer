@@ -4,6 +4,7 @@ using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.Setup;
 
@@ -40,10 +41,23 @@ public static class UserSettings
                 settings[config.Key] = config.Value;
             }
 
+            Logger.App(
+                $"UserSettings: loaded {settings.Count} key(s) from Configuration table",
+                LogEventLevel.Information
+            );
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            // Silent failure here is the original "worker counts reset on
+            // boot" bug — every saved value gets discarded if the read throws
+            // (schema not yet ready, SecureValue conversion error, etc.).
+            // Surface the cause so operators can act.
+            Logger.App(
+                $"UserSettings: failed to read Configuration table — using defaults this boot. "
+                    + $"{ex.GetType().Name}: {ex.Message}",
+                LogEventLevel.Error
+            );
             return false;
         }
     }

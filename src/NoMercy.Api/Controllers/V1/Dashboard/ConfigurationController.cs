@@ -68,6 +68,35 @@ public class ConfigurationController(
         return device?.Value ?? Environment.MachineName;
     }
 
+    /// <summary>
+    /// Belt-and-suspenders persist for worker counts. Writes the value to the
+    /// Configuration table directly AND tells the QueueRunner to resize live
+    /// workers. The previous flow only called QueueRunner.SetWorkerCount,
+    /// which short-circuits with a no-op when the new count equals the
+    /// current count — leaving the DB stale and the value resetting to the
+    /// default on next boot. Two writes both have to land or the persistence
+    /// silently rots.
+    /// </summary>
+    [NonAction]
+    private async Task PersistWorkerCount(string queueName, int count, Guid userId)
+    {
+        string key = $"{queueName}Runners";
+        await appContext
+            .Configuration.Upsert(
+                new Configuration
+                {
+                    Key = key,
+                    Value = count.ToString(),
+                    ModifiedBy = userId,
+                }
+            )
+            .On(c => c.Key)
+            .WhenMatched((_, n) => new() { Value = n.Value, ModifiedBy = n.ModifiedBy })
+            .RunAsync();
+
+        await queueRunner.SetWorkerCount(queueName, count, userId);
+    }
+
     [HttpPost]
     public IActionResult Store()
     {
@@ -127,97 +156,73 @@ public class ConfigurationController(
         if (request.LibraryWorkers is not null)
         {
             int oldCount = Config.LibraryWorkers.Value;
-            Config.LibraryWorkers = new(Config.LibraryWorkers.Key, (int)request.LibraryWorkers);
-            await queueRunner.SetWorkerCount(
-                Config.LibraryWorkers.Key,
-                (int)request.LibraryWorkers,
-                userId
-            );
-            changes.Add((Config.LibraryWorkers.Key, oldCount, (int)request.LibraryWorkers));
+            int newCount = (int)request.LibraryWorkers;
+            Config.LibraryWorkers = new(Config.LibraryWorkers.Key, newCount);
+            await PersistWorkerCount(Config.LibraryWorkers.Key, newCount, userId);
+            changes.Add((Config.LibraryWorkers.Key, oldCount, newCount));
         }
 
         if (request.ImportWorkers is not null)
         {
             int oldCount = Config.ImportWorkers.Value;
-            Config.ImportWorkers = new(Config.ImportWorkers.Key, (int)request.ImportWorkers);
-            await queueRunner.SetWorkerCount(
-                Config.ImportWorkers.Key,
-                (int)request.ImportWorkers,
-                userId
-            );
-            changes.Add((Config.ImportWorkers.Key, oldCount, (int)request.ImportWorkers));
+            int newCount = (int)request.ImportWorkers;
+            Config.ImportWorkers = new(Config.ImportWorkers.Key, newCount);
+            await PersistWorkerCount(Config.ImportWorkers.Key, newCount, userId);
+            changes.Add((Config.ImportWorkers.Key, oldCount, newCount));
         }
 
         if (request.ExtrasWorkers is not null)
         {
             int oldCount = Config.ExtrasWorkers.Value;
-            Config.ExtrasWorkers = new(Config.ExtrasWorkers.Key, (int)request.ExtrasWorkers);
-            await queueRunner.SetWorkerCount(
-                Config.ExtrasWorkers.Key,
-                (int)request.ExtrasWorkers,
-                userId
-            );
-            changes.Add((Config.ExtrasWorkers.Key, oldCount, (int)request.ExtrasWorkers));
+            int newCount = (int)request.ExtrasWorkers;
+            Config.ExtrasWorkers = new(Config.ExtrasWorkers.Key, newCount);
+            await PersistWorkerCount(Config.ExtrasWorkers.Key, newCount, userId);
+            changes.Add((Config.ExtrasWorkers.Key, oldCount, newCount));
         }
 
         if (request.EncoderWorkers is not null)
         {
             int oldCount = Config.EncoderWorkers.Value;
-            Config.EncoderWorkers = new(Config.EncoderWorkers.Key, (int)request.EncoderWorkers);
-            await queueRunner.SetWorkerCount(
-                Config.EncoderWorkers.Key,
-                (int)request.EncoderWorkers,
-                userId
-            );
-            changes.Add((Config.EncoderWorkers.Key, oldCount, (int)request.EncoderWorkers));
+            int newCount = (int)request.EncoderWorkers;
+            Config.EncoderWorkers = new(Config.EncoderWorkers.Key, newCount);
+            await PersistWorkerCount(Config.EncoderWorkers.Key, newCount, userId);
+            changes.Add((Config.EncoderWorkers.Key, oldCount, newCount));
         }
 
         if (request.CronWorkers is not null)
         {
             int oldCount = Config.CronWorkers.Value;
-            Config.CronWorkers = new(Config.CronWorkers.Key, (int)request.CronWorkers);
-            await queueRunner.SetWorkerCount(
-                Config.CronWorkers.Key,
-                (int)request.CronWorkers,
-                userId
-            );
-            changes.Add((Config.CronWorkers.Key, oldCount, (int)request.CronWorkers));
+            int newCount = (int)request.CronWorkers;
+            Config.CronWorkers = new(Config.CronWorkers.Key, newCount);
+            await PersistWorkerCount(Config.CronWorkers.Key, newCount, userId);
+            changes.Add((Config.CronWorkers.Key, oldCount, newCount));
         }
 
         if (request.ImageWorkers is not null)
         {
             int oldCount = Config.ImageWorkers.Value;
-            Config.ImageWorkers = new(Config.ImageWorkers.Key, (int)request.ImageWorkers);
-            await queueRunner.SetWorkerCount(
-                Config.ImageWorkers.Key,
-                (int)request.ImageWorkers,
-                userId
-            );
-            changes.Add((Config.ImageWorkers.Key, oldCount, (int)request.ImageWorkers));
+            int newCount = (int)request.ImageWorkers;
+            Config.ImageWorkers = new(Config.ImageWorkers.Key, newCount);
+            await PersistWorkerCount(Config.ImageWorkers.Key, newCount, userId);
+            changes.Add((Config.ImageWorkers.Key, oldCount, newCount));
         }
 
         if (request.FileWorkers is not null)
         {
             int oldCount = Config.FileWorkers.Value;
-            Config.FileWorkers = new(Config.FileWorkers.Key, (int)request.FileWorkers);
-            await queueRunner.SetWorkerCount(
-                Config.FileWorkers.Key,
-                (int)request.FileWorkers,
-                userId
-            );
-            changes.Add((Config.FileWorkers.Key, oldCount, (int)request.FileWorkers));
+            int newCount = (int)request.FileWorkers;
+            Config.FileWorkers = new(Config.FileWorkers.Key, newCount);
+            await PersistWorkerCount(Config.FileWorkers.Key, newCount, userId);
+            changes.Add((Config.FileWorkers.Key, oldCount, newCount));
         }
 
         if (request.MusicWorkers is not null)
         {
             int oldCount = Config.MusicWorkers.Value;
-            Config.MusicWorkers = new(Config.MusicWorkers.Key, (int)request.MusicWorkers);
-            await queueRunner.SetWorkerCount(
-                Config.MusicWorkers.Key,
-                (int)request.MusicWorkers,
-                userId
-            );
-            changes.Add((Config.MusicWorkers.Key, oldCount, (int)request.MusicWorkers));
+            int newCount = (int)request.MusicWorkers;
+            Config.MusicWorkers = new(Config.MusicWorkers.Key, newCount);
+            await PersistWorkerCount(Config.MusicWorkers.Key, newCount, userId);
+            changes.Add((Config.MusicWorkers.Key, oldCount, newCount));
         }
 
         if (request.Swagger is not null)
