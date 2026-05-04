@@ -593,4 +593,28 @@
     <Key>driver_id is required.</Key>
     <Value lang="nl">driver_id is required.</Value>
   </Entry>
+  <Entry>
+    <Key>Something went wrong adding the folder</Key>
+    <Value lang="nl">Something went wrong adding the folder</Value>
+  </Entry>
+  <Entry>
+    <Key>A driver named 'Media' already exists.</Key>
+    <Value lang="nl">A driver named 'Media' already exists.</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to create drivers</Key>
+    <Value lang="nl">You do not have permission to create drivers</Value>
+  </Entry>
+  <Entry>
+    <Key>Folder not found</Key>
+    <Value lang="nl">Folder not found</Value>
+  </Entry>
+  <Entry>
+    <Key>Something went wrong deleting the library folder</Key>
+    <Value lang="nl">Something went wrong deleting the library folder</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view users</Key>
+    <Value lang="nl">You do not have permission to view users</Value>
+  </Entry>
 </I18N>
