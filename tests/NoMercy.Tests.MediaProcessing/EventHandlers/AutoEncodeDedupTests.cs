@@ -14,6 +14,7 @@ namespace NoMercy.Tests.MediaProcessing.EventHandlers;
 /// to every configured destination from a single run, so duplicate
 /// dispatches were pure waste.
 /// </summary>
+[Trait("Category", "Unit")]
 public class AutoEncodeDedupTests
 {
     private static readonly Ulid LocalDriverId = Ulid.NewUlid();

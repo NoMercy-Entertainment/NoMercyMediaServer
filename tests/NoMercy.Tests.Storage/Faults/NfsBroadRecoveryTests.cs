@@ -12,6 +12,7 @@ namespace NoMercy.Tests.Storage.Faults;
 /// asserts the operation succeeds via remount, and asserts the call count
 /// proves exactly one retry happened.
 /// </summary>
+[Trait("Category", "Unit")]
 public class NfsBroadRecoveryTests
 {
     private static NfsDriverConfig BuildConfig() =>

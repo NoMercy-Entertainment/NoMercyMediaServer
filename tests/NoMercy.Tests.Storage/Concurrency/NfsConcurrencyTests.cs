@@ -16,6 +16,7 @@ namespace NoMercy.Tests.Storage.Concurrency;
 /// rarely show because the in-memory operations finish before the next
 /// thread starts.
 /// </summary>
+[Trait("Category", "Unit")]
 public class NfsConcurrencyTests
 {
     private static NfsDriverConfig BuildConfig() =>

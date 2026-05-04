@@ -11,6 +11,7 @@ namespace NoMercy.Tests.Storage.Faults;
 /// Every test runs the driver against <see cref="FaultyLibNfs"/> — no Docker,
 /// no NFS server, no flake.
 /// </summary>
+[Trait("Category", "Unit")]
 public class NfsExpiredRecoveryTests
 {
     private static NfsDriverConfig BuildConfig() =>
