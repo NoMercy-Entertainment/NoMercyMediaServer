@@ -11,6 +11,11 @@ namespace NoMercy.Database.Models.Storage;
 [Index(nameof(Type))]
 public class Driver
 {
+    // Stable sentinel for the built-in local-filesystem driver that is
+    // auto-seeded on first boot. Hardcoded so every install uses the same
+    // Ulid — clients can rely on it without querying the DB.
+    public static readonly Ulid SystemLocalDriverId = Ulid.Parse("01JKQSTS00000000000000000A");
+
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
     public Ulid Id { get; set; }

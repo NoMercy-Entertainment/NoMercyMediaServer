@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
@@ -131,6 +132,7 @@ public static class DatabaseSeeder
         Func<Task>[] offlineSeeds =
         [
             () => appDbContext.Init(),
+            () => SeedSystemLocalDriver(mediaDbContext),
             () => LibrariesSeed.Init(mediaDbContext, storage, storageDriver),
             () => EncoderProfilesSeed.Init(mediaDbContext, storage),
             () => EncodingPresetsSeed.Init(mediaDbContext, storage),
@@ -180,6 +182,34 @@ public static class DatabaseSeeder
                 Logger.Setup($"Seed failed: {ex.Message}", LogEventLevel.Warning);
             }
         }
+    }
+
+    /// <summary>
+    /// Ensures the built-in system local driver row exists. Idempotent — skips
+    /// if the row is already present. The driver uses an empty rootPath so
+    /// StorageFactory builds each folder's guard from the folder's own subPath,
+    /// giving per-folder path isolation without a separate driver per folder.
+    /// </summary>
+    public static async Task SeedSystemLocalDriver(MediaContext mediaContext)
+    {
+        bool exists = await mediaContext.Drivers.AnyAsync(d => d.Id == Driver.SystemLocalDriverId);
+        if (exists)
+            return;
+
+        Driver systemLocalDriver = new()
+        {
+            Id = Driver.SystemLocalDriverId,
+            Name = "Local",
+            Type = "local",
+            Config = "{\"rootPath\":\"\"}",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+
+        mediaContext.Drivers.Add(systemLocalDriver);
+        await mediaContext.SaveChangesAsync();
+
+        Logger.Setup("Seeded system local driver", LogEventLevel.Verbose);
     }
 
     /// <summary>
