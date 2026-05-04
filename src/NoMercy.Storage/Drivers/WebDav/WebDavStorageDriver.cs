@@ -195,23 +195,32 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
     public Stream OpenWrite(string path, bool overwrite)
     {
         // WebDAV requires every parent collection to exist before the PUT;
-        // otherwise the server replies 403/409. Walk up the path and MKCOL
-        // each missing segment first. CreateDirectory is idempotent (treats
-        // 405 as already-exists), so this is safe to call unconditionally.
-        string normalized = path.TrimStart('/').TrimStart('\\').Replace('\\', '/');
-        int lastSlash = normalized.LastIndexOf('/');
-        if (lastSlash > 0)
-        {
-            string parent = normalized[..lastSlash];
-            CreateDirectory(parent);
-        }
+        // otherwise the server replies 403/409.
+        EnsureParentCollection(path);
 
         string uri = ToUri(path);
         return new WebDavUploadStream(_client, uri, overwrite);
     }
 
+    /// <summary>
+    /// MKCOL each missing segment of the destination's parent collection.
+    /// CreateDirectory is idempotent (treats 405 as already-exists) so this
+    /// is safe to call unconditionally before any PUT/MOVE/COPY.
+    /// </summary>
+    private void EnsureParentCollection(string path)
+    {
+        string normalized = path.TrimStart('/').TrimStart('\\').Replace('\\', '/');
+        int lastSlash = normalized.LastIndexOf('/');
+        if (lastSlash > 0)
+            CreateDirectory(normalized[..lastSlash]);
+    }
+
     public void MoveFile(string source, string destination)
     {
+        // Same parent-collection requirement as PUT — destination's parent
+        // must exist or the server returns 409 Conflict.
+        EnsureParentCollection(destination);
+
         string srcUri = ToUri(source);
         string dstUri = ToUri(destination);
 
@@ -228,6 +237,8 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
 
     public void CopyFile(string source, string destination, bool overwrite)
     {
+        EnsureParentCollection(destination);
+
         string srcUri = ToUri(source);
         string dstUri = ToUri(destination);
 
@@ -240,6 +251,94 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             throw new IOException(
                 $"WebDAV COPY '{srcUri}' → '{dstUri}' failed: HTTP {response.StatusCode} — {response.Description}"
             );
+    }
+
+    /// <summary>
+    /// Batched listing — walks PROPFIND results once and emits StorageEntryInfo
+    /// with Size + LastWriteUtc populated from the response. Overrides the
+    /// IStorageDriver default which would issue N×PROPFIND per entry to fill
+    /// the same metadata, hammering the server and tripping auth quirks on
+    /// some WebDAV implementations.
+    /// </summary>
+    public IEnumerable<StorageEntryInfo> EnumerateEntries(
+        string directory,
+        string searchPattern,
+        SearchOption option
+    )
+    {
+        return EnumerateRecursiveWithMeta(
+            directory,
+            searchPattern,
+            option == SearchOption.AllDirectories
+        );
+    }
+
+    private IEnumerable<StorageEntryInfo> EnumerateRecursiveWithMeta(
+        string directory,
+        string searchPattern,
+        bool recursive
+    )
+    {
+        string uri = ToCollectionUri(directory);
+        PropfindResponse response = _client
+            .Propfind(
+                uri,
+                new PropfindParameters { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
+            )
+            .GetAwaiter()
+            .GetResult();
+
+        if (!response.IsSuccessful)
+        {
+            if (response.StatusCode == 404)
+                yield break;
+            throw new IOException(
+                $"WebDAV PROPFIND '{uri}' failed: HTTP {response.StatusCode} — "
+                    + $"{response.Description ?? "(no description)"}"
+            );
+        }
+
+        // Resources[0] is the directory itself — skip it.
+        foreach (WebDavResource resource in response.Resources.Skip(1))
+        {
+            string entryName = ExtractName(resource.Uri);
+
+            if (resource.IsCollection)
+            {
+                string relPath = MakeRelative(resource.Uri).TrimEnd('/');
+                if (MatchesPattern(entryName, searchPattern))
+                    yield return new StorageEntryInfo(
+                        relPath,
+                        IsDirectory: true,
+                        Size: 0L,
+                        LastWriteUtc: resource.LastModifiedDate?.ToUniversalTime()
+                            ?? DateTime.UtcNow
+                    );
+
+                if (recursive)
+                {
+                    foreach (
+                        StorageEntryInfo child in EnumerateRecursiveWithMeta(
+                            relPath,
+                            searchPattern,
+                            true
+                        )
+                    )
+                        yield return child;
+                }
+            }
+            else
+            {
+                if (MatchesPattern(entryName, searchPattern))
+                    yield return new StorageEntryInfo(
+                        MakeRelative(resource.Uri),
+                        IsDirectory: false,
+                        Size: resource.ContentLength ?? 0L,
+                        LastWriteUtc: resource.LastModifiedDate?.ToUniversalTime()
+                            ?? DateTime.UtcNow
+                    );
+            }
+        }
     }
 
     public IEnumerable<string> EnumerateFileSystemEntries(

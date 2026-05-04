@@ -113,19 +113,20 @@ public sealed class RemoteStorage : IStorage
             : SearchOption.TopDirectoryOnly;
         string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
 
+        // Use the driver's batched EnumerateEntries — drivers like S3 and
+        // WebDAV pull size + mtime in the same listing call so we don't fan
+        // out to N×HEAD/PROPFIND per file (which costs minutes on a 200-segment
+        // HLS folder and trips per-request auth quirks on some WebDAV servers).
         foreach (
-            string entry in _driver.EnumerateFileSystemEntries(V(path), effectivePattern, option)
+            StorageEntryInfo info in _driver.EnumerateEntries(V(path), effectivePattern, option)
         )
         {
             ct.ThrowIfCancellationRequested();
-            bool isDir = _driver.DirectoryExists(entry);
-            long size = isDir ? 0L : _driver.GetFileSize(entry);
-            DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             yield return new StorageEntry(
-                entry,
-                isDir,
-                size,
-                new DateTimeOffset(utc, TimeSpan.Zero)
+                info.Path,
+                info.IsDirectory,
+                info.Size,
+                new DateTimeOffset(info.LastWriteUtc, TimeSpan.Zero)
             );
             await Task.Yield();
         }

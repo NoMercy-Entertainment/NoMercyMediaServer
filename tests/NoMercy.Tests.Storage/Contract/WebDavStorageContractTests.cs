@@ -76,13 +76,20 @@ public sealed class WebDavContractFixture : IAsyncLifetime
 
     public WebDavStorageDriver BuildDriver()
     {
-        WebDavClient client = new(
-            new WebDavClientParams
-            {
-                BaseAddress = new Uri(BaseUrl),
-                Credentials = new NetworkCredential(Username, Password),
-            }
+        // Hard-set the Authorization header on the HttpClient so every
+        // request carries Basic auth — bytemark/webdav rejects PROPFIND on
+        // sub-collections without an Authorization header (challenge-response
+        // doesn't seem to fire from the WebDav.Client library for those
+        // requests). HttpClientHandler.Credentials only triggers on a 401
+        // challenge round-trip; PreAuthenticate doesn't help across distinct
+        // paths the way operators expect.
+        string token = Convert.ToBase64String(
+            System.Text.Encoding.ASCII.GetBytes($"{Username}:{Password}")
         );
+        HttpClient httpClient = new() { BaseAddress = new Uri(BaseUrl) };
+        httpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", token);
+        WebDavClient client = new(httpClient);
 
         return new WebDavStorageDriver(client, BaseUrl);
     }
@@ -213,10 +220,51 @@ public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
         return response.StatusCode == HttpStatusCode.MultiStatus;
     }
 
-    protected override Task DisposeStorage()
+    protected override async Task DisposeStorage()
     {
-        // Driver and HttpClient are owned by the fixture — nothing to dispose per test.
-        return Task.CompletedTask;
+        // Per-test isolation — wipe everything in the WebDAV server's root
+        // before the next test runs. The container persists across the test
+        // class (per-class fixture) so without this each test sees leftover
+        // files from earlier tests, breaking "list shows exactly N entries"
+        // assertions in unpredictable ways.
+        if (!_fixture.Available)
+            return;
+
+        try
+        {
+            // Enumerate top-level resources and DELETE each. Recursive deletes
+            // on collections take the whole subtree.
+            using HttpRequestMessage propfind = new(new HttpMethod("PROPFIND"), _fixture.BaseUrl);
+            propfind.Headers.Add("Depth", "1");
+            HttpResponseMessage list = await _fixture.RawHttp.SendAsync(propfind);
+            if (list.StatusCode != HttpStatusCode.MultiStatus)
+                return;
+
+            string body = await list.Content.ReadAsStringAsync();
+            // Crude href extraction — good enough for this fixture.
+            System.Text.RegularExpressions.MatchCollection matches =
+                System.Text.RegularExpressions.Regex.Matches(
+                    body,
+                    "<D:href>([^<]+)</D:href>",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                );
+
+            foreach (System.Text.RegularExpressions.Match m in matches)
+            {
+                string href = m.Groups[1].Value;
+                // Skip the root itself.
+                Uri full = new(new Uri(_fixture.BaseUrl), href);
+                if (full.AbsoluteUri.TrimEnd('/') == _fixture.BaseUrl.TrimEnd('/'))
+                    continue;
+
+                using HttpRequestMessage del = new(HttpMethod.Delete, full);
+                _ = await _fixture.RawHttp.SendAsync(del);
+            }
+        }
+        catch
+        {
+            // Best effort — cleanup failures shouldn't fail the test.
+        }
     }
 
     // -----------------------------------------------------------------------
