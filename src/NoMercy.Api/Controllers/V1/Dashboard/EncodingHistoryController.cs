@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
 using NoMercy.Helpers.Extensions;
@@ -56,17 +57,15 @@ public class EncodingHistoryController(EncodingHistoryRepository historyReposito
             .ToList();
 
         return Ok(
-            new
-            {
-                data,
-                meta = new
-                {
-                    total,
-                    pageSize,
-                    pageIndex,
-                    totalPages = (int)Math.Ceiling((double)total / pageSize),
-                },
-            }
+            new HistoryListResponse(
+                Data: data,
+                Meta: new HistoryListMeta(
+                    Total: total,
+                    PageSize: pageSize,
+                    PageIndex: pageIndex,
+                    TotalPages: (int)Math.Ceiling((double)total / pageSize)
+                )
+            )
         );
     }
 
@@ -124,27 +123,39 @@ public class EncodingHistoryController(EncodingHistoryRepository historyReposito
     }
 }
 
-public record PurgeHistoryRequest(int? OlderThanDays = null);
+public record PurgeHistoryRequest(
+    [property: JsonProperty("older_than_days")] int? OlderThanDays = null
+);
+
+public record HistoryListResponse(
+    [property: JsonProperty("data")] List<EncodingHistoryEntryDto> Data,
+    [property: JsonProperty("meta")] HistoryListMeta Meta
+);
+
+public record HistoryListMeta(
+    [property: JsonProperty("total")] int Total,
+    [property: JsonProperty("page_size")] int PageSize,
+    [property: JsonProperty("page_index")] int PageIndex,
+    [property: JsonProperty("total_pages")] int TotalPages
+);
 
 /// <summary>
-/// Frontend-facing shape for a single history row. Mirrors
-/// EncodingHistory but with no JsonProperty attributes so the global
-/// camelCase resolver applies — keeps the dashboard list aligned with
-/// EncodingHistoryStats and the Vue types.
+/// Frontend-facing shape for a single history row. Snake_case via
+/// JsonProperty matches the rest of the dashboard API surface.
 /// </summary>
 public record EncodingHistoryEntryDto(
-    string Id,
-    string InputPath,
-    string OutputPath,
-    string? ProfileId,
-    string ProfileName,
-    string EncoderUsed,
-    string? GpuUsed,
-    double DurationSeconds,
-    long InputSizeBytes,
-    long OutputSizeBytes,
-    double CompressionRatio,
-    double AverageSpeed,
-    double AverageFps,
-    DateTime CreatedAt
+    [property: JsonProperty("id")] string Id,
+    [property: JsonProperty("input_path")] string InputPath,
+    [property: JsonProperty("output_path")] string OutputPath,
+    [property: JsonProperty("profile_id")] string? ProfileId,
+    [property: JsonProperty("profile_name")] string ProfileName,
+    [property: JsonProperty("encoder_used")] string EncoderUsed,
+    [property: JsonProperty("gpu_used")] string? GpuUsed,
+    [property: JsonProperty("duration_seconds")] double DurationSeconds,
+    [property: JsonProperty("input_size_bytes")] long InputSizeBytes,
+    [property: JsonProperty("output_size_bytes")] long OutputSizeBytes,
+    [property: JsonProperty("compression_ratio")] double CompressionRatio,
+    [property: JsonProperty("average_speed")] double AverageSpeed,
+    [property: JsonProperty("average_fps")] double AverageFps,
+    [property: JsonProperty("created_at")] DateTime CreatedAt
 );

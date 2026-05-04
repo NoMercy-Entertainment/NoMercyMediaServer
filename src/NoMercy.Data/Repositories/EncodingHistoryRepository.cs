@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 
@@ -95,10 +96,10 @@ public class EncodingHistoryRepository(MediaContext context)
 }
 
 public record EncodingHistoryStats(
-    int TotalEncodes,
-    long TotalInputBytes,
-    long TotalOutputBytes,
-    double AverageSpeed,
-    double AverageCompressionRatio,
-    double AverageFps
+    [property: JsonProperty("total_encodes")] int TotalEncodes,
+    [property: JsonProperty("total_input_bytes")] long TotalInputBytes,
+    [property: JsonProperty("total_output_bytes")] long TotalOutputBytes,
+    [property: JsonProperty("average_speed")] double AverageSpeed,
+    [property: JsonProperty("average_compression_ratio")] double AverageCompressionRatio,
+    [property: JsonProperty("average_fps")] double AverageFps
 );
