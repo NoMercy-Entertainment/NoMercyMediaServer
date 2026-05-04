@@ -195,6 +195,21 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
 
         JObject? configToStore = request.Config;
 
+        // Diagnostic: surface what the dashboard actually sent. Without this,
+        // a UI that submits {credentials: null} vs {credentials: {access_key:"",
+        // secret_key:""}} vs flat top-level fields all looked identical from
+        // the operator's seat.
+        Logger.App(
+            $"[DriversController] Update {id} ({driver.Type}) — credentials block: "
+                + (
+                    request.Credentials is null
+                        ? "absent"
+                        : $"present (access_key len={request.Credentials.AccessKey.Length}, "
+                            + $"secret_key len={request.Credentials.SecretKey.Length})"
+                ),
+            LogEventLevel.Information
+        );
+
         if (request.Credentials is not null && HasMeaningfulCredentials(request.Credentials))
         {
             string credRef = $"driver:{id}";
@@ -247,6 +262,62 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
         List<Ulid> folderIds = driver.Folders.Select(f => f.Id).ToList();
         foreach (Ulid folderId in folderIds)
             storageFactory.Invalidate(folderId);
+
+        return Ok(MapToDto(driver));
+    }
+
+    // -----------------------------------------------------------------------
+    // PUT /api/v1/dashboard/drivers/{id}/credentials
+    // Direct credential write — bypasses the full Update payload so a stuck
+    // form (or a curl/script user) can land non-empty creds without having
+    // to reconstruct config + name + type. Body: {access_key, secret_key}.
+    // -----------------------------------------------------------------------
+
+    [HttpPut]
+    [Route("{id:ulid}/credentials")]
+    public async Task<IActionResult> UpdateCredentials(
+        Ulid id,
+        [FromBody] DriverCredentialsDto request
+    )
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("You do not have permission to update driver credentials");
+
+        Driver? driver = await driverRepository.GetDriverByIdAsync(id);
+        if (driver is null)
+            return NotFoundResponse("Driver not found");
+
+        if (!HasMeaningfulCredentials(request))
+            return BadRequestResponse(
+                "access_key and secret_key are both required and must be non-empty."
+            );
+
+        string credRef = $"driver:{id}";
+        CredentialManager.SetCredentials(
+            target: credRef,
+            username: request.AccessKey,
+            password: request.SecretKey,
+            apiKey: string.Empty
+        );
+
+        // Ensure credentialsRef is present in Config so the StorageFactory resolves it.
+        JObject? configObj = ParseConfigJson(driver.Config) ?? new();
+        configObj["credentialsRef"] = credRef;
+        driver.Config = JsonConvert.SerializeObject(configObj);
+        driver.UpdatedAt = DateTimeOffset.UtcNow;
+        await driverRepository.UpdateDriverAsync(driver);
+
+        // Invalidate any cached IStorage instances built without credentials.
+        List<Ulid> folderIds = driver.Folders.Select(f => f.Id).ToList();
+        foreach (Ulid folderId in folderIds)
+            storageFactory.Invalidate(folderId);
+
+        Logger.App(
+            $"[DriversController] Direct credential write for driver {id} ({driver.Type}) "
+                + $"(accessKey len={request.AccessKey.Length}, secret len={request.SecretKey.Length}); "
+                + $"invalidated {folderIds.Count} cached folder(s).",
+            LogEventLevel.Information
+        );
 
         return Ok(MapToDto(driver));
     }
