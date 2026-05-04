@@ -30,6 +30,23 @@ internal sealed class FaultyLibNfs : ILibNfs
     public Dictionary<string, int> CallCounts { get; } = new();
 
     /// <summary>
+    /// When &gt; 0, every libnfs call sleeps this long inside the protected
+    /// region. Forces concurrency races to surface in stress tests so the
+    /// driver's lock guarantees are observable.
+    /// </summary>
+    public TimeSpan ArtificialLatency { get; set; } = TimeSpan.Zero;
+
+    /// <summary>
+    /// Largest number of libnfs calls observed running simultaneously — proves
+    /// the driver serializes access to the shared context. The driver-side
+    /// SemaphoreSlim should pin this to 1; anything higher is a contract bug.
+    /// </summary>
+    public int MaxConcurrentCalls => _maxConcurrent;
+
+    private int _currentConcurrent;
+    private int _maxConcurrent;
+
+    /// <summary>
     /// Scripted responses keyed by "Method:callIndex" (0-based).
     /// E.g. <c>Faults["Open:0"] = (-11, "NFS4ERR_EXPIRED")</c> makes the FIRST
     /// Open call return -11 with that error. Other calls hit the real backend.
@@ -68,19 +85,46 @@ internal sealed class FaultyLibNfs : ILibNfs
 
     private bool TryFault(string method, out int rc, out string err)
     {
-        int index = CallCounts.GetValueOrDefault(method, 0);
-        CallCounts[method] = index + 1;
+        // Track concurrent execution so stress tests can prove the driver's
+        // lock holds the libnfs context single-threaded.
+        int current = Interlocked.Increment(ref _currentConcurrent);
+        int max = _maxConcurrent;
+        while (current > max)
+            max = Interlocked.CompareExchange(ref _maxConcurrent, current, max);
 
-        if (Faults.TryGetValue($"{method}:{index}", out (int rc, string error) fault))
+        try
         {
-            rc = fault.rc;
-            err = fault.error;
-            CurrentError = err;
-            return true;
+            int index;
+            lock (CallCounts)
+            {
+                index = CallCounts.GetValueOrDefault(method, 0);
+                CallCounts[method] = index + 1;
+            }
+
+            if (ArtificialLatency > TimeSpan.Zero)
+                Thread.Sleep(ArtificialLatency);
+
+            (int rc, string error) fault;
+            bool faultPresent;
+            lock (Faults)
+            {
+                faultPresent = Faults.TryGetValue($"{method}:{index}", out fault);
+            }
+            if (faultPresent)
+            {
+                rc = fault.rc;
+                err = fault.error;
+                CurrentError = err;
+                return true;
+            }
+            rc = 0;
+            err = string.Empty;
+            return false;
         }
-        rc = 0;
-        err = string.Empty;
-        return false;
+        finally
+        {
+            Interlocked.Decrement(ref _currentConcurrent);
+        }
     }
 
     private sealed class FileHandle
