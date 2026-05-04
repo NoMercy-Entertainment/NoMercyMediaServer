@@ -101,3 +101,24 @@ public record StorageEntryDto
     [JsonProperty("is_directory")]
     public bool IsDirectory { get; set; }
 }
+
+public record StorageMkdirRequest
+{
+    [JsonProperty("driver_id")]
+    public string? DriverId { get; set; }
+
+    [JsonProperty("path")]
+    public string? Path { get; set; }
+}
+
+public record StorageMkdirResponse
+{
+    [JsonProperty("ok")]
+    public bool Ok { get; set; }
+
+    [JsonProperty("path")]
+    public string? Path { get; set; }
+
+    [JsonProperty("error")]
+    public string? Error { get; set; }
+}

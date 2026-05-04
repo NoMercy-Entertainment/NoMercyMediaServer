@@ -190,4 +190,58 @@ public class StorageBrowserController(
             return Ok(new StorageListResponse { Ok = false, Error = ex.Message });
         }
     }
+
+    // -----------------------------------------------------------------------
+    // POST /api/v1/dashboard/storage/mkdir
+    // Create a directory on the driver — used by the dashboard "create new
+    // folder" flow before attaching it to a library. Idempotent: existing
+    // directories return ok=true. Body: { driver_id, path }.
+    // -----------------------------------------------------------------------
+
+    [HttpPost]
+    [Route("mkdir")]
+    public async Task<IActionResult> Mkdir([FromBody] StorageMkdirRequest request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to create directories.");
+
+        if (string.IsNullOrWhiteSpace(request.DriverId))
+            return BadRequestResponse("driver_id is required.");
+
+        if (!Ulid.TryParse(request.DriverId, out Ulid driverId))
+            return BadRequestResponse("driver_id is not a valid ULID.");
+
+        if (string.IsNullOrWhiteSpace(request.Path))
+            return BadRequestResponse("path is required.");
+
+        Driver? driver = await driverRepository.GetDriverByIdAsync(driverId);
+        if (driver is null)
+            return NotFoundResponse($"Driver '{request.DriverId}' not found.");
+
+        string subPath = request.Path.Replace('\\', '/').TrimStart('/').TrimEnd('/');
+
+        try
+        {
+            IStorage storage = storageFactory.For(
+                folderId: SyntheticBrowseFolderId(driverId),
+                driverId: driverId,
+                subPath: string.Empty
+            );
+
+            await storage.CreateDirectoryAsync(subPath, HttpContext.RequestAborted);
+
+            return Ok(new StorageMkdirResponse { Ok = true, Path = subPath });
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Storage mkdir failed: driver={DriverId} type={Type} path={Path}",
+                driverId,
+                driver.Type,
+                subPath
+            );
+            return Ok(new StorageMkdirResponse { Ok = false, Error = ex.Message });
+        }
+    }
 }
