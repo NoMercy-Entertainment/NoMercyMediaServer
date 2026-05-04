@@ -39,13 +39,12 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             string segmentResolved = TemplateResolver.Resolve(video.SegmentNameTemplate, tokens);
             string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
 
-            // Split into directory and filename parts
-            string subDir =
-                Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
-            string playlistFile = Path.GetFileName(playlistResolved);
-            string segmentDir =
-                Path.GetDirectoryName(segmentResolved)?.Replace("\\", "/") ?? segmentResolved;
-            string segmentFile = Path.GetFileName(segmentResolved);
+            // Split into directory and filename parts using storage-aware helpers
+            // (forward-slash canonical, no OS-separator contamination on Windows).
+            string subDir = storage.GetParent(playlistResolved) ?? playlistResolved;
+            string playlistFile = storage.GetName(playlistResolved);
+            string segmentDir = storage.GetParent(segmentResolved) ?? segmentResolved;
+            string segmentFile = storage.GetName(segmentResolved);
 
             // Paths are relative — FFmpeg CWD is set to the output directory.
             string playlistPath = $"{subDir}/{playlistFile}.m3u8";
@@ -122,12 +121,10 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                     tokens
                 );
 
-                string subDir =
-                    Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
-                string playlistFile = Path.GetFileName(playlistResolved);
-                string segmentDir =
-                    Path.GetDirectoryName(segmentResolved)?.Replace("\\", "/") ?? segmentResolved;
-                string segmentFile = Path.GetFileName(segmentResolved);
+                string subDir = storage.GetParent(playlistResolved) ?? playlistResolved;
+                string playlistFile = storage.GetName(playlistResolved);
+                string segmentDir = storage.GetParent(segmentResolved) ?? segmentResolved;
+                string segmentFile = storage.GetName(segmentResolved);
 
                 string playlistPath = $"{subDir}/{playlistFile}.m3u8";
 
@@ -188,10 +185,12 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                 video.IsHdrOutput
             );
             string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
-            string subDir =
-                Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
-            string playlistFile = Path.GetFileName(playlistResolved);
-            string variantPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
+            string subDir = storage.GetParent(playlistResolved) ?? playlistResolved;
+            string playlistFile = storage.GetName(playlistResolved);
+            string variantPath = storage.CombinePath(
+                storage.CombinePath(outputDirectory, subDir),
+                $"{playlistFile}.m3u8"
+            );
 
             videoMetrics[video.MapLabel] = analyzer.Measure(variantPath);
         }
@@ -209,10 +208,12 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                 audio.Channels
             );
             string playlistResolved = TemplateResolver.Resolve(audio.PlaylistNameTemplate, tokens);
-            string subDir =
-                Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
-            string playlistFile = Path.GetFileName(playlistResolved);
-            string variantPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
+            string subDir = storage.GetParent(playlistResolved) ?? playlistResolved;
+            string playlistFile = storage.GetName(playlistResolved);
+            string variantPath = storage.CombinePath(
+                storage.CombinePath(outputDirectory, subDir),
+                $"{playlistFile}.m3u8"
+            );
 
             audioMetrics[audio.MapLabel] = analyzer.Measure(variantPath);
         }
@@ -224,7 +225,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             videoMetrics,
             audioMetrics
         );
-        string masterPath = Path.Combine(outputDirectory, $"{mediaTitle}.m3u8");
+        string masterPath = storage.CombinePath(outputDirectory, $"{mediaTitle}.m3u8");
         await storage.WriteAsync(masterPath, Encoding.UTF8.GetBytes(masterPlaylist), ct);
 
         await WriteSubtitleSidecarsAsync(outputDirectory, plan, ct);
@@ -249,7 +250,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         if (webVttSubs.Length == 0)
             return;
 
-        string subtitlesDir = Path.Combine(outputDirectory, "subtitles");
+        string subtitlesDir = storage.CombinePath(outputDirectory, "subtitles");
         if (!storage.Exists(subtitlesDir))
             return;
 
@@ -275,18 +276,19 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 
             // Match the source .vtt the extractor produced.
             string? sourceVttPath = vttFiles.FirstOrDefault(f =>
-                Path.GetFileName(f)
+                storage
+                    .GetName(f)
                     .Contains($".{lang}.{variant}.", StringComparison.OrdinalIgnoreCase)
             );
             sourceVttPath ??= vttFiles.FirstOrDefault(f =>
-                Path.GetFileName(f).Contains($".{lang}.", StringComparison.OrdinalIgnoreCase)
+                storage.GetName(f).Contains($".{lang}.", StringComparison.OrdinalIgnoreCase)
             );
             if (sourceVttPath is null)
                 continue;
 
             // Skip our own segment files if the language probe finds them
             // before the source — they end with _NNNNN.vtt.
-            if (Regex.IsMatch(Path.GetFileName(sourceVttPath), @"_\d{5}\.vtt$"))
+            if (Regex.IsMatch(storage.GetName(sourceVttPath), @"_\d{5}\.vtt$"))
                 continue;
 
             string vttContent = Encoding.UTF8.GetString(storage.Read(sourceVttPath));
@@ -298,7 +300,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             for (int i = 0; i < segments.Count; i++)
             {
                 string segFile = $"subs_{lang}_{variant}_{i:D5}.vtt";
-                string segPath = Path.Combine(subtitlesDir, segFile);
+                string segPath = storage.CombinePath(subtitlesDir, segFile);
                 await storage.WriteAsync(segPath, Encoding.UTF8.GetBytes(segments[i].Content), ct);
             }
 
@@ -307,7 +309,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                 segments,
                 segmentDurationSeconds
             );
-            string playlistPath = Path.Combine(subtitlesDir, $"subs_{lang}_{variant}.m3u8");
+            string playlistPath = storage.CombinePath(subtitlesDir, $"subs_{lang}_{variant}.m3u8");
             await storage.WriteAsync(playlistPath, Encoding.UTF8.GetBytes(playlist), ct);
         }
     }
@@ -328,9 +330,12 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             firstVideo.IsHdrOutput
         );
         string resolved = TemplateResolver.Resolve(firstVideo.PlaylistNameTemplate, tokens);
-        string subDir = Path.GetDirectoryName(resolved)?.Replace("\\", "/") ?? resolved;
-        string playlistFile = Path.GetFileName(resolved);
-        string variantPath = Path.Combine(outputDirectory, subDir, $"{playlistFile}.m3u8");
+        string subDir = storage.GetParent(resolved) ?? resolved;
+        string playlistFile = storage.GetName(resolved);
+        string variantPath = storage.CombinePath(
+            storage.CombinePath(outputDirectory, subDir),
+            $"{playlistFile}.m3u8"
+        );
 
         if (!storage.Exists(variantPath))
             return 0;
@@ -353,6 +358,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             )
                 total += seconds;
         }
+
         return total;
     }
 
@@ -368,7 +374,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                 video.IsHdrOutput
             );
             string resolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
-            string subDir = Path.GetDirectoryName(resolved)?.Replace("\\", "/") ?? resolved;
+            string subDir = storage.GetParent(resolved) ?? resolved;
             dirs.Add(subDir);
         }
 
@@ -383,7 +389,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                     audio.Channels
                 );
                 string resolved = TemplateResolver.Resolve(audio.PlaylistNameTemplate, tokens);
-                string subDir = Path.GetDirectoryName(resolved)?.Replace("\\", "/") ?? resolved;
+                string subDir = storage.GetParent(resolved) ?? resolved;
                 dirs.Add(subDir);
             }
         }

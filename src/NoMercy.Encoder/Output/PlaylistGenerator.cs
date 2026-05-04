@@ -7,6 +7,7 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Output;
 
@@ -90,9 +91,8 @@ public class PlaylistGenerator : IPlaylistGenerator
             );
 
             string playlistResolved = TemplateResolver.Resolve(audio.PlaylistNameTemplate, tokens);
-            string subDir =
-                Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
-            string playlistFile = Path.GetFileName(playlistResolved);
+            string subDir = StoragePathHelpers.GetParent(playlistResolved) ?? playlistResolved;
+            string playlistFile = StoragePathHelpers.GetName(playlistResolved);
 
             string uri = $"{subDir}/{playlistFile}.m3u8";
             string language = audio.Language ?? "und";
@@ -160,9 +160,8 @@ public class PlaylistGenerator : IPlaylistGenerator
                 video.IsHdrOutput
             );
             string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
-            string subDir =
-                Path.GetDirectoryName(playlistResolved)?.Replace("\\", "/") ?? playlistResolved;
-            string playlistFile = Path.GetFileName(playlistResolved);
+            string subDir = StoragePathHelpers.GetParent(playlistResolved) ?? playlistResolved;
+            string playlistFile = StoragePathHelpers.GetName(playlistResolved);
 
             // VIDEO-RANGE labels the colour pipeline (PQ/HLG = HDR transfer,
             // SDR otherwise) — not the bit depth. 10-bit anime / 10-bit BT.709

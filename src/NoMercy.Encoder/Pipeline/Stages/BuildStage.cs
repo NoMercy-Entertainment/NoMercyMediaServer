@@ -125,13 +125,17 @@ public class BuildStage(
             effectiveStorage.CreateDirectory(input.OutputDirectory);
             foreach (string subDir in strategy.GetOutputSubdirectories(input.Plan.OutputPlan))
             {
-                effectiveStorage.CreateDirectory(Path.Combine(input.OutputDirectory, subDir));
+                effectiveStorage.CreateDirectory(
+                    effectiveStorage.CombinePath(input.OutputDirectory, subDir)
+                );
             }
 
             // Ensure subtitles/ directory exists
             if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0)
             {
-                effectiveStorage.CreateDirectory(Path.Combine(input.OutputDirectory, "subtitles"));
+                effectiveStorage.CreateDirectory(
+                    effectiveStorage.CombinePath(input.OutputDirectory, "subtitles")
+                );
             }
 
             FfmpegCommandBuilder builder = new();
@@ -270,7 +274,7 @@ public class BuildStage(
             // with encoding outputs.
             if (context.MediaInfo is not null && context.MediaInfo.HasAttachments)
             {
-                string fontDir = Path.Combine(input.OutputDirectory, "fonts");
+                string fontDir = effectiveStorage.CombinePath(input.OutputDirectory, "fonts");
                 effectiveStorage.CreateDirectory(fontDir);
                 FfmpegCommand fontCommand = fontExtractor.BuildExtractionCommand(
                     options.FfmpegPath,
@@ -377,11 +381,10 @@ public class BuildStage(
                 mediaTitle
             );
 
-            // Ensure subtitle directory exists (absolute path for .NET IO)
-            string absolutePath = Path.Combine(outputDirectory, info.OutputPath);
-            string? parentDir = Path.GetDirectoryName(absolutePath);
+            // Ensure subtitle directory exists (storage-relative parent of OutputPath).
+            string? parentDir = storage.GetParent(info.OutputPath);
             if (parentDir is not null)
-                storage.CreateDirectory(parentDir);
+                storage.CreateDirectory(storage.CombinePath(outputDirectory, parentDir));
 
             // FFmpeg gets the relative path (CWD = output directory)
             builder.AddOutput(
@@ -436,11 +439,10 @@ public class BuildStage(
                 mediaTitle
             );
 
-            // Ensure subtitle directory exists (absolute path for .NET IO)
-            string absolutePath = Path.Combine(outputDirectory, info.OutputPath);
-            string? parentDir = Path.GetDirectoryName(absolutePath);
+            // Ensure subtitle directory exists (storage-relative parent of OutputPath).
+            string? parentDir = storage.GetParent(info.OutputPath);
             if (parentDir is not null)
-                storage.CreateDirectory(parentDir);
+                storage.CreateDirectory(storage.CombinePath(outputDirectory, parentDir));
 
             // Use MKS (Matroska) container for bitmap subs.
             // Must specify -f matroska explicitly — FFmpeg doesn't auto-detect .mks.

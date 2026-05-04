@@ -218,8 +218,7 @@ public class EncodingOrchestrator(
                             // returns NF4ERR_NOENT(-2) when the enclosing dir is
                             // missing, so without this the first segment write blows
                             // up on every fresh show / season folder.
-                            string? remoteParent = Path.GetDirectoryName(remoteDest)
-                                ?.Replace('\\', '/');
+                            string? remoteParent = destinationStorage.GetParent(remoteDest);
                             if (!string.IsNullOrEmpty(remoteParent))
                                 destinationStorage.CreateDirectory(remoteParent);
 

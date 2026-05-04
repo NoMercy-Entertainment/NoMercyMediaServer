@@ -8,6 +8,7 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
 using NoMercy.Events.Library;
+using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Subscribers;
 
@@ -89,9 +90,9 @@ public class AutoEncodeSubscriber : IDisposable
         if (profile is null)
             return;
 
-        string outputDirectory = Path.Combine(
-            Path.GetDirectoryName(filePath) ?? string.Empty,
-            Path.GetFileNameWithoutExtension(filePath)
+        string outputDirectory = StoragePathHelpers.Combine(
+            StoragePathHelpers.GetParent(filePath) ?? string.Empty,
+            StoragePathHelpers.GetNameWithoutExtension(filePath)
         );
 
         _logger.LogInformation(

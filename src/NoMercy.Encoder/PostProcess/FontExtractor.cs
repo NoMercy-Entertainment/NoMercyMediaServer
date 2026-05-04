@@ -17,7 +17,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         string outputDirectory
     )
     {
-        string fontDir = Path.Combine(outputDirectory, "fonts");
+        string fontDir = storage.CombinePath(outputDirectory, "fonts");
 
         string[] args =
         [
@@ -37,7 +37,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
 
     public async Task WriteFontManifestAsync(string outputDirectory, CancellationToken ct)
     {
-        string fontDir = Path.Combine(outputDirectory, "fonts");
+        string fontDir = storage.CombinePath(outputDirectory, "fonts");
 
         if (!storage.Exists(fontDir))
             return;
@@ -55,21 +55,24 @@ public class FontExtractor(IStorage storage) : IFontExtractor
 
         List<FontEntry> entries = fontFiles
             .Select(f => new FontEntry(
-                File: $"fonts/{Path.GetFileName(f.Path)}",
+                File: $"fonts/{storage.GetName(f.Path)}",
                 MimeType: GetFontMimeType(f.Path)
             ))
             .ToList();
 
         string json = JsonConvert.SerializeObject(entries, Formatting.Indented);
         await storage.WriteAsync(
-            Path.Combine(outputDirectory, "fonts.json"),
+            storage.CombinePath(outputDirectory, "fonts.json"),
             Encoding.UTF8.GetBytes(json),
             ct
         );
     }
 
-    private static string GetFontMimeType(string path) =>
-        Path.GetExtension(path).ToLowerInvariant() switch
+    private static string GetFontMimeType(string path)
+    {
+        int dot = path.LastIndexOf('.');
+        string ext = dot < 0 ? string.Empty : path[dot..].ToLowerInvariant();
+        return ext switch
         {
             ".ttf" => "application/x-font-truetype",
             ".otf" => "application/x-font-opentype",
@@ -77,6 +80,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
             ".woff2" => "font/woff2",
             _ => "application/octet-stream",
         };
+    }
 
     private record FontEntry(
         [property: JsonProperty("file")] string File,
