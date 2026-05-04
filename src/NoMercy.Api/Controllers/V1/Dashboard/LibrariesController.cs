@@ -595,12 +595,22 @@ public class LibrariesController(
 
             await folderRepository.AddFolderAsync(folder);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Logger.App(
+                $"[AddFolder] failed for library={id} driver={request.DriverId} path='{request.Path}': {ex}",
+                LogEventLevel.Error
+            );
             return InternalServerErrorResponse("Something went wrong adding the folder");
         }
 
-        Folder? pathAsync = await folderRepository.GetFolderByPathAsync(request.Path);
+        // Scope the lookup to the same driver so two folders with the same
+        // sub-path on different drivers (e.g. NFS Anime/Anime + S3 Anime-S3
+        // both mapped to library "Anime") don't cross-link.
+        Folder? pathAsync = await folderRepository.GetFolderByDriverAndPathAsync(
+            request.DriverId,
+            request.Path
+        );
 
         if (pathAsync is null)
             return NotFoundResponse("Folder not found");

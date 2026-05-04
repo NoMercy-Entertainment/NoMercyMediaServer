@@ -21,6 +21,19 @@ public class FolderRepository(MediaContext context)
         return context.Folders.FirstOrDefaultAsync(folder => folder.Path == requestPath);
     }
 
+    /// <summary>
+    /// Composite (DriverId, Path) lookup — matches the real unique index. Use
+    /// this instead of <see cref="GetFolderByPathAsync"/> whenever the caller
+    /// already knows which driver they want; same sub-path on two different
+    /// drivers is legitimate (e.g. NFS+S3 mirrors).
+    /// </summary>
+    public Task<Folder?> GetFolderByDriverAndPathAsync(Ulid driverId, string requestPath)
+    {
+        return context.Folders.FirstOrDefaultAsync(f =>
+            f.DriverId == driverId && f.Path == requestPath
+        );
+    }
+
     public Task<List<Folder>> GetFoldersByLibraryIdAsync(FolderLibraryDto[] folderLibraries)
     {
         return context
@@ -53,10 +66,15 @@ public class FolderRepository(MediaContext context)
 
     public Task<int> AddFolderAsync(Folder folder)
     {
+        // Match the real unique index (DriverId, Path). Matching on Path
+        // alone made FlexLabs emit ON CONFLICT (Path), which doesn't hit the
+        // composite unique → the insert proceeded and tripped the actual
+        // UNIQUE on (DriverId, Path), surfacing as a 500 to operators trying
+        // to attach an already-known folder to a different library.
         return context
             .Folders.Upsert(folder)
-            .On(f => new { f.Path })
-            .WhenMatched((fs, fi) => new() { Path = fi.Path })
+            .On(f => new { f.DriverId, f.Path })
+            .WhenMatched((existing, incoming) => new() { Path = incoming.Path })
             .RunAsync();
     }
 
