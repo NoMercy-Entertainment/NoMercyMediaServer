@@ -177,12 +177,14 @@ public sealed class StorageFactory : IStorageFactory
 
     private IStorage BuildLocal(Ulid folderId, string? driverConfigJson, string subPath)
     {
+        // System-local driver: empty config or empty rootPath means no driver-level
+        // root restriction. The folder's own subPath becomes the allowed root so
+        // each folder constrains itself without needing a per-driver rootPath.
         if (string.IsNullOrWhiteSpace(driverConfigJson))
-            throw new ArgumentException(
-                $"driver_config is required for 'local' (folder {folderId}). "
-                    + "Supply: {{\"rootPath\": \"<absolute path>\"}}.",
-                nameof(driverConfigJson)
-            );
+        {
+            StoragePathGuard openGuard = BuildLocalGuardFromSubPath(subPath, _driver);
+            return new LocalStorage(_driver, openGuard);
+        }
 
         LocalDriverConfig? config;
         try
@@ -201,11 +203,12 @@ public sealed class StorageFactory : IStorageFactory
             );
         }
 
+        // Empty rootPath = system-local mode: folder subPath is the effective root.
         if (config is null || string.IsNullOrWhiteSpace(config.RootPath))
-            throw new ArgumentException(
-                $"driver_config.rootPath is required for 'local' (folder {folderId}).",
-                nameof(driverConfigJson)
-            );
+        {
+            StoragePathGuard openGuard = BuildLocalGuardFromSubPath(subPath, _driver);
+            return new LocalStorage(_driver, openGuard);
+        }
 
         // Incorporate the folder sub-path so callers can pass paths relative
         // to the storage root (consistent with NFS/S3/WebDAV behaviour).
@@ -214,6 +217,24 @@ public sealed class StorageFactory : IStorageFactory
             : JoinRoot(config.RootPath, subPath, "local");
         StoragePathGuard guard = new([allowedRoot], _driver);
         return new LocalStorage(_driver, guard);
+    }
+
+    /// <summary>
+    /// Builds a <see cref="StoragePathGuard"/> for the system-local driver
+    /// where no driver-level rootPath is set. When <paramref name="subPath"/>
+    /// is non-empty it becomes the single allowed root, constraining the folder
+    /// to that absolute path. When subPath is empty no root restriction is
+    /// applied (structural-only validation).
+    /// </summary>
+    private static StoragePathGuard BuildLocalGuardFromSubPath(
+        string subPath,
+        IStorageDriver driver
+    )
+    {
+        if (string.IsNullOrWhiteSpace(subPath))
+            return new StoragePathGuard([], driver);
+
+        return new StoragePathGuard([subPath], driver);
     }
 
     private IStorage BuildNfs(Ulid folderId, string? driverConfigJson, string subPath)

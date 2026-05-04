@@ -94,25 +94,45 @@ public class StorageFactoryTests
     }
 
     [Fact]
-    public void For_local_missing_rootPath_throws_ArgumentException()
+    public void For_local_null_config_returns_structural_only_guard()
     {
+        // Null config = system-local mode (no driver-level rootPath restriction).
         StorageFactory factory = Factory(resolver: StubResolver("local", null));
         Ulid id = Ulid.NewUlid();
 
-        Action act = () => factory.For(id, Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(id, Ulid.NewUlid(), string.Empty);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*rootPath*");
+        storage.Should().NotBeNull().And.BeAssignableTo<IStorage>();
     }
 
     [Fact]
-    public void For_local_empty_rootPath_throws_ArgumentException()
+    public void For_local_empty_rootPath_returns_structural_only_guard()
     {
+        // Empty rootPath = system-local mode. No ArgumentException; the factory
+        // builds a guard with no allowed roots (structural checks only).
         StorageFactory factory = Factory(resolver: StubResolver("local", "{\"rootPath\":\"\"}"));
         Ulid id = Ulid.NewUlid();
 
-        Action act = () => factory.For(id, Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(id, Ulid.NewUlid(), string.Empty);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*rootPath*");
+        storage.Should().NotBeNull().And.BeAssignableTo<IStorage>();
+    }
+
+    [Fact]
+    public void For_local_empty_rootPath_with_subPath_uses_subPath_as_root()
+    {
+        // When rootPath is empty but a folder subPath is provided, the subPath
+        // becomes the allowed root — so the folder self-constrains.
+        Mock<IStorageDriver> driver = BackendMock();
+        string folderPath = Path.GetTempPath();
+        StorageFactory factory = Factory(driver, StubResolver("local", "{\"rootPath\":\"\"}"));
+        Ulid id = Ulid.NewUlid();
+
+        IStorage storage = factory.For(id, Ulid.NewUlid(), folderPath);
+
+        string inside = Path.Combine(folderPath, "movie.mkv");
+        Action act = () => storage.Exists(inside);
+        act.Should().NotThrow<StoragePathNotAllowedException>();
     }
 
     [Fact]
