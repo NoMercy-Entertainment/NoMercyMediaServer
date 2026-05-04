@@ -1,0 +1,283 @@
+using System.Net;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
+using NoMercy.Storage.Drivers.WebDav;
+using NoMercy.Storage.Remote;
+using WebDav;
+
+namespace NoMercy.Tests.Storage.Contract;
+
+// ---------------------------------------------------------------------------
+// bytemark/webdav class-level fixture.
+//
+// A single WebDAV container starts once for all tests in this class.
+// The raw HttpClient used for seed/verify is kept on the fixture so it lives
+// across tests without being re-created per call.
+// ---------------------------------------------------------------------------
+
+public sealed class WebDavContractFixture : IAsyncLifetime
+{
+    private IContainer? _container;
+
+    public bool Available { get; private set; }
+    public string BaseUrl { get; private set; } = string.Empty;
+
+    public const string Username = "testuser";
+    public const string Password = "testpass";
+
+    // Shared raw HTTP client — used by SeedFile, SeedDirectory, BackendHasFile.
+    public HttpClient RawHttp { get; private set; } = new();
+
+    public async Task InitializeAsync()
+    {
+        if (!await DockerAvailableAsync())
+        {
+            Available = false;
+            return;
+        }
+
+        try
+        {
+            _container = new ContainerBuilder()
+                .WithImage("bytemark/webdav:latest")
+                .WithPortBinding(80, assignRandomHostPort: true)
+                .WithEnvironment("AUTH_TYPE", "Basic")
+                .WithEnvironment("USERNAME", Username)
+                .WithEnvironment("PASSWORD", Password)
+                .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(80))
+                .Build();
+
+            await _container.StartAsync();
+
+            int port = _container.GetMappedPublicPort(80);
+            BaseUrl = $"http://localhost:{port}/";
+            Available = true;
+
+            HttpClientHandler handler = new()
+            {
+                Credentials = new NetworkCredential(Username, Password),
+                PreAuthenticate = true,
+            };
+            RawHttp = new HttpClient(handler, disposeHandler: true);
+        }
+        catch
+        {
+            Available = false;
+        }
+    }
+
+    public async Task DisposeAsync()
+    {
+        RawHttp.Dispose();
+
+        if (_container is not null)
+            await _container.DisposeAsync();
+    }
+
+    public WebDavStorageDriver BuildDriver()
+    {
+        WebDavClient client = new(
+            new WebDavClientParams
+            {
+                BaseAddress = new Uri(BaseUrl),
+                Credentials = new NetworkCredential(Username, Password),
+            }
+        );
+
+        return new WebDavStorageDriver(client, BaseUrl);
+    }
+
+    private static async Task<bool> DockerAvailableAsync()
+    {
+        try
+        {
+            using HttpClient http = new();
+            http.Timeout = TimeSpan.FromSeconds(3);
+            HttpResponseMessage response = await http.GetAsync("http://localhost:2375/info");
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            try
+            {
+                using System.Diagnostics.Process proc = new();
+                proc.StartInfo = new System.Diagnostics.ProcessStartInfo("docker", "info")
+                {
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                };
+                proc.Start();
+                await proc.WaitForExitAsync();
+                return proc.ExitCode == 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+}
+
+// Required by xUnit so the fixture is shared across the collection.
+[CollectionDefinition("WebDavContractIntegration")]
+public sealed class WebDavContractIntegrationCollection
+    : ICollectionFixture<WebDavContractFixture> { }
+
+/// <summary>
+/// Runs the shared IStorage contract suite against a real bytemark/webdav container.
+///
+/// Design:
+///   - <see cref="WebDavContractFixture"/> starts one container for the whole class.
+///   - Each test in the base class calls <see cref="CreateStorage"/> then
+///     <see cref="DisposeStorage"/> in its own try/finally.
+///   - <see cref="CreateStorage"/> calls <c>Skip.If(!_fixture.Available)</c> so every
+///     inherited [Fact] skips cleanly when Docker is absent.
+///   - Seed helpers use raw HTTP (MKCOL / PUT) and PROPFIND to verify, bypassing
+///     the driver under test.
+/// </summary>
+[Collection("WebDavContractIntegration")]
+[Trait("Category", "Integration")]
+public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
+    : IStorageContractTests
+{
+    private readonly WebDavContractFixture _fixture = fixture;
+
+    // -----------------------------------------------------------------------
+    // IStorageContractTests hooks
+    // -----------------------------------------------------------------------
+
+    protected override IStorage CreateStorage()
+    {
+        Skip.If(
+            !_fixture.Available,
+            "Docker / WebDAV not available — skipping WebDAV contract test"
+        );
+
+        return new RemoteStorage(_fixture.BuildDriver());
+    }
+
+    /// <summary>
+    /// Seed bypasses the driver — PUT directly via the raw HttpClient.
+    /// </summary>
+    protected override async Task SeedFile(string relativePath, byte[] content)
+    {
+        // Ensure parent directories exist.
+        string normalized = relativePath.TrimStart('/');
+        string? parent = Path.GetDirectoryName(normalized)?.Replace('\\', '/');
+        if (!string.IsNullOrEmpty(parent))
+            await SeedDirectory(parent);
+
+        string url = _fixture.BaseUrl + normalized;
+        using ByteArrayContent body = new(content);
+        HttpResponseMessage response = await _fixture.RawHttp.PutAsync(url, body);
+        response.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
+    /// WebDAV has real directory objects — MKCOL each ancestor in order.
+    /// 405 MethodNotAllowed means the collection already exists; that's fine.
+    /// </summary>
+    protected override async Task SeedDirectory(string relativePath)
+    {
+        string normalized = relativePath.TrimStart('/').TrimEnd('/');
+        string[] segments = normalized.Split('/');
+        string accumulated = string.Empty;
+
+        foreach (string segment in segments)
+        {
+            accumulated = string.IsNullOrEmpty(accumulated) ? segment : accumulated + "/" + segment;
+
+            string url = _fixture.BaseUrl + accumulated + "/";
+            using HttpRequestMessage mkcol = new(new HttpMethod("MKCOL"), url);
+            HttpResponseMessage response = await _fixture.RawHttp.SendAsync(mkcol);
+
+            if (
+                !response.IsSuccessStatusCode
+                && response.StatusCode != HttpStatusCode.MethodNotAllowed
+            )
+                response.EnsureSuccessStatusCode();
+        }
+    }
+
+    /// <summary>
+    /// Verify presence via PROPFIND Depth: 0, bypassing the driver.
+    /// Returns true only for HTTP 207 Multi-Status responses.
+    /// </summary>
+    protected override async Task<bool> BackendHasFile(string relativePath)
+    {
+        string url = _fixture.BaseUrl + relativePath.TrimStart('/');
+        using HttpRequestMessage propfind = new(new HttpMethod("PROPFIND"), url);
+        propfind.Headers.Add("Depth", "0");
+        HttpResponseMessage response = await _fixture.RawHttp.SendAsync(propfind);
+        return response.StatusCode == HttpStatusCode.MultiStatus;
+    }
+
+    protected override Task DisposeStorage()
+    {
+        // Driver and HttpClient are owned by the fixture — nothing to dispose per test.
+        return Task.CompletedTask;
+    }
+
+    // -----------------------------------------------------------------------
+    // WebDAV-specific overrides — document known driver divergences
+    // -----------------------------------------------------------------------
+
+    // ExistsAsync for root ("") — bytemark/webdav responds to PROPFIND on "/"
+    // with 207. Expected to pass.
+
+    // Backslash normalisation — WebDavStorageDriver replaces '\' with '/' before
+    // building the URL. Expected to pass.
+
+    // Double-slash normalisation — WebDavStorageDriver does NOT collapse "//".
+    // "foo//bar.bin" and "foo/bar.bin" are different URLs on WebDAV.
+    // This test is expected to FAIL until the driver normalises paths.
+    // Named distinctly to avoid xUnit1024 (test method name conflict with base class).
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task WebDav_double_slash_is_known_failure_requires_driver_normalisation()
+    {
+        Skip.If(!_fixture.Available, "Docker not available");
+
+        IStorage storage = CreateStorage();
+        try
+        {
+            byte[] data = new byte[] { 0x01, 0x02 };
+            await SeedFile("foo/bar.bin", data);
+
+            bool withSingle = await storage.ExistsAsync("foo/bar.bin", CancellationToken.None);
+
+            // KNOWN FAILURE: WebDavStorageDriver does not collapse double slashes.
+            // "foo//bar.bin" is a different WebDAV URL from "foo/bar.bin".
+            // Driver fix needed: normalise consecutive slashes before URL construction.
+            bool withDouble = await storage.ExistsAsync("foo//bar.bin", CancellationToken.None);
+
+            withSingle.Should().BeTrue();
+            withDouble
+                .Should()
+                .Be(
+                    withSingle,
+                    "KNOWN FAILURE: WebDavStorageDriver does not collapse double slashes — driver fix needed"
+                );
+        }
+        finally
+        {
+            await DisposeStorage();
+        }
+    }
+
+    // Absolute path rejection — RemoteStorage / WebDavStorageDriver does not
+    // apply StoragePathGuard. An absolute path "/abs/path" is treated as a
+    // URL path, which returns 404 → ExistsAsync returns false. The base contract
+    // accepts "returned false" as a valid outcome.
+
+    // Null-byte in path — WebDavStorageDriver will build a URL containing \0
+    // which the HttpClient rejects with an InvalidOperationException. The base
+    // contract accepts any Exception here.
+
+    // ".." traversal — the WebDAV server normalises ".." in URL paths server-side.
+    // The driver does not pre-validate. Result: ExistsAsync returns false (no throw).
+    // The base contract accepts "returned false" as an acceptable outcome.
+    // NOTE: if the contract is tightened to require a throw, driver-side
+    // StoragePathGuard integration will be needed.
+}
