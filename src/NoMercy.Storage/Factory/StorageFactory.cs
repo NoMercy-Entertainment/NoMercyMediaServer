@@ -330,8 +330,6 @@ public sealed class StorageFactory : IStorageFactory
             {
                 accessKey = creds.Value.AccessKey;
                 secretKey = creds.Value.SecretKey;
-                // TEMP-DEBUG: surface what creds the resolver returned so we can
-                // compare against the keypair the user actually generated.
                 _logger.LogInformation(
                     "S3/R2 cred resolved for folder {FolderId}: accessKey starts with '{AkPrefix}' len={AkLen}, secret len={SkLen}",
                     folderId,
@@ -349,6 +347,21 @@ public sealed class StorageFactory : IStorageFactory
                 );
             }
         }
+
+        // S3/R2 require explicit credentials in a self-hosted media server
+        // context — the default AWS credential chain (env vars, EC2 IMDS) is
+        // never what an operator wants here. Reject with a message that
+        // names the fix instead of letting the SDK throw "Credential access
+        // key has length 0" / "Unable to get IAM credentials from EC2 IMDS"
+        // deep inside the signing path.
+        bool emptyOrNullAccess = string.IsNullOrEmpty(accessKey);
+        bool emptyOrNullSecret = string.IsNullOrEmpty(secretKey);
+        if (emptyOrNullAccess || emptyOrNullSecret)
+            throw new ArgumentException(
+                $"{driverType} driver (folder {folderId}) has no credentials configured. "
+                    + "Open the driver in the dashboard and set access key + secret key.",
+                nameof(driverConfigJson)
+            );
 
         S3StorageDriver s3Driver = new(
             config.Bucket,
