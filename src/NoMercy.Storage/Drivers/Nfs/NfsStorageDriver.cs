@@ -206,6 +206,122 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     }
 
     // -----------------------------------------------------------------------
+    // EXPIRED-retry helpers — caller MUST hold _lock. Each helper performs a
+    // single libnfs call, and on EXPIRED-class failure tears down + remounts
+    // the context once before retrying. Used by every IStorageDriver entry
+    // point that touches state-bearing NFSv4 operations so a stale lease
+    // never propagates to callers.
+    // -----------------------------------------------------------------------
+
+    private int Stat64WithRetry(string nfsPath, out LibNfs.NfsStat64 stat)
+    {
+        int rc = _libNfs.Stat64(_nfs, nfsPath, out stat);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
+        {
+            try
+            {
+                Remount();
+            }
+            catch
+            {
+                return rc;
+            }
+            rc = _libNfs.Stat64(_nfs, nfsPath, out stat);
+        }
+        return rc;
+    }
+
+    private int OpenDirWithRetry(string nfsPath, out IntPtr dir)
+    {
+        int rc = _libNfs.OpenDir(_nfs, nfsPath, out dir);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
+        {
+            try
+            {
+                Remount();
+            }
+            catch
+            {
+                return rc;
+            }
+            rc = _libNfs.OpenDir(_nfs, nfsPath, out dir);
+        }
+        return rc;
+    }
+
+    private int UnlinkWithRetry(string nfsPath)
+    {
+        int rc = _libNfs.Unlink(_nfs, nfsPath);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
+        {
+            try
+            {
+                Remount();
+            }
+            catch
+            {
+                return rc;
+            }
+            rc = _libNfs.Unlink(_nfs, nfsPath);
+        }
+        return rc;
+    }
+
+    private int RenameWithRetry(string oldPath, string newPath)
+    {
+        int rc = _libNfs.Rename(_nfs, oldPath, newPath);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
+        {
+            try
+            {
+                Remount();
+            }
+            catch
+            {
+                return rc;
+            }
+            rc = _libNfs.Rename(_nfs, oldPath, newPath);
+        }
+        return rc;
+    }
+
+    private int RmDirWithRetry(string nfsPath)
+    {
+        int rc = _libNfs.RmDir(_nfs, nfsPath);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
+        {
+            try
+            {
+                Remount();
+            }
+            catch
+            {
+                return rc;
+            }
+            rc = _libNfs.RmDir(_nfs, nfsPath);
+        }
+        return rc;
+    }
+
+    private int MkDirWithRetry(string nfsPath)
+    {
+        int rc = _libNfs.MkDir(_nfs, nfsPath);
+        if (rc != 0 && IsExpiredStateError(rc, _libNfs.GetError(_nfs)))
+        {
+            try
+            {
+                Remount();
+            }
+            catch
+            {
+                return rc;
+            }
+            rc = _libNfs.MkDir(_nfs, nfsPath);
+        }
+        return rc;
+    }
+
+    // -----------------------------------------------------------------------
     // IStorageDriver
     // -----------------------------------------------------------------------
 
@@ -215,7 +331,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _lock.Wait();
         try
         {
-            int rc = _libNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
             {
                 // NFS4ERR_NOENT (-2) is the expected "no, that path doesn't
@@ -249,7 +365,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _lock.Wait();
         try
         {
-            int rc = _libNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
             {
                 // NFS4ERR_NOENT (-2) is the expected "no, that path doesn't
@@ -298,7 +414,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _lock.Wait();
         try
         {
-            int rc = _libNfs.Unlink(_nfs, nfsPath);
+            int rc = UnlinkWithRetry(nfsPath);
             // Idempotent — ignore ENOENT (-2)
             if (
                 rc != 0
@@ -323,7 +439,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 DeleteDirectoryRecursive(nfsPath);
             else
             {
-                int rc = _libNfs.RmDir(_nfs, nfsPath);
+                int rc = RmDirWithRetry(nfsPath);
                 if (
                     rc != 0
                     && rc != -2
@@ -348,7 +464,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _lock.Wait();
         try
         {
-            int rc = _libNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
                 throw new FileNotFoundException(
                     $"NFS stat failed for '{path}': {_libNfs.GetError(_nfs)}"
@@ -367,7 +483,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _lock.Wait();
         try
         {
-            int rc = _libNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
                 throw new FileNotFoundException(
                     $"NFS stat failed for '{path}': {_libNfs.GetError(_nfs)}"
@@ -389,7 +505,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _lock.Wait();
         try
         {
-            int rc = _libNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
                 throw new FileNotFoundException(
                     $"NFS stat failed for '{path}': {_libNfs.GetError(_nfs)}"
@@ -411,7 +527,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _lock.Wait();
         try
         {
-            int rc = _libNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+            int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
             if (rc != 0)
                 throw new FileNotFoundException(
                     $"NFS stat failed for '{path}': {_libNfs.GetError(_nfs)}"
@@ -531,7 +647,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 _lock.Wait();
                 try
                 {
-                    int statRc = _libNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+                    int statRc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
                     if (statRc != 0)
                         throw new FileNotFoundException($"NFS file not found: '{path}'");
                     fileSize = (long)stat.Size;
@@ -641,7 +757,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _lock.Wait();
         try
         {
-            int rc = _libNfs.Rename(_nfs, srcPath, dstPath);
+            int rc = RenameWithRetry(srcPath, dstPath);
             if (rc != 0)
                 throw new IOException(
                     $"NFS rename '{source}' -> '{destination}' failed: {_libNfs.GetError(_nfs)}"
@@ -753,7 +869,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _lock.Wait();
         try
         {
-            int rc = _libNfs.Rename(_nfs, srcPath, dstPath);
+            int rc = RenameWithRetry(srcPath, dstPath);
             if (rc != 0)
                 throw new IOException(
                     $"NFS rename directory '{source}' -> '{destination}' failed: {_libNfs.GetError(_nfs)}"
@@ -1003,7 +1119,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         _lock.Wait();
         try
         {
-            int openRc = _libNfs.OpenDir(_nfs, nfsPath, out IntPtr dir);
+            int openRc = OpenDirWithRetry(nfsPath, out IntPtr dir);
             if (openRc != 0)
                 return results;
 
@@ -1102,7 +1218,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     private bool FileExistsNoLock(string nfsPath)
     {
-        int rc = _libNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 stat);
+        int rc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 stat);
         return rc == 0 && stat.FileType == LibNfs.S_IFREG;
     }
 
@@ -1111,7 +1227,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         if (nfsPath == "/" || nfsPath == string.Empty)
             return;
 
-        int checkRc = _libNfs.Stat64(_nfs, nfsPath, out LibNfs.NfsStat64 existing);
+        int checkRc = Stat64WithRetry(nfsPath, out LibNfs.NfsStat64 existing);
         if (checkRc == 0 && existing.FileType == LibNfs.S_IFDIR)
             return;
 
@@ -1119,7 +1235,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         if (parent != nfsPath)
             EnsureDirectoryRecursive(parent);
 
-        int mkRc = _libNfs.MkDir(_nfs, nfsPath);
+        int mkRc = MkDirWithRetry(nfsPath);
         if (mkRc != 0)
         {
             string mkErr = _libNfs.GetError(_nfs);
@@ -1134,7 +1250,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     private void DeleteDirectoryRecursive(string nfsPath)
     {
-        int openRc = _libNfs.OpenDir(_nfs, nfsPath, out IntPtr dir);
+        int openRc = OpenDirWithRetry(nfsPath, out IntPtr dir);
         if (openRc != 0)
         {
             if (_libNfs.GetError(_nfs).Contains("ENOENT", StringComparison.OrdinalIgnoreCase))
@@ -1161,7 +1277,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     DeleteDirectoryRecursive(childPath);
                 else
                 {
-                    int unlinkRc = _libNfs.Unlink(_nfs, childPath);
+                    int unlinkRc = UnlinkWithRetry(childPath);
                     if (unlinkRc != 0)
                         throw new IOException(
                             $"NFS unlink failed for '{childPath}': {_libNfs.GetError(_nfs)}"
@@ -1174,7 +1290,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
             _libNfs.CloseDir(_nfs, dir);
         }
 
-        int rmdirRc = _libNfs.RmDir(_nfs, nfsPath);
+        int rmdirRc = RmDirWithRetry(nfsPath);
         if (
             rmdirRc != 0
             && !_libNfs.GetError(_nfs).Contains("ENOENT", StringComparison.OrdinalIgnoreCase)
@@ -1190,7 +1306,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         List<string> results
     )
     {
-        int openRc = _libNfs.OpenDir(_nfs, nfsDir, out IntPtr dir);
+        int openRc = OpenDirWithRetry(nfsDir, out IntPtr dir);
         if (openRc != 0)
         {
             // -20 (NFS4ERR_NOTDIR / ENOTDIR) just means the caller (or the
@@ -1234,7 +1350,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                     // entry.Type from libnfs's nfsdirent has been unreliable
                     // for NFSv4 in practice — verify with Stat64 before
                     // recursing so we never opendir a regular file.
-                    int statRc = _libNfs.Stat64(_nfs, childNfsPath, out LibNfs.NfsStat64 childStat);
+                    int statRc = Stat64WithRetry(childNfsPath, out LibNfs.NfsStat64 childStat);
                     if (statRc == 0 && childStat.FileType == LibNfs.S_IFDIR)
                         CollectEntries(childNfsPath, virtualPath, searchPattern, option, results);
                 }
