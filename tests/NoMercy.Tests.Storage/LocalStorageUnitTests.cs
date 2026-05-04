@@ -21,6 +21,62 @@ public class LocalStorageUnitTests
     }
 
     [Fact]
+    public void List_with_empty_path_lists_the_scoped_root_not_throws()
+    {
+        // Regression: dashboard StorageBrowserController passes empty path
+        // when browsing the configured root of a local driver. Pre-fix,
+        // StoragePathGuard rejected that with "path is empty" and the
+        // browser surfaced "Storage list failed". Empty path now means
+        // "the storage's scoped root".
+        Mock<IStorageDriver> driver = new(MockBehavior.Loose);
+        string root = Path.Combine(Path.GetTempPath(), $"nm-root-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            driver
+                .Setup(b => b.GetFullPath(It.IsAny<string>()))
+                .Returns<string>(p => Path.GetFullPath(p));
+            driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
+            driver
+                .Setup(b =>
+                    b.EnumerateFileSystemEntries(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<SearchOption>()
+                    )
+                )
+                .Returns([]);
+            driver.Setup(b => b.DirectoryExists(It.IsAny<string>())).Returns(true);
+            driver.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(DateTime.UtcNow);
+
+            StoragePathGuard guard = new([root], driver.Object);
+            LocalStorage storage = new(driver.Object, guard);
+
+            IReadOnlyList<StorageEntry> entries = storage.List("", null, recursive: false);
+
+            entries.Should().NotBeNull();
+            driver.Verify(
+                b =>
+                    b.EnumerateFileSystemEntries(
+                        It.Is<string>(p => p.StartsWith(root, StringComparison.OrdinalIgnoreCase)),
+                        It.IsAny<string>(),
+                        It.IsAny<SearchOption>()
+                    ),
+                Times.AtLeastOnce(),
+                "empty path should resolve to the scoped root, not throw"
+            );
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(root, recursive: true);
+            }
+            catch { }
+        }
+    }
+
+    [Fact]
     public async Task ReadAsync_pulls_full_stream_from_backend()
     {
         (LocalStorage storage, Mock<IStorageDriver> driver) = Build();

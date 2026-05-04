@@ -261,7 +261,15 @@ public sealed class LocalStorage : IStorage
 
     public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
     {
-        string safe = _guard.Validate(path);
+        // Empty path = "list the storage root I'm scoped to" — the natural
+        // browse-root semantic. Without this LocalStorage rejects every
+        // browse-from-root call (e.g. dashboard StorageBrowserController)
+        // with "path is empty".
+        string requestedPath = path;
+        if (string.IsNullOrEmpty(requestedPath) && _guard.Enforced && _guard.AllowedRoots.Count > 0)
+            requestedPath = _guard.AllowedRoots[0];
+
+        string safe = _guard.Validate(requestedPath);
         SearchOption option = recursive
             ? SearchOption.AllDirectories
             : SearchOption.TopDirectoryOnly;
