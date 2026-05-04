@@ -10,7 +10,9 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
+using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -105,7 +107,7 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
 
         JObject? configToStore = request.Config;
 
-        if (request.Credentials is not null)
+        if (request.Credentials is not null && HasMeaningfulCredentials(request.Credentials))
         {
             string credRef = $"driver:{newId}";
             CredentialManager.SetCredentials(
@@ -114,10 +116,24 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
                 password: request.Credentials.SecretKey,
                 apiKey: string.Empty
             );
+            Logger.App(
+                $"[DriversController] Stored credentials for new {normalizedType} driver "
+                    + $"(id={newId}, accessKey len={request.Credentials.AccessKey.Length}, "
+                    + $"secret len={request.Credentials.SecretKey.Length})",
+                LogEventLevel.Information
+            );
 
             // Inject credentialsRef into Config so the StorageFactory can resolve it.
             configToStore ??= new JObject();
             configToStore["credentialsRef"] = credRef;
+        }
+        else if (request.Credentials is not null)
+        {
+            Logger.App(
+                $"[DriversController] Ignoring blank credentials block on create for {normalizedType} "
+                    + $"(id={newId}); driver will be created without stored credentials.",
+                LogEventLevel.Warning
+            );
         }
 
         Driver driver = new()
@@ -179,7 +195,7 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
 
         JObject? configToStore = request.Config;
 
-        if (request.Credentials is not null)
+        if (request.Credentials is not null && HasMeaningfulCredentials(request.Credentials))
         {
             string credRef = $"driver:{id}";
             CredentialManager.SetCredentials(
@@ -188,11 +204,30 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
                 password: request.Credentials.SecretKey,
                 apiKey: string.Empty
             );
+            Logger.App(
+                $"[DriversController] Updated credentials for driver {id} ({driver.Type}) "
+                    + $"(accessKey len={request.Credentials.AccessKey.Length}, "
+                    + $"secret len={request.Credentials.SecretKey.Length})",
+                LogEventLevel.Information
+            );
 
             // Ensure credentialsRef is present in Config.
             configToStore ??= request.Config ?? ParseConfigJson(driver.Config);
             configToStore ??= new JObject();
             configToStore["credentialsRef"] = credRef;
+        }
+        else if (request.Credentials is not null)
+        {
+            // The dashboard form re-submits an empty credentials block when
+            // the user touches anything else — without this guard, every
+            // unrelated edit (renaming the driver, toggling a config flag)
+            // wiped out the previously-stored access key + secret. Preserve
+            // existing credentials when the incoming block is blank.
+            Logger.App(
+                $"[DriversController] Ignoring blank credentials block on update for driver {id} "
+                    + $"({driver.Type}); preserving previously-stored credentials.",
+                LogEventLevel.Information
+            );
         }
 
         if (configToStore is not null)
@@ -301,4 +336,16 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
             return null;
         }
     }
+
+    /// <summary>
+    /// True when the credentials block carries actual values to write. The
+    /// dashboard form submits an empty access/secret block whenever any
+    /// other field changes — without this guard a rename or config tweak
+    /// would silently overwrite the previously-stored credentials with
+    /// empty strings, surfacing later as "Credential access key has length 0"
+    /// when the driver is used.
+    /// </summary>
+    private static bool HasMeaningfulCredentials(DriverCredentialsDto credentials) =>
+        !string.IsNullOrWhiteSpace(credentials.AccessKey)
+        && !string.IsNullOrWhiteSpace(credentials.SecretKey);
 }
