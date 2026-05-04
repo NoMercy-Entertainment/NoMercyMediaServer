@@ -1,37 +1,114 @@
 namespace NoMercy.Storage;
 
 /// <summary>
-/// Minimum-viable filesystem abstraction shared across the NoMercy
-/// codebase. A single concrete driver (<see cref="LocalStorage"/>)
-/// ships today; remote drivers (SMB / NFS / S3 / R2) land post-merge
-/// without touching consumer call sites.
+/// Filesystem abstraction shared across the NoMercy codebase. A single
+/// <see cref="Drivers.Local.LocalStorage"/> driver ships today; remote
+/// drivers (NFS, S3, R2, WebDAV) plug in without touching consumer call sites.
 /// </summary>
+/// <remarks>
+/// <para><strong>PATH CONTRACT (v1)</strong> — every IStorage method follows these rules:</para>
+///
+/// <para><strong>Rule 1 — PATHS ARE RELATIVE TO THE STORAGE'S SCOPE.</strong><br/>
+/// The scope is whatever IStorageFactory configured: a local rootPath, an NFS export, an S3
+/// bucket+prefix, a WebDAV base URL. Callers MUST NOT pass absolute backend paths.</para>
+///
+/// <para><strong>Rule 2 — SEPARATORS ARE FORWARD SLASHES.</strong><br/>
+/// Backslashes are tolerated for legacy callers and normalized internally.
+/// Mixed-separator strings from <c>System.IO.Path.Combine</c> on Windows are
+/// normalized too, but producing them is an anti-pattern — use
+/// <see cref="CombinePath"/>.</para>
+///
+/// <para><strong>Rule 3 — EMPTY OR NULL PATH = THE SCOPE ROOT.</strong><br/>
+/// <c>List</c>/<c>Exists</c>/<c>Size</c> on <c>""</c> returns what's in the scoped root.
+/// This is the natural browse-from-root semantic the dashboard relies on.
+/// Note: <see cref="Validation.StoragePathGuard"/> currently rejects empty paths before
+/// <see cref="Drivers.Local.LocalStorage.ResolveAgainstScopedRoot"/> can substitute the root —
+/// see the architecture note in <see cref="Validation.StoragePathGuard"/> for the pending
+/// resolution.</para>
+///
+/// <para><strong>Rule 4 — ABSOLUTE PATHS (rooted in OS terms) ARE REJECTED.</strong><br/>
+/// A path already canonicalized to a backend-absolute form indicates the caller bypassed
+/// the abstraction. <see cref="Validation.StoragePathGuard"/> surfaces this as
+/// <see cref="Validation.StoragePathNotAllowedException"/>.</para>
+///
+/// <para><strong>Rule 5 — ".." TRAVERSAL AND NULL BYTES ARE REJECTED</strong> structurally
+/// before any backend call. This is the security check that survives even when other rules
+/// are relaxed.</para>
+///
+/// <para><strong>Rule 6 — THE DRIVER OWNS BACKEND TRANSLATION.</strong><br/>
+/// <see cref="Drivers.Local.LocalStorage"/> joins with the OS root, NFS prepends the export,
+/// S3 prepends bucket prefix, WebDAV prepends the base URL — all internal. Consumers never
+/// see these prefixes.</para>
+///
+/// <para><strong>Important</strong>: <see cref="Remote.RemoteStorage"/> currently does NOT
+/// pass paths through <see cref="Validation.StoragePathGuard"/>. Rules 4 and 5 are therefore
+/// only enforced for <see cref="Drivers.Local.LocalStorage"/> today. This is a known gap —
+/// see the enforcement notes in <c>.claude/specs/2026-05-04-istorage-path-contract.md</c>.</para>
+/// </remarks>
 public interface IStorage
 {
+    /// <remarks>
+    /// <paramref name="path"/> must be scope-relative (Rule 1) and use forward slashes
+    /// (Rule 2). An empty string resolves to the scope root (Rule 3).
+    /// </remarks>
     Task<byte[]> ReadAsync(string path, CancellationToken ct);
 
+    /// <remarks>
+    /// <paramref name="path"/> must be scope-relative (Rule 1). The returned stream is not
+    /// buffered; callers own disposal.
+    /// </remarks>
     Task<Stream> OpenReadAsync(string path, CancellationToken ct);
 
+    /// <remarks>
+    /// <paramref name="path"/> must be scope-relative (Rule 1). Parent directories are
+    /// created automatically — callers do not call <see cref="CreateDirectoryAsync"/> first.
+    /// </remarks>
     Task WriteAsync(string path, byte[] bytes, CancellationToken ct);
 
+    /// <remarks>
+    /// <paramref name="path"/> must be scope-relative (Rule 1). Caller owns stream disposal.
+    /// </remarks>
     Task<Stream> OpenWriteAsync(string path, bool overwrite, CancellationToken ct);
 
+    /// <remarks>
+    /// Returns true for both files and directories. <paramref name="path"/> must be
+    /// scope-relative (Rule 1). Empty path checks whether the scope root itself exists
+    /// (Rule 3).
+    /// </remarks>
     Task<bool> ExistsAsync(string path, CancellationToken ct);
 
     Task DeleteAsync(string path, CancellationToken ct);
 
     Task DeleteDirectoryAsync(string path, bool recursive, CancellationToken ct);
 
+    /// <remarks>
+    /// <paramref name="path"/> must be scope-relative (Rule 1). Intermediate directories are
+    /// created recursively. Idempotent — calling on an existing directory is a no-op.
+    /// </remarks>
     Task CreateDirectoryAsync(string path, CancellationToken ct);
 
+    /// <remarks>
+    /// Both <paramref name="from"/> and <paramref name="to"/> must be scope-relative (Rule 1).
+    /// Crossing storage instances is not supported; use <see cref="CopyAsync"/> then
+    /// <see cref="DeleteAsync"/> when the source and destination live on different
+    /// <see cref="IStorage"/> instances.
+    /// </remarks>
     Task MoveAsync(string from, string to, CancellationToken ct);
 
+    /// <remarks>
+    /// Both <paramref name="from"/> and <paramref name="to"/> must be scope-relative (Rule 1).
+    /// </remarks>
     Task CopyAsync(string from, string to, CancellationToken ct);
 
     Task<long> SizeAsync(string path, CancellationToken ct);
 
     Task<DateTimeOffset> LastModifiedAsync(string path, CancellationToken ct);
 
+    /// <remarks>
+    /// <paramref name="path"/> must be scope-relative (Rule 1). An empty string lists
+    /// the scope root (Rule 3). Each yielded <see cref="StorageEntry"/> path is also
+    /// scope-relative — callers must not pass it to OS path APIs directly.
+    /// </remarks>
     IAsyncEnumerable<StorageEntry> ListAsync(
         string path,
         string? pattern,
@@ -48,10 +125,15 @@ public interface IStorage
 
     /// <summary>
     /// Acquire a real local path suitable for child-process consumption
-    /// (ffmpeg, fpcalc, whisper, etc.). <see cref="LocalStorage"/>
+    /// (ffmpeg, fpcalc, whisper, etc.). <see cref="Drivers.Local.LocalStorage"/>
     /// returns the validated path as-is with a no-op dispose; remote
     /// drivers stage to a temp file and clean up on dispose.
     /// </summary>
+    /// <remarks>
+    /// The path inside the returned <see cref="LocalPathLease"/> is a real OS-absolute path —
+    /// it is intentionally NOT scope-relative. It must not be passed back into IStorage
+    /// methods (that would violate Rule 1). Its sole purpose is child-process invocation.
+    /// </remarks>
     Task<LocalPathLease> AcquireLocalPathAsync(string path, CancellationToken ct);
 
     // --- Sync companions ----------------------------------------------------
@@ -94,6 +176,12 @@ public interface IStorage
 
     void Copy(string from, string to);
 
+    /// <remarks>
+    /// Each returned <see cref="StorageEntry"/> path is scope-relative (Rule 1).
+    /// Do not pass these paths to <c>System.IO</c> APIs or
+    /// <c>System.IO.Path.Combine</c> — use <see cref="CombinePath"/> if you
+    /// need to build a child path from a listed entry (Rule 2).
+    /// </remarks>
     IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive);
 
     LocalPathLease AcquireLocalPath(string path);
@@ -123,16 +211,27 @@ public interface IStorage
     /// <summary>Driver's path separator. Convenience pass-through.</summary>
     char DirectorySeparator => Driver.DirectorySeparator;
 
-    /// <summary>Driver-aware path join. Convenience pass-through.</summary>
+    /// <summary>
+    /// Driver-aware path join. Use this instead of
+    /// <c>System.IO.Path.Combine</c> for any path that will be passed back
+    /// into an IStorage method. <c>Path.Combine</c> uses the OS separator
+    /// which is <c>'\\'</c> on Windows — violating Rule 2 of the path contract.
+    /// </summary>
     string CombinePath(string parent, string child) => Driver.CombinePath(parent, child);
 
     /// <summary>
     /// Resolves a storage-relative path to the absolute local filesystem
     /// path that would be written for that key. Only meaningful for
-    /// <see cref="LocalStorage"/>; all other backends throw
+    /// <see cref="Drivers.Local.LocalStorage"/>; all other backends throw
     /// <see cref="NotSupportedException"/>. Used by the encoder
     /// orchestrator's same-volume rename fast-path.
     /// </summary>
+    /// <remarks>
+    /// The returned path is OS-absolute — it is intentionally NOT scope-relative.
+    /// Do not pass the result back into IStorage methods (Rule 1 violation).
+    /// This method escapes the abstraction by design; its only approved use is
+    /// the encoder's same-volume rename fast-path.
+    /// </remarks>
     string GetFullPath(string path) =>
         throw new NotSupportedException(
             $"{GetType().Name} does not support GetFullPath. "
