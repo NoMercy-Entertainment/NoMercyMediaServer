@@ -17,13 +17,18 @@ internal sealed class NfsWriteStream : Stream
     private readonly IntPtr _nfs;
     private readonly IntPtr _fh;
     private readonly SemaphoreSlim _lock;
+    private readonly ILibNfs _libNfs;
     private bool _disposed;
 
     internal NfsWriteStream(IntPtr nfs, IntPtr fh, SemaphoreSlim driverLock)
+        : this(nfs, fh, driverLock, LibNfsPInvoke.Instance) { }
+
+    internal NfsWriteStream(IntPtr nfs, IntPtr fh, SemaphoreSlim driverLock, ILibNfs libNfs)
     {
         _nfs = nfs;
         _fh = fh;
         _lock = driverLock;
+        _libNfs = libNfs;
     }
 
     public override bool CanRead => false;
@@ -56,9 +61,9 @@ internal sealed class NfsWriteStream : Stream
                     _lock.Wait();
                     try
                     {
-                        n = LibNfs.Write(_nfs, _fh, pinned, chunk);
+                        n = _libNfs.Write(_nfs, _fh, pinned, chunk);
                         if (n < 0)
-                            err = LibNfs.GetError(_nfs);
+                            err = _libNfs.GetError(_nfs);
                     }
                     finally
                     {
@@ -129,7 +134,7 @@ internal sealed class NfsWriteStream : Stream
             _lock.Wait();
             try
             {
-                LibNfs.Close(_nfs, _fh);
+                _libNfs.Close(_nfs, _fh);
             }
             finally
             {

@@ -18,15 +18,26 @@ internal sealed class NfsReadStream : Stream
     private readonly IntPtr _fh;
     private readonly SemaphoreSlim _lock;
     private readonly long _length;
+    private readonly ILibNfs _libNfs;
     private long _position;
     private bool _disposed;
 
     internal NfsReadStream(IntPtr nfs, IntPtr fh, long length, SemaphoreSlim driverLock)
+        : this(nfs, fh, length, driverLock, LibNfsPInvoke.Instance) { }
+
+    internal NfsReadStream(
+        IntPtr nfs,
+        IntPtr fh,
+        long length,
+        SemaphoreSlim driverLock,
+        ILibNfs libNfs
+    )
     {
         _nfs = nfs;
         _fh = fh;
         _length = length;
         _lock = driverLock;
+        _libNfs = libNfs;
     }
 
     public override bool CanRead => true;
@@ -65,9 +76,9 @@ internal sealed class NfsReadStream : Stream
                     _lock.Wait();
                     try
                     {
-                        n = LibNfs.Read(_nfs, _fh, pinned, chunk);
+                        n = _libNfs.Read(_nfs, _fh, pinned, chunk);
                         if (n < 0)
-                            err = LibNfs.GetError(_nfs);
+                            err = _libNfs.GetError(_nfs);
                     }
                     finally
                     {
@@ -118,7 +129,7 @@ internal sealed class NfsReadStream : Stream
             _lock.Wait();
             try
             {
-                rc = LibNfs.Lseek(
+                rc = _libNfs.Lseek(
                     _nfs,
                     _fh,
                     target,
@@ -127,7 +138,7 @@ internal sealed class NfsReadStream : Stream
                     out _
                 );
                 if (rc < 0)
-                    err = LibNfs.GetError(_nfs);
+                    err = _libNfs.GetError(_nfs);
             }
             finally
             {
@@ -164,7 +175,7 @@ internal sealed class NfsReadStream : Stream
             _lock.Wait();
             try
             {
-                LibNfs.Close(_nfs, _fh);
+                _libNfs.Close(_nfs, _fh);
             }
             finally
             {

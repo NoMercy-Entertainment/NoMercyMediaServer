@@ -84,6 +84,10 @@ public class AutoEncodeSubscriber(
             }
 
             // Video files for this media id — match on movie id OR episode id.
+            // Multiple sources per media (NFS + S3 + ...) is expected, so dedupe
+            // by Filename and pick the best driver to read from. The encoder
+            // publishes its output to every configured destination from a single
+            // run, so we never need to encode the same content twice.
             List<VideoFile> videoFiles = await context
                 .VideoFiles.Where(vf => vf.MovieId == evt.MediaId || vf.EpisodeId == evt.MediaId)
                 .ToListAsync(ct);
@@ -100,22 +104,47 @@ public class AutoEncodeSubscriber(
             JobDispatcher dispatcher = new();
             int dispatched = 0;
 
-            foreach (VideoFile file in videoFiles)
+            // Pre-load drivers so we can rank sources by storage type
+            // (local > nfs/smb > webdav > r2/s3) without N+1 queries.
+            Dictionary<Ulid, string> driverTypeById = await context
+                .Drivers.AsNoTracking()
+                .ToDictionaryAsync(d => d.Id, d => d.Type, ct);
+
+            IEnumerable<IGrouping<string, VideoFile>> bySource = videoFiles.GroupBy(vf =>
+                vf.Filename
+            );
+
+            foreach (IGrouping<string, VideoFile> group in bySource)
             {
-                // Skip if already encoded — the encoded output lands under a
-                // `.NoMercy` sibling directory next to the source. Cheap FS
-                // check that keeps rescans idempotent.
-                if (!string.IsNullOrEmpty(file.Folder) && IsAlreadyEncoded(file))
+                VideoFile? bestSource = group
+                    .Select(file => new
+                    {
+                        File = file,
+                        Folder = folders.FirstOrDefault(f =>
+                            !string.IsNullOrEmpty(file.HostFolder)
+                            && file.HostFolder.StartsWith(
+                                f.Path,
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                        ),
+                    })
+                    .Where(x => x.Folder is not null)
+                    .OrderBy(x => DriverPreference(driverTypeById, x.Folder!.DriverId))
+                    .Select(x => x.File)
+                    .FirstOrDefault();
+
+                if (bestSource is null)
                     continue;
 
-                Folder? folder = folders.FirstOrDefault(f =>
-                    !string.IsNullOrEmpty(file.HostFolder)
-                    && file.HostFolder.StartsWith(f.Path, StringComparison.OrdinalIgnoreCase)
+                if (!string.IsNullOrEmpty(bestSource.Folder) && IsAlreadyEncoded(bestSource))
+                    continue;
+
+                Folder folder = folders.First(f =>
+                    bestSource.HostFolder.StartsWith(f.Path, StringComparison.OrdinalIgnoreCase)
                 );
-                if (folder is null)
-                    continue;
 
-                string filePath = file.HostFolder.TrimEnd('/') + "/" + file.Filename.TrimStart('/');
+                string filePath =
+                    bestSource.HostFolder.TrimEnd('/') + "/" + bestSource.Filename.TrimStart('/');
                 dispatcher.DispatchJob<VideoEncodeJob>(
                     evt.LibraryId,
                     folder.Id,
@@ -138,6 +167,23 @@ public class AutoEncodeSubscriber(
         {
             logger.LogWarning(ex, "Auto-encode handler failed for media {MediaId}", evt.MediaId);
         }
+    }
+
+    // Lower number = preferred. Picks the lowest-latency / cheapest source
+    // when the same media is mounted on multiple drivers.
+    private static int DriverPreference(Dictionary<Ulid, string> typeById, Ulid driverId)
+    {
+        if (!typeById.TryGetValue(driverId, out string? type))
+            return 99;
+
+        return type.ToLowerInvariant() switch
+        {
+            "local" => 0,
+            "nfs" or "smb" or "cifs" => 1,
+            "webdav" => 2,
+            "s3" or "r2" => 3,
+            _ => 50,
+        };
     }
 
     /// <summary>

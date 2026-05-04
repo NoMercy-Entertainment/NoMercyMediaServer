@@ -48,7 +48,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     public async Task StoreVideoFile(VideoFile videoFile)
     {
         VideoFile? existing = await _context.VideoFiles.FirstOrDefaultAsync(v =>
-            v.Filename == videoFile.Filename
+            v.Filename == videoFile.Filename && v.HostFolder == videoFile.HostFolder
         );
 
         if (existing is null)

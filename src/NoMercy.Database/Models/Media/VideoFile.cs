@@ -6,7 +6,7 @@ using NoMercy.Database.Internal;
 namespace NoMercy.Database.Models.Media;
 
 [PrimaryKey(nameof(Id))]
-[Index(nameof(Filename), IsUnique = true)]
+[Index(nameof(Filename), nameof(HostFolder), IsUnique = true)]
 [Index(nameof(EpisodeId))]
 [Index(nameof(MovieId))]
 [Index(nameof(Folder))]
