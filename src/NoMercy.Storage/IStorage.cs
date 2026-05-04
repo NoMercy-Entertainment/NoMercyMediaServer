@@ -220,6 +220,50 @@ public interface IStorage
     string CombinePath(string parent, string child) => Driver.CombinePath(parent, child);
 
     /// <summary>
+    /// Returns the last segment of a storage-relative path — the storage-aware
+    /// equivalent of <c>System.IO.Path.GetFileName</c>. Splits on <c>'/'</c>
+    /// (Rule 2 canonical separator). Never touches the local filesystem.
+    /// </summary>
+    string GetName(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return string.Empty;
+        string trimmed = path.TrimEnd('/');
+        int idx = trimmed.LastIndexOf('/');
+        return idx < 0 ? trimmed : trimmed[(idx + 1)..];
+    }
+
+    /// <summary>
+    /// Returns the parent directory segment of a storage-relative path — the
+    /// storage-aware equivalent of <c>System.IO.Path.GetDirectoryName</c>.
+    /// Splits on <c>'/'</c> (Rule 2). Returns null when the path has no parent
+    /// (i.e. it is already the scope root).
+    /// </summary>
+    string? GetParent(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return null;
+        string trimmed = path.TrimEnd('/');
+        int idx = trimmed.LastIndexOf('/');
+        if (idx < 0)
+            return null;
+        string parent = trimmed[..idx];
+        return string.IsNullOrEmpty(parent) ? null : parent;
+    }
+
+    /// <summary>
+    /// Returns the last segment of a storage-relative path without its
+    /// extension — the storage-aware equivalent of
+    /// <c>System.IO.Path.GetFileNameWithoutExtension</c>.
+    /// </summary>
+    string GetNameWithoutExtension(string path)
+    {
+        string name = GetName(path);
+        int dot = name.LastIndexOf('.');
+        return dot < 0 ? name : name[..dot];
+    }
+
+    /// <summary>
     /// Resolves a storage-relative path to the absolute local filesystem
     /// path that would be written for that key. Only meaningful for
     /// <see cref="Drivers.Local.LocalStorage"/>; all other backends throw
