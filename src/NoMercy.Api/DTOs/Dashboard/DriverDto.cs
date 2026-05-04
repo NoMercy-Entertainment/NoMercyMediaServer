@@ -20,6 +20,12 @@ public record DriverDto
     [JsonProperty("credentials_configured")]
     public bool CredentialsConfigured { get; set; }
 
+    // True for the built-in system local driver — the web client uses this to
+    // hide the driver from the manage-drivers UI while still resolving its id
+    // for folder picking.
+    [JsonProperty("is_system")]
+    public bool IsSystem { get; set; }
+
     [JsonProperty("folder_count")]
     public int FolderCount { get; set; }
 

@@ -10,20 +10,19 @@ namespace NoMercy.Api.Services;
 /// </summary>
 public static class DriverTypeMetadata
 {
-    public static readonly string[] AllowedTypes = ["local", "nfs", "s3", "r2", "webdav"];
+    // Types that users are allowed to create through the dashboard.
+    // "local" is excluded — it is a built-in system driver, not user-created.
+    public static readonly string[] AllUserCreatable = ["nfs", "s3", "r2", "webdav"];
+
+    // All recognised types — used by the factory and for validation of
+    // existing rows (e.g. the system local driver uses "local").
+    public static readonly string[] AllRecognized = ["local", "nfs", "s3", "r2", "webdav"];
+
+    // Alias kept for call sites that haven't been updated yet.
+    public static readonly string[] AllowedTypes = AllUserCreatable;
 
     public static readonly DriverMetadataDto[] All =
     [
-        new()
-        {
-            Type = "local",
-            DisplayName = "Local disk",
-            Available = true,
-            ConfigSchema = new()
-            {
-                { "rootPath", "string (required) — absolute path to the local mount or directory" },
-            },
-        },
         new()
         {
             Type = "nfs",
@@ -92,14 +91,10 @@ public static class DriverTypeMetadata
     {
         switch (driverType)
         {
+            // "local" is the system driver — users can't create it, so no
+            // config validation is needed on the create/update path. The
+            // factory handles empty rootPath as the system-local passthrough.
             case "local":
-                if (config is null)
-                    return "config is required for 'local' and must include 'rootPath'.";
-
-                string? rootPath = config["rootPath"]?.Value<string>();
-                if (string.IsNullOrWhiteSpace(rootPath))
-                    return "config.rootPath must be a non-empty string for 'local'.";
-
                 return null;
 
             case "nfs":

@@ -75,6 +75,21 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
     }
 
     // -----------------------------------------------------------------------
+    // GET /api/v1/dashboard/drivers/system-local
+    // Returns the stable id of the built-in system local driver.
+    // -----------------------------------------------------------------------
+
+    [HttpGet]
+    [Route("system-local")]
+    public IActionResult GetSystemLocalId()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view driver info");
+
+        return Ok(new { id = Driver.SystemLocalDriverId.ToString() });
+    }
+
+    // -----------------------------------------------------------------------
     // POST /api/v1/dashboard/drivers
     // Create a named driver instance.
     // -----------------------------------------------------------------------
@@ -87,9 +102,14 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
 
         string normalizedType = (request.Type ?? string.Empty).Trim().ToLowerInvariant();
 
-        if (!DriverTypeMetadata.AllowedTypes.Contains(normalizedType))
+        if (normalizedType == "local")
             return BadRequestResponse(
-                $"Invalid type '{request.Type}'. Allowed values: {string.Join(", ", DriverTypeMetadata.AllowedTypes)}."
+                "Local storage is built-in. Use the library folder picker to attach a local path; you don't need to create a 'local' driver manually."
+            );
+
+        if (!DriverTypeMetadata.AllUserCreatable.Contains(normalizedType))
+            return BadRequestResponse(
+                $"Invalid type '{request.Type}'. Allowed values: {string.Join(", ", DriverTypeMetadata.AllUserCreatable)}."
             );
 
         string? validationError = DriverTypeMetadata.ValidateConfig(normalizedType, request.Config);
@@ -186,9 +206,13 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
         if (request.Type is not null)
         {
             string normalizedType = request.Type.Trim().ToLowerInvariant();
-            if (!DriverTypeMetadata.AllowedTypes.Contains(normalizedType))
+            if (normalizedType == "local")
                 return BadRequestResponse(
-                    $"Invalid type '{request.Type}'. Allowed values: {string.Join(", ", DriverTypeMetadata.AllowedTypes)}."
+                    "Cannot change type to 'local'; local storage is built-in and not user-managed."
+                );
+            if (!DriverTypeMetadata.AllUserCreatable.Contains(normalizedType))
+                return BadRequestResponse(
+                    $"Invalid type '{request.Type}'. Allowed values: {string.Join(", ", DriverTypeMetadata.AllUserCreatable)}."
                 );
             driver.Type = normalizedType;
         }
@@ -324,7 +348,7 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
 
     // -----------------------------------------------------------------------
     // DELETE /api/v1/dashboard/drivers/{id}
-    // Refuses with 409 if any folder references this driver.
+    // Refuses with 409 if any folder references this driver or it is system.
     // -----------------------------------------------------------------------
 
     [HttpDelete]
@@ -333,6 +357,9 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
     {
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to delete drivers");
+
+        if (id == Driver.SystemLocalDriverId)
+            return ConflictResponse("Cannot delete system driver");
 
         Driver? driver = await driverRepository.GetDriverByIdAsync(id);
         if (driver is null)
@@ -399,6 +426,7 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
             Type = driver.Type,
             Config = configObj,
             CredentialsConfigured = hasCredentialsConfigured,
+            IsSystem = driver.Id == Driver.SystemLocalDriverId,
             FolderCount = driver.Folders.Count,
             CreatedAt = driver.CreatedAt,
             UpdatedAt = driver.UpdatedAt,
