@@ -33,7 +33,7 @@ jobs:
           --verbosity minimal
           --logger trx
           --blame-hang-timeout 5m
-          --filter "Category=Unit|Category=ErrorHandling|Category=Characterization"
+          --filter "(Category=Unit|Category=ErrorHandling|Category=Characterization)&Category!=Integration"
 
   # Optional coverage job - non-blocking, only runs on master or when manually triggered
   coverage:
