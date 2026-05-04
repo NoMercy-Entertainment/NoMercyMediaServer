@@ -143,7 +143,7 @@ public partial class FileLogic(
         List<Subtitle> subtitles = [];
 
         string itemPath = item.Path.Replace('\\', '/');
-        string fileName = "/" + Path.GetFileName(itemPath);
+        string fileName = "/" + StoragePathHelpers.GetName(itemPath);
         string hostFolder = itemPath.Replace(fileName, "");
         string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
         int showIdx = string.IsNullOrEmpty(showName)

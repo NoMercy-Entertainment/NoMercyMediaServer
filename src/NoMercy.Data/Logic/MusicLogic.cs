@@ -17,6 +17,7 @@ using NoMercy.Providers.AcoustId.Client;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Storage;
 using NoMercyQueue;
 using Serilog.Events;
 
@@ -611,7 +612,7 @@ public partial class MusicLogic : IAsyncDisposable
                     ?.Replace("\\" + mediaFile.Name, "")
                 ?? string.Empty;
 
-            insert.Filename = "/" + Path.GetFileName(file);
+            insert.Filename = "/" + StoragePathHelpers.GetName(file);
             insert.Quality = (int)Math.Floor(ffProbeData.Format.BitRate / 1000.0);
             insert.Duration = HmsRegex().Replace(ffProbeData.Duration.ToString("hh\\:mm\\:ss"), "");
 
