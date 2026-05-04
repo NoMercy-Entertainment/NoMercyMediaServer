@@ -352,7 +352,15 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             .GetResult();
 
         if (!response.IsSuccessful)
-            yield break;
+            throw new IOException(
+                $"WebDAV PROPFIND '{uri}' failed: HTTP {response.StatusCode} — "
+                    + $"{response.Description ?? "(no description)"}. "
+                    + (
+                        response.StatusCode == 401 || response.StatusCode == 403
+                            ? "Check the driver credentials in the dashboard."
+                            : "Check the driver URL and that the server speaks WebDAV at this path."
+                    )
+            );
 
         // Resources[0] is the directory itself — skip it.
         foreach (WebDavResource resource in response.Resources.Skip(1))

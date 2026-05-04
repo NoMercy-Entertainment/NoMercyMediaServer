@@ -317,9 +317,10 @@ public sealed class StorageFactory : IStorageFactory
                 if (creds is null)
                 {
                     _logger.LogWarning(
-                        "credentials_ref '{CredentialsRef}' not found in secrets store for folder {FolderId}; trying driver:{FolderId} fallback",
+                        "credentials_ref '{CredentialsRef}' not found in secrets store for folder {FolderId}; trying driver:{FallbackKey} fallback",
                         config.CredentialsRef,
-                        folderId
+                        folderId,
+                        $"driver:{folderId}"
                     );
                 }
             }

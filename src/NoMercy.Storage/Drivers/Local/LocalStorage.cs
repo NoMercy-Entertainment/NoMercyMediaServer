@@ -261,13 +261,11 @@ public sealed class LocalStorage : IStorage
 
     public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
     {
-        // Empty path = "list the storage root I'm scoped to" — the natural
-        // browse-root semantic. Without this LocalStorage rejects every
-        // browse-from-root call (e.g. dashboard StorageBrowserController)
-        // with "path is empty".
-        string requestedPath = path;
-        if (string.IsNullOrEmpty(requestedPath) && _guard.Enforced && _guard.AllowedRoots.Count > 0)
-            requestedPath = _guard.AllowedRoots[0];
+        // Resolve the requested path against the storage's scoped root so the
+        // dashboard can pass relative sub-paths (e.g. "Anime", "Movies/2024")
+        // and they land under the driver's configured rootPath instead of the
+        // process CWD. Empty path → list the root itself.
+        string requestedPath = ResolveAgainstScopedRoot(path);
 
         string safe = _guard.Validate(requestedPath);
         SearchOption option = recursive
@@ -301,6 +299,31 @@ public sealed class LocalStorage : IStorage
             return;
         if (!_driver.DirectoryExists(parent))
             _driver.CreateDirectory(parent);
+    }
+
+    /// <summary>
+    /// Resolves a possibly-relative browse path against the storage's scoped
+    /// root. Empty path → the root itself; relative path → root + path joined.
+    /// Already-absolute paths pass through unchanged so callers that pass
+    /// fully-qualified paths still work. Without this resolution, relative
+    /// sub-paths canonicalize against the process CWD via Path.GetFullPath
+    /// and fail the under-root guard check.
+    /// </summary>
+    private string ResolveAgainstScopedRoot(string path)
+    {
+        if (!_guard.Enforced || _guard.AllowedRoots.Count == 0)
+            return string.IsNullOrEmpty(path) ? path : path;
+
+        string root = _guard.AllowedRoots[0];
+
+        if (string.IsNullOrEmpty(path))
+            return root;
+
+        if (Path.IsPathRooted(path))
+            return path;
+
+        string normalized = path.Replace('\\', '/').TrimStart('/');
+        return Path.Combine(root, normalized.Replace('/', Path.DirectorySeparatorChar));
     }
 
     public async Task<string> ReadAllTextAsync(string path, CancellationToken ct)
