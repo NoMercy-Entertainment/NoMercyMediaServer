@@ -93,120 +93,14 @@ public sealed class NfsStorageContractTests : IStorageContractTests
     }
 
     // -----------------------------------------------------------------------
-    // NFSC-1: List tests that require ReadDir — skipped (known gap)
+    // NFSC-1, NFSC-2, NFSC-3 (originally documented gaps) — all closed:
+    //   * FaultyLibNfs.ReadDir now walks the in-memory _files+_dirs map.
+    //   * FaultyLibNfs.Stat64 returns a recorded mtime per path.
+    //   * RemoteStorage.V() runs StoragePathGuard.StructuralValidate at the
+    //     IStorage boundary, so null-byte and ".." paths throw uniformly.
+    // The corresponding base-class assertions now apply directly — no
+    // overrides needed.
     // -----------------------------------------------------------------------
-
-    [SkippableFact]
-    [Trait("Category", "Unit")]
-    public override async Task List_with_pattern_filters_by_extension()
-    {
-        // NFSC-1: FaultyLibNfs.ReadDir returns IntPtr.Zero — CollectEntries
-        // always returns empty. This test documents the gap; skip rather than fail.
-        Skip.If(
-            true,
-            "NFSC-1: FaultyLibNfs.ReadDir not implemented — NFS List always empty in fake. "
-                + "Fix: implement ReadDir in FaultyLibNfs using the in-memory file map."
-        );
-        await base.List_with_pattern_filters_by_extension();
-    }
-
-    [SkippableFact]
-    [Trait("Category", "Unit")]
-    public override async Task List_flat_does_not_see_subdir_contents()
-    {
-        // NFSC-1: same gap — List always returns empty so the "not contain deep"
-        // assertion would trivially pass for the wrong reason. Skip to avoid false green.
-        Skip.If(true, "NFSC-1: FaultyLibNfs.ReadDir not implemented — skip to avoid false-green.");
-        await base.List_flat_does_not_see_subdir_contents();
-    }
-
-    [SkippableFact]
-    [Trait("Category", "Unit")]
-    public override async Task List_recursive_sees_subdir_contents()
-    {
-        // NFSC-1: FaultyLibNfs.ReadDir returns IntPtr.Zero — recursive list returns empty.
-        Skip.If(
-            true,
-            "NFSC-1: FaultyLibNfs.ReadDir not implemented — NFS recursive List always empty in fake."
-        );
-        await base.List_recursive_sees_subdir_contents();
-    }
-
-    // -----------------------------------------------------------------------
-    // NFSC-2: LastModified — FaultyLibNfs returns epoch, not recent timestamp
-    // -----------------------------------------------------------------------
-
-    [SkippableFact]
-    [Trait("Category", "Unit")]
-    public override async Task LastModifiedAsync_is_recent_after_write()
-    {
-        // NFSC-2: FaultyLibNfs.Stat64 returns zero-initialized NfsStat64 (MtimeSec=0).
-        // LastModifiedAsync returns DateTimeOffset.UnixEpoch, not a recent timestamp.
-        // Fix: FaultyLibNfs.Seed should record write time and Stat64 should return it.
-        Skip.If(
-            true,
-            "NFSC-2: FaultyLibNfs Stat64 returns MtimeSec=0 (epoch). "
-                + "Fix: track write timestamps in FaultyLibNfs per-file metadata."
-        );
-        await base.LastModifiedAsync_is_recent_after_write();
-    }
-
-    // -----------------------------------------------------------------------
-    // NFSC-3: RemoteStorage has no guard — override rejection tests
-    // -----------------------------------------------------------------------
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public override async Task Exists_null_byte_in_path_throws()
-    {
-        // NFSC-3: RemoteStorage does not guard paths. The null byte is passed through
-        // to NfsStorageDriver.ToNfsPath() and then to FaultyLibNfs.Stat64() where it
-        // results in a key miss (returns false), not an exception.
-        // This is a security gap: null bytes must be rejected at the IStorage boundary.
-        // Fix: add StoragePathGuard to RemoteStorage, or add structural validation in NfsStorageDriver.
-        IStorage storage = CreateStorage();
-        try
-        {
-            bool result = await storage.ExistsAsync("foo\0bar", CancellationToken.None);
-
-            // Document the actual behavior: returns false instead of throwing.
-            result
-                .Should()
-                .BeFalse(
-                    "NFSC-3: null byte passes through RemoteStorage — returns false instead of throwing. "
-                        + "This is a known security gap. RemoteStorage needs a path guard."
-                );
-        }
-        finally
-        {
-            await DisposeStorage();
-        }
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public override async Task Exists_dotdot_traversal_throws()
-    {
-        // NFSC-3: RemoteStorage does not guard paths. NfsStorageDriver.GetFullPath()
-        // resolves ".." segments by popping the stack, collapsing them rather than rejecting.
-        // "../escape" from export "/export" resolves to "/" (back to the NFS root).
-        // This does not escape the NFS mount, but it's not the "throw" the contract expects.
-        // Fix: add StoragePathGuard to RemoteStorage or reject ".." in NfsStorageDriver.ToNfsPath().
-        IStorage storage = CreateStorage();
-        try
-        {
-            bool result = await storage.ExistsAsync("../escape", CancellationToken.None);
-
-            // Document the actual behavior: resolves to NFS root check, returns true/false,
-            // does NOT throw. The contract calls for a throw; this is the gap.
-            // Not asserting result value — the important signal is "no exception thrown".
-            _ = result;
-        }
-        finally
-        {
-            await DisposeStorage();
-        }
-    }
 
     // -----------------------------------------------------------------------
     // NFSC-4: ExistsAsync("") root check — NFS-specific behavior documented

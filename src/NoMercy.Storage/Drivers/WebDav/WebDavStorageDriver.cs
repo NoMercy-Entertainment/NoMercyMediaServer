@@ -194,6 +194,18 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
 
     public Stream OpenWrite(string path, bool overwrite)
     {
+        // WebDAV requires every parent collection to exist before the PUT;
+        // otherwise the server replies 403/409. Walk up the path and MKCOL
+        // each missing segment first. CreateDirectory is idempotent (treats
+        // 405 as already-exists), so this is safe to call unconditionally.
+        string normalized = path.TrimStart('/').TrimStart('\\').Replace('\\', '/');
+        int lastSlash = normalized.LastIndexOf('/');
+        if (lastSlash > 0)
+        {
+            string parent = normalized[..lastSlash];
+            CreateDirectory(parent);
+        }
+
         string uri = ToUri(path);
         return new WebDavUploadStream(_client, uri, overwrite);
     }
@@ -352,6 +364,14 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             .GetResult();
 
         if (!response.IsSuccessful)
+        {
+            // Path Contract: List on a non-existent directory returns empty,
+            // never throws. 404 from the WebDAV server means the collection
+            // doesn't exist — yield nothing. Auth/path failures still surface
+            // so operators can act on them.
+            if (response.StatusCode == 404)
+                yield break;
+
             throw new IOException(
                 $"WebDAV PROPFIND '{uri}' failed: HTTP {response.StatusCode} — "
                     + $"{response.Description ?? "(no description)"}. "
@@ -361,6 +381,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
                             : "Check the driver URL and that the server speaks WebDAV at this path."
                     )
             );
+        }
 
         // Resources[0] is the directory itself — skip it.
         foreach (WebDavResource resource in response.Resources.Skip(1))

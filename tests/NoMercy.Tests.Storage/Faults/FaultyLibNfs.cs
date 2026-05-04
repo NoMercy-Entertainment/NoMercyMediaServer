@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
+using System.Text;
 using NoMercy.Storage.Drivers.Nfs.Interop;
 
 namespace NoMercy.Tests.Storage.Faults;
@@ -17,9 +19,20 @@ internal sealed class FaultyLibNfs : ILibNfs
 {
     private readonly ConcurrentDictionary<string, byte[]> _files = new();
     private readonly ConcurrentDictionary<string, bool> _dirs = new();
+    private readonly ConcurrentDictionary<string, DateTime> _mtimes = new();
     private readonly ConcurrentDictionary<IntPtr, FileHandle> _openHandles = new();
+    private readonly ConcurrentDictionary<IntPtr, DirIter> _openDirs = new();
     private long _nextHandle = 1;
     private long _nextContext = 1;
+
+    private sealed class DirIter
+    {
+        public required List<string> Entries { get; init; }
+        public required List<bool> EntryIsDir { get; init; }
+        public int Cursor;
+        public IntPtr ScratchEntry; // unmanaged NfsDirent struct
+        public IntPtr ScratchName; // unmanaged UTF-8 bytes
+    }
 
     public string CurrentError { get; private set; } = string.Empty;
 
@@ -57,11 +70,18 @@ internal sealed class FaultyLibNfs : ILibNfs
 
     public void Seed(string path, byte[] content)
     {
-        _files[Normalise(path)] = content;
+        string key = Normalise(path);
+        _files[key] = content;
+        _mtimes[key] = DateTime.UtcNow;
         EnsureParentDirs(path);
     }
 
-    public void SeedDir(string path) => _dirs[Normalise(path)] = true;
+    public void SeedDir(string path)
+    {
+        string key = Normalise(path);
+        _dirs[key] = true;
+        _mtimes[key] = DateTime.UtcNow;
+    }
 
     private static string Normalise(string path)
     {
@@ -71,9 +91,10 @@ internal sealed class FaultyLibNfs : ILibNfs
         return normalised.TrimEnd('/');
     }
 
-    private void EnsureParentDirs(string path)
+    private void EnsureParentDirs(string path) => EnsureParentDirsKey(Normalise(path));
+
+    private void EnsureParentDirsKey(string normalised)
     {
-        string normalised = Normalise(path);
         int idx = normalised.LastIndexOf('/');
         while (idx > 0)
         {
@@ -187,12 +208,20 @@ internal sealed class FaultyLibNfs : ILibNfs
         string key = Normalise(path);
         stat = default;
 
+        // Recorded write time so LastModifiedAsync returns a meaningful
+        // recent timestamp instead of the Unix epoch.
+        DateTime mtime = _mtimes.TryGetValue(key, out DateTime t) ? t : DateTime.UtcNow;
+        ulong mtimeSec = (ulong)new DateTimeOffset(mtime, TimeSpan.Zero).ToUnixTimeSeconds();
+
         if (_files.TryGetValue(key, out byte[]? content))
         {
             stat = new()
             {
                 Size = (ulong)content.Length,
                 Mode = 0x8000, /* S_IFREG << 12 */
+                MtimeSec = mtimeSec,
+                CtimeSec = mtimeSec,
+                AtimeSec = mtimeSec,
             };
             return 0;
         }
@@ -201,6 +230,9 @@ internal sealed class FaultyLibNfs : ILibNfs
             stat = new()
             {
                 Mode = 0x4000, /* S_IFDIR << 12 */
+                MtimeSec = mtimeSec,
+                CtimeSec = mtimeSec,
+                AtimeSec = mtimeSec,
             };
             return 0;
         }
@@ -219,17 +251,105 @@ internal sealed class FaultyLibNfs : ILibNfs
             dir = IntPtr.Zero;
             return rc;
         }
-        dir = new(Interlocked.Increment(ref _nextHandle));
+
+        string parent = Normalise(path);
+        string parentPrefix = parent == "/" ? "/" : parent + "/";
+
+        // Collect immediate children (not recursive).
+        List<string> entries = [];
+        List<bool> entryIsDir = [];
+
+        foreach (string fileKey in _files.Keys)
+        {
+            if (!fileKey.StartsWith(parentPrefix, StringComparison.Ordinal))
+                continue;
+            string remainder = fileKey.Substring(parentPrefix.Length);
+            if (remainder.Length == 0 || remainder.Contains('/'))
+                continue;
+            entries.Add(remainder);
+            entryIsDir.Add(false);
+        }
+
+        foreach (string dirKey in _dirs.Keys)
+        {
+            if (dirKey == parent)
+                continue;
+            if (!dirKey.StartsWith(parentPrefix, StringComparison.Ordinal))
+                continue;
+            string remainder = dirKey.Substring(parentPrefix.Length);
+            if (remainder.Length == 0 || remainder.Contains('/'))
+                continue;
+            entries.Add(remainder);
+            entryIsDir.Add(true);
+        }
+
+        IntPtr handle = new(Interlocked.Increment(ref _nextHandle));
+        _openDirs[handle] = new DirIter { Entries = entries, EntryIsDir = entryIsDir };
+        dir = handle;
         return 0;
     }
 
     public IntPtr ReadDir(IntPtr nfs, IntPtr dir)
     {
         TryFault(nameof(ReadDir), out _, out _);
-        return IntPtr.Zero;
+
+        if (!_openDirs.TryGetValue(dir, out DirIter? iter))
+            return IntPtr.Zero;
+
+        if (iter.Cursor >= iter.Entries.Count)
+            return IntPtr.Zero;
+
+        string name = iter.Entries[iter.Cursor];
+        bool isDir = iter.EntryIsDir[iter.Cursor];
+        iter.Cursor++;
+
+        // Free any previous scratch allocations before allocating fresh ones
+        // for this entry — the driver only reads the most recently returned
+        // pointer before calling ReadDir again, so we can reuse the slot.
+        FreeScratch(iter);
+
+        // Allocate UTF-8 name buffer in unmanaged memory.
+        byte[] nameBytes = Encoding.UTF8.GetBytes(name + "\0");
+        IntPtr namePtr = Marshal.AllocHGlobal(nameBytes.Length);
+        Marshal.Copy(nameBytes, 0, namePtr, nameBytes.Length);
+        iter.ScratchName = namePtr;
+
+        // Allocate the NfsDirent struct itself.
+        LibNfs.NfsDirent entry = new()
+        {
+            Next = IntPtr.Zero,
+            Name = namePtr,
+            Inode = (ulong)iter.Cursor,
+            // libnfs ftype3: NF3REG=1, NF3DIR=2.
+            Type = isDir ? 2u : 1u,
+        };
+        IntPtr entryPtr = Marshal.AllocHGlobal(Marshal.SizeOf<LibNfs.NfsDirent>());
+        Marshal.StructureToPtr(entry, entryPtr, fDeleteOld: false);
+        iter.ScratchEntry = entryPtr;
+
+        return entryPtr;
     }
 
-    public void CloseDir(IntPtr nfs, IntPtr dir) => TryFault(nameof(CloseDir), out _, out _);
+    public void CloseDir(IntPtr nfs, IntPtr dir)
+    {
+        TryFault(nameof(CloseDir), out _, out _);
+        if (_openDirs.TryRemove(dir, out DirIter? iter))
+            FreeScratch(iter);
+    }
+
+    private static void FreeScratch(DirIter iter)
+    {
+        if (iter.ScratchEntry != IntPtr.Zero)
+        {
+            Marshal.FreeHGlobal(iter.ScratchEntry);
+            iter.ScratchEntry = IntPtr.Zero;
+        }
+        if (iter.ScratchName != IntPtr.Zero)
+        {
+            Marshal.FreeHGlobal(iter.ScratchName);
+            iter.ScratchName = IntPtr.Zero;
+        }
+    }
 
     public int MkDir(IntPtr nfs, string path)
     {
@@ -278,7 +398,11 @@ internal sealed class FaultyLibNfs : ILibNfs
                 return -17;
             }
             if (isTrunc || !_files.ContainsKey(key))
+            {
                 _files[key] = [];
+                _mtimes[key] = DateTime.UtcNow;
+                EnsureParentDirsKey(key);
+            }
         }
         else if (!_files.ContainsKey(key))
         {
@@ -303,6 +427,8 @@ internal sealed class FaultyLibNfs : ILibNfs
         }
         string key = Normalise(path);
         _files[key] = [];
+        _mtimes[key] = DateTime.UtcNow;
+        EnsureParentDirsKey(key);
         FileHandle handle = new() { Path = key };
         IntPtr ptr = new(Interlocked.Increment(ref _nextHandle));
         _openHandles[ptr] = handle;
@@ -354,6 +480,7 @@ internal sealed class FaultyLibNfs : ILibNfs
             Array.Resize(ref content, (int)newSize);
         Array.Copy(writeBuf, 0, content, handle.Position, count);
         _files[handle.Path] = content;
+        _mtimes[handle.Path] = DateTime.UtcNow;
         handle.Position += count;
         return count;
     }

@@ -1198,6 +1198,13 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
     private string ToNfsPath(string path)
     {
         string normalized = path.Replace('\\', '/');
+
+        // Path Contract Rule 2: collapse consecutive separators. Without
+        // this, "foo//bar" reaches libnfs verbatim and fails to match the
+        // canonical "foo/bar" entries in the directory listing.
+        while (normalized.Contains("//"))
+            normalized = normalized.Replace("//", "/");
+
         if (!normalized.StartsWith('/'))
             normalized = "/" + normalized;
 

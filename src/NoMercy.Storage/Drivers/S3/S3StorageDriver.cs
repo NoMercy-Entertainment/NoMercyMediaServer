@@ -109,8 +109,17 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     // Key helpers
     // -----------------------------------------------------------------------
 
-    private string ToKey(string path) =>
-        _prefix + path.TrimStart('/').TrimStart('\\').Replace('\\', '/');
+    private string ToKey(string path)
+    {
+        string normalized = path.TrimStart('/').TrimStart('\\').Replace('\\', '/');
+        // Path Contract Rule 2: collapse consecutive separators. MinIO
+        // returns HTTP 400 InvalidArgument on keys with "//"; canonicalize
+        // before sending. Public S3 silently maps "//" to "/" but we'd lose
+        // the round-trip property if we relied on that.
+        while (normalized.Contains("//"))
+            normalized = normalized.Replace("//", "/");
+        return _prefix + normalized;
+    }
 
     private string FromKey(string key) =>
         string.IsNullOrEmpty(_prefix) ? key : key.Substring(_prefix.Length);

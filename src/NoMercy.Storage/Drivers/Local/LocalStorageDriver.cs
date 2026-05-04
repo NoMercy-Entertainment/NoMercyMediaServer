@@ -57,7 +57,13 @@ public sealed class LocalStorageDriver : IStorageDriver
         string directory,
         string searchPattern,
         SearchOption option
-    ) => Directory.EnumerateFileSystemEntries(directory, searchPattern, option);
+    ) =>
+        // Path Contract: List on a non-existent directory returns empty,
+        // never throws. Directory.EnumerateFileSystemEntries throws
+        // DirectoryNotFoundException on a missing directory; guard it.
+        Directory.Exists(directory)
+            ? Directory.EnumerateFileSystemEntries(directory, searchPattern, option)
+            : [];
 
     public string GetFullPath(string path) => Path.GetFullPath(path);
 

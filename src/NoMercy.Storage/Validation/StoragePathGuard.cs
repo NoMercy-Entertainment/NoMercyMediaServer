@@ -34,17 +34,34 @@ public sealed class StoragePathGuard
     }
 
     /// <summary>
-    /// Validates <paramref name="requestedPath"/> and returns its
-    /// canonical absolute form. Throws
-    /// <see cref="StoragePathNotAllowedException"/> on rejection.
+    /// Structural-only validation: rejects null bytes, ".." traversal, and
+    /// Windows device paths. Does NOT canonicalize and does NOT enforce the
+    /// under-root rule. Used by RemoteStorage where the storage scope is a
+    /// URL/key prefix rather than an OS-rooted path, and where canonicalisation
+    /// against a local filesystem is meaningless. Empty/null is accepted —
+    /// callers translate that to "scope root" before calling, but a path
+    /// that's still empty after resolution gets through here as a no-op.
     /// </summary>
-    public string Validate(string requestedPath)
+    public static void StructuralValidate(string? requestedPath)
     {
-        if (string.IsNullOrWhiteSpace(requestedPath))
-            throw new StoragePathNotAllowedException(requestedPath ?? "<null>", "path is empty");
+        if (requestedPath is null)
+            return;
 
         if (requestedPath.Contains('\0'))
             throw new StoragePathNotAllowedException(requestedPath, "null byte in path");
+
+        // ".." traversal — anywhere in the path. Keeps us safe even when a
+        // remote driver doesn't canonicalize.
+        if (
+            requestedPath == ".."
+            || requestedPath.StartsWith("../", StringComparison.Ordinal)
+            || requestedPath.StartsWith("..\\", StringComparison.Ordinal)
+            || requestedPath.EndsWith("/..", StringComparison.Ordinal)
+            || requestedPath.EndsWith("\\..", StringComparison.Ordinal)
+            || requestedPath.Contains("/../", StringComparison.Ordinal)
+            || requestedPath.Contains("\\..\\", StringComparison.Ordinal)
+        )
+            throw new StoragePathNotAllowedException(requestedPath, ".. traversal is not allowed");
 
         if (
             OperatingSystem.IsWindows()
@@ -54,6 +71,24 @@ public sealed class StoragePathGuard
             )
         )
             throw new StoragePathNotAllowedException(requestedPath, "device paths are not allowed");
+    }
+
+    /// <summary>
+    /// Validates <paramref name="requestedPath"/> and returns its
+    /// canonical absolute form. Throws
+    /// <see cref="StoragePathNotAllowedException"/> on rejection.
+    ///
+    /// Path Contract Rule 3 (empty = root) is honoured at the IStorage level
+    /// (LocalStorage.ValidateScoped resolves empty → root before calling here)
+    /// — Validate itself still rejects empty so callers can't accidentally
+    /// bypass scope resolution.
+    /// </summary>
+    public string Validate(string requestedPath)
+    {
+        if (string.IsNullOrWhiteSpace(requestedPath))
+            throw new StoragePathNotAllowedException(requestedPath ?? "<null>", "path is empty");
+
+        StructuralValidate(requestedPath);
 
         string canonical;
         try
