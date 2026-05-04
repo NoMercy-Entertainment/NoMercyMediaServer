@@ -22,7 +22,7 @@ public class QueueWorker(
 
     private long? _currentJobId;
     private bool _isRunning = true;
-    private readonly CancellationTokenSource _stopCts = new();
+    private CancellationTokenSource _stopCts = new();
 
     private int CurrentIndex => runner?.GetWorkerIndex(name, this) ?? -1;
 
@@ -251,5 +251,32 @@ public class QueueWorker(
             Thread.Sleep(1000);
 
         Stop();
+    }
+
+    /// <summary>
+    /// Fire-and-forget wrapper that schedules <see cref="StartAsync"/> on the
+    /// thread pool. <see cref="QueueRunner"/> uses this from its synchronous
+    /// spawn/lifecycle methods so it doesn't have to await each worker
+    /// individually — workers run for the lifetime of the process.
+    /// </summary>
+    public void Start()
+    {
+        // Replace the cancel source if it was already tripped by a prior Stop;
+        // otherwise StartAsync exits immediately on the first cancellation check.
+        if (_stopCts.IsCancellationRequested)
+            _stopCts = new();
+        _isRunning = true;
+        _ = Task.Run(() => StartAsync(_stopCts.Token));
+    }
+
+    /// <summary>
+    /// Cancels the current Stop signal and re-enters the poll loop. Used by
+    /// <see cref="QueueRunner.Restart"/> so a paused worker can resume without
+    /// reconstructing the instance (preserving its DI scope and event handlers).
+    /// </summary>
+    public void Restart()
+    {
+        Stop();
+        Start();
     }
 }

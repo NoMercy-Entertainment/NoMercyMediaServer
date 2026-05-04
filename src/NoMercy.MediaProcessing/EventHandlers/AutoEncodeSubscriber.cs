@@ -110,38 +110,16 @@ public class AutoEncodeSubscriber(
                 .Drivers.AsNoTracking()
                 .ToDictionaryAsync(d => d.Id, d => d.Type, ct);
 
-            IEnumerable<IGrouping<string, VideoFile>> bySource = videoFiles.GroupBy(vf =>
-                vf.Filename
-            );
-
-            foreach (IGrouping<string, VideoFile> group in bySource)
+            foreach (
+                (VideoFile bestSource, Folder folder) in SelectSourcesToEncode(
+                    videoFiles,
+                    folders,
+                    driverTypeById
+                )
+            )
             {
-                VideoFile? bestSource = group
-                    .Select(file => new
-                    {
-                        File = file,
-                        Folder = folders.FirstOrDefault(f =>
-                            !string.IsNullOrEmpty(file.HostFolder)
-                            && file.HostFolder.StartsWith(
-                                f.Path,
-                                StringComparison.OrdinalIgnoreCase
-                            )
-                        ),
-                    })
-                    .Where(x => x.Folder is not null)
-                    .OrderBy(x => DriverPreference(driverTypeById, x.Folder!.DriverId))
-                    .Select(x => x.File)
-                    .FirstOrDefault();
-
-                if (bestSource is null)
-                    continue;
-
                 if (!string.IsNullOrEmpty(bestSource.Folder) && IsAlreadyEncoded(bestSource))
                     continue;
-
-                Folder folder = folders.First(f =>
-                    bestSource.HostFolder.StartsWith(f.Path, StringComparison.OrdinalIgnoreCase)
-                );
 
                 string filePath =
                     bestSource.HostFolder.TrimEnd('/') + "/" + bestSource.Filename.TrimStart('/');
@@ -169,9 +147,46 @@ public class AutoEncodeSubscriber(
         }
     }
 
+    /// <summary>
+    /// Pure decision function: given the VideoFiles for one media and the
+    /// available folders+driver mapping, return one (source, folder) pair per
+    /// distinct filename — the best source ranked by driver type. Same media
+    /// content stored on NFS + S3 gets exactly one encode dispatched, against
+    /// the fastest source. Internal so the test project can pin every branch
+    /// without spinning up a DB.
+    /// </summary>
+    internal static IEnumerable<(VideoFile File, Folder Folder)> SelectSourcesToEncode(
+        IReadOnlyList<VideoFile> videoFiles,
+        IReadOnlyList<Folder> folders,
+        Dictionary<Ulid, string> driverTypeById
+    )
+    {
+        return videoFiles
+            .GroupBy(vf => vf.Filename)
+            .Select(group =>
+                group
+                    .Select(file => new
+                    {
+                        File = file,
+                        Folder = folders.FirstOrDefault(f =>
+                            !string.IsNullOrEmpty(file.HostFolder)
+                            && file.HostFolder.StartsWith(
+                                f.Path,
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                        ),
+                    })
+                    .Where(x => x.Folder is not null)
+                    .OrderBy(x => DriverPreference(driverTypeById, x.Folder!.DriverId))
+                    .Select(x => (File: x.File, Folder: x.Folder!))
+                    .FirstOrDefault()
+            )
+            .Where(pair => pair.File is not null && pair.Folder is not null);
+    }
+
     // Lower number = preferred. Picks the lowest-latency / cheapest source
     // when the same media is mounted on multiple drivers.
-    private static int DriverPreference(Dictionary<Ulid, string> typeById, Ulid driverId)
+    internal static int DriverPreference(Dictionary<Ulid, string> typeById, Ulid driverId)
     {
         if (!typeById.TryGetValue(driverId, out string? type))
             return 99;
