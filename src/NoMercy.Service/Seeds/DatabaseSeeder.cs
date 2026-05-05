@@ -171,7 +171,6 @@ public static class DatabaseSeeder
             () => GenresSeed.Init(mediaDbContext),
             () => CertificationsSeed.Init(mediaDbContext),
             () => MusicGenresSeed.Init(mediaDbContext),
-            () => SpecialSeed.Init(mediaDbContext),
         ];
 
         foreach (Func<Task> seed in seeds)
