@@ -11,6 +11,8 @@ public enum Container
     Aac,
     Flac,
     Ogg,
+    Mka,
+    Mks,
     AudioHlsTs,
     AudioHlsFmp4,
 }

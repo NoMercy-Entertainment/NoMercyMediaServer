@@ -110,6 +110,8 @@ public class ContainerCompatibilityTests
             Container.Aac,
             Container.Flac,
             Container.Ogg,
+            Container.Mka,
+            Container.Mks,
             Container.AudioHlsTs,
             Container.AudioHlsFmp4,
         ];
@@ -179,6 +181,8 @@ public class ContainerCompatibilityTests
             [Container.Aac] = [],
             [Container.Flac] = [],
             [Container.Ogg] = [],
+            [Container.Mka] = [],
+            [Container.Mks] = [],
             [Container.AudioHlsTs] = [],
             [Container.AudioHlsFmp4] = [],
         };
@@ -230,6 +234,19 @@ public class ContainerCompatibilityTests
             [Container.Aac] = [AudioCodecType.Aac],
             [Container.Flac] = [AudioCodecType.Flac],
             [Container.Ogg] = [AudioCodecType.Vorbis, AudioCodecType.Opus, AudioCodecType.Flac],
+            [Container.Mka] =
+            [
+                AudioCodecType.Aac,
+                AudioCodecType.Mp3,
+                AudioCodecType.Opus,
+                AudioCodecType.Flac,
+                AudioCodecType.Ac3,
+                AudioCodecType.Eac3,
+                AudioCodecType.TrueHd,
+                AudioCodecType.Dts,
+                AudioCodecType.Vorbis,
+            ],
+            [Container.Mks] = [],
             [Container.AudioHlsTs] = [AudioCodecType.Aac, AudioCodecType.Mp3],
             [Container.AudioHlsFmp4] = [AudioCodecType.Aac, AudioCodecType.Eac3],
             [Container.Dash] = [AudioCodecType.Aac, AudioCodecType.Eac3, AudioCodecType.Opus],
