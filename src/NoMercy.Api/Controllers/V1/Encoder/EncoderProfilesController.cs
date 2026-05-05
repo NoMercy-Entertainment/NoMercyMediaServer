@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Activity;
@@ -15,6 +16,12 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 using AnalysisMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
+using V2EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using V2IPresetLookup = NoMercy.Encoder.Profiles.V2.IPresetLookup;
+using V2PresetResolver = NoMercy.Encoder.Profiles.V2.PresetResolver;
+using V2ProfileDiffer = NoMercy.Encoder.Profiles.V2.ProfileDiffer;
+using V2ProfileValidationResult = NoMercy.Encoder.Profiles.V2.ProfileValidationResult;
+using V2ProfileValidator = NoMercy.Encoder.Profiles.V2.ProfileValidator;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
 
@@ -76,22 +83,61 @@ public class EncoderProfilesController(
     }
 
     /// <summary>
-    /// Returns a single encoding profile by its <see cref="Ulid"/> id.
+    /// Returns the sparse DB row for a single encoding preset by its <see cref="Ulid"/> id.
     /// </summary>
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Get(string id)
+    [HttpGet("{id:ulid}")]
+    public async Task<IActionResult> Get(Ulid id, CancellationToken ct)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view profiles");
 
-        if (!Ulid.TryParse(id, out Ulid presetId))
-            return BadRequestResponse("Invalid profile id");
-
-        EncodingPreset? preset = await presetRepository.GetByIdAsync(presetId);
+        EncodingPreset? preset = await mediaContext
+            .EncodingPresets.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
         if (preset is null)
-            return NotFoundResponse("Profile not found");
+            return NotFoundResponse("Preset not found.");
 
-        return Ok(preset);
+        return Ok(
+            new EncoderProfileDto
+            {
+                Id = preset.Id,
+                Name = preset.Name,
+                Description = preset.Description,
+                Tags = preset.Tags,
+                ParentPresetId = preset.ParentPresetId,
+                IsBuiltIn = preset.IsBuiltIn,
+                Source = preset.Source,
+                ProfileJson = preset.ProfileJson,
+            }
+        );
+    }
+
+    /// <summary>
+    /// Resolves a preset by walking its parent chain and merging all layers,
+    /// returning the fully-effective <see cref="V2EncodingProfile"/>.
+    /// </summary>
+    [HttpGet("{id:ulid}/resolved")]
+    public IActionResult GetResolved(Ulid id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view profiles");
+
+        DbPresetLookup lookup = new(mediaContext);
+        V2EncodingProfile resolved;
+        try
+        {
+            resolved = V2PresetResolver.Resolve(id, lookup);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+
+        V2ProfileValidationResult validation = V2ProfileValidator.Validate(resolved);
+        if (!validation.IsValid)
+            return UnprocessableEntityResponse(string.Join("; ", validation.Errors));
+
+        return Ok(resolved);
     }
 
     /// <summary>
@@ -255,73 +301,37 @@ public class EncoderProfilesController(
     }
 
     /// <summary>
-    /// Permanently deletes a user-created profile. Returns HTTP 422 with a
-    /// structured <see cref="ValidationEnvelope"/> when called on a built-in
-    /// profile — built-ins are seeded and cannot be deleted.
+    /// Permanently deletes a user-created preset. Rejects deletion when the
+    /// preset is built-in or when other presets inherit from it — callers must
+    /// reparent or delete children first.
     /// </summary>
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id)
+    [HttpDelete("{id:ulid}")]
+    public async Task<IActionResult> Delete(Ulid id, CancellationToken ct)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to delete profiles");
 
-        if (!Ulid.TryParse(id, out Ulid presetId))
-            return BadRequestResponse("Invalid profile id");
+        EncodingPreset? row = await mediaContext.EncodingPresets.FirstOrDefaultAsync(
+            p => p.Id == id,
+            ct
+        );
+        if (row is null)
+            return NotFoundResponse("Preset not found.");
+        if (row.IsBuiltIn)
+            return BadRequestResponse("Built-in presets cannot be deleted.");
 
-        EncodingPreset? existing = await presetRepository.GetByIdAsync(presetId);
-        if (existing is null)
-            return NotFoundResponse("Profile not found");
+        bool hasChildren = await mediaContext.EncodingPresets.AnyAsync(
+            p => p.ParentPresetId == id,
+            ct
+        );
+        if (hasChildren)
+            return BadRequestResponse(
+                "Preset has children that inherit from it; reparent or delete them first."
+            );
 
-        if (existing.IsBuiltIn)
-        {
-            ValidationEnvelope envelope = ValidationEnvelope.FromRules([
-                new EncoderRule(
-                    EncoderRuleId.ProfileBuiltinReadonly,
-                    EncoderRuleSeverity.Error,
-                    "id",
-                    "Built-in profiles cannot be deleted — clone the profile to make an editable copy.",
-                    $"POST /api/v1/encoder/profiles/{id}/clone to create an editable copy, then delete that."
-                ),
-            ]);
-            return UnprocessableEntity(envelope);
-        }
-
-        try
-        {
-            bool removed = await presetRepository.DeleteAsync(presetId);
-            if (!removed)
-                return NotFoundResponse("Profile not found");
-
-            try
-            {
-                await activityLogger.LogConfigurationAsync(
-                    "config.encoder_default_changed",
-                    User.UserId(),
-                    Ulid.Empty,
-                    configKey: $"encoder.profile.{existing.Id}",
-                    oldValue: new
-                    {
-                        id = existing.Id.ToString(),
-                        name = existing.Name,
-                        action = "deleted",
-                    },
-                    newValue: null
-                );
-            }
-            catch (Exception logEx)
-            {
-                Logger.App(
-                    $"Failed to log encoder profile deleted: {logEx.Message}",
-                    LogEventLevel.Warning
-                );
-            }
-
-            return NoContent();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return ConflictResponse(ex.Message);
-        }
+        mediaContext.EncodingPresets.Remove(row);
+        await mediaContext.SaveChangesAsync(ct);
+        return NoContent();
     }
 
     /// <summary>
@@ -555,185 +565,90 @@ public class EncoderProfilesController(
     }
 
     /// <summary>
-    /// Rejects any attempt to modify a built-in preset, returning HTTP 422
-    /// with a structured <see cref="ValidationEnvelope"/> that includes the
-    /// stable rule ID <c>profile.builtin_readonly</c> and a fix hint
-    /// pointing at the clone endpoint.
-    ///
-    /// Wire this guard into any future PUT / PATCH endpoint on this controller
-    /// by calling <c>await GuardBuiltinAsync(id)</c> before mutating the row.
+    /// Updates a user-owned preset. When the preset has a parent, the saved
+    /// <see cref="EncodingPreset.ProfileJson"/> is the sparse diff against the
+    /// resolved parent rather than the full profile — keeping the inheritance
+    /// chain intact and compact.
     /// </summary>
-    [HttpPut("{id}")]
+    [HttpPut("{id:ulid}")]
     public async Task<IActionResult> Update(
-        string id,
-        [FromBody] UpdateEncoderProfileRequest request
+        Ulid id,
+        [FromBody] V2EncodingProfile incoming,
+        CancellationToken ct
     )
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update profiles");
 
-        if (!Ulid.TryParse(id, out Ulid presetId))
-            return BadRequestResponse("Invalid profile id");
-
-        EncodingPreset? existing = await presetRepository.GetByIdAsync(presetId);
-        if (existing is null)
-            return NotFoundResponse("Profile not found");
-
-        if (existing.IsBuiltIn)
-        {
-            ValidationEnvelope envelope = ValidationEnvelope.FromRules([
-                new EncoderRule(
-                    EncoderRuleId.ProfileBuiltinReadonly,
-                    EncoderRuleSeverity.Error,
-                    "id",
-                    "Built-in presets are read-only — clone the preset to edit it.",
-                    $"POST /api/v1/encoder/profiles/{id}/clone to make an editable copy."
-                ),
-            ]);
-            return UnprocessableEntity(envelope);
-        }
-
-        string oldName = existing.Name;
-        string? oldProfileJson = existing.ProfileJson;
-
-        // Forward mutations through the repository so the UpdatedAt stamp
-        // and change-tracking are handled consistently.
-        EncodingPreset? updated = await presetRepository.UpdateAsync(
-            presetId,
-            preset =>
-            {
-                if (request.Name is not null)
-                    preset.Name = request.Name;
-                if (request.Description is not null)
-                    preset.Description = request.Description;
-                if (request.ProfileJson is not null)
-                    preset.ProfileJson = request.ProfileJson;
-            }
+        EncodingPreset? row = await mediaContext.EncodingPresets.FirstOrDefaultAsync(
+            p => p.Id == id,
+            ct
         );
+        if (row is null)
+            return NotFoundResponse("Preset not found.");
+        if (row.IsBuiltIn)
+            return BadRequestResponse("Built-in presets are read-only.");
 
-        try
+        Newtonsoft.Json.Linq.JObject sparseJson;
+        if (row.ParentPresetId.HasValue)
         {
-            await activityLogger.LogConfigurationAsync(
-                "config.encoder_default_changed",
-                User.UserId(),
-                Ulid.Empty,
-                configKey: $"encoder.profile.{presetId}",
-                oldValue: new { name = oldName, profile_json = oldProfileJson },
-                newValue: new
-                {
-                    name = updated?.Name ?? oldName,
-                    profile_json = updated?.ProfileJson ?? oldProfileJson,
-                }
+            DbPresetLookup lookup = new(mediaContext);
+            V2EncodingProfile resolvedParent = V2PresetResolver.Resolve(
+                row.ParentPresetId.Value,
+                lookup
             );
+            sparseJson = V2ProfileDiffer.Diff(incoming, resolvedParent);
         }
-        catch (Exception ex)
+        else
         {
-            Logger.App(
-                $"Failed to log encoder profile updated: {ex.Message}",
-                LogEventLevel.Warning
-            );
+            sparseJson = Newtonsoft.Json.Linq.JObject.FromObject(incoming);
         }
 
-        return Ok(updated);
+        row.ProfileJson = sparseJson.ToString(Formatting.None);
+        row.UpdatedAt = DateTime.UtcNow;
+        await mediaContext.SaveChangesAsync(ct);
+
+        return NoContent();
     }
 
     /// <summary>
-    /// Clones a preset (built-in or user-created) into a new editable preset.
-    /// The clone gets a fresh <c>Ulid</c>, <c>IsBuiltIn = false</c>, and a
-    /// <c>ParentId</c> pointing at the source so the UI can show provenance.
+    /// Clones a preset into a new pure-inheritance child. The clone's
+    /// <see cref="EncodingPreset.ProfileJson"/> starts as <c>{}</c> — all
+    /// effective values flow from the parent chain — so only intentional
+    /// overrides need to be set via PUT.
     /// </summary>
-    [HttpPost("{id}/clone")]
-    public async Task<IActionResult> Clone(string id)
+    [HttpPost("{parentId:ulid}/clone")]
+    public async Task<IActionResult> Clone(
+        Ulid parentId,
+        [FromBody] CloneRequest request,
+        CancellationToken ct
+    )
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to clone profiles");
 
-        if (!Ulid.TryParse(id, out Ulid sourceId))
-            return BadRequestResponse("Invalid profile id");
+        EncodingPreset? parent = await mediaContext
+            .EncodingPresets.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == parentId, ct);
+        if (parent is null)
+            return NotFoundResponse("Parent preset not found.");
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequestResponse("Name required.");
 
-        EncodingPreset? source = await presetRepository.GetByIdAsync(sourceId);
-        if (source is null)
-            return NotFoundResponse("Profile not found");
-
-        // Build the clone: deserialize the source profile JSON, stamp a new
-        // deterministic-free Ulid, clear IsBuiltin, set ParentId.
-        EncodingProfile? sourceProfile;
-        try
+        EncodingPreset clone = new()
         {
-            sourceProfile = JsonConvert.DeserializeObject<EncodingProfile>(source.ProfileJson);
-        }
-        catch (JsonException ex)
-        {
-            return BadRequestResponse($"Source profile JSON is malformed: {ex.Message}");
-        }
-
-        if (sourceProfile is null)
-            return BadRequestResponse("Source profile JSON deserialized to null");
-
-        Ulid newId = Ulid.NewUlid();
-        EncodingProfile clonedProfile = sourceProfile with
-        {
-            Id = newId,
-            IsBuiltin = false,
-            ParentId = sourceProfile.Id,
-            Name = source.Name + " (copy)",
-        };
-
-        string clonedJson = JsonConvert.SerializeObject(clonedProfile);
-
-        EncodingPreset cloneRow = new()
-        {
-            Id = newId,
-            Name = clonedProfile.Name,
-            Description = source.Description,
-            Author = source.Author,
-            Tags = source.Tags,
-            ProfileJson = clonedJson,
-            ParentPresetId = source.Id,
+            Id = Ulid.NewUlid(),
+            Name = request.Name,
+            Description = request.Description,
+            ProfileJson = "{}",
+            ParentPresetId = parent.Id,
             IsBuiltIn = false,
+            Source = "db",
         };
+        mediaContext.EncodingPresets.Add(clone);
+        await mediaContext.SaveChangesAsync(ct);
 
-        EncodingPreset saved = await presetRepository.CreateAsync(cloneRow);
-
-        try
-        {
-            await activityLogger.LogConfigurationAsync(
-                "config.encoder_default_changed",
-                User.UserId(),
-                Ulid.Empty,
-                configKey: $"encoder.profile.{saved.Id}",
-                oldValue: new
-                {
-                    id = source.Id.ToString(),
-                    name = source.Name,
-                    action = "cloned_from",
-                },
-                newValue: new
-                {
-                    id = saved.Id.ToString(),
-                    name = saved.Name,
-                    action = "cloned",
-                }
-            );
-        }
-        catch (Exception ex)
-        {
-            Logger.App(
-                $"Failed to log encoder profile cloned: {ex.Message}",
-                LogEventLevel.Warning
-            );
-        }
-
-        return CreatedAtAction(
-            nameof(Clone),
-            new { id = saved.Id.ToString() },
-            new
-            {
-                id = saved.Id,
-                name = saved.Name,
-                profile = clonedProfile,
-            }
-        );
+        return CreatedAtAction(nameof(Get), new { id = clone.Id }, new { id = clone.Id });
     }
 
     /// <summary>
@@ -976,6 +891,15 @@ public class EncoderProfilesController(
     }
 }
 
+public class CloneRequest
+{
+    [JsonProperty("name")]
+    public required string Name { get; set; }
+
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+}
+
 public record CreateEncoderProfileRequest(
     [property: JsonProperty("name")] string Name,
     [property: JsonProperty("profile_json")] string ProfileJson,
@@ -1025,5 +949,21 @@ internal sealed class EncoderProfilesPresetLookup(EncodingPresetRepository repos
             : null;
 
         return new(preset.Name, preset.ProfileJson, parentName);
+    }
+}
+
+/// <summary>
+/// V2 <see cref="V2IPresetLookup"/> adapter — walks the parent chain by id
+/// directly against <see cref="MediaContext"/> so the V2 resolver can merge
+/// the inheritance layers without going through the V2.5 repository.
+/// </summary>
+internal sealed class DbPresetLookup(MediaContext context) : V2IPresetLookup
+{
+    public (string ProfileJson, Ulid? ParentPresetId)? Get(Ulid presetId)
+    {
+        EncodingPreset? row = context
+            .EncodingPresets.AsNoTracking()
+            .FirstOrDefault(p => p.Id == presetId);
+        return row is null ? null : (row.ProfileJson, row.ParentPresetId);
     }
 }

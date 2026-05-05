@@ -2,23 +2,29 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Api.DTOs.Dashboard;
 
-public record EncoderProfileDto
+public class EncoderProfileDto
 {
     [JsonProperty("id")]
-    public string Id { get; set; } = string.Empty;
+    public Ulid Id { get; set; }
 
     [JsonProperty("name")]
-    public string Name { get; set; } = string.Empty;
+    public required string Name { get; set; }
 
-    [JsonProperty("container")]
-    public string? Container { get; set; }
+    [JsonProperty("description")]
+    public string? Description { get; set; }
 
-    [JsonProperty("created_at")]
-    public DateTime CreatedAt { get; set; }
+    [JsonProperty("tags")]
+    public string? Tags { get; set; }
 
-    [JsonProperty("updated_at")]
-    public DateTime UpdatedAt { get; set; }
+    [JsonProperty("parent_preset_id")]
+    public Ulid? ParentPresetId { get; set; }
 
-    [JsonProperty("params")]
-    public ParamsDto? Params { get; set; }
+    [JsonProperty("is_built_in")]
+    public bool IsBuiltIn { get; set; }
+
+    [JsonProperty("source")]
+    public string Source { get; set; } = "db";
+
+    [JsonProperty("profile_json")]
+    public required string ProfileJson { get; set; }
 }
