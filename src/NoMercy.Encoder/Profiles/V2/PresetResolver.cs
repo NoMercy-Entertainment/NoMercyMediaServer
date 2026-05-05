@@ -6,6 +6,27 @@ namespace NoMercy.Encoder.Profiles.V2;
 public static class PresetResolver
 {
     private const int MaxDepth = 8;
+    private const int CurrentSchemaVersion = 2;
+
+    /// <summary>
+    /// Test seam — production startup leaves this empty.
+    /// Inject migrations here in tests to verify upgrade paths.
+    /// </summary>
+    internal static IReadOnlyList<IProfileMigration> Migrations { get; set; } = [];
+
+    private static JObject EnsureCurrent(JObject input)
+    {
+        int version = input["schemaVersion"]?.Value<int>() ?? CurrentSchemaVersion;
+        while (version < CurrentSchemaVersion)
+        {
+            IProfileMigration? step = Migrations.FirstOrDefault(m => m.FromVersion == version);
+            if (step is null)
+                throw new InvalidOperationException($"No migration from schema v{version}.");
+            input = step.Migrate(input);
+            version = step.ToVersion;
+        }
+        return input;
+    }
 
     public static EncodingProfile Resolve(Ulid presetId, IPresetLookup lookup)
     {
@@ -34,10 +55,10 @@ public static class PresetResolver
         }
 
         chain.Reverse();
-        JObject accumulator = JObject.Parse(chain[0].Json);
+        JObject accumulator = EnsureCurrent(JObject.Parse(chain[0].Json));
         for (int i = 1; i < chain.Count; i++)
         {
-            JObject child = JObject.Parse(chain[i].Json);
+            JObject child = EnsureCurrent(JObject.Parse(chain[i].Json));
             accumulator.Merge(
                 child,
                 new JsonMergeSettings

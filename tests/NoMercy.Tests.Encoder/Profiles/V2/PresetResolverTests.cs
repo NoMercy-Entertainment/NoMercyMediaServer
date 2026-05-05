@@ -243,9 +243,37 @@ public class PresetResolverTests
         results.Should().AllSatisfy(r => r.Name.Should().Be("root"));
     }
 
-    [Fact(Skip = "Migration framework lands in Task K1")]
+    [Fact]
     public void Migration_invoked_for_older_schema_version()
     {
-        // Verified once IProfileMigration is registered (Task K1)
+        PresetResolver.Migrations = [new TestV1ToV2Migration()];
+        try
+        {
+            Ulid id = Ulid.NewUlid();
+            EncodingProfile root = MinimalProfile("v1") with { Id = id };
+            Newtonsoft.Json.Linq.JObject json = Newtonsoft.Json.Linq.JObject.FromObject(root);
+            json["schemaVersion"] = 1;
+            FakeLookup lookup = new(new() { [id] = (json.ToString(), null) });
+
+            EncodingProfile resolved = PresetResolver.Resolve(id, lookup);
+            resolved.Description.Should().Be("migrated:v1->v2");
+        }
+        finally
+        {
+            PresetResolver.Migrations = [];
+        }
+    }
+
+    private sealed class TestV1ToV2Migration : IProfileMigration
+    {
+        public int FromVersion => 1;
+        public int ToVersion => 2;
+
+        public Newtonsoft.Json.Linq.JObject Migrate(Newtonsoft.Json.Linq.JObject input)
+        {
+            input["schemaVersion"] = 2;
+            input["description"] = "migrated:v1->v2";
+            return input;
+        }
     }
 }
