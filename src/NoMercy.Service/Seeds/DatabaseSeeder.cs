@@ -136,10 +136,7 @@ public static class DatabaseSeeder
             () => LibrariesSeed.Init(mediaDbContext, storage, storageDriver),
             () => EncoderProfilesSeed.Init(mediaDbContext, storage),
             () => EncodingPresetsSeed.Init(mediaDbContext, storage),
-            () =>
-                ShouldSeedMarvel
-                    ? EncodingPresetsSeed.SeedExamplesAsync(mediaDbContext)
-                    : Task.CompletedTask,
+            () => EncodingPresetsSeed.SeedExamplesAsync(mediaDbContext),
             () => EncodingPresetsSeed.MaterializePresetsAsync(mediaDbContext),
         ];
 
