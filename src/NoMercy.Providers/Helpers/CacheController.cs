@@ -14,6 +14,15 @@ public static class CacheController
     private const long MaxCacheSizeBytes = 500_000_000; // 500MB
     private const int MaxLockEntries = 10_000;
 
+    // Prune is O(N) over the entire cache directory (List + sort + sum). Heavy
+    // parallel TMDB fetches (cast/crew with 50-200 people per show) used to
+    // call Prune on every Write, scanning thousands of JSON files thousands of
+    // times under the file-lock-held section. Throttle to at most once a
+    // minute and fire-and-forget so writes return immediately.
+    private static readonly TimeSpan _pruneInterval = TimeSpan.FromMinutes(1);
+    private static long _lastPruneTicksUtc = DateTime.MinValue.Ticks;
+    private static int _pruneInFlight;
+
     private static IStorage? _storage;
 
     public static void Initialize(IStorage storage)
@@ -145,7 +154,7 @@ public static class CacheController
             try
             {
                 await Storage.WriteAllTextAsync(fullname, data, CancellationToken.None);
-                PruneCache();
+                MaybeSchedulePrune();
                 return;
             }
             catch (Exception) when (retry < 10) { }
@@ -163,6 +172,35 @@ public static class CacheController
     internal static void PruneCache()
     {
         PruneCache(AppFiles.ApiCachePath, MaxCacheSizeBytes);
+    }
+
+    private static void MaybeSchedulePrune()
+    {
+        long now = DateTime.UtcNow.Ticks;
+        long last = Interlocked.Read(ref _lastPruneTicksUtc);
+        if (new TimeSpan(now - last) < _pruneInterval)
+            return;
+
+        // Single-flight: only one Prune at a time.
+        if (Interlocked.CompareExchange(ref _pruneInFlight, 1, 0) != 0)
+            return;
+
+        Interlocked.Exchange(ref _lastPruneTicksUtc, now);
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                PruneCache();
+            }
+            catch
+            {
+                // best-effort — don't let a prune error bubble out of the writer path.
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _pruneInFlight, 0);
+            }
+        });
     }
 
     internal static void PruneCache(string cachePath, long maxSizeBytes)
