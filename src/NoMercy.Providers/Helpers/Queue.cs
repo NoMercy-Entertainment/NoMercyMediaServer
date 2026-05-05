@@ -6,6 +6,12 @@ namespace NoMercy.Providers.Helpers;
 
 public class Queue(QueueOptions options)
 {
+    // Two separate queues: priority drains first. Inside each, FIFO via
+    // insertion-ordered Dictionary. Without this split, priority=true was
+    // a no-op — Execute() walked keys in insertion order regardless of
+    // the randomized uniqueId, so user-facing TMDB calls sat behind
+    // background metadata fills.
+    private readonly Dictionary<string, Func<Task>> _priorityTasks = [];
     private readonly Dictionary<string, Func<Task>> _tasks = [];
 
     private int _lastRan = Environment.TickCount;
@@ -73,36 +79,43 @@ public class Queue(QueueOptions options)
     {
         lock (_tasks)
         {
-            List<string> keys = _tasks.Keys.ToList();
-
-            foreach (string key in keys)
-            {
-                if (_currentlyHandled >= Options.Concurrent)
-                    break;
-
-                if (!_tasks.TryGetValue(key, out Func<Task>? value))
-                    continue;
-
-                _currentlyHandled++;
-                _tasks.Remove(key);
-
-                try
-                {
-                    Task result = value.Invoke();
-                    Resolve?.Invoke(this, new() { Result = result });
-                }
-                catch (Exception ex)
-                {
-                    Reject?.Invoke(this, new() { Error = ex });
-                }
-                finally
-                {
-                    Finish();
-                }
-            }
+            // Priority queue drains first, then the normal queue. Inside each,
+            // insertion order = FIFO.
+            DrainQueue(_priorityTasks);
+            DrainQueue(_tasks);
         }
 
         return Task.CompletedTask;
+    }
+
+    private void DrainQueue(Dictionary<string, Func<Task>> queue)
+    {
+        List<string> keys = queue.Keys.ToList();
+        foreach (string key in keys)
+        {
+            if (_currentlyHandled >= Options.Concurrent)
+                return;
+
+            if (!queue.TryGetValue(key, out Func<Task>? value))
+                continue;
+
+            _currentlyHandled++;
+            queue.Remove(key);
+
+            try
+            {
+                Task result = value.Invoke();
+                Resolve?.Invoke(this, new() { Result = result });
+            }
+            catch (Exception ex)
+            {
+                Reject?.Invoke(this, new() { Error = ex });
+            }
+            finally
+            {
+                Finish();
+            }
+        }
     }
 
     private Task Dequeue()
@@ -122,17 +135,16 @@ public class Queue(QueueOptions options)
 
         TaskCompletionSource<T> tcs = new();
 
-        string? uniqueId = Ulid.NewUlid().ToString();
-
-        if (priority is true)
-            uniqueId = _r.Next(0, int.MaxValue).ToString();
+        bool isPriority = priority is true;
+        string uniqueId = Ulid.NewUlid().ToString();
 
         lock (_tasks)
         {
-            while (_tasks.ContainsKey(uniqueId))
+            Dictionary<string, Func<Task>> bucket = isPriority ? _priorityTasks : _tasks;
+            while (bucket.ContainsKey(uniqueId))
                 uniqueId = Ulid.NewUlid().ToString();
 
-            _tasks.Add(
+            bucket.Add(
                 uniqueId,
                 async () =>
                 {
@@ -180,6 +192,7 @@ public class Queue(QueueOptions options)
                         Semaphore.Release();
                         lock (_tasks)
                         {
+                            _priorityTasks.Remove(uniqueId);
                             _tasks.Remove(uniqueId);
                         }
                     }
@@ -197,6 +210,7 @@ public class Queue(QueueOptions options)
     {
         lock (_tasks)
         {
+            _priorityTasks.Clear();
             _tasks.Clear();
         }
     }
@@ -207,7 +221,7 @@ public class Queue(QueueOptions options)
         {
             lock (_tasks)
             {
-                return _tasks.Count;
+                return _priorityTasks.Count + _tasks.Count;
             }
         }
     }
