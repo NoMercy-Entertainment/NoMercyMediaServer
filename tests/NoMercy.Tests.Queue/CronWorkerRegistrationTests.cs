@@ -33,7 +33,7 @@ public class CronWorkerRegistrationTests
     [Fact]
     public async Task RegisterJob_CalledTwiceWithSameType_StartsOnlyOneWorker()
     {
-        using ServiceProvider provider = BuildProvider();
+        await using ServiceProvider provider = BuildProvider();
         CronWorker cronWorker = CreateCronWorker(provider);
 
         cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A", "0 0 * * *");
@@ -47,7 +47,7 @@ public class CronWorkerRegistrationTests
     [Fact]
     public async Task RegisterJobWithSchedule_CalledTwiceWithSameType_StartsOnlyOneWorker()
     {
-        using ServiceProvider provider = BuildProvider();
+        await using ServiceProvider provider = BuildProvider();
         CronWorker cronWorker = CreateCronWorker(provider);
 
         cronWorker.RegisterJobWithSchedule<TestCronJobA>("test-job-a", provider);
@@ -60,7 +60,7 @@ public class CronWorkerRegistrationTests
     [Fact]
     public async Task RegisterJob_DifferentJobTypes_StartsOneWorkerEach()
     {
-        using ServiceProvider provider = BuildProvider();
+        await using ServiceProvider provider = BuildProvider();
         CronWorker cronWorker = CreateCronWorker(provider);
 
         cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A", "0 0 * * *");
@@ -73,7 +73,7 @@ public class CronWorkerRegistrationTests
     [Fact]
     public async Task StopAsync_AfterDuplicateRegistration_CleansUpWithoutOrphanedTasks()
     {
-        using ServiceProvider provider = BuildProvider();
+        await using ServiceProvider provider = BuildProvider();
         CronWorker cronWorker = CreateCronWorker(provider);
 
         cronWorker.RegisterJob<TestCronJobA>("test-job-a", "Test Job A", "0 0 * * *");

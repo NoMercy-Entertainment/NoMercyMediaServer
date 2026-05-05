@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Newtonsoft.Json.Linq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles.V2;
@@ -104,7 +103,7 @@ public class ProfileDifferTests
         JObject reconstructed = JObject.FromObject(parent);
         reconstructed.Merge(
             diff,
-            new Newtonsoft.Json.Linq.JsonMergeSettings
+            new JsonMergeSettings
             {
                 MergeArrayHandling = MergeArrayHandling.Replace,
                 MergeNullValueHandling = MergeNullValueHandling.Merge,
@@ -237,7 +236,7 @@ public class ProfileDifferTests
         JObject reconstructed = JObject.FromObject(parent);
         reconstructed.Merge(
             diff,
-            new Newtonsoft.Json.Linq.JsonMergeSettings
+            new JsonMergeSettings
             {
                 MergeArrayHandling = MergeArrayHandling.Replace,
                 MergeNullValueHandling = MergeNullValueHandling.Merge,

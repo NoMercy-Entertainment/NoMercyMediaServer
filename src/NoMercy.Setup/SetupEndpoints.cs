@@ -921,7 +921,7 @@ public class SetupEndpoints
     {
         Assembly assembly = typeof(SetupEndpoints).Assembly;
         string resourceName = $"NoMercy.Setup.Resources.{filename}";
-        using Stream? stream = assembly.GetManifestResourceStream(resourceName);
+        await using Stream? stream = assembly.GetManifestResourceStream(resourceName);
         if (stream is null)
             throw new FileNotFoundException($"Embedded resource not found: {resourceName}");
         using StreamReader reader = new(stream);
@@ -936,7 +936,7 @@ public class SetupEndpoints
     {
         Assembly assembly = typeof(SetupEndpoints).Assembly;
         string resourceName = $"NoMercy.Setup.Resources.{filename}";
-        using Stream? stream = assembly.GetManifestResourceStream(resourceName);
+        await using Stream? stream = assembly.GetManifestResourceStream(resourceName);
         if (stream is null)
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;

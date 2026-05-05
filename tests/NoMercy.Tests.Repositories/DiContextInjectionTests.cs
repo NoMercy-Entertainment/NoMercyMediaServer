@@ -177,7 +177,7 @@ public class DiContextInjectionTests : IDisposable
     public async Task MusicRepository_UsesInjectedContext_NotNewInstance()
     {
         // Verify MusicRepository queries use the injected context by checking data is accessible
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         List<Guid> artistIds = await repository.SearchArtistIdsAsync("test");
@@ -188,7 +188,7 @@ public class DiContextInjectionTests : IDisposable
     [Fact]
     public async Task MusicRepository_SearchAlbumIds_UsesInjectedContext()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         List<Guid> albumIds = await repository.SearchAlbumIdsAsync("test");
@@ -199,7 +199,7 @@ public class DiContextInjectionTests : IDisposable
     [Fact]
     public async Task MusicRepository_SearchTrackIds_UsesInjectedContext()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         List<Guid> trackIds = await repository.SearchTrackIdsAsync("test");
@@ -210,7 +210,7 @@ public class DiContextInjectionTests : IDisposable
     [Fact]
     public async Task MusicRepository_SearchPlaylistIds_UsesInjectedContext()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         List<Guid> playlistIds = await repository.SearchPlaylistIdsAsync("test");
@@ -221,7 +221,7 @@ public class DiContextInjectionTests : IDisposable
     [Fact]
     public async Task MusicRepository_GetArtistAsync_UsesInjectedContext()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         Artist? artist = await repository.GetArtistAsync(
@@ -269,7 +269,7 @@ public class DiContextInjectionTests : IDisposable
         // Verify that a repository with no data returns empty results
         // (proves it reads from the injected context, not a global/static one)
         string isolatedDb = Guid.NewGuid().ToString();
-        using SqliteConnection isolatedConn = new(
+        await using SqliteConnection isolatedConn = new(
             $"DataSource={isolatedDb};Mode=Memory;Cache=Shared"
         );
         isolatedConn.Open();
@@ -285,7 +285,7 @@ public class DiContextInjectionTests : IDisposable
             )
             .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
-        using TestMediaContext emptyContext = new(options);
+        await using TestMediaContext emptyContext = new(options);
         await emptyContext.Database.EnsureCreatedAsync();
 
         MusicRepository repository = new(emptyContext, null!);

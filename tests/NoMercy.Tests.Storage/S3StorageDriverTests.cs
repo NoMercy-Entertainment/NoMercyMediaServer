@@ -1,10 +1,8 @@
-﻿using System.Text;
-using Amazon.S3;
+﻿using Amazon.S3;
 using Amazon.S3.Model;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Logging.Abstractions;
-using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.S3;
 using NoMercy.Storage.Factory;
@@ -204,9 +202,9 @@ public sealed class MinioFixture : IAsyncLifetime
     {
         try
         {
-            using System.Net.Http.HttpClient http = new();
+            using HttpClient http = new();
             http.Timeout = TimeSpan.FromSeconds(3);
-            System.Net.Http.HttpResponseMessage response = await http.GetAsync(
+            HttpResponseMessage response = await http.GetAsync(
                 "http://localhost:2375/info"
             );
             return response.IsSuccessStatusCode;
@@ -256,7 +254,7 @@ public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture
         }
 
         // Read
-        using Stream r = backend.OpenRead(path);
+        await using Stream r = backend.OpenRead(path);
         using MemoryStream ms = new();
         await r.CopyToAsync(ms);
         ms.ToArray().Should().Equal(data);
@@ -374,7 +372,7 @@ public class S3StorageDriverIntegrationTests(MinioFixture minio) : IClassFixture
         await using (Stream w = backend.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
-        using Stream r = backend.OpenRead(path);
+        await using Stream r = backend.OpenRead(path);
         using MemoryStream ms = new();
         await r.CopyToAsync(ms);
 

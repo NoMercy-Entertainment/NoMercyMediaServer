@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.Database.Models.Libraries;
 
 namespace NoMercy.Database.Models.Media;
 

@@ -306,7 +306,7 @@ public class ServerController(
         System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
         Logger.App(
             $"[FileList] folder={request.Folder} type={request.Type} driver={request.DriverId}",
-            Serilog.Events.LogEventLevel.Information
+            LogEventLevel.Information
         );
 
         IStorage? resolvedStorage = null;
@@ -335,7 +335,7 @@ public class ServerController(
 
             Logger.App(
                 $"[FileList] returned {fileList.Count} entries in {sw.ElapsedMilliseconds}ms (music)",
-                Serilog.Events.LogEventLevel.Information
+                LogEventLevel.Information
             );
 
             return Ok(
@@ -357,7 +357,7 @@ public class ServerController(
 
             Logger.App(
                 $"[FileList] returned {fileList.Count} entries in {sw.ElapsedMilliseconds}ms",
-                Serilog.Events.LogEventLevel.Information
+                LogEventLevel.Information
             );
 
             return Ok(

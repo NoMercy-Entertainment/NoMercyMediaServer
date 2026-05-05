@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NoMercy.OpticalMedia.Sources.Bluray;
 
 namespace NoMercy.Tests.Encoder.DiscRipping;

@@ -60,8 +60,13 @@ public class LocalhostOnlyAttributeTests
 
     private static AuthorizationFilterContext CreateContext(IPAddress? remoteIp)
     {
-        DefaultHttpContext httpContext = new();
-        httpContext.Connection.RemoteIpAddress = remoteIp;
+        DefaultHttpContext httpContext = new()
+        {
+            Connection =
+            {
+                RemoteIpAddress = remoteIp
+            }
+        };
 
         ActionContext actionContext = new(httpContext, new(), new());
 

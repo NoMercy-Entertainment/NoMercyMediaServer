@@ -4,7 +4,6 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
-using NoMercy.Storage.Factory;
 using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.MediaProcessing.EventHandlers;

@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database.Internal;
-using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Storage;
 
 namespace NoMercy.Database.Models.Libraries;

@@ -231,7 +231,7 @@ public sealed class R2LiveTests(R2LiveFixture fix) : IClassFixture<R2LiveFixture
             await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
                 await w.WriteAsync(expected);
 
-            using Stream r = driver.OpenRead(scratch);
+            await using Stream r = driver.OpenRead(scratch);
             using MemoryStream ms = new();
             await r.CopyToAsync(ms);
             ms.ToArray().Should().Equal(expected);
@@ -342,7 +342,7 @@ public sealed class R2LiveTests(R2LiveFixture fix) : IClassFixture<R2LiveFixture
             driver.FileExists(src).Should().BeFalse("old path must not exist after move");
             driver.FileExists(dst).Should().BeTrue("new path must exist after move");
 
-            using Stream r = driver.OpenRead(dst);
+            await using Stream r = driver.OpenRead(dst);
             using MemoryStream ms = new();
             await r.CopyToAsync(ms);
             ms.ToArray().Should().Equal(data);

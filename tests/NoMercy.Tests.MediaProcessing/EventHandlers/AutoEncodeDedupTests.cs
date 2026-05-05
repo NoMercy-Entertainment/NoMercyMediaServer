@@ -1,6 +1,5 @@
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Storage;
 using NoMercy.MediaProcessing.EventHandlers;
 
 namespace NoMercy.Tests.MediaProcessing.EventHandlers;

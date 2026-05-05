@@ -1,7 +1,6 @@
 ﻿using System.Drawing;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Dto;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Lifecycle;
 using NoMercy.NmSystem.LogEnrichers;

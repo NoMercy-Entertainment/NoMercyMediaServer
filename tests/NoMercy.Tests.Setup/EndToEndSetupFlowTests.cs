@@ -9,7 +9,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Setup;
-using NoMercy.Storage;
 
 namespace NoMercy.Tests.Setup;
 
@@ -235,7 +234,7 @@ public class EndToEndSseFlowTests : IAsyncLifetime
             HttpCompletionOption.ResponseHeadersRead
         );
 
-        using Stream stream = await response.Content.ReadAsStreamAsync();
+        await using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
@@ -284,7 +283,7 @@ public class EndToEndSseFlowTests : IAsyncLifetime
             HttpCompletionOption.ResponseHeadersRead
         );
 
-        using Stream stream = await response.Content.ReadAsStreamAsync();
+        await using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
@@ -410,9 +409,17 @@ public class EndToEndMiddlewareFlowTests
 
     private static DefaultHttpContext CreateContext(string path)
     {
-        DefaultHttpContext context = new();
-        context.Request.Path = path;
-        context.Response.Body = new MemoryStream();
+        DefaultHttpContext context = new()
+        {
+            Request =
+            {
+                Path = path
+            },
+            Response =
+            {
+                Body = new MemoryStream()
+            }
+        };
         return context;
     }
 

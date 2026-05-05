@@ -138,13 +138,15 @@ public class CoordinatorDispatchController_Tests
             encoderOptions: options ?? new EncoderOptions()
         );
 
-        DefaultHttpContext ctx = new();
-        ctx.User = new ClaimsPrincipal(
-            new ClaimsIdentity(
-                [new Claim(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
-                "test"
+        DefaultHttpContext ctx = new()
+        {
+            User = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    [new Claim(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
+                    "test"
+                )
             )
-        );
+        };
         controller.ControllerContext = new() { HttpContext = ctx };
         return controller;
     }

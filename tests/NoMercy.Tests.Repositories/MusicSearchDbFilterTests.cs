@@ -213,7 +213,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_AccentedQuery_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "beyonce" should find "Beyoncé" via accent normalization
@@ -225,7 +225,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_UmlautQuery_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "motley crue" should find "Mötley Crüe"
@@ -237,7 +237,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_EmDashNormalized_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "twenty-one" should find "Twenty—One Pilots" (em dash normalized to hyphen)
@@ -249,7 +249,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_CaseInsensitive_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "rolling stones" should find "The Rolling Stones"
@@ -261,7 +261,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_NoMatch_ReturnsEmpty()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         List<Guid> ids = await repository.SearchArtistIdsAsync("nonexistent artist");
@@ -271,7 +271,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchAlbumIdsAsync_AccentedAlbum_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "resume" should find "Résumé"
@@ -283,7 +283,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchTrackIdsAsync_AccentedTrack_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "deja vu" should find "Déjà Vu"
@@ -295,7 +295,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchPlaylistIdsAsync_AccentedPlaylist_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "cafe" should find "Café Vibes"
@@ -325,7 +325,7 @@ public class MusicSearchDbFilterTests : IDisposable
             .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
             .Options;
 
-        using TestMediaContext context = new(options);
+        await using TestMediaContext context = new(options);
         await context.Database.EnsureCreatedAsync();
 
         MusicRepository repository = new(context, null!);
@@ -342,7 +342,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_PartialMatch_FindsMultiple()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "e" should match multiple artists (Beyoncé, Mötley Crüe, Twenty—One Pilots, The Rolling Stones)

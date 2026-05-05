@@ -122,7 +122,7 @@ public class DiscScanner(
         {
             doc = JsonDocument.Parse(json);
         }
-        catch (System.Text.Json.JsonException ex)
+        catch (JsonException ex)
         {
             throw new InvalidOperationException(
                 $"ffprobe output was not valid JSON: {ex.Message}",

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NoMercy.OpticalMedia.Metadata;
 
 namespace NoMercy.Tests.Encoder.DiscRipping;

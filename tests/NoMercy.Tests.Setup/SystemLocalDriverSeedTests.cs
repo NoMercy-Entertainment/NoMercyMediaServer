@@ -38,7 +38,7 @@ public class SystemLocalDriverSeedTests : IDisposable
     [Fact]
     public async Task SeedSystemLocalDriver_InsertsSingleRow()
     {
-        using MediaContext ctx = CreateContext();
+        await using MediaContext ctx = CreateContext();
 
         await DatabaseSeeder.SeedSystemLocalDriver(ctx);
 
@@ -49,7 +49,7 @@ public class SystemLocalDriverSeedTests : IDisposable
     [Fact]
     public async Task SeedSystemLocalDriver_IsIdempotent_RunTwice_StillOneRow()
     {
-        using MediaContext ctx = CreateContext();
+        await using MediaContext ctx = CreateContext();
 
         await DatabaseSeeder.SeedSystemLocalDriver(ctx);
         await DatabaseSeeder.SeedSystemLocalDriver(ctx);
@@ -61,7 +61,7 @@ public class SystemLocalDriverSeedTests : IDisposable
     [Fact]
     public async Task SeedSystemLocalDriver_RowHasExpectedValues()
     {
-        using MediaContext ctx = CreateContext();
+        await using MediaContext ctx = CreateContext();
 
         await DatabaseSeeder.SeedSystemLocalDriver(ctx);
 
@@ -74,7 +74,7 @@ public class SystemLocalDriverSeedTests : IDisposable
     [Fact]
     public async Task SeedSystemLocalDriver_DoesNotInsertWhenAlreadyPresent()
     {
-        using MediaContext ctx = CreateContext();
+        await using MediaContext ctx = CreateContext();
 
         // Pre-insert a row with the same id to simulate an existing install.
         ctx.Drivers.Add(

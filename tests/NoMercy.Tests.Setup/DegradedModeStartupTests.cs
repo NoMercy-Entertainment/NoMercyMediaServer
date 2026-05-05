@@ -8,7 +8,6 @@ using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
 using NoMercy.Setup;
 using NoMercy.Setup.Dto;
-using NoMercy.Storage;
 
 namespace NoMercy.Tests.Setup;
 

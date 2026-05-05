@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Setup;
-using NoMercy.Storage;
 
 namespace NoMercy.Tests.Setup;
 

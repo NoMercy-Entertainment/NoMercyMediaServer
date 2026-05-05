@@ -457,7 +457,7 @@ internal sealed class FaultyLibNfs : ILibNfs
         int toRead = (int)Math.Min(count, remaining);
         if (toRead <= 0)
             return 0;
-        System.Runtime.InteropServices.Marshal.Copy(content, (int)handle.Position, buf, toRead);
+        Marshal.Copy(content, (int)handle.Position, buf, toRead);
         handle.Position += toRead;
         return toRead;
     }
@@ -473,7 +473,7 @@ internal sealed class FaultyLibNfs : ILibNfs
             return -2;
 
         byte[] writeBuf = new byte[count];
-        System.Runtime.InteropServices.Marshal.Copy(buf, writeBuf, 0, count);
+        Marshal.Copy(buf, writeBuf, 0, count);
 
         long newSize = handle.Position + count;
         if (newSize > content.Length)

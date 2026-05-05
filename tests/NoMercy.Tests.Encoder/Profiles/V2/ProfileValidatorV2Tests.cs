@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles.V2;
 using RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;

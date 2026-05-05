@@ -253,9 +253,9 @@ public sealed class NfsFixture : IAsyncLifetime
     {
         try
         {
-            using System.Net.Http.HttpClient http = new();
+            using HttpClient http = new();
             http.Timeout = TimeSpan.FromSeconds(3);
-            System.Net.Http.HttpResponseMessage response = await http.GetAsync(
+            HttpResponseMessage response = await http.GetAsync(
                 "http://localhost:2375/info"
             );
             return response.IsSuccessStatusCode;
@@ -310,7 +310,7 @@ public class NfsStorageDriverIntegrationTests(NfsFixture nfs) : IClassFixture<Nf
         await using (Stream w = backend.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
-        using Stream r = backend.OpenRead(path);
+        await using Stream r = backend.OpenRead(path);
         using MemoryStream ms = new();
         await r.CopyToAsync(ms);
         ms.ToArray().Should().Equal(data);
@@ -333,7 +333,7 @@ public class NfsStorageDriverIntegrationTests(NfsFixture nfs) : IClassFixture<Nf
 
         backend.GetFileSize(path).Should().Be(data.Length);
 
-        using Stream r = backend.OpenRead(path);
+        await using Stream r = backend.OpenRead(path);
         using MemoryStream ms = new();
         await r.CopyToAsync(ms);
         ms.ToArray().Should().HaveCount(data.Length);

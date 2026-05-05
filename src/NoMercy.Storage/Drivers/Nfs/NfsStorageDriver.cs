@@ -857,7 +857,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 
     public bool IsHidden(string path)
     {
-        string name = System.IO.Path.GetFileName(path.Replace('\\', '/'));
+        string name = Path.GetFileName(path.Replace('\\', '/'));
         return name.StartsWith('.') && name.Length > 1;
     }
 
@@ -1238,7 +1238,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         if (checkRc == 0 && existing.FileType == LibNfs.S_IFDIR)
             return;
 
-        string parent = System.IO.Path.GetDirectoryName(nfsPath)?.Replace('\\', '/') ?? "/";
+        string parent = Path.GetDirectoryName(nfsPath)?.Replace('\\', '/') ?? "/";
         if (parent != nfsPath)
             EnsureDirectoryRecursive(parent);
 

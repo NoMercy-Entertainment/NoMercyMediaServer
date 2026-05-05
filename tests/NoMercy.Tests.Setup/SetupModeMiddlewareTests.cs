@@ -7,7 +7,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Setup;
-using NoMercy.Storage;
 
 namespace NoMercy.Tests.Setup;
 
@@ -42,9 +41,17 @@ public class SetupModeMiddlewareTests
 
     private static DefaultHttpContext CreateContext(string path)
     {
-        DefaultHttpContext context = new();
-        context.Request.Path = path;
-        context.Response.Body = new MemoryStream();
+        DefaultHttpContext context = new()
+        {
+            Request =
+            {
+                Path = path
+            },
+            Response =
+            {
+                Body = new MemoryStream()
+            }
+        };
         return context;
     }
 

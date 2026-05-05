@@ -200,9 +200,10 @@ public static class AppFiles
             Directory.CreateDirectory(DataProtectionKeysDir);
             if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {
-                DirectoryInfo keysDir = new(DataProtectionKeysDir);
-                keysDir.UnixFileMode =
-                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+                DirectoryInfo keysDir = new(DataProtectionKeysDir)
+                {
+                    UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
+                };
             }
         }
 

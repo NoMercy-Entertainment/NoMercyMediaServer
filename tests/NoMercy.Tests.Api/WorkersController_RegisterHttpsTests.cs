@@ -49,13 +49,15 @@ public class WorkersController_RegisterHttpsTests
         // Stand up an HttpContext whose principal carries the owner's user id
         // as ClaimTypes.NameIdentifier — that's what IsOwner() actually checks
         // against the seeded static _users list.
-        DefaultHttpContext httpContext = new();
-        httpContext.User = new ClaimsPrincipal(
-            new ClaimsIdentity(
-                [new Claim(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
-                "test"
+        DefaultHttpContext httpContext = new()
+        {
+            User = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    [new Claim(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
+                    "test"
+                )
             )
-        );
+        };
         controller.ControllerContext = new() { HttpContext = httpContext };
         return controller;
     }

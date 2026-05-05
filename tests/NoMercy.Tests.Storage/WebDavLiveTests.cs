@@ -225,7 +225,7 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
             await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
                 await w.WriteAsync(expected);
 
-            using Stream r = driver.OpenRead(scratch);
+            await using Stream r = driver.OpenRead(scratch);
             using MemoryStream ms = new();
             await r.CopyToAsync(ms);
             ms.ToArray().Should().Equal(expected);
@@ -336,7 +336,7 @@ public sealed class WebDavLiveTests(WebDavLiveFixture fix) : IClassFixture<WebDa
             driver.FileExists(src).Should().BeFalse();
             driver.FileExists(dst).Should().BeTrue();
 
-            using Stream r = driver.OpenRead(dst);
+            await using Stream r = driver.OpenRead(dst);
             using MemoryStream ms = new();
             await r.CopyToAsync(ms);
             ms.ToArray().Should().Equal(data);

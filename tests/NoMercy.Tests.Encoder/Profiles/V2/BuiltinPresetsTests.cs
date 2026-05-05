@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Tests.Encoder.Profiles.V2;

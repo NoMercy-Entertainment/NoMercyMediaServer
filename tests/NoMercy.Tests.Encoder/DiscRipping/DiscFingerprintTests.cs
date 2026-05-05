@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Sources;

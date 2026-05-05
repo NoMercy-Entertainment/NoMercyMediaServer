@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Profiles;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Service.Seeds.Data;

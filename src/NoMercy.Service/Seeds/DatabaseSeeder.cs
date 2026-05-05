@@ -9,7 +9,6 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Service.Seeds.Data;
 using NoMercy.Storage;
 using NoMercyQueue.Workers;
 using Serilog.Events;
@@ -65,10 +64,10 @@ public static class DatabaseSeeder
         try
         {
             // Check if media.db has a Configuration table with rows
-            using SqliteConnection checkConn = new($"Data Source={mediaDbPath}");
+            await using SqliteConnection checkConn = new($"Data Source={mediaDbPath}");
             await checkConn.OpenAsync();
 
-            using SqliteCommand checkCmd = checkConn.CreateCommand();
+            await using SqliteCommand checkCmd = checkConn.CreateCommand();
             checkCmd.CommandText =
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Configuration'";
             long tableExists = (long)(await checkCmd.ExecuteScalarAsync() ?? 0L);
@@ -79,7 +78,7 @@ public static class DatabaseSeeder
                 return;
             }
 
-            using SqliteCommand countCmd = checkConn.CreateCommand();
+            await using SqliteCommand countCmd = checkConn.CreateCommand();
             countCmd.CommandText = "SELECT COUNT(*) FROM Configuration";
             long rowCount = (long)(await countCmd.ExecuteScalarAsync() ?? 0L);
 
@@ -90,20 +89,20 @@ public static class DatabaseSeeder
 
             // Copy rows using ATTACH DATABASE on the app.db connection
             string appDbPath = AppFiles.AppDatabase;
-            using SqliteConnection appConn = new($"Data Source={appDbPath}");
+            await using SqliteConnection appConn = new($"Data Source={appDbPath}");
             await appConn.OpenAsync();
 
-            using SqliteCommand attachCmd = appConn.CreateCommand();
+            await using SqliteCommand attachCmd = appConn.CreateCommand();
             attachCmd.CommandText = $"ATTACH DATABASE '{mediaDbPath}' AS source";
             await attachCmd.ExecuteNonQueryAsync();
 
-            using SqliteCommand copyCmd = appConn.CreateCommand();
+            await using SqliteCommand copyCmd = appConn.CreateCommand();
             copyCmd.CommandText =
                 "INSERT OR IGNORE INTO Configuration (Key, Value, ModifiedBy, CreatedAt, UpdatedAt) "
                 + "SELECT Key, Value, ModifiedBy, CreatedAt, UpdatedAt FROM source.Configuration";
             int copied = await copyCmd.ExecuteNonQueryAsync();
 
-            using SqliteCommand detachCmd = appConn.CreateCommand();
+            await using SqliteCommand detachCmd = appConn.CreateCommand();
             detachCmd.CommandText = "DETACH DATABASE source";
             await detachCmd.ExecuteNonQueryAsync();
 
@@ -191,16 +190,18 @@ public static class DatabaseSeeder
         string overlayDir = Path.Combine(AppFiles.DataPath, "profiles");
         Directory.CreateDirectory(overlayDir);
 
-        NoMercy.Encoder.Profiles.V2.DiskOverlayLoader.LoadResult overlay =
-            NoMercy.Encoder.Profiles.V2.DiskOverlayLoader.Load(overlayDir);
+        Encoder.Profiles.V2.DiskOverlayLoader.LoadResult overlay =
+            Encoder.Profiles.V2.DiskOverlayLoader.Load(overlayDir);
 
         foreach (string error in overlay.Errors)
             Logger.Setup($"Disk overlay load error: {error}", LogEventLevel.Warning);
 
-        foreach (NoMercy.Encoder.Profiles.V2.DiskOverlayLoader.LoadedPreset entry in overlay.Loaded)
+        foreach (
+            Encoder.Profiles.V2.DiskOverlayLoader.LoadedPreset entry in overlay.Loaded
+        )
         {
-            NoMercy.Encoder.Profiles.V2.EncodingProfile p = entry.Profile;
-            NoMercy.Database.Models.Media.EncodingPreset? existing =
+            Encoder.Profiles.V2.EncodingProfile p = entry.Profile;
+            Database.Models.Media.EncodingPreset? existing =
                 await context.EncodingPresets.FirstOrDefaultAsync(x => x.Id == p.Id);
 
             if (existing is null)
@@ -282,6 +283,12 @@ public static class DatabaseSeeder
             () => ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext),
         ];
 
+        if (ShouldSeedMarvel)
+        {
+            Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
+            thread.Start();
+        }
+
         foreach (Func<Task> seed in seeds)
         {
             try
@@ -292,12 +299,6 @@ public static class DatabaseSeeder
             {
                 Logger.Setup($"Auth seed failed: {ex.Message}", LogEventLevel.Warning);
             }
-        }
-
-        if (ShouldSeedMarvel)
-        {
-            Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
-            thread.Start();
         }
     }
 
@@ -344,7 +345,7 @@ public static class DatabaseSeeder
 
         // Check if migration history table exists to determine DB state.
         // Do NOT run PRAGMA commands first — they create an empty .db file
-        // which causes CanConnect() to return true on a fresh install.
+        // which causes CanConnect() to return true on a fresh installation.
         // NOTE: Must use raw ADO.NET here — ExecuteSqlRaw returns rows-affected (-1 for SELECT),
         // not the query result, so it can't be used to read a scalar value.
         bool migrationTableExists = false;
@@ -499,16 +500,17 @@ public static class DatabaseSeeder
         DbContext context
     )
     {
-        Dictionary<string, string> result = new();
-
-        // We can't reliably ask EF for the Up/Down operations per migration
-        // without reflection on generated types. Instead keep a small curated
-        // lookup for migrations whose primary table is the failure surface —
-        // this list grows as new tables are added. The fallback is "unknown
-        // migration" which we treat as safe (don't unstamp).
-        result["20260416210105_AddEncodingHistoryTable"] = "EncodingHistory";
-        result["20260417010426_AddEncodingPresetTable"] = "EncodingPresets";
-        result["20260417011900_AddContentSegmentTable"] = "ContentSegments";
+        Dictionary<string, string> result = new()
+        {
+            // We can't reliably ask EF for the Up/Down operations per migration
+            // without reflection on generated types. Instead, keep a small curated
+            // lookup for migrations whose primary table is the failure surface —
+            // this list grows as new tables are added. The fallback is "unknown
+            // migration" which we treat as safe (don't unstamp).
+            ["20260416210105_AddEncodingHistoryTable"] = "EncodingHistory",
+            ["20260417010426_AddEncodingPresetTable"] = "EncodingPresets",
+            ["20260417011900_AddContentSegmentTable"] = "ContentSegments"
+        };
 
         // Context-type filtering: only return entries whose migration name
         // appears in the context's migration set.

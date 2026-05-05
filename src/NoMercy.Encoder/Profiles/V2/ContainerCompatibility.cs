@@ -1,6 +1,6 @@
 namespace NoMercy.Encoder.Profiles.V2;
 
-using NoMercy.Encoder.Codecs;
+using Codecs;
 
 public static class ContainerCompatibility
 {

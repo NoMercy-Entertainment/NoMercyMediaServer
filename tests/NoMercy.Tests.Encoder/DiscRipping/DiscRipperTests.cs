@@ -4,11 +4,8 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Profiles;
 using NoMercy.OpticalMedia.Drives;
-using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
-using NoMercy.OpticalMedia.Sources.Bluray;
-using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
 

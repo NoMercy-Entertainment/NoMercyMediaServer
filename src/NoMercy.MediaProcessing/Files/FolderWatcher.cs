@@ -226,9 +226,10 @@ public class FolderWatcher : IDisposable
         FileWatcherEventArgs fileWatcherEventArgs = new(
             sender as FileSystemWatcher,
             new(WatcherChangeTypes.All, "", "")
-        );
-
-        fileWatcherEventArgs.ErrorEventArgs = e;
+        )
+        {
+            ErrorEventArgs = e
+        };
 
         _instance?.OnError?.Invoke(fileWatcherEventArgs);
 

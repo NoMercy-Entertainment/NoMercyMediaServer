@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Amazon.Runtime;
 using Amazon.S3;
-using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Storage.Drivers.S3;
 using NoMercy.Storage.Drivers.WebDav;
 using WebDav;

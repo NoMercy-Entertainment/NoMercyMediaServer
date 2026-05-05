@@ -82,7 +82,7 @@ internal static partial class LogsCommand
                         ct
                     );
 
-                    using Stream stream = await response.Content.ReadAsStreamAsync(ct);
+                    await using Stream stream = await response.Content.ReadAsStreamAsync(ct);
                     using StreamReader reader = new(stream);
 
                     while (!ct.IsCancellationRequested)

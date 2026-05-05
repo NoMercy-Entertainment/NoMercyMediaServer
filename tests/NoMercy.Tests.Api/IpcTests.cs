@@ -90,7 +90,7 @@ public class IpcUnixSocketIntegrationTests : IDisposable
         Task<string> serverTask = Task.Run(async () =>
         {
             using Socket accepted = await _listenSocket.AcceptAsync();
-            using NetworkStream stream = new(accepted);
+            await using NetworkStream stream = new(accepted);
 
             byte[] buffer = new byte[4096];
             int bytesRead = await stream.ReadAsync(buffer);
@@ -128,7 +128,7 @@ public class IpcUnixSocketIntegrationTests : IDisposable
         Task serverTask = Task.Run(async () =>
         {
             using Socket accepted = await _listenSocket.AcceptAsync();
-            using NetworkStream stream = new(accepted);
+            await using NetworkStream stream = new(accepted);
 
             byte[] buffer = new byte[4096];
             _ = await stream.ReadAsync(buffer);
@@ -161,7 +161,7 @@ public class IpcUnixSocketIntegrationTests : IDisposable
         Task serverTask = Task.Run(async () =>
         {
             using Socket accepted = await _listenSocket.AcceptAsync();
-            using NetworkStream stream = new(accepted);
+            await using NetworkStream stream = new(accepted);
 
             byte[] buffer = new byte[4096];
             _ = await stream.ReadAsync(buffer);

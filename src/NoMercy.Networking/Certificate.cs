@@ -314,7 +314,7 @@ public static class Certificate
             : data.Data.CertificateAuthority;
 
         // Write to DB
-        using AppDbContext db = new();
+        await using AppDbContext db = new();
         UpsertConfig(db, "ssl_certificate", certPem);
         UpsertConfig(db, "ssl_private_key", keyPem);
         if (!string.IsNullOrEmpty(caPem))

@@ -425,7 +425,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         // the filelist response is the local-encode pre-flight which still
         // works end-to-end for LocalStorage.
         FfProbeData ffprobeData =
-            storage.Driver is NoMercy.Storage.Drivers.Local.LocalStorageDriver
+            storage.Driver is Storage.Drivers.Local.LocalStorageDriver
                 ? await FfProbe.CreateAsync(entryPath)
                 : new FfProbeData();
 

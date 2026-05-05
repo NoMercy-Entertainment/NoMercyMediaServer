@@ -108,9 +108,9 @@ public class EncodingOrchestrator(
 
             EncodingResult result;
 
-            Directory.CreateDirectory(NoMercy.Storage.StoragePaths.TranscodeRoot);
+            Directory.CreateDirectory(StoragePaths.TranscodeRoot);
             string tempDir = Path.Combine(
-                NoMercy.Storage.StoragePaths.TranscodeRoot,
+                StoragePaths.TranscodeRoot,
                 $"nomercy-enc-{Ulid.NewUlid()}"
             );
             Directory.CreateDirectory(tempDir);

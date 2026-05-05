@@ -103,7 +103,7 @@ public class HmacValidationMiddleware(
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(
                 "{\"error\":\"hmac_unavailable\",\"detail\":\"Distributed encoding signing key is not configured.\"}",
-                System.Text.Encoding.UTF8
+                Encoding.UTF8
             );
             return;
         }

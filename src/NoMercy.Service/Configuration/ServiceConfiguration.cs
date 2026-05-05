@@ -64,7 +64,6 @@ using NoMercyQueue.Extensions;
 using Serilog.Events;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using DatabaseActivity = NoMercy.Database.Activity;
-using DriveMonitor = NoMercy.MediaSources.OpticalMedia.DriveMonitor;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MediaProcessingCollectionRepository = NoMercy.MediaProcessing.Collections.CollectionRepository;
 using MediaProcessingEpisodeRepository = NoMercy.MediaProcessing.Episodes.EpisodeRepository;

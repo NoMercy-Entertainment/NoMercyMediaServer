@@ -1,11 +1,8 @@
 using System.Net;
-using System.Text;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.WebDav;
 using NoMercy.Storage.Factory;
@@ -331,9 +328,9 @@ public sealed class WebDavFixture : IAsyncLifetime
     {
         try
         {
-            using System.Net.Http.HttpClient http = new();
+            using HttpClient http = new();
             http.Timeout = TimeSpan.FromSeconds(3);
-            System.Net.Http.HttpResponseMessage response = await http.GetAsync(
+            HttpResponseMessage response = await http.GetAsync(
                 "http://localhost:2375/info"
             );
             return response.IsSuccessStatusCode;
@@ -379,7 +376,7 @@ public class WebDavStorageDriverIntegrationTests(WebDavFixture webDav)
         await using (Stream w = driver.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
 
-        using Stream r = driver.OpenRead(path);
+        await using Stream r = driver.OpenRead(path);
         using MemoryStream ms = new();
         await r.CopyToAsync(ms);
         ms.ToArray().Should().Equal(data);
