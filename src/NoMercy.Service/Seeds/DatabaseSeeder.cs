@@ -9,6 +9,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Service.Seeds.Data;
 using NoMercy.Storage;
 using NoMercyQueue.Workers;
 using Serilog.Events;
@@ -137,6 +138,7 @@ public static class DatabaseSeeder
             () => EncodingPresetsSeed.Init(mediaDbContext, storage),
             () => EncodingPresetsSeed.SeedExamplesAsync(mediaDbContext),
             () => EncodingPresetsSeed.MaterializePresetsAsync(mediaDbContext),
+            () => LoadDiskOverlaysAsync(mediaDbContext),
         ];
 
         foreach (Func<Task> seed in offlineSeeds)
@@ -169,6 +171,7 @@ public static class DatabaseSeeder
             () => GenresSeed.Init(mediaDbContext),
             () => CertificationsSeed.Init(mediaDbContext),
             () => MusicGenresSeed.Init(mediaDbContext),
+            () => SpecialSeed.Init(mediaDbContext),
         ];
 
         foreach (Func<Task> seed in seeds)
@@ -182,6 +185,59 @@ public static class DatabaseSeeder
                 Logger.Setup($"Seed failed: {ex.Message}", LogEventLevel.Warning);
             }
         }
+    }
+
+    public static async Task LoadDiskOverlaysAsync(MediaContext context)
+    {
+        string overlayDir = Path.Combine(AppFiles.DataPath, "profiles");
+        Directory.CreateDirectory(overlayDir);
+
+        NoMercy.Encoder.Profiles.V2.DiskOverlayLoader.LoadResult overlay =
+            NoMercy.Encoder.Profiles.V2.DiskOverlayLoader.Load(overlayDir);
+
+        foreach (string error in overlay.Errors)
+            Logger.Setup($"Disk overlay load error: {error}", LogEventLevel.Warning);
+
+        foreach (NoMercy.Encoder.Profiles.V2.DiskOverlayLoader.LoadedPreset entry in overlay.Loaded)
+        {
+            NoMercy.Encoder.Profiles.V2.EncodingProfile p = entry.Profile;
+            NoMercy.Database.Models.Media.EncodingPreset? existing =
+                await context.EncodingPresets.FirstOrDefaultAsync(x => x.Id == p.Id);
+
+            if (existing is null)
+            {
+                context.EncodingPresets.Add(
+                    new()
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Description = entry.Description,
+                        ProfileJson = Newtonsoft.Json.JsonConvert.SerializeObject(p),
+                        ParentPresetId = entry.ParentPresetId,
+                        IsBuiltIn = false,
+                        Source = $"disk:{Path.GetFileName(entry.SourcePath)}",
+                    }
+                );
+            }
+            else if (existing.IsBuiltIn)
+            {
+                Logger.Setup(
+                    $"Disk overlay '{entry.SourcePath}' has Ulid {p.Id} that collides with a built-in preset '{existing.Name}'. "
+                        + "Built-ins are immutable; disk overlay rejected. Use a different Ulid to coexist.",
+                    LogEventLevel.Warning
+                );
+            }
+            else
+            {
+                existing.Name = p.Name;
+                existing.Description = entry.Description ?? existing.Description;
+                existing.ProfileJson = Newtonsoft.Json.JsonConvert.SerializeObject(p);
+                existing.ParentPresetId = entry.ParentPresetId;
+                existing.Source = $"disk:{Path.GetFileName(entry.SourcePath)}";
+            }
+        }
+
+        await context.SaveChangesAsync();
     }
 
     /// <summary>
