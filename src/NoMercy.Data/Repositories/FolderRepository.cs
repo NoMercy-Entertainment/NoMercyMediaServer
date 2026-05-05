@@ -102,10 +102,23 @@ public class FolderRepository(MediaContext context)
         return context.SaveChangesAsync();
     }
 
-    public Task<int> DeleteFolderAsync(Folder folder)
+    public async Task<int> DeleteFolderAsync(Folder folder)
     {
-        context.Folders.Remove(folder);
-        return context.SaveChangesAsync();
+        // SQLite schema uses DeleteBehavior.Restrict globally. Folder has FK
+        // dependents (FolderLibrary entries, etc.) that aren't on the cascade
+        // list in OnModelCreating, so a straight Remove + SaveChangesAsync
+        // throws on the constraint violation. Mirrors the same workaround
+        // pattern as MovieRepository / CollectionRepository / TvShowRepository.
+        await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+        try
+        {
+            context.Folders.Remove(folder);
+            return await context.SaveChangesAsync();
+        }
+        finally
+        {
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+        }
     }
 
     public async Task<int> SyncFolderLibraryAsync(

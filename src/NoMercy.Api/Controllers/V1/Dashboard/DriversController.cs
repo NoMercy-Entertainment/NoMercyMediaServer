@@ -102,11 +102,6 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
 
         string normalizedType = (request.Type ?? string.Empty).Trim().ToLowerInvariant();
 
-        if (normalizedType == "local")
-            return BadRequestResponse(
-                "Local storage is built-in. Use the library folder picker to attach a local path; you don't need to create a 'local' driver manually."
-            );
-
         if (!DriverTypeMetadata.AllUserCreatable.Contains(normalizedType))
             return BadRequestResponse(
                 $"Invalid type '{request.Type}'. Allowed values: {string.Join(", ", DriverTypeMetadata.AllUserCreatable)}."
@@ -187,6 +182,14 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
         if (driver is null)
             return NotFoundResponse("Driver not found");
 
+        // The built-in system-local driver anchors the entire passthrough
+        // mode (empty rootPath) and must remain immutable. Users can create
+        // their own named local drivers alongside it, but this row is off
+        // limits — even a rename would surprise other code paths that look
+        // it up by id.
+        if (id == Driver.SystemLocalDriverId)
+            return ConflictResponse("Cannot edit the built-in system local driver.");
+
         if (request.Name is not null)
         {
             string trimmedName = request.Name.Trim();
@@ -206,10 +209,6 @@ public class DriversController(DriverRepository driverRepository, IStorageFactor
         if (request.Type is not null)
         {
             string normalizedType = request.Type.Trim().ToLowerInvariant();
-            if (normalizedType == "local")
-                return BadRequestResponse(
-                    "Cannot change type to 'local'; local storage is built-in and not user-managed."
-                );
             if (!DriverTypeMetadata.AllUserCreatable.Contains(normalizedType))
                 return BadRequestResponse(
                     $"Invalid type '{request.Type}'. Allowed values: {string.Join(", ", DriverTypeMetadata.AllUserCreatable)}."

@@ -11,8 +11,11 @@ namespace NoMercy.Api.Services;
 public static class DriverTypeMetadata
 {
     // Types that users are allowed to create through the dashboard.
-    // "local" is excluded — it is a built-in system driver, not user-created.
-    public static readonly string[] AllUserCreatable = ["nfs", "s3", "r2", "webdav"];
+    // "local" is included so users can register a named local-FS driver
+    // pointing at e.g. an SMB/NFS mount surfaced by the OS (\\nas\share,
+    // /mnt/movies). The single built-in system local driver remains
+    // protected from user edit/delete.
+    public static readonly string[] AllUserCreatable = ["local", "nfs", "s3", "r2", "webdav"];
 
     // All recognised types — used by the factory and for validation of
     // existing rows (e.g. the system local driver uses "local").
@@ -23,6 +26,19 @@ public static class DriverTypeMetadata
 
     public static readonly DriverMetadataDto[] All =
     [
+        new()
+        {
+            Type = "local",
+            DisplayName = "Local filesystem",
+            Available = true,
+            ConfigSchema = new()
+            {
+                {
+                    "rootPath",
+                    "string (required) — local filesystem path or UNC path, e.g. /mnt/movies or \\\\nas\\share"
+                },
+            },
+        },
         new()
         {
             Type = "nfs",
@@ -91,10 +107,19 @@ public static class DriverTypeMetadata
     {
         switch (driverType)
         {
-            // "local" is the system driver — users can't create it, so no
-            // config validation is needed on the create/update path. The
-            // factory handles empty rootPath as the system-local passthrough.
+            // User-created local drivers must point at a real path so the
+            // factory can resolve them. The single built-in system local
+            // driver keeps an empty rootPath (passthrough mode) and is
+            // protected from edit at the controller layer, so this check
+            // only applies to user-managed rows.
             case "local":
+                if (config is null)
+                    return "config is required for 'local' and must include 'rootPath'.";
+
+                string? localRoot = config["rootPath"]?.Value<string>();
+                if (string.IsNullOrWhiteSpace(localRoot))
+                    return "config.rootPath must be a non-empty string for 'local'.";
+
                 return null;
 
             case "nfs":

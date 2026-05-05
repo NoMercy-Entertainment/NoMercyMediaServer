@@ -282,7 +282,21 @@ public class TvShowRepository(MediaContext context)
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync(ct);
+        // SQLite schema uses DeleteBehavior.Restrict globally — the modelBuilder
+        // cascade rules only affect EF's tracked-entity cascades, not bulk
+        // ExecuteDeleteAsync. Without disabling FK enforcement the delete
+        // throws on the first dependent row (seasons, episodes, video files,
+        // userdata, etc.) and the controller returns 500. Mirrors the same
+        // workaround applied in MovieRepository / CollectionRepository.
+        await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF", ct);
+        try
+        {
+            await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync(ct);
+        }
+        finally
+        {
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON", ct);
+        }
     }
 
     public async Task<IEnumerable<Episode>> GetMissingLibraryShows(

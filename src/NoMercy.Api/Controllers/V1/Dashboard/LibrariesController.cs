@@ -749,8 +749,15 @@ public class LibrariesController(
                 }
             );
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            // Surface the underlying failure (FK constraint, missing dep,
+            // event-bus crash) so future delete-folder regressions don't
+            // require Stoney to grep for a generic 500 in production logs.
+            Logger.App(
+                $"[DeleteFolder] folder={folderId} library={id} failed: {ex}",
+                LogEventLevel.Error
+            );
             return InternalServerErrorResponse("Something went wrong deleting the library folder");
         }
     }
