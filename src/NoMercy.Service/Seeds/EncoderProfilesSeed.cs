@@ -4,7 +4,6 @@ using NoMercy.Database.Models.Media;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Service.Seeds.Data;
 using NoMercy.Storage;
 using Serilog.Events;
 
@@ -16,13 +15,12 @@ public static class EncoderProfilesSeed
     {
         Logger.Setup("Adding Encoder Profiles", LogEventLevel.Verbose);
 
-        List<EncoderProfile> encoderProfiles;
-        if (storage.Exists(AppFiles.EncoderProfilesSeedFile))
-            encoderProfiles = storage
-                .ReadAllTextAsync(AppFiles.EncoderProfilesSeedFile, CancellationToken.None)
-                .Result.FromJson<List<EncoderProfile>>()!;
-        else
-            encoderProfiles = EncoderProfileSeedData.GetEncoderProfiles();
+        if (!storage.Exists(AppFiles.EncoderProfilesSeedFile))
+            return;
+
+        List<EncoderProfile> encoderProfiles = storage
+            .ReadAllTextAsync(AppFiles.EncoderProfilesSeedFile, CancellationToken.None)
+            .Result.FromJson<List<EncoderProfile>>()!;
 
         // Strip any folder bindings before re-serializing — the seed file is
         // a catalog of profiles, never a record of user-driven assignments.

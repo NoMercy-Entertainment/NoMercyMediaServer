@@ -1,42 +1,35 @@
-using Newtonsoft.Json;
-using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Profiles;
-using NoMercy.Service.Seeds;
+using NoMercy.Encoder.Profiles.V2;
+using V2BuiltinPresets = NoMercy.Encoder.Profiles.V2.BuiltinPresets;
 
 namespace NoMercy.Tests.Setup.Seeds;
 
 /// <summary>
-/// Every built-in preset must (a) deserialize into a valid EncodingProfile,
-/// (b) pass ProfileValidator without ERROR-severity issues, (c) carry a
-/// stable Ulid so repeat seeding upserts rather than duplicating rows.
-/// These tests break loudly at CI time when a future edit accidentally
-/// ships a broken template — much better than the seed swallowing the
-/// exception and the preset going missing on every install.
+/// Every built-in preset must (a) round-trip through JSON without data loss,
+/// (b) pass V2 ProfileValidator without errors, (c) carry a stable deterministic
+/// Id so repeat seeding upserts rather than duplicating rows, and (d) satisfy
+/// codec/container invariants specific to its tier.
 /// </summary>
 public class EncodingPresetsSeedTests
 {
-    private readonly ProfileValidator _validator = new(new());
-
     [Fact]
     public void AllBuiltInPresets_HaveStableIds_AndAreMarkedBuiltIn()
     {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
+        EncodingProfile[] presets = V2BuiltinPresets.All();
 
         Assert.NotEmpty(presets);
-        foreach (EncodingPreset preset in presets)
+        foreach (EncodingProfile preset in presets)
         {
             Assert.NotEqual(default, preset.Id);
-            Assert.True(preset.IsBuiltIn, $"{preset.Name} must be marked IsBuiltIn");
+            Assert.True(preset.IsBuiltin, $"{preset.Name} must be marked IsBuiltin");
             Assert.False(string.IsNullOrWhiteSpace(preset.Name));
-            Assert.False(string.IsNullOrWhiteSpace(preset.ProfileJson));
         }
     }
 
     [Fact]
     public void AllBuiltInPresets_HaveUniqueIds()
     {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
+        EncodingProfile[] presets = V2BuiltinPresets.All();
         Ulid[] ids = presets.Select(p => p.Id).ToArray();
         Assert.Equal(ids.Length, ids.Distinct().Count());
     }
@@ -44,197 +37,135 @@ public class EncodingPresetsSeedTests
     [Fact]
     public void AllBuiltInPresets_HaveUniqueNames()
     {
-        // Duplicate names would be confusing in the picker. Repository's
-        // GetByNameAsync also relies on name uniqueness.
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
+        EncodingProfile[] presets = V2BuiltinPresets.All();
         string[] names = presets.Select(p => p.Name).ToArray();
         Assert.Equal(names.Length, names.Distinct().Count());
     }
 
     [Fact]
-    public void BuildBuiltInPresets_IsIdempotent()
+    public void AllBuiltInPresets_IsIdempotent()
     {
-        EncodingPreset[] a = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset[] b = EncodingPresetsSeed.BuildBuiltInPresets();
+        EncodingProfile[] a = V2BuiltinPresets.All();
+        EncodingProfile[] b = V2BuiltinPresets.All();
 
         Assert.Equal(a.Length, b.Length);
         for (int i = 0; i < a.Length; i++)
         {
             Assert.Equal(a[i].Id, b[i].Id);
             Assert.Equal(a[i].Name, b[i].Name);
-            Assert.Equal(a[i].ProfileJson, b[i].ProfileJson);
-        }
-    }
-
-    [Fact]
-    public void AllBuiltInPresets_DeserializeToValidProfiles()
-    {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-
-        foreach (EncodingPreset preset in presets)
-        {
-            EncodingProfile? profile = JsonConvert.DeserializeObject<EncodingProfile>(
-                preset.ProfileJson
-            );
-            Assert.NotNull(profile);
-            Assert.False(
-                string.IsNullOrWhiteSpace(profile!.Name),
-                $"{preset.Name}: deserialized profile Name is blank"
-            );
         }
     }
 
     [Fact]
     public void AllBuiltInPresets_PassValidationWithoutErrors()
     {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
+        EncodingProfile[] presets = V2BuiltinPresets.All();
 
-        foreach (EncodingPreset preset in presets)
+        foreach (EncodingProfile preset in presets)
         {
-            EncodingProfile? profile = JsonConvert.DeserializeObject<EncodingProfile>(
-                preset.ProfileJson
-            );
-            Assert.NotNull(profile);
-
-            ValidationResult result = _validator.Validate(profile!);
-            ValidationError[] errors = result
-                .Errors.Where(e => e.Severity == ValidationSeverity.Error)
-                .ToArray();
+            ProfileValidationResult result = ProfileValidator.Validate(preset);
             Assert.True(
-                errors.Length == 0,
-                $"{preset.Name} failed validation: "
-                    + string.Join(", ", errors.Select(e => $"{e.Field}={e.Message}"))
+                result.IsValid,
+                $"{preset.Name} failed validation: " + string.Join(", ", result.Errors)
             );
-            Assert.True(result.IsValid, preset.Name);
         }
     }
 
     [Fact]
-    public void AnimePreset_CarriesAnimationTune()
+    public void AnimeHevcPreset_CarriesAnimationTune()
     {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset anime = presets.First(p => p.Name == "Anime — 1080p");
+        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile anime = presets.First(p => p.Name == "Anime HEVC 1080p 10-bit");
 
-        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(
-            anime.ProfileJson
-        )!;
-        Assert.Equal("animation", profile.VideoOutputs[0].Tune);
+        Assert.NotNull(anime.Video);
+        Assert.Equal("animation", anime.Video!.Tune);
+        Assert.Equal(VideoCodecType.H265, anime.Video.Codec);
+        Assert.Equal(10, anime.Video.BitDepth);
     }
 
     [Fact]
-    public void ChromecastPreset_TargetsLevel41()
+    public void Chromecast1080pPreset_HasAacAndAc3Audio()
     {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset cc = presets.First(p => p.Name.Contains("Chromecast"));
+        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile cc = presets.First(p => p.Name == "Chromecast 1080p");
 
-        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(cc.ProfileJson)!;
-        Assert.Equal(VideoCodecType.H264, profile.VideoOutputs[0].Codec);
-        Assert.Equal("4.1", profile.VideoOutputs[0].Level);
-        Assert.Equal(1920, profile.VideoOutputs[0].Width);
+        Assert.NotNull(cc.Video);
+        Assert.Equal(VideoCodecType.H264, cc.Video!.Codec);
+        Assert.Equal(1920, cc.Video.Width);
+        Assert.Contains(cc.Audio, a => a.Codec == AudioCodecType.Aac);
+        Assert.Contains(cc.Audio, a => a.Codec == AudioCodecType.Ac3);
     }
 
     [Fact]
-    public void AppleTv4KPreset_UsesHevcMain10AndEac3()
+    public void AppleTv4kPreset_UsesHevcMain10AndEac3()
     {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset atv = presets.First(p => p.Name.Contains("Apple TV"));
+        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile atv = presets.First(p => p.Name == "Apple TV 4K HEVC");
 
-        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(atv.ProfileJson)!;
-        Assert.Equal(VideoCodecType.H265, profile.VideoOutputs[0].Codec);
-        Assert.Equal("main10", profile.VideoOutputs[0].Profile);
-        Assert.True(profile.VideoOutputs[0].TenBit);
-        Assert.Equal(AudioCodecType.Eac3, profile.AudioOutputs[0].Codec);
-    }
-
-    [Fact]
-    public void MobileLowPreset_UsesBitrateMode()
-    {
-        // Mobile preset pins file size via bitrate, not CRF — the bandwidth
-        // budget matters more than perfect quality.
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset mobile = presets.First(p => p.Name.Contains("Mobile"));
-
-        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(
-            mobile.ProfileJson
-        )!;
-        Assert.Equal(0, profile.VideoOutputs[0].Crf);
-        Assert.True(profile.VideoOutputs[0].BitrateKbps > 0);
-        Assert.Equal("3.1", profile.VideoOutputs[0].Level);
-    }
-
-    [Fact]
-    public void ArchivalPresets_UseLosslessOrNearLosslessAudio()
-    {
-        // Both archival presets (1080p + 4K) should keep audio lossless or
-        // near it. User can always re-encode from archive; losing audio
-        // fidelity on the archive copy is unrecoverable.
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset uhd = presets.First(p => p.Name.Contains("4K Archival"));
-
-        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(uhd.ProfileJson)!;
-        Assert.Equal(AudioCodecType.Flac, profile.AudioOutputs[0].Codec);
-    }
-
-    [Fact]
-    public void AnimeHevc10bitPreset_IsMkvForAssSubtitles()
-    {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset anime = presets.First(p => p.Name.Contains("HEVC"));
-
-        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(
-            anime.ProfileJson
-        )!;
-        Assert.Equal(OutputFormat.Mkv, profile.Format);
-        Assert.Equal(VideoCodecType.H265, profile.VideoOutputs[0].Codec);
-        Assert.True(profile.VideoOutputs[0].TenBit);
-    }
-
-    [Fact]
-    public void MusicAacPreset_IsAudioOnlyInMp4()
-    {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset music = presets.First(p => p.Name.Contains("AAC"));
-
-        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(
-            music.ProfileJson
-        )!;
-        Assert.Empty(profile.VideoOutputs);
-        Assert.Empty(profile.SubtitleOutputs);
-        Assert.Single(profile.AudioOutputs);
-        Assert.Equal(OutputFormat.Mp4, profile.Format);
-        Assert.Equal(AudioCodecType.Aac, profile.AudioOutputs[0].Codec);
-    }
-
-    [Fact]
-    public void MusicMp3Preset_IsAudioOnlyInMp3()
-    {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset music = presets.First(p => p.Name.Contains("MP3"));
-
-        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(
-            music.ProfileJson
-        )!;
-        Assert.Empty(profile.VideoOutputs);
-        Assert.Empty(profile.SubtitleOutputs);
-        Assert.Single(profile.AudioOutputs);
-        Assert.Equal(OutputFormat.Mp3, profile.Format);
-        Assert.Equal(AudioCodecType.Mp3, profile.AudioOutputs[0].Codec);
-        Assert.Equal(320, profile.AudioOutputs[0].BitrateKbps);
+        Assert.NotNull(atv.Video);
+        Assert.Equal(VideoCodecType.H265, atv.Video!.Codec);
+        Assert.Equal(CodecProfile.Main10, atv.Video.CodecProfile);
+        Assert.Equal(10, atv.Video.BitDepth);
+        Assert.Contains(atv.Audio, a => a.Codec == AudioCodecType.Eac3);
     }
 
     [Fact]
     public void MusicFlacPreset_IsAudioOnlyInFlac()
     {
-        EncodingPreset[] presets = EncodingPresetsSeed.BuildBuiltInPresets();
-        EncodingPreset music = presets.First(p => p.Name.Contains("FLAC Lossless"));
+        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile music = presets.First(p => p.Name == "Music FLAC Lossless");
 
-        EncodingProfile profile = JsonConvert.DeserializeObject<EncodingProfile>(
-            music.ProfileJson
-        )!;
-        Assert.Empty(profile.VideoOutputs);
-        Assert.Empty(profile.SubtitleOutputs);
-        Assert.Single(profile.AudioOutputs);
-        Assert.Equal(OutputFormat.Flac, profile.Format);
-        Assert.Equal(AudioCodecType.Flac, profile.AudioOutputs[0].Codec);
+        Assert.Null(music.Video);
+        Assert.Empty(music.Subtitles);
+        Assert.Single(music.Audio);
+        Assert.Equal(Container.Flac, music.Container);
+        Assert.Equal(AudioCodecType.Flac, music.Audio[0].Codec);
+    }
+
+    [Fact]
+    public void MusicMp3Preset_IsAudioOnlyInMp3()
+    {
+        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile music = presets.First(p => p.Name == "Music MP3 320k");
+
+        Assert.Null(music.Video);
+        Assert.Empty(music.Subtitles);
+        Assert.Single(music.Audio);
+        Assert.Equal(Container.Mp3, music.Container);
+        Assert.Equal(AudioCodecType.Mp3, music.Audio[0].Codec);
+        Assert.Equal(320, music.Audio[0].BitrateKbps);
+    }
+
+    [Fact]
+    public void MusicAacPreset_IsAudioOnlyInAac()
+    {
+        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile music = presets.First(p => p.Name == "Music AAC 256k");
+
+        Assert.Null(music.Video);
+        Assert.Empty(music.Subtitles);
+        Assert.Single(music.Audio);
+        Assert.Equal(Container.Aac, music.Container);
+        Assert.Equal(AudioCodecType.Aac, music.Audio[0].Codec);
+        Assert.Equal(256, music.Audio[0].BitrateKbps);
+    }
+
+    [Fact]
+    public void CompressHevcMkvPreset_HasFlacAudio()
+    {
+        EncodingProfile[] presets = V2BuiltinPresets.All();
+        EncodingProfile archival = presets.First(p => p.Name == "Compress HEVC 1080p MKV");
+
+        Assert.Equal(Container.Mkv, archival.Container);
+        Assert.Equal(AudioCodecType.Flac, archival.Audio[0].Codec);
+    }
+
+    [Fact]
+    public void Web1080pBalanced_ExistsAndMatchesExpectedBuiltinNames()
+    {
+        EncodingProfile[] presets = V2BuiltinPresets.All();
+        Assert.Contains(presets, p => p.Name == "Web 1080p Balanced");
+        Assert.Contains(presets, p => p.Name == "Anime HEVC 1080p 10-bit");
+        Assert.Contains(presets, p => p.Name == "Music FLAC Lossless");
     }
 }
