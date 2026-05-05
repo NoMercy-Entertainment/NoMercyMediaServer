@@ -919,6 +919,7 @@ public record PreviewEncoderProfileRequest(
     [property: JsonProperty("source_path")] string? SourcePath
 );
 
+[Obsolete("Replaced by V2EncodingProfile body on PUT /{id:ulid}. Kept for reference only.")]
 public record UpdateEncoderProfileRequest(
     [property: JsonProperty("name")] string? Name = null,
     [property: JsonProperty("description")] string? Description = null,
