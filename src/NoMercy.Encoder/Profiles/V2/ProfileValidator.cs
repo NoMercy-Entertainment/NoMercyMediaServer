@@ -10,6 +10,19 @@ public record ProfileValidationResult(
 
 public static class ProfileValidator
 {
+    private static readonly HashSet<string> ForbiddenCustomArgs = new(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        "c:v",
+        "c:a",
+        "c:s",
+        "f",
+        "vcodec",
+        "acodec",
+        "scodec",
+    };
+
     public static ProfileValidationResult Validate(EncodingProfile profile)
     {
         List<string> errors = [];
@@ -19,6 +32,7 @@ public static class ProfileValidator
         ValidateAudioBitrate(profile, errors);
         ValidateLadder(profile, errors);
         ValidateCmafCompatibility(profile, errors);
+        ValidateCustomArguments(profile, warnings);
 
         return new(errors.Count == 0, errors, warnings);
     }
@@ -115,5 +129,15 @@ public static class ProfileValidator
             .Where(c => ContainerCompatibility.SupportsAudio(c, codec))
             .Select(c => c.ToString());
         return $"Compatible containers for {codec}: {string.Join(", ", compatible)}.";
+    }
+
+    private static void ValidateCustomArguments(EncodingProfile profile, List<string> warnings)
+    {
+        if (profile.CustomArguments is null)
+            return;
+        foreach (string key in profile.CustomArguments.Keys.Where(ForbiddenCustomArgs.Contains))
+            warnings.Add(
+                $"CustomArgument '{key}' overrides codec/container choice — will hard-reject in a future release."
+            );
     }
 }

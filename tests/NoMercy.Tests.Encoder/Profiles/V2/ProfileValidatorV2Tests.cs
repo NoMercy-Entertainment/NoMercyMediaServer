@@ -397,4 +397,16 @@ public class ProfileValidatorV2Tests
         error.Should().Contain("does not support");
         error.Should().Contain("Compatible containers");
     }
+
+    [Fact]
+    public void Custom_argument_overriding_codec_warns_but_does_not_reject()
+    {
+        EncodingProfile profile = MinimalHls() with
+        {
+            CustomArguments = new() { ["c:v"] = "libx265" },
+        };
+        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        result.IsValid.Should().BeTrue();
+        result.Warnings.Should().Contain(w => w.Contains("c:v"));
+    }
 }
