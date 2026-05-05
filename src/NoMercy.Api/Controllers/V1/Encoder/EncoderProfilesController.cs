@@ -257,10 +257,11 @@ public class EncoderProfilesController(
     /// <summary>
     /// Resolves a profile by walking its parent chain via
     /// <see cref="IPresetResolver"/>, returning the fully-merged
-    /// <see cref="EncodingProfile"/>. This is distinct from the new
-    /// <c>IProfileResolver</c> — the preset resolver expands inheritance,
-    /// the profile resolver walks the V3 parent-id graph.
+    /// <see cref="EncodingProfile"/>. Superseded by
+    /// <c>GET /{id:ulid}/resolved</c> which uses the V2 resolver and validates
+    /// the merged result before returning.
     /// </summary>
+    [Obsolete("Use GET /{id:ulid}/resolved — V2 resolver with post-merge validation.")]
     [HttpGet("{id}/resolve")]
     public async Task<IActionResult> Resolve(
         string id,
