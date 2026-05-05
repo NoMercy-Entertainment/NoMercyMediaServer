@@ -962,6 +962,8 @@ internal sealed class EncoderProfilesPresetLookup(EncodingPresetRepository repos
 /// V2 <see cref="V2IPresetLookup"/> adapter — walks the parent chain by id
 /// directly against <see cref="MediaContext"/> so the V2 resolver can merge
 /// the inheritance layers without going through the V2.5 repository.
+/// Synchronous lookup is intentional: <see cref="PresetResolver"/> is a pure
+/// static method and the chain is short (max 8 hops by contract).
 /// </summary>
 internal sealed class DbPresetLookup(MediaContext context) : V2IPresetLookup
 {
