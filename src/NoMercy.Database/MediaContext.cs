@@ -235,6 +235,18 @@ public class MediaContext : DbContext
             .HasForeignKey(d => d.OwnerUserId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        modelBuilder.Entity<EncodingPresetFolder>(b =>
+        {
+            b.HasOne(epf => epf.Preset)
+                .WithMany()
+                .HasForeignKey(epf => epf.PresetId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(epf => epf.Folder)
+                .WithMany()
+                .HasForeignKey(epf => epf.FolderId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         base.OnModelCreating(modelBuilder);
     }
 
@@ -256,6 +268,7 @@ public class MediaContext : DbContext
     public virtual DbSet<EncoderProfile> EncoderProfiles { get; init; }
     public virtual DbSet<EncodingHistory> EncodingHistory { get; init; }
     public virtual DbSet<EncodingPreset> EncodingPresets { get; init; }
+    public DbSet<EncodingPresetFolder> EncodingPresetFolders => Set<EncodingPresetFolder>();
     public virtual DbSet<ContentSegment> ContentSegments { get; init; }
     public virtual DbSet<Episode> Episodes { get; init; }
     public virtual DbSet<FolderLibrary> FolderLibrary { get; init; }
