@@ -57,6 +57,17 @@ public static class Program
             Logger.App("UnhandledException " + exception);
         };
 
+        // Tasks that lose their last exception observer (fire-and-forget
+        // patterns, GC'd before await) raise here. Marking them observed
+        // keeps them from escalating to UnhandledException. async-void
+        // chains aren't covered by this — those are handled defensively
+        // at the source (see ChromeCast.NeutralizeTimer).
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Logger.App("UnobservedTaskException " + e.Exception);
+            e.SetObserved();
+        };
+
         Console.CancelKeyPress += (_, e) =>
         {
             lock (ShutdownLock)

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using System.Timers;
 using Newtonsoft.Json;
 using NoMercy.Events;
 using NoMercy.Events.Cast;
@@ -231,8 +232,23 @@ public class ChromeCast
         return client;
     }
 
-    // Sharpcaster heartbeat: stop the outbound Timer AND drop the channel
-    // from the dispatch list — both paths are async-void into ThreadPool.
+    // Sharpcaster heartbeat is async-void on a System.Timers.Timer. When the
+    // cast device disconnects mid-flight, the SSL write inside SendAsync
+    // throws a SocketException that escapes via the AsyncStateMachine and
+    // becomes UnhandledException — which kills the entire process in
+    // .NET 5+. Stop+Dispose alone races with in-flight Elapsed callbacks
+    // and Sharpcaster's reconnect logic, so we also rewire the Timer's
+    // private _onIntervalElapsed multicast delegate to a no-op wrapper.
+    // If the Timer ever fires after this call, our wrapper runs in place
+    // of Sharpcaster's TimerElapsed and swallows synchronously — no
+    // async-void chain ever starts. Real fix is to vendor-fork Sharpcaster
+    // and try/catch its TimerElapsed body.
+    private static readonly FieldInfo? _timerOnIntervalElapsedField =
+        typeof(System.Timers.Timer).GetField(
+            "_onIntervalElapsed",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
+
     private static void DisableSharpcasterHeartbeat(ChromecastClient client)
     {
         try
@@ -256,20 +272,7 @@ public class ChromeCast
                     continue;
 
                 heartbeats.Add(channel);
-
-                foreach (
-                    FieldInfo field in channel
-                        .GetType()
-                        .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
-                )
-                {
-                    object? value = field.GetValue(channel);
-                    if (value is System.Timers.Timer timer)
-                    {
-                        timer.Stop();
-                        timer.Dispose();
-                    }
-                }
+                NeutralizeTimersIn(channel);
             }
 
             foreach (object heartbeat in heartbeats)
@@ -278,6 +281,69 @@ public class ChromeCast
         catch (Exception ex)
         {
             Logger.Ping($"DisableSharpcasterHeartbeat failed: {ex.Message}");
+        }
+    }
+
+    private static void NeutralizeTimersIn(object owner)
+    {
+        foreach (
+            FieldInfo field in owner
+                .GetType()
+                .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+        )
+        {
+            object? value;
+            try
+            {
+                value = field.GetValue(owner);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (value is System.Timers.Timer timer)
+                NeutralizeTimer(timer);
+        }
+    }
+
+    private static void NeutralizeTimer(System.Timers.Timer timer)
+    {
+        try
+        {
+            timer.Stop();
+            timer.AutoReset = false;
+        }
+        catch
+        {
+            // best-effort
+        }
+
+        if (_timerOnIntervalElapsedField is not null)
+        {
+            try
+            {
+                ElapsedEventHandler safe = (_, _) => {
+                    // Replaces Sharpcaster's TimerElapsed entirely. If the
+                    // timer fires before Stop takes effect or Sharpcaster
+                    // restarts it via reconnect, we no-op instead of
+                    // entering the SocketException-prone async-void path.
+                };
+                _timerOnIntervalElapsedField.SetValue(timer, safe);
+            }
+            catch
+            {
+                // best-effort
+            }
+        }
+
+        try
+        {
+            timer.Dispose();
+        }
+        catch
+        {
+            // best-effort
         }
     }
 
