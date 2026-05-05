@@ -341,6 +341,10 @@ public class EncoderProfilesController(
     ///
     /// Always returns 200 — <c>valid: false</c> flows in the body. Validation
     /// informs; it never gates the HTTP request.
+    ///
+    /// Note: uses the V2.5 <see cref="IProfileValidator"/> pipeline. V2 profiles
+    /// stored via <c>PUT /{id:ulid}</c> are validated by
+    /// <see cref="V2ProfileValidator"/> inside <c>GET /{id:ulid}/resolved</c>.
     /// </summary>
     [HttpPost("validate")]
     public IActionResult Validate([FromBody] ValidateEncoderProfileRequest request)
