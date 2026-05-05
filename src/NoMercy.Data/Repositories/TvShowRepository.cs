@@ -285,14 +285,36 @@ public class TvShowRepository(MediaContext context)
         // SQLite schema uses DeleteBehavior.Restrict globally.
         // Temporarily disable FK enforcement so the show and all its dependents
         // (episodes, video files, user data, seasons, library links) are removed atomically.
-        await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF", ct);
+        //
+        // PRAGMA foreign_keys is a *per-connection* setting in SQLite. EF Core's
+        // ExecuteSqlRawAsync and ExecuteDeleteAsync each open and close a pooled
+        // connection by default — so a PRAGMA on one call lands on connection A
+        // while the DELETE runs on connection B that still has FK enforcement on,
+        // and the delete fails with "FOREIGN KEY constraint failed". Pin a
+        // single connection across all three statements so the PRAGMA actually
+        // applies to the DELETE that follows it.
+        bool ownsConnection =
+            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
+
+        if (ownsConnection)
+            await context.Database.OpenConnectionAsync(ct);
+
         try
         {
-            await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync(ct);
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF", ct);
+            try
+            {
+                await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync(ct);
+            }
+            finally
+            {
+                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON", ct);
+            }
         }
         finally
         {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON", ct);
+            if (ownsConnection)
+                await context.Database.CloseConnectionAsync();
         }
     }
 

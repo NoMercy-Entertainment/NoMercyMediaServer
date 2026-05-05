@@ -195,19 +195,44 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         context.Response.Headers.AcceptRanges = "bytes";
         context.Response.ContentLength = length;
 
-        await using FileStream fs = File.OpenRead(file.PhysicalPath);
+        // FileShare.ReadWrite | FileShare.Delete is critical on Windows.
+        // File.OpenRead defaults to FileShare.Read which blocks ALL concurrent
+        // writes and deletes for the lifetime of this stream. Linux ignores
+        // FileShare so it works there. Since the open-ended Range fix
+        // (d09d9ab4) keeps this stream open for the entire playback (hours
+        // for a long movie via ExoPlayer), any other process touching the
+        // file — encoder output, indexer, antivirus quarantine, library
+        // reorganize, replace-on-merge — was blocked or failed silently on
+        // Windows production servers. Reading shouldn't hold writers hostage.
+        // useAsync=true enables overlapped IO so the per-chunk Reads don't
+        // pin a thread-pool thread for the whole playback.
+        await using FileStream fs = new(
+            file.PhysicalPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete,
+            bufferSize: 64 * 1024,
+            useAsync: true
+        );
 
         fs.Seek(start, SeekOrigin.Begin);
         byte[] buffer = new byte[64 * 1024];
         int bytesRead;
         long bytesToRead = length;
 
-        while (
-            (bytesRead = fs.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead))) > 0
-            && bytesToRead > 0
-        )
+        while (bytesToRead > 0)
         {
-            await context.Response.Body.WriteAsync(buffer, 0, bytesRead);
+            bytesRead = await fs.ReadAsync(
+                buffer.AsMemory(0, (int)Math.Min(buffer.Length, bytesToRead)),
+                context.RequestAborted
+            );
+            if (bytesRead == 0)
+                break;
+
+            await context.Response.Body.WriteAsync(
+                buffer.AsMemory(0, bytesRead),
+                context.RequestAborted
+            );
             bytesToRead -= bytesRead;
         }
     }

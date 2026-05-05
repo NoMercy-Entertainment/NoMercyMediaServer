@@ -92,9 +92,32 @@ public static class LibrariesSeed
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
-        // Register seeded folders with the middleware so they can serve files over HTTP
-        foreach (Folder folder in folders.Where(f => Directory.Exists(f.Path)))
-            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+        // Register seeded folders with the middleware so they can serve files
+        // over HTTP. Filtering by Directory.Exists silently dropped folders
+        // that lived on transiently-unmounted shares (NAS / SMB / NFS) at
+        // boot time — they then 404'd until the next process restart with
+        // no log entry to point at the cause. Always register; log + skip
+        // anything PhysicalFileProvider can't open.
+        foreach (Folder folder in folders)
+        {
+            try
+            {
+                DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+            }
+            catch (Exception ex)
+                when (ex
+                        is DirectoryNotFoundException
+                            or IOException
+                            or UnauthorizedAccessException
+                            or ArgumentException
+                )
+            {
+                Logger.Setup(
+                    $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+        }
 
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);
 

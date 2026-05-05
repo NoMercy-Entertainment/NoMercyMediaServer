@@ -35,9 +35,31 @@ public static class FolderRootsSeed
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
-        // Register seeded folders with the middleware so they can serve files over HTTP
-        foreach (Folder folder in folders.Where(f => Directory.Exists(f.Path)))
-            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+        // Register seeded folders with the middleware so they can serve files
+        // over HTTP. Filtering by Directory.Exists silently dropped folders
+        // whose path wasn't reachable yet (e.g. NFS / SMB mounts not ready at
+        // boot), and they 404'd for the rest of the process lifetime with no
+        // log entry to point at the cause.
+        foreach (Folder folder in folders)
+        {
+            try
+            {
+                DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+            }
+            catch (Exception ex)
+                when (ex
+                        is DirectoryNotFoundException
+                            or IOException
+                            or UnauthorizedAccessException
+                            or ArgumentException
+                )
+            {
+                Logger.Setup(
+                    $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+        }
 
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);
     }

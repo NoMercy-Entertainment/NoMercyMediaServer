@@ -572,16 +572,34 @@ public class CollectionRepository(MediaContext context)
         // SQLite schema uses DeleteBehavior.Restrict globally.
         // Temporarily disable FK enforcement so the collection and all its dependents
         // are removed atomically.
-        await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF", ct);
+        //
+        // PRAGMA foreign_keys is a per-connection setting; pin one connection
+        // across the PRAGMA + DELETE + restore so the PRAGMA actually applies
+        // to the DELETE that follows it. See TvShowRepository.DeleteAsync.
+        bool ownsConnection =
+            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
+
+        if (ownsConnection)
+            await context.Database.OpenConnectionAsync(ct);
+
         try
         {
-            await context
-                .Collections.Where(collection => collection.Id == id)
-                .ExecuteDeleteAsync(ct);
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF", ct);
+            try
+            {
+                await context
+                    .Collections.Where(collection => collection.Id == id)
+                    .ExecuteDeleteAsync(ct);
+            }
+            finally
+            {
+                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON", ct);
+            }
         }
         finally
         {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON", ct);
+            if (ownsConnection)
+                await context.Database.CloseConnectionAsync();
         }
     }
 }

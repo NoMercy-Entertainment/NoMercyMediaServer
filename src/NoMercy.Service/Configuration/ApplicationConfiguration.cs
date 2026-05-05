@@ -11,12 +11,14 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
 using NoMercy.Setup;
 using NoMercyQueue.Workers;
+using Serilog.Events;
 
 namespace NoMercy.Service.Configuration;
 
@@ -294,10 +296,8 @@ public static class ApplicationConfiguration
         {
             using MediaContext mediaContext = new();
             List<Folder> folderLibraries = mediaContext.Folders.ToList();
-            foreach (
-                Folder folder in folderLibraries.Where(folder => Directory.Exists(folder.Path))
-            )
-                DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+            foreach (Folder folder in folderLibraries)
+                RegisterFolderSafe(folder);
 
             // Refresh the cached folder IDs so AccessLogMiddleware allows
             // requests through before the background seeder finishes.
@@ -314,6 +314,58 @@ public static class ApplicationConfiguration
         {
             // Database not yet initialized (fresh install) — folders will be
             // registered when libraries are created after seeding completes.
+        }
+    }
+
+    /// <summary>
+    /// Register a folder with the static-files middleware, surviving any
+    /// "path doesn't exist right now" failure. PhysicalFileProvider's ctor
+    /// throws DirectoryNotFoundException if the path is missing — common on
+    /// servers whose libraries live on NFS / SMB mounts that may not be
+    /// ready at boot. The previous startup code silently skipped those rows
+    /// via Directory.Exists(...), which meant a transiently-unmounted share
+    /// produced 404s for every file inside it for the entire process
+    /// lifetime, with no log entry to point at the cause. Log + continue so
+    /// the operator can see exactly which folders weren't registered and
+    /// why.
+    /// </summary>
+    private static void RegisterFolderSafe(Folder folder)
+    {
+        try
+        {
+            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+        }
+        catch (DirectoryNotFoundException ex)
+        {
+            Logger.App(
+                $"[FolderRegistration] folder {folder.Id} not registered — path '{folder.Path}' does not exist: {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
+        catch (IOException ex)
+        {
+            Logger.App(
+                $"[FolderRegistration] folder {folder.Id} not registered — IO error on '{folder.Path}': {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Logger.App(
+                $"[FolderRegistration] folder {folder.Id} not registered — access denied on '{folder.Path}': {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
+        catch (ArgumentException ex)
+        {
+            // PhysicalFileProvider throws ArgumentException when the path is
+            // null, empty, or not absolute. Test fixtures and partially-set-up
+            // dev databases sometimes contain folder rows with relative or
+            // empty paths; skip them instead of crashing the host.
+            Logger.App(
+                $"[FolderRegistration] folder {folder.Id} not registered — invalid path '{folder.Path}': {ex.Message}",
+                LogEventLevel.Warning
+            );
         }
     }
 }
