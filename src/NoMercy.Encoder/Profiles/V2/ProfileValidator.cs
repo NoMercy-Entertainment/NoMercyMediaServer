@@ -16,6 +16,9 @@ public static class ProfileValidator
         List<string> warnings = [];
 
         ValidateContainerCompatibility(profile, errors);
+        ValidateAudioBitrate(profile, errors);
+        ValidateLadder(profile, errors);
+        ValidateCmafCompatibility(profile, errors);
 
         return new(errors.Count == 0, errors, warnings);
     }
@@ -36,6 +39,65 @@ public static class ProfileValidator
                 errors.Add(
                     $"Container {profile.Container} does not support audio codec {audio.Codec}. {SuggestContainerForAudioCodec(audio.Codec)}"
                 );
+        }
+    }
+
+    private static void ValidateAudioBitrate(EncodingProfile profile, List<string> errors)
+    {
+        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        {
+            if (
+                audio.BitrateKbps <= 0
+                && audio.Codec != AudioCodecType.Flac
+                && audio.Codec != AudioCodecType.TrueHd
+            )
+                errors.Add($"Audio output for {audio.Codec}: BitrateKbps must be > 0.");
+        }
+    }
+
+    private static void ValidateLadder(EncodingProfile profile, List<string> errors)
+    {
+        if (profile.Ladder is null)
+            return;
+        if (profile.Ladder.Mode == LadderMode.Manual)
+        {
+            if (profile.Ladder.Rungs is null || profile.Ladder.Rungs.Length == 0)
+            {
+                errors.Add("Manual ladder requires non-empty Rungs[].");
+                return;
+            }
+
+            for (int i = 1; i < profile.Ladder.Rungs.Length; i++)
+            {
+                if (profile.Ladder.Rungs[i].BitrateKbps <= profile.Ladder.Rungs[i - 1].BitrateKbps)
+                {
+                    errors.Add("Manual ladder rungs must be sorted ascending by bitrate.");
+                    break;
+                }
+            }
+        }
+    }
+
+    private static void ValidateCmafCompatibility(EncodingProfile profile, List<string> errors)
+    {
+        bool cmafOn =
+            profile.Hls?.CmafCompatible == true
+            && profile.Container is Container.HlsFmp4 or Container.AudioHlsFmp4;
+        if (!cmafOn)
+            return;
+
+        if (
+            profile.Video is { Policy: StreamPolicy.Transcode } video
+            && !ContainerCompatibility.IsCmafCompatible(video.Codec)
+        )
+        {
+            errors.Add($"CMAF requires a CMAF-compatible video codec; got {video.Codec}.");
+        }
+
+        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        {
+            if (!ContainerCompatibility.IsCmafCompatible(audio.Codec))
+                errors.Add($"CMAF requires a CMAF-compatible audio codec; got {audio.Codec}.");
         }
     }
 
