@@ -218,17 +218,36 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             audioMetrics[audio.MapLabel] = analyzer.Measure(variantPath);
         }
 
+        // Build subtitle sidecars first so the master playlist only advertises
+        // subtitle URIs that actually exist on disk.
+        await WriteSubtitleSidecarsAsync(outputDirectory, plan, ct);
+
+        OutputPlan masterPlan = BuildMasterPlaylistPlan(outputDirectory, plan);
+
         PlaylistGenerator generator = new();
         string masterPlaylist = generator.GenerateMasterPlaylist(
-            plan,
+            masterPlan,
             mediaTitle,
             videoMetrics,
             audioMetrics
         );
         string masterPath = storage.CombinePath(outputDirectory, $"{mediaTitle}.m3u8");
         await storage.WriteAsync(masterPath, Encoding.UTF8.GetBytes(masterPlaylist), ct);
+    }
 
-        await WriteSubtitleSidecarsAsync(outputDirectory, plan, ct);
+    private OutputPlan BuildMasterPlaylistPlan(string outputDirectory, OutputPlan plan)
+    {
+        SubtitleOutputPlan[] existingSubtitleOutputs = plan
+            .SubtitleOutputs.Where(s => s.Action is StreamAction.Extract or StreamAction.Copy)
+            .Where(s =>
+            {
+                string relativeUri = PlaylistGenerator.GetSubtitlePlaylistUri(s);
+                string absolutePath = storage.CombinePath(outputDirectory, relativeUri);
+                return storage.Exists(absolutePath);
+            })
+            .ToArray();
+
+        return plan with { SubtitleOutputs = existingSubtitleOutputs };
     }
 
     // Slices each extracted WebVTT into per-segment .vtt files matching the

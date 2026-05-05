@@ -2,10 +2,13 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using System.Text.RegularExpressions;
 using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Libraries;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -21,10 +24,7 @@ public class FileRescanJob : AbstractMediaJob
 
     public override async Task Handle()
     {
-        Logger.App(
-            $"[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}",
-            Serilog.Events.LogEventLevel.Information
-        );
+        Logger.App($"[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}");
 
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
@@ -38,12 +38,19 @@ public class FileRescanJob : AbstractMediaJob
             StorageFactory
         );
 
-        await libraryManager.RescanFiles(LibraryId, Id);
+        Library? library = await libraryManager.RescanFiles(LibraryId, Id);
+        
+        string type = library?.Type switch
+        {
+            Config.TvMediaType or Config.AnimeMediaType => "tv",
+            Config.MovieMediaType => "movie",
+            _ => "unknown"
+        };
 
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["base", "info", Id.ToString()] }
+                new LibraryRefreshEvent { QueryKey = [type, Id.ToString()] }
             );
 
             await EventBusProvider.Current.PublishAsync(
@@ -54,9 +61,6 @@ public class FileRescanJob : AbstractMediaJob
                 new LibraryRefreshEvent { QueryKey = ["home"] }
             );
 
-            // Signal that VideoFile rows are now queryable — auto-encode
-            // subscribers listen for this to dispatch encoding jobs against
-            // folders that have EncoderProfileFolder assignments.
             await EventBusProvider.Current.PublishAsync(
                 new MediaFilesScannedEvent { MediaId = Id, LibraryId = LibraryId }
             );

@@ -131,7 +131,13 @@ public class TracksController : BaseController
             return NotFoundResponse("Track not found");
 
         if (track.Lyrics is not null)
-            return Ok(new LyricsResponseDto { Data = track.Lyrics, Offset = track.LyricsOffset });
+            return Ok(
+                new LyricsResponseDto
+                {
+                    Data = ApplyLyricsOffset(track.Lyrics, track.LyricsOffset),
+                    Offset = track.LyricsOffset,
+                }
+            );
 
         try
         {
@@ -142,7 +148,13 @@ public class TracksController : BaseController
                 track,
                 JsonConvert.SerializeObject(subtitles)
             );
-            return Ok(new LyricsResponseDto { Data = saved ?? [], Offset = track.LyricsOffset });
+            return Ok(
+                new LyricsResponseDto
+                {
+                    Data = ApplyLyricsOffset(saved ?? [], track.LyricsOffset),
+                    Offset = track.LyricsOffset,
+                }
+            );
         }
         catch (Exception e)
         {
@@ -177,6 +189,23 @@ public class TracksController : BaseController
                 Offset = request.Offset,
             }
         );
+    }
+
+    private static Lyric[] ApplyLyricsOffset(Lyric[] lyrics, int? offsetMs)
+    {
+        if (offsetMs is null or 0)
+            return lyrics;
+        double offsetSec = offsetMs.Value / 1000.0;
+        foreach (Lyric line in lyrics)
+        {
+            double newTotal = Math.Max(0, line.Time.Total + offsetSec);
+            int totalHundredths = (int)Math.Round(newTotal * 100);
+            line.Time.Total = newTotal;
+            line.Time.Minutes = totalHundredths / 6000;
+            line.Time.Seconds = totalHundredths / 100 % 60;
+            line.Time.Hundredths = totalHundredths % 100;
+        }
+        return lyrics;
     }
 
     [HttpPost]

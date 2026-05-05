@@ -465,18 +465,20 @@ public class LibraryManager(
         await libraryRepository.DisposeAsync();
     }
 
-    public async Task RescanFiles(Ulid libraryId, int id)
+    public async Task<Library?> RescanFiles(Ulid libraryId, int id)
     {
         Library? library = await libraryRepository.GetLibraryByIdWithFolders(libraryId);
         if (library is null)
         {
             Logger.App("Library with ID " + libraryId + " not found", LogEventLevel.Warning);
-            return;
+            return null;
         }
 
         FileRepository fileRepository = new(mediaContext, storageDriver);
         FileManager fileManager = new(fileRepository, storageFactory, storageDriver);
 
         await fileManager.FindFiles(id, library);
+
+        return library;
     }
 }

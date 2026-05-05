@@ -63,7 +63,7 @@ public class ShowImportJob : AbstractMediaJob
                 {
                     MediaId = Id,
                     MediaType = "tvshow",
-                    Title = show.Name ?? $"Show {Id}",
+                    Title = show.Name,
                     LibraryId = LibraryId,
                 }
             );
