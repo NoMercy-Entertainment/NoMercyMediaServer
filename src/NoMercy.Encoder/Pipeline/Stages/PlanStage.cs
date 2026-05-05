@@ -12,6 +12,7 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 
@@ -561,7 +562,7 @@ public class PlanStage(
                         SourceIndex: si,
                         MapLabel: $"0:s:{si}",
                         PlaylistNameTemplate: subProfile.PlaylistNameTemplate,
-                        Mode: subProfile.Mode,
+                        Policy: MapToV2Policy(subProfile.Mode),
                         Variant: SubtitleClassifier.ResolveVariant(stream)
                     )
                 );
@@ -735,5 +736,14 @@ public class PlanStage(
             // Custom loudnorm left to CustomArguments on the profile; no auto filter here.
             LoudnessMode.Custom => null,
             _ => null,
+        };
+
+    private static SubtitlePolicy MapToV2Policy(SubtitleMode mode) =>
+        mode switch
+        {
+            SubtitleMode.Extract => SubtitlePolicy.Extract,
+            SubtitleMode.BurnIn => SubtitlePolicy.BurnIn,
+            SubtitleMode.PassThrough => SubtitlePolicy.Copy,
+            _ => SubtitlePolicy.Extract,
         };
 }

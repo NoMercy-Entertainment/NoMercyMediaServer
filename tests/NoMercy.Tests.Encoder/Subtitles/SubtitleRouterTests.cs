@@ -1,6 +1,6 @@
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
 
 namespace NoMercy.Tests.Encoder.Subtitles;
 
@@ -11,95 +11,90 @@ public class SubtitleRouterTests
     public static TheoryData<
         SubtitleSourceType,
         OutputFormat,
-        SubtitleMode,
+        SubtitlePolicy,
         SubtitleAction
     > SpecMatrix =>
         new()
         {
-            // text → mkv → copy regardless of mode
+            // text → mkv → copy regardless of policy
             {
                 SubtitleSourceType.Text,
                 OutputFormat.Mkv,
-                SubtitleMode.Extract,
+                SubtitlePolicy.Extract,
                 SubtitleAction.Copy
             },
-            {
-                SubtitleSourceType.Text,
-                OutputFormat.Mkv,
-                SubtitleMode.PassThrough,
-                SubtitleAction.Copy
-            },
+            { SubtitleSourceType.Text, OutputFormat.Mkv, SubtitlePolicy.Copy, SubtitleAction.Copy },
             // text → hls → extract → vtt (segmented)
             {
                 SubtitleSourceType.Text,
                 OutputFormat.Hls,
-                SubtitleMode.Extract,
+                SubtitlePolicy.Extract,
                 SubtitleAction.ExtractVtt
             },
-            // text → mp4 → extract → mov_text (embedded). PassThrough → sidecar.
+            // text → mp4 → extract → mov_text (embedded). Copy → sidecar.
             {
                 SubtitleSourceType.Text,
                 OutputFormat.Mp4,
-                SubtitleMode.Extract,
+                SubtitlePolicy.Extract,
                 SubtitleAction.MovText
             },
             {
                 SubtitleSourceType.Text,
                 OutputFormat.Mp4,
-                SubtitleMode.PassThrough,
+                SubtitlePolicy.Copy,
                 SubtitleAction.ExtractVttSidecar
             },
             // text → dash → vtt sidecar
             {
                 SubtitleSourceType.Text,
                 OutputFormat.Dash,
-                SubtitleMode.Extract,
+                SubtitlePolicy.Extract,
                 SubtitleAction.ExtractVttSidecar
             },
             // bitmap → mkv → copy
             {
                 SubtitleSourceType.Bitmap,
                 OutputFormat.Mkv,
-                SubtitleMode.Extract,
+                SubtitlePolicy.Extract,
                 SubtitleAction.Copy
             },
             // bitmap → hls → ocr (or BurnIn when explicit)
             {
                 SubtitleSourceType.Bitmap,
                 OutputFormat.Hls,
-                SubtitleMode.Extract,
+                SubtitlePolicy.Extract,
                 SubtitleAction.Ocr
             },
             {
                 SubtitleSourceType.Bitmap,
                 OutputFormat.Hls,
-                SubtitleMode.BurnIn,
+                SubtitlePolicy.BurnIn,
                 SubtitleAction.BurnIn
             },
             // bitmap → mp4 → ocr sidecar (or BurnIn)
             {
                 SubtitleSourceType.Bitmap,
                 OutputFormat.Mp4,
-                SubtitleMode.Extract,
+                SubtitlePolicy.Extract,
                 SubtitleAction.OcrSidecar
             },
             {
                 SubtitleSourceType.Bitmap,
                 OutputFormat.Mp4,
-                SubtitleMode.BurnIn,
+                SubtitlePolicy.BurnIn,
                 SubtitleAction.BurnIn
             },
             // bitmap → dash → ocr sidecar (or BurnIn)
             {
                 SubtitleSourceType.Bitmap,
                 OutputFormat.Dash,
-                SubtitleMode.Extract,
+                SubtitlePolicy.Extract,
                 SubtitleAction.OcrSidecar
             },
             {
                 SubtitleSourceType.Bitmap,
                 OutputFormat.Dash,
-                SubtitleMode.BurnIn,
+                SubtitlePolicy.BurnIn,
                 SubtitleAction.BurnIn
             },
         };
@@ -109,11 +104,11 @@ public class SubtitleRouterTests
     public void Resolve_returns_expected_action(
         SubtitleSourceType source,
         OutputFormat container,
-        SubtitleMode mode,
+        SubtitlePolicy policy,
         SubtitleAction expected
     )
     {
-        SubtitleRouting routing = _router.Resolve(source, container, mode);
+        SubtitleRouting routing = _router.Resolve(source, container, policy);
         routing.Action.Should().Be(expected);
     }
 
@@ -126,12 +121,12 @@ public class SubtitleRouterTests
         SubtitleRouting textRouting = _router.Resolve(
             SubtitleSourceType.Text,
             container,
-            SubtitleMode.Extract
+            SubtitlePolicy.Extract
         );
         SubtitleRouting bitmapRouting = _router.Resolve(
             SubtitleSourceType.Bitmap,
             container,
-            SubtitleMode.BurnIn
+            SubtitlePolicy.BurnIn
         );
 
         textRouting.Action.Should().Be(SubtitleAction.None);
@@ -144,12 +139,24 @@ public class SubtitleRouterTests
     [Fact]
     public void Resolve_BurnIn_overrides_source_type_when_container_supports_video()
     {
-        // BurnIn is mode-driven, not source-driven — text + hls + BurnIn still burns.
+        // BurnIn is policy-driven, not source-driven — text + hls + BurnIn still burns.
         SubtitleRouting routing = _router.Resolve(
             SubtitleSourceType.Text,
             OutputFormat.Hls,
-            SubtitleMode.BurnIn
+            SubtitlePolicy.BurnIn
         );
         routing.Action.Should().Be(SubtitleAction.BurnIn);
+    }
+
+    [Fact]
+    public void Resolve_Omit_returns_None_for_any_container()
+    {
+        SubtitleRouting routing = _router.Resolve(
+            SubtitleSourceType.Text,
+            OutputFormat.Hls,
+            SubtitlePolicy.Omit
+        );
+        routing.Action.Should().Be(SubtitleAction.None);
+        routing.Reason.Should().Contain("omitted by policy");
     }
 }

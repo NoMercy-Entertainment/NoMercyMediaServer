@@ -1,5 +1,6 @@
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
 
 namespace NoMercy.Encoder.Subtitles;
 
@@ -46,7 +47,11 @@ public sealed record SubtitleRouting(SubtitleAction Action, string? Reason = nul
 
 public interface ISubtitleRouter
 {
-    SubtitleRouting Resolve(SubtitleSourceType source, OutputFormat container, SubtitleMode mode);
+    SubtitleRouting Resolve(
+        SubtitleSourceType source,
+        OutputFormat container,
+        SubtitlePolicy policy
+    );
 }
 
 /// <summary>
@@ -61,15 +66,19 @@ public sealed class SubtitleRouter : ISubtitleRouter
     public SubtitleRouting Resolve(
         SubtitleSourceType source,
         OutputFormat container,
-        SubtitleMode mode
+        SubtitlePolicy policy
     )
     {
         // Audio-only containers carry no subtitles by definition.
         if (container is OutputFormat.Mp3 or OutputFormat.Flac or OutputFormat.Ogg)
             return new(SubtitleAction.None, "container has no subtitle support");
 
+        // Omit — caller explicitly wants no subtitle output.
+        if (policy == SubtitlePolicy.Omit)
+            return new(SubtitleAction.None, "subtitle omitted by policy");
+
         // BurnIn always wins — caller picked it explicitly.
-        if (mode == SubtitleMode.BurnIn)
+        if (policy == SubtitlePolicy.BurnIn)
             return new(SubtitleAction.BurnIn);
 
         return (source, container) switch
@@ -77,11 +86,11 @@ public sealed class SubtitleRouter : ISubtitleRouter
             (SubtitleSourceType.Text, OutputFormat.Mkv) => new(SubtitleAction.Copy),
             (SubtitleSourceType.Text, OutputFormat.Hls) => new(SubtitleAction.ExtractVtt),
             // text+mp4+Extract → MovText (mov_text is the native MP4 text track).
-            // PassThrough explicitly skips the embed and writes a .vtt sidecar
+            // Copy explicitly skips the embed and writes a .vtt sidecar
             // so external player UIs can pick it up without parsing the moov.
-            (SubtitleSourceType.Text, OutputFormat.Mp4) => mode switch
+            (SubtitleSourceType.Text, OutputFormat.Mp4) => policy switch
             {
-                SubtitleMode.PassThrough => new(SubtitleAction.ExtractVttSidecar),
+                SubtitlePolicy.Copy => new(SubtitleAction.ExtractVttSidecar),
                 _ => new(SubtitleAction.MovText),
             },
             (SubtitleSourceType.Text, OutputFormat.Dash) => new(SubtitleAction.ExtractVttSidecar),
@@ -91,7 +100,7 @@ public sealed class SubtitleRouter : ISubtitleRouter
             (SubtitleSourceType.Bitmap, OutputFormat.Mp4) => new(SubtitleAction.OcrSidecar),
             (SubtitleSourceType.Bitmap, OutputFormat.Dash) => new(SubtitleAction.OcrSidecar),
 
-            _ => new(SubtitleAction.None, $"no routing for {source} → {container} ({mode})"),
+            _ => new(SubtitleAction.None, $"no routing for {source} → {container} ({policy})"),
         };
     }
 }

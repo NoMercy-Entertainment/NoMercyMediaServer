@@ -12,6 +12,7 @@ using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Tests.Encoder.Storage;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
@@ -51,7 +52,7 @@ public class BuildStageBurnInTests
                     SourceIndex: 0,
                     MapLabel: "0:s:0",
                     PlaylistNameTemplate: "subtitles/burn",
-                    Mode: SubtitleMode.BurnIn
+                    Policy: SubtitlePolicy.BurnIn
                 ),
             ],
             Thumbnails: null
@@ -78,7 +79,7 @@ public class BuildStageBurnInTests
                     Language: "en",
                     SourceIndex: 0,
                     MapLabel: "0:s:0",
-                    Mode: SubtitleMode.BurnIn
+                    Policy: SubtitlePolicy.BurnIn
                 ),
             ],
             Thumbnails: null
@@ -104,7 +105,7 @@ public class BuildStageBurnInTests
                     Language: "en",
                     SourceIndex: 0,
                     MapLabel: "0:s:0",
-                    Mode: SubtitleMode.BurnIn
+                    Policy: SubtitlePolicy.BurnIn
                 ),
             ],
             Thumbnails: null
@@ -144,7 +145,7 @@ public class BuildStageBurnInTests
                     Language: "en",
                     SourceIndex: 0,
                     MapLabel: "0:s:0",
-                    Mode: SubtitleMode.BurnIn
+                    Policy: SubtitlePolicy.BurnIn
                 ),
             ],
             Thumbnails: null
@@ -175,7 +176,7 @@ public class BuildStageBurnInTests
                     Language: "en",
                     SourceIndex: 0,
                     MapLabel: "0:s:0",
-                    Mode: SubtitleMode.Extract
+                    Policy: SubtitlePolicy.Extract
                 ),
             ],
             Thumbnails: null
@@ -283,7 +284,7 @@ public class BuildStageBurnInTests
                     Language: "en",
                     SourceIndex: 0,
                     MapLabel: "0:s:0",
-                    Mode: SubtitleMode.BurnIn
+                    Policy: SubtitlePolicy.BurnIn
                 ),
             ],
             Thumbnails: null
@@ -317,7 +318,7 @@ public class BuildStageBurnInTests
                     Language: "en",
                     SourceIndex: 0,
                     MapLabel: "0:s:0",
-                    Mode: SubtitleMode.BurnIn
+                    Policy: SubtitlePolicy.BurnIn
                 ),
             ],
             Thumbnails: null
@@ -354,7 +355,7 @@ public class BuildStageBurnInTests
                     Language: "en",
                     SourceIndex: 0,
                     MapLabel: "0:s:0",
-                    Mode: SubtitleMode.BurnIn
+                    Policy: SubtitlePolicy.BurnIn
                 ),
             ],
             Thumbnails: null
@@ -390,7 +391,7 @@ public class BuildStageBurnInTests
                     Language: "en",
                     SourceIndex: 0,
                     MapLabel: "0:s:0",
-                    Mode: SubtitleMode.Extract
+                    Policy: SubtitlePolicy.Extract
                 ),
             ],
             Thumbnails: null

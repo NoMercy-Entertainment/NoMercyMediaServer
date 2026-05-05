@@ -10,6 +10,7 @@ using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 
@@ -145,7 +146,7 @@ public class BuildStage(
             // entry and choose between the ASS filter path and the PGS
             // overlay path before building the filter graph.
             SubtitleOutputPlan? burnInPlan = input.Plan.OutputPlan.SubtitleOutputs.FirstOrDefault(
-                s => s.Mode == SubtitleMode.BurnIn
+                s => s.Policy == SubtitlePolicy.BurnIn
             );
 
             if (burnInPlan is not null)
@@ -359,7 +360,7 @@ public class BuildStage(
     {
         foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
         {
-            if (subPlan.Mode == SubtitleMode.BurnIn)
+            if (subPlan.Policy == SubtitlePolicy.BurnIn)
                 continue;
 
             if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
@@ -417,7 +418,7 @@ public class BuildStage(
 
         foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
         {
-            if (subPlan.Mode == SubtitleMode.BurnIn)
+            if (subPlan.Policy == SubtitlePolicy.BurnIn)
                 continue;
 
             if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
@@ -784,7 +785,7 @@ public class BuildStage(
         AssBurnInFilterBuilder? assBurnInFilterBuilder
     )
     {
-        SubtitleOutputPlan? burnIn = subs.FirstOrDefault(s => s.Mode == SubtitleMode.BurnIn);
+        SubtitleOutputPlan? burnIn = subs.FirstOrDefault(s => s.Policy == SubtitlePolicy.BurnIn);
         if (burnIn is null)
             return null;
 

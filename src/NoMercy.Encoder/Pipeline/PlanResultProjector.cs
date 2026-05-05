@@ -1,6 +1,7 @@
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Profiles;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
 
 namespace NoMercy.Encoder.Pipeline;
 
@@ -141,7 +142,7 @@ public static class PlanResultProjector
         {
             string action = s.Action switch
             {
-                StreamAction.Extract when s.Mode == SubtitleMode.BurnIn => "burn_in",
+                StreamAction.Extract when s.Policy == SubtitlePolicy.BurnIn => "burn_in",
                 StreamAction.Extract => "extract",
                 StreamAction.Transcode => "burn_in",
                 _ => "copy",

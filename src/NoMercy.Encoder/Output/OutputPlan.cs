@@ -3,6 +3,7 @@ using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
 
 namespace NoMercy.Encoder.Output;
 
@@ -83,7 +84,7 @@ public record SubtitleOutputPlan(
     int SourceIndex,
     string? MapLabel,
     string PlaylistNameTemplate = "subtitles/:filename:.:language:.:variant:",
-    SubtitleMode Mode = SubtitleMode.Extract,
+    SubtitlePolicy Policy = SubtitlePolicy.Extract,
     // Variant slot — full / sign / sdh / alt — derived from the source stream's
     // title and disposition flags so multi-track sources keep distinct URIs.
     string Variant = "full"

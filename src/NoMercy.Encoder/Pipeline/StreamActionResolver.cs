@@ -2,6 +2,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
 
 namespace NoMercy.Encoder.Pipeline;
 
@@ -130,7 +131,13 @@ public class StreamActionResolver
             ? SubtitleSourceType.Text
             : SubtitleSourceType.Bitmap;
 
-        SubtitleRouting routing = _subtitleRouter.Resolve(sourceType, format, profile.Mode);
+        SubtitlePolicy policy = profile.Mode switch
+        {
+            SubtitleMode.BurnIn => SubtitlePolicy.BurnIn,
+            SubtitleMode.PassThrough => SubtitlePolicy.Copy,
+            _ => SubtitlePolicy.Extract,
+        };
+        SubtitleRouting routing = _subtitleRouter.Resolve(sourceType, format, policy);
 
         return MapToStreamAction(routing.Action);
     }
