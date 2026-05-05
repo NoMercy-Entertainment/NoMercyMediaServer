@@ -541,32 +541,11 @@ public class EncoderProfilesController(
             return Ok(nullResponse);
         }
 
-        string sourcePath = request.SourcePath ?? string.Empty;
-
-        AnalysisMediaInfo mediaInfo;
-        try
-        {
-            mediaInfo = await mediaAnalyzer.AnalyzeAsync(sourcePath, ct);
-        }
-        catch
-        {
-            throw RuntimeErrors.SourceNotAccessible(sourcePath);
-        }
-
-        PreviewResult result = PreviewEngine.Analyze(profile, mediaInfo);
-
-        PreviewResponse response = new(
-            ProfileId: id,
-            SourceVideoFileId: sourcePath,
-            SourceAnalysis: result.SourceAnalysis,
-            PerStreamPlan: result.Plan,
-            SourceWarnings: result.SourceWarnings,
-            EstimatedFps: result.EstimatedFps,
-            EstimatedDurationSeconds: result.EstimatedDurationSeconds,
-            EncoderHandle: result.EncoderHandle
+        // PreviewEngine was removed in V2 migration — V2 preview not yet implemented.
+        return StatusCode(
+            501,
+            new { error = "Encode preview not yet implemented for V2 profiles." }
         );
-
-        return Ok(response);
     }
 
     /// <summary>

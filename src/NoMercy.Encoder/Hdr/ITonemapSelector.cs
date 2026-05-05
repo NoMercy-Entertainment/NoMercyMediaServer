@@ -1,21 +1,20 @@
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
+using ProfileHdrOptions = NoMercy.Encoder.Profiles.V2.HdrOptions;
 
 namespace NoMercy.Encoder.Hdr;
-
-using ProfileHdrOptions = Profiles.HdrOptions;
 
 public interface ITonemapSelector
 {
     TonemapStrategy SelectBest(IHardwareCapabilities hardware, IFfmpegCapabilities? ffmpeg = null);
 
     /// <summary>
-    /// Resolves the per-profile tonemap plan, honouring <see cref="HdrOptions"/>
+    /// Resolves the per-profile tonemap plan, honouring <see cref="ProfileHdrOptions"/>
     /// over the short-hand <paramref name="profileTonemapAlgorithm"/> field.
     /// Emits structured decisions to <paramref name="decisions"/> so the
     /// dashboard can show exactly which algorithm + nits were chosen and why.
-    /// When <paramref name="storage"/> is non-null, a <see cref="HdrOptions.LutPath"/>
+    /// When <paramref name="storage"/> is non-null, a <see cref="ProfileHdrOptions.LutPath"/>
     /// is validated via <see cref="IStorage.AcquireLocalPath"/>; rejected paths
     /// fall back to the algorithm-based filter and emit a
     /// <c>plan.tonemap_lut_path_rejected</c> decision.

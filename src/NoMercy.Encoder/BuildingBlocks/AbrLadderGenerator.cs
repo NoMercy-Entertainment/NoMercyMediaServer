@@ -1,5 +1,5 @@
 using NoMercy.Encoder.Analysis;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Encoder.BuildingBlocks;
 
@@ -15,7 +15,7 @@ namespace NoMercy.Encoder.BuildingBlocks;
 /// </summary>
 public class AbrLadderGenerator : IAbrLadderGenerator
 {
-    private static readonly LadderTier[] Tiers =
+    private static readonly LadderTierDef[] Tiers =
     [
         new(Height: 360, DefaultBitrateKbps: 800),
         new(Height: 480, DefaultBitrateKbps: 1400),
@@ -35,7 +35,7 @@ public class AbrLadderGenerator : IAbrLadderGenerator
         double complexityScale = ComputeComplexityScale(source);
 
         List<VideoOutput> ladder = [];
-        foreach (LadderTier tier in Tiers)
+        foreach (LadderTierDef tier in Tiers)
         {
             // Skip tiers above the source — upscaling is never worth it.
             if (tier.Height > source.Height)
@@ -95,5 +95,5 @@ public class AbrLadderGenerator : IAbrLadderGenerator
 
     private static int EvenRound(int value) => value - (value % 2);
 
-    private record LadderTier(int Height, int DefaultBitrateKbps);
+    private record LadderTierDef(int Height, int DefaultBitrateKbps);
 }

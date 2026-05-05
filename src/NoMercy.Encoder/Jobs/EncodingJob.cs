@@ -1,4 +1,4 @@
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Encoder.Jobs;
 

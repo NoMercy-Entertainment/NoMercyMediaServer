@@ -1,5 +1,5 @@
 using NoMercy.Encoder.Analysis;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Encoder.BuildingBlocks;
 

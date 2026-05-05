@@ -1,6 +1,6 @@
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Encoder.Pipeline.Optimizer;
 
@@ -15,8 +15,10 @@ public class ExecutionGraphBuilder
         List<ExecutionNode> nodes = [];
         int nodeId = 0;
 
+        VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
+
         // If we have video outputs
-        if (media.HasVideo && profile.VideoOutputs.Length > 0)
+        if (media.HasVideo && videoOutputs.Length > 0)
         {
             // 1. Decode
             string decodeId = $"node_{nodeId++}";
@@ -33,7 +35,7 @@ public class ExecutionGraphBuilder
 
             // 2. Tonemap if any output wants HDR→SDR and source is HDR
             bool needsTonemap =
-                media.VideoStreams[0].IsHdr && profile.VideoOutputs.Any(v => v.ConvertHdrToSdr);
+                media.VideoStreams[0].IsHdr && videoOutputs.Any(v => v.ConvertHdrToSdr);
 
             if (needsTonemap)
             {
@@ -50,7 +52,7 @@ public class ExecutionGraphBuilder
             }
 
             // 3. Split if multiple outputs
-            if (profile.VideoOutputs.Length > 1)
+            if (videoOutputs.Length > 1)
             {
                 string splitId = $"node_{nodeId++}";
                 nodes.Add(
@@ -58,14 +60,14 @@ public class ExecutionGraphBuilder
                         splitId,
                         OperationType.Split,
                         [lastVideoNode],
-                        new() { ["count"] = profile.VideoOutputs.Length.ToString() }
+                        new() { ["count"] = videoOutputs.Length.ToString() }
                     )
                 );
 
                 // 4. Scale + Encode per output
-                for (int i = 0; i < profile.VideoOutputs.Length; i++)
+                for (int i = 0; i < videoOutputs.Length; i++)
                 {
-                    VideoOutput output = profile.VideoOutputs[i];
+                    VideoOutput output = videoOutputs[i];
                     int height =
                         output.Height
                         ?? (
@@ -110,7 +112,7 @@ public class ExecutionGraphBuilder
             else
             {
                 // Single output: scale + encode
-                VideoOutput output = profile.VideoOutputs[0];
+                VideoOutput output = videoOutputs[0];
                 int height =
                     output.Height
                     ?? (output.Width * media.VideoStreams[0].Height / media.VideoStreams[0].Width);
@@ -157,7 +159,7 @@ public class ExecutionGraphBuilder
         }
 
         // Audio operations
-        for (int i = 0; i < profile.AudioOutputs.Length && i < media.AudioStreams.Count; i++)
+        for (int i = 0; i < profile.Audio.Length && i < media.AudioStreams.Count; i++)
         {
             string audioDecodeId = $"node_{nodeId++}";
             nodes.Add(
@@ -177,17 +179,17 @@ public class ExecutionGraphBuilder
                     [audioDecodeId],
                     new()
                     {
-                        ["codec"] = profile.AudioOutputs[i].Codec.ToString(),
-                        ["bitrate"] = profile.AudioOutputs[i].BitrateKbps.ToString(),
-                        ["channels"] = profile.AudioOutputs[i].Channels.ToString(),
-                        ["sample_rate"] = profile.AudioOutputs[i].SampleRateHz.ToString(),
+                        ["codec"] = profile.Audio[i].Codec.ToString(),
+                        ["bitrate"] = profile.Audio[i].BitrateKbps.ToString(),
+                        ["channels"] = profile.Audio[i].Channels.ToString(),
+                        ["sample_rate"] = profile.Audio[i].SampleRateHz.ToString(),
                     }
                 )
             );
         }
 
         // Subtitle extraction (independent operations)
-        for (int i = 0; i < profile.SubtitleOutputs.Length && i < media.SubtitleStreams.Count; i++)
+        for (int i = 0; i < profile.Subtitles.Length && i < media.SubtitleStreams.Count; i++)
         {
             string subExtractId = $"node_{nodeId++}";
             nodes.Add(

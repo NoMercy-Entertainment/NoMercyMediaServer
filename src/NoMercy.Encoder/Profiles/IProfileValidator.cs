@@ -4,7 +4,7 @@ namespace NoMercy.Encoder.Profiles;
 
 public interface IProfileValidator
 {
-    /// <summary>Legacy API — retained for one release. Prefer <see cref="ValidateAsEnvelope"/>.</summary>
+    /// <summary>Legacy API — retained as a compat shim for existing API controllers.</summary>
     ValidationResult Validate(EncodingProfile profile);
 
     /// <summary>

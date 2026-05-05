@@ -1,6 +1,5 @@
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Profiles;
-using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
+using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Encoder.Subtitles;
 

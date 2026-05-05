@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
-using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
@@ -10,9 +9,11 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Optimizer;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Encoder.Subtitles;
-using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
+using LegacyDrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
+using LegacyDrmMethod = NoMercy.Encoder.BuildingBlocks.Drm.DrmMethod;
+using LegacyHlsOptions = NoMercy.Encoder.Profiles.HlsOptions;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 
@@ -67,6 +68,7 @@ public class PlanStage(
             int maxHwSessions = hardware.HasGpu ? hardware.Gpus.Min(g => g.MaxEncoderSessions) : 0;
             int hwSessionsUsed = 0;
 
+            VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
             ResolvedCodec[] resolvedCodecs;
 
             if (hardwarePreferenceResolver is not null)
@@ -79,7 +81,7 @@ public class PlanStage(
 
                 List<ResolvedCodec> codecList = [];
 
-                foreach (VideoOutput v in profile.VideoOutputs)
+                foreach (VideoOutput v in videoOutputs)
                 {
                     // Clamp to ForceSoftware when the GPU session cap is exhausted.
                     HardwarePreference effectivePreference =
@@ -133,8 +135,8 @@ public class PlanStage(
             else
             {
                 // Legacy path — no resolver injected (e.g. older test suites).
-                resolvedCodecs = profile
-                    .VideoOutputs.Select(v =>
+                resolvedCodecs = videoOutputs
+                    .Select(v =>
                     {
                         EncoderPreference preference =
                             hwSessionsUsed < maxHwSessions
@@ -256,6 +258,9 @@ public class PlanStage(
         EncodingContext context
     )
     {
+        OutputFormat outputFormat = PlanStageHelpers.ContainerToOutputFormat(profile.Container);
+        LegacyHlsOptions? hlsOptions = PlanStageHelpers.ContainerToHlsOptions(profile.Container);
+
         // Resolve tonemap strategy once — shared across all video outputs that need HDR→SDR.
         // When HdrPolicy is AlwaysPreserve, skip tonemapping entirely regardless of source.
         bool sourceIsHdr = media.VideoStreams.Count > 0 && media.VideoStreams[0].IsHdr;
@@ -266,19 +271,21 @@ public class PlanStage(
                 ? tonemapSelector.SelectBest(hardware, ffmpegCapabilities)
                 : null;
 
-        // Per-profile plan: resolves algorithm + nits + optional LUT from HdrOptions /
-        // profile.TonemapAlgorithm with a clear precedence chain.
+        // Per-profile plan: resolves algorithm + nits + optional LUT from HdrOptions.
+        // V2 profile has no TonemapAlgorithm shorthand — pass null; HdrOptions takes over.
         TonemapPlan tonemapPlan = tonemapSelector.Build(
             profile.HdrOptions,
-            profile.TonemapAlgorithm,
+            null,
             context.DecisionsOrNoOp
         );
 
+        VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
+
         // Audio-only: skip video planning entirely when source has no video streams
         VideoOutputPlan[] videoPlan =
-            media.VideoStreams.Count > 0 && profile.VideoOutputs.Length > 0
-                ? profile
-                    .VideoOutputs.Select(
+            media.VideoStreams.Count > 0 && videoOutputs.Length > 0
+                ? videoOutputs
+                    .Select(
                         (v, i) =>
                         {
                             ResolvedCodec resolved = resolvedCodecs[i];
@@ -296,8 +303,6 @@ public class PlanStage(
                             );
 
                             // Translate the profile CRF to the encoder-native quality value.
-                            // The scaler knows each encoder's quirks (CQ range, inverted q:v,
-                            // QSV's zero-disables-CRF bug, etc.) so PlanStage stays generic.
                             string encoderHandle = resolved.FfmpegEncoderName;
                             IQualityScaler scaler =
                                 qualityScalerResolver?.For(encoderHandle)
@@ -340,9 +345,7 @@ public class PlanStage(
                             );
 
                             // Capped-CRF: when both a CRF target and a bitrate ceiling are set,
-                            // emit -maxrate / -bufsize so FFmpeg enforces the cap. Without these
-                            // the bitrate value is silently ignored and the encode is pure CRF.
-                            // Fix: Phase 3.10 — RateControl.CrfCapped was dashboard-display-only.
+                            // emit -maxrate / -bufsize so FFmpeg enforces the cap.
                             if (v.Crf > 0 && v.BitrateKbps > 0)
                             {
                                 int bufKbps = v.BitrateKbps * 2;
@@ -350,11 +353,9 @@ public class PlanStage(
                                 extraFlags["-bufsize"] = $"{bufKbps}k";
                             }
 
-                            // HDR→HDR passthrough: when source is HDR and the output profile
-                            // keeps 10-bit without tonemapping to SDR, preserve color metadata
-                            // so players treat the file as HDR. Without these flags the output
-                            // is 10-bit bt709 (muddy colors on HDR displays).
-                            bool preservesHdr = sourceIsHdr && v.TenBit && !v.ConvertHdrToSdr;
+                            // HDR→HDR passthrough: preserve color metadata when source is HDR
+                            // and the output keeps 10-bit without tonemapping.
+                            bool preservesHdr = sourceIsHdr && v.BitDepth >= 10 && !v.ConvertHdrToSdr;
                             if (preservesHdr)
                             {
                                 VideoStreamInfo src = media.VideoStreams[0];
@@ -365,12 +366,7 @@ public class PlanStage(
                             }
 
                             // 10-bit / bit-depth policy resolution.
-                            // When IBitDepthPolicyResolver is injected (Phase 3.3) it is the
-                            // single source of truth and honours profile.BitDepthPolicy.
-                            // Without the resolver the legacy inline guard is preserved so
-                            // existing tests (TenBitRequested_EncoderLacks10Bit_DowngradedTo8Bit)
-                            // continue to pass unchanged.
-                            int requestedDepth = v.BitDepth ?? (v.TenBit ? 10 : 8);
+                            int requestedDepth = v.BitDepth;
                             bool outputTenBit;
                             string outputPixelFormat;
                             string outputEncoderName = resolved.FfmpegEncoderName;
@@ -425,8 +421,8 @@ public class PlanStage(
                             else
                             {
                                 // Legacy path — preserve existing behaviour exactly.
-                                outputTenBit = v.TenBit && encoder.Supports10Bit;
-                                if (v.TenBit && !encoder.Supports10Bit)
+                                outputTenBit = requestedDepth >= 10 && encoder.Supports10Bit;
+                                if (requestedDepth >= 10 && !encoder.Supports10Bit)
                                 {
                                     logger.LogWarning(
                                         "Profile requests 10-bit video_{Index} but encoder {Encoder} "
@@ -441,6 +437,11 @@ public class PlanStage(
                                     : "yuv420p";
                             }
 
+                            string? codecProfileString =
+                                v.CodecProfile == CodecProfile.Auto
+                                    ? null
+                                    : v.CodecProfile.ToString().ToLowerInvariant();
+
                             return new VideoOutputPlan(
                                 Width: outputWidth,
                                 Height: outputHeight,
@@ -448,7 +449,10 @@ public class PlanStage(
                                 Crf: crf,
                                 BitrateKbps: v.BitrateKbps,
                                 Preset: EncoderArgumentResolver.ResolvePreset(v.Preset, encoder),
-                                Profile: EncoderArgumentResolver.ResolveProfile(v.Profile, encoder),
+                                Profile: EncoderArgumentResolver.ResolveProfile(
+                                    codecProfileString,
+                                    encoder
+                                ),
                                 Level: v.Level,
                                 TenBit: outputTenBit,
                                 PixelFormat: outputPixelFormat,
@@ -464,10 +468,6 @@ public class PlanStage(
                                     ? tonemapPlan.FilterStringFragment
                                     : null,
                                 CropFilter: cropFilter,
-                                // Reuses the same predicate as the HDR-passthrough flag
-                                // emission above (preservesHdr). Keeping them in sync
-                                // means the folder/playlist names match the actual color
-                                // metadata embedded in the segments.
                                 IsHdrOutput: preservesHdr
                             );
                         }
@@ -477,9 +477,8 @@ public class PlanStage(
 
         // Build one AudioOutputPlan per matching source stream.
         // AllowedLanguages is a FILTER — the actual language comes from the source stream.
-        // When AllowedLanguages is empty or contains all languages, include every stream.
         List<AudioOutputPlan> audioPlans = [];
-        foreach (AudioOutput audioProfile in profile.AudioOutputs)
+        foreach (AudioOutput audioProfile in profile.Audio)
         {
             string encoderName = AudioCodecDefinitions.GetEncoder(audioProfile.Codec).FfmpegName;
             HashSet<string> allowed =
@@ -495,16 +494,14 @@ public class PlanStage(
                 AudioStreamInfo stream = media.AudioStreams[si];
                 string streamLang = stream.Language ?? "und";
 
-                // If AllowedLanguages is empty, include all streams.
-                // Otherwise only include streams whose language is in the filter list.
                 if (allowed.Count > 0 && !allowed.Contains(streamLang))
                     continue;
 
-                string? audioFilter = BuildAudioFilter(
-                    audioProfile.Loudness,
-                    audioProfile.Downmix,
-                    audioProfile.CustomPanMatrix
-                );
+                LoudnessMode loudnessMode = audioProfile.Loudness?.Mode ?? LoudnessMode.None;
+                DownmixMode downmixMode = audioProfile.Downmix?.Mode ?? DownmixMode.Auto;
+                string? customPanMatrix = audioProfile.Downmix?.CustomPanMatrix;
+
+                string? audioFilter = BuildAudioFilter(loudnessMode, downmixMode, customPanMatrix);
 
                 audioPlans.Add(
                     new(
@@ -526,11 +523,10 @@ public class PlanStage(
         AudioOutputPlan[] audioPlan = audioPlans.ToArray();
 
         // Build one SubtitleOutputPlan per matching source stream.
-        // AllowedLanguages is a filter — language comes from the source stream.
         // Deduplicate by source stream index — first matching profile wins.
         List<SubtitleOutputPlan> subtitlePlans = [];
         HashSet<int> claimedStreams = [];
-        foreach (SubtitleOutput subProfile in profile.SubtitleOutputs)
+        foreach (SubtitleOutput subProfile in profile.Subtitles)
         {
             HashSet<string> allowed =
                 subProfile.AllowedLanguages.Length > 0
@@ -555,14 +551,14 @@ public class PlanStage(
                 subtitlePlans.Add(
                     new(
                         OutputCodec: subProfile.Codec,
-                        Action: subProfile.Mode == SubtitleMode.BurnIn
+                        Action: subProfile.Policy == SubtitlePolicy.BurnIn
                             ? StreamAction.Transcode
                             : StreamAction.Extract,
                         Language: streamLang,
                         SourceIndex: si,
                         MapLabel: $"0:s:{si}",
                         PlaylistNameTemplate: subProfile.PlaylistNameTemplate,
-                        Policy: MapToV2Policy(subProfile.Mode),
+                        Policy: subProfile.Policy,
                         Variant: SubtitleClassifier.ResolveVariant(stream)
                     )
                 );
@@ -575,8 +571,6 @@ public class PlanStage(
         if (profile.Thumbnails is not null && media.VideoStreams.Count > 0)
         {
             ThumbnailOutput thumbConfig = profile.Thumbnails;
-            // Calculate the actual thumbnail height from source aspect ratio.
-            // FFmpeg scale=W:-2 produces this height (rounded to even).
             int thumbHeight = (int)(
                 2
                 * Math.Round(
@@ -591,42 +585,28 @@ public class PlanStage(
         }
 
         // Clamp segment duration to input length for very short files.
-        // A 2-second clip with 6-second segments produces malformed HLS playlists.
         int segmentDuration = profile.SegmentDurationSeconds;
         if (media.Duration.TotalSeconds > 0 && media.Duration.TotalSeconds < segmentDuration)
             segmentDuration = Math.Max(1, (int)Math.Ceiling(media.Duration.TotalSeconds));
 
-        // Dolby Vision passthrough gate (Phase 3.5).
-        // DolbyVisionGate is the single source of truth for whether the RPU
-        // survives. It evaluates codec, bit-depth, container, and HdrPolicy in
-        // one place and merges any container-specific extra flags into the first
-        // video output's ExtraFlags dictionary.
-        //
-        // Per-output bit-depth: we evaluate using the first video output because
-        // DV RPU is a stream-level property — all outputs either preserve or strip.
-        // The gate checks the most-capable output to avoid false strips when a
-        // ladder has mixed bit-depths.
-        VideoOutput? primaryVideo =
-            profile.VideoOutputs.Length > 0 ? profile.VideoOutputs[0] : null;
-
-        int primaryBitDepth = primaryVideo?.BitDepth ?? (primaryVideo?.TenBit == true ? 10 : 8);
-
-        // Codec type lives on the profile VideoOutput — ResolvedCodec only
-        // carries the ffmpeg encoder name, not the VideoCodecType enum.
+        // Dolby Vision passthrough gate.
+        // Per-output bit-depth: evaluate using the first video output because
+        // DV RPU is a stream-level property.
+        VideoOutput? primaryVideo = videoOutputs.Length > 0 ? videoOutputs[0] : null;
+        int primaryBitDepth = primaryVideo?.BitDepth ?? 8;
         VideoCodecType primaryCodec = primaryVideo?.Codec ?? VideoCodecType.H264;
 
         DolbyVisionDecision dvDecision = DolbyVisionGate.Resolve(
             media.DolbyVision,
             primaryCodec,
             primaryBitDepth,
-            profile.Format,
+            outputFormat,
             profile.HdrPolicy,
             context.DecisionsOrNoOp,
-            profile.HlsOptions
+            hlsOptions
         );
 
         // Merge DV container flags into the first video output's ExtraFlags.
-        // videoPlan is already built at this point so we patch via LINQ index.
         if (dvDecision.Preserved && dvDecision.ExtraFlags.Count > 0 && videoPlan.Length > 0)
         {
             foreach ((string key, string value) in dvDecision.ExtraFlags)
@@ -644,39 +624,40 @@ public class PlanStage(
         }
 
         return new(
-            profile.Format,
+            outputFormat,
             videoPlan,
             audioPlan,
             subtitlePlan,
             thumbPlan,
             segmentDuration,
             PreserveDolbyVision: dvDecision.Preserved,
-            Drm: profile.Drm
+            Drm: ConvertDrmConfig(profile.Drm)
         );
     }
 
     /// <summary>
-    /// When the profile opts into <see cref="EncodingProfile.AutoLadder"/>,
-    /// expand the single reference video output into a multi-tier ABR ladder
-    /// generated from the source media's resolution + bitrate density.
+    /// When the profile opts into <see cref="LadderMode.Auto"/>, expand the
+    /// single reference video output into a multi-tier ABR ladder generated
+    /// from the source media's resolution + bitrate density. The generated
+    /// outputs are stored as Manual rungs so <see cref="PlanStageHelpers.EnumerateVideo"/>
+    /// materialises them correctly on subsequent passes.
     /// Passthrough when auto-ladder is off or when the source has no video.
     /// </summary>
     private EncodingProfile ExpandAutoLadder(EncodingProfile profile, MediaInfo media)
     {
-        if (!profile.AutoLadder || media.VideoStreams.Count == 0)
+        if (profile.Ladder?.Mode != LadderMode.Auto || media.VideoStreams.Count == 0)
             return profile;
 
-        if (profile.VideoOutputs.Length != 1)
+        if (profile.Video is null)
         {
             logger.LogWarning(
-                "AutoLadder requires exactly one reference VideoOutput; profile has {Count}. "
-                    + "Falling back to manual variants.",
-                profile.VideoOutputs.Length
+                "AutoLadder requires a reference Video output; profile has none. "
+                    + "Falling back to no video outputs."
             );
             return profile;
         }
 
-        VideoOutput[] ladder = abrLadderGenerator.Generate(media, profile.VideoOutputs[0]);
+        VideoOutput[] ladder = abrLadderGenerator.Generate(media, profile.Video);
         if (ladder.Length == 0)
             return profile;
 
@@ -685,7 +666,27 @@ public class PlanStage(
             ladder.Length,
             media.FilePath
         );
-        return profile with { VideoOutputs = ladder };
+
+        LadderRung[] rungs = ladder
+            .Select(v => new LadderRung(
+                Width: v.Width,
+                Height: v.Height ?? 0,
+                Codec: v.Codec,
+                BitrateKbps: v.BitrateKbps,
+                MaxBitrateKbps: v.MaxBitrateKbps ?? 0,
+                BufferSizeKbps: v.BufferSizeKbps ?? 0,
+                Framerate: 0,
+                Preset: v.Preset,
+                CodecProfile: v.CodecProfile,
+                BitDepth: v.BitDepth,
+                PixelFormat: v.PixelFormat
+            ))
+            .ToArray();
+
+        return profile with
+        {
+            Ladder = new LadderConfig { Mode = LadderMode.Manual, Rungs = rungs },
+        };
     }
 
     /// <summary>
@@ -738,12 +739,20 @@ public class PlanStage(
             _ => null,
         };
 
-    private static SubtitlePolicy MapToV2Policy(SubtitleMode mode) =>
-        mode switch
+    private static LegacyDrmConfig? ConvertDrmConfig(DrmConfig? v2Drm)
+    {
+        if (v2Drm is null)
+            return null;
+
+        LegacyDrmMethod method = v2Drm.Scheme.ToLowerInvariant() switch
         {
-            SubtitleMode.Extract => SubtitlePolicy.Extract,
-            SubtitleMode.BurnIn => SubtitlePolicy.BurnIn,
-            SubtitleMode.PassThrough => SubtitlePolicy.Copy,
-            _ => SubtitlePolicy.Extract,
+            "aes128" or "aes-128" => LegacyDrmMethod.Aes128,
+            "cenc" => LegacyDrmMethod.Cenc,
+            _ => LegacyDrmMethod.None,
         };
+
+        string keyUri = v2Drm.Parameters?.GetValueOrDefault("key_uri") ?? string.Empty;
+
+        return new LegacyDrmConfig(Method: method, KeyUri: keyUri);
+    }
 }

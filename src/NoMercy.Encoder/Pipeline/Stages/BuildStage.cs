@@ -7,10 +7,10 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
-using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
+using DrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 

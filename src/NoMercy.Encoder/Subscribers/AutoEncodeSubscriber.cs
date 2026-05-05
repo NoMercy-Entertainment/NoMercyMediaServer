@@ -5,7 +5,7 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Storage;

@@ -1,7 +1,6 @@
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Stages;
-using NoMercy.Encoder.Profiles;
-using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
+using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Encoder.Pipeline;
 

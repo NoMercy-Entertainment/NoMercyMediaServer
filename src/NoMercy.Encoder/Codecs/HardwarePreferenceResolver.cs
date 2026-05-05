@@ -1,7 +1,7 @@
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Encoder.Codecs;
 

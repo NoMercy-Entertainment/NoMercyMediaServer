@@ -2,8 +2,10 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
+using EncodeMode = NoMercy.Encoder.Codecs.EncodeMode;
 
 namespace NoMercy.Encoder.Strategies;
 
@@ -118,7 +120,8 @@ public abstract class TwoPassStrategyBase(
     )
     {
         string statsFilePath = ResolveStatsFilePath(request, stor);
-        int variantCount = Math.Max(1, request.Profile.VideoOutputs.Length);
+        VideoOutput[] profileVideoOutputs = PlanStageHelpers.EnumerateVideo(request.Profile);
+        int variantCount = Math.Max(1, profileVideoOutputs.Length);
 
         JobCheckpoint? checkpoint = await checkpointStore.LoadAsync(request.OutputDirectory, ct);
         bool pass1AlreadyDone =

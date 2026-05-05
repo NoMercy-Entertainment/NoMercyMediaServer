@@ -1,10 +1,11 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Storage;
@@ -39,21 +40,25 @@ public class EncodingOrchestrator(
 
         if (nvencCap is not null && wantsGpu)
         {
-            string gpuName = request.Profile.Name ?? request.Profile.Format.ToString();
+            string gpuName = request.Profile.Name ?? request.Profile.Container.ToString();
 
             nvencCap.EnforceForGpuEncode(gpuName, requiresGpu: true);
         }
 
+        OutputFormat profileFormat = PlanStageHelpers.ContainerToOutputFormat(
+            request.Profile.Container
+        );
+
         IEncodingStrategy? strategy = resolver.Resolve(
-            request.Profile.Format,
-            request.Profile.EncodeMode
+            profileFormat,
+            (NoMercy.Encoder.Codecs.EncodeMode)(int)request.Profile.EncodeMode
         );
 
         if (strategy is null)
         {
             EncodingError error = new(
                 Kind: EncodingErrorKind.Unknown,
-                Message: $"No strategy registered for {request.Profile.Format} / "
+                Message: $"No strategy registered for {profileFormat} / "
                     + $"{request.Profile.EncodeMode}. Register an IEncodingStrategy implementation "
                     + "for this combination.",
                 FfmpegStderr: null,

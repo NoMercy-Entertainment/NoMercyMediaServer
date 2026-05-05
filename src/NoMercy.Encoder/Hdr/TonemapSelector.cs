@@ -2,10 +2,9 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
 using NoMercy.Storage.Validation;
+using ProfileHdrOptions = NoMercy.Encoder.Profiles.V2.HdrOptions;
 
 namespace NoMercy.Encoder.Hdr;
-
-using ProfileHdrOptions = Profiles.HdrOptions;
 
 public class TonemapSelector : ITonemapSelector
 {
@@ -54,7 +53,7 @@ public class TonemapSelector : ITonemapSelector
     )
     {
         // --- Algorithm resolution -------------------------------------------
-        string rawAlgorithm = options?.TonemapAlgorithm ?? profileTonemapAlgorithm ?? "hable";
+        string rawAlgorithm = options?.Algorithm ?? profileTonemapAlgorithm ?? "hable";
 
         string algorithm;
         if (KnownAlgorithms.Contains(rawAlgorithm))
@@ -75,7 +74,7 @@ public class TonemapSelector : ITonemapSelector
         }
 
         // --- Peak nits -------------------------------------------------------
-        int peakNits = options?.TonemapPeakNits ?? 100;
+        int peakNits = options?.PeakNits ?? 100;
 
         // --- LUT path --------------------------------------------------------
         string? lutPath = options?.LutPath;

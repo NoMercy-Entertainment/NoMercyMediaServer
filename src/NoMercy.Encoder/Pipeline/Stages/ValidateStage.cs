@@ -1,13 +1,13 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 
 public record ValidateInput(MediaInfo Media, EncodingProfile Profile);
 
-public class ValidateStage(IProfileValidator validator, ILogger<ValidateStage> logger)
+public class ValidateStage(ILogger<ValidateStage> logger)
     : IPipelineStage<ValidateInput, ValidateInput>,
         IValidationStage
 {
@@ -25,16 +25,11 @@ public class ValidateStage(IProfileValidator validator, ILogger<ValidateStage> l
             input.Profile.Name
         );
 
-        ValidationResult result = validator.Validate(input.Profile);
+        ProfileValidationResult result = ProfileValidator.Validate(input.Profile);
 
         if (!result.IsValid)
         {
-            string errors = string.Join(
-                "; ",
-                result
-                    .Errors.Where(e => e.Severity == ValidationSeverity.Error)
-                    .Select(e => e.Message)
-            );
+            string errors = string.Join("; ", result.Errors);
 
             return Task.FromResult<StageResult>(
                 new StageFailure(
@@ -49,15 +44,11 @@ public class ValidateStage(IProfileValidator validator, ILogger<ValidateStage> l
             );
         }
 
-        foreach (
-            ValidationError warning in result.Errors.Where(e =>
-                e.Severity == ValidationSeverity.Warning
-            )
-        )
+        foreach (string warning in result.Warnings)
             logger.LogWarning(
                 "[{CorrelationId}] Validation warning: {Message}",
                 context.CorrelationId,
-                warning.Message
+                warning
             );
 
         return Task.FromResult<StageResult>(new StageSuccess<ValidateInput>(input));
