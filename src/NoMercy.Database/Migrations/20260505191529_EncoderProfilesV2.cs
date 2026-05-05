@@ -17,7 +17,10 @@ namespace NoMercy.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(name: "IX_VideoFiles_Filename", table: "VideoFiles");
+            // Drift-tolerant: IX_VideoFiles_Filename may not exist on every dev DB
+            // (prior migration history is inconsistent across machines). DropIndex
+            // crashes the runtime if absent; raw SQL with IF EXISTS is safe.
+            migrationBuilder.Sql("DROP INDEX IF EXISTS \"IX_VideoFiles_Filename\";");
 
             migrationBuilder.AddColumn<string>(
                 name: "Source",
@@ -59,11 +62,9 @@ namespace NoMercy.Database.Migrations
                 }
             );
 
-            migrationBuilder.CreateIndex(
-                name: "IX_VideoFiles_Filename_HostFolder",
-                table: "VideoFiles",
-                columns: new[] { "Filename", "HostFolder" },
-                unique: true
+            // Drift-tolerant create: idempotent if a previous run partially applied.
+            migrationBuilder.Sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_VideoFiles_Filename_HostFolder\" ON \"VideoFiles\" (\"Filename\", \"HostFolder\");"
             );
 
             migrationBuilder.CreateIndex(
@@ -113,10 +114,7 @@ namespace NoMercy.Database.Migrations
         {
             migrationBuilder.DropTable(name: "EncodingPresetFolders");
 
-            migrationBuilder.DropIndex(
-                name: "IX_VideoFiles_Filename_HostFolder",
-                table: "VideoFiles"
-            );
+            migrationBuilder.Sql("DROP INDEX IF EXISTS \"IX_VideoFiles_Filename_HostFolder\";");
 
             migrationBuilder.DropIndex(
                 name: "IX_EncodingPresets_IsBuiltIn",
@@ -127,11 +125,8 @@ namespace NoMercy.Database.Migrations
 
             migrationBuilder.DropColumn(name: "Source", table: "EncodingPresets");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_VideoFiles_Filename",
-                table: "VideoFiles",
-                column: "Filename",
-                unique: true
+            migrationBuilder.Sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_VideoFiles_Filename\" ON \"VideoFiles\" (\"Filename\");"
             );
         }
     }
