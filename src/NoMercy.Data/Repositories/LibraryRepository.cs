@@ -72,6 +72,9 @@ public class LibraryRepository(MediaContext context)
             .ForUser(userId)
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
+                    .ThenInclude(f => f.Driver)
+            .Include(library => library.FolderLibraries)
+                .ThenInclude(fl => fl.Folder)
                     .ThenInclude(f => f.EncoderProfileFolder)
                         .ThenInclude(epf => epf.EncoderProfile)
             .Include(library => library.LanguageLibraries)
@@ -705,6 +708,7 @@ public class LibraryRepository(MediaContext context)
             .Include(library => library.LanguageLibraries)
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
+                    .ThenInclude(f => f.Driver)
             .Include(library => library.LibraryMovies)
             .Include(library => library.LibraryTvs)
             .FirstOrDefaultAsync(library => library.Id == id);
@@ -716,6 +720,7 @@ public class LibraryRepository(MediaContext context)
             .Libraries.AsNoTracking()
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
+                    .ThenInclude(f => f.Driver)
             .Include(library => library.LibraryMovies)
             .Include(library => library.LibraryTvs)
             .ToListAsync();
@@ -723,7 +728,11 @@ public class LibraryRepository(MediaContext context)
 
     public Task<List<FolderDto>> GetFoldersAsync()
     {
-        return context.Folders.AsNoTracking().Select(f => new FolderDto(f)).ToListAsync();
+        return context
+            .Folders.AsNoTracking()
+            .Include(f => f.Driver)
+            .Select(f => new FolderDto(f))
+            .ToListAsync();
     }
 
     // public Task<Tv?> GetRandomTvShow(Guid userId, string language)
