@@ -18,8 +18,10 @@ namespace NoMercy.Database.Models.Media;
 /// </summary>
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Name))]
+[Index(nameof(IsBuiltIn))]
+[Index(nameof(Source))]
 [Index(nameof(ParentPresetId))]
-public class EncodingPreset
+public class EncodingPreset : Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
@@ -68,9 +70,11 @@ public class EncodingPreset
     [JsonProperty("is_built_in")]
     public bool IsBuiltIn { get; set; }
 
-    [JsonProperty("created_at")]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    [JsonProperty("updated_at")]
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>
+    /// Origin of the preset: "db" for user-created/imported, "file" for
+    /// presets loaded from disk at startup, "community" for remotely fetched.
+    /// </summary>
+    [JsonProperty("source")]
+    [MaxLength(64)]
+    public string Source { get; set; } = "db";
 }
