@@ -156,8 +156,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMediaKeyResolver, MediaKeyResolver>();
         services.AddSingleton<IOutputNamingResolver, OutputNamingResolver>();
 
-        // Metadata injector
+        // Metadata injector and merger
         services.AddSingleton<IMetadataInjector, MetadataInjector>();
+        services.AddSingleton<IMetadataMerger, MetadataMerger>();
 
         // Bundle writers
         services.AddSingleton<IBundleManifestWriter, BundleManifestWriter>();

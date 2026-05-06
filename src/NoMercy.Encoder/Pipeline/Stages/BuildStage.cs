@@ -37,7 +37,8 @@ public class BuildStage(
     IStorage storage,
     AssBurnInFilterBuilder? assBurnInFilterBuilder = null,
     PgsBurnInFilterBuilder? pgsBurnInFilterBuilder = null,
-    IMetadataInjector? metadataInjector = null
+    IMetadataInjector? metadataInjector = null,
+    IMetadataMerger? metadataMerger = null
 ) : IPipelineStage<BuildInput, FfmpegCommand[]>, IBuildStage
 {
     public string Name => "Build";
@@ -262,7 +263,8 @@ public class BuildStage(
             }
 
             FfmpegCommand mainCommand = builder.Build(options.FfmpegPath, input.OutputDirectory);
-            mainCommand = InjectMetadataArgs(mainCommand, context.MediaItem);
+            bool copyMode = IsCopyMode(input.Plan.OutputPlan);
+            mainCommand = InjectMetadataArgs(mainCommand, context.MediaItem, context, copyMode);
 
             logger.LogInformation(
                 "[{CorrelationId}] FFmpeg command: {Executable} {Args}",
@@ -844,13 +846,25 @@ public class BuildStage(
     /// args from <paramref name="mediaItem"/> into <paramref name="command"/>
     /// just before the last argument (output filename). When no injector is
     /// configured or the media item is null, the command is returned unchanged.
+    ///
+    /// For copy-mode encodes (<paramref name="isCopyMode"/> true), MetadataMerger
+    /// is called first to apply field-level source-vs-DB precedence rules.
+    /// For transcode encodes source metadata is discarded and DB tracks are used
+    /// directly (streams are re-encoded from scratch, so source tags don't survive).
     /// </summary>
-    private FfmpegCommand InjectMetadataArgs(FfmpegCommand command, MediaItemRef? mediaItem)
+    private FfmpegCommand InjectMetadataArgs(
+        FfmpegCommand command,
+        MediaItemRef? mediaItem,
+        EncodingContext context,
+        bool isCopyMode
+    )
     {
         if (metadataInjector is null || mediaItem is null)
             return command;
 
-        MetadataInjectionContext ctx = new(Media: mediaItem, Tracks: [], AttachmentPaths: []);
+        IReadOnlyList<TrackMetadata> tracks = ResolveTracksForInjection(context, isCopyMode);
+
+        MetadataInjectionContext ctx = new(Media: mediaItem, Tracks: tracks, AttachmentPaths: []);
 
         IReadOnlyList<string> metaArgs = metadataInjector.BuildArgs(ctx);
         if (metaArgs.Count == 0)
@@ -869,5 +883,51 @@ public class BuildStage(
         {
             Arguments = updated,
         };
+    }
+
+    /// <summary>
+    /// Resolves the track list to pass to MetadataInjector.
+    /// When <paramref name="isCopyMode"/> is true and both SourceTracks and
+    /// DbTracks are present on the context, MetadataMerger applies field-level
+    /// precedence rules. Otherwise DB tracks (or an empty list) are used.
+    /// </summary>
+    private IReadOnlyList<TrackMetadata> ResolveTracksForInjection(
+        EncodingContext context,
+        bool isCopyMode
+    )
+    {
+        IReadOnlyList<TrackMetadata> dbTracks = context.DbTracks ?? [];
+
+        if (
+            !isCopyMode
+            || metadataMerger is null
+            || context.SourceTracks is null
+            || context.SourceTracks.Count == 0
+        )
+            return dbTracks;
+
+        return metadataMerger.Merge(context.SourceTracks, dbTracks);
+    }
+
+    /// <summary>
+    /// Returns true when any video output uses the "copy" pseudo-encoder or
+    /// any audio output uses <see cref="StreamAction.Copy"/>, meaning source
+    /// streams are passed byte-for-byte without re-encoding.
+    /// </summary>
+    internal static bool IsCopyMode(OutputPlan plan)
+    {
+        foreach (VideoOutputPlan v in plan.VideoOutputs)
+        {
+            if (string.Equals(v.EncoderName, "copy", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        foreach (AudioOutputPlan a in plan.AudioOutputs)
+        {
+            if (a.Action == StreamAction.Copy)
+                return true;
+        }
+
+        return false;
     }
 }

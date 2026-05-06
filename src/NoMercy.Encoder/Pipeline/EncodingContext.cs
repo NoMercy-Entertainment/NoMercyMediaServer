@@ -1,4 +1,5 @@
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
 using NoMercy.Storage;
 
@@ -30,7 +31,19 @@ public record EncodingContext(
     IDecisionLogSink? Decisions = null,
     IStorage? SourceStorage = null,
     IStorage? DestinationStorage = null,
-    MediaItemRef? MediaItem = null
+    MediaItemRef? MediaItem = null,
+    /// <summary>
+    /// Source-file stream metadata for copy-mode encodes. Populated by the
+    /// caller (typically the job that dispatches the encode) from the
+    /// MediaInfo stream objects. When null the merger falls back to DB-only.
+    /// </summary>
+    IReadOnlyList<SourceTrackMetadata>? SourceTracks = null,
+    /// <summary>
+    /// DB-side per-stream metadata rows. When set and SourceTracks is also set
+    /// and the encode is copy-mode, BuildStage runs MetadataMerger before
+    /// passing the result to MetadataInjector.
+    /// </summary>
+    IReadOnlyList<TrackMetadata>? DbTracks = null
 )
 {
     /// <summary>
