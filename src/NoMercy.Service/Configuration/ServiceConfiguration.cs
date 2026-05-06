@@ -377,7 +377,7 @@ public static class ServiceConfiguration
 
         // Add Singleton Services
         services.AddSingleton<AppProcessManager>();
-        services.AddSingleton<ResourceMonitor>();
+        services.AddSingleton<NoMercy.Helpers.Monitoring.ResourceMonitor>();
 
         // Network discovery (replaces static Networking.Networking IP/address members)
         services.AddSingleton<INetworkDiscovery>(sp =>

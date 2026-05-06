@@ -30,8 +30,19 @@ public sealed class LocalStorageDriver : IStorageDriver
             ? Directory.GetLastAccessTimeUtc(path)
             : File.GetLastAccessTimeUtc(path);
 
+    // FileShare.ReadWrite | FileShare.Delete is critical on Windows. Default
+    // FileShare.Read blocks concurrent writes/deletes for the stream's entire
+    // lifetime — long ExoPlayer Range reads keep this open for hours, which
+    // would block encoder output, library reorg, replace-on-merge, etc.
     public Stream OpenRead(string path) =>
-        new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
+        new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete,
+            bufferSize: 64 * 1024,
+            useAsync: true
+        );
 
     public Stream OpenWrite(string path, bool overwrite) =>
         new FileStream(

@@ -102,9 +102,29 @@ public static class LibrariesSeed
         }
 
         // Register seeded folders with the middleware so they can serve files
-        // over HTTP. Per-request resolution through IStorageFactory.
+        // over HTTP. Per-request resolution through IStorageFactory. Wrap each
+        // registration so a single bad row doesn't silently drop folders or
+        // crash boot.
         foreach (Folder folder in folders)
-            DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
+        {
+            try
+            {
+                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
+            }
+            catch (Exception ex)
+                when (ex
+                        is DirectoryNotFoundException
+                            or IOException
+                            or UnauthorizedAccessException
+                            or ArgumentException
+                )
+            {
+                Logger.Setup(
+                    $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+        }
 
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);
 

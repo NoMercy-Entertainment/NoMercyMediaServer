@@ -45,9 +45,29 @@ public static class FolderRootsSeed
 
         // Register seeded folders with the middleware so they can serve files
         // over HTTP. The middleware resolves the actual backend per-request
-        // via IStorageFactory using DriverId + sub-path.
+        // via IStorageFactory using DriverId + sub-path. Wrap each registration
+        // so a single bad row (empty path, unreachable mount) doesn't take down
+        // the whole boot path silently.
         foreach (Folder folder in folders)
-            DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
+        {
+            try
+            {
+                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
+            }
+            catch (Exception ex)
+                when (ex
+                        is DirectoryNotFoundException
+                            or IOException
+                            or UnauthorizedAccessException
+                            or ArgumentException
+                )
+            {
+                Logger.Setup(
+                    $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+        }
 
         await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);
     }

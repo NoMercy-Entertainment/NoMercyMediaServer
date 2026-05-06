@@ -311,12 +311,19 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         int bytesRead;
         long bytesToRead = length;
 
-        while (
-            (bytesRead = fs.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead))) > 0
-            && bytesToRead > 0
-        )
+        while (bytesToRead > 0)
         {
-            await context.Response.Body.WriteAsync(buffer, 0, bytesRead);
+            bytesRead = await fs.ReadAsync(
+                buffer.AsMemory(0, (int)Math.Min(buffer.Length, bytesToRead)),
+                context.RequestAborted
+            );
+            if (bytesRead == 0)
+                break;
+
+            await context.Response.Body.WriteAsync(
+                buffer.AsMemory(0, bytesRead),
+                context.RequestAborted
+            );
             bytesToRead -= bytesRead;
         }
     }

@@ -288,14 +288,33 @@ public class TvShowRepository(MediaContext context)
         // throws on the first dependent row (seasons, episodes, video files,
         // userdata, etc.) and the controller returns 500. Mirrors the same
         // workaround applied in MovieRepository / CollectionRepository.
-        await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF", ct);
+        //
+        // PRAGMA foreign_keys is per-connection in SQLite. EF Core's
+        // ExecuteSqlRawAsync and ExecuteDeleteAsync each open and close a pooled
+        // connection by default — PRAGMA OFF on connection A doesn't apply to
+        // the DELETE on connection B. Pin one connection across all three calls.
+        bool ownsConnection =
+            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
+
+        if (ownsConnection)
+            await context.Database.OpenConnectionAsync(ct);
+
         try
         {
-            await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync(ct);
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF", ct);
+            try
+            {
+                await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync(ct);
+            }
+            finally
+            {
+                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON", ct);
+            }
         }
         finally
         {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON", ct);
+            if (ownsConnection)
+                await context.Database.CloseConnectionAsync();
         }
     }
 
