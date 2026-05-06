@@ -574,6 +574,7 @@ public static class ServiceConfiguration
         services.AddHostedService<IntroDetectionSubscriber>();
 
         services.AddPluginSystem(AppFiles.PluginsPath);
+        services.RegisterPluginServicesFromManifests(AppFiles.PluginsPath);
 
         services.AddVideoHubServices();
         services.AddMusicHubServices();
