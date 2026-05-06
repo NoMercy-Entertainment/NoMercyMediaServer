@@ -9,6 +9,9 @@ using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Tests.Encoder.Storage;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using V2EncodeMode = NoMercy.Encoder.Profiles.V2.EncodeMode;
 
 namespace NoMercy.Tests.Encoder.Strategies;
 
@@ -185,6 +188,16 @@ public class TwoPassStrategySiblingsTests : IDisposable
             _ => throw new ArgumentException($"No 2-pass sibling for {format}"),
         };
 
+    private static Container ToContainer(OutputFormat format) =>
+        format switch
+        {
+            OutputFormat.Hls => Container.HlsTs,
+            OutputFormat.Dash => Container.Dash,
+            OutputFormat.Mp4 => Container.Mp4,
+            OutputFormat.Mkv => Container.Mkv,
+            _ => Container.HlsTs,
+        };
+
     private EncodingRequest BuildRequest(OutputFormat format) =>
         new(
             InputPath: "/media/src.mkv",
@@ -192,11 +205,11 @@ public class TwoPassStrategySiblingsTests : IDisposable
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: $"{format} 2-pass",
-                Format: format,
-                VideoOutputs: [],
-                AudioOutputs: [],
-                SubtitleOutputs: [],
-                EncodeMode: EncodeMode.TwoPass
+                Container: ToContainer(format),
+                Video: null,
+                Audio: [],
+                Subtitles: [],
+                EncodeMode: V2EncodeMode.TwoPass
             )
         );
 }

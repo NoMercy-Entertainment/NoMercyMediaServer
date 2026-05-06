@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Analysis;
-using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
@@ -9,7 +8,17 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
-using NoMercy.Encoder.Profiles;
+using AudioOutput = NoMercy.Encoder.Profiles.V2.AudioOutput;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using DownmixConfig = NoMercy.Encoder.Profiles.V2.DownmixConfig;
+using DownmixMode = NoMercy.Encoder.Profiles.V2.DownmixMode;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using LoudnessConfig = NoMercy.Encoder.Profiles.V2.LoudnessConfig;
+using LoudnessMode = NoMercy.Encoder.Profiles.V2.LoudnessMode;
+using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
+using V2RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
@@ -235,35 +244,44 @@ public class PlanStageDownmixTests
         new(
             Id: Ulid.NewUlid(),
             Name: "Downmix Test",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
+            ),
+            Audio:
             [
                 new(
-                    Codec: VideoCodecType.H264,
-                    Width: 1920,
-                    Height: 1080,
-                    BitrateKbps: 4000,
-                    Crf: 23,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.1",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-            ],
-            AudioOutputs:
-            [
-                new(
+                    Policy: StreamPolicy.Transcode,
                     Codec: AudioCodecType.Aac,
                     BitrateKbps: 192,
                     Channels: 2,
                     SampleRateHz: 48000,
                     AllowedLanguages: [],
-                    Loudness: loudness,
-                    Downmix: downmix
+                    DefaultLanguage: null,
+                    Loudness: loudness == LoudnessMode.None ? null : new LoudnessConfig(loudness),
+                    Downmix: downmix == DownmixMode.Auto ? null : new DownmixConfig(downmix),
+                    SegmentNameTemplate: "audio/{lang}-{codec}",
+                    PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),
             ],
-            SubtitleOutputs: []
+            Subtitles: []
         );
 }

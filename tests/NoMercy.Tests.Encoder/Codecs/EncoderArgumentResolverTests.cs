@@ -1,6 +1,9 @@
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
-using NoMercy.Encoder.Profiles;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
+using V2RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Codecs;
 
@@ -280,16 +283,24 @@ public class EncoderArgumentResolverTests
 
     private static VideoOutput MakeVideoOutput(int width, int? height = null) =>
         new(
+            Policy: StreamPolicy.Transcode,
             Codec: VideoCodecType.H264,
             Width: width,
             Height: height,
-            BitrateKbps: 4000,
+            RateControl: V2RateControlMode.Crf,
             Crf: 22,
+            BitrateKbps: 4000,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
             Preset: "medium",
-            Profile: "high",
+            CodecProfile: CodecProfile.High,
             Level: null,
-            ConvertHdrToSdr: false,
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: null,
             KeyframeIntervalSeconds: 2,
-            TenBit: false
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
 }

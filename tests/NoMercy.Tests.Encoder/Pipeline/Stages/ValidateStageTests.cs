@@ -1,24 +1,23 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
-using NoMercy.Encoder.Profiles;
+using AudioOutput = NoMercy.Encoder.Profiles.V2.AudioOutput;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
+using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
 public class ValidateStageTests
 {
-    private readonly Mock<IProfileValidator> _validator = new();
-    private readonly ValidateStage _stage;
+    private readonly ValidateStage _stage = new(NullLogger<ValidateStage>.Instance);
     private readonly EncodingContext _context = EncodingContext.Create();
-
-    public ValidateStageTests()
-    {
-        _stage = new(_validator.Object, NullLogger<ValidateStage>.Instance);
-    }
 
     private static MediaInfo BuildMediaInfo() =>
         new(
@@ -49,38 +48,74 @@ public class ValidateStageTests
             Chapters: []
         );
 
-    private static EncodingProfile BuildProfile() =>
+    private static EncodingProfile BuildValidProfile() =>
         new(
             Id: Ulid.NewUlid(),
             Name: "Test",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
             [
                 new(
-                    Codec: VideoCodecType.H264,
-                    Width: 1920,
-                    Height: 1080,
-                    BitrateKbps: 4000,
-                    Crf: 23,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.1",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-            ],
-            AudioOutputs:
-            [
-                new(
+                    Policy: StreamPolicy.Transcode,
                     Codec: AudioCodecType.Aac,
                     BitrateKbps: 192,
                     Channels: 2,
                     SampleRateHz: 48000,
-                    AllowedLanguages: ["en"]
+                    AllowedLanguages: ["en"],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            SubtitleOutputs: []
+            Subtitles: []
+        );
+
+    private static EncodingProfile BuildInvalidProfile() =>
+        new(
+            Id: Ulid.NewUlid(),
+            Name: "Invalid",
+            Container: Container.HlsTs,
+            Video: null,
+            Audio:
+            [
+                new(
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 0,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
+                ),
+            ],
+            Subtitles: []
         );
 
     // ------------------------------------------------------------------
@@ -90,11 +125,9 @@ public class ValidateStageTests
     [Fact]
     public async Task ValidProfile_ReturnsSuccess_WithPassthrough()
     {
-        EncodingProfile profile = BuildProfile();
+        EncodingProfile profile = BuildValidProfile();
         MediaInfo media = BuildMediaInfo();
         ValidateInput input = new(media, profile);
-
-        _validator.Setup(v => v.Validate(profile)).Returns(ValidationResult.Success());
 
         StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
@@ -105,25 +138,15 @@ public class ValidateStageTests
     }
 
     // ------------------------------------------------------------------
-    // Invalid profile (has error) → ProfileInvalid failure
+    // Invalid profile (audio BitrateKbps = 0) → ProfileInvalid failure
     // ------------------------------------------------------------------
 
     [Fact]
     public async Task InvalidProfile_WithErrors_ReturnsProfileInvalidFailure()
     {
-        EncodingProfile profile = BuildProfile();
+        EncodingProfile profile = BuildInvalidProfile();
         MediaInfo media = BuildMediaInfo();
         ValidateInput input = new(media, profile);
-
-        ValidationResult validationResult = new(
-            false,
-            [
-                new("Name", "Name is required", ValidationSeverity.Error),
-                new("VideoOutput[0].Width", "Width must be positive", ValidationSeverity.Error),
-            ]
-        );
-
-        _validator.Setup(v => v.Validate(profile)).Returns(validationResult);
 
         StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
@@ -131,26 +154,26 @@ public class ValidateStageTests
         StageFailure failure = (StageFailure)result;
         failure.Error.Kind.Should().Be(EncodingErrorKind.ProfileInvalid);
         failure.Error.StageName.Should().Be("Validate");
-        failure.Error.Message.Should().Contain("Name is required");
+        failure.Error.Message.Should().Contain("BitrateKbps");
     }
 
     // ------------------------------------------------------------------
-    // Profile with only warnings → still success
+    // Profile with no audio/video → still valid (nothing to validate)
     // ------------------------------------------------------------------
 
     [Fact]
-    public async Task ProfileWithWarningsOnly_ReturnsSuccess()
+    public async Task ProfileWithNoOutputs_ReturnsSuccess()
     {
-        EncodingProfile profile = BuildProfile();
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "Empty",
+            Container: Container.HlsTs,
+            Video: null,
+            Audio: [],
+            Subtitles: []
+        );
         MediaInfo media = BuildMediaInfo();
         ValidateInput input = new(media, profile);
-
-        ValidationResult validationResult = new(
-            true,
-            [new("VideoOutput[0].Codec", "VP9 in MP4 is non-standard", ValidationSeverity.Warning)]
-        );
-
-        _validator.Setup(v => v.Validate(profile)).Returns(validationResult);
 
         StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
@@ -158,33 +181,47 @@ public class ValidateStageTests
     }
 
     // ------------------------------------------------------------------
-    // Mixed errors and warnings → fails on error
+    // Profile with incompatible codec → ProfileInvalid failure
     // ------------------------------------------------------------------
 
     [Fact]
-    public async Task ProfileWithErrorsAndWarnings_ReturnsFailure()
+    public async Task ProfileWithIncompatibleCodec_ReturnsFailure()
     {
-        EncodingProfile profile = BuildProfile();
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "Bad Codec",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H265,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.Main,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio: [],
+            Subtitles: []
+        );
         MediaInfo media = BuildMediaInfo();
         ValidateInput input = new(media, profile);
-
-        ValidationResult validationResult = new(
-            false,
-            [
-                new("Name", "Name is required", ValidationSeverity.Error),
-                new("VideoOutput[0].Codec", "Non-standard combination", ValidationSeverity.Warning),
-            ]
-        );
-
-        _validator.Setup(v => v.Validate(profile)).Returns(validationResult);
 
         StageResult result = await _stage.ExecuteAsync(input, _context, default);
 
         result.Should().BeOfType<StageFailure>();
         StageFailure failure = (StageFailure)result;
         failure.Error.Kind.Should().Be(EncodingErrorKind.ProfileInvalid);
-        // Only the error message should appear, not the warning
-        failure.Error.Message.Should().Contain("Name is required");
-        failure.Error.Message.Should().NotContain("Non-standard");
     }
 }

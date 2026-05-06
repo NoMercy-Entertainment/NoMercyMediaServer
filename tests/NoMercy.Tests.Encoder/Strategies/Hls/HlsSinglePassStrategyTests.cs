@@ -3,6 +3,8 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Strategies.Hls;
 
@@ -54,10 +56,10 @@ public class HlsSinglePassStrategyTests
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "HLS 1080p",
-                Format: OutputFormat.Hls,
-                VideoOutputs: [],
-                AudioOutputs: [],
-                SubtitleOutputs: []
+                Container: Container.HlsTs,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 

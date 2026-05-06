@@ -3,6 +3,8 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Audio;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Strategies.Audio;
 
@@ -54,10 +56,10 @@ public class AudioHlsStrategyTests
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Audio HLS",
-                Format: OutputFormat.AudioHls,
-                VideoOutputs: [],
-                AudioOutputs: [],
-                SubtitleOutputs: []
+                Container: Container.AudioHlsFmp4,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 
@@ -111,10 +113,10 @@ public class AudioHlsStrategyTests
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Audio HLS from FLAC",
-                Format: OutputFormat.AudioHls,
-                VideoOutputs: [],
-                AudioOutputs: [],
-                SubtitleOutputs: []
+                Container: Container.AudioHlsFmp4,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 

@@ -7,6 +7,9 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Storage;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using V2EncodeMode = NoMercy.Encoder.Profiles.V2.EncodeMode;
 
 namespace NoMercy.Tests.Encoder.Orchestration;
 
@@ -121,6 +124,19 @@ public class EncodingOrchestratorTests
         );
     }
 
+    private static Container ToContainer(OutputFormat format) =>
+        format switch
+        {
+            OutputFormat.Hls => Container.HlsTs,
+            OutputFormat.Dash => Container.Dash,
+            OutputFormat.Mp4 => Container.Mp4,
+            OutputFormat.Mkv => Container.Mkv,
+            _ => Container.HlsTs,
+        };
+
+    private static V2EncodeMode ToV2EncodeMode(EncodeMode mode) =>
+        mode == EncodeMode.TwoPass ? V2EncodeMode.TwoPass : V2EncodeMode.SinglePass;
+
     private static EncodingRequest BuildRequest(OutputFormat format, EncodeMode mode) =>
         new(
             InputPath: "/media/test.mkv",
@@ -128,11 +144,11 @@ public class EncodingOrchestratorTests
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test",
-                Format: format,
-                VideoOutputs: [],
-                AudioOutputs: [],
-                SubtitleOutputs: [],
-                EncodeMode: mode
+                Container: ToContainer(format),
+                Video: null,
+                Audio: [],
+                Subtitles: [],
+                EncodeMode: ToV2EncodeMode(mode)
             )
         );
 

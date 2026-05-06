@@ -2,6 +2,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+using BitDepthPolicy = NoMercy.Encoder.Profiles.V2.BitDepthPolicy;
 
 namespace NoMercy.Tests.Encoder.Codecs;
 

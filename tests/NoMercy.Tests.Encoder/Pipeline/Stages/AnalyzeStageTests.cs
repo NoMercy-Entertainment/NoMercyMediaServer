@@ -71,7 +71,13 @@ public class AnalyzeStageTests
         MediaInfo expected = BuildMediaInfo();
         _storage.Setup(s => s.Exists("/movies/test.mkv")).Returns(true);
         _analyzer
-            .Setup(a => a.AnalyzeAsync("/movies/test.mkv", It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    "/movies/test.mkv",
+                    It.IsAny<IStorage>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(expected);
 
         StageResult result = await _stage.ExecuteAsync("/movies/test.mkv", _context, default);
@@ -110,7 +116,9 @@ public class AnalyzeStageTests
     {
         _storage.Setup(s => s.Exists("/corrupt.mkv")).Returns(true);
         _analyzer
-            .Setup(a => a.AnalyzeAsync("/corrupt.mkv", It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync("/corrupt.mkv", It.IsAny<IStorage>(), It.IsAny<CancellationToken>())
+            )
             .ThrowsAsync(new InvalidOperationException("ffprobe failed: invalid data"));
 
         StageResult result = await _stage.ExecuteAsync("/corrupt.mkv", _context, default);
@@ -131,7 +139,13 @@ public class AnalyzeStageTests
     {
         _storage.Setup(s => s.Exists("/movies/test.mkv")).Returns(true);
         _analyzer
-            .Setup(a => a.AnalyzeAsync("/movies/test.mkv", It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    "/movies/test.mkv",
+                    It.IsAny<IStorage>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ThrowsAsync(new OperationCanceledException());
 
         CancellationToken ct = new(true);

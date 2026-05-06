@@ -8,7 +8,12 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
-using NoMercy.Encoder.Profiles;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using LadderConfig = NoMercy.Encoder.Profiles.V2.LadderConfig;
+using LadderMode = NoMercy.Encoder.Profiles.V2.LadderMode;
+using LadderRung = NoMercy.Encoder.Profiles.V2.LadderRung;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
@@ -77,7 +82,7 @@ public class PlanStageAutoLadderTests
     {
         EncodingProfile profile = BuildProfile(
             autoLadder: false,
-            videoOutputs: [BuildVideo(1920, 1080), BuildVideo(1280, 720)]
+            rungs: [BuildVideo(1920, 1080), BuildVideo(1280, 720)]
         );
 
         OutputPlan plan = await RunPlan(BuildMedia(1920, 1080), profile);
@@ -90,10 +95,7 @@ public class PlanStageAutoLadderTests
     [Fact]
     public async Task AutoLadder_On_Expand1080pReference_Produces360_480_720_1080()
     {
-        EncodingProfile profile = BuildProfile(
-            autoLadder: true,
-            videoOutputs: [BuildVideo(1920, 1080)]
-        );
+        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(1920, 1080)]);
 
         OutputPlan plan = await RunPlan(BuildMedia(1920, 1080, bitrateKbps: 6000), profile);
 
@@ -107,10 +109,7 @@ public class PlanStageAutoLadderTests
     [Fact]
     public async Task AutoLadder_On_720pSource_SkipsHigherTiers()
     {
-        EncodingProfile profile = BuildProfile(
-            autoLadder: true,
-            videoOutputs: [BuildVideo(1280, 720)]
-        );
+        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(1280, 720)]);
 
         OutputPlan plan = await RunPlan(BuildMedia(1280, 720, bitrateKbps: 3000), profile);
 
@@ -125,7 +124,7 @@ public class PlanStageAutoLadderTests
         // the stage logs a warning and keeps the manual variants.
         EncodingProfile profile = BuildProfile(
             autoLadder: true,
-            videoOutputs: [BuildVideo(1920, 1080), BuildVideo(1280, 720)]
+            rungs: [BuildVideo(1920, 1080), BuildVideo(1280, 720)]
         );
 
         OutputPlan plan = await RunPlan(BuildMedia(1920, 1080), profile);
@@ -136,10 +135,7 @@ public class PlanStageAutoLadderTests
     [Fact]
     public async Task AutoLadder_On_AudioOnlySource_NoExpansion()
     {
-        EncodingProfile profile = BuildProfile(
-            autoLadder: true,
-            videoOutputs: [BuildVideo(1920, 1080)]
-        );
+        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(1920, 1080)]);
 
         // Source has no video streams → auto-ladder passthrough.
         OutputPlan plan = await RunPlan(BuildAudioOnlyMedia(), profile);
@@ -199,29 +195,33 @@ public class PlanStageAutoLadderTests
             Chapters: []
         );
 
-    private static EncodingProfile BuildProfile(bool autoLadder, VideoOutput[] videoOutputs) =>
+    private static EncodingProfile BuildProfile(bool autoLadder, LadderRung[] rungs) =>
         new(
             Id: Ulid.NewUlid(),
             Name: "Test",
-            Format: OutputFormat.Hls,
-            VideoOutputs: videoOutputs,
-            AudioOutputs: [],
-            SubtitleOutputs: [],
-            AutoLadder: autoLadder
+            Container: Container.HlsTs,
+            Video: null,
+            Audio: [],
+            Subtitles: [],
+            Ladder: new LadderConfig
+            {
+                Mode = autoLadder ? LadderMode.Auto : LadderMode.Manual,
+                Rungs = rungs,
+            }
         );
 
-    private static VideoOutput BuildVideo(int width, int height) =>
+    private static LadderRung BuildVideo(int width, int height) =>
         new(
-            Codec: VideoCodecType.H264,
             Width: width,
             Height: height,
+            Codec: VideoCodecType.H264,
             BitrateKbps: 4000,
-            Crf: 23,
+            MaxBitrateKbps: 6000,
+            BufferSizeKbps: 8000,
+            Framerate: 24.0,
             Preset: "medium",
-            Profile: "high",
-            Level: "4.1",
-            ConvertHdrToSdr: false,
-            KeyframeIntervalSeconds: 2,
-            TenBit: false
+            CodecProfile: CodecProfile.High,
+            BitDepth: 8,
+            PixelFormat: "yuv420p"
         );
 }

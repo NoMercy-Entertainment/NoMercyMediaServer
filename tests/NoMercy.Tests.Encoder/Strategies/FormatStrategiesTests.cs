@@ -6,6 +6,8 @@ using NoMercy.Encoder.Strategies;
 using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Mkv;
 using NoMercy.Encoder.Strategies.Mp4;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Strategies;
 
@@ -89,10 +91,10 @@ public class FormatStrategiesTests
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test",
-                Format: OutputFormat.Hls,
-                VideoOutputs: [],
-                AudioOutputs: [],
-                SubtitleOutputs: []
+                Container: Container.HlsTs,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 }

@@ -1,7 +1,8 @@
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
+using RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
 
 namespace NoMercy.Tests.Encoder.BuildingBlocks;
 
@@ -160,16 +161,24 @@ public class AbrLadderGeneratorTests
 
     private static VideoOutput BuildReference() =>
         new(
+            Policy: StreamPolicy.Transcode,
             Codec: VideoCodecType.H264,
             Width: 1920,
             Height: 1080,
-            BitrateKbps: 4000,
+            RateControl: RateControlMode.Crf,
             Crf: 23,
+            BitrateKbps: 4000,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
             Preset: "medium",
-            Profile: "high",
+            CodecProfile: CodecProfile.High,
             Level: "4.1",
-            ConvertHdrToSdr: false,
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: null,
             KeyframeIntervalSeconds: 2,
-            TenBit: false
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
         );
 }

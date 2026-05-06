@@ -10,6 +10,12 @@ using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Storage;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
+using V2RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Strategies;
 
@@ -97,25 +103,30 @@ public class TwoPassStatsFileTests
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test",
-                Format: OutputFormat.Hls,
-                VideoOutputs:
-                [
-                    new(
-                        Codec: VideoCodecType.H264,
-                        Width: 1920,
-                        Height: null,
-                        BitrateKbps: 0,
-                        Crf: 22,
-                        Preset: "fast",
-                        Profile: null,
-                        Level: null,
-                        ConvertHdrToSdr: false,
-                        KeyframeIntervalSeconds: 2,
-                        TenBit: false
-                    ),
-                ],
-                AudioOutputs: [],
-                SubtitleOutputs: []
+                Container: Container.HlsTs,
+                Video: new(
+                    Policy: StreamPolicy.Transcode,
+                    Codec: VideoCodecType.H264,
+                    Width: 1920,
+                    Height: null,
+                    RateControl: V2RateControlMode.Crf,
+                    Crf: 22,
+                    BitrateKbps: 0,
+                    MaxBitrateKbps: null,
+                    BufferSizeKbps: null,
+                    Preset: "fast",
+                    CodecProfile: CodecProfile.Auto,
+                    Level: null,
+                    Tune: null,
+                    BitDepth: 8,
+                    PixelFormat: null,
+                    KeyframeIntervalSeconds: 2,
+                    ConvertHdrToSdr: false,
+                    SegmentNameTemplate: "video/{label}",
+                    PlaylistNameTemplate: "video/{label}/playlist"
+                ),
+                Audio: [],
+                Subtitles: []
             )
         );
 

@@ -35,7 +35,10 @@ public class TmdbDiscMatcherTests
     public void NormalizeLabel_DoesNotStripDiscMidWord()
     {
         // "Discovery Channel Disc 1" — only the trailing "Disc 1" should go
-        TmdbDiscMatcher.NormalizeLabel("Discovery Channel Disc 1").Should().Be("Discovery Channel");
+        TmdbDiscMatcher
+            .NormalizeLabel("Discovery Channel Disc 1")
+            .Should()
+            .Be("Discovery Channel");
     }
 
     [Fact]

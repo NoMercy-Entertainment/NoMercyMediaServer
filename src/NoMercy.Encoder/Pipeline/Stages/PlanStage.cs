@@ -355,7 +355,8 @@ public class PlanStage(
 
                             // HDR→HDR passthrough: preserve color metadata when source is HDR
                             // and the output keeps 10-bit without tonemapping.
-                            bool preservesHdr = sourceIsHdr && v.BitDepth >= 10 && !v.ConvertHdrToSdr;
+                            bool preservesHdr =
+                                sourceIsHdr && v.BitDepth >= 10 && !v.ConvertHdrToSdr;
                             if (preservesHdr)
                             {
                                 VideoStreamInfo src = media.VideoStreams[0];
@@ -648,16 +649,39 @@ public class PlanStage(
         if (profile.Ladder?.Mode != LadderMode.Auto || media.VideoStreams.Count == 0)
             return profile;
 
-        if (profile.Video is null)
+        LadderRung[] existingRungs = profile.Ladder.Rungs ?? [];
+
+        // Auto + multiple rungs → keep rungs as-is, switch to Manual
+        if (existingRungs.Length > 1)
         {
             logger.LogWarning(
-                "AutoLadder requires a reference Video output; profile has none. "
-                    + "Falling back to no video outputs."
+                "AutoLadder with {Count} rungs: falling back to Manual mode.",
+                existingRungs.Length
+            );
+            return profile with
+            {
+                Ladder = new LadderConfig { Mode = LadderMode.Manual, Rungs = existingRungs },
+            };
+        }
+
+        VideoOutput reference =
+            profile.Video
+            ?? (
+                existingRungs.Length == 1
+                    ? PlanStageHelpers.BuildSyntheticReference(existingRungs[0])
+                    : null
+            );
+
+        if (reference is null)
+        {
+            logger.LogWarning(
+                "AutoLadder requires a reference Video output or at least one rung; "
+                    + "profile has neither. Falling back to no video outputs."
             );
             return profile;
         }
 
-        VideoOutput[] ladder = abrLadderGenerator.Generate(media, profile.Video);
+        VideoOutput[] ladder = abrLadderGenerator.Generate(media, reference);
         if (ladder.Length == 0)
             return profile;
 

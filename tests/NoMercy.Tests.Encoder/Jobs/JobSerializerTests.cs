@@ -2,6 +2,13 @@ using System.Text;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Profiles;
+using AudioOutput = NoMercy.Encoder.Profiles.V2.AudioOutput;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
+using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Jobs;
 
@@ -127,25 +134,45 @@ public class JobSerializerTests
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "test-profile",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 0,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.0",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 0,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
             [
                 new(
-                    VideoCodecType.H264,
-                    1920,
-                    1080,
-                    0,
-                    23,
-                    "medium",
-                    "high",
-                    "4.0",
-                    false,
-                    0,
-                    false
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
-            SubtitleOutputs: [],
+            Subtitles: [],
             Thumbnails: null
         );
 

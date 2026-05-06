@@ -1,15 +1,27 @@
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Startup;
+using AudioOutput = NoMercy.Encoder.Profiles.V2.AudioOutput;
+using BuiltinPresets = NoMercy.Encoder.Profiles.V2.BuiltinPresets;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using LoudnessConfig = NoMercy.Encoder.Profiles.V2.LoudnessConfig;
+using LoudnessMode = NoMercy.Encoder.Profiles.V2.LoudnessMode;
+using RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
+using SubtitleOutput = NoMercy.Encoder.Profiles.V2.SubtitleOutput;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
+using ThumbnailOutput = NoMercy.Encoder.Profiles.V2.ThumbnailOutput;
+using V2EncodeMode = NoMercy.Encoder.Profiles.V2.EncodeMode;
+using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Integration;
 
@@ -122,38 +134,48 @@ public class RealEncodeTests : IAsyncLifetime
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "test-hls-180p",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
-            [
-                new(
-                    Codec: VideoCodecType.H264,
-                    Width: 320,
-                    Height: 180,
-                    BitrateKbps: 200,
-                    Crf: 40,
-                    Preset: "ultrafast",
-                    Profile: "baseline",
-                    Level: "3.0",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-            ],
-            AudioOutputs:
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 320,
+                Height: 180,
+                RateControl: RateControlMode.Crf,
+                Crf: 40,
+                BitrateKbps: 200,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "ultrafast",
+                CodecProfile: CodecProfile.Baseline,
+                Level: "3.0",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
             [
                 // Use Opus — libopus is available in both the bundled FFmpeg and standard builds.
                 // libfdk_aac is only in the bundled build (nomercy-ffmpeg), so tests that
                 // run with system FFmpeg would fail with "Unknown encoder 'libfdk_aac'".
                 new(
+                    Policy: StreamPolicy.Transcode,
                     Codec: AudioCodecType.Opus,
                     BitrateKbps: 64,
                     Channels: 2,
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
-                    Loudness: LoudnessMode.None
+                    DefaultLanguage: null,
+                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            SubtitleOutputs: []
+            Subtitles: []
         );
 
         EncodingRequest request = new(
@@ -200,35 +222,45 @@ public class RealEncodeTests : IAsyncLifetime
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "test-hls-90p-scale",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 160,
+                Height: null,
+                RateControl: RateControlMode.Crf,
+                Crf: 40,
+                BitrateKbps: 100,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "ultrafast",
+                CodecProfile: CodecProfile.Baseline,
+                Level: "3.0",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
             [
                 new(
-                    Codec: VideoCodecType.H264,
-                    Width: 160,
-                    Height: null,
-                    BitrateKbps: 100,
-                    Crf: 40,
-                    Preset: "ultrafast",
-                    Profile: "baseline",
-                    Level: "3.0",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-            ],
-            AudioOutputs:
-            [
-                new(
+                    Policy: StreamPolicy.Transcode,
                     Codec: AudioCodecType.Opus,
                     BitrateKbps: 64,
                     Channels: 2,
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
-                    Loudness: LoudnessMode.None
+                    DefaultLanguage: null,
+                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            SubtitleOutputs: []
+            Subtitles: []
         );
 
         EncodingRequest request = new(
@@ -281,48 +313,54 @@ public class RealEncodeTests : IAsyncLifetime
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "test-hls-multi",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 320,
+                Height: 180,
+                RateControl: RateControlMode.Crf,
+                Crf: 40,
+                BitrateKbps: 200,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "ultrafast",
+                CodecProfile: CodecProfile.Baseline,
+                Level: "3.0",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
             [
                 new(
-                    Codec: VideoCodecType.H264,
-                    Width: 320,
-                    Height: 180,
-                    BitrateKbps: 200,
-                    Crf: 40,
-                    Preset: "ultrafast",
-                    Profile: "baseline",
-                    Level: "3.0",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-                new(
-                    Codec: VideoCodecType.H264,
-                    Width: 160,
-                    Height: null,
-                    BitrateKbps: 100,
-                    Crf: 40,
-                    Preset: "ultrafast",
-                    Profile: "baseline",
-                    Level: "3.0",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-            ],
-            AudioOutputs:
-            [
-                new(
+                    Policy: StreamPolicy.Transcode,
                     Codec: AudioCodecType.Opus,
                     BitrateKbps: 64,
                     Channels: 2,
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
-                    Loudness: LoudnessMode.None
+                    DefaultLanguage: null,
+                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            SubtitleOutputs: []
+            Subtitles: [],
+            Ladder: new NoMercy.Encoder.Profiles.V2.LadderConfig
+            {
+                Mode = NoMercy.Encoder.Profiles.V2.LadderMode.Manual,
+                Rungs =
+                [
+                    new(320, 180, VideoCodecType.H264, 200, 400, 800, 25.0, "ultrafast"),
+                    new(160, 90, VideoCodecType.H264, 100, 200, 400, 25.0, "ultrafast"),
+                ],
+            }
         );
 
         EncodingRequest request = new(
@@ -370,35 +408,45 @@ public class RealEncodeTests : IAsyncLifetime
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "test-hls-160x90-scaling",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 160,
+                Height: 90,
+                RateControl: RateControlMode.Crf,
+                Crf: 40,
+                BitrateKbps: 100,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "ultrafast",
+                CodecProfile: CodecProfile.Baseline,
+                Level: "3.0",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
             [
                 new(
-                    Codec: VideoCodecType.H264,
-                    Width: 160,
-                    Height: 90,
-                    BitrateKbps: 100,
-                    Crf: 40,
-                    Preset: "ultrafast",
-                    Profile: "baseline",
-                    Level: "3.0",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-            ],
-            AudioOutputs:
-            [
-                new(
+                    Policy: StreamPolicy.Transcode,
                     Codec: AudioCodecType.Opus,
                     BitrateKbps: 64,
                     Channels: 2,
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
-                    Loudness: LoudnessMode.None
+                    DefaultLanguage: null,
+                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            SubtitleOutputs: []
+            Subtitles: []
         );
 
         EncodingRequest request = new(
@@ -450,36 +498,46 @@ public class RealEncodeTests : IAsyncLifetime
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "test-hls-twopass-180p",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 320,
+                Height: 180,
+                RateControl: RateControlMode.Crf,
+                Crf: 40,
+                BitrateKbps: 500,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "ultrafast",
+                CodecProfile: CodecProfile.Baseline,
+                Level: "3.0",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
             [
                 new(
-                    Codec: VideoCodecType.H264,
-                    Width: 320,
-                    Height: 180,
-                    BitrateKbps: 500,
-                    Crf: 40,
-                    Preset: "ultrafast",
-                    Profile: "baseline",
-                    Level: "3.0",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-            ],
-            AudioOutputs:
-            [
-                new(
+                    Policy: StreamPolicy.Transcode,
                     Codec: AudioCodecType.Opus,
                     BitrateKbps: 64,
                     Channels: 2,
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
-                    Loudness: LoudnessMode.None
+                    DefaultLanguage: null,
+                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            SubtitleOutputs: [],
-            EncodeMode: EncodeMode.TwoPass
+            Subtitles: [],
+            EncodeMode: V2EncodeMode.TwoPass
         );
 
         EncodingRequest request = new(
@@ -566,8 +624,8 @@ public class RealEncodeTests : IAsyncLifetime
                     $"profile '{profile.Name}' should have a non-empty Name after roundtrip"
                 );
 
-            bool hasAudioOutput = deserialized.AudioOutputs.Length > 0;
-            bool hasVideoOutput = deserialized.VideoOutputs.Length > 0;
+            bool hasAudioOutput = deserialized.Audio.Length > 0;
+            bool hasVideoOutput = deserialized.Video != null || deserialized.Ladder != null;
             (hasAudioOutput || hasVideoOutput)
                 .Should()
                 .BeTrue($"profile '{profile.Name}' should have at least one audio or video output");
@@ -580,57 +638,56 @@ public class RealEncodeTests : IAsyncLifetime
         EncodingProfile original = new(
             Id: Ulid.NewUlid(),
             Name: "roundtrip-test-profile",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.0",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
+            ),
+            Audio:
             [
                 new(
-                    Codec: VideoCodecType.H264,
-                    Width: 1920,
-                    Height: 1080,
-                    BitrateKbps: 4000,
-                    Crf: 23,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.0",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-                new(
-                    Codec: VideoCodecType.H264,
-                    Width: 1280,
-                    Height: 720,
-                    BitrateKbps: 2000,
-                    Crf: 25,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.0",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-            ],
-            AudioOutputs:
-            [
-                new(
+                    Policy: StreamPolicy.Transcode,
                     Codec: AudioCodecType.Opus,
                     BitrateKbps: 128,
                     Channels: 2,
                     SampleRateHz: 48000,
                     AllowedLanguages: ["eng", "und"],
-                    Loudness: LoudnessMode.None
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "audio/{lang}-{codec}",
+                    PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),
             ],
-            SubtitleOutputs:
+            Subtitles:
             [
                 new(
+                    Policy: SubtitlePolicy.Extract,
                     Codec: SubtitleCodecType.WebVtt,
-                    Mode: SubtitleMode.Extract,
-                    AllowedLanguages: ["eng"]
+                    AllowedLanguages: ["eng"],
+                    IncludeForced: true,
+                    OcrLanguage: null,
+                    PlaylistNameTemplate: "subs/{lang}"
                 ),
             ],
-            Thumbnails: new(Width: 320, IntervalSeconds: 10),
-            SchemaVersion: 1
+            Thumbnails: new(Width: 320, IntervalSeconds: 10)
         );
 
         string json = JsonConvert.SerializeObject(original);
@@ -638,24 +695,22 @@ public class RealEncodeTests : IAsyncLifetime
 
         deserialized.Should().NotBeNull();
         deserialized!.Name.Should().Be(original.Name);
-        deserialized.Format.Should().Be(original.Format);
+        deserialized.Container.Should().Be(original.Container);
         deserialized.SchemaVersion.Should().Be(original.SchemaVersion);
 
-        deserialized.VideoOutputs.Should().HaveCount(original.VideoOutputs.Length);
-        deserialized.VideoOutputs[0].Width.Should().Be(1920);
-        deserialized.VideoOutputs[0].Height.Should().Be(1080);
-        deserialized.VideoOutputs[0].Codec.Should().Be(VideoCodecType.H264);
-        deserialized.VideoOutputs[1].Width.Should().Be(1280);
-        deserialized.VideoOutputs[1].Height.Should().Be(720);
+        deserialized.Video.Should().NotBeNull();
+        deserialized.Video!.Width.Should().Be(1920);
+        deserialized.Video.Height.Should().Be(1080);
+        deserialized.Video.Codec.Should().Be(VideoCodecType.H264);
 
-        deserialized.AudioOutputs.Should().HaveCount(original.AudioOutputs.Length);
-        deserialized.AudioOutputs[0].Codec.Should().Be(AudioCodecType.Opus);
-        deserialized.AudioOutputs[0].BitrateKbps.Should().Be(128);
-        deserialized.AudioOutputs[0].AllowedLanguages.Should().BeEquivalentTo("eng", "und");
+        deserialized.Audio.Should().HaveCount(original.Audio.Length);
+        deserialized.Audio[0].Codec.Should().Be(AudioCodecType.Opus);
+        deserialized.Audio[0].BitrateKbps.Should().Be(128);
+        deserialized.Audio[0].AllowedLanguages.Should().BeEquivalentTo("eng", "und");
 
-        deserialized.SubtitleOutputs.Should().HaveCount(original.SubtitleOutputs.Length);
-        deserialized.SubtitleOutputs[0].Codec.Should().Be(SubtitleCodecType.WebVtt);
-        deserialized.SubtitleOutputs[0].Mode.Should().Be(SubtitleMode.Extract);
+        deserialized.Subtitles.Should().HaveCount(original.Subtitles.Length);
+        deserialized.Subtitles[0].Codec.Should().Be(SubtitleCodecType.WebVtt);
+        deserialized.Subtitles[0].Policy.Should().Be(SubtitlePolicy.Extract);
 
         deserialized.Thumbnails.Should().NotBeNull();
         deserialized.Thumbnails!.Width.Should().Be(320);

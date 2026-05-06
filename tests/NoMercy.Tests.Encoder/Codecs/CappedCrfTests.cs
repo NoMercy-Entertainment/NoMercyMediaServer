@@ -10,6 +10,12 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Tests.Encoder.Pipeline.Stages;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
+using V2RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Codecs;
 
@@ -96,33 +102,38 @@ public class CappedCrfTests
         VideoCodecType codec,
         int crf,
         int bitrateKbps,
-        OutputFormat format = OutputFormat.Hls
+        Container container = Container.HlsTs
     ) =>
         new(
+            Media: FakeMediaInfo(),
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test",
-                Format: format,
-                VideoOutputs:
-                [
-                    new(
-                        Codec: codec,
-                        Width: 1920,
-                        Height: null,
-                        BitrateKbps: bitrateKbps,
-                        Crf: crf,
-                        Preset: "fast",
-                        Profile: null,
-                        Level: null,
-                        ConvertHdrToSdr: false,
-                        KeyframeIntervalSeconds: 2,
-                        TenBit: false
-                    ),
-                ],
-                AudioOutputs: [],
-                SubtitleOutputs: []
-            ),
-            Media: FakeMediaInfo()
+                Container: container,
+                Video: new(
+                    Policy: StreamPolicy.Transcode,
+                    Codec: codec,
+                    Width: 1920,
+                    Height: null,
+                    RateControl: V2RateControlMode.Crf,
+                    Crf: crf,
+                    BitrateKbps: bitrateKbps,
+                    MaxBitrateKbps: null,
+                    BufferSizeKbps: null,
+                    Preset: "fast",
+                    CodecProfile: CodecProfile.Auto,
+                    Level: null,
+                    Tune: null,
+                    BitDepth: 8,
+                    PixelFormat: null,
+                    KeyframeIntervalSeconds: 2,
+                    ConvertHdrToSdr: false,
+                    SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                    PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+                ),
+                Audio: [],
+                Subtitles: []
+            )
         );
 
     private static ResolvedCodec SoftwareCodec(

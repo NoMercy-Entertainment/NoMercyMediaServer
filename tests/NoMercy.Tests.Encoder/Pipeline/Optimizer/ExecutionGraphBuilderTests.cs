@@ -2,7 +2,19 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline.Optimizer;
-using NoMercy.Encoder.Profiles;
+using AudioOutput = NoMercy.Encoder.Profiles.V2.AudioOutput;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using LadderConfig = NoMercy.Encoder.Profiles.V2.LadderConfig;
+using LadderMode = NoMercy.Encoder.Profiles.V2.LadderMode;
+using LadderRung = NoMercy.Encoder.Profiles.V2.LadderRung;
+using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
+using SubtitleOutput = NoMercy.Encoder.Profiles.V2.SubtitleOutput;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
+using ThumbnailOutput = NoMercy.Encoder.Profiles.V2.ThumbnailOutput;
+using V2RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Optimizer;
 
@@ -87,27 +99,50 @@ public class ExecutionGraphBuilderTests
 
     private static VideoOutput SingleOutput1080pH264 =>
         new(
+            Policy: StreamPolicy.Transcode,
             Codec: VideoCodecType.H264,
             Width: 1920,
             Height: 1080,
-            BitrateKbps: 4000,
+            RateControl: V2RateControlMode.Crf,
             Crf: 23,
+            BitrateKbps: 4000,
+            MaxBitrateKbps: null,
+            BufferSizeKbps: null,
             Preset: "fast",
-            Profile: null,
+            CodecProfile: CodecProfile.High,
             Level: null,
-            ConvertHdrToSdr: false,
+            Tune: null,
+            BitDepth: 8,
+            PixelFormat: null,
             KeyframeIntervalSeconds: 2,
-            TenBit: false
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: "video/{label}",
+            PlaylistNameTemplate: "video/{label}/playlist"
+        );
+
+    private static AudioOutput DefaultAudioOutput =>
+        new(
+            Policy: StreamPolicy.Transcode,
+            Codec: AudioCodecType.Aac,
+            BitrateKbps: 192,
+            Channels: 2,
+            SampleRateHz: 48000,
+            AllowedLanguages: [],
+            DefaultLanguage: null,
+            Loudness: null,
+            Downmix: null,
+            SegmentNameTemplate: "audio/{lang}-{codec}",
+            PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
         );
 
     private static EncodingProfile SingleOutputProfile =>
         new(
             Id: Ulid.NewUlid(),
             Name: "Test",
-            Format: OutputFormat.Hls,
-            VideoOutputs: [SingleOutput1080pH264],
-            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
-            SubtitleOutputs: []
+            Container: Container.HlsTs,
+            Video: SingleOutput1080pH264,
+            Audio: [DefaultAudioOutput],
+            Subtitles: []
         );
 
     private static EncoderInfo MakeEncoderInfo(string name, bool isHw) =>
@@ -194,53 +229,79 @@ public class ExecutionGraphBuilderTests
     [Fact]
     public void Hdr4KMultiResolution_HasDecodeTonemapSplitScaleEncodeChain()
     {
-        VideoOutput output1080p = new(
-            Codec: VideoCodecType.H265,
-            Width: 1920,
-            Height: 1080,
-            BitrateKbps: 4000,
-            Crf: 22,
-            Preset: "medium",
-            Profile: null,
-            Level: null,
-            ConvertHdrToSdr: true,
-            KeyframeIntervalSeconds: 2,
-            TenBit: false
-        );
-        VideoOutput output720p = new(
-            Codec: VideoCodecType.H265,
-            Width: 1280,
-            Height: 720,
-            BitrateKbps: 2500,
-            Crf: 22,
-            Preset: "medium",
-            Profile: null,
-            Level: null,
-            ConvertHdrToSdr: true,
-            KeyframeIntervalSeconds: 2,
-            TenBit: false
-        );
-        VideoOutput output480p = new(
-            Codec: VideoCodecType.H265,
-            Width: 854,
-            Height: 480,
-            BitrateKbps: 1200,
-            Crf: 22,
-            Preset: "medium",
-            Profile: null,
-            Level: null,
-            ConvertHdrToSdr: true,
-            KeyframeIntervalSeconds: 2,
-            TenBit: false
-        );
-
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "HDR Multi",
-            Format: OutputFormat.Hls,
-            VideoOutputs: [output1080p, output720p, output480p],
-            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
-            SubtitleOutputs: []
+            Container: Container.HlsTs,
+            Video: new VideoOutput(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H265,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 22,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: 6000,
+                BufferSizeKbps: 8000,
+                Preset: "medium",
+                CodecProfile: CodecProfile.Main10,
+                Level: null,
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: true,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
+            ),
+            Audio: [DefaultAudioOutput],
+            Subtitles: [],
+            Ladder: new LadderConfig
+            {
+                Mode = LadderMode.Manual,
+                Rungs =
+                [
+                    new LadderRung(
+                        Width: 1920,
+                        Height: 1080,
+                        Codec: VideoCodecType.H265,
+                        BitrateKbps: 4000,
+                        MaxBitrateKbps: 6000,
+                        BufferSizeKbps: 8000,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.Main10,
+                        BitDepth: 8,
+                        PixelFormat: null
+                    ),
+                    new LadderRung(
+                        Width: 1280,
+                        Height: 720,
+                        Codec: VideoCodecType.H265,
+                        BitrateKbps: 2500,
+                        MaxBitrateKbps: 4000,
+                        BufferSizeKbps: 5000,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.Main10,
+                        BitDepth: 8,
+                        PixelFormat: null
+                    ),
+                    new LadderRung(
+                        Width: 854,
+                        Height: 480,
+                        Codec: VideoCodecType.H265,
+                        BitrateKbps: 1200,
+                        MaxBitrateKbps: 2000,
+                        BufferSizeKbps: 2500,
+                        Framerate: 24.0,
+                        Preset: "medium",
+                        CodecProfile: CodecProfile.Main10,
+                        BitDepth: 8,
+                        PixelFormat: null
+                    ),
+                ],
+            }
         );
 
         ResolvedCodec[] resolvedCodecs =
@@ -267,10 +328,10 @@ public class ExecutionGraphBuilderTests
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "Audio Only",
-            Format: OutputFormat.Hls,
-            VideoOutputs: [],
-            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
-            SubtitleOutputs: []
+            Container: Container.HlsTs,
+            Video: null,
+            Audio: [DefaultAudioOutput],
+            Subtitles: []
         );
 
         List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, []);
@@ -286,17 +347,20 @@ public class ExecutionGraphBuilderTests
     {
         MediaInfo media = MakeMedia(video: [Sdr1080p], subs: [EnglishSub, FrenchSub]);
         SubtitleOutput subOutput = new(
+            Policy: SubtitlePolicy.Extract,
             Codec: SubtitleCodecType.WebVtt,
-            Mode: SubtitleMode.Extract,
-            AllowedLanguages: []
+            AllowedLanguages: [],
+            IncludeForced: true,
+            OcrLanguage: null,
+            PlaylistNameTemplate: "subs/{lang}"
         );
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "Subs",
-            Format: OutputFormat.Hls,
-            VideoOutputs: [SingleOutput1080pH264],
-            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
-            SubtitleOutputs: [subOutput, subOutput]
+            Container: Container.HlsTs,
+            Video: SingleOutput1080pH264,
+            Audio: [DefaultAudioOutput],
+            Subtitles: [subOutput, subOutput]
         );
 
         List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
@@ -322,10 +386,10 @@ public class ExecutionGraphBuilderTests
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "With Thumbs",
-            Format: OutputFormat.Hls,
-            VideoOutputs: [SingleOutput1080pH264],
-            AudioOutputs: [],
-            SubtitleOutputs: [],
+            Container: Container.HlsTs,
+            Video: SingleOutput1080pH264,
+            Audio: [],
+            Subtitles: [],
             Thumbnails: thumbnails
         );
 
@@ -377,14 +441,21 @@ public class ExecutionGraphBuilderTests
             subs: [EnglishSub, FrenchSub],
             chapters: [Chapter]
         );
-        SubtitleOutput subOutput = new(SubtitleCodecType.WebVtt, SubtitleMode.Extract, []);
+        SubtitleOutput subOutput = new(
+            Policy: SubtitlePolicy.Extract,
+            Codec: SubtitleCodecType.WebVtt,
+            AllowedLanguages: [],
+            IncludeForced: true,
+            OcrLanguage: null,
+            PlaylistNameTemplate: "subs/{lang}"
+        );
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "Full",
-            Format: OutputFormat.Hls,
-            VideoOutputs: [SingleOutput1080pH264],
-            AudioOutputs: [new(AudioCodecType.Aac, 192, 2, 48000, [])],
-            SubtitleOutputs: [subOutput, subOutput],
+            Container: Container.HlsTs,
+            Video: SingleOutput1080pH264,
+            Audio: [DefaultAudioOutput],
+            Subtitles: [subOutput, subOutput],
             Thumbnails: new(320, 10)
         );
 
@@ -398,19 +469,6 @@ public class ExecutionGraphBuilderTests
     public void SingleOutputSmallerResolution_ScaleNodeAdded()
     {
         // 4K source encoded to 1080p → needs Scale node
-        VideoOutput output1080p = new(
-            Codec: VideoCodecType.H265,
-            Width: 1920,
-            Height: 1080,
-            BitrateKbps: 4000,
-            Crf: 22,
-            Preset: null,
-            Profile: null,
-            Level: null,
-            ConvertHdrToSdr: false,
-            KeyframeIntervalSeconds: 2,
-            TenBit: false
-        );
         VideoStreamInfo source4k = Hdr4K with
         {
             ColorPrimaries = "bt709",
@@ -421,10 +479,30 @@ public class ExecutionGraphBuilderTests
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "Scale Down",
-            Format: OutputFormat.Hls,
-            VideoOutputs: [output1080p],
-            AudioOutputs: [],
-            SubtitleOutputs: []
+            Container: Container.HlsTs,
+            Video: new VideoOutput(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H265,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 22,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: null,
+                CodecProfile: CodecProfile.High,
+                Level: null,
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
+            ),
+            Audio: [],
+            Subtitles: []
         );
 
         List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);

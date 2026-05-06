@@ -4,11 +4,12 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Encoder.Storage;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Strategies;
 
@@ -214,10 +215,10 @@ public class CancellationTests : IDisposable
             Profile: new EncodingProfile(
                 Id: Ulid.NewUlid(),
                 Name: "Test HLS",
-                Format: OutputFormat.Hls,
-                VideoOutputs: [],
-                AudioOutputs: [],
-                SubtitleOutputs: []
+                Container: Container.HlsTs,
+                Video: null,
+                Audio: [],
+                Subtitles: []
             )
         );
 }

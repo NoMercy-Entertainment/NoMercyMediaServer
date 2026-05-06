@@ -6,7 +6,7 @@ using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Encoder.Hdr;
 
-using HdrOptions = NoMercy.Encoder.Profiles.HdrOptions;
+using HdrOptions = NoMercy.Encoder.Profiles.V2.HdrOptions;
 
 /// <summary>
 /// Tests for TonemapSelector.Build() — per-profile algorithm + LUT resolution.

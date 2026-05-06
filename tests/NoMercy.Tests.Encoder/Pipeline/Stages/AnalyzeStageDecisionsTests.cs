@@ -30,7 +30,13 @@ public class AnalyzeStageDecisionsTests
     public async Task DolbyVision_present_emits_dv_present_decision()
     {
         _analyzer
-            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IStorage>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(
                 BuildMediaInfo(
                     dolbyVision: new DolbyVisionInfo(7, 6, true, false, DvBlCompatibility.Hdr10)
@@ -46,7 +52,13 @@ public class AnalyzeStageDecisionsTests
     public async Task No_DolbyVision_does_not_emit_dv_present_decision()
     {
         _analyzer
-            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IStorage>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(BuildMediaInfo());
 
         await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
@@ -58,7 +70,13 @@ public class AnalyzeStageDecisionsTests
     public async Task Variable_frame_rate_emits_vfr_detected_decision()
     {
         _analyzer
-            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IStorage>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(BuildMediaInfo(realFps: 30.0, avgFps: 24.0));
 
         await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
@@ -70,7 +88,13 @@ public class AnalyzeStageDecisionsTests
     public async Task Constant_frame_rate_does_not_emit_vfr_detected_decision()
     {
         _analyzer
-            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IStorage>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(BuildMediaInfo(realFps: 23.976, avgFps: 23.976));
 
         await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
@@ -82,7 +106,13 @@ public class AnalyzeStageDecisionsTests
     public async Task Font_attachments_emit_attached_fonts_decision()
     {
         _analyzer
-            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IStorage>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(
                 BuildMediaInfo(
                     attachments:
@@ -107,7 +137,13 @@ public class AnalyzeStageDecisionsTests
     public async Task Chapters_emit_chapter_count_decision()
     {
         _analyzer
-            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IStorage>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(
                 BuildMediaInfo(
                     chapters:
@@ -128,7 +164,13 @@ public class AnalyzeStageDecisionsTests
     {
         EncodingContext bare = new("no-sink");
         _analyzer
-            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IStorage>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(
                 BuildMediaInfo(
                     dolbyVision: new DolbyVisionInfo(7, 6, true, false, DvBlCompatibility.Hdr10)

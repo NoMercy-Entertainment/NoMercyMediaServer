@@ -3,10 +3,16 @@ using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Tests.Encoder.Storage;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using LadderConfig = NoMercy.Encoder.Profiles.V2.LadderConfig;
+using LadderMode = NoMercy.Encoder.Profiles.V2.LadderMode;
+using LadderRung = NoMercy.Encoder.Profiles.V2.LadderRung;
+using V2EncodeMode = NoMercy.Encoder.Profiles.V2.EncodeMode;
 
 namespace NoMercy.Tests.Encoder.Strategies.Dash;
 
@@ -166,26 +172,31 @@ public class DashMultiVariantTwoPassTests : IDisposable
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: $"DASH 2-pass {variantCount}-variant",
-                Format: OutputFormat.Dash,
-                VideoOutputs: Enumerable
-                    .Range(0, variantCount)
-                    .Select(i => new VideoOutput(
-                        Codec: VideoCodecType.H264,
-                        Width: 1920 >> i,
-                        Height: 1080 >> i,
-                        BitrateKbps: 4000 >> i,
-                        Crf: 23,
-                        Preset: "medium",
-                        Profile: "high",
-                        Level: "4.1",
-                        ConvertHdrToSdr: false,
-                        KeyframeIntervalSeconds: 2,
-                        TenBit: false
-                    ))
-                    .ToArray(),
-                AudioOutputs: [],
-                SubtitleOutputs: [],
-                EncodeMode: EncodeMode.TwoPass
+                Container: Container.Dash,
+                Video: null,
+                Audio: [],
+                Subtitles: [],
+                EncodeMode: V2EncodeMode.TwoPass,
+                Ladder: new LadderConfig
+                {
+                    Mode = LadderMode.Manual,
+                    Rungs = Enumerable
+                        .Range(0, variantCount)
+                        .Select(i => new LadderRung(
+                            Width: 1920 >> i,
+                            Height: 1080 >> i,
+                            Codec: VideoCodecType.H264,
+                            BitrateKbps: 4000 >> i,
+                            MaxBitrateKbps: 6000 >> i,
+                            BufferSizeKbps: 8000 >> i,
+                            Framerate: 24.0,
+                            Preset: "medium",
+                            CodecProfile: CodecProfile.High,
+                            BitDepth: 8,
+                            PixelFormat: "yuv420p"
+                        ))
+                        .ToArray(),
+                }
             )
         );
 }

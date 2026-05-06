@@ -2,6 +2,8 @@ using Newtonsoft.Json;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Profiles;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Jobs;
 
@@ -71,10 +73,10 @@ public class JobCheckpointTests
         EncodingProfile profile = new(
             Id: profileId,
             Name: "HLS 1080p",
-            Format: OutputFormat.Hls,
-            VideoOutputs: [],
-            AudioOutputs: [],
-            SubtitleOutputs: []
+            Container: Container.HlsTs,
+            Video: null,
+            Audio: [],
+            Subtitles: []
         );
 
         EncodingJob job = new(
@@ -111,10 +113,10 @@ public class JobCheckpointTests
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "HLS 1080p",
-            Format: OutputFormat.Hls,
-            VideoOutputs: [],
-            AudioOutputs: [],
-            SubtitleOutputs: []
+            Container: Container.HlsTs,
+            Video: null,
+            Audio: [],
+            Subtitles: []
         );
 
         EncodingJob job = new(

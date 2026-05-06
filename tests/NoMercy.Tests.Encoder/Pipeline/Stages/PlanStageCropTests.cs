@@ -9,7 +9,12 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
-using NoMercy.Encoder.Profiles;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
+using V2RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
@@ -181,25 +186,30 @@ public class PlanStageCropTests
         new(
             Id: Ulid.NewUlid(),
             Name: "Crop Test",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
-            [
-                new(
-                    Codec: VideoCodecType.H264,
-                    Width: 1920,
-                    Height: 1080,
-                    BitrateKbps: 4000,
-                    Crf: 23,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.1",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-            ],
-            AudioOutputs: [],
-            SubtitleOutputs: [],
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "video/{label}",
+                PlaylistNameTemplate: "video/{label}/playlist"
+            ),
+            Audio: [],
+            Subtitles: [],
             AutoDetectCrop: autoDetectCrop
         );
 }

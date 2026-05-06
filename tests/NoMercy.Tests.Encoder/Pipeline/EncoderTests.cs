@@ -13,11 +13,17 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
 using NoMercy.Tests.Encoder.Pipeline.Stages;
 using NoMercy.Tests.Encoder.Storage;
+using AudioOutput = NoMercy.Encoder.Profiles.V2.AudioOutput;
+using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.V2.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
+using V2RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Pipeline;
 
@@ -25,7 +31,6 @@ public class EncoderTests
 {
     private readonly Mock<IMediaAnalyzer> _analyzer = new();
     private readonly Mock<IStorage> _storage = new();
-    private readonly Mock<IProfileValidator> _profileValidator = new();
     private readonly Mock<IFfmpegExecutor> _ffmpegExecutor = new();
     private readonly Mock<ICodecResolver> _codecResolver = new();
     private readonly Mock<IHardwareCapabilities> _hardware = new();
@@ -48,10 +53,7 @@ public class EncoderTests
             _storage.Object,
             NullLogger<AnalyzeStage>.Instance
         );
-        ValidateStage validateStage = new(
-            _profileValidator.Object,
-            NullLogger<ValidateStage>.Instance
-        );
+        ValidateStage validateStage = new(NullLogger<ValidateStage>.Instance);
         PlanStage planStage = new(
             new(),
             new(),
@@ -191,34 +193,45 @@ public class EncoderTests
         new(
             Id: Ulid.NewUlid(),
             Name: "Test",
-            Format: OutputFormat.Hls,
-            VideoOutputs:
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: V2RateControlMode.Crf,
+                Crf: 23,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
             [
                 new(
-                    Codec: VideoCodecType.H264,
-                    Width: 1920,
-                    Height: 1080,
-                    BitrateKbps: 4000,
-                    Crf: 23,
-                    Preset: "medium",
-                    Profile: "high",
-                    Level: "4.1",
-                    ConvertHdrToSdr: false,
-                    KeyframeIntervalSeconds: 2,
-                    TenBit: false
-                ),
-            ],
-            AudioOutputs:
-            [
-                new(
+                    Policy: StreamPolicy.Transcode,
                     Codec: AudioCodecType.Aac,
                     BitrateKbps: 192,
                     Channels: 2,
                     SampleRateHz: 48000,
-                    AllowedLanguages: ["en"]
+                    AllowedLanguages: ["en"],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
                 ),
             ],
-            SubtitleOutputs: []
+            Subtitles: []
         );
 
     private void SetupSuccessPath(string inputPath = "/movies/test.mkv")
@@ -227,11 +240,10 @@ public class EncoderTests
 
         _storage.Setup(s => s.Exists(inputPath)).Returns(true);
         _analyzer
-            .Setup(a => a.AnalyzeAsync(inputPath, It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(inputPath, It.IsAny<IStorage>(), It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(media);
-        _profileValidator
-            .Setup(v => v.Validate(It.IsAny<EncodingProfile>()))
-            .Returns(ValidationResult.Success());
         _ffmpegExecutor
             .Setup(e =>
                 e.ExecuteAsync(
@@ -366,11 +378,14 @@ public class EncoderTests
 
         _storage.Setup(s => s.Exists("/movies/test.mkv")).Returns(true);
         _analyzer
-            .Setup(a => a.AnalyzeAsync("/movies/test.mkv", It.IsAny<CancellationToken>()))
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    "/movies/test.mkv",
+                    It.IsAny<IStorage>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(media);
-        _profileValidator
-            .Setup(v => v.Validate(It.IsAny<EncodingProfile>()))
-            .Returns(ValidationResult.Success());
         _ffmpegExecutor
             .Setup(e =>
                 e.ExecuteAsync(

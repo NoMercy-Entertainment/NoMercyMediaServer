@@ -28,19 +28,48 @@ internal static class PlanStageHelpers
     /// </summary>
     internal static VideoOutput[] EnumerateVideo(EncodingProfile profile)
     {
-        if (profile.Video is null)
-            return [];
-
         if (
             profile.Ladder?.Mode == LadderMode.Manual
             && profile.Ladder.Rungs is { Length: > 0 } rungs
         )
         {
-            return rungs.Select(r => RungToVideoOutput(r, profile.Video)).ToArray();
+            VideoOutput reference = profile.Video ?? BuildSyntheticReference(rungs[0]);
+            return rungs.Select(r => RungToVideoOutput(r, reference)).ToArray();
         }
+
+        if (profile.Video is null)
+            return [];
 
         return [profile.Video];
     }
+
+    /// <summary>
+    /// When no <see cref="VideoOutput"/> reference is provided alongside a
+    /// <see cref="LadderConfig"/>, synthesise a minimal reference from the
+    /// first rung using safe defaults for fields the rung doesn't carry.
+    /// </summary>
+    internal static VideoOutput BuildSyntheticReference(LadderRung rung) =>
+        new(
+            Policy: StreamPolicy.Transcode,
+            Codec: rung.Codec,
+            Width: rung.Width,
+            Height: rung.Height,
+            RateControl: Profiles.V2.RateControlMode.Crf,
+            Crf: 23,
+            BitrateKbps: rung.BitrateKbps,
+            MaxBitrateKbps: rung.MaxBitrateKbps > 0 ? rung.MaxBitrateKbps : null,
+            BufferSizeKbps: rung.BufferSizeKbps > 0 ? rung.BufferSizeKbps : null,
+            Preset: rung.Preset,
+            CodecProfile: rung.CodecProfile,
+            Level: null,
+            Tune: null,
+            BitDepth: rung.BitDepth,
+            PixelFormat: rung.PixelFormat,
+            KeyframeIntervalSeconds: 2,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: "video/{label}",
+            PlaylistNameTemplate: "video/{label}/playlist"
+        );
 
     /// <summary>Materialise one <see cref="LadderRung"/> into a full VideoOutput.</summary>
     internal static VideoOutput RungToVideoOutput(LadderRung rung, VideoOutput reference) =>

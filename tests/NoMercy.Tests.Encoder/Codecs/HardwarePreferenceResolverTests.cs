@@ -3,6 +3,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+using HardwarePreference = NoMercy.Encoder.Profiles.V2.HardwarePreference;
 
 namespace NoMercy.Tests.Encoder.Codecs;
 
