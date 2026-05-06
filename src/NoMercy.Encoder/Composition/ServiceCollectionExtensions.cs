@@ -201,9 +201,11 @@ public static class ServiceCollectionExtensions
         // webhooks for Discord/Slack/email/etc.
         services.AddSingleton<INotificationDispatcher, WebhookNotificationDispatcher>();
 
-        // Subtitle acquisition — adapter + service. IOpenSubtitlesProvider is
-        // registered by the host (MediaProcessing layer) so it can reference the
-        // XML-RPC client without creating a circular project reference.
+        // Subtitle acquisition — adapter + service. IOpenSubtitlesProvider has a
+        // no-op default registered here so encoder-only test contexts always
+        // resolve. The Service host registers the real XML-RPC provider after
+        // this call, replacing the no-op via standard DI last-wins.
+        services.AddSingleton<IOpenSubtitlesProvider, NoOpOpenSubtitlesProvider>();
         services.AddTransient<IOpenSubtitlesAdapter, OpenSubtitlesAdapter>();
         services.AddTransient<ISubtitleAcquisitionService, SubtitleAcquisitionService>();
 
