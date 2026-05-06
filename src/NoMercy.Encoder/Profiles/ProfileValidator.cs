@@ -23,6 +23,15 @@ public static class ProfileValidator
         "scodec",
     };
 
+    private static readonly HashSet<Container> AudioOnlyContainers = new()
+    {
+        Container.Mp3,
+        Container.Aac,
+        Container.Flac,
+        Container.Ogg,
+        Container.Mka,
+    };
+
     public static ProfileValidationResult Validate(EncodingProfile profile)
     {
         List<string> errors = [];
@@ -34,6 +43,7 @@ public static class ProfileValidator
         ValidateCmafCompatibility(profile, errors);
         ValidateCustomArguments(profile, warnings);
         ValidateHlsDerivatives(profile, errors, warnings);
+        ValidateSubtitleAcquisition(profile, errors, warnings);
 
         return new(errors.Count == 0, errors, warnings);
     }
@@ -209,6 +219,42 @@ public static class ProfileValidator
         foreach (string key in profile.CustomArguments.Keys.Where(ForbiddenCustomArgs.Contains))
             warnings.Add(
                 $"CustomArgument '{key}' overrides codec/container choice — will hard-reject in a future release."
+            );
+    }
+
+    private static void ValidateSubtitleAcquisition(
+        EncodingProfile profile,
+        List<string> errors,
+        List<string> warnings
+    )
+    {
+        SubtitleAcquisitionConfig? acq = profile.SubtitleAcquisition;
+        if (acq is null || !acq.Enabled)
+            return;
+
+        // Rule 1 — acquisition enabled but no subtitle output declared
+        if (profile.Subtitles.Length == 0)
+            errors.Add("SubtitleAcquisition requires at least one declared subtitle output");
+
+        // Rule 2 — acquisition enabled on audio-only container
+        if (AudioOnlyContainers.Contains(profile.Container))
+            errors.Add("SubtitleAcquisition is incompatible with audio-only containers");
+
+        // Rule 3 — MinRating out of [0, 10]
+        if (acq.MinRating < 0 || acq.MinRating > 10)
+            errors.Add("SubtitleAcquisition.MinRating must be in [0, 10]");
+
+        // Rule 4 — MaxPerLanguage < 1
+        if (acq.MaxPerLanguage < 1)
+            errors.Add("SubtitleAcquisition.MaxPerLanguage must be at least 1");
+
+        // Rule 5 — ExactMatchOnly + TitleOnly: warn, never embed
+        if (
+            acq.EmbedPolicy == SubtitleEmbedPolicy.ExactMatchOnly
+            && acq.Strategy == SubtitleMatchStrategy.TitleOnly
+        )
+            warnings.Add(
+                "TitleOnly + ExactMatchOnly will never embed; titles can't satisfy exact-match. Acquisition will run sidecar-only."
             );
     }
 
