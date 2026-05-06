@@ -58,6 +58,21 @@ public class OutputNamingResolverTests
         layout.PresetSlug.Should().Be("this-is-a-really-long-pr"); // first 24 chars of slug
     }
 
+    [Fact]
+    public void Resolve_NameSplitsAtSeparator_StripsTrailingDash()
+    {
+        // "abcdefghijklmnopqrstuvw Foo" slugifies to 'abcdefghijklmnopqrstuvw-foo'
+        // (27 chars). Truncating to 24 lands on 'abcdefghijklmnopqrstuvw-' — the
+        // trailing dash must be trimmed off so we never persist 'xxx-' slugs.
+        EncodingProfile profile = TestProfiles.WithName("abcdefghijklmnopqrstuvw Foo");
+        MediaItemRef media = new(MediaType.Movie, 1, "X", 2026);
+
+        BundleLayout layout = _resolver.Resolve(media, profile);
+
+        layout.PresetSlug.Should().Be("abcdefghijklmnopqrstuvw");
+        layout.PresetSlug.Should().NotEndWith("-");
+    }
+
     // ------------------------------------------------------------------
     // C3: Per-output path resolution
     // ------------------------------------------------------------------

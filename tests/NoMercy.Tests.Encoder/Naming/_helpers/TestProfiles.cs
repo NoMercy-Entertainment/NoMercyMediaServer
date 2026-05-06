@@ -6,11 +6,9 @@ namespace NoMercy.Tests.Encoder.Naming;
 
 internal static class TestProfiles
 {
-    private static Ulid IdFromName(string name) => Ulid.NewUlid();
-
     public static EncodingProfile ArchiveRemuxMkv() =>
         new(
-            Id: IdFromName("Archive Remux MKV"),
+            Id: Ulid.NewUlid(),
             Name: "Archive Remux MKV",
             Container: Container.Mkv,
             Video: new(
@@ -68,7 +66,7 @@ internal static class TestProfiles
 
     public static EncodingProfile WebHls1080p() =>
         new(
-            Id: IdFromName("Web 1080p"),
+            Id: Ulid.NewUlid(),
             Name: "Web 1080p",
             Container: Container.HlsFmp4,
             Video: new(
@@ -128,7 +126,7 @@ internal static class TestProfiles
 
     public static EncodingProfile WithName(string name) =>
         new(
-            Id: IdFromName(name),
+            Id: Ulid.NewUlid(),
             Name: name,
             Container: Container.HlsFmp4,
             Video: new(

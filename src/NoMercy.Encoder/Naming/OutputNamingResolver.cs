@@ -87,7 +87,10 @@ public class OutputNamingResolver(IMediaKeyResolver mediaKeys) : IOutputNamingRe
             prev = next;
         }
         string slug = new string(chars, 0, j).Trim('-');
-        return slug.Length <= MaxSlugChars ? slug : slug[..MaxSlugChars];
+        // Trim trailing dashes again after truncation so a name that splits
+        // mid-separator (e.g. "Long Name Foo" cut at char 24) doesn't leave a
+        // dangling "long-name-" slug.
+        return slug.Length <= MaxSlugChars ? slug : slug[..MaxSlugChars].TrimEnd('-');
     }
 
     private static bool IsSingleFileContainer(Container c) =>
