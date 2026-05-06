@@ -146,6 +146,21 @@ public class BuildStage(
             FfmpegCommandBuilder builder = new();
             builder.AddInput(new(input.InputPath, Duration: input.DurationLimit));
 
+            // Exact-match acquired subtitles: inject each as an additional -i input
+            // so the main command can copy the subtitle stream to the output directory.
+            int acquiredInputIndex = 1;
+            List<(int InputIndex, AcquiredSubtitle Sub)> exactMatchSubs = [];
+            IReadOnlyList<AcquiredSubtitle> acquired =
+                input.Plan.OutputPlan.AcquiredSubtitles ?? [];
+            foreach (AcquiredSubtitle sub in acquired)
+            {
+                if (!sub.IsExactMatch)
+                    continue;
+                builder.AddInput(new(sub.LocalPath));
+                exactMatchSubs.Add((acquiredInputIndex, sub));
+                acquiredInputIndex++;
+            }
+
             // Resolve burn-in mode first so we can emit the decision log
             // entry and choose between the ASS filter path and the PGS
             // overlay path before building the filter graph.
@@ -215,6 +230,15 @@ public class BuildStage(
 
             // Video + audio outputs via the output strategy (HLS, MKV, etc.)
             strategy.ConfigureOutput(builder, effectivePlan, input.OutputDirectory);
+
+            // Acquired subtitle outputs: copy each exact-match sub to the subtitles dir.
+            foreach ((int idx, AcquiredSubtitle sub) in exactMatchSubs)
+            {
+                string subFile = $"subtitles/{sub.Language}.acquired.{sub.Format}";
+                builder.AddOutput(
+                    new(FilePath: subFile, SubtitleCodec: "copy", MapStreams: [$"{idx}:s:0"])
+                );
+            }
 
             // Thumbnail sprite — the spritevtt muxer generates both the sprite
             // sheet (.webp) and the companion VTT cue file in one pass.
