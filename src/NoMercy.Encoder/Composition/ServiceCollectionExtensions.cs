@@ -15,6 +15,7 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Notifications;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Output;
@@ -148,6 +149,10 @@ public static class ServiceCollectionExtensions
 
         // HDR
         services.AddTransient<ITonemapSelector, TonemapSelector>();
+
+        // Naming resolvers
+        services.AddSingleton<IMediaKeyResolver, MediaKeyResolver>();
+        services.AddSingleton<IOutputNamingResolver, OutputNamingResolver>();
 
         // Profiles
         services.AddTransient<IProfileValidator, V2BackedProfileValidator>();

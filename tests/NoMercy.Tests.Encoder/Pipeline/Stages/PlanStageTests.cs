@@ -5,6 +5,7 @@ using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
@@ -468,5 +469,105 @@ public class PlanStageTests
         result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
         plan.OutputPlan.VideoOutputs.Should().HaveCount(2);
+    }
+
+    // ------------------------------------------------------------------
+    // OutputNamingResolver integration — when MediaItemRef is present
+    // in the context, PlanStage must call IOutputNamingResolver.Resolve
+    // and attach the resulting BundleLayout to OutputPlan.Layout.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task OutputNamingResolver_WhenMediaItemProvided_LayoutAttachedToOutputPlan()
+    {
+        Mock<IOutputNamingResolver> namingResolver = new();
+        BundleLayout fakeLayout = new(
+            MediaKey: "mfa",
+            PresetSlug: "test",
+            IsSingleFile: false,
+            BundleDirectory: "encodes/test",
+            MasterPlaylistName: "mfa_master.m3u8",
+            ManifestPath: "encodes/test/manifest.json",
+            ReconstructionPath: "encodes/test/reconstruction.json",
+            SingleFileName: string.Empty
+        );
+
+        namingResolver
+            .Setup(r => r.Resolve(It.IsAny<MediaItemRef>(), It.IsAny<EncodingProfile>()))
+            .Returns(fakeLayout);
+
+        PlanStage stage = new(
+            _graphBuilder,
+            _groupingStrategy,
+            _costEstimator,
+            _codecResolver.Object,
+            _hardware.Object,
+            new TonemapSelector(),
+            new Mock<IFfmpegCapabilities>().Object,
+            new AbrLadderGenerator(),
+            new NoOpCropDetector(),
+            NullLogger<PlanStage>.Instance,
+            outputNamingResolver: namingResolver.Object
+        );
+
+        MediaItemRef mediaItem = new(MediaType.Movie, 550, "Fight Club", 1999);
+        EncodingContext contextWithItem = _context with { MediaItem = mediaItem };
+
+        MediaInfo media = BuildMediaInfo();
+        EncodingProfile profile = BuildSimpleProfile();
+
+        StageResult result = await stage.ExecuteAsync(
+            new(media, profile),
+            contextWithItem,
+            default
+        );
+
+        result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
+        ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
+        plan.OutputPlan.Layout.Should().NotBeNull();
+        plan.OutputPlan.Layout.Should().Be(fakeLayout);
+
+        namingResolver.Verify(
+            r => r.Resolve(It.Is<MediaItemRef>(m => m.Id == 550), It.IsAny<EncodingProfile>()),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task OutputNamingResolver_WhenNoMediaItemInContext_LayoutIsNull()
+    {
+        Mock<IOutputNamingResolver> namingResolver = new();
+
+        PlanStage stage = new(
+            _graphBuilder,
+            _groupingStrategy,
+            _costEstimator,
+            _codecResolver.Object,
+            _hardware.Object,
+            new TonemapSelector(),
+            new Mock<IFfmpegCapabilities>().Object,
+            new AbrLadderGenerator(),
+            new NoOpCropDetector(),
+            NullLogger<PlanStage>.Instance,
+            outputNamingResolver: namingResolver.Object
+        );
+
+        MediaInfo media = BuildMediaInfo();
+        EncodingProfile profile = BuildSimpleProfile();
+
+        StageResult result = await stage.ExecuteAsync(
+            new(media, profile),
+            _context, // no MediaItem
+            default
+        );
+
+        result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
+        ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
+        plan.OutputPlan.Layout.Should().BeNull();
+
+        namingResolver.Verify(
+            r => r.Resolve(It.IsAny<MediaItemRef>(), It.IsAny<EncodingProfile>()),
+            Times.Never
+        );
     }
 }

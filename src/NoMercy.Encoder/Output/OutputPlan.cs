@@ -1,6 +1,7 @@
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using DrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
@@ -34,7 +35,10 @@ public record OutputPlan(
     //   MP4  — written as ffmetadata file, injected via -i chapters.ffmeta.
     //   DASH — post-processed into <EventStream> entries in the MPD.
     //   HLS  — emitted as #EXT-X-DATERANGE tags in the master playlist.
-    IReadOnlyList<ChapterInfo>? Chapters = null
+    IReadOnlyList<ChapterInfo>? Chapters = null,
+    // Resolved by PlanStage when EncodingContext.MediaItem is set.
+    // Provides the canonical bundle directory + per-output filenames.
+    BundleLayout? Layout = null
 );
 
 public record VideoOutputPlan(

@@ -1,4 +1,5 @@
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.Naming;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Pipeline;
@@ -28,7 +29,8 @@ public record EncodingContext(
     MediaInfo? MediaInfo = null,
     IDecisionLogSink? Decisions = null,
     IStorage? SourceStorage = null,
-    IStorage? DestinationStorage = null
+    IStorage? DestinationStorage = null,
+    MediaItemRef? MediaItem = null
 )
 {
     /// <summary>

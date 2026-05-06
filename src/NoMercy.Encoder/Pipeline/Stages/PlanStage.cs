@@ -7,6 +7,7 @@ using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Profiles;
@@ -36,7 +37,8 @@ public class PlanStage(
     IQualityScalerResolver? qualityScalerResolver = null,
     IHardwarePreferenceResolver? hardwarePreferenceResolver = null,
     SpeedIndex? speedIndex = null,
-    IBitDepthPolicyResolver? bitDepthPolicyResolver = null
+    IBitDepthPolicyResolver? bitDepthPolicyResolver = null,
+    IOutputNamingResolver? outputNamingResolver = null
 ) : IPipelineStage<ValidateInput, ExecutionPlan>, IPlanStage
 {
     public string Name => "Plan";
@@ -638,6 +640,11 @@ public class PlanStage(
             )
             : null;
 
+        BundleLayout? layout =
+            outputNamingResolver is not null && context.MediaItem is not null
+                ? outputNamingResolver.Resolve(context.MediaItem, profile)
+                : null;
+
         return new(
             outputFormat,
             videoPlan,
@@ -647,7 +654,8 @@ public class PlanStage(
             segmentDuration,
             PreserveDolbyVision: dvDecision.Preserved,
             Drm: ConvertDrmConfig(profile.Drm),
-            HlsOptions: hlsOptions
+            HlsOptions: hlsOptions,
+            Layout: layout
         );
     }
 
