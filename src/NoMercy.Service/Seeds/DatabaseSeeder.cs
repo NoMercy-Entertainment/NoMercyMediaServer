@@ -6,6 +6,8 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
+using NoMercy.Encoder.Bundle;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -264,6 +266,33 @@ public static class DatabaseSeeder
         await mediaContext.SaveChangesAsync();
 
         Logger.Setup("Seeded system local driver", LogEventLevel.Verbose);
+    }
+
+    /// <summary>
+    /// Runs the bundle-slug rename pass after DI is available. Must be called
+    /// after <see cref="Run"/> so the <see cref="IStorageFactory"/> singleton
+    /// is fully configured with driver config resolvers.
+    /// </summary>
+    public static async Task RunBundleSlugRenamePassAsync(IStorageFactory storageFactory)
+    {
+        if (BuiltinPresetRenames.SlugRenames.Count == 0)
+            return;
+
+        try
+        {
+            MediaContext context = new();
+            BundleSlugRenamer renamer = new(
+                BuiltinPresetRenames.SlugRenames,
+                storageFactory,
+                context
+            );
+            await renamer.RunAsync();
+            Logger.Setup("Bundle slug rename pass complete", LogEventLevel.Verbose);
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup($"Bundle slug rename pass failed: {ex.Message}", LogEventLevel.Warning);
+        }
     }
 
     /// <summary>

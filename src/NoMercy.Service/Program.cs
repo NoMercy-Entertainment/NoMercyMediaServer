@@ -189,6 +189,11 @@ public static class Program
         // returns 403 for anonymous UAs).
         await DatabaseSeeder.Run(diStorage, dIStorageDriver);
 
+        // Rename on-disk bundle directories when a built-in preset slug changed.
+        await DatabaseSeeder.RunBundleSlugRenamePassAsync(
+            app.Services.GetRequiredService<IStorageFactory>()
+        );
+
         // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).
         // It returns true when interactive auth is required (setup mode).
         BootOrchestrator orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
