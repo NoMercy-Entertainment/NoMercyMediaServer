@@ -5,6 +5,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
 
@@ -15,7 +16,9 @@ public record FinalizeInput(
     OutputPlan Plan,
     string OutputDirectory,
     string MediaTitle,
-    IProgressObserver? Progress = null
+    IProgressObserver? Progress = null,
+    // Null means "use spec defaults" — not "skip everything".
+    HlsDerivatives? HlsDerivatives = null
 );
 
 public record FinalizeOutput(string OutputPath, long OutputSizeBytes);
@@ -46,16 +49,35 @@ public class FinalizeStage(
             // available; fall back to the DI-injected singleton for default installs.
             IStorage effectiveStorage = context.DestinationStorage ?? storage;
 
+            // Null → spec defaults. Never skip everything.
+            HlsDerivatives derivatives = input.HlsDerivatives ?? new HlsDerivatives();
+
             effectiveStorage.CreateDirectory(input.OutputDirectory);
 
             IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.Format);
 
-            input.Progress?.OnStageStarted("Building Master Playlist");
-            await strategy.FinalizeAsync(input.OutputDirectory, input.Plan, input.MediaTitle, ct);
-            input.Progress?.OnStageCompleted("Building Master Playlist", TimeSpan.Zero);
+            // GenerateMasterPlaylist — master playlist written by the output strategy.
+            // TODO: when GenerateMasterPlaylist = false, skip strategy.FinalizeAsync
+            //       once output strategies expose a way to skip master playlist writing
+            //       independently from segment finalization.
+            if (derivatives.GenerateMasterPlaylist)
+            {
+                input.Progress?.OnStageStarted("Building Master Playlist");
+                await strategy.FinalizeAsync(
+                    input.OutputDirectory,
+                    input.Plan,
+                    input.MediaTitle,
+                    ct
+                );
+                input.Progress?.OnStageCompleted("Building Master Playlist", TimeSpan.Zero);
+            }
 
-            // Write chapters.vtt from MediaInfo
-            if (context.MediaInfo is not null && context.MediaInfo.Chapters.Count > 0)
+            // GenerateChapters — write chapters.vtt from MediaInfo.
+            if (
+                derivatives.GenerateChapters
+                && context.MediaInfo is not null
+                && context.MediaInfo.Chapters.Count > 0
+            )
             {
                 input.Progress?.OnStageStarted("Extracting chapters");
                 await chapterWriter.WriteChaptersAsync(
@@ -72,10 +94,45 @@ public class FinalizeStage(
                 );
             }
 
-            // Write fonts.json manifest from previously extracted fonts
-            input.Progress?.OnStageStarted("Extracting fonts");
-            await fontExtractor.WriteFontManifestAsync(input.OutputDirectory, ct);
-            input.Progress?.OnStageCompleted("Extracting fonts", TimeSpan.Zero);
+            // GenerateFontsJson — write fonts.json manifest from previously extracted fonts.
+            if (derivatives.GenerateFontsJson)
+            {
+                input.Progress?.OnStageStarted("Extracting fonts");
+                await fontExtractor.WriteFontManifestAsync(input.OutputDirectory, ct);
+                input.Progress?.OnStageCompleted("Extracting fonts", TimeSpan.Zero);
+            }
+            else
+            {
+                logger.LogDebug(
+                    "[{CorrelationId}] Skipping fonts.json (GenerateFontsJson=false)",
+                    context.CorrelationId
+                );
+            }
+
+            // GenerateSpriteVtt — sprite VTT and thumbnail sprites are produced by the
+            // spritevtt muxer in the main FFmpeg command; the flag and numeric params
+            // (SpriteVttIntervalSeconds/Columns/Rows/ThumbnailWidth) are forwarded to
+            // the muxer at BuildStage.
+            // TODO: thread SpriteVtt params into BuildStage → FFmpeg muxer args.
+
+            // GenerateIFramePlaylists — no I-frame playlist generator exists yet.
+            // TODO: add IFramePlaylistGenerator and call it here when
+            //       derivatives.GenerateIFramePlaylists = true.
+
+            // GenerateThumbnailTrack — thumbnail track is emitted by the output strategy.
+            // TODO: expose a flag on IOutputStrategy.FinalizeAsync to include/exclude
+            //       the thumbnail rendition from the master playlist.
+
+            // ExtractClosedCaptions — no CEA-608/708 extractor exists yet.
+            // TODO: add CcExtractor and call it here when
+            //       derivatives.ExtractClosedCaptions = true.
+
+            // WriteOriginalFilename — original filename tag is injected by MetadataInjector
+            // in BuildStage. TODO: thread WriteOriginalFilename flag through BuildInput.
+
+            // GenerateMetadataJson — NoMercy-owned metadata.json sidecar.
+            // TODO: add MetadataJsonWriter and call it here when
+            //       derivatives.GenerateMetadataJson = true.
 
             // Thumbnail sprite + VTT are produced by the spritevtt muxer
             // in the main FFmpeg command — no post-processing needed.

@@ -127,7 +127,8 @@ public class Encoder(
             plan.OutputPlan,
             request.OutputDirectory,
             request.ResolvedTitle,
-            Progress: progress
+            Progress: progress,
+            HlsDerivatives: request.Profile.HlsDerivatives
         );
         StageResult finalizeResult = await finalizeStage.ExecuteAsync(finalizeInput, context, ct);
         if (finalizeResult is StageFailure finalizeFailure)
@@ -260,7 +261,8 @@ public class Encoder(
             executionResults,
             plan.OutputPlan,
             previewRequest.OutputDirectory,
-            previewRequest.ResolvedTitle
+            previewRequest.ResolvedTitle,
+            HlsDerivatives: previewRequest.Profile.HlsDerivatives
         );
         StageResult finalizeResult = await finalizeStage.ExecuteAsync(finalizeInput, context, ct);
         if (finalizeResult is StageFailure ff)
