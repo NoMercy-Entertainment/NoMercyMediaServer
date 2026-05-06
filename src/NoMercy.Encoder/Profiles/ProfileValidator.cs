@@ -33,6 +33,7 @@ public static class ProfileValidator
         ValidateLadder(profile, errors);
         ValidateCmafCompatibility(profile, errors);
         ValidateCustomArguments(profile, warnings);
+        ValidateHlsDerivatives(profile, errors, warnings);
 
         return new(errors.Count == 0, errors, warnings);
     }
@@ -208,6 +209,64 @@ public static class ProfileValidator
         foreach (string key in profile.CustomArguments.Keys.Where(ForbiddenCustomArgs.Contains))
             warnings.Add(
                 $"CustomArgument '{key}' overrides codec/container choice — will hard-reject in a future release."
+            );
+    }
+
+    private static void ValidateHlsDerivatives(
+        EncodingProfile profile,
+        List<string> errors,
+        List<string> warnings
+    )
+    {
+        // When HlsDerivatives is null the caller relies on defaults; contextual flags
+        // (like GenerateSpriteVtt) are only meaningful for HLS containers and
+        // FinalizeStage skips them when the container is not HLS.
+        // Only validate an explicitly-set HlsDerivatives record.
+        if (profile.HlsDerivatives is not HlsDerivatives d)
+            return;
+
+        bool isHls =
+            profile.Container
+            is Container.HlsFmp4
+                or Container.HlsTs
+                or Container.AudioHlsFmp4
+                or Container.AudioHlsTs;
+
+        // Rule 1 — SpriteVtt requires HLS container
+        if (d.GenerateSpriteVtt && !isHls)
+            errors.Add(
+                "HlsDerivatives.GenerateSpriteVtt requires HLS container (HlsFmp4 or HlsTs)"
+            );
+
+        // Rule 2 — IFramePlaylists cannot run on Copy video
+        if (d.GenerateIFramePlaylists && profile.Video is { Policy: StreamPolicy.Copy })
+            errors.Add(
+                "HlsDerivatives.GenerateIFramePlaylists cannot run on Copy video — keyframe positions must be re-muxed"
+            );
+
+        // Rule 3 — warn when MasterPlaylist disabled on HLS (power-user option)
+        if (!d.GenerateMasterPlaylist && isHls)
+            warnings.Add(
+                "GenerateMasterPlaylist=false on HLS container — clients won't have a coordinated entry point"
+            );
+
+        // Rule 4 — SpriteVtt numeric ranges
+        if (d.SpriteVttIntervalSeconds <= 0 || d.SpriteVttIntervalSeconds > 600)
+            errors.Add(
+                $"HlsDerivatives.SpriteVttIntervalSeconds must be in [1, 600] (got {d.SpriteVttIntervalSeconds})"
+            );
+
+        if (d.SpriteVttColumns <= 0 || d.SpriteVttColumns > 20)
+            errors.Add(
+                $"HlsDerivatives.SpriteVttColumns must be in [1, 20] (got {d.SpriteVttColumns})"
+            );
+
+        if (d.SpriteVttRows <= 0 || d.SpriteVttRows > 20)
+            errors.Add($"HlsDerivatives.SpriteVttRows must be in [1, 20] (got {d.SpriteVttRows})");
+
+        if (d.SpriteVttThumbnailWidth <= 0 || d.SpriteVttThumbnailWidth > 1920)
+            errors.Add(
+                $"HlsDerivatives.SpriteVttThumbnailWidth must be in [1, 1920] (got {d.SpriteVttThumbnailWidth})"
             );
     }
 }
