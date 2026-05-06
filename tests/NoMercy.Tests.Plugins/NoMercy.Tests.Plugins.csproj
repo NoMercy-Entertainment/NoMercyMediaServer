@@ -27,5 +27,11 @@
     <ProjectReference Include="..\..\src\NoMercy.Plugins\NoMercy.Plugins.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Events\NoMercy.Events.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Storage\NoMercy.Storage.csproj" />
+    <!-- Build dependency only — do NOT copy Echo DLL to test bin. If Echo is in the default
+         AssemblyLoadContext, PluginLoadContext isolation breaks (type identity mismatch). -->
+    <ProjectReference
+      Include="..\NoMercy.Plugin.Samples.Echo\NoMercy.Plugin.Samples.Echo.csproj"
+      ReferenceOutputAssembly="false"
+    />
   </ItemGroup>
 </Project>
