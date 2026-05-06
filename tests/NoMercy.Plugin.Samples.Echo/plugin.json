@@ -1,0 +1,8 @@
+{
+  "id": "11111111-2222-3333-4444-555555555555",
+  "name": "Echo",
+  "version": "0.1.0",
+  "description": "Sample plugin for the test suite",
+  "assembly": "NoMercy.Plugin.Samples.Echo.dll",
+  "autoEnabled": true
+}
