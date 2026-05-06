@@ -25,7 +25,7 @@ public class MediaKeyResolver : IMediaKeyResolver
         if (value == 0)
             return "0";
 
-        Span<char> buffer = stackalloc char[13]; // enough for long.MaxValue in base36
+        Span<char> buffer = stackalloc char[13]; // long.MaxValue in base36 = 13 digits
         int i = buffer.Length;
         while (value > 0)
         {

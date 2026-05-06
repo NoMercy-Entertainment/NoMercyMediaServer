@@ -33,4 +33,19 @@ public class MediaKeyResolverTests
         Action act = () => _resolver.ForMedia(MediaType.Movie, -1);
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
+
+    [Fact]
+    public void ForMedia_UnknownType_Throws()
+    {
+        Action act = () => _resolver.ForMedia((MediaType)99, 1);
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void ForMedia_MaxLongId_DoesNotOverflowStackBuffer()
+    {
+        // Documents the design ceiling: 13 base-36 digits encode long.MaxValue.
+        string key = _resolver.ForMedia(MediaType.Movie, long.MaxValue);
+        key.Should().StartWith("m").And.HaveLength(14);
+    }
 }
