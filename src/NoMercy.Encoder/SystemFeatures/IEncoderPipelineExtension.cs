@@ -2,7 +2,7 @@ using NoMercy.Encoder.Pipeline;
 
 namespace NoMercy.Encoder.SystemFeatures;
 
-public interface IEncoderPlugin
+public interface IEncoderPipelineExtension
 {
     string Name { get; }
 
