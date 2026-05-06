@@ -90,6 +90,76 @@ public static class ProfileValidator
                 }
             }
         }
+
+        if (profile.Ladder.Mode == LadderMode.Auto && profile.Ladder.AutoConfig is not null)
+            ValidateAutoLadder(profile.Ladder.AutoConfig, errors);
+    }
+
+    private static void ValidateAutoLadder(AutoLadderConfig config, List<string> errors)
+    {
+        // Rule 6 — Empty Tiers array (check first; other rules reference tier content)
+        if (config.Tiers.Length == 0)
+        {
+            errors.Add("AutoLadder.Tiers cannot be empty.");
+            return;
+        }
+
+        // Rule 1 — MinRungs > MaxRungs
+        if (config.MinRungs > config.MaxRungs)
+            errors.Add(
+                $"AutoLadder.MinRungs cannot exceed MaxRungs (MinRungs={config.MinRungs}, MaxRungs={config.MaxRungs})."
+            );
+
+        // Rule 2 — AppleHlsRecommended + tier with all-null recommended bitrates
+        if (
+            config.BitrateStrategy
+            is BitrateStrategy.AppleHlsRecommended
+                or BitrateStrategy.BitrateLadder
+        )
+        {
+            foreach (LadderTier tier in config.Tiers)
+            {
+                if (
+                    tier.RecommendedBitrateH264Kbps is null
+                    && tier.RecommendedBitrateHevcKbps is null
+                    && tier.RecommendedBitrateAv1Kbps is null
+                )
+                    errors.Add(
+                        $"Tier '{tier.Label}' missing recommended bitrate for AppleHlsRecommended strategy."
+                    );
+            }
+        }
+
+        // Rule 3 — CrfBased + Crf out of [0, 51]
+        if (config.BitrateStrategy == BitrateStrategy.CrfBased)
+        {
+            if (config.Crf < 0 || config.Crf > 51)
+                errors.Add($"AutoLadder.Crf out of range [0, 51] (got {config.Crf}).");
+        }
+
+        // Rule 4 — PercentOfSource + SourcePercentage out of (0, 200]
+        if (config.BitrateStrategy == BitrateStrategy.PercentOfSource)
+        {
+            if (config.SourcePercentage <= 0 || config.SourcePercentage > 200)
+                errors.Add(
+                    $"AutoLadder.SourcePercentage must be in (0, 200] (got {config.SourcePercentage})."
+                );
+        }
+
+        // Rule 5 — Mixed policy requires both codec types
+        if (config.CodecPolicy == LadderCodecPolicy.Mixed)
+        {
+            if (config.LowTierCodec is null || config.HighTierCodec is null)
+                errors.Add(
+                    "AutoLadder.CodecPolicy=Mixed requires both LowTierCodec and HighTierCodec."
+                );
+        }
+
+        // Rule 7 — LowTierFramerateMultiplier out of (0, 1.0]
+        if (config.LowTierFramerateMultiplier <= 0 || config.LowTierFramerateMultiplier > 1.0)
+            errors.Add(
+                $"AutoLadder.LowTierFramerateMultiplier must be in (0, 1.0] (got {config.LowTierFramerateMultiplier})."
+            );
     }
 
     private static void ValidateCmafCompatibility(EncodingProfile profile, List<string> errors)
