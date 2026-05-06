@@ -10,12 +10,12 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Tests.Encoder.Pipeline.Stages;
-using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
-using Container = NoMercy.Encoder.Profiles.V2.Container;
-using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
-using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
-using V2RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
-using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
+using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
+using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
+using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Codecs;
 

@@ -1,4 +1,4 @@
-using NoMercy.Encoder.Profiles.V2;
+using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Encoder.Codecs;
 

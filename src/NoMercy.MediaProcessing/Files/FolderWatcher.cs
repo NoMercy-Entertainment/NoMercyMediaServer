@@ -228,7 +228,7 @@ public class FolderWatcher : IDisposable
             new(WatcherChangeTypes.All, "", "")
         )
         {
-            ErrorEventArgs = e
+            ErrorEventArgs = e,
         };
 
         _instance?.OnError?.Invoke(fileWatcherEventArgs);

@@ -151,7 +151,7 @@ public static class ServiceCollectionExtensions
 
         // Profiles
         services.AddTransient<IProfileValidator, V2BackedProfileValidator>();
-        services.AddTransient<IPresetResolver, PresetResolver>();
+        services.AddTransient<INamePresetResolver, ByNamePresetResolver>();
         services.AddSingleton<IProfileSignatureVerifier, ProfileSignatureVerifier>();
 
         // Execution

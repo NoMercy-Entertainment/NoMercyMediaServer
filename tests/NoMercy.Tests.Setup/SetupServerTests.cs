@@ -706,11 +706,7 @@ public class SetupServerRedirectUriTests
         // This is required for PKCE security — the code_verifier is only on the server.
         DefaultHttpContext context = new()
         {
-            Request =
-            {
-                Scheme = "http",
-                Host = new("192.168.1.100", 7626)
-            }
+            Request = { Scheme = "http", Host = new("192.168.1.100", 7626) },
         };
 
         string result = SetupServer.BuildRedirectUri(context.Request);
@@ -723,11 +719,7 @@ public class SetupServerRedirectUriTests
     {
         DefaultHttpContext context = new()
         {
-            Request =
-            {
-                Scheme = "http",
-                Host = new("localhost", 8080)
-            }
+            Request = { Scheme = "http", Host = new("localhost", 8080) },
         };
 
         string result = SetupServer.BuildRedirectUri(context.Request);
@@ -741,11 +733,7 @@ public class SetupServerRedirectUriTests
         // When no port is present on the Host header, the default setup port is used.
         DefaultHttpContext context = new()
         {
-            Request =
-            {
-                Scheme = "https",
-                Host = new("example.com")
-            }
+            Request = { Scheme = "https", Host = new("example.com") },
         };
 
         string result = SetupServer.BuildRedirectUri(context.Request);

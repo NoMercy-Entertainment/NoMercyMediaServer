@@ -1,9 +1,9 @@
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
-using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
-using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
-using V2RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
-using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
+using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
+using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
+using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
+using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Codecs;
 

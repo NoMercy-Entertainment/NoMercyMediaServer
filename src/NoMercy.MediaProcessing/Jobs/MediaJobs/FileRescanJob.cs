@@ -38,12 +38,12 @@ public class FileRescanJob : AbstractMediaJob
         );
 
         Library? library = await libraryManager.RescanFiles(LibraryId, Id);
-        
+
         string type = library?.Type switch
         {
             Config.TvMediaType or Config.AnimeMediaType => "tv",
             Config.MovieMediaType => "movie",
-            _ => "unknown"
+            _ => "unknown",
         };
 
         if (EventBusProvider.IsConfigured)

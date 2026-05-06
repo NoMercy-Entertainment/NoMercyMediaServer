@@ -9,7 +9,7 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Optimizer;
-using NoMercy.Encoder.Profiles.V2;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using LegacyDrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
 using LegacyDrmMethod = NoMercy.Encoder.BuildingBlocks.Drm.DrmMethod;

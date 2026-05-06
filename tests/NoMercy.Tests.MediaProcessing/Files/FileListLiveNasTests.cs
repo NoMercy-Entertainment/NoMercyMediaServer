@@ -89,11 +89,7 @@ public sealed class FileListLiveNasTests
         await using MediaContext context = new(opts);
         FileRepository repo = new(context, storage.Driver);
 
-        List<FileItem> files = await repo.GetFilesInDirectory(
-            AnimeSeasonDir,
-            "anime",
-            storage
-        );
+        List<FileItem> files = await repo.GetFilesInDirectory(AnimeSeasonDir, "anime", storage);
 
         Assert.NotEmpty(files);
 
@@ -141,11 +137,7 @@ public sealed class FileListLiveNasTests
         await using MediaContext context = new(opts);
         FileRepository repo = new(context, storage.Driver);
 
-        List<FileItem> files = await repo.GetFilesInDirectory(
-            AnimeSeasonDir,
-            "anime",
-            storage
-        );
+        List<FileItem> files = await repo.GetFilesInDirectory(AnimeSeasonDir, "anime", storage);
 
         foreach (FileItem item in files)
         {

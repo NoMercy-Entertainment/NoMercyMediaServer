@@ -7,9 +7,9 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Tests.Encoder.Storage;
-using Container = NoMercy.Encoder.Profiles.V2.Container;
-using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
-using V2EncodeMode = NoMercy.Encoder.Profiles.V2.EncodeMode;
+using Container = NoMercy.Encoder.Profiles.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using V2EncodeMode = NoMercy.Encoder.Profiles.EncodeMode;
 
 namespace NoMercy.Tests.Encoder.Strategies.Hls;
 

@@ -196,7 +196,9 @@ public sealed class ServerConnection : IDisposable
                     "/manage/logs/stream",
                     cancellationToken
                 );
-                await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                await using Stream stream = await response.Content.ReadAsStreamAsync(
+                    cancellationToken
+                );
                 using StreamReader reader = new(stream);
 
                 retryDelay = 1000;

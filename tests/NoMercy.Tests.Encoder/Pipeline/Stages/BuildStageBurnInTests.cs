@@ -12,7 +12,7 @@ using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Tests.Encoder.Storage;
-using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.SubtitlePolicy;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 

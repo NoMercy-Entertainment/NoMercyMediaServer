@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
-using NoMercy.Storage.Drivers.Local;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +6,7 @@ using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Setup;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;
 
@@ -43,14 +43,8 @@ public class SetupModeMiddlewareTests
     {
         DefaultHttpContext context = new()
         {
-            Request =
-            {
-                Path = path
-            },
-            Response =
-            {
-                Body = new MemoryStream()
-            }
+            Request = { Path = path },
+            Response = { Body = new MemoryStream() },
         };
         return context;
     }

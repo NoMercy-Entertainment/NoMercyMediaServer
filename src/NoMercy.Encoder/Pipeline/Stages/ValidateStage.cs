@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
-using NoMercy.Encoder.Profiles.V2;
+using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 

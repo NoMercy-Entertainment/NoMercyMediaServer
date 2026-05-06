@@ -7,13 +7,13 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Tests.Encoder.Storage;
-using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
-using Container = NoMercy.Encoder.Profiles.V2.Container;
-using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
-using LadderConfig = NoMercy.Encoder.Profiles.V2.LadderConfig;
-using LadderMode = NoMercy.Encoder.Profiles.V2.LadderMode;
-using LadderRung = NoMercy.Encoder.Profiles.V2.LadderRung;
-using V2EncodeMode = NoMercy.Encoder.Profiles.V2.EncodeMode;
+using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using LadderConfig = NoMercy.Encoder.Profiles.LadderConfig;
+using LadderMode = NoMercy.Encoder.Profiles.LadderMode;
+using LadderRung = NoMercy.Encoder.Profiles.LadderRung;
+using V2EncodeMode = NoMercy.Encoder.Profiles.EncodeMode;
 
 namespace NoMercy.Tests.Encoder.Strategies.Hls;
 

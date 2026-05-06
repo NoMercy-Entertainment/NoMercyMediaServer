@@ -12,7 +12,6 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
-using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
@@ -23,7 +22,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using Serilog.Events;
-using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 

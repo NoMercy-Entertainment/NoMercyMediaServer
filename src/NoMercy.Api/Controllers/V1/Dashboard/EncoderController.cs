@@ -11,7 +11,6 @@ using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Profiles;
-using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;

@@ -12,17 +12,16 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
-using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 using AnalysisMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
-using V2EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
-using V2IPresetLookup = NoMercy.Encoder.Profiles.V2.IPresetLookup;
-using V2PresetResolver = NoMercy.Encoder.Profiles.V2.PresetResolver;
-using V2ProfileDiffer = NoMercy.Encoder.Profiles.V2.ProfileDiffer;
-using V2ProfileValidationResult = NoMercy.Encoder.Profiles.V2.ProfileValidationResult;
-using V2ProfileValidator = NoMercy.Encoder.Profiles.V2.ProfileValidator;
+using V2EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using V2IPresetLookup = NoMercy.Encoder.Profiles.IPresetLookup;
+using V2PresetResolver = NoMercy.Encoder.Profiles.PresetResolver;
+using V2ProfileDiffer = NoMercy.Encoder.Profiles.ProfileDiffer;
+using V2ProfileValidationResult = NoMercy.Encoder.Profiles.ProfileValidationResult;
+using V2ProfileValidator = NoMercy.Encoder.Profiles.ProfileValidator;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
 
@@ -257,7 +256,7 @@ public class EncoderProfilesController(
 
     /// <summary>
     /// Resolves a profile by walking its parent chain via
-    /// <see cref="IPresetResolver"/>, returning the fully-merged
+    /// <see cref="INamePresetResolver"/>, returning the fully-merged
     /// <see cref="EncodingProfile"/>. Superseded by
     /// <c>GET /{id:ulid}/resolved</c> which uses the V2 resolver and validates
     /// the merged result before returning.
@@ -266,7 +265,7 @@ public class EncoderProfilesController(
     [HttpGet("{id}/resolve")]
     public async Task<IActionResult> Resolve(
         string id,
-        [FromServices] IPresetResolver presetResolver
+        [FromServices] INamePresetResolver presetResolver
     )
     {
         if (!User.IsModerator())
@@ -918,13 +917,13 @@ public record ImportProfileRequest(
 );
 
 /// <summary>
-/// Adapter that lets <see cref="IPresetResolver"/> walk the parent chain by
+/// Adapter that lets <see cref="INamePresetResolver"/> walk the parent chain by
 /// hitting the database once per ancestor. Synchronous lookup — the resolver
 /// is pure and doesn't await, so the adapter blocks on async repository
 /// calls.
 /// </summary>
 internal sealed class EncoderProfilesPresetLookup(EncodingPresetRepository repository)
-    : NoMercy.Encoder.Profiles.IPresetLookup
+    : INamePresetLookup
 {
     public PresetResolveRequest? FindByName(string name)
     {
@@ -947,7 +946,7 @@ internal sealed class EncoderProfilesPresetLookup(EncodingPresetRepository repos
 /// Synchronous lookup is intentional: <see cref="PresetResolver"/> is a pure
 /// static method and the chain is short (max 8 hops by contract).
 /// </summary>
-internal sealed class DbPresetLookup(MediaContext context) : V2IPresetLookup
+internal sealed class DbPresetLookup(MediaContext context) : IPresetLookup
 {
     public (string ProfileJson, Ulid? ParentPresetId)? Get(Ulid presetId)
     {

@@ -1,11 +1,11 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
-using NoMercy.Storage.Drivers.Local;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Setup;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;
 

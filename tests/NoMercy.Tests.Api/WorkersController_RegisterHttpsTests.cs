@@ -56,7 +56,7 @@ public class WorkersController_RegisterHttpsTests
                     [new Claim(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
                     "test"
                 )
-            )
+            ),
         };
         controller.ControllerContext = new() { HttpContext = httpContext };
         return controller;

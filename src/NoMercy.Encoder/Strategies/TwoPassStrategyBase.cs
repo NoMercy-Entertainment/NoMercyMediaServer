@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles.V2;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
 using EncodeMode = NoMercy.Encoder.Codecs.EncodeMode;

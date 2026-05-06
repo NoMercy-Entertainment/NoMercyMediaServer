@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using NoMercy.Storage.Drivers.Local;
 using System.Net.Sockets;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -9,6 +8,7 @@ using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Setup;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;
 
@@ -411,14 +411,8 @@ public class EndToEndMiddlewareFlowTests
     {
         DefaultHttpContext context = new()
         {
-            Request =
-            {
-                Path = path
-            },
-            Response =
-            {
-                Body = new MemoryStream()
-            }
+            Request = { Path = path },
+            Response = { Body = new MemoryStream() },
         };
         return context;
     }

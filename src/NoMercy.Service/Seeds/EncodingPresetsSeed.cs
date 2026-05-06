@@ -3,13 +3,12 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Profiles;
-using NoMercy.Encoder.Profiles.V2;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Service.Seeds.Data;
 using NoMercy.Storage;
 using Serilog.Events;
-using V2BuiltinPresets = NoMercy.Encoder.Profiles.V2.BuiltinPresets;
+using V2BuiltinPresets = NoMercy.Encoder.Profiles.BuiltinPresets;
 
 namespace NoMercy.Service.Seeds;
 
@@ -47,7 +46,7 @@ public static class EncodingPresetsSeed
     {
         Logger.Setup("Seeding example encoding presets", LogEventLevel.Verbose);
 
-        NoMercy.Encoder.Profiles.V2.EncodingProfile[] builtins = V2BuiltinPresets.All();
+        NoMercy.Encoder.Profiles.EncodingProfile[] builtins = V2BuiltinPresets.All();
         Dictionary<string, Ulid> builtinByName = builtins.ToDictionary(p => p.Name, p => p.Id);
 
         foreach (EncoderProfileSeedData.SeedExample example in EncoderProfileSeedData.Examples)

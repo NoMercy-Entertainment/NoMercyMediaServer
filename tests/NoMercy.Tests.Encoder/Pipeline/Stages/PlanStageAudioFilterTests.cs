@@ -8,15 +8,15 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
-using AudioOutput = NoMercy.Encoder.Profiles.V2.AudioOutput;
-using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
-using Container = NoMercy.Encoder.Profiles.V2.Container;
-using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
-using LoudnessConfig = NoMercy.Encoder.Profiles.V2.LoudnessConfig;
-using LoudnessMode = NoMercy.Encoder.Profiles.V2.LoudnessMode;
-using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
-using V2RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
-using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
+using AudioOutput = NoMercy.Encoder.Profiles.AudioOutput;
+using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using LoudnessConfig = NoMercy.Encoder.Profiles.LoudnessConfig;
+using LoudnessMode = NoMercy.Encoder.Profiles.LoudnessMode;
+using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
+using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
+using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 

@@ -2,7 +2,7 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Storage;
 using NoMercy.Storage.Validation;
-using ProfileHdrOptions = NoMercy.Encoder.Profiles.V2.HdrOptions;
+using ProfileHdrOptions = NoMercy.Encoder.Profiles.HdrOptions;
 
 namespace NoMercy.Encoder.Hdr;
 

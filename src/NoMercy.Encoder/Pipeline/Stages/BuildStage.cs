@@ -7,7 +7,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
-using NoMercy.Encoder.Profiles.V2;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
 using DrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;

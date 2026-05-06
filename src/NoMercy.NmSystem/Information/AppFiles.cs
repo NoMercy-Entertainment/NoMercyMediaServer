@@ -202,7 +202,8 @@ public static class AppFiles
             {
                 DirectoryInfo keysDir = new(DataProtectionKeysDir)
                 {
-                    UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
+                    UnixFileMode =
+                        UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
                 };
             }
         }

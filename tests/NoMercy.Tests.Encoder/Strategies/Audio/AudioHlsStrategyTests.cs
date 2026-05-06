@@ -3,8 +3,8 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Audio;
-using Container = NoMercy.Encoder.Profiles.V2.Container;
-using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
+using Container = NoMercy.Encoder.Profiles.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Strategies.Audio;
 

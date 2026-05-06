@@ -190,15 +190,15 @@ public static class DatabaseSeeder
         string overlayDir = Path.Combine(AppFiles.DataPath, "profiles");
         Directory.CreateDirectory(overlayDir);
 
-        Encoder.Profiles.V2.DiskOverlayLoader.LoadResult overlay =
-            Encoder.Profiles.V2.DiskOverlayLoader.Load(overlayDir);
+        Encoder.Profiles.DiskOverlayLoader.LoadResult overlay =
+            Encoder.Profiles.DiskOverlayLoader.Load(overlayDir);
 
         foreach (string error in overlay.Errors)
             Logger.Setup($"Disk overlay load error: {error}", LogEventLevel.Warning);
 
-        foreach (Encoder.Profiles.V2.DiskOverlayLoader.LoadedPreset entry in overlay.Loaded)
+        foreach (Encoder.Profiles.DiskOverlayLoader.LoadedPreset entry in overlay.Loaded)
         {
-            Encoder.Profiles.V2.EncodingProfile p = entry.Profile;
+            Encoder.Profiles.EncodingProfile p = entry.Profile;
             Database.Models.Media.EncodingPreset? existing =
                 await context.EncodingPresets.FirstOrDefaultAsync(x => x.Id == p.Id);
 

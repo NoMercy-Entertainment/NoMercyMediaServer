@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
-using NoMercy.Storage.Drivers.Local;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Setup;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;
 

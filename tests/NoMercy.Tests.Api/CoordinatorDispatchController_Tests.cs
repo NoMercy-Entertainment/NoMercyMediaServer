@@ -145,7 +145,7 @@ public class CoordinatorDispatchController_Tests
                     [new Claim(ClaimTypes.NameIdentifier, OwnerUserId.ToString())],
                     "test"
                 )
-            )
+            ),
         };
         controller.ControllerContext = new() { HttpContext = ctx };
         return controller;

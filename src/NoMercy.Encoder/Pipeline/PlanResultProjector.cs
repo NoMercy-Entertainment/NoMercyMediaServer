@@ -1,6 +1,6 @@
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Stages;
-using NoMercy.Encoder.Profiles.V2;
+using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Encoder.Pipeline;
 

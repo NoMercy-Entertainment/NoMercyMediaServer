@@ -2,7 +2,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles.V2;
+using NoMercy.Encoder.Profiles;
 using DrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
 
 namespace NoMercy.Encoder.Output;

@@ -3,7 +3,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
-using HdrPolicy = NoMercy.Encoder.Profiles.V2.HdrPolicy;
+using HdrPolicy = NoMercy.Encoder.Profiles.HdrPolicy;
 
 namespace NoMercy.Tests.Encoder.Hdr;
 

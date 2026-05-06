@@ -1,4 +1,4 @@
-using NoMercy.Encoder.Profiles.V2;
+using NoMercy.Encoder.Profiles;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Metadata;
 

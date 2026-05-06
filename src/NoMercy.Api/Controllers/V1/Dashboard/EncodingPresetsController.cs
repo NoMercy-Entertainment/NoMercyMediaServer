@@ -12,7 +12,6 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
-using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Storage;
 
@@ -25,7 +24,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [Route("api/v{version:apiVersion}/dashboard/encoding/presets")]
 public class EncodingPresetsController(
     EncodingPresetRepository presetRepository,
-    IPresetResolver presetResolver,
+    INamePresetResolver presetResolver,
     IProfileValidator profileValidator,
     IMediaAnalyzer mediaAnalyzer,
     IDbContextFactory<MediaContext> contextFactory,
@@ -546,14 +545,14 @@ public record CreatePresetRequest(
 );
 
 /// <summary>
-/// Adapter that lets <see cref="IPresetResolver"/> walk the parent chain by
+/// Adapter that lets <see cref="INamePresetResolver"/> walk the parent chain by
 /// hitting the database once per ancestor. Synchronous lookup — the resolver
 /// is pure and doesn't await, so the adapter blocks on async repository
 /// calls. Fine for the rare resolve path; optimize if it ever gets called
 /// in a tight loop.
 /// </summary>
 internal sealed class RepositoryPresetLookup(EncodingPresetRepository repository)
-    : NoMercy.Encoder.Profiles.IPresetLookup
+    : INamePresetLookup
 {
     public PresetResolveRequest? FindByName(string name)
     {

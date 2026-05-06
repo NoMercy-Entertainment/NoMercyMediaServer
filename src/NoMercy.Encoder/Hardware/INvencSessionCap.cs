@@ -22,7 +22,7 @@ public interface INvencSessionCap
     /// </param>
     /// <param name="requiresGpu">
     /// <c>true</c> when the profile uses hardware encoding (any
-    /// <see cref="NoMercy.Encoder.Profiles.V2.HardwarePreference"/> other than
+    /// <see cref="NoMercy.Encoder.Profiles.HardwarePreference"/> other than
     /// <c>ForceSoftware</c> or <c>PreferQuality</c>). <c>false</c> skips
     /// the cap check entirely.
     /// </param>

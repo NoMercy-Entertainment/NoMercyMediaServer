@@ -1,6 +1,6 @@
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Profiles.V2;
-using V2BuiltinPresets = NoMercy.Encoder.Profiles.V2.BuiltinPresets;
+using NoMercy.Encoder.Profiles;
+using V2BuiltinPresets = NoMercy.Encoder.Profiles.BuiltinPresets;
 
 namespace NoMercy.Tests.Setup.Seeds;
 

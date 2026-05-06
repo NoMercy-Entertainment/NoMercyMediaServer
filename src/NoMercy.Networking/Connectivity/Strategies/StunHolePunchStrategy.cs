@@ -148,10 +148,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             IPEndPoint serverEndpoint = new(serverAddress, port);
 
             // Build STUN binding request (RFC 5389)
-            StunMessage5389 request = new()
-            {
-                StunMessageType = StunMessageType.BindingRequest
-            };
+            StunMessage5389 request = new() { StunMessageType = StunMessageType.BindingRequest };
             byte[] requestBytes = new byte[request.Length];
             request.WriteTo(requestBytes);
 

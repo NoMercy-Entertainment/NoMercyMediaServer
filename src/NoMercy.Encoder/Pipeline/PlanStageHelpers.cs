@@ -1,5 +1,5 @@
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Profiles.V2;
+using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Encoder.Pipeline;
 
@@ -54,7 +54,7 @@ internal static class PlanStageHelpers
             Codec: rung.Codec,
             Width: rung.Width,
             Height: rung.Height,
-            RateControl: Profiles.V2.RateControlMode.Crf,
+            RateControl: Profiles.RateControlMode.Crf,
             Crf: 23,
             BitrateKbps: rung.BitrateKbps,
             MaxBitrateKbps: rung.MaxBitrateKbps > 0 ? rung.MaxBitrateKbps : null,

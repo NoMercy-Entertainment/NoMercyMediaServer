@@ -8,20 +8,20 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Startup;
-using AudioOutput = NoMercy.Encoder.Profiles.V2.AudioOutput;
-using BuiltinPresets = NoMercy.Encoder.Profiles.V2.BuiltinPresets;
-using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
-using Container = NoMercy.Encoder.Profiles.V2.Container;
-using EncodingProfile = NoMercy.Encoder.Profiles.V2.EncodingProfile;
-using LoudnessConfig = NoMercy.Encoder.Profiles.V2.LoudnessConfig;
-using LoudnessMode = NoMercy.Encoder.Profiles.V2.LoudnessMode;
-using RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
-using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
-using SubtitleOutput = NoMercy.Encoder.Profiles.V2.SubtitleOutput;
-using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
-using ThumbnailOutput = NoMercy.Encoder.Profiles.V2.ThumbnailOutput;
-using V2EncodeMode = NoMercy.Encoder.Profiles.V2.EncodeMode;
-using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
+using AudioOutput = NoMercy.Encoder.Profiles.AudioOutput;
+using BuiltinPresets = NoMercy.Encoder.Profiles.BuiltinPresets;
+using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
+using Container = NoMercy.Encoder.Profiles.Container;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using LoudnessConfig = NoMercy.Encoder.Profiles.LoudnessConfig;
+using LoudnessMode = NoMercy.Encoder.Profiles.LoudnessMode;
+using RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
+using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
+using SubtitleOutput = NoMercy.Encoder.Profiles.SubtitleOutput;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.SubtitlePolicy;
+using ThumbnailOutput = NoMercy.Encoder.Profiles.ThumbnailOutput;
+using V2EncodeMode = NoMercy.Encoder.Profiles.EncodeMode;
+using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Integration;
 
@@ -352,9 +352,9 @@ public class RealEncodeTests : IAsyncLifetime
                 ),
             ],
             Subtitles: [],
-            Ladder: new NoMercy.Encoder.Profiles.V2.LadderConfig
+            Ladder: new NoMercy.Encoder.Profiles.LadderConfig
             {
-                Mode = NoMercy.Encoder.Profiles.V2.LadderMode.Manual,
+                Mode = NoMercy.Encoder.Profiles.LadderMode.Manual,
                 Rungs =
                 [
                     new(320, 180, VideoCodecType.H264, 200, 400, 800, 25.0, "ultrafast"),

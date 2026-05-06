@@ -1,6 +1,6 @@
 using NoMercy.Encoder.Codecs;
-using NoMercy.Encoder.Profiles.V2;
-using RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
+using NoMercy.Encoder.Profiles;
+using RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 
 namespace NoMercy.Tests.Encoder.Profiles.V2;
 

@@ -255,9 +255,7 @@ public sealed class NfsFixture : IAsyncLifetime
         {
             using HttpClient http = new();
             http.Timeout = TimeSpan.FromSeconds(3);
-            HttpResponseMessage response = await http.GetAsync(
-                "http://localhost:2375/info"
-            );
+            HttpResponseMessage response = await http.GetAsync("http://localhost:2375/info");
             return response.IsSuccessStatusCode;
         }
         catch

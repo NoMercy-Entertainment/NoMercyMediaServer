@@ -2,13 +2,13 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
-using AudioOutput = NoMercy.Encoder.Profiles.V2.AudioOutput;
-using CodecProfile = NoMercy.Encoder.Profiles.V2.CodecProfile;
-using RateControlMode = NoMercy.Encoder.Profiles.V2.RateControlMode;
-using StreamPolicy = NoMercy.Encoder.Profiles.V2.StreamPolicy;
-using SubtitleOutput = NoMercy.Encoder.Profiles.V2.SubtitleOutput;
-using SubtitlePolicy = NoMercy.Encoder.Profiles.V2.SubtitlePolicy;
-using VideoOutput = NoMercy.Encoder.Profiles.V2.VideoOutput;
+using AudioOutput = NoMercy.Encoder.Profiles.AudioOutput;
+using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
+using RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
+using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
+using SubtitleOutput = NoMercy.Encoder.Profiles.SubtitleOutput;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.SubtitlePolicy;
+using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Pipeline;
 

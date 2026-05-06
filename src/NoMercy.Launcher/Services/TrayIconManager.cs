@@ -73,10 +73,7 @@ public class TrayIconManager
         _startServerItem = new("Start Server");
         _startServerItem.Click += OnStartServer;
 
-        _stopServerItem = new("Stop Server")
-        {
-            IsEnabled = false
-        };
+        _stopServerItem = new("Stop Server") { IsEnabled = false };
         _stopServerItem.Click += OnStopServer;
 
         NativeMenuItemSeparator separator3 = new();
@@ -300,7 +297,7 @@ public class TrayIconManager
 
             MainViewModel viewModel = new(_serverConnection, _processLauncher)
             {
-                SelectedTabIndex = selectedTab
+                SelectedTabIndex = selectedTab,
             };
             _mainWindow = new(viewModel);
             _mainWindow.Closed += (_, _) => _mainWindow = null;
