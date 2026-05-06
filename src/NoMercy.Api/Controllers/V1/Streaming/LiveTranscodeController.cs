@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.Controllers.V1.Streaming.Dtos;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.Devices;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.LiveTranscode;
@@ -32,7 +34,10 @@ public class LiveTranscodeController(
     IResourceBudget budget,
     IDbContextFactory<MediaContext> contextFactory,
     LiveSessionLimits sessionLimits,
-    IStorage storage
+    IStorage storage,
+    IDeviceCapabilityRegistry capabilityRegistry,
+    IDeviceAwareVariantSelector variantSelector,
+    ILogger<LiveTranscodeController> logger
 ) : BaseController
 {
     [HttpGet("sessions")]
@@ -64,6 +69,7 @@ public class LiveTranscodeController(
     [HttpPost("sessions")]
     public async Task<IActionResult> StartSession(
         [FromBody] StartLiveSessionRequest request,
+        [FromQuery] string? deviceId = null,
         CancellationToken ct = default
     )
     {
@@ -108,10 +114,31 @@ public class LiveTranscodeController(
             );
         }
 
+        DeviceCapabilities? deviceCaps = null;
+        if (deviceId is not null)
+        {
+            deviceCaps =
+                capabilityRegistry.Get(deviceId)
+                ?? await capabilityRegistry.LoadFromDbAsync(deviceId, ct);
+        }
+
+        ClientCapabilities clientCaps = variantSelector.ApplyDeviceCaps(
+            ToClientCapabilities(request.ClientCaps),
+            deviceCaps
+        );
+
+        if (deviceCaps is not null)
+            logger.LogInformation(
+                "Live session for device {DeviceId}: caps channels={Ch} ramTier={Tier}",
+                deviceId,
+                deviceCaps.MaxAudioChannels,
+                deviceCaps.RamTier
+            );
+
         LiveEncodeRequest liveRequest = new(
             InputPath: resolved.InputPath,
             CachedInfo: mediaInfo,
-            Client: ToClientCapabilities(request.ClientCaps),
+            Client: clientCaps,
             StartPosition: TimeSpan.FromSeconds(Math.Max(0, request.StartTimeSeconds)),
             PreferredQuality: request.PreferredQuality
         );
