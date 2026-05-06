@@ -6,6 +6,7 @@ using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.OpticalMedia.Composition;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -35,6 +36,7 @@ public class IStorageAdoptionTests
             opts.FfmpegPathOverride = "ffmpeg";
             opts.FfprobePathOverride = "ffprobe";
         });
+        services.AddNoMercyOpticalMedia();
 
         // Replace IStorage with a logging decorator wrapping LocalStorage
         // (built from the same driver the encoder defaulted to).

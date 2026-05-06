@@ -134,7 +134,7 @@ public sealed class LocalStorage : IStorage
             long size = isDir ? 0L : _driver.GetFileSize(entry);
             DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             yield return new StorageEntry(
-                entry,
+                entry.Replace('\\', '/'),
                 isDir,
                 size,
                 new DateTimeOffset(utc, TimeSpan.Zero)
@@ -274,7 +274,12 @@ public sealed class LocalStorage : IStorage
             long size = isDir ? 0L : _driver.GetFileSize(entry);
             DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             entries.Add(
-                new StorageEntry(entry, isDir, size, new DateTimeOffset(utc, TimeSpan.Zero))
+                new StorageEntry(
+                    entry.Replace('\\', '/'),
+                    isDir,
+                    size,
+                    new DateTimeOffset(utc, TimeSpan.Zero)
+                )
             );
         }
         return entries;

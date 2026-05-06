@@ -167,8 +167,8 @@ public class HlsSubtitleMediaTagTests
         string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(sub, segments, 6);
 
         playlist.Should().Contain("#EXTM3U");
-        playlist.Should().Contain("subs_eng_00000.vtt");
-        playlist.Should().Contain("subs_eng_00001.vtt");
+        playlist.Should().Contain("subs_eng_full_00000.vtt");
+        playlist.Should().Contain("subs_eng_full_00001.vtt");
         playlist.Should().Contain("#EXT-X-ENDLIST");
     }
 

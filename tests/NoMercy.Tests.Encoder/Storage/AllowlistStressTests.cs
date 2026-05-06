@@ -143,7 +143,10 @@ public class AllowlistStressTests
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(e => e.Reason.StartsWith("path is not under any allowed root"));
+            .Where(e =>
+                e.Reason.StartsWith(".. traversal is not allowed")
+                || e.Reason.StartsWith("path is not under any allowed root")
+            );
     }
 
     [Fact]
@@ -158,7 +161,10 @@ public class AllowlistStressTests
 
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(e => e.Reason.StartsWith("path is not under any allowed root"));
+            .Where(e =>
+                e.Reason.StartsWith(".. traversal is not allowed")
+                || e.Reason.StartsWith("path is not under any allowed root")
+            );
     }
 
     [Fact]

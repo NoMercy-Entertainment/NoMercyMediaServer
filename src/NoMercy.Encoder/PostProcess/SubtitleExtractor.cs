@@ -43,10 +43,15 @@ public class SubtitleExtractor : ISubtitleExtractor
             extension = isVobSub ? "idx" : "mks";
             ffmpegCodec = "copy";
         }
+        else if (isAss)
+        {
+            // ASS/SSA always preserves styling — never lossy-convert to WebVTT.
+            (extension, ffmpegCodec) = ("ass", "ass");
+        }
         else
         {
-            // Copy = preserve source format byte-for-byte (no styling loss for
-            // ASS, no ext mismatch for SRT). Explicit codecs force conversion.
+            // Copy = preserve source format byte-for-byte (no ext mismatch for
+            // SRT). Explicit codecs force conversion.
             (extension, ffmpegCodec) = plan.OutputCodec switch
             {
                 SubtitleCodecType.WebVtt => ("vtt", "webvtt"),

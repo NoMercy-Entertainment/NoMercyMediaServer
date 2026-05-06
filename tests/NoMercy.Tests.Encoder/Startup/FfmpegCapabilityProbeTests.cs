@@ -38,7 +38,7 @@ public class FfmpegCapabilityProbeTests
         runner
             .Setup(r =>
                 r.RunAsync(
-                    "ffmpeg",
+                    It.IsAny<string>(),
                     It.Is<string[]>(a =>
                         a.Length == 2 && a[0] == "-hide_banner" && a[1] == "-muxers"
                     ),
@@ -54,7 +54,7 @@ public class FfmpegCapabilityProbeTests
         runner
             .Setup(r =>
                 r.RunAsync(
-                    "fpcalc",
+                    It.IsAny<string>(),
                     It.Is<string[]>(a => a.Length == 1 && a[0] == "--version"),
                     null,
                     It.IsAny<CancellationToken>()
@@ -72,6 +72,9 @@ public class FfmpegCapabilityProbeTests
         caps.Setup(c => c.AvailableProtocols).Returns(new HashSet<string>());
         caps.Setup(c => c.HasProtocol("bluray")).Returns(bluray);
         caps.Setup(c => c.HasProtocol("dvdread")).Returns(dvdread);
+        // ffmpeg ≥ 6.1 routes libdvdread through the `dvdvideo` demuxer instead
+        // of the dvdread:// protocol — the probe checks demuxer presence.
+        caps.Setup(c => c.HasDemuxer("dvdvideo")).Returns(dvdread);
         caps.Setup(c => c.HasFilter(It.IsAny<string>())).Returns(false);
         return caps;
     }

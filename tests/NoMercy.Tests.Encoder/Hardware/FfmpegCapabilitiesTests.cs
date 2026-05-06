@@ -23,6 +23,7 @@ public class FfmpegCapabilitiesTests
             """;
         SetupResponse("-encoders", encoderOutput);
         SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
         SetupResponse("-filters", "");
         SetupResponse("-protocols", "");
 
@@ -41,6 +42,7 @@ public class FfmpegCapabilitiesTests
     {
         SetupResponse("-encoders", "");
         SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
         SetupResponse("-protocols", "");
         string filterOutput = """
             Filters:
@@ -69,6 +71,7 @@ public class FfmpegCapabilitiesTests
             """;
         SetupResponse("-encoders", encoderOutput);
         SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
         SetupResponse("-filters", "");
         SetupResponse("-protocols", "");
 
@@ -83,7 +86,7 @@ public class FfmpegCapabilitiesTests
         _processRunner
             .Setup(r =>
                 r.RunAsync(
-                    "ffmpeg",
+                    It.IsAny<string>(),
                     It.Is<string[]>(args => args.Length == 1 && args[0] == flag),
                     null,
                     It.IsAny<CancellationToken>()

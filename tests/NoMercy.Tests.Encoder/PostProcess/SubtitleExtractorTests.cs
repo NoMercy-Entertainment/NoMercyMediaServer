@@ -66,18 +66,19 @@ public class SubtitleExtractorTests
     }
 
     // ------------------------------------------------------------------
-    // DVD subtitle (bitmap) → .mks with copy codec
+    // VobSub (dvd_subtitle) → native .idx/.sub pair via vobsubenc muxer.
+    // PGS / DVB stay in .mks (see PgsSubtitle test below).
     // ------------------------------------------------------------------
 
     [Fact]
-    public void ResolveOutput_DvdSubtitle_ProducesMksFile()
+    public void ResolveOutput_DvdSubtitle_ProducesIdxFile()
     {
         SubtitleOutputPlan plan = MakePlan(0, "eng");
         SubtitleStreamInfo stream = MakeStream(0, "dvd_subtitle", "eng");
 
         SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
 
-        info.Extension.Should().Be("mks");
+        info.Extension.Should().Be("idx");
         info.FfmpegCodec.Should().Be("copy");
         info.IsBitmap.Should().BeTrue();
     }
