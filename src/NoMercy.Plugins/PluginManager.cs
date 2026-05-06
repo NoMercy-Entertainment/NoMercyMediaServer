@@ -234,6 +234,38 @@ public class PluginManager : IPluginManager, IDisposable
         }
     }
 
+    public async Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default)
+    {
+        if (!_storage.Exists(_pluginsPath))
+        {
+            _logger.LogInformation(
+                "Plugins directory missing: {Path}. No plugins loaded.",
+                _pluginsPath
+            );
+            return [];
+        }
+
+        await LoadPluginsFromDirectoryAsync(ct);
+
+        List<PluginLoadResult> results = [];
+        foreach (LoadedPlugin loaded in _loadedPlugins.Values)
+        {
+            if (loaded.Instance is not null && loaded.Info.Status == PluginStatus.Active)
+            {
+                results.Add(
+                    new(
+                        loaded.Info.Id,
+                        loaded.Info.Name,
+                        loaded.Info.Version.ToString(),
+                        loaded.Instance
+                    )
+                );
+            }
+        }
+
+        return results;
+    }
+
     internal async Task LoadPluginFromManifestAsync(
         string manifestPath,
         CancellationToken ct = default
