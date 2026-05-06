@@ -9,6 +9,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
+using NoMercy.Encoder.Devices;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
@@ -284,6 +285,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IEncodingStrategy, AudioHlsStrategy>();
         services.AddTransient<IStrategyResolver, StrategyResolver>();
         services.AddTransient<IEncodingOrchestrator, EncodingOrchestrator>();
+
+        // Device capability negotiation
+        services.AddSingleton<IDeviceCapabilityRegistry, DeviceCapabilityRegistry>();
+        services.AddSingleton<IDeviceAwareVariantSelector, DeviceAwareVariantSelector>();
 
         // Live Transcoding
         services.AddSingleton<IPlaybackDecisionEngine, PlaybackDecisionEngine>();
