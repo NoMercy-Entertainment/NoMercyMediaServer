@@ -163,6 +163,7 @@ public static class ServiceCollectionExtensions
         // Bundle writers
         services.AddSingleton<IBundleManifestWriter, BundleManifestWriter>();
         services.AddSingleton<IReconstructionWriter, ReconstructionWriter>();
+        services.AddSingleton<IBundleGarbageCollector, BundleGarbageCollector>();
 
         // Profiles
         services.AddTransient<IProfileValidator, V2BackedProfileValidator>();

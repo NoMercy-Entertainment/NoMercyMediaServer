@@ -33,6 +33,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
   </ItemGroup>
 
   <ItemGroup>
