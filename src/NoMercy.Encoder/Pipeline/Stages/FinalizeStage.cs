@@ -26,7 +26,8 @@ public class FinalizeStage(
     IOutputStrategyFactory outputStrategyFactory,
     ILogger<FinalizeStage> logger,
     IStorage storage,
-    IBundleManifestWriter? manifestWriter = null
+    IBundleManifestWriter? manifestWriter = null,
+    IReconstructionWriter? reconstructionWriter = null
 ) : IPipelineStage<FinalizeInput, FinalizeOutput>, IFinalizeStage
 {
     public string Name => "Finalize";
@@ -87,12 +88,22 @@ public class FinalizeStage(
 
             long totalSize = allEntries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
 
-            // Emit manifest.json when the encode has a resolved BundleLayout
-            // and a writer is wired (DI singleton). Skipped when layout is null
-            // (legacy callers that don't set MediaItem on the context).
-            if (manifestWriter is not null && input.Plan.Layout is BundleLayout layout)
+            // Emit manifest.json + reconstruction.json when the encode has a resolved
+            // BundleLayout and writers are wired (DI singletons). Skipped when layout
+            // is null (legacy callers that don't set MediaItem on the context).
+            if (input.Plan.Layout is BundleLayout layout)
             {
-                await WriteManifestAsync(effectiveStorage, layout, allEntries, context, ct);
+                if (manifestWriter is not null)
+                    await WriteManifestAsync(effectiveStorage, layout, allEntries, context, ct);
+
+                if (reconstructionWriter is not null && context.MediaInfo is not null)
+                    await WriteReconstructionAsync(
+                        effectiveStorage,
+                        layout,
+                        input.Plan,
+                        context,
+                        ct
+                    );
             }
 
             return new StageSuccess<FinalizeOutput>(new(input.OutputDirectory, totalSize));
@@ -109,6 +120,30 @@ public class FinalizeStage(
                 )
             );
         }
+    }
+
+    private async Task WriteReconstructionAsync(
+        IStorage effectiveStorage,
+        BundleLayout layout,
+        OutputPlan plan,
+        EncodingContext context,
+        CancellationToken ct
+    )
+    {
+        await reconstructionWriter!.WriteAsync(
+            effectiveStorage,
+            layout.ReconstructionPath,
+            context.MediaInfo!,
+            plan,
+            layout,
+            ct
+        );
+
+        logger.LogInformation(
+            "[{CorrelationId}] Wrote reconstruction.json → {Path}",
+            context.CorrelationId,
+            layout.ReconstructionPath
+        );
     }
 
     private async Task WriteManifestAsync(

@@ -155,8 +155,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMediaKeyResolver, MediaKeyResolver>();
         services.AddSingleton<IOutputNamingResolver, OutputNamingResolver>();
 
-        // Bundle manifest
+        // Bundle writers
         services.AddSingleton<IBundleManifestWriter, BundleManifestWriter>();
+        services.AddSingleton<IReconstructionWriter, ReconstructionWriter>();
 
         // Profiles
         services.AddTransient<IProfileValidator, V2BackedProfileValidator>();
