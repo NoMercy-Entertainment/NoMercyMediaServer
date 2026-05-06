@@ -200,6 +200,12 @@ public static class ServiceCollectionExtensions
         // webhooks for Discord/Slack/email/etc.
         services.AddSingleton<INotificationDispatcher, WebhookNotificationDispatcher>();
 
+        // Subtitle acquisition — adapter + service. IOpenSubtitlesProvider is
+        // registered by the host (MediaProcessing layer) so it can reference the
+        // XML-RPC client without creating a circular project reference.
+        services.AddTransient<IOpenSubtitlesAdapter, OpenSubtitlesAdapter>();
+        services.AddTransient<ISubtitleAcquisitionService, SubtitleAcquisitionService>();
+
         // Subtitle burn-in filter builders
         services.AddTransient<AssBurnInFilterBuilder>();
         services.AddTransient<PgsBurnInFilterBuilder>();

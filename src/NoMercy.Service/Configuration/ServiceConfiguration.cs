@@ -39,6 +39,7 @@ using NoMercy.MediaProcessing.Movies;
 using NoMercy.MediaProcessing.People;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
+using NoMercy.MediaProcessing.Subtitles;
 using NoMercy.Networking;
 using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Connectivity.Strategies;
@@ -175,6 +176,15 @@ public static class ServiceConfiguration
                 client.BaseAddress = new("https://api.opensubtitles.org/xml-rpc");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.Timeout = defaultTimeout;
+            }
+        );
+
+        services.AddHttpClient(
+            HttpClientNames.OpenSubtitlesDownload,
+            client =>
+            {
                 client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
                 client.Timeout = defaultTimeout;
             }
@@ -573,6 +583,13 @@ public static class ServiceConfiguration
             sp.GetRequiredService<IActivityLogger>()
         );
         services.AddSignalREventHandlers();
+
+        // Subtitle acquisition — OpenSubtitlesProvider lives in MediaProcessing so
+        // it can reference both NoMercy.Encoder (interface) and NoMercy.Providers (XML-RPC).
+        services.AddSingleton<
+            NoMercy.Encoder.Subtitles.IOpenSubtitlesProvider,
+            OpenSubtitlesProvider
+        >();
 
         services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.AddScoped<ILocalizer, Localizer>();
