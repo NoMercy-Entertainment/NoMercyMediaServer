@@ -106,7 +106,7 @@ public class ServiceRegistrationTests
         ServiceProvider provider = BuildProvider();
         IProfileValidator validator = provider.GetRequiredService<IProfileValidator>();
         validator.Should().NotBeNull();
-        validator.Should().BeOfType<ProfileValidator>();
+        validator.Should().BeOfType<V2BackedProfileValidator>();
     }
 
     [Fact]

@@ -11,6 +11,7 @@ using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -44,88 +45,22 @@ public class EncoderController(
     /// </remarks>
     [Obsolete("Use POST /api/v1/encoder/profiles")]
     [HttpPost]
-    public async Task<IActionResult> Create()
+    public Task<IActionResult> Create()
     {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to create encoder profiles");
-
-        try
-        {
-            int encoderProfileCount = await encoderRepository.GetEncoderProfileCountAsync();
-
-            Ulid profileId = Ulid.NewUlid();
-            EncodingProfile v3Profile = new(
-                Id: profileId,
-                Name: $"Profile {encoderProfileCount}",
-                Format: OutputFormat.Hls,
-                VideoOutputs:
-                [
-                    new(
-                        Codec: VideoCodecType.H264,
-                        Width: 1920,
-                        Height: null,
-                        BitrateKbps: 8000,
-                        Crf: 23,
-                        Preset: "medium",
-                        Profile: "high",
-                        Level: "4.0",
-                        ConvertHdrToSdr: true,
-                        KeyframeIntervalSeconds: 2,
-                        TenBit: false
-                    ),
-                ],
-                AudioOutputs:
-                [
-                    new(
-                        Codec: AudioCodecType.Aac,
-                        BitrateKbps: 192,
-                        Channels: 2,
-                        SampleRateHz: 48000,
-                        AllowedLanguages: [],
-                        Loudness: LoudnessMode.None
-                    ),
-                ],
-                SubtitleOutputs: []
-            );
-
-            string profileJson = JsonConvert.SerializeObject(v3Profile);
-
-            // Legacy row — kept for old clients that may read this table.
-            EncoderProfile legacyProfile = new()
+        // V2.5 default-profile authoring lived here before the V2 migration
+        // dropped the V2.5 EncodingProfile shape. The replacement endpoint
+        // (POST /api/v1/encoder/profiles) constructs a V2 profile from a
+        // built-in preset clone. This stub returns 410 Gone so any client
+        // still hitting the old route discovers the new path quickly.
+        IActionResult result = StatusCode(
+            StatusCodes.Status410Gone,
+            new
             {
-                Id = profileId,
-                Name = $"Profile {encoderProfileCount}",
-                Container = "m3u8",
-                Param = profileJson,
-            };
-
-            await encoderRepository.AddEncoderProfileAsync(legacyProfile);
-
-            // V3 row — the active encoder pipeline reads from EncodingPresets.
-            EncodingPreset preset = new()
-            {
-                Id = profileId,
-                Name = $"Profile {encoderProfileCount}",
-                ProfileJson = profileJson,
-                IsBuiltIn = false,
-            };
-
-            await presetRepository.CreateAsync(preset);
-
-            return Ok(
-                new StatusResponseDto<EncoderProfile>
-                {
-                    Status = "ok",
-                    Data = legacyProfile,
-                    Message = "Successfully created a new encoder profile.",
-                    Args = [],
-                }
-            );
-        }
-        catch (Exception)
-        {
-            return InternalServerErrorResponse("Something went wrong creating the encoder profile");
-        }
+                error = "endpoint_removed",
+                message = "POST /api/v1/encoder is removed. Use POST /api/v1/encoder/profiles/{parentId}/clone to create a profile from a built-in V2 preset.",
+            }
+        );
+        return Task.FromResult(result);
     }
 
     [HttpDelete]

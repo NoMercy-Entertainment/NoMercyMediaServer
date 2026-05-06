@@ -1,4 +1,4 @@
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Metadata;
 
@@ -62,4 +62,4 @@ public record CustomMetadata(
 
 public record AudioTrackSelection(int StreamIndex, bool Include);
 
-public record SubtitleSelection(int StreamIndex, bool Include, SubtitleMode Mode);
+public record SubtitleSelection(int StreamIndex, bool Include, SubtitlePolicy Policy);

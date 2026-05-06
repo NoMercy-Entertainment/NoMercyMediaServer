@@ -1,4 +1,5 @@
 using NoMercy.Encoder.Errors;
+using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Encoder.Profiles;
 

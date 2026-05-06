@@ -4,7 +4,6 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
@@ -46,7 +45,7 @@ public class PlaylistGenerator : IPlaylistGenerator
         Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics
     )
     {
-        HlsOptions hlsOptions = plan.HlsOptions ?? new HlsOptions();
+        HlsPlanOptions hlsOptions = plan.HlsOptions ?? new HlsPlanOptions();
 
         bool hasFmp4 = hlsOptions.SegmentType.Equals("fmp4", StringComparison.OrdinalIgnoreCase);
         bool hasSubsGroup = plan.SubtitleOutputs.Any(s =>

@@ -242,7 +242,6 @@ public class DolbyVisionGateTests
     public void Resolve_preserves_with_HLS_fmp4_when_HEVC_10bit_HLS_passthrough()
     {
         ScopedDecisionLog log = NewLog();
-        HlsOptions fmp4Options = new() { SegmentType = "fmp4" };
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
             source: DvSource(),
@@ -251,7 +250,7 @@ public class DolbyVisionGateTests
             container: OutputFormat.Hls,
             policy: HdrPolicy.PassthroughWhenPossible,
             decisions: log,
-            hlsOptions: fmp4Options
+            hlsUsesFmp4Segments: true
         );
 
         result.Preserved.Should().BeTrue();
@@ -263,7 +262,6 @@ public class DolbyVisionGateTests
     public void Resolve_strips_when_HLS_segment_type_is_mpegts()
     {
         ScopedDecisionLog log = NewLog();
-        HlsOptions mpegtsOptions = new() { SegmentType = "mpegts" };
 
         DolbyVisionDecision result = DolbyVisionGate.Resolve(
             source: DvSource(),
@@ -272,7 +270,7 @@ public class DolbyVisionGateTests
             container: OutputFormat.Hls,
             policy: HdrPolicy.PassthroughWhenPossible,
             decisions: log,
-            hlsOptions: mpegtsOptions
+            hlsUsesFmp4Segments: false
         );
 
         result.Preserved.Should().BeFalse();

@@ -1,5 +1,5 @@
 using NoMercy.Encoder.Analysis;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Metadata;
@@ -357,7 +357,7 @@ public class DiscRippingModelTests
 
         SubtitleSelection[] subtitles =
         [
-            new(StreamIndex: 2, Include: true, Mode: SubtitleMode.Extract),
+            new(StreamIndex: 2, Include: true, Policy: SubtitlePolicy.Extract),
         ];
 
         Ulid libraryId = Ulid.Parse("01HMZXX9P3VK7BKFMTQ2AHKGWY");
@@ -386,7 +386,7 @@ public class DiscRippingModelTests
         request.Subtitles.Should().HaveCount(1);
         request.AudioTracks[0].Include.Should().BeTrue();
         request.AudioTracks[1].Include.Should().BeFalse();
-        request.Subtitles[0].Mode.Should().Be(SubtitleMode.Extract);
+        request.Subtitles[0].Policy.Should().Be(SubtitlePolicy.Extract);
     }
 
     [Fact]
@@ -439,17 +439,25 @@ public class DiscRippingModelTests
     [Fact]
     public void SubtitleSelection_ConstructsCorrectly_AllModes()
     {
-        SubtitleSelection extract = new(StreamIndex: 0, Include: true, Mode: SubtitleMode.Extract);
-        SubtitleSelection burnIn = new(StreamIndex: 1, Include: true, Mode: SubtitleMode.BurnIn);
+        SubtitleSelection extract = new(
+            StreamIndex: 0,
+            Include: true,
+            Policy: SubtitlePolicy.Extract
+        );
+        SubtitleSelection burnIn = new(
+            StreamIndex: 1,
+            Include: true,
+            Policy: SubtitlePolicy.BurnIn
+        );
         SubtitleSelection passThrough = new(
             StreamIndex: 2,
             Include: false,
-            Mode: SubtitleMode.PassThrough
+            Policy: SubtitlePolicy.Copy
         );
 
-        extract.Mode.Should().Be(SubtitleMode.Extract);
-        burnIn.Mode.Should().Be(SubtitleMode.BurnIn);
-        passThrough.Mode.Should().Be(SubtitleMode.PassThrough);
+        extract.Policy.Should().Be(SubtitlePolicy.Extract);
+        burnIn.Policy.Should().Be(SubtitlePolicy.BurnIn);
+        passThrough.Policy.Should().Be(SubtitlePolicy.Copy);
         passThrough.Include.Should().BeFalse();
     }
 }

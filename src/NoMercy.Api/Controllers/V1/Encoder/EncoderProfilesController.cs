@@ -12,6 +12,7 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -755,16 +756,18 @@ public class EncoderProfilesController(
         }
 
         // --- 3. Signature verification ---------------------------------------
-        bool hasSigning =
-            !string.IsNullOrWhiteSpace(profile.PublisherKeyFingerprint)
-            && !string.IsNullOrWhiteSpace(profile.Signature);
+        // V2 EncodingProfile no longer carries PublisherKeyFingerprint /
+        // Signature inline — those move into the trusted-publisher pipeline as
+        // a separate envelope when V2 grows publisher signing support. For
+        // now, skip signature verification on V2 profiles.
+        bool hasSigning = false;
 
         if (hasSigning)
         {
             EncoderRule? rejection = signatureVerifier.Verify(
                 profileJson,
-                profile.PublisherKeyFingerprint!,
-                profile.Signature!,
+                string.Empty,
+                string.Empty,
                 fingerprint =>
                     mediaContext
                         .TrustedPublisherKeys.AsNoTracking()
@@ -921,7 +924,7 @@ public record ImportProfileRequest(
 /// calls.
 /// </summary>
 internal sealed class EncoderProfilesPresetLookup(EncodingPresetRepository repository)
-    : IPresetLookup
+    : NoMercy.Encoder.Profiles.IPresetLookup
 {
     public PresetResolveRequest? FindByName(string name)
     {

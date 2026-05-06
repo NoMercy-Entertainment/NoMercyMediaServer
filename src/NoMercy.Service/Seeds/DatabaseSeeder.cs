@@ -196,9 +196,7 @@ public static class DatabaseSeeder
         foreach (string error in overlay.Errors)
             Logger.Setup($"Disk overlay load error: {error}", LogEventLevel.Warning);
 
-        foreach (
-            Encoder.Profiles.V2.DiskOverlayLoader.LoadedPreset entry in overlay.Loaded
-        )
+        foreach (Encoder.Profiles.V2.DiskOverlayLoader.LoadedPreset entry in overlay.Loaded)
         {
             Encoder.Profiles.V2.EncodingProfile p = entry.Profile;
             Database.Models.Media.EncodingPreset? existing =
@@ -509,7 +507,7 @@ public static class DatabaseSeeder
             // migration" which we treat as safe (don't unstamp).
             ["20260416210105_AddEncodingHistoryTable"] = "EncodingHistory",
             ["20260417010426_AddEncodingPresetTable"] = "EncodingPresets",
-            ["20260417011900_AddContentSegmentTable"] = "ContentSegments"
+            ["20260417011900_AddContentSegmentTable"] = "ContentSegments",
         };
 
         // Context-type filtering: only return entries whose migration name

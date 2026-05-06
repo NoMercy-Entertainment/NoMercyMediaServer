@@ -13,7 +13,6 @@ using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Encoder.Subtitles;
 using LegacyDrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
 using LegacyDrmMethod = NoMercy.Encoder.BuildingBlocks.Drm.DrmMethod;
-using LegacyHlsOptions = NoMercy.Encoder.Profiles.HlsOptions;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 
@@ -259,7 +258,7 @@ public class PlanStage(
     )
     {
         OutputFormat outputFormat = PlanStageHelpers.ContainerToOutputFormat(profile.Container);
-        LegacyHlsOptions? hlsOptions = PlanStageHelpers.ContainerToHlsOptions(profile.Container);
+        bool hlsUsesFmp4Segments = profile.Container is Container.HlsFmp4 or Container.AudioHlsFmp4;
 
         // Resolve tonemap strategy once — shared across all video outputs that need HDR→SDR.
         // When HdrPolicy is AlwaysPreserve, skip tonemapping entirely regardless of source.
@@ -604,7 +603,7 @@ public class PlanStage(
             outputFormat,
             profile.HdrPolicy,
             context.DecisionsOrNoOp,
-            hlsOptions
+            hlsUsesFmp4Segments
         );
 
         // Merge DV container flags into the first video output's ExtraFlags.
@@ -624,6 +623,21 @@ public class PlanStage(
             );
         }
 
+        // Resolve HLS muxer options from V2 HlsConfig + Container. Strategies
+        // need flat strings ("mpegts" | "fmp4", "vod" | "event") so we materialise
+        // them here once instead of teaching every strategy how to read V2.
+        HlsPlanOptions? hlsOptions = profile.Container
+            is Container.HlsTs
+                or Container.HlsFmp4
+                or Container.AudioHlsTs
+                or Container.AudioHlsFmp4
+            ? new HlsPlanOptions(
+                SegmentType: hlsUsesFmp4Segments ? "fmp4" : "mpegts",
+                PlaylistType: profile.Hls?.PlaylistType == HlsPlaylistType.Event ? "event" : "vod",
+                IndependentSegments: profile.Hls?.IndependentSegments ?? true
+            )
+            : null;
+
         return new(
             outputFormat,
             videoPlan,
@@ -632,7 +646,8 @@ public class PlanStage(
             thumbPlan,
             segmentDuration,
             PreserveDolbyVision: dvDecision.Preserved,
-            Drm: ConvertDrmConfig(profile.Drm)
+            Drm: ConvertDrmConfig(profile.Drm),
+            HlsOptions: hlsOptions
         );
     }
 

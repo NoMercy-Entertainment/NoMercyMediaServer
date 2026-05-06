@@ -1,9 +1,11 @@
-namespace NoMercy.Encoder.Profiles;
+namespace NoMercy.Encoder.Profiles.V2;
 
 /// <summary>
-/// V1 profile type aliases — these match the database IVideoProfile/IAudioProfile/ISubtitleProfile
-/// but live in the Encoder namespace so the mapper doesn't depend on Database project.
-/// The job maps from Database types to these before calling the mapper.
+/// Adapter records that mirror the V1 DB profile shape (IVideoProfile,
+/// IAudioProfile, ISubtitleProfile, IThumbnailProfile) without depending on
+/// NoMercy.Database. <see cref="V2ProfileFactory"/> consumes these to build a
+/// V2 <see cref="EncodingProfile"/>. The job (e.g. VideoEncodeJob) maps from
+/// the DB row to these records before calling the factory.
 /// </summary>
 public record V1VideoProfile(
     string Codec,

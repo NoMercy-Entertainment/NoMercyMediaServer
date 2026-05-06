@@ -12,6 +12,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Storage;
 
@@ -551,7 +552,8 @@ public record CreatePresetRequest(
 /// calls. Fine for the rare resolve path; optimize if it ever gets called
 /// in a tight loop.
 /// </summary>
-internal sealed class RepositoryPresetLookup(EncodingPresetRepository repository) : IPresetLookup
+internal sealed class RepositoryPresetLookup(EncodingPresetRepository repository)
+    : NoMercy.Encoder.Profiles.IPresetLookup
 {
     public PresetResolveRequest? FindByName(string name)
     {

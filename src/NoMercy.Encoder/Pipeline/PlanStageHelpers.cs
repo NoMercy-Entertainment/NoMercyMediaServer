@@ -109,22 +109,4 @@ internal static class PlanStageHelpers
             Container.Mks => OutputFormat.Mkv,
             _ => OutputFormat.Hls,
         };
-
-    /// <summary>
-    /// Derives an <see cref="NoMercy.Encoder.Profiles.HlsOptions"/> compatible
-    /// value from the V2 <see cref="Container"/>.
-    /// HlsTs → mpegts segments. HlsFmp4 / AudioHlsFmp4 → fmp4 segments.
-    /// Non-HLS containers return null.
-    /// </summary>
-    internal static NoMercy.Encoder.Profiles.HlsOptions? ContainerToHlsOptions(
-        Container container
-    ) =>
-        container switch
-        {
-            Container.HlsTs => new() { SegmentType = "mpegts" },
-            Container.HlsFmp4 => new() { SegmentType = "fmp4" },
-            Container.AudioHlsTs => new() { SegmentType = "mpegts" },
-            Container.AudioHlsFmp4 => new() { SegmentType = "fmp4" },
-            _ => null,
-        };
 }

@@ -24,7 +24,7 @@ public enum DownmixMode
 
     /// <summary>
     /// Custom pan matrix supplied in the profile as a raw
-    /// <see cref="F:NoMercy.Encoder.Profiles.AudioOutput.CustomPanMatrix"/>
+    /// <see cref="P:NoMercy.Encoder.Profiles.V2.DownmixConfig.CustomPanMatrix"/>
     /// string (e.g. <c>stereo|FL&lt;FL+0.5*FC|FR&lt;FR+0.5*FC</c>).
     /// </summary>
     Custom,

@@ -2,7 +2,7 @@
 using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
-using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Profiles.V2;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
@@ -123,11 +123,7 @@ public class DiscRipperTests : IDisposable
             drivePath: "bluray:/dev/sr0",
             titles: [0],
             audioTracks: [new(0, true)],
-            subtitles:
-            [
-                new(0, true, SubtitleMode.PassThrough),
-                new(1, false, SubtitleMode.PassThrough),
-            ]
+            subtitles: [new(0, true, SubtitlePolicy.Copy), new(1, false, SubtitlePolicy.Copy)]
         );
 
         await ripper.RipAsync(request, _outputDir, CancellationToken.None);

@@ -150,9 +150,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ITonemapSelector, TonemapSelector>();
 
         // Profiles
-        services.AddTransient<IProfileValidator, ProfileValidator>();
+        services.AddTransient<IProfileValidator, V2BackedProfileValidator>();
         services.AddTransient<IPresetResolver, PresetResolver>();
-        services.AddSingleton<IProfileResolver, ProfileResolver>();
         services.AddSingleton<IProfileSignatureVerifier, ProfileSignatureVerifier>();
 
         // Execution

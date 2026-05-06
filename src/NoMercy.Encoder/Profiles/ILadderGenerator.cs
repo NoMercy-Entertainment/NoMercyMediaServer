@@ -1,5 +1,6 @@
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Profiles.V2;
 
 namespace NoMercy.Encoder.Profiles;
 

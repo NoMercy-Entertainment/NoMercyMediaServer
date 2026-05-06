@@ -60,7 +60,7 @@ public static class DolbyVisionGate
         OutputFormat container,
         HdrPolicy policy,
         IDecisionLogSink decisions,
-        HlsOptions? hlsOptions = null
+        bool hlsUsesFmp4Segments = true
     )
     {
         // --- Condition 0: no DV in source → silent no-op ---------------------
@@ -152,7 +152,7 @@ public static class DolbyVisionGate
         Dictionary<string, string> extraFlags = BuildExtraFlags(
             source,
             container,
-            hlsOptions,
+            hlsUsesFmp4Segments,
             decisions
         );
 
@@ -161,7 +161,7 @@ public static class DolbyVisionGate
         if (extraFlags.Count == 0 && container == OutputFormat.Hls)
         {
             string reason =
-                "HLS mpegts segments do not carry DV RPU — set HlsOptions.SegmentType = fmp4 to preserve DV";
+                "HLS mpegts segments do not carry DV RPU — use Container.HlsFmp4 to preserve DV";
             decisions.Add(
                 new DecisionLog(
                     "plan",
@@ -205,7 +205,7 @@ public static class DolbyVisionGate
     private static Dictionary<string, string> BuildExtraFlags(
         DolbyVisionInfo source,
         OutputFormat container,
-        HlsOptions? hlsOptions,
+        bool hlsUsesFmp4Segments,
         IDecisionLogSink decisions
     )
     {
@@ -227,14 +227,11 @@ public static class DolbyVisionGate
                 break;
 
             case OutputFormat.Hls:
-                // HLS DV requires fmp4 segments. If the profile explicitly set mpegts
-                // we don't silently override — return empty flags to trigger the strip path.
-                string segmentType = hlsOptions?.SegmentType ?? "fmp4";
-                if (!string.Equals(segmentType, "fmp4", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Caller will detect empty flags + Hls container and log the strip.
+                // HLS DV requires fmp4 segments. If the caller's container is HlsTs
+                // (mpegts) we don't silently override — return empty flags to trigger
+                // the strip path so the operator sees the warning.
+                if (!hlsUsesFmp4Segments)
                     return new Dictionary<string, string>();
-                }
 
                 flags["-hls_segment_type"] = "fmp4";
                 break;

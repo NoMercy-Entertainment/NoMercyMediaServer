@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Storage;
 
@@ -21,7 +20,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
     )
     {
         int segmentDuration = plan.SegmentDurationSeconds;
-        HlsOptions hlsOptions = plan.HlsOptions ?? new HlsOptions();
+        HlsPlanOptions hlsOptions = plan.HlsOptions ?? new HlsPlanOptions();
 
         // Hoist segment-type derived values; both video and audio loops need them.
         bool isFmp4 = hlsOptions.SegmentType.Equals("fmp4", StringComparison.OrdinalIgnoreCase);
@@ -247,7 +246,10 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             })
             .ToArray();
 
-        return plan with { SubtitleOutputs = existingSubtitleOutputs };
+        return plan with
+        {
+            SubtitleOutputs = existingSubtitleOutputs,
+        };
     }
 
     // Slices each extracted WebVTT into per-segment .vtt files matching the

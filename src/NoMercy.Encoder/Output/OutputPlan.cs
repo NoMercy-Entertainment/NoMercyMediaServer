@@ -2,7 +2,6 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Profiles.V2;
 using DrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
 
@@ -28,7 +27,7 @@ public record OutputPlan(
     DrmConfig? Drm = null,
     // HLS muxer options forwarded from the profile. Controls playlist type,
     // segment container format, and independent-segments signaling.
-    HlsOptions? HlsOptions = null,
+    HlsPlanOptions? HlsOptions = null,
     // Chapter metadata from the source file. Output strategies use this to
     // embed chapter data in container-appropriate format:
     //   MKV  — stream-copied by FFmpeg automatically; no extra args needed.
