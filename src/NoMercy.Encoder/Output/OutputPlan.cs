@@ -4,6 +4,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
+using NoMercy.Encoder.Subtitles;
 using DrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
 
 namespace NoMercy.Encoder.Output;
@@ -38,7 +39,10 @@ public record OutputPlan(
     IReadOnlyList<ChapterInfo>? Chapters = null,
     // Resolved by PlanStage when EncodingContext.MediaItem is set.
     // Provides the canonical bundle directory + per-output filenames.
-    BundleLayout? Layout = null
+    BundleLayout? Layout = null,
+    // Subtitles downloaded by SubtitleAcquisitionService during PlanStage.
+    // BuildStage adds exact-match entries as FFmpeg -i inputs.
+    IReadOnlyList<AcquiredSubtitle>? AcquiredSubtitles = null
 );
 
 public record VideoOutputPlan(

@@ -38,7 +38,8 @@ public class PlanStage(
     IHardwarePreferenceResolver? hardwarePreferenceResolver = null,
     SpeedIndex? speedIndex = null,
     IBitDepthPolicyResolver? bitDepthPolicyResolver = null,
-    IOutputNamingResolver? outputNamingResolver = null
+    IOutputNamingResolver? outputNamingResolver = null,
+    ISubtitleAcquisitionService? subtitleAcquisitionService = null
 ) : IPipelineStage<ValidateInput, ExecutionPlan>, IPlanStage
 {
     public string Name => "Plan";
@@ -183,6 +184,15 @@ public class PlanStage(
                 totalEstimate
             );
 
+            IReadOnlyList<AcquiredSubtitle> acquiredSubtitles = await AcquireSubtitlesAsync(
+                    profile,
+                    input.Media,
+                    ct
+                )
+                .ConfigureAwait(false);
+
+            outputPlan = outputPlan with { AcquiredSubtitles = acquiredSubtitles };
+
             ExecutionPlan plan = new(groups.ToArray(), totalEstimate, outputPlan);
             return new StageSuccess<ExecutionPlan>(plan);
         }
@@ -248,6 +258,49 @@ public class PlanStage(
                 correlationId
             );
             return null;
+        }
+    }
+
+    private async Task<IReadOnlyList<AcquiredSubtitle>> AcquireSubtitlesAsync(
+        EncodingProfile profile,
+        MediaInfo media,
+        CancellationToken ct
+    )
+    {
+        SubtitleAcquisitionConfig? acq = profile.SubtitleAcquisition;
+        if (subtitleAcquisitionService is null || acq is null || !acq.Enabled)
+            return [];
+
+        try
+        {
+            string[] alreadyPresent = media
+                .SubtitleStreams.Select(s => s.Language ?? "und")
+                .ToArray();
+
+            AcquisitionRequest request = new(
+                SourcePath: media.FilePath,
+                SourceFileSize: media.FileSizeBytes,
+                SourceFilename: System.IO.Path.GetFileName(media.FilePath),
+                MediaTitle: System.IO.Path.GetFileNameWithoutExtension(media.FilePath),
+                Season: null,
+                Episode: null,
+                Year: null,
+                SourceFps: media.VideoStreams.Count > 0 ? media.VideoStreams[0].FrameRate : null,
+                SourceDuration: media.Duration,
+                LanguagesAlreadyInSource: alreadyPresent,
+                Config: acq
+            );
+
+            return await subtitleAcquisitionService.AcquireAsync(request, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                ex,
+                "[{CorrelationId}] Subtitle acquisition failed — continuing without acquired subs",
+                "unknown"
+            );
+            return [];
         }
     }
 
