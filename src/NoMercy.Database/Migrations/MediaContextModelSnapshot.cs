@@ -3811,6 +3811,9 @@ namespace NoMercy.Database.Migrations
                     b.Property<DateTime?>("WsConnectedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CapabilitiesJson")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DeviceId")

@@ -67,5 +67,9 @@ public class Device : Timestamps
     [JsonProperty("mdns_seen_at")]
     public DateTime? MdnsSeenAt { get; set; }
 
+    [Column(TypeName = "TEXT")]
+    [JsonProperty("capabilities_json")]
+    public string? CapabilitiesJson { get; set; }
+
     public virtual User? OwnerUser { get; set; }
 }
