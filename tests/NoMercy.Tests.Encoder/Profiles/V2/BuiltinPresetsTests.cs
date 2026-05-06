@@ -5,6 +5,42 @@ namespace NoMercy.Tests.Encoder.Profiles.V2;
 public class BuiltinPresetsTests
 {
     [Fact]
+    public void AbrStandard_uses_Auto_mode_with_Standard_tiers()
+    {
+        EncodingProfile preset = BuiltinPresets
+            .All()
+            .Single(p => p.Name == "ABR Standard 480/720/1080");
+
+        preset.Ladder.Should().NotBeNull();
+        preset.Ladder!.Mode.Should().Be(LadderMode.Auto);
+        preset.Ladder.AutoConfig.Should().NotBeNull();
+        preset.Ladder.AutoConfig!.Tiers.Should().BeSameAs(LadderTiers.Standard);
+        preset.Ladder.AutoConfig.BitrateStrategy.Should().Be(BitrateStrategy.AppleHlsRecommended);
+        preset.Ladder.AutoConfig.CodecPolicy.Should().Be(LadderCodecPolicy.Uniform);
+    }
+
+    [Fact]
+    public void AbrPremiumHevc_uses_Auto_mode_with_Premium_720p_plus_tiers()
+    {
+        EncodingProfile preset = BuiltinPresets
+            .All()
+            .Single(p => p.Name == "ABR Premium HEVC 720/1080/2160");
+
+        preset.Ladder.Should().NotBeNull();
+        preset.Ladder!.Mode.Should().Be(LadderMode.Auto);
+        preset.Ladder.AutoConfig.Should().NotBeNull();
+
+        AutoLadderConfig config = preset.Ladder.AutoConfig!;
+        config.BitrateStrategy.Should().Be(BitrateStrategy.AppleHlsRecommended);
+        config.CodecPolicy.Should().Be(LadderCodecPolicy.Uniform);
+        config.Crf.Should().Be(20);
+
+        // Tiers = LadderTiers.Premium.Skip(1) → 720p, 1080p, 2160p (no 480p)
+        config.Tiers.Should().HaveCount(3);
+        config.Tiers.Select(t => t.Label).Should().Equal("720p", "1080p", "2160p");
+    }
+
+    [Fact]
     public void All_returns_22_presets()
     {
         EncodingProfile[] all = BuiltinPresets.All();

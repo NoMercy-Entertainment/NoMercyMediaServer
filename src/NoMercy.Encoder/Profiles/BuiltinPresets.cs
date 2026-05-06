@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using NoMercy.Encoder.Codecs;
@@ -272,49 +273,13 @@ public static class BuiltinPresets
             HlsDerivatives: new(),
             Ladder: new()
             {
-                Mode = LadderMode.Manual,
-                Rungs =
-                [
-                    new(
-                        854,
-                        480,
-                        VideoCodecType.H264,
-                        1500,
-                        2250,
-                        3000,
-                        24.0,
-                        "medium",
-                        CodecProfile.High,
-                        8,
-                        "yuv420p"
-                    ),
-                    new(
-                        1280,
-                        720,
-                        VideoCodecType.H264,
-                        3000,
-                        4500,
-                        6000,
-                        24.0,
-                        "medium",
-                        CodecProfile.High,
-                        8,
-                        "yuv420p"
-                    ),
-                    new(
-                        1920,
-                        1080,
-                        VideoCodecType.H264,
-                        6000,
-                        9000,
-                        12000,
-                        24.0,
-                        "medium",
-                        CodecProfile.High,
-                        8,
-                        "yuv420p"
-                    ),
-                ],
+                Mode = LadderMode.Auto,
+                AutoConfig = new()
+                {
+                    Tiers = LadderTiers.Standard,
+                    BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
+                    CodecPolicy = LadderCodecPolicy.Uniform,
+                },
             }
         )
         {
@@ -376,49 +341,14 @@ public static class BuiltinPresets
             HlsDerivatives: new() { GenerateIFramePlaylists = true },
             Ladder: new()
             {
-                Mode = LadderMode.Manual,
-                Rungs =
-                [
-                    new(
-                        1280,
-                        720,
-                        VideoCodecType.H265,
-                        1600,
-                        2400,
-                        3200,
-                        24.0,
-                        "slow",
-                        CodecProfile.Main10,
-                        10,
-                        "yuv420p10le"
-                    ),
-                    new(
-                        1920,
-                        1080,
-                        VideoCodecType.H265,
-                        3400,
-                        5100,
-                        6800,
-                        24.0,
-                        "slow",
-                        CodecProfile.Main10,
-                        10,
-                        "yuv420p10le"
-                    ),
-                    new(
-                        3840,
-                        2160,
-                        VideoCodecType.H265,
-                        11600,
-                        17400,
-                        23200,
-                        24.0,
-                        "slow",
-                        CodecProfile.Main10,
-                        10,
-                        "yuv420p10le"
-                    ),
-                ],
+                Mode = LadderMode.Auto,
+                AutoConfig = new()
+                {
+                    Tiers = LadderTiers.Premium.Skip(1).ToArray(),
+                    BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
+                    CodecPolicy = LadderCodecPolicy.Uniform,
+                    Crf = 20,
+                },
             }
         )
         {
