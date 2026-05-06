@@ -15,6 +15,7 @@ using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Plugins.Abstractions;
 using NoMercy.Service.Configuration;
 using NoMercy.Service.Seeds;
 using NoMercy.Setup;
@@ -213,6 +214,17 @@ public static class Program
         // don't wait for InitRemaining() which can be blocked by rate-limited HTTP calls.
         QueueRunner queueRunner = app.Services.GetRequiredService<QueueRunner>();
         await queueRunner.Initialize();
+
+        // Scan and load plugins from the plugins directory. Missing directory is safe —
+        // returns empty list and logs INFO. One plugin's failure never blocks others.
+        IPluginManager pluginManager = app.Services.GetRequiredService<IPluginManager>();
+        IReadOnlyList<PluginLoadResult> loadedPlugins = await pluginManager.LoadAllAsync(
+            _applicationShutdownCts.Token
+        );
+        foreach (PluginLoadResult pluginResult in loadedPlugins)
+            Logger.Setup(
+                $"Plugin loaded: {pluginResult.Name} {pluginResult.Version} ({pluginResult.PluginId})"
+            );
 
         RegisterLifetimeEvents(app, stopWatch);
 
