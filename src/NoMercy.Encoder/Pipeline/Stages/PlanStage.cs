@@ -704,31 +704,47 @@ public class PlanStage(
             return profile;
         }
 
-        VideoOutput[] ladder = abrLadderGenerator.Generate(media, reference);
-        if (ladder.Length == 0)
+        LadderRung[] rungs;
+
+        if (profile.Ladder.AutoConfig is not null)
+        {
+            rungs = abrLadderGenerator.GenerateLadder(
+                media,
+                reference.Codec,
+                profile.Ladder.AutoConfig
+            );
+        }
+        else
+        {
+            VideoOutput[] ladder = abrLadderGenerator.Generate(media, reference);
+            if (ladder.Length == 0)
+                return profile;
+
+            rungs = ladder
+                .Select(v => new LadderRung(
+                    Width: v.Width,
+                    Height: v.Height ?? 0,
+                    Codec: v.Codec,
+                    BitrateKbps: v.BitrateKbps,
+                    MaxBitrateKbps: v.MaxBitrateKbps ?? 0,
+                    BufferSizeKbps: v.BufferSizeKbps ?? 0,
+                    Framerate: 0,
+                    Preset: v.Preset,
+                    CodecProfile: v.CodecProfile,
+                    BitDepth: v.BitDepth,
+                    PixelFormat: v.PixelFormat
+                ))
+                .ToArray();
+        }
+
+        if (rungs.Length == 0)
             return profile;
 
         logger.LogInformation(
             "AutoLadder expanded 1 reference profile → {Count} variants for {Source}",
-            ladder.Length,
+            rungs.Length,
             media.FilePath
         );
-
-        LadderRung[] rungs = ladder
-            .Select(v => new LadderRung(
-                Width: v.Width,
-                Height: v.Height ?? 0,
-                Codec: v.Codec,
-                BitrateKbps: v.BitrateKbps,
-                MaxBitrateKbps: v.MaxBitrateKbps ?? 0,
-                BufferSizeKbps: v.BufferSizeKbps ?? 0,
-                Framerate: 0,
-                Preset: v.Preset,
-                CodecProfile: v.CodecProfile,
-                BitDepth: v.BitDepth,
-                PixelFormat: v.PixelFormat
-            ))
-            .ToArray();
 
         return profile with
         {
