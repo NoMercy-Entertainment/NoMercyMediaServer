@@ -5,6 +5,8 @@ using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
+using NoMercy.Encoder.Metadata;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
@@ -34,7 +36,8 @@ public class BuildStage(
     ILogger<BuildStage> logger,
     IStorage storage,
     AssBurnInFilterBuilder? assBurnInFilterBuilder = null,
-    PgsBurnInFilterBuilder? pgsBurnInFilterBuilder = null
+    PgsBurnInFilterBuilder? pgsBurnInFilterBuilder = null,
+    IMetadataInjector? metadataInjector = null
 ) : IPipelineStage<BuildInput, FfmpegCommand[]>, IBuildStage
 {
     public string Name => "Build";
@@ -259,6 +262,7 @@ public class BuildStage(
             }
 
             FfmpegCommand mainCommand = builder.Build(options.FfmpegPath, input.OutputDirectory);
+            mainCommand = InjectMetadataArgs(mainCommand, context.MediaItem);
 
             logger.LogInformation(
                 "[{CorrelationId}] FFmpeg command: {Executable} {Args}",
@@ -832,6 +836,38 @@ public class BuildStage(
         return plan with
         {
             VideoOutputs = remapped,
+        };
+    }
+
+    /// <summary>
+    /// Splices -metadata / per-stream metadata / disposition / attachment
+    /// args from <paramref name="mediaItem"/> into <paramref name="command"/>
+    /// just before the last argument (output filename). When no injector is
+    /// configured or the media item is null, the command is returned unchanged.
+    /// </summary>
+    private FfmpegCommand InjectMetadataArgs(FfmpegCommand command, MediaItemRef? mediaItem)
+    {
+        if (metadataInjector is null || mediaItem is null)
+            return command;
+
+        MetadataInjectionContext ctx = new(Media: mediaItem, Tracks: [], AttachmentPaths: []);
+
+        IReadOnlyList<string> metaArgs = metadataInjector.BuildArgs(ctx);
+        if (metaArgs.Count == 0)
+            return command;
+
+        // Insert the metadata flags before the last argument (output filepath).
+        string[] original = command.Arguments;
+        string[] updated = new string[original.Length + metaArgs.Count];
+        int insertAt = original.Length - 1;
+        Array.Copy(original, updated, insertAt);
+        for (int i = 0; i < metaArgs.Count; i++)
+            updated[insertAt + i] = metaArgs[i];
+        updated[^1] = original[^1];
+
+        return command with
+        {
+            Arguments = updated,
         };
     }
 }

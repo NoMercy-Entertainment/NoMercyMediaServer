@@ -16,6 +16,7 @@ using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Notifications;
 using NoMercy.Encoder.Orchestration;
@@ -154,6 +155,9 @@ public static class ServiceCollectionExtensions
         // Naming resolvers
         services.AddSingleton<IMediaKeyResolver, MediaKeyResolver>();
         services.AddSingleton<IOutputNamingResolver, OutputNamingResolver>();
+
+        // Metadata injector
+        services.AddSingleton<IMetadataInjector, MetadataInjector>();
 
         // Bundle writers
         services.AddSingleton<IBundleManifestWriter, BundleManifestWriter>();
