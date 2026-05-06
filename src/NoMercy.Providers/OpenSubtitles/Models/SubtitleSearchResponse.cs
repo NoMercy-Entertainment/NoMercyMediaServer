@@ -62,6 +62,11 @@ public class SubtitleSearchResponseArrayData
     public List<SubtitleSearchResponseMemberValue> Values { get; set; } = [];
 }
 
+// TODO(subtitle-acquisition): the active model above does not parse SubRating, SubDownloadsCnt,
+// SubDownloadLink, MovieFPS, SubFromTrusted, SubLanguageID, or SubFormat out of the XML-RPC
+// response envelope. The commented-out DataStruct class below lists all available fields.
+// These need to be deserialized and mapped to SubtitleCandidate by OpenSubtitlesAdapter.
+
 // [XmlRoot("methodResponse", IsNullable = false)]
 // public class SubtitleSearchResponse
 // {

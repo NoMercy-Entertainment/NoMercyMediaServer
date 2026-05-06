@@ -33,6 +33,13 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
         return this;
     }
 
+    // TODO(subtitle-acquisition): add SearchByHashAsync(movieHash, fileSize, languages, ct)
+    //   — builds XML-RPC SearchSubtitles with moviehash + moviebytesize members
+    // TODO(subtitle-acquisition): add SearchByFilenameAsync(filename, languages, ct)
+    //   — builds XML-RPC SearchSubtitles with query member containing the filename
+    // TODO(subtitle-acquisition): add SearchByTitleAsync(title, season, episode, year, languages, ct)
+    //   — builds XML-RPC SearchSubtitles with query member containing the title
+    // TODO(subtitle-acquisition): TrustedUploadersOnly — client-side filter on SubFromTrusted field
     public async Task<SubtitleSearchResponse?> SearchSubtitles(string query, string language)
     {
         SubtitleSearch searchResponse = new()

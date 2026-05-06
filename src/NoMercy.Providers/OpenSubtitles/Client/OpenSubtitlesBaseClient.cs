@@ -60,6 +60,7 @@ public class OpenSubtitlesBaseClient : IDisposable
     {
         using StringContent content = new(xml, Encoding.UTF8, "text/xml");
         using HttpResponseMessage response = await _client.PostAsync(url, content);
+        // TODO(subtitle-acquisition): handle HTTP 429 — log WARN, return empty, enforce backoff window
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStringAsync();
     }
