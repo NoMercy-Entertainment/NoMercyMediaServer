@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.BuildingBlocks;
+using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
@@ -23,7 +25,8 @@ public class FinalizeStage(
     IFontExtractor fontExtractor,
     IOutputStrategyFactory outputStrategyFactory,
     ILogger<FinalizeStage> logger,
-    IStorage storage
+    IStorage storage,
+    IBundleManifestWriter? manifestWriter = null
 ) : IPipelineStage<FinalizeInput, FinalizeOutput>, IFinalizeStage
 {
     public string Name => "Finalize";
@@ -76,10 +79,21 @@ public class FinalizeStage(
             // Thumbnail sprite + VTT are produced by the spritevtt muxer
             // in the main FFmpeg command — no post-processing needed.
 
-            long totalSize = effectiveStorage
-                .List(input.OutputDirectory, "*", recursive: true)
-                .Where(e => !e.IsDirectory)
-                .Sum(e => e.SizeBytes);
+            IReadOnlyList<StorageEntry> allEntries = effectiveStorage.List(
+                input.OutputDirectory,
+                "*",
+                recursive: true
+            );
+
+            long totalSize = allEntries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
+
+            // Emit manifest.json when the encode has a resolved BundleLayout
+            // and a writer is wired (DI singleton). Skipped when layout is null
+            // (legacy callers that don't set MediaItem on the context).
+            if (manifestWriter is not null && input.Plan.Layout is BundleLayout layout)
+            {
+                await WriteManifestAsync(effectiveStorage, layout, allEntries, context, ct);
+            }
 
             return new StageSuccess<FinalizeOutput>(new(input.OutputDirectory, totalSize));
         }
@@ -95,5 +109,66 @@ public class FinalizeStage(
                 )
             );
         }
+    }
+
+    private async Task WriteManifestAsync(
+        IStorage effectiveStorage,
+        BundleLayout layout,
+        IReadOnlyList<StorageEntry> allEntries,
+        EncodingContext context,
+        CancellationToken ct
+    )
+    {
+        string dirPrefix = layout.BundleDirectory.TrimEnd('/') + "/";
+
+        List<string> relFiles = [];
+        foreach (StorageEntry entry in allEntries)
+        {
+            if (entry.IsDirectory)
+                continue;
+            string rel = entry.Path.StartsWith(dirPrefix, StringComparison.OrdinalIgnoreCase)
+                ? entry.Path[dirPrefix.Length..]
+                : entry.Path;
+            // Exclude the manifest itself from its own file list.
+            if (rel.Equals("manifest.json", StringComparison.OrdinalIgnoreCase))
+                continue;
+            relFiles.Add(rel);
+        }
+
+        string mediaTypeStr = context.MediaItem?.Type switch
+        {
+            MediaType.Movie => "movie",
+            MediaType.Episode => "episode",
+            MediaType.Track => "track",
+            _ => "unknown",
+        };
+
+        string encoderVersion = typeof(FinalizeStage).Assembly.GetName().Version?.ToString() ?? "3";
+
+        BundleManifest manifest = new(
+            Version: 1,
+            EncoderVersion: encoderVersion,
+            PresetId: layout.PresetId,
+            PresetName: layout.PresetName,
+            PresetSlug: layout.PresetSlug,
+            MediaType: mediaTypeStr,
+            MediaId: context.MediaItem?.Id ?? 0,
+            MediaExternalId: null,
+            MediaFolder: layout.BundleDirectory,
+            Container: layout.ContainerString,
+            CreatedAt: DateTime.UtcNow,
+            CompletedAt: DateTime.UtcNow,
+            MediaKey: layout.MediaKey,
+            Files: relFiles
+        );
+
+        await manifestWriter!.WriteAsync(layout.ManifestPath, manifest, ct);
+
+        logger.LogInformation(
+            "[{CorrelationId}] Wrote manifest.json → {Path} ({FileCount} files)",
+            context.CorrelationId,
+            layout.ManifestPath,
+            relFiles.Count
+        );
     }
 }

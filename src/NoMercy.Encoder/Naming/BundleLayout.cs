@@ -12,5 +12,10 @@ public record BundleLayout(
     string MasterPlaylistName, // "{mediaKey}_master.m3u8" or "" for single-file
     string ManifestPath, // "{bundleDir}/manifest.json" or "{singleFile}.manifest.json"
     string ReconstructionPath, // "{bundleDir}/reconstruction.json" or "{singleFile}.reconstruction.json"
-    string SingleFileName // "{Title}.NoMercy.{ext}" or "" for HLS
+    string SingleFileName, // "{Title}.NoMercy.{ext}" or "" for HLS
+    // Preset metadata forwarded from EncodingProfile so FinalizeStage can
+    // write a complete manifest.json without re-resolving the profile.
+    string PresetId = "",
+    string PresetName = "",
+    string ContainerString = "" // e.g. "hls-fmp4", "mkv"
 );

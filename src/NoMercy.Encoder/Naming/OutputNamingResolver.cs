@@ -39,7 +39,10 @@ public class OutputNamingResolver(IMediaKeyResolver mediaKeys) : IOutputNamingRe
             masterName,
             manifestPath,
             reconstructionPath,
-            singleName
+            singleName,
+            PresetId: profile.Id.ToString(),
+            PresetName: profile.Name,
+            ContainerString: ContainerToString(profile.Container)
         );
     }
 
@@ -123,4 +126,23 @@ public class OutputNamingResolver(IMediaKeyResolver mediaKeys) : IOutputNamingRe
         int dot = name.LastIndexOf('.');
         return dot < 0 ? name : name[..dot];
     }
+
+    private static string ContainerToString(Container c) =>
+        c switch
+        {
+            Container.Mkv => "mkv",
+            Container.Mp4 => "mp4",
+            Container.HlsTs => "hls-ts",
+            Container.HlsFmp4 => "hls-fmp4",
+            Container.Dash => "dash",
+            Container.Mp3 => "mp3",
+            Container.Aac => "aac",
+            Container.Flac => "flac",
+            Container.Ogg => "ogg",
+            Container.Mka => "mka",
+            Container.Mks => "mks",
+            Container.AudioHlsTs => "audio-hls-ts",
+            Container.AudioHlsFmp4 => "audio-hls-fmp4",
+            _ => c.ToString().ToLowerInvariant(),
+        };
 }

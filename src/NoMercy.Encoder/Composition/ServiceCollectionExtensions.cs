@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.BuildingBlocks.Drm;
+using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.ContentAnalysis;
@@ -153,6 +154,9 @@ public static class ServiceCollectionExtensions
         // Naming resolvers
         services.AddSingleton<IMediaKeyResolver, MediaKeyResolver>();
         services.AddSingleton<IOutputNamingResolver, OutputNamingResolver>();
+
+        // Bundle manifest
+        services.AddSingleton<IBundleManifestWriter, BundleManifestWriter>();
 
         // Profiles
         services.AddTransient<IProfileValidator, V2BackedProfileValidator>();
