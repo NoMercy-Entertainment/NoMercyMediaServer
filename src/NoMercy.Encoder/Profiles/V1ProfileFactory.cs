@@ -50,13 +50,18 @@ public static class V1ProfileFactory
         return new V1Shape(container, [.. videos], audios, subtitles);
     }
 
+    // Container strings must round-trip through V2ProfileFactory.ParseContainer.
+    // "m3u8" parses to HlsTs (mpegts segments) which does not support H265 —
+    // HEVC HLS must emit "hls_fmp4" so the validator sees HlsFmp4.
     private static string SerializeContainer(Container c) =>
         c switch
         {
             Container.Mkv => "mkv",
             Container.Mp4 => "mp4",
-            Container.HlsTs or Container.HlsFmp4 => "m3u8",
-            Container.AudioHlsTs or Container.AudioHlsFmp4 => "m3u8",
+            Container.HlsTs => "m3u8",
+            Container.HlsFmp4 => "hls_fmp4",
+            Container.AudioHlsTs => "m3u8",
+            Container.AudioHlsFmp4 => "hls_fmp4",
             Container.Dash => "dash",
             Container.Mp3 => "mp3",
             Container.Aac => "aac",
