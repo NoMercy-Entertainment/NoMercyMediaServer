@@ -27,6 +27,10 @@ public class Start
         return
         [
             // ── PHASE 1: MUST SUCCEED (no network) ─────────────────────
+            // CreateAppFolders runs first so the DataProtection keyring directory
+            // exists (with restrictive perms on Unix) before TokenStore lazy-bootstraps
+            // during the Configuration table read in UserSettings.
+            new("CreateAppFolders", AppFiles.CreateAppFolders, CanDefer: false, Phase: 1),
             new(
                 "UserSettings",
                 async () =>
@@ -35,14 +39,8 @@ public class Start
                         UserSettings.ApplySettings(settings);
                 },
                 CanDefer: false,
-                Phase: 1
-            ),
-            new(
-                "CreateAppFolders",
-                AppFiles.CreateAppFolders,
-                CanDefer: false,
                 Phase: 1,
-                DependsOn: ["UserSettings"]
+                DependsOn: ["CreateAppFolders"]
             ),
             new(
                 "ApiInfo",
