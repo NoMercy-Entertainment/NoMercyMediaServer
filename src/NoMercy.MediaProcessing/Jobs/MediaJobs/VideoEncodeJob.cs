@@ -82,7 +82,35 @@ public class VideoEncodeJob : AbstractEncoderJob
                     );
                 }
 
-                EncodingProfile encodingProfile = V2ProfileFactory.FromV1(
+                // Prefer the V2 EncodingPreset source-of-truth when one exists with
+                // the same Ulid — V1 columns drop HardwarePreference, HdrPolicy,
+                // BitDepthPolicy, ClientCompatibility, and several other fields that
+                // never made it into the legacy schema. The materializer keeps V1
+                // and V2 rows in lockstep by Ulid, so this lookup is exact.
+                EncodingProfile? encodingProfile = null;
+                bool hasV2Source = await context
+                    .EncodingPresets.AsNoTracking()
+                    .AnyAsync(p => p.Id == dbProfile.Id);
+
+                if (hasV2Source)
+                {
+                    try
+                    {
+                        encodingProfile = PresetResolver.Resolve(
+                            dbProfile.Id,
+                            new DbPresetLookup(context)
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Encoder(
+                            $"V2 preset resolve failed for {dbProfile.Name} ({dbProfile.Id}); falling back to V1 row. {ex.Message}",
+                            LogEventLevel.Warning
+                        );
+                    }
+                }
+
+                encodingProfile ??= V2ProfileFactory.FromV1(
                     dbProfile.Id,
                     dbProfile.Name,
                     dbProfile.Container ?? "m3u8",
