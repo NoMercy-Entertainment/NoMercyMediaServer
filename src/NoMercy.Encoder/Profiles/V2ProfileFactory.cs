@@ -79,18 +79,25 @@ public static class V2ProfileFactory
         );
     }
 
+    // 'm3u8' is just the playlist extension — both HlsTs (mpegts segments) and
+    // HlsFmp4 (fMP4 segments) serve M3U8 playlists. Legacy V1 rows store 'm3u8'
+    // without distinguishing the segment format, and stale HEVC rows hit the
+    // codec/container validator when 'm3u8' parses to HlsTs (mpegts can't carry
+    // H265). Default to HlsFmp4 — the modern HLS variant that supports HEVC,
+    // HDR, and is recommended by Apple and Google for new content. Callers who
+    // explicitly want mpegts segments now use 'hls_ts' / 'ts' / 'mpegts'.
     private static Container ParseContainer(string container) =>
         container.ToLowerInvariant() switch
         {
-            "m3u8" or "hls" => Container.HlsTs,
-            "fmp4" or "hls_fmp4" => Container.HlsFmp4,
+            "ts" or "mpegts" or "hls_ts" => Container.HlsTs,
+            "m3u8" or "hls" or "fmp4" or "hls_fmp4" => Container.HlsFmp4,
             "mkv" or "matroska" => Container.Mkv,
             "mp4" or "m4a" or "aac" => Container.Mp4,
             "dash" or "mpd" => Container.Dash,
             "mp3" => Container.Mp3,
             "flac" => Container.Flac,
             "ogg" or "oga" or "opus" => Container.Ogg,
-            _ => Container.HlsTs,
+            _ => Container.HlsFmp4,
         };
 
     private static EncodeMode ParseEncodeMode(string? value)
