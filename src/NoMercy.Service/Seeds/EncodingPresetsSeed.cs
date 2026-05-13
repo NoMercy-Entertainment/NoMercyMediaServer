@@ -84,31 +84,85 @@ public static class EncodingPresetsSeed
     }
 
     /// <summary>
-    /// For every <see cref="EncodingPreset"/> row that carries a parseable
-    /// <c>ProfileJson</c>, materializes a corresponding <see cref="EncoderProfile"/>
-    /// row so V3 presets appear in the Folder picker alongside V1 profiles.
+    /// For every built-in <see cref="EncodingPreset"/>, upserts a matching
+    /// <see cref="EncoderProfile"/> row with the same Id so the V1-keyed
+    /// folder picker and encode pipeline (<c>EncoderProfileFolder</c> FK still
+    /// references EncoderProfiles, VideoEncodeJob still calls
+    /// <c>V2ProfileFactory.FromV1</c>) see the V2 builtins.
     ///
-    /// Rules:
-    ///   - Uses the preset's Id as the EncoderProfile Id (stable, no duplicates).
-    ///   - Never touches EncoderProfileFolder rows — folder assignments survive re-seed.
-    ///   - Unparseable ProfileJson is skipped with a warning; one bad preset must
-    ///     not block the rest.
+    /// Refreshes columns on every boot so stale rows from earlier mapper
+    /// versions get corrected. Never deletes existing V1 rows — folder
+    /// assignments and any hand-edited user profiles stay put.
     /// </summary>
-    public static Task MaterializePresetsAsync(MediaContext context)
+    public static async Task MaterializePresetsAsync(
+        MediaContext context,
+        CancellationToken ct = default
+    )
     {
-        // V2 → V1 bridge retired with the V2 schema migration. ProfileMapper
-        // (which converted V2 EncodingProfile → V1 EncoderProfile column shape)
-        // was deleted with the V2.5 cleanup, and the V1 EncoderProfile DB model
-        // is itself slated for removal. This method now no-ops; the dashboard
-        // queries EncodingPresets directly via /api/v1/encoder/profiles
-        // endpoints, and the legacy folder picker will only see V1 rows that
-        // were seeded explicitly via the file-based seeder (which is also gone)
-        // or persisted from a prior release.
+        List<EncodingPreset> presets = await context
+            .EncodingPresets.AsNoTracking()
+            .Where(p => p.IsBuiltIn)
+            .ToListAsync(ct);
+
+        int upserted = 0;
+        int skipped = 0;
+
+        foreach (EncodingPreset preset in presets)
+        {
+            NoMercy.Encoder.Profiles.EncodingProfile? v2Profile;
+            try
+            {
+                v2Profile = JsonConvert.DeserializeObject<NoMercy.Encoder.Profiles.EncodingProfile>(
+                    preset.ProfileJson
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup(
+                    $"MaterializePresets: skipping '{preset.Name}' — failed to parse ProfileJson: {ex.Message}",
+                    LogEventLevel.Warning
+                );
+                skipped++;
+                continue;
+            }
+
+            if (v2Profile is null)
+            {
+                skipped++;
+                continue;
+            }
+
+            V1ProfileFactory.V1Shape shape = V1ProfileFactory.FromV2(v2Profile);
+
+            EncoderProfile? existing = await context.EncoderProfiles.FirstOrDefaultAsync(
+                p => p.Id == preset.Id,
+                ct
+            );
+
+            if (existing is null)
+            {
+                EncoderProfile created = new() { Id = preset.Id, Name = preset.Name };
+                created.Container = shape.Container;
+                created.VideoProfiles = shape.VideoProfiles;
+                created.AudioProfiles = shape.AudioProfiles;
+                created.SubtitleProfiles = shape.SubtitleProfiles;
+                context.EncoderProfiles.Add(created);
+            }
+            else
+            {
+                existing.Name = preset.Name;
+                existing.Container = shape.Container;
+                existing.VideoProfiles = shape.VideoProfiles;
+                existing.AudioProfiles = shape.AudioProfiles;
+                existing.SubtitleProfiles = shape.SubtitleProfiles;
+            }
+            upserted++;
+        }
+
+        await context.SaveChangesAsync(ct);
         Logger.Setup(
-            "MaterializePresetsAsync: skipped — V2→V1 bridge retired. "
-                + "EncodingPresets is the authoritative source.",
+            $"MaterializePresets: upserted {upserted}, skipped {skipped} V1 rows from {presets.Count} V2 builtins",
             LogEventLevel.Verbose
         );
-        return Task.CompletedTask;
     }
 }
