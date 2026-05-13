@@ -157,12 +157,36 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
 
         if (best == string.Empty)
         {
-            // No hardware entries in the speed index — fall back to software
+            // SpeedIndex has no HW measurements for this codec — the benchmark
+            // runs lazily, so the first encode after install hits this path.
+            // Probe availableEncoders for a hardware handle instead of silently
+            // dropping to software; otherwise PreferHardware would behave like
+            // PreferQuality until the benchmark eventually populates the cache.
+            string? availableHw = availableEncoders.FirstOrDefault(CodecRegistry.IsHardware);
+            if (availableHw is not null)
+            {
+                decisions.Add(
+                    new DecisionLog(
+                        "plan",
+                        "plan.encoder_resolved",
+                        $"PreferHardware → {availableHw} (no benchmark yet, picked from availableEncoders)",
+                        new
+                        {
+                            handle = availableHw,
+                            codec = codec.ToString(),
+                            reason = "prefer_hardware_unmeasured",
+                        }
+                    )
+                );
+
+                return new HardwareResolutionResult(availableHw, null);
+            }
+
             decisions.Add(
                 new DecisionLog(
                     "plan",
                     "plan.encoder_resolved",
-                    $"PreferHardware → {swHandle} (no HW benchmark entries)",
+                    $"PreferHardware → {swHandle} (no HW encoder available)",
                     new
                     {
                         handle = swHandle,
@@ -210,7 +234,28 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
 
         if (best == string.Empty)
         {
-            // No hardware encoder in the speed index — hard fail
+            // Mirror PreferHardware's fallback: an unmeasured HW encoder is still
+            // a HW encoder. Only hard-fail when availableEncoders also lacks one.
+            string? availableHw = availableEncoders.FirstOrDefault(CodecRegistry.IsHardware);
+            if (availableHw is not null)
+            {
+                decisions.Add(
+                    new DecisionLog(
+                        "plan",
+                        "plan.encoder_resolved",
+                        $"ForceHardware → {availableHw} (no benchmark yet, picked from availableEncoders)",
+                        new
+                        {
+                            handle = availableHw,
+                            codec = codec.ToString(),
+                            reason = "force_hardware_unmeasured",
+                        }
+                    )
+                );
+
+                return new HardwareResolutionResult(availableHw, null);
+            }
+
             EncoderRuntimeException failure = RuntimeErrors.HardwareForcedButUnavailable(
                 codec.ToString()
             );
@@ -219,7 +264,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                 new DecisionLog(
                     "plan",
                     "plan.encoder_resolved",
-                    $"ForceHardware → FAILED (no HW benchmark entries for {codec})",
+                    $"ForceHardware → FAILED (no HW encoder available for {codec})",
                     new { codec = codec.ToString(), reason = "force_hardware_failed" }
                 )
             );

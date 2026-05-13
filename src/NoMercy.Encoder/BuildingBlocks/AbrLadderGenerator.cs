@@ -110,7 +110,10 @@ public class AbrLadderGenerator : IAbrLadderGenerator
                 continue;
 
             // NeverUpsource: compute the tier bitrate first to compare with source.
-            if (autoConfig.NeverUpsource)
+            // When the source bitrate is unknown (0 — ffprobe sometimes only fills
+            // container-level bitrate, not the video stream's) the comparison would
+            // cut every tier; skip the filter instead of producing zero rungs.
+            if (autoConfig.NeverUpsource && source.BitRateKbps > 0)
             {
                 int candidateBitrate = ComputeBitrate(tier, source, profileCodec, autoConfig);
                 if (candidateBitrate > source.BitRateKbps)
