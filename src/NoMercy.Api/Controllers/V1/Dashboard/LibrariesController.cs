@@ -180,9 +180,12 @@ public class LibrariesController(
 
             await libraryRepository.UpdateLibraryAsync(library);
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            return InternalServerErrorResponse("Something went wrong updating the library");
+            Logger.App(e);
+            return InternalServerErrorResponse(
+                $"Something went wrong updating the library: {e.GetType().Name}: {e.Message}"
+            );
         }
 
         if (oldRealtime.HasValue)
@@ -225,10 +228,11 @@ public class LibrariesController(
 
                 await folderRepository.SyncFolderLibraryAsync(folderLibraries, folders);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Logger.App(e);
                 return InternalServerErrorResponse(
-                    "Something went wrong updating the library folders"
+                    $"Something went wrong updating the library folders: {e.GetType().Name}: {e.Message}"
                 );
             }
 
@@ -271,7 +275,7 @@ public class LibrariesController(
             {
                 Logger.App(e);
                 return InternalServerErrorResponse(
-                    "Something went wrong updating the library encoder profiles"
+                    $"Something went wrong updating the library encoder profiles: {e.GetType().Name}: {e.Message}"
                 );
             }
         }
