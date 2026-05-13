@@ -18,10 +18,15 @@ public interface IAbrLadderGenerator
     /// <summary>
     /// New path: generates <see cref="LadderRung"/> rungs by reading every
     /// parameter from <paramref name="autoConfig"/> — no hardcoded constants.
+    /// When <paramref name="reference"/> is supplied, each rung inherits its
+    /// BitDepth, PixelFormat, Preset, and CodecProfile so HDR / 10-bit profiles
+    /// survive the ladder expansion (an SDR source still resolves to 8-bit
+    /// via the reference profile's own defaults).
     /// </summary>
     LadderRung[] GenerateLadder(
         MediaInfo media,
         VideoCodecType profileCodec,
-        AutoLadderConfig autoConfig
+        AutoLadderConfig autoConfig,
+        VideoOutput? reference = null
     );
 }

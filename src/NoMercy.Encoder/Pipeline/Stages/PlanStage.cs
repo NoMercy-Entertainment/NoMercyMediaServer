@@ -764,7 +764,8 @@ public class PlanStage(
             rungs = abrLadderGenerator.GenerateLadder(
                 media,
                 reference.Codec,
-                profile.Ladder.AutoConfig
+                profile.Ladder.AutoConfig,
+                reference
             );
         }
         else

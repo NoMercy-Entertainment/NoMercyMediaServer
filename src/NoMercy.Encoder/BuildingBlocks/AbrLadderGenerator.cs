@@ -89,7 +89,8 @@ public class AbrLadderGenerator : IAbrLadderGenerator
     public LadderRung[] GenerateLadder(
         MediaInfo media,
         VideoCodecType profileCodec,
-        AutoLadderConfig autoConfig
+        AutoLadderConfig autoConfig,
+        VideoOutput? reference = null
     )
     {
         if (autoConfig.Tiers.Length == 0)
@@ -148,7 +149,11 @@ public class AbrLadderGenerator : IAbrLadderGenerator
                     BitrateKbps: bitrate,
                     MaxBitrateKbps: maxBitrate,
                     BufferSizeKbps: bufSize,
-                    Framerate: framerate
+                    Framerate: framerate,
+                    Preset: reference?.Preset,
+                    CodecProfile: reference?.CodecProfile ?? CodecProfile.Auto,
+                    BitDepth: reference?.BitDepth ?? 8,
+                    PixelFormat: reference?.PixelFormat
                 )
             );
         }

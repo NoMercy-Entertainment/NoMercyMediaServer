@@ -349,7 +349,8 @@ public class PlanStageAutoLadderRoutingTests
                 g.GenerateLadder(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<VideoCodecType>(),
-                    It.IsAny<AutoLadderConfig>()
+                    It.IsAny<AutoLadderConfig>(),
+                    It.IsAny<VideoOutput?>()
                 )
             )
             .Returns(mockedRungs);
@@ -395,7 +396,13 @@ public class PlanStageAutoLadderRoutingTests
 
         // GenerateLadder called once with the expected codec + AutoConfig.
         _abrGenerator.Verify(
-            g => g.GenerateLadder(It.IsAny<MediaInfo>(), VideoCodecType.H264, autoConfig),
+            g =>
+                g.GenerateLadder(
+                    It.IsAny<MediaInfo>(),
+                    VideoCodecType.H264,
+                    autoConfig,
+                    It.IsAny<VideoOutput?>()
+                ),
             Times.Once
         );
 
@@ -493,7 +500,8 @@ public class PlanStageAutoLadderRoutingTests
                 g.GenerateLadder(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<VideoCodecType>(),
-                    It.IsAny<AutoLadderConfig>()
+                    It.IsAny<AutoLadderConfig>(),
+                    It.IsAny<VideoOutput?>()
                 ),
             Times.Never
         );
