@@ -41,10 +41,10 @@ public class BuiltinPresetsTests
     }
 
     [Fact]
-    public void All_returns_22_presets()
+    public void All_returns_23_presets()
     {
         EncodingProfile[] all = BuiltinPresets.All();
-        all.Length.Should().Be(22);
+        all.Length.Should().Be(23);
     }
 
     [Fact]
@@ -101,6 +101,7 @@ public class BuiltinPresetsTests
     [InlineData("Apple TV 4K HEVC")]
     [InlineData("Legacy Device H.264 Baseline")]
     [InlineData("DASH 1080p Balanced")]
+    [InlineData("YouTube ABR Full Range")]
     public void Named_preset_exists(string name)
     {
         BuiltinPresets.All().Should().Contain(p => p.Name == name);

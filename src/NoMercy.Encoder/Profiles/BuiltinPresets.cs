@@ -31,6 +31,7 @@ public static class BuiltinPresets
             AppleTv4kHevc(),
             LegacyDeviceH264Baseline(),
             Dash1080pBalanced(),
+            YouTubeAbrFullRange(),
         ];
 
     private static Ulid IdFromName(string name)
@@ -1329,6 +1330,92 @@ public static class BuiltinPresets
                 "H.264 Baseline 4.0 CRF 24 for legacy devices — maximum compatibility MP4.",
             IsBuiltin = true,
             ClientCompatibility = ClientCompatibility.LegacyDevices,
+        };
+    }
+
+    private static EncodingProfile YouTubeAbrFullRange()
+    {
+        const string Name = "YouTube ABR Full Range";
+        return new(
+            Id: IdFromName(Name),
+            Name: Name,
+            Container: Container.HlsFmp4,
+            // Reference Video defines the codec + base settings the auto-ladder
+            // extends across every rung. HEVC Main10 10-bit so HDR sources can
+            // passthrough their PQ/HLG signal at every quality level.
+            Video: new(
+                StreamPolicy.Transcode,
+                VideoCodecType.H265,
+                1920,
+                1080,
+                RateControlMode.Crf,
+                22,
+                0,
+                null,
+                null,
+                "medium",
+                CodecProfile.Main10,
+                null,
+                null,
+                10,
+                "yuv420p10le",
+                4,
+                false,
+                "video/{label}",
+                "video/{label}/playlist"
+            ),
+            Audio:
+            [
+                new(
+                    StreamPolicy.Transcode,
+                    AudioCodecType.Aac,
+                    192,
+                    2,
+                    48000,
+                    AllowedLanguages.All,
+                    null,
+                    null,
+                    null,
+                    "audio/{lang}-{codec}",
+                    "audio/{lang}-{codec}/playlist"
+                ),
+            ],
+            Subtitles:
+            [
+                new(
+                    SubtitlePolicy.Extract,
+                    SubtitleCodecType.WebVtt,
+                    AllowedLanguages.All,
+                    true,
+                    null,
+                    "subs/{lang}"
+                ),
+            ],
+            Hls: new(),
+            HlsDerivatives: new() { GenerateIFramePlaylists = true },
+            Ladder: new()
+            {
+                Mode = LadderMode.Auto,
+                AutoConfig = new()
+                {
+                    Tiers = LadderTiers.YouTube,
+                    BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
+                    CodecPolicy = LadderCodecPolicy.Uniform,
+                    Crf = 22,
+                    MaxRungs = 8,
+                },
+            }
+        )
+        {
+            Description =
+                "HEVC ABR ladder spanning 144p → 2160p, mirroring YouTube's quality range. "
+                + "HDR sources keep their HDR signal via passthrough; SDR sources stay SDR.",
+            IsBuiltin = true,
+            HdrPolicy = HdrPolicy.PassthroughWhenPossible,
+            ClientCompatibility =
+                ClientCompatibility.NativeAndroid
+                | ClientCompatibility.NativeIos
+                | ClientCompatibility.Cast,
         };
     }
 
