@@ -1409,8 +1409,11 @@ public static class BuiltinPresets
         {
             Description =
                 "HEVC ABR ladder spanning 144p → 2160p, mirroring YouTube's quality range. "
-                + "HDR sources keep their HDR signal via passthrough; SDR sources stay SDR.",
+                + "HDR sources keep their HDR signal via passthrough; SDR sources stay SDR. "
+                + "Prefers a hardware encoder (NVENC / AMF / QSV / VideoToolbox) when one is "
+                + "detected — large ladders are too expensive on CPU.",
             IsBuiltin = true,
+            HardwarePreference = HardwarePreference.PreferHardware,
             HdrPolicy = HdrPolicy.PassthroughWhenPossible,
             ClientCompatibility =
                 ClientCompatibility.NativeAndroid
