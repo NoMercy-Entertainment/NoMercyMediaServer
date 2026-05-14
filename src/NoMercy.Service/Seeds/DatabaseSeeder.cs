@@ -138,7 +138,7 @@ public static class DatabaseSeeder
             () => LibrariesSeed.Init(mediaDbContext, storage, storageDriver),
             () => EncodingPresetsSeed.Init(mediaDbContext, storage),
             () => EncodingPresetsSeed.SeedExamplesAsync(mediaDbContext),
-            () => EncodingPresetsSeed.MaterializePresetsAsync(mediaDbContext),
+            () => EncodingPresetsSeed.BackfillV1ToV2Async(mediaDbContext),
             () => LoadDiskOverlaysAsync(mediaDbContext),
         ];
 

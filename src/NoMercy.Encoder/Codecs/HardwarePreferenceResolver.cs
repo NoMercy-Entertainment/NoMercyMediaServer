@@ -159,10 +159,13 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         {
             // SpeedIndex has no HW measurements for this codec — the benchmark
             // runs lazily, so the first encode after install hits this path.
-            // Probe availableEncoders for a hardware handle instead of silently
-            // dropping to software; otherwise PreferHardware would behave like
-            // PreferQuality until the benchmark eventually populates the cache.
-            string? availableHw = availableEncoders.FirstOrDefault(CodecRegistry.IsHardware);
+            // Probe availableEncoders for a codec-matching hardware handle so
+            // PreferHardware actually prefers hardware until the benchmark
+            // populates the cache. Codec match goes by the encoder-name prefix
+            // ("hevc_nvenc" matches H265, not H264).
+            string? availableHw = availableEncoders.FirstOrDefault(e =>
+                CodecRegistry.IsHardware(e) && MatchesCodec(e, codec)
+            );
             if (availableHw is not null)
             {
                 decisions.Add(
@@ -235,8 +238,11 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         if (best == string.Empty)
         {
             // Mirror PreferHardware's fallback: an unmeasured HW encoder is still
-            // a HW encoder. Only hard-fail when availableEncoders also lacks one.
-            string? availableHw = availableEncoders.FirstOrDefault(CodecRegistry.IsHardware);
+            // a HW encoder. Only hard-fail when availableEncoders also lacks a
+            // codec-matching HW handle.
+            string? availableHw = availableEncoders.FirstOrDefault(e =>
+                CodecRegistry.IsHardware(e) && MatchesCodec(e, codec)
+            );
             if (availableHw is not null)
             {
                 decisions.Add(
@@ -352,5 +358,22 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         return SoftwareHandles.TryGetValue(codec, out string? handle)
             ? handle
             : $"lib{codec.ToString().ToLowerInvariant()}";
+    }
+
+    // Encoder-name prefix per codec — used to match HW handles (e.g. hevc_nvenc)
+    // back to the requested codec without keeping a static table per encoder.
+    private static bool MatchesCodec(string ffmpegEncoderName, VideoCodecType codec)
+    {
+        string prefix = codec switch
+        {
+            VideoCodecType.H264 => "h264_",
+            VideoCodecType.H265 => "hevc_",
+            VideoCodecType.Av1 => "av1_",
+            VideoCodecType.Vp9 => "vp9_",
+            _ => string.Empty,
+        };
+
+        return prefix.Length > 0
+            && ffmpegEncoderName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
     }
 }

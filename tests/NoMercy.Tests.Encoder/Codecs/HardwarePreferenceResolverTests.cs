@@ -175,7 +175,32 @@ public class HardwarePreferenceResolverTests
 
         IReadOnlyList<DecisionLog> snapshot = log.Snapshot();
         Assert.Single(snapshot);
-        Assert.Contains("no HW benchmark entries", snapshot[0].Message);
+        Assert.Contains("no HW encoder available", snapshot[0].Message);
+    }
+
+    [Fact]
+    public void PreferHardware_picks_unmeasured_HW_from_availableEncoders_when_index_is_empty()
+    {
+        // Lazy benchmark hasn't populated SpeedIndex yet, but availableEncoders
+        // exposes hevc_nvenc — resolver should pick it rather than dropping to
+        // libx265.
+        SpeedIndex index = EmptyIndex();
+
+        ScopedDecisionLog log = NewLog();
+
+        HardwareResolutionResult result = _resolver.Resolve(
+            VideoCodecType.H265,
+            HardwarePreference.PreferHardware,
+            WithNvenc(),
+            index,
+            log
+        );
+
+        Assert.Null(result.Failure);
+        Assert.Equal("hevc_nvenc", result.EncoderHandle);
+
+        IReadOnlyList<DecisionLog> snapshot = log.Snapshot();
+        Assert.Contains("no benchmark yet", snapshot[0].Message);
     }
 
     // ── ForceHardware ─────────────────────────────────────────────────────────

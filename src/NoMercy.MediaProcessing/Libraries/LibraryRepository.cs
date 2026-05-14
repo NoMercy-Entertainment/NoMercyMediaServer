@@ -40,6 +40,8 @@ public class LibraryRepository(MediaContext context, IStorageDriver storageDrive
                         .ThenInclude(f => f.Folder)
             .Include(folder => folder.EncoderProfileFolder)
                 .ThenInclude(encoderProfileFolder => encoderProfileFolder.EncoderProfile)
+            .Include(folder => folder.EncodingPresetFolders)
+                .ThenInclude(link => link.Preset)
             .FirstOrDefaultAsync(folder => folder.Id == folderId);
     }
 

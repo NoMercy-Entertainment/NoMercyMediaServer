@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database.Internal;
+using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Storage;
 
 namespace NoMercy.Database.Models.Libraries;
@@ -31,6 +32,9 @@ public class Folder
 
     [JsonProperty("encoder_profile_folder")]
     public ICollection<EncoderProfileFolder> EncoderProfileFolder { get; set; } = [];
+
+    [JsonProperty("encoding_preset_folders")]
+    public ICollection<EncodingPresetFolder> EncodingPresetFolders { get; set; } = [];
 
     [JsonProperty("folder_libraries")]
     public ICollection<FolderLibrary> FolderLibraries { get; set; } = [];

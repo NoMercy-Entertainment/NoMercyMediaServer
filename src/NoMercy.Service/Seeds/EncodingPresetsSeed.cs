@@ -84,85 +84,178 @@ public static class EncodingPresetsSeed
     }
 
     /// <summary>
-    /// For every built-in <see cref="EncodingPreset"/>, upserts a matching
-    /// <see cref="EncoderProfile"/> row with the same Id so the V1-keyed
-    /// folder picker and encode pipeline (<c>EncoderProfileFolder</c> FK still
-    /// references EncoderProfiles, VideoEncodeJob still calls
-    /// <c>V2ProfileFactory.FromV1</c>) see the V2 builtins.
+    /// Forward migration from V1 EncoderProfiles to V2 EncodingPresets:
+    ///   - For every legacy V1 <c>EncoderProfile</c> row that has no matching
+    ///     V2 <c>EncodingPreset</c> by Ulid, build a V2 EncodingProfile via
+    ///     <see cref="V2ProfileFactory.FromV1"/>, serialize it, and insert
+    ///     an EncodingPreset row preserving the same Ulid.
+    ///   - For every legacy <c>EncoderProfileFolder</c> link, ensure a
+    ///     matching <c>EncodingPresetFolder</c> row exists. Same FolderId,
+    ///     PresetId = EncoderProfileId.
     ///
-    /// Refreshes columns on every boot so stale rows from earlier mapper
-    /// versions get corrected. Never deletes existing V1 rows — folder
-    /// assignments and any hand-edited user profiles stay put.
+    /// Idempotent — runs on every boot until the V1 tables get dropped in
+    /// a follow-up migration. Once the V1 schema is gone this seed can be
+    /// removed entirely.
     /// </summary>
-    public static async Task MaterializePresetsAsync(
+    public static async Task BackfillV1ToV2Async(
         MediaContext context,
         CancellationToken ct = default
     )
     {
-        List<EncodingPreset> presets = await context
-            .EncodingPresets.AsNoTracking()
-            .Where(p => p.IsBuiltIn)
+        // ── Step 1: copy V1 EncoderProfiles → V2 EncodingPresets ──────────────
+        HashSet<Ulid> existingPresetIds =
+        [
+            .. await context.EncodingPresets.AsNoTracking().Select(p => p.Id).ToListAsync(ct),
+        ];
+
+        List<EncoderProfile> v1Profiles = await context
+            .EncoderProfiles.AsNoTracking()
             .ToListAsync(ct);
 
-        int upserted = 0;
-        int skipped = 0;
-
-        foreach (EncodingPreset preset in presets)
+        int copiedPresets = 0;
+        foreach (EncoderProfile v1 in v1Profiles)
         {
-            NoMercy.Encoder.Profiles.EncodingProfile? v2Profile;
+            if (existingPresetIds.Contains(v1.Id))
+                continue;
+
+            NoMercy.Encoder.Profiles.EncodingProfile v2Profile;
             try
             {
-                v2Profile = JsonConvert.DeserializeObject<NoMercy.Encoder.Profiles.EncodingProfile>(
-                    preset.ProfileJson
+                v2Profile = V2ProfileFactory.FromV1(
+                    v1.Id,
+                    v1.Name,
+                    v1.Container ?? "m3u8",
+                    v1.VideoProfiles.Select(MapVideo).ToArray(),
+                    v1.AudioProfiles.Select(MapAudio).ToArray(),
+                    v1.SubtitleProfiles.Select(MapSubtitle).ToArray(),
+                    v1.Thumbnails is not null
+                        ? new V1ThumbnailProfile(v1.Thumbnails.Width, v1.Thumbnails.IntervalSeconds)
+                        : null
                 );
             }
             catch (Exception ex)
             {
                 Logger.Setup(
-                    $"MaterializePresets: skipping '{preset.Name}' — failed to parse ProfileJson: {ex.Message}",
+                    $"BackfillV1ToV2: skipping V1 profile '{v1.Name}' ({v1.Id}) — conversion failed: {ex.Message}",
                     LogEventLevel.Warning
                 );
-                skipped++;
                 continue;
             }
 
-            if (v2Profile is null)
-            {
-                skipped++;
-                continue;
-            }
-
-            V1ProfileFactory.V1Shape shape = V1ProfileFactory.FromV2(v2Profile);
-
-            EncoderProfile? existing = await context.EncoderProfiles.FirstOrDefaultAsync(
-                p => p.Id == preset.Id,
-                ct
+            context.EncodingPresets.Add(
+                new()
+                {
+                    Id = v1.Id,
+                    Name = v1.Name,
+                    Description = $"Migrated from V1 EncoderProfile '{v1.Name}'.",
+                    ProfileJson = JsonConvert.SerializeObject(v2Profile),
+                    IsBuiltIn = false,
+                    Source = "v1_backfill",
+                }
             );
-
-            if (existing is null)
-            {
-                EncoderProfile created = new() { Id = preset.Id, Name = preset.Name };
-                created.Container = shape.Container;
-                created.VideoProfiles = shape.VideoProfiles;
-                created.AudioProfiles = shape.AudioProfiles;
-                created.SubtitleProfiles = shape.SubtitleProfiles;
-                context.EncoderProfiles.Add(created);
-            }
-            else
-            {
-                existing.Name = preset.Name;
-                existing.Container = shape.Container;
-                existing.VideoProfiles = shape.VideoProfiles;
-                existing.AudioProfiles = shape.AudioProfiles;
-                existing.SubtitleProfiles = shape.SubtitleProfiles;
-            }
-            upserted++;
+            copiedPresets++;
         }
 
-        await context.SaveChangesAsync(ct);
-        Logger.Setup(
-            $"MaterializePresets: upserted {upserted}, skipped {skipped} V1 rows from {presets.Count} V2 builtins",
-            LogEventLevel.Verbose
-        );
+        if (copiedPresets > 0)
+            await context.SaveChangesAsync(ct);
+
+        // ── Step 2: copy V1 EncoderProfileFolder → V2 EncodingPresetFolders ───
+        HashSet<(Ulid PresetId, Ulid FolderId)> existingLinks =
+        [
+            .. await context
+                .EncodingPresetFolders.AsNoTracking()
+                .Select(l => new ValueTuple<Ulid, Ulid>(l.PresetId, l.FolderId))
+                .ToListAsync(ct),
+        ];
+
+        List<EncoderProfileFolder> v1Links = await context
+            .Set<EncoderProfileFolder>()
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        int copiedLinks = 0;
+        foreach (EncoderProfileFolder v1Link in v1Links)
+        {
+            (Ulid PresetId, Ulid FolderId) key = (v1Link.EncoderProfileId, v1Link.FolderId);
+            if (existingLinks.Contains(key))
+                continue;
+
+            // Only port the link when the target preset exists in V2 (either a
+            // builtin or just-backfilled). Otherwise the FK would be invalid.
+            bool presetExists = await context.EncodingPresets.AnyAsync(
+                p => p.Id == v1Link.EncoderProfileId,
+                ct
+            );
+            if (!presetExists)
+            {
+                Logger.Setup(
+                    $"BackfillV1ToV2: dropping orphan link (V1 profile {v1Link.EncoderProfileId} → folder {v1Link.FolderId}) — no V2 preset target",
+                    LogEventLevel.Warning
+                );
+                continue;
+            }
+
+            context.EncodingPresetFolders.Add(
+                new()
+                {
+                    PresetId = v1Link.EncoderProfileId,
+                    FolderId = v1Link.FolderId,
+                    IsDefault = false,
+                }
+            );
+            copiedLinks++;
+        }
+
+        if (copiedLinks > 0)
+            await context.SaveChangesAsync(ct);
+
+        if (copiedPresets > 0 || copiedLinks > 0)
+        {
+            Logger.Setup(
+                $"BackfillV1ToV2: copied {copiedPresets} preset(s) + {copiedLinks} link(s) from V1 to V2",
+                LogEventLevel.Information
+            );
+        }
     }
+
+    private static V1VideoProfile MapVideo(IVideoProfile v) =>
+        new(
+            Codec: v.Codec,
+            Bitrate: v.Bitrate,
+            Width: v.Width,
+            Height: v.Height,
+            Preset: v.Preset,
+            Profile: v.Profile,
+            Tune: v.Tune,
+            Level: v.Level,
+            SegmentName: v.SegmentName,
+            PlaylistName: v.PlaylistName,
+            ColorSpace: v.ColorSpace,
+            Crf: v.Crf,
+            KeyInt: v.KeyInt,
+            ConvertHdrToSdr: v.ConvertHdrToSdr,
+            CustomArguments: v.CustomArguments
+        );
+
+    private static V1AudioProfile MapAudio(IAudioProfile a) =>
+        new(
+            Codec: a.Codec,
+            Channels: a.Channels,
+            SampleRate: a.SampleRate,
+            SegmentName: a.SegmentName,
+            PlaylistName: a.PlaylistName,
+            AllowedLanguages: a.AllowedLanguages,
+            CustomArguments: a.CustomArguments,
+            Loudness: a.Loudness,
+            Downmix: a.Downmix,
+            CustomPanMatrix: a.CustomPanMatrix
+        );
+
+    private static V1SubtitleProfile MapSubtitle(ISubtitleProfile s) =>
+        new(
+            Codec: s.Codec,
+            PlaylistName: s.PlaylistName,
+            AllowedLanguages: s.AllowedLanguages,
+            CustomArguments: s.CustomArguments
+        );
 }

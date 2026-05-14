@@ -44,11 +44,12 @@ public class VideoEncodeJob : AbstractEncoderJob
         if (folder is null)
             return;
 
-        List<EncoderProfile> profiles = folder
-            .EncoderProfileFolder.Select(e => e.EncoderProfile)
+        List<EncodingPreset> presets = folder
+            .EncodingPresetFolders.Where(link => link.Preset is not null)
+            .Select(link => link.Preset!)
             .ToList();
 
-        if (profiles.Count == 0)
+        if (presets.Count == 0)
             return;
 
         FileMetadata fileMetadata = await GetFileMetaData(folder, context);
@@ -57,14 +58,31 @@ public class VideoEncodeJob : AbstractEncoderJob
 
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        foreach (EncoderProfile dbProfile in profiles)
+        foreach (EncodingPreset preset in presets)
         {
             try
             {
-                if (dbProfile.VideoProfiles.Length == 0 && dbProfile.AudioProfiles.Length == 0)
+                EncodingProfile encodingProfile;
+                try
+                {
+                    encodingProfile = PresetResolver.Resolve(
+                        preset.Id,
+                        new DbPresetLookup(context)
+                    );
+                }
+                catch (Exception ex)
                 {
                     Logger.Encoder(
-                        $"Skipping profile {dbProfile.Name}: no video or audio profiles configured"
+                        $"Skipping preset '{preset.Name}' ({preset.Id}): resolve failed — {ex.Message}",
+                        LogEventLevel.Warning
+                    );
+                    continue;
+                }
+
+                if (encodingProfile.Video is null && encodingProfile.Audio.Length == 0)
+                {
+                    Logger.Encoder(
+                        $"Skipping preset {preset.Name}: no video or audio outputs configured"
                     );
                     continue;
                 }
@@ -77,91 +95,10 @@ public class VideoEncodeJob : AbstractEncoderJob
                             JobId = fileMetadata.Id,
                             InputPath = InputFile,
                             OutputPath = fileMetadata.Path,
-                            ProfileName = dbProfile.Name,
+                            ProfileName = preset.Name,
                         }
                     );
                 }
-
-                // Prefer the V2 EncodingPreset source-of-truth when one exists with
-                // the same Ulid — V1 columns drop HardwarePreference, HdrPolicy,
-                // BitDepthPolicy, ClientCompatibility, and several other fields that
-                // never made it into the legacy schema. The materializer keeps V1
-                // and V2 rows in lockstep by Ulid, so this lookup is exact.
-                EncodingProfile? encodingProfile = null;
-                bool hasV2Source = await context
-                    .EncodingPresets.AsNoTracking()
-                    .AnyAsync(p => p.Id == dbProfile.Id);
-
-                if (hasV2Source)
-                {
-                    try
-                    {
-                        encodingProfile = PresetResolver.Resolve(
-                            dbProfile.Id,
-                            new DbPresetLookup(context)
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Encoder(
-                            $"V2 preset resolve failed for {dbProfile.Name} ({dbProfile.Id}); falling back to V1 row. {ex.Message}",
-                            LogEventLevel.Warning
-                        );
-                    }
-                }
-
-                encodingProfile ??= V2ProfileFactory.FromV1(
-                    dbProfile.Id,
-                    dbProfile.Name,
-                    dbProfile.Container ?? "m3u8",
-                    dbProfile
-                        .VideoProfiles.Select(v => new V1VideoProfile(
-                            v.Codec,
-                            v.Bitrate,
-                            v.Width,
-                            v.Height,
-                            v.Preset,
-                            v.Profile,
-                            v.Tune,
-                            v.Level,
-                            v.SegmentName,
-                            v.PlaylistName,
-                            v.ColorSpace,
-                            v.Crf,
-                            v.KeyInt,
-                            v.ConvertHdrToSdr,
-                            v.CustomArguments
-                        ))
-                        .ToArray(),
-                    dbProfile
-                        .AudioProfiles.Select(a => new V1AudioProfile(
-                            a.Codec,
-                            a.Channels,
-                            a.SampleRate,
-                            a.SegmentName,
-                            a.PlaylistName,
-                            a.AllowedLanguages,
-                            a.CustomArguments,
-                            a.Loudness,
-                            a.Downmix,
-                            a.CustomPanMatrix
-                        ))
-                        .ToArray(),
-                    dbProfile
-                        .SubtitleProfiles.Select(s => new V1SubtitleProfile(
-                            s.Codec,
-                            s.PlaylistName,
-                            s.AllowedLanguages,
-                            s.CustomArguments
-                        ))
-                        .ToArray(),
-                    dbProfile.Thumbnails is not null
-                        ? new V1ThumbnailProfile(
-                            dbProfile.Thumbnails.Width,
-                            dbProfile.Thumbnails.IntervalSeconds
-                        )
-                        : null
-                );
 
                 IEncodingOrchestrator orchestrator =
                     EncoderProvider.ResolveService<IEncodingOrchestrator>()
@@ -200,13 +137,15 @@ public class VideoEncodeJob : AbstractEncoderJob
                     title: fileMetadata.Title,
                     baseFolder: fileMetadata.Path,
                     sharePath: fileMetadata.Path,
-                    videoStreams: dbProfile
-                        .VideoProfiles.Select(v => $"{v.Width}x{v.Height} {v.Codec}")
+                    videoStreams: SummarizeVideo(encodingProfile),
+                    audioStreams: encodingProfile
+                        .Audio.Select(a =>
+                            $"{a.Codec.ToString().ToLowerInvariant()} {a.Channels}ch"
+                        )
                         .ToList(),
-                    audioStreams: dbProfile
-                        .AudioProfiles.Select(a => $"{a.Codec} {a.Channels}ch")
+                    subtitleStreams: encodingProfile
+                        .Subtitles.Select(s => s.Codec.ToString().ToLowerInvariant())
                         .ToList(),
-                    subtitleStreams: dbProfile.SubtitleProfiles.Select(s => s.Codec).ToList(),
                     hasGpu: false,
                     isHdr: false,
                     registry: processRegistry
@@ -226,13 +165,7 @@ public class VideoEncodeJob : AbstractEncoderJob
                 );
 
                 await PublishStageAsync(fileMetadata, "Recording encoding history");
-                await RecordEncodingHistoryAsync(
-                    context,
-                    dbProfile,
-                    result,
-                    InputFile,
-                    StorageDriver
-                );
+                await RecordEncodingHistoryAsync(context, preset, result, InputFile, StorageDriver);
 
                 await PublishStageAsync(fileMetadata, "Checking source subtitles");
                 await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
@@ -298,9 +231,35 @@ public class VideoEncodeJob : AbstractEncoderJob
     /// swallowed — a dashboard-history miss should never fail a working encode.
     /// Denormalizes profile name / encoder so the row survives profile deletion.
     /// </summary>
+    /// <summary>
+    /// One line per ladder rung (or the single reference Video) for the
+    /// progress observer. Auto ladders that haven't been expanded yet just
+    /// show the reference output — sufficient for the dashboard.
+    /// </summary>
+    private static List<string> SummarizeVideo(EncodingProfile profile)
+    {
+        List<string> summary = [];
+
+        if (profile.Ladder?.Rungs is { Length: > 0 } rungs)
+        {
+            foreach (LadderRung rung in rungs)
+                summary.Add(
+                    $"{rung.Width}x{rung.Height} {rung.Codec.ToString().ToLowerInvariant()}"
+                );
+            return summary;
+        }
+
+        if (profile.Video is { } video)
+            summary.Add(
+                $"{video.Width}x{video.Height ?? 0} {video.Codec.ToString().ToLowerInvariant()}"
+            );
+
+        return summary;
+    }
+
     private static async Task RecordEncodingHistoryAsync(
         MediaContext context,
-        EncoderProfile profile,
+        EncodingPreset preset,
         EncodingResult result,
         string inputPath,
         IStorageDriver storageDriver
@@ -335,8 +294,8 @@ public class VideoEncodeJob : AbstractEncoderJob
                 {
                     InputPath = inputPath,
                     OutputPath = result.OutputPath,
-                    ProfileId = profile.Id,
-                    ProfileName = profile.Name,
+                    ProfileId = preset.Id,
+                    ProfileName = preset.Name,
                     EncoderUsed = result.Metrics.EncoderUsed,
                     GpuUsed = result.Metrics.GpuUsed,
                     DurationSeconds = result.Duration.TotalSeconds,
