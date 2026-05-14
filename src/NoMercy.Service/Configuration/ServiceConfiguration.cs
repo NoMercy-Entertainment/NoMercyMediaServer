@@ -835,6 +835,21 @@ public static class ServiceConfiguration
         services.AddResponseCompression(options =>
         {
             options.EnableForHttps = true;
+            // Subtitle payloads (Aegisub karaoke + hand-drawn signs) reach
+            // 60-90 MB. Compressing them strips Content-Length from the
+            // OkHttp response on the Android client (transparent gzip leaves
+            // the header reflecting the compressed bytes, useless for sizing
+            // the read buffer). Result: the client falls into its no-length
+            // fallback path and OOMs the 256 MB-heap TV / 384 MB phone. Skip
+            // compression for subtitle MIME types so clients always know the
+            // real payload size up front.
+            options.ExcludedMimeTypes =
+            [
+                "text/x-ssa",
+                "text/x-ass",
+                "application/x-subrip",
+                "text/vtt",
+            ];
         });
 
         SwaggerConfiguration.AddSwagger(services);
