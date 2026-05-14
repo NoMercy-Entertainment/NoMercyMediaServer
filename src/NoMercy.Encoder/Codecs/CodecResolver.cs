@@ -81,6 +81,40 @@ public class CodecResolver(CodecRegistry registry) : ICodecResolver
         return definition.Encoders.FirstOrDefault(e => e.RequiredVendor == vendor);
     }
 
+    public ResolvedCodec ResolveByEncoderName(
+        VideoCodecType codec,
+        string ffmpegEncoderName,
+        IHardwareCapabilities hardware
+    )
+    {
+        if (codec == VideoCodecType.Copy)
+            return Resolve(codec, hardware);
+
+        ICodecDefinition definition = registry.GetVideoDefinition(codec);
+        EncoderInfo? encoder = definition.Encoders.FirstOrDefault(e =>
+            string.Equals(e.FfmpegName, ffmpegEncoderName, StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (encoder is null)
+        {
+            // Encoder name didn't match any definition entry — fall through to
+            // the regular preference-based resolver so the pipeline gets a
+            // best-effort match instead of crashing.
+            return Resolve(codec, hardware);
+        }
+
+        // Vendor-match a GPU device when available. When IHardwareCapabilities
+        // hasn't detected one (stale probe / GPU enumeration gap) the SpeedIndex
+        // has still validated the encoder works on this host — proceed without
+        // the device handle. The pipeline tolerates null Device for hardware
+        // encoders; only metrics labelling uses it.
+        GpuDevice? device = encoder.RequiredVendor is { } vendor
+            ? hardware.Gpus.FirstOrDefault(g => g.Vendor == vendor)
+            : null;
+
+        return MakeResolved(encoder, device);
+    }
+
     private static ResolvedCodec MakeResolved(EncoderInfo encoder, GpuDevice? device)
     {
         RateControlMode defaultRc =

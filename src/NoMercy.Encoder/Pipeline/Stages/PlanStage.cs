@@ -112,18 +112,17 @@ public class PlanStage(
                         );
                     }
 
-                    // Fall through to ICodecResolver using the preference the resolver chose —
-                    // it owns the EncoderInfo/GpuDevice lookup that the rest of the pipeline needs.
-                    EncoderPreference legacyPreference = CodecRegistry.IsHardware(
-                        resolution.EncoderHandle!
-                    )
-                        ? EncoderPreference.PreferHardware
-                        : EncoderPreference.ForceSoftware;
-
-                    ResolvedCodec resolved = codecResolver.Resolve(
+                    // The HW preference resolver already picked an encoder by name from
+                    // the SpeedIndex (which is the authoritative source of "this works
+                    // on this host"). Look up the EncoderInfo directly instead of
+                    // re-resolving via preference — the legacy CodecResolver path gates
+                    // on IHardwareCapabilities.HasGpu, which silently downgrades to
+                    // software when GPU detection is stale even though SpeedIndex has
+                    // hevc_nvenc benchmarks for it.
+                    ResolvedCodec resolved = codecResolver.ResolveByEncoderName(
                         v.Codec,
-                        hardware,
-                        legacyPreference
+                        resolution.EncoderHandle!,
+                        hardware
                     );
 
                     if (resolved.Device is not null)
