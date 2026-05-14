@@ -14,11 +14,9 @@ public static class ContainerCompatibility
             VideoCodecType.Vp9,
         ],
         [Container.Mp4] = [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1],
-        // HEVC and AV1 over MPEG-TS are valid per the HLS spec (hvc1/hev1 stream
-        // type identifiers). FFmpeg muxes them and VLC + every modern HLS client
-        // demuxes them. Earlier H264-only matrix forced HEVC presets into fMP4
-        // (.m4s segments) which VLC handles poorly.
-        [Container.HlsTs] = [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1],
+        // Apple HLS Authoring Specification §1.5: HEVC MUST use fMP4. Same
+        // applies to AV1 (CMAF). Only H.264 may use MPEG-TS segments.
+        [Container.HlsTs] = [VideoCodecType.H264],
         [Container.HlsFmp4] = [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1],
         [Container.Dash] =
         [

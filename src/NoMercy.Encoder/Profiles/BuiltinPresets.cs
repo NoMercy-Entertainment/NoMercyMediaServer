@@ -296,7 +296,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsTs,
+            Container: Container.HlsFmp4,
             Video: null,
             Audio:
             [
@@ -368,7 +368,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsTs,
+            Container: Container.HlsFmp4,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H265,
@@ -436,7 +436,8 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsTs,
+            // fMP4 so HEVC sources remux without re-encode; H.264 also works in fMP4.
+            Container: Container.HlsFmp4,
             Video: new(
                 StreamPolicy.Copy,
                 VideoCodecType.Copy,
@@ -502,7 +503,8 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsTs,
+            // fMP4 so HEVC sources remux cleanly; H.264 also works in fMP4.
+            Container: Container.HlsFmp4,
             Video: new(
                 StreamPolicy.Copy,
                 VideoCodecType.Copy,
@@ -1045,7 +1047,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsTs,
+            Container: Container.HlsFmp4,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H265,
@@ -1124,7 +1126,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsTs,
+            Container: Container.HlsFmp4,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H265,
@@ -1202,7 +1204,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsTs,
+            Container: Container.HlsFmp4,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H265,
@@ -1345,7 +1347,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsTs,
+            Container: Container.HlsFmp4,
             // Reference Video defines the codec + base settings the auto-ladder
             // extends across every rung. HEVC Main10 10-bit so HDR sources can
             // passthrough their PQ/HLG signal at every quality level.

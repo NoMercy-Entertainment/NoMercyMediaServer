@@ -10,8 +10,8 @@ public class ContainerCompatibilityTests
     [InlineData(Container.Mp4, VideoCodecType.H265, true)]
     [InlineData(Container.Mp4, VideoCodecType.Vp9, false)]
     [InlineData(Container.HlsTs, VideoCodecType.H264, true)]
-    [InlineData(Container.HlsTs, VideoCodecType.H265, true)]
-    [InlineData(Container.HlsTs, VideoCodecType.Av1, true)]
+    [InlineData(Container.HlsTs, VideoCodecType.H265, false)]
+    [InlineData(Container.HlsTs, VideoCodecType.Av1, false)]
     [InlineData(Container.HlsFmp4, VideoCodecType.H264, true)]
     [InlineData(Container.HlsFmp4, VideoCodecType.H265, true)]
     [InlineData(Container.HlsFmp4, VideoCodecType.Av1, true)]
@@ -169,7 +169,7 @@ public class ContainerCompatibilityTests
                 VideoCodecType.Vp9,
             ],
             [Container.Mp4] = [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1],
-            [Container.HlsTs] = [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1],
+            [Container.HlsTs] = [VideoCodecType.H264],
             [Container.HlsFmp4] = [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1],
             [Container.Dash] =
             [
