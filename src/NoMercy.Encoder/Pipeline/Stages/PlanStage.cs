@@ -622,20 +622,36 @@ public class PlanStage(
         SubtitleOutputPlan[] subtitlePlan = subtitlePlans.ToArray();
 
         ThumbnailOutputPlan? thumbPlan = null;
-        if (profile.Thumbnails is not null && media.VideoStreams.Count > 0)
+        if (media.VideoStreams.Count > 0)
         {
-            ThumbnailOutput thumbConfig = profile.Thumbnails;
-            int thumbHeight = (int)(
-                2
-                * Math.Round(
-                    (double)thumbConfig.Width
-                        * media.VideoStreams[0].Height
-                        / media.VideoStreams[0].Width
-                        / 2
-                )
-            );
+            // Explicit profile.Thumbnails wins. Otherwise fall back to the
+            // HlsDerivatives switch: when GenerateSpriteVtt is on (the default
+            // for HLS), build a ThumbnailOutput from SpriteVttThumbnailWidth +
+            // SpriteVttIntervalSeconds so sprites land for every HLS preset
+            // without the author having to also set the legacy Thumbnails field.
+            ThumbnailOutput? thumbConfig = profile.Thumbnails;
+            if (thumbConfig is null && profile.HlsDerivatives is { GenerateSpriteVtt: true } d)
+            {
+                thumbConfig = new ThumbnailOutput(
+                    Width: d.SpriteVttThumbnailWidth,
+                    IntervalSeconds: d.SpriteVttIntervalSeconds
+                );
+            }
 
-            thumbPlan = new(thumbConfig.Width, thumbHeight, thumbConfig.IntervalSeconds);
+            if (thumbConfig is not null)
+            {
+                int thumbHeight = (int)(
+                    2
+                    * Math.Round(
+                        (double)thumbConfig.Width
+                            * media.VideoStreams[0].Height
+                            / media.VideoStreams[0].Width
+                            / 2
+                    )
+                );
+
+                thumbPlan = new(thumbConfig.Width, thumbHeight, thumbConfig.IntervalSeconds);
+            }
         }
 
         // Clamp segment duration to input length for very short files.

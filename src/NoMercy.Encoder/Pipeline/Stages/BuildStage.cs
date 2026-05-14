@@ -682,17 +682,18 @@ public class BuildStage(
                 );
             }
 
-            // Thumbnail branch: format=yuv420p (force 8-bit) → fps → scale → [thumbs]
+            // Thumbnail branch: format=yuvj420p (full-range 8-bit) → fps → scale → [thumbs]
             // The spritevtt muxer handles tiling and VTT generation — no tile filter needed.
-            // format=yuv420p is required because the split receives raw source pixel format
-            // (e.g. yuv420p10le for 10-bit content) and libwebp can't encode 10-bit.
+            // Using yuvj420p (JPEG full range) instead of yuv420p (TV limited range)
+            // because libwebp interprets limited-range Y=16 as "darker than black",
+            // which surfaces as a green tint on otherwise dark thumbnails.
             if (hasThumbnails)
             {
                 ThumbnailOutputPlan thumbs = plan.Thumbnails!;
 
                 fg.AddFilter(
                     "thumbsrc",
-                    $"format=yuv420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
+                    $"format=yuvj420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
                     "thumbs"
                 );
             }
