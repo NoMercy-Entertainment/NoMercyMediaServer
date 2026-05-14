@@ -114,10 +114,24 @@ public class EncodingOrchestrator(
             EncodingResult result;
 
             Directory.CreateDirectory(StoragePaths.TranscodeRoot);
-            string tempDir = Path.Combine(
-                StoragePaths.TranscodeRoot,
-                $"nomercy-enc-{Ulid.NewUlid()}"
-            );
+            // Mirror the final OutputDirectory structure under the transcode root
+            // so working files land at e.g.
+            //   cache/encoder/<Show>.(<Year>)/<Show>.SxxExx/
+            // instead of an opaque nomercy-enc-<ulid> dir. Easy to inspect, easy
+            // to wipe per show. OutputDirectory is a relative path from the
+            // destination storage root; treat / and \ as portable separators.
+            string relativeOutputPath = (request.OutputDirectory ?? string.Empty)
+                .Replace('\\', '/')
+                .Trim('/');
+            string tempDir = string.IsNullOrEmpty(relativeOutputPath)
+                ? Path.Combine(StoragePaths.TranscodeRoot, $"nomercy-enc-{Ulid.NewUlid()}")
+                : Path.Combine(
+                    StoragePaths.TranscodeRoot,
+                    relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
+                );
+            // Wipe any stale scratch from a prior failed run so segments don't mix.
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
             Directory.CreateDirectory(tempDir);
 
             try
