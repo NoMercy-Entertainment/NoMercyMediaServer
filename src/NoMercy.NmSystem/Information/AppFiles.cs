@@ -52,6 +52,7 @@ public static class AppFiles
     public static string ApiCachePath => Path.Combine(CachePath, "api");
     public static string TempPath => Path.Combine(CachePath, "temp");
     public static string TranscodePath => Path.Combine(CachePath, "transcode");
+    public static string EncoderCachePath => Path.Combine(CachePath, "encoder");
     public static string ImagesPath => Path.Combine(CachePath, "images");
     public static string MusicImagesPath => Path.Combine(ImagesPath, "music");
     public static string TempImagesPath => Path.Combine(ImagesPath, "temp");
@@ -167,6 +168,7 @@ public static class AppFiles
             BrowserPath,
             CachePath,
             ApiCachePath,
+            EncoderCachePath,
             CertPath,
             ConfigPath,
             SeedsPath,

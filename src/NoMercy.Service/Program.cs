@@ -148,6 +148,14 @@ public static class Program
         // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
         await Setup.Start.InitEssential();
 
+        // Route storage-facade temp + transcode writes inside the NoMercy data
+        // directory instead of the OS temp folder. StoragePaths defaults to
+        // Path.GetTempPath(); the orchestrator + remote storage stage files
+        // there. Encoder gets its own 'cache/encoder' subdir so transcodes
+        // don't share scratch space with the rest of the lease churn.
+        NoMercy.Storage.StoragePaths.TempRoot = AppFiles.TempPath;
+        NoMercy.Storage.StoragePaths.TranscodeRoot = AppFiles.EncoderCachePath;
+
         // Pre-DI storage pair — used for seed calls that run before the DI
         // container is built. Same pattern as Start.cs Binaries task.
         IStorageDriver preBootBackend = new LocalStorageDriver();
