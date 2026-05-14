@@ -164,6 +164,11 @@ public class AbrLadderGenerator : IAbrLadderGenerator
         // Step 4 — Cap to MaxRungs (retain highest-resolution rungs).
         if (rungs.Count > autoConfig.MaxRungs)
         {
+            _logger.LogInformation(
+                "AutoLadder: capping {Before} rungs to MaxRungs={Max} (keeping top resolutions)",
+                rungs.Count,
+                autoConfig.MaxRungs
+            );
             List<LadderRung> sorted = rungs.OrderByDescending(r => r.Height).ToList();
             rungs = sorted.Take(autoConfig.MaxRungs).ToList();
         }

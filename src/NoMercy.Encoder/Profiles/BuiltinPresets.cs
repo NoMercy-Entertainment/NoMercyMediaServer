@@ -1429,7 +1429,9 @@ public static class BuiltinPresets
                 + "detected — large ladders are too expensive on CPU.",
             IsBuiltin = true,
             HardwarePreference = HardwarePreference.PreferHardware,
-            HdrPolicy = HdrPolicy.PassthroughWhenPossible,
+            // HDR sources emit both HDR passthrough + SDR tonemap variants per
+            // rung (matches the example media layout). SDR sources just emit SDR.
+            HdrPolicy = HdrPolicy.EmitHdrAndSdr,
             ClientCompatibility =
                 ClientCompatibility.NativeAndroid
                 | ClientCompatibility.NativeIos

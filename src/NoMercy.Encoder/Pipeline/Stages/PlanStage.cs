@@ -71,6 +71,35 @@ public class PlanStage(
             int hwSessionsUsed = 0;
 
             VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
+
+            // EmitHdrAndSdr: when source is HDR, duplicate every video output —
+            // first copy as HDR passthrough (ConvertHdrToSdr=false), second copy
+            // as SDR tonemap (ConvertHdrToSdr=true). Template label suffix
+            // distinguishes the two on disk (video_WxH/ vs video_WxH_SDR/).
+            // SDR source: behaves like AlwaysTonemap, no doubling.
+            if (
+                profile.HdrPolicy == HdrPolicy.EmitHdrAndSdr
+                && input.Media.VideoStreams.Count > 0
+                && input.Media.VideoStreams[0].IsHdr
+            )
+            {
+                videoOutputs = videoOutputs
+                    .SelectMany(v =>
+                        new[]
+                        {
+                            v with
+                            {
+                                ConvertHdrToSdr = false,
+                            },
+                            v with
+                            {
+                                ConvertHdrToSdr = true,
+                            },
+                        }
+                    )
+                    .ToArray();
+            }
+
             ResolvedCodec[] resolvedCodecs;
 
             if (hardwarePreferenceResolver is not null)
@@ -333,6 +362,21 @@ public class PlanStage(
         );
 
         VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
+
+        // EmitHdrAndSdr: same expansion as in the resolver block above so
+        // VideoOutputPlan count matches resolvedCodecs count.
+        if (
+            profile.HdrPolicy == HdrPolicy.EmitHdrAndSdr
+            && media.VideoStreams.Count > 0
+            && media.VideoStreams[0].IsHdr
+        )
+        {
+            videoOutputs = videoOutputs
+                .SelectMany(v =>
+                    new[] { v with { ConvertHdrToSdr = false }, v with { ConvertHdrToSdr = true } }
+                )
+                .ToArray();
+        }
 
         // Audio-only: skip video planning entirely when source has no video streams
         VideoOutputPlan[] videoPlan =

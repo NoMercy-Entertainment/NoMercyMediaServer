@@ -8,7 +8,11 @@ public record AutoLadderConfig
     public BitrateStrategy BitrateStrategy { get; init; } = BitrateStrategy.AppleHlsRecommended;
     public int Crf { get; init; } = 22;
     public double SourcePercentage { get; init; } = 50.0;
-    public int MaxRungs { get; init; } = 5;
+
+    // Default 10 (was 5) so the YouTube ladder's 8 tiers (144p..2160p) survive
+    // when JSON deserialization races init-only setters against the C# default.
+    // Smaller ladders (Standard 3-rung, Premium 4-rung) are unaffected.
+    public int MaxRungs { get; init; } = 10;
     public int MinRungs { get; init; } = 1;
     public bool NeverUpscale { get; init; } = true;
     public bool NeverUpsource { get; init; } = true;
