@@ -46,7 +46,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H264,
@@ -111,7 +111,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H264,
@@ -176,7 +176,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H264,
@@ -241,7 +241,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: null,
             Audio:
             [
@@ -296,7 +296,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: null,
             Audio:
             [
@@ -368,7 +368,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H265,
@@ -436,7 +436,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: new(
                 StreamPolicy.Copy,
                 VideoCodecType.Copy,
@@ -502,7 +502,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: new(
                 StreamPolicy.Copy,
                 VideoCodecType.Copy,
@@ -967,7 +967,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H264,
@@ -1045,7 +1045,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H265,
@@ -1124,7 +1124,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H265,
@@ -1202,7 +1202,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             Video: new(
                 StreamPolicy.Transcode,
                 VideoCodecType.H265,
@@ -1345,7 +1345,7 @@ public static class BuiltinPresets
         return new(
             Id: IdFromName(Name),
             Name: Name,
-            Container: Container.HlsFmp4,
+            Container: Container.HlsTs,
             // Reference Video defines the codec + base settings the auto-ladder
             // extends across every rung. HEVC Main10 10-bit so HDR sources can
             // passthrough their PQ/HLG signal at every quality level.

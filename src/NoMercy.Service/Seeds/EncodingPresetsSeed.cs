@@ -103,21 +103,21 @@ public static class EncodingPresetsSeed
     )
     {
         // ── Step 1: copy V1 EncoderProfiles → V2 EncodingPresets ──────────────
-        HashSet<Ulid> existingPresetIds =
-        [
-            .. await context.EncodingPresets.AsNoTracking().Select(p => p.Id).ToListAsync(ct),
-        ];
+        // Refreshes existing v1_backfill rows on every boot so default-value
+        // changes (HardwarePreference, HdrPolicy, etc.) propagate to migrated
+        // user profiles. Hand-edited V2 rows (Source != 'v1_backfill') are
+        // never touched.
+        Dictionary<Ulid, EncodingPreset> existingByIdTracked =
+            await context.EncodingPresets.ToDictionaryAsync(p => p.Id, ct);
 
         List<EncoderProfile> v1Profiles = await context
             .EncoderProfiles.AsNoTracking()
             .ToListAsync(ct);
 
-        int copiedPresets = 0;
+        int insertedPresets = 0;
+        int refreshedPresets = 0;
         foreach (EncoderProfile v1 in v1Profiles)
         {
-            if (existingPresetIds.Contains(v1.Id))
-                continue;
-
             NoMercy.Encoder.Profiles.EncodingProfile v2Profile;
             try
             {
@@ -142,21 +142,41 @@ public static class EncodingPresetsSeed
                 continue;
             }
 
-            context.EncodingPresets.Add(
-                new()
-                {
-                    Id = v1.Id,
-                    Name = v1.Name,
-                    Description = $"Migrated from V1 EncoderProfile '{v1.Name}'.",
-                    ProfileJson = JsonConvert.SerializeObject(v2Profile),
-                    IsBuiltIn = false,
-                    Source = "v1_backfill",
-                }
-            );
-            copiedPresets++;
+            string profileJson = JsonConvert.SerializeObject(v2Profile);
+
+            if (existingByIdTracked.TryGetValue(v1.Id, out EncodingPreset? existing))
+            {
+                // Only refresh rows that came from a previous backfill pass —
+                // hand-edited user presets that happen to share a V1 Ulid are
+                // out of scope.
+                if (existing.Source != "v1_backfill")
+                    continue;
+
+                if (existing.ProfileJson == profileJson && existing.Name == v1.Name)
+                    continue;
+
+                existing.Name = v1.Name;
+                existing.ProfileJson = profileJson;
+                refreshedPresets++;
+            }
+            else
+            {
+                context.EncodingPresets.Add(
+                    new()
+                    {
+                        Id = v1.Id,
+                        Name = v1.Name,
+                        Description = $"Migrated from V1 EncoderProfile '{v1.Name}'.",
+                        ProfileJson = profileJson,
+                        IsBuiltIn = false,
+                        Source = "v1_backfill",
+                    }
+                );
+                insertedPresets++;
+            }
         }
 
-        if (copiedPresets > 0)
+        if (insertedPresets > 0 || refreshedPresets > 0)
             await context.SaveChangesAsync(ct);
 
         // ── Step 2: copy V1 EncoderProfileFolder → V2 EncodingPresetFolders ───
@@ -209,10 +229,10 @@ public static class EncodingPresetsSeed
         if (copiedLinks > 0)
             await context.SaveChangesAsync(ct);
 
-        if (copiedPresets > 0 || copiedLinks > 0)
+        if (insertedPresets > 0 || refreshedPresets > 0 || copiedLinks > 0)
         {
             Logger.Setup(
-                $"BackfillV1ToV2: copied {copiedPresets} preset(s) + {copiedLinks} link(s) from V1 to V2",
+                $"BackfillV1ToV2: inserted {insertedPresets}, refreshed {refreshedPresets} preset(s) + ported {copiedLinks} link(s) from V1 to V2",
                 LogEventLevel.Information
             );
         }
