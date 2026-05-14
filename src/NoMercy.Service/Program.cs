@@ -211,6 +211,24 @@ public static class Program
             _applicationShutdownCts.Token
         );
 
+        // The initial forceHttp decision used cert presence as a proxy for "auth done".
+        // It's wrong when a cert exists but tokens are missing/unreadable (DataProtection
+        // key rotation, manual wipe, schema migration) — Kestrel binds HTTPS-only but the
+        // setup browser URL is plain HTTP, so the browser gets ERR_EMPTY_RESPONSE. Rebuild
+        // the host as HTTP-only so the setup flow can run; RunWithHttpsRestart will then
+        // restart with HTTPS once the user re-authenticates.
+        if (needsSetupMode && hasCert)
+        {
+            Logger.App(
+                "Setup required but host is HTTPS-bound — rebuilding as HTTP-only for setup flow"
+            );
+            await app.DisposeAsync();
+            app = CreateWebApplication(options, forceHttp: true);
+            diStorage = app.Services.GetRequiredService<IStorage>();
+            dIStorageDriver = app.Services.GetRequiredService<IStorageDriver>();
+            orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
+        }
+
         // Load SSL cert from database now that TokenStore is initialized by BootOrchestrator
         Certificate.LoadFromDb();
 
