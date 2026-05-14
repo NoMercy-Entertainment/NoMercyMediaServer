@@ -65,8 +65,8 @@ public static class BuiltinPresets
                 "yuv420p",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -80,8 +80,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -92,7 +92,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -130,8 +130,8 @@ public static class BuiltinPresets
                 "yuv420p",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -145,8 +145,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -157,7 +157,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -195,8 +195,8 @@ public static class BuiltinPresets
                 "yuv420p",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -210,8 +210,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -222,7 +222,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -255,8 +255,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -267,7 +267,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -310,8 +310,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_eac3",
-                    "audio_{lang}_eac3/playlist"
+                    "audio_{lang}_eac3/audio_{lang}_eac3",
+                    "audio_{lang}_eac3/audio_{lang}_eac3"
                 ),
                 new(
                     StreamPolicy.Transcode,
@@ -323,8 +323,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_aac",
-                    "audio_{lang}_aac/playlist"
+                    "audio_{lang}_aac/audio_{lang}_aac",
+                    "audio_{lang}_aac/audio_{lang}_aac"
                 ),
             ],
             Subtitles:
@@ -335,7 +335,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -387,8 +387,8 @@ public static class BuiltinPresets
                 "yuv420p10le",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -402,8 +402,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -414,7 +414,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -470,8 +470,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_copy",
-                    "audio_{lang}_copy/playlist"
+                    "audio_{lang}_copy/audio_{lang}_copy",
+                    "audio_{lang}_copy/audio_{lang}_copy"
                 ),
             ],
             Subtitles:
@@ -482,7 +482,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -536,8 +536,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -548,7 +548,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -582,8 +582,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_copy",
-                    "audio_{lang}_copy/playlist"
+                    "audio_{lang}_copy/audio_{lang}_copy",
+                    "audio_{lang}_copy/audio_{lang}_copy"
                 ),
             ],
             Subtitles: [],
@@ -627,8 +627,8 @@ public static class BuiltinPresets
                 "yuv420p10le",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -642,8 +642,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -654,7 +654,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ]
         )
@@ -693,8 +693,8 @@ public static class BuiltinPresets
                 "yuv420p10le",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -708,8 +708,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -720,7 +720,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ]
         )
@@ -759,8 +759,8 @@ public static class BuiltinPresets
                 "yuv420p",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -774,8 +774,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -786,7 +786,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ]
         )
@@ -839,8 +839,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_copy",
-                    "audio_{lang}_copy/playlist"
+                    "audio_{lang}_copy/audio_{lang}_copy",
+                    "audio_{lang}_copy/audio_{lang}_copy"
                 ),
             ],
             Subtitles:
@@ -851,7 +851,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ]
         )
@@ -882,8 +882,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles: []
@@ -915,8 +915,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles: []
@@ -948,8 +948,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles: []
@@ -986,8 +986,8 @@ public static class BuiltinPresets
                 "yuv420p",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -1001,8 +1001,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_aac",
-                    "audio_{lang}_aac/playlist"
+                    "audio_{lang}_aac/audio_{lang}_aac",
+                    "audio_{lang}_aac/audio_{lang}_aac"
                 ),
                 new(
                     StreamPolicy.Transcode,
@@ -1014,8 +1014,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_ac3",
-                    "audio_{lang}_ac3/playlist"
+                    "audio_{lang}_ac3/audio_{lang}_ac3",
+                    "audio_{lang}_ac3/audio_{lang}_ac3"
                 ),
             ],
             Subtitles:
@@ -1026,7 +1026,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(CmafCompatible: false),
@@ -1064,8 +1064,8 @@ public static class BuiltinPresets
                 "yuv420p10le",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -1079,8 +1079,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_aac",
-                    "audio_{lang}_aac/playlist"
+                    "audio_{lang}_aac/audio_{lang}_aac",
+                    "audio_{lang}_aac/audio_{lang}_aac"
                 ),
                 new(
                     StreamPolicy.Transcode,
@@ -1092,8 +1092,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_eac3",
-                    "audio_{lang}_eac3/playlist"
+                    "audio_{lang}_eac3/audio_{lang}_eac3",
+                    "audio_{lang}_eac3/audio_{lang}_eac3"
                 ),
             ],
             Subtitles:
@@ -1104,7 +1104,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -1143,8 +1143,8 @@ public static class BuiltinPresets
                 "yuv420p",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -1158,8 +1158,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_aac",
-                    "audio_{lang}_aac/playlist"
+                    "audio_{lang}_aac/audio_{lang}_aac",
+                    "audio_{lang}_aac/audio_{lang}_aac"
                 ),
                 new(
                     StreamPolicy.Transcode,
@@ -1171,8 +1171,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_eac3",
-                    "audio_{lang}_eac3/playlist"
+                    "audio_{lang}_eac3/audio_{lang}_eac3",
+                    "audio_{lang}_eac3/audio_{lang}_eac3"
                 ),
             ],
             Subtitles:
@@ -1183,7 +1183,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -1221,8 +1221,8 @@ public static class BuiltinPresets
                 "yuv420p10le",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -1236,8 +1236,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_aac",
-                    "audio_{lang}_aac/playlist"
+                    "audio_{lang}_aac/audio_{lang}_aac",
+                    "audio_{lang}_aac/audio_{lang}_aac"
                 ),
                 new(
                     StreamPolicy.Transcode,
@@ -1249,8 +1249,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_eac3",
-                    "audio_{lang}_eac3/playlist"
+                    "audio_{lang}_eac3/audio_{lang}_eac3",
+                    "audio_{lang}_eac3/audio_{lang}_eac3"
                 ),
             ],
             Subtitles:
@@ -1261,7 +1261,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -1300,8 +1300,8 @@ public static class BuiltinPresets
                 "yuv420p",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -1315,8 +1315,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -1327,7 +1327,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ]
         )
@@ -1367,8 +1367,8 @@ public static class BuiltinPresets
                 "yuv420p10le",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -1382,8 +1382,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -1394,7 +1394,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Hls: new(),
@@ -1460,8 +1460,8 @@ public static class BuiltinPresets
                 "yuv420p",
                 4,
                 false,
-                "video_{label}",
-                "video_{label}/playlist"
+                "video_{label}/video_{label}",
+                "video_{label}/video_{label}"
             ),
             Audio:
             [
@@ -1475,8 +1475,8 @@ public static class BuiltinPresets
                     null,
                     null,
                     null,
-                    "audio_{lang}_{codec}",
-                    "audio_{lang}_{codec}/playlist"
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}",
+                    "audio_{lang}_{codec}/audio_{lang}_{codec}"
                 ),
             ],
             Subtitles:
@@ -1487,7 +1487,7 @@ public static class BuiltinPresets
                     AllowedLanguages.All,
                     true,
                     null,
-                    "subtitles/{lang}"
+                    "subtitles/{filename}.{lang}.{type}"
                 ),
             ],
             Dash: new()

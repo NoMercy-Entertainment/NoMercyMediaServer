@@ -35,16 +35,17 @@ public static class TemplateResolver
     public static Dictionary<string, string> VideoTokens(int width, int height, bool isHdrOutput)
     {
         string framesize = $"{width}x{height}";
+        // {label} produces the per-variant folder name that matches the example
+        // media layout: HDR variants stay bare ("1920x795"), SDR tonemaps get
+        // an explicit "_SDR" suffix ("1920x795_SDR"). Single token so builtins
+        // can use one template ("video_{label}/video_{label}") for both.
+        string label = isHdrOutput ? framesize : $"{framesize}_SDR";
         return new()
         {
             ["type"] = "video",
             ["framesize"] = framesize,
-            // {label} is the V2 brace-style alias for framesize — every V2 builtin
-            // emits "video/{label}" expecting the resolution string.
-            ["label"] = framesize,
-            // HDR labelling derives from the actual transfer pipeline that the
-            // OutputPlan builder set, never from bit depth. 10-bit BT.709 is
-            // SDR; an 8-bit HDR stream (rare but possible) would still be HDR.
+            ["label"] = label,
+            ["colorspace"] = isHdrOutput ? "HDR" : "SDR",
             ["colorrange"] = isHdrOutput ? "HDR" : "SDR",
         };
     }
@@ -77,6 +78,11 @@ public static class TemplateResolver
             ["language"] = language,
             ["lang"] = language,
             ["variant"] = variant,
+            // {type} alias for subtitle templates — the spec uses
+            // "subtitles/{filename}.{lang}.{type}" where {type} is the variant
+            // (full / sign / song / forced). Distinct from the global "type"
+            // token in video/audio contexts where it resolves to "video"/"audio".
+            ["type"] = variant,
             ["filename"] = filename,
         };
     }
