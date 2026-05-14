@@ -129,9 +129,12 @@ public class EncodingOrchestrator(
                     StoragePaths.TranscodeRoot,
                     relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
                 );
-            // Wipe any stale scratch from a prior failed run so segments don't mix.
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, recursive: true);
+            // CreateDirectory is idempotent — returns the existing DirectoryInfo
+            // when the path already exists. FFmpeg's -y overwrites any stale
+            // segments from a prior run, so wiping isn't necessary and a
+            // recursive Delete races against Process.Start's working-directory
+            // resolution on Windows (intermittently leaves the dir gone when
+            // ffmpeg.exe boots a moment later).
             Directory.CreateDirectory(tempDir);
 
             try
