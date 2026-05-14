@@ -624,18 +624,24 @@ public class PlanStage(
         ThumbnailOutputPlan? thumbPlan = null;
         if (media.VideoStreams.Count > 0)
         {
-            // Explicit profile.Thumbnails wins. Otherwise fall back to the
-            // HlsDerivatives switch: when GenerateSpriteVtt is on (the default
-            // for HLS), build a ThumbnailOutput from SpriteVttThumbnailWidth +
+            // Explicit profile.Thumbnails wins. Otherwise fall back to
+            // HlsDerivatives: when GenerateSpriteVtt is on (the default for HLS),
+            // build a ThumbnailOutput from SpriteVttThumbnailWidth +
             // SpriteVttIntervalSeconds so sprites land for every HLS preset
-            // without the author having to also set the legacy Thumbnails field.
+            // without each author having to also set the legacy Thumbnails field.
+            // Null HlsDerivatives (V1-backfilled presets) gets treated as a
+            // fresh HlsDerivatives() so the sprite-on defaults still apply.
             ThumbnailOutput? thumbConfig = profile.Thumbnails;
-            if (thumbConfig is null && profile.HlsDerivatives is { GenerateSpriteVtt: true } d)
+            if (thumbConfig is null)
             {
-                thumbConfig = new ThumbnailOutput(
-                    Width: d.SpriteVttThumbnailWidth,
-                    IntervalSeconds: d.SpriteVttIntervalSeconds
-                );
+                HlsDerivatives derivatives = profile.HlsDerivatives ?? new HlsDerivatives();
+                if (derivatives.GenerateSpriteVtt)
+                {
+                    thumbConfig = new ThumbnailOutput(
+                        Width: derivatives.SpriteVttThumbnailWidth,
+                        IntervalSeconds: derivatives.SpriteVttIntervalSeconds
+                    );
+                }
             }
 
             if (thumbConfig is not null)
