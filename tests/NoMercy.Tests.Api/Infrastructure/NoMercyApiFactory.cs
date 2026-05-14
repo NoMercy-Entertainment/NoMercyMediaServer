@@ -571,5 +571,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
+
+        public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>(Array.Empty<PluginLoadResult>());
     }
 }
