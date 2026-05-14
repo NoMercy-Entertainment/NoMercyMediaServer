@@ -96,6 +96,21 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         StringBuilder stdOutBuilder = new();
         StringBuilder stdErrBuilder = new();
 
+        // Working directories on Windows must exist before Process.Start —
+        // otherwise the API surfaces Win32 error 2 (ERROR_FILE_NOT_FOUND)
+        // with a misleading "An error occurred trying to start process ..."
+        // message that points at the executable instead of the missing dir.
+        // Defensive create avoids spurious failures from upstream cleanup races.
+        string resolvedWorkingDirectory = workingDirectory ?? Environment.CurrentDirectory;
+        if (!string.IsNullOrEmpty(workingDirectory) && !Directory.Exists(workingDirectory))
+        {
+            logger.LogWarning(
+                "Working directory {Dir} missing at Process.Start; creating",
+                workingDirectory
+            );
+            Directory.CreateDirectory(workingDirectory);
+        }
+
         ProcessStartInfo startInfo = new()
         {
             FileName = executable,
@@ -103,7 +118,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory,
+            WorkingDirectory = resolvedWorkingDirectory,
         };
 
         if (extraEnv is { Count: > 0 })

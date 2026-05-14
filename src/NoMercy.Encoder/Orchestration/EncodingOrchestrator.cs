@@ -135,7 +135,24 @@ public class EncodingOrchestrator(
             // recursive Delete races against Process.Start's working-directory
             // resolution on Windows (intermittently leaves the dir gone when
             // ffmpeg.exe boots a moment later).
-            Directory.CreateDirectory(tempDir);
+            try
+            {
+                Directory.CreateDirectory(tempDir);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to create encoder temp dir {TempDir}", tempDir);
+                throw;
+            }
+
+            if (!Directory.Exists(tempDir))
+            {
+                logger.LogWarning(
+                    "Encoder temp dir {TempDir} not present after CreateDirectory — recreating",
+                    tempDir
+                );
+                Directory.CreateDirectory(tempDir);
+            }
 
             try
             {
