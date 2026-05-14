@@ -241,8 +241,11 @@ public class MediaContext : DbContext
                 .WithMany()
                 .HasForeignKey(epf => epf.PresetId)
                 .OnDelete(DeleteBehavior.Cascade);
+            // Folder.EncodingPresetFolders is the inverse — without naming it
+            // EF Core fabricates a shadow FK (FolderId1) for the new collection
+            // navigation and queries fail with "no such column: e1.FolderId1".
             b.HasOne(epf => epf.Folder)
-                .WithMany()
+                .WithMany(f => f.EncodingPresetFolders)
                 .HasForeignKey(epf => epf.FolderId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

@@ -5,6 +5,8 @@ using NoMercy.Database.Internal;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Storage;
 
+// EncodingPresetFolder is referenced via [InverseProperty]
+
 namespace NoMercy.Database.Models.Libraries;
 
 [PrimaryKey(nameof(Id))]
@@ -34,6 +36,7 @@ public class Folder
     public ICollection<EncoderProfileFolder> EncoderProfileFolder { get; set; } = [];
 
     [JsonProperty("encoding_preset_folders")]
+    [InverseProperty(nameof(EncodingPresetFolder.Folder))]
     public ICollection<EncodingPresetFolder> EncodingPresetFolders { get; set; } = [];
 
     [JsonProperty("folder_libraries")]
