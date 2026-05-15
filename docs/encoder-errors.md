@@ -77,6 +77,7 @@ shows up below wrapped in backticks. Add a new ID → add a new bullet here in t
 - `ladder.inverted` — manual ladder is not monotonically ordered by bitrate or resolution.
 
 ## Levels
+- `level.frame_rate_cap_exceeded` — the source fps × resolution exceeds the declared codec level's luma sample rate cap; the encoder will reject it at runtime.
 - `level.resolution_mismatch` — codec level cannot carry the requested resolution.
 
 ## Licensing
@@ -97,6 +98,8 @@ shows up below wrapped in backticks. Add a new ID → add a new bullet here in t
 - `source.dolby_vision_will_be_stripped` — DV cannot be preserved through the requested target.
 - `source.not_accessible` — source file path is not reachable from this worker.
 - `source.read_error` — generic read failure on the source.
+- `source.spherical_metadata_will_be_stripped` — VR projection metadata (sv3d/Projection) will be lost if the video stream is re-encoded; switch to stream-copy to retain it.
+- `source.stereoscopic_unsupported` — 3D stereo source detected but re-encoding 3D is not supported; use a stream-copy profile to preserve stereo_mode.
 - `source.upscaling_detected` — target resolution exceeds source resolution.
 - `source.variable_frame_rate` — VFR detected; emitting a warning, not gating the encode.
 

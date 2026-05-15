@@ -743,6 +743,37 @@ public class PlanStage(
             );
         }
 
+        // 3D stereo_mode preservation: when the source has a stereo_mode tag and
+        // the profile stream-copies video, forward the tag so the muxer carries it
+        // to the output. Transcode paths cannot preserve it (rejected by validator).
+        bool videoIsCopy =
+            profile.Video is { Policy: StreamPolicy.Copy } || videoOutputs.Length == 0;
+
+        if (media.StereoMode is not null && videoIsCopy && videoPlan.Length > 0)
+        {
+            // MKV: -metadata:s:v stereo_mode=<value> tags the video track.
+            // MP4: stream-copy keeps the st3d box automatically when -c:v copy is
+            //      used; the extra tag does not hurt non-MKV containers.
+            videoPlan[0].ExtraFlags["-metadata:s:v stereo_mode"] = media.StereoMode;
+        }
+
+        // VR spherical projection preservation: pass-through the sv3d/proj box
+        // metadata on stream-copy. -movflags +write_colr ensures the MP4 muxer
+        // emits colour information that VR players expect alongside sv3d.
+        if (media.SphericalProjection is not null && videoIsCopy && videoPlan.Length > 0)
+        {
+            if (outputFormat is OutputFormat.Mp4 or OutputFormat.Hls or OutputFormat.Dash)
+            {
+                videoPlan[0].ExtraFlags["-movflags"] = "+write_colr";
+            }
+
+            logger.LogInformation(
+                "[{CorrelationId}] VR source (projection={Projection}): stream-copy preserves spherical metadata",
+                context.CorrelationId,
+                media.SphericalProjection
+            );
+        }
+
         // Resolve HLS muxer options from V2 HlsConfig + Container. Strategies
         // need flat strings ("mpegts" | "fmp4", "vod" | "event") so we materialise
         // them here once instead of teaching every strategy how to read V2.
