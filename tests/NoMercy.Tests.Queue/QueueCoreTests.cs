@@ -572,6 +572,16 @@ public class QueueCoreTests
 
         public void UpdateJob(QueueJobModel job) { }
 
+        public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
+        {
+            QueueJobModel? job = _jobs.FirstOrDefault(j => j.Id == jobId);
+            if (job is null)
+                return;
+            job.Payload = newPayload;
+            job.AvailableAt = availableAt;
+            job.ReservedAt = null;
+        }
+
         public void ResetAllReservedJobs()
         {
             foreach (QueueJobModel job in _jobs)

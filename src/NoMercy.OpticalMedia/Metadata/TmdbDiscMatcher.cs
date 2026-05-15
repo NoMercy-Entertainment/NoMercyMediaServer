@@ -28,7 +28,7 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
     private const int MaxCandidatesPerType = 5;
 
     /// <summary>High-confidence threshold above which a match is auto-applied.</summary>
-    internal const double AutoApplyThreshold = 0.85;
+    public const double AutoApplyThreshold = 0.85;
 
     public async Task<MetadataMatch[]> ResolveAsync(DiscInfo disc, CancellationToken ct)
     {

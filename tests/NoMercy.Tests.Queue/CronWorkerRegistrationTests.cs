@@ -139,6 +139,8 @@ public class CronWorkerRegistrationTests
 
         public void UpdateJob(QueueJobModel job) { }
 
+        public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt) { }
+
         public void ResetAllReservedJobs() { }
 
         public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) => [];

@@ -49,6 +49,16 @@ public class TestQueueContextAdapter : IQueueContext
             Jobs[index] = job;
     }
 
+    public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
+    {
+        QueueJobModel? job = Jobs.FirstOrDefault(j => j.Id == jobId);
+        if (job is null)
+            return;
+        job.Payload = newPayload;
+        job.AvailableAt = availableAt;
+        job.ReservedAt = null;
+    }
+
     public void ResetAllReservedJobs()
     {
         foreach (QueueJobModel job in Jobs)
