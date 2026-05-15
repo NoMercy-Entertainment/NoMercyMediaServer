@@ -224,6 +224,194 @@ public partial class OpticalMediaController(
     }
 
     /// <summary>
+    /// Returns ranked TMDB candidates for the disc in the given drive.
+    /// No side effects — purely read-only preview. Returns the top 5
+    /// candidates ordered by confidence (highest first) so the dashboard
+    /// can render a candidate picker before the user confirms.
+    /// </summary>
+    [HttpPost("{drivePath}/resolve")]
+    public async Task<IActionResult> ResolveDisc(string drivePath, CancellationToken ct)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to resolve disc metadata");
+
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
+
+        DiscDrive? drive = driveMonitor
+            .GetDrives()
+            .FirstOrDefault(d =>
+                d.Path.TrimEnd(Path.DirectorySeparatorChar)
+                    .Equals(
+                        drivePath.TrimEnd(Path.DirectorySeparatorChar),
+                        StringComparison.OrdinalIgnoreCase
+                    )
+            );
+
+        if (drive is null || !drive.HasDisc)
+            return NotFoundResponse($"No disc loaded in {drivePath}");
+
+        IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
+        if (source is null)
+            return BadRequestResponse($"No reader registered for disc type {drive.DiscType}");
+
+        DiscInfo info = await source.ProbeAsync(drive, ct);
+        MetadataMatch[] candidates = await metadataResolver.ResolveAsync(info, ct);
+
+        return Ok(
+            new
+            {
+                drive_path = drive.Path,
+                disc_duration_sec = info.MainTitleDurationSec,
+                candidates = candidates
+                    .Take(5)
+                    .Select(m => new
+                    {
+                        tmdb_id = m.ExternalId,
+                        media_type = m.Type.ToString().ToLowerInvariant(),
+                        title = m.Title,
+                        year = m.Year,
+                        runtime = m.Runtime,
+                        confidence = m.Confidence,
+                        poster_url = m.PosterUrl,
+                        backdrop_url = m.BackdropUrl,
+                        season_number = m.SeasonNumber,
+                        episode_number = m.EpisodeNumber,
+                    }),
+            }
+        );
+    }
+
+    /// <summary>
+    /// Applies the user's chosen TMDB match to the rip output. Renames/moves
+    /// the raw rip file into the canonical media-library path and triggers a
+    /// library refresh so the file is picked up by the import pipeline.
+    /// </summary>
+    [HttpPost("{drivePath}/confirm")]
+    public async Task<IActionResult> ConfirmDisc(
+        string drivePath,
+        [FromBody] DiscConfirmRequest request,
+        CancellationToken ct
+    )
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to confirm disc metadata");
+
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
+
+        if (string.IsNullOrWhiteSpace(request.TmdbId))
+            return BadRequestResponse("TmdbId is required");
+
+        if (string.IsNullOrWhiteSpace(request.RipOutputPath))
+            return BadRequestResponse("RipOutputPath is required");
+
+        if (!System.IO.File.Exists(request.RipOutputPath))
+            return NotFoundResponse($"Rip output not found at {request.RipOutputPath}");
+
+        await using MediaContext db = new();
+        LibraryRepository libraryRepository = new(db, localStorageDriver);
+
+        Folder? targetFolder = await libraryRepository.GetLibraryFolder(request.FolderId);
+        if (targetFolder is null)
+            return BadRequestResponse(
+                $"FolderId {request.FolderId} does not match any library folder"
+            );
+
+        Library? targetLibrary = await libraryRepository.GetLibraryByIdWithFolders(
+            request.LibraryId
+        );
+        if (targetLibrary is null)
+            return BadRequestResponse($"LibraryId {request.LibraryId} does not match any library");
+
+        CustomMetadata meta =
+            request.MediaType == "tv"
+                ? new CustomMetadata(
+                    Title: request.Title ?? string.Empty,
+                    Year: request.Year,
+                    Type: MediaType.TvShow,
+                    PosterUrl: request.PosterUrl,
+                    SeasonNumber: request.SeasonNumber ?? 1,
+                    EpisodeStartNumber: request.EpisodeNumber ?? 1
+                )
+                : new CustomMetadata(
+                    Title: request.Title ?? string.Empty,
+                    Year: request.Year,
+                    Type: MediaType.Movie,
+                    PosterUrl: request.PosterUrl
+                );
+
+        RipRequest syntheticRequest = new(
+            DrivePath: drivePath,
+            SelectedTitleIndices: [0],
+            MetadataId: request.TmdbId,
+            Custom: meta,
+            LibraryId: request.LibraryId,
+            FolderId: request.FolderId,
+            EncodingProfileId: null,
+            AudioTracks: [],
+            Subtitles: [],
+            Mode: RipMode.RipAndEncode
+        );
+
+        string folderRelative = BuildOutputPath(syntheticRequest, targetLibrary.Type, 0, 0);
+
+        IStorage folderStorage = storageFactory.For(
+            targetFolder.Id,
+            targetFolder.DriverId,
+            string.Empty
+        );
+
+        string parentRelative = ParentRelative(folderRelative);
+        if (!string.IsNullOrEmpty(parentRelative))
+            await folderStorage.CreateDirectoryAsync(parentRelative, ct);
+
+        await using (FileStream src = new(request.RipOutputPath, FileMode.Open, FileAccess.Read))
+        await using (
+            System.IO.Stream dst = await folderStorage.OpenWriteAsync(
+                folderRelative,
+                overwrite: true,
+                ct
+            )
+        )
+        {
+            await src.CopyToAsync(dst, ct);
+        }
+
+        try
+        {
+            System.IO.File.Delete(request.RipOutputPath);
+        }
+        catch
+        {
+            // best effort
+        }
+
+        string watcherFolderHost = ResolveHostPath(folderStorage, parentRelative);
+        if (EventBusProvider.IsConfigured)
+        {
+            await EventBusProvider.Current.PublishAsync(
+                new FileCreatedEvent
+                {
+                    FolderPath = watcherFolderHost,
+                    LibraryId = targetLibrary.Id,
+                    LibraryType = targetLibrary.Type,
+                }
+            );
+        }
+
+        return Ok(
+            new
+            {
+                tmdb_id = request.TmdbId,
+                media_type = request.MediaType,
+                destination = folderRelative,
+                library_refresh_triggered = EventBusProvider.IsConfigured,
+            }
+        );
+    }
+
+    /// <summary>
     /// Starts a stream-copy rip of the requested titles into MKV intermediates.
     /// Each rip emits a <c>DiscRipResult</c> the caller can inspect; failures
     /// surface AACS / BD+ / read-error classifications via <c>Error</c>. The
@@ -315,6 +503,22 @@ public partial class OpticalMediaController(
             DiscType = drive.DiscType,
         };
 
+        // Probe the disc now (we already probed for DRM above, so cache the
+        // info for auto-resolve). Only needed when the caller didn't supply
+        // custom metadata — otherwise we use what they gave us.
+        DiscInfo? discInfoForAutoResolve = null;
+        if (enriched.Custom is null && source is not null)
+        {
+            try
+            {
+                discInfoForAutoResolve = await source.ProbeAsync(drive, ct);
+            }
+            catch
+            {
+                // Non-fatal — auto-resolve will simply be skipped.
+            }
+        }
+
         // Spawn the rip in the background. After each title rips successfully
         // we upload to the chosen folder via its driver, then publish a
         // FileCreatedEvent so the existing FileWatcher → MediaScan → AutoEncode
@@ -322,6 +526,7 @@ public partial class OpticalMediaController(
         // dropped into the library through any other channel.
         Folder? folderForBackground = targetFolder;
         Library? libraryForBackground = targetLibrary;
+        DiscInfo? discInfoCapture = discInfoForAutoResolve;
         _ = Task.Run(
             async () =>
             {
@@ -351,8 +556,71 @@ public partial class OpticalMediaController(
                     HashSet<string> notifiedFolders = new(StringComparer.OrdinalIgnoreCase);
                     foreach (DiscRipResult res in successes)
                     {
+                        // When the caller supplied no custom metadata, attempt
+                        // auto-resolution from TMDB. High-confidence matches are
+                        // applied automatically; low-confidence matches write a
+                        // pending-state sidecar for the user to resolve manually.
+                        RipRequest effectiveRequest = enriched;
+                        if (enriched.Custom is null && discInfoCapture is not null)
+                        {
+                            MetadataMatch[] candidates = await metadataResolver.ResolveAsync(
+                                discInfoCapture,
+                                CancellationToken.None
+                            );
+                            MetadataMatch? top = candidates.FirstOrDefault();
+
+                            if (
+                                top is not null
+                                && top.Confidence >= TmdbDiscMatcher.AutoApplyThreshold
+                            )
+                            {
+                                effectiveRequest = enriched with
+                                {
+                                    Custom = new CustomMetadata(
+                                        Title: top.Title,
+                                        Year: top.Year,
+                                        Type: top.Type == MediaType.Movie
+                                            ? MediaType.Movie
+                                            : MediaType.TvShow,
+                                        PosterUrl: top.PosterUrl,
+                                        SeasonNumber: top.SeasonNumber,
+                                        EpisodeStartNumber: top.EpisodeNumber
+                                    ),
+                                };
+                            }
+                            else if (top is not null)
+                            {
+                                string pendingPath = Path.Combine(
+                                    outputDir,
+                                    $"pending_{res.TitleIndex:D2}.json"
+                                );
+                                DiscRipPendingState pendingState = new(
+                                    RipOutputPath: res.OutputPath,
+                                    TitleIndex: res.TitleIndex,
+                                    DrivePath: enriched.DrivePath,
+                                    DiscDurationSec: discInfoCapture.MainTitleDurationSec,
+                                    Candidates: candidates.Take(5).ToArray(),
+                                    CreatedAt: DateTimeOffset.UtcNow
+                                );
+                                await System.IO.File.WriteAllTextAsync(
+                                    pendingPath,
+                                    System.Text.Json.JsonSerializer.Serialize(
+                                        pendingState,
+                                        new System.Text.Json.JsonSerializerOptions
+                                        {
+                                            WriteIndented = true,
+                                        }
+                                    ),
+                                    CancellationToken.None
+                                );
+                                // Skip the move — the file stays in the rip cache
+                                // until the user confirms via the /confirm endpoint.
+                                continue;
+                            }
+                        }
+
                         string folderRelative = BuildOutputPath(
-                            enriched,
+                            effectiveRequest,
                             libraryForBackground.Type,
                             res.TitleIndex,
                             batchIndex
@@ -524,3 +792,23 @@ public partial class OpticalMediaController(
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRun();
 }
+
+/// <summary>
+/// Request body for <c>POST /optical/{drivePath}/confirm</c>.
+/// The caller supplies the TMDB match they want applied along with the
+/// rip output path, destination library/folder, and optional title metadata
+/// for constructing the canonical file name.
+/// </summary>
+public record DiscConfirmRequest(
+    string TmdbId,
+    /// <summary>"movie" or "tv"</summary>
+    string MediaType,
+    string RipOutputPath,
+    Ulid LibraryId,
+    Ulid FolderId,
+    string? Title = null,
+    int? Year = null,
+    string? PosterUrl = null,
+    int? SeasonNumber = null,
+    int? EpisodeNumber = null
+);
