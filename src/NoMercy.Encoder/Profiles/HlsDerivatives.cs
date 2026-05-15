@@ -15,4 +15,12 @@ public record HlsDerivatives
     public bool ExtractClosedCaptions { get; init; }
     public bool GenerateMasterPlaylist { get; init; } = true;
     public bool WriteOriginalFilename { get; init; } = true;
+
+    /// <summary>
+    /// When true, the encoder emits one still per chapter at the chapter's exact
+    /// timestamp. Output: <c>chapters/{NN}.webp</c> referenced from
+    /// <c>chapters.vtt</c>. When false (default), the player falls back to the
+    /// existing thumbs sprite frame nearest each chapter.
+    /// </summary>
+    public bool GenerateChapterThumbs { get; init; } = false;
 }
