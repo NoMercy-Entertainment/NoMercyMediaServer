@@ -132,7 +132,7 @@ public class ChromeCast
             ChromecastReceiver candidate = new()
             {
                 Name = ip,
-                DeviceUri = new Uri($"https://{ip}"),
+                DeviceUri = new($"https://{ip}"),
                 Port = 8009,
                 Model = "Chromecast",
                 Version = "0",
@@ -410,14 +410,11 @@ public class ChromeCast
             }
         }
 
-        try
-        {
-            timer.Dispose();
-        }
-        catch
-        {
-            // best-effort
-        }
+        // Do NOT Dispose the Timer. Sharpcaster's HeartbeatChannel.OnMessageReceived
+        // toggles `_timer.Enabled = true` whenever a PONG arrives — set_Enabled on a
+        // disposed timer throws ObjectDisposedException from an async-void path and
+        // kills the process. Keeping the timer alive with an empty handler is safe:
+        // ticks still fire but our no-op runs, no SendAsync, no SocketException.
     }
 
     private static async Task<ChromecastClient?> GetOrCreateClientAsync(string name)
@@ -452,7 +449,7 @@ public class ChromeCast
         // Serialize per-name so 3 concurrent callers don't each open a TCP
         // connection. First caller does the work; the rest wait, then read
         // from ClientPool (which the winner populated below).
-        SemaphoreSlim gate = _connectGates.GetOrAdd(name, _ => new SemaphoreSlim(1, 1));
+        SemaphoreSlim gate = _connectGates.GetOrAdd(name, _ => new(1, 1));
         await gate.WaitAsync();
         try
         {
