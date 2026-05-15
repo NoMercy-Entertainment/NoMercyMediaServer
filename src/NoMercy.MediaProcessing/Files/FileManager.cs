@@ -999,8 +999,15 @@ public partial class FileManager(
         }
 
         using MediaContext mediaContext = new();
+
+        // Scope to the target library's folders only. The previous query
+        // grabbed every FolderLibrary row system-wide, so a rescan of a movie
+        // in an NFS library would also probe every S3 / WebDAV folder for
+        // unrelated libraries — one flaky remote backend then threw on
+        // Exists() and killed the whole job (retried up to maxAttempts).
         Folder[] rootFolders = mediaContext
-            .FolderLibrary.Include(fl => fl.Folder)
+            .FolderLibrary.Where(fl => fl.LibraryId == library.Id)
+            .Include(fl => fl.Folder)
                 .ThenInclude(fl => fl.Driver)
             .Select(f => f.Folder)
             .ToArray();
@@ -1010,14 +1017,27 @@ public partial class FileManager(
             IStorage folderStorage = StorageFor(rootFolder);
             string path = folderStorage.CombinePath(rootFolder.Path, folder);
 
-            if (!folderStorage.Exists(path))
+            // Treat a transport-level failure from any single backend as
+            // "not in this folder" rather than aborting the whole rescan. The
+            // job is idempotent on its successful folders, and one transient
+            // S3 502 should not trigger queue-level retries.
+            bool exists = TryExists(folderStorage, path);
+
+            if (!exists)
             {
-                string? match = Str.FindMatchingDirectory(_storageDriver, rootFolder.Path, folder);
+                string? match = TryFindMatchingDirectory(
+                    folderStorage.Driver,
+                    rootFolder.Path,
+                    folder
+                );
                 if (match != null)
+                {
                     path = match;
+                    exists = TryExists(folderStorage, path);
+                }
             }
 
-            if (folderStorage.Exists(path))
+            if (exists)
                 folders.Add(
                     new()
                     {
@@ -1030,6 +1050,42 @@ public partial class FileManager(
         }
 
         return folders;
+    }
+
+    private static bool TryExists(IStorage storage, string path)
+    {
+        try
+        {
+            return storage.Exists(path);
+        }
+        catch (Exception ex)
+        {
+            Logger.App(
+                $"[FileManager.Paths] storage.Exists threw for '{path}' on driver {storage.Driver.GetType().Name}: {ex.Message}",
+                LogEventLevel.Warning
+            );
+            return false;
+        }
+    }
+
+    private static string? TryFindMatchingDirectory(
+        IStorageDriver driver,
+        string rootPath,
+        string expectedFolderName
+    )
+    {
+        try
+        {
+            return Str.FindMatchingDirectory(driver, rootPath, expectedFolderName);
+        }
+        catch (Exception ex)
+        {
+            Logger.App(
+                $"[FileManager.Paths] FindMatchingDirectory threw for root '{rootPath}' on driver {driver.GetType().Name}: {ex.Message}",
+                LogEventLevel.Warning
+            );
+            return null;
+        }
     }
 
     private static string ComputeFileHash(IStorage storage, string filePath)
