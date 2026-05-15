@@ -5,6 +5,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Resources;
 using NoMercy.Tests.Encoder.Storage;
 
 namespace NoMercy.Tests.Encoder.LiveTranscode;
@@ -20,6 +21,15 @@ public class LiveFfmpegRunnerTests
     private static IHardwareCapabilities NoopHardware() =>
         new HardwareCapabilities([], Environment.ProcessorCount);
 
+    private static IResourceBudget NoopBudget()
+    {
+        Mock<IResourceBudget> mock = new();
+        mock.Setup(b => b.Acquire(It.IsAny<ResourceRequirement>()))
+            .Returns(new ResourceLease("noop", null, 0, 0));
+        mock.Setup(b => b.Release(It.IsAny<ResourceLease>()));
+        return mock.Object;
+    }
+
     private static LiveFfmpegRunner MakeRunner(IProcessRunner? processRunner = null) =>
         new(
             processRunner ?? new FakeProcessRunner(() => { }),
@@ -27,7 +37,8 @@ public class LiveFfmpegRunnerTests
             NullLogger<LiveFfmpegRunner>.Instance,
             TestStorageFactory.CreateLocal(),
             NoopCap(),
-            NoopHardware()
+            NoopHardware(),
+            NoopBudget()
         );
 
     private static LiveQuality MakeQuality(
@@ -276,7 +287,8 @@ public class LiveFfmpegRunnerTests
                 NullLogger<LiveFfmpegRunner>.Instance,
                 TestStorageFactory.CreateLocal(),
                 NoopCap(),
-                NoopHardware()
+                NoopHardware(),
+                NoopBudget()
             );
 
             LiveSession session = new("sess", MakeQuality());

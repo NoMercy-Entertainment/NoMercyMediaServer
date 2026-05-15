@@ -7,6 +7,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercy.Tests.Encoder.Storage;
 
@@ -104,13 +105,20 @@ public class LiveFfmpegRunnerCapTests
             FfprobePathOverride = "ffprobe",
         };
 
+        Mock<IResourceBudget> noopBudget = new();
+        noopBudget
+            .Setup(b => b.Acquire(It.IsAny<ResourceRequirement>()))
+            .Returns(new ResourceLease("noop", null, 0, 0));
+        noopBudget.Setup(b => b.Release(It.IsAny<ResourceLease>()));
+
         return new LiveFfmpegRunner(
             processRunner ?? MakeInstantProcessRunner(),
             opts,
             NullLogger<LiveFfmpegRunner>.Instance,
             storage ?? TestStorageFactory.CreateLocal(),
             cap,
-            hw
+            hw,
+            noopBudget.Object
         );
     }
 

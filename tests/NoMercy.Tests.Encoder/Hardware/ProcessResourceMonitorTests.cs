@@ -52,7 +52,7 @@ public class ProcessResourceMonitorTests
             SupportedCodecs: [VideoCodecType.H264]
         );
 
-        double util = sut.GetGpuEncodeUtilization(nvidia);
+        double util = sut.GetGpuEncodeUtilization(nvidia.Name);
 
         util.Should().Be(0.0);
     }
@@ -64,10 +64,6 @@ public class ProcessResourceMonitorTests
 
         sut.GetCpuUsagePercent().Should().Be(0);
         sut.GetAvailableMemoryMb().Should().Be(0);
-        sut.GetGpuEncodeUtilization(
-                new(GpuVendor.Nvidia, "n/a", VramMb: 0, MaxEncoderSessions: 0, SupportedCodecs: [])
-            )
-            .Should()
-            .Be(0);
+        sut.GetGpuEncodeUtilization("n/a").Should().Be(0);
     }
 }

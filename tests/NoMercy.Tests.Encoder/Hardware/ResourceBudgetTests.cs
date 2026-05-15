@@ -1,5 +1,6 @@
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
+using NoMercy.Resources;
 
 namespace NoMercy.Tests.Encoder.Hardware;
 
@@ -17,7 +18,7 @@ public class ResourceBudgetTests
     public void InitialState_AllSlotsAvailable()
     {
         ResourceBudget budget = new([TestGpu], cpuCores: 8);
-        budget.AvailableGpuEncoderSlots(TestGpu).Should().Be(3);
+        budget.AvailableGpuEncoderSlots(TestGpu.Name).Should().Be(3);
         budget.AvailableCpuThreads().Should().Be(8);
     }
 
@@ -25,9 +26,13 @@ public class ResourceBudgetTests
     public void Acquire_GpuSlot_DecreasesAvailable()
     {
         ResourceBudget budget = new([TestGpu], cpuCores: 8);
-        ResourceRequirement requirement = new(GpuDevice: TestGpu, GpuSlots: 1, CpuThreads: 0);
+        ResourceRequirement requirement = new(
+            GpuDeviceKey: TestGpu.Name,
+            GpuSlots: 1,
+            CpuThreads: 0
+        );
         ResourceLease lease = budget.Acquire(requirement);
-        budget.AvailableGpuEncoderSlots(TestGpu).Should().Be(2);
+        budget.AvailableGpuEncoderSlots(TestGpu.Name).Should().Be(2);
         lease.Should().NotBeNull();
     }
 
@@ -35,18 +40,22 @@ public class ResourceBudgetTests
     public void Release_RestoresSlots()
     {
         ResourceBudget budget = new([TestGpu], cpuCores: 8);
-        ResourceRequirement requirement = new(GpuDevice: TestGpu, GpuSlots: 1, CpuThreads: 0);
+        ResourceRequirement requirement = new(
+            GpuDeviceKey: TestGpu.Name,
+            GpuSlots: 1,
+            CpuThreads: 0
+        );
         ResourceLease lease = budget.Acquire(requirement);
-        budget.AvailableGpuEncoderSlots(TestGpu).Should().Be(2);
+        budget.AvailableGpuEncoderSlots(TestGpu.Name).Should().Be(2);
         budget.Release(lease);
-        budget.AvailableGpuEncoderSlots(TestGpu).Should().Be(3);
+        budget.AvailableGpuEncoderSlots(TestGpu.Name).Should().Be(3);
     }
 
     [Fact]
     public void Acquire_CpuThreads_DecreasesAvailable()
     {
         ResourceBudget budget = new([], cpuCores: 8);
-        ResourceRequirement requirement = new(GpuDevice: null, GpuSlots: 0, CpuThreads: 4);
+        ResourceRequirement requirement = new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 4);
         ResourceLease lease = budget.Acquire(requirement);
         budget.AvailableCpuThreads().Should().Be(4);
         budget.Release(lease);
@@ -57,7 +66,11 @@ public class ResourceBudgetTests
     public void TryAcquire_WhenExhausted_ReturnsNull()
     {
         ResourceBudget budget = new([TestGpu], cpuCores: 8);
-        ResourceRequirement requirement = new(GpuDevice: TestGpu, GpuSlots: 1, CpuThreads: 0);
+        ResourceRequirement requirement = new(
+            GpuDeviceKey: TestGpu.Name,
+            GpuSlots: 1,
+            CpuThreads: 0
+        );
         ResourceLease lease1 = budget.Acquire(requirement);
         ResourceLease lease2 = budget.Acquire(requirement);
         ResourceLease lease3 = budget.Acquire(requirement);
@@ -72,7 +85,11 @@ public class ResourceBudgetTests
     public async Task ConcurrentAcquire_IsThreadSafe()
     {
         ResourceBudget budget = new([TestGpu], cpuCores: 8);
-        ResourceRequirement requirement = new(GpuDevice: TestGpu, GpuSlots: 1, CpuThreads: 0);
+        ResourceRequirement requirement = new(
+            GpuDeviceKey: TestGpu.Name,
+            GpuSlots: 1,
+            CpuThreads: 0
+        );
         int successCount = 0;
         List<ResourceLease> leases = [];
         object lockObj = new();
