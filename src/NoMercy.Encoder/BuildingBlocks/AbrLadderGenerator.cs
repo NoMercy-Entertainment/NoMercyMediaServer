@@ -103,41 +103,52 @@ public class AbrLadderGenerator : IAbrLadderGenerator
 
         VideoStreamInfo source = media.VideoStreams[0];
 
-        // Source promotion: when the source is wider than 1080p (1920) but narrower
-        // than 4K (3840) and the ladder defines a 4K slot, swap that slot's pixel
-        // dimensions for the source's. Result: the top rung encodes at the source's
-        // native resolution instead of being filtered out by NeverUpscale. No
-        // upscale, no dropped top rung, no synthesized variants beyond the source.
-        // Bitrate scales by pixel-count ratio so the HLS variant signals the right
-        // bandwidth band — using the raw 4K bitrate would mis-signal a 4K stream.
+        // Source-rung injection: when the source's width doesn't match any named
+        // tier and falls below the ladder's top tier, inject a source-sized rung.
+        // Default behaviour across every preset: never upscale, never drop the
+        // highest-quality option, always emit a variant at the source's native
+        // resolution when no named tier captures it. Bitrate scales from the next-
+        // higher tier by pixel-count ratio so the HLS variant signals the right
+        // bandwidth band; the next-higher tier (not the top tier) is the one whose
+        // bandwidth bracket the source belongs in.
+        //
+        // 5% tolerance on the match check so a near-tier source (e.g. 1960x1080)
+        // rides the named tier instead of creating a 1960x1080 rung next to the
+        // 1080p rung — the named tier already covers it at its scale output.
+        const double SourceTierMatchTolerance = 0.05;
         LadderTier[] effectiveTiers = autoConfig.Tiers;
-        if (source.Width > 1920 && source.Width < 3840)
-        {
-            LadderTier? slot4k = effectiveTiers.FirstOrDefault(t => t.Width >= 3840);
-            if (slot4k is not null)
-            {
-                long srcPx = (long)source.Width * source.Height;
-                long slotPx = (long)slot4k.Width * slot4k.Height;
-                double ratio = slotPx == 0 ? 1.0 : (double)srcPx / slotPx;
+        int maxTierWidth = effectiveTiers.Max(t => t.Width);
+        bool sourceMatchesTier = effectiveTiers.Any(t =>
+            Math.Abs(t.Width - source.Width) / (double)t.Width <= SourceTierMatchTolerance
+        );
 
-                LadderTier promoted = slot4k with
-                {
-                    Width = source.Width,
-                    Height = source.Height,
-                    RecommendedBitrateH264Kbps = slot4k.RecommendedBitrateH264Kbps is int h264
-                        ? (int)Math.Round(h264 * ratio)
-                        : null,
-                    RecommendedBitrateHevcKbps = slot4k.RecommendedBitrateHevcKbps is int hevc
-                        ? (int)Math.Round(hevc * ratio)
-                        : null,
-                    RecommendedBitrateAv1Kbps = slot4k.RecommendedBitrateAv1Kbps is int av1
-                        ? (int)Math.Round(av1 * ratio)
-                        : null,
-                };
-                effectiveTiers = effectiveTiers
-                    .Select(t => ReferenceEquals(t, slot4k) ? promoted : t)
-                    .ToArray();
-            }
+        if (!sourceMatchesTier && source.Width < maxTierWidth)
+        {
+            LadderTier referenceTier = effectiveTiers
+                .Where(t => t.Width > source.Width)
+                .OrderBy(t => t.Width)
+                .First();
+
+            long srcPx = (long)source.Width * source.Height;
+            long refPx = (long)referenceTier.Width * referenceTier.Height;
+            double ratio = refPx == 0 ? 1.0 : (double)srcPx / refPx;
+
+            LadderTier sourceRung = new(
+                Width: source.Width,
+                Height: source.Height,
+                Label: "source",
+                RecommendedBitrateH264Kbps: referenceTier.RecommendedBitrateH264Kbps is int h264
+                    ? (int)Math.Round(h264 * ratio)
+                    : null,
+                RecommendedBitrateHevcKbps: referenceTier.RecommendedBitrateHevcKbps is int hevc
+                    ? (int)Math.Round(hevc * ratio)
+                    : null,
+                RecommendedBitrateAv1Kbps: referenceTier.RecommendedBitrateAv1Kbps is int av1
+                    ? (int)Math.Round(av1 * ratio)
+                    : null
+            );
+
+            effectiveTiers = effectiveTiers.Append(sourceRung).ToArray();
         }
 
         // Step 1 — Filter candidate tiers.
