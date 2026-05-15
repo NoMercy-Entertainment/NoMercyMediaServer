@@ -5,6 +5,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.LiveTranscode;
@@ -15,7 +16,8 @@ public class LiveFfmpegRunner(
     ILogger<LiveFfmpegRunner> logger,
     IStorage storage,
     INvencSessionCap nvencSessionCap,
-    IHardwareCapabilities hardware
+    IHardwareCapabilities hardware,
+    IResourceBudget resourceBudget
 ) : ILiveFfmpegRunner
 {
     private const string PlaylistFileName = "index.m3u8";
@@ -30,6 +32,14 @@ public class LiveFfmpegRunner(
         bool requiresGpu = input.Quality.IsHardwareAccelerated;
         string gpuName = hardware.Gpus.Count > 0 ? hardware.Gpus[0].Name : "GPU";
         nvencSessionCap.EnforceForGpuEncode(gpuName, requiresGpu);
+
+        // Acquire a resource-budget lease for the duration of this live session
+        // so the queue scheduler sees GPU/CPU slots as occupied.
+        ResourceRequirement requirement = requiresGpu
+            ? new ResourceRequirement(gpuName, GpuSlots: 1, CpuThreads: 2)
+            : new ResourceRequirement(null, GpuSlots: 0, CpuThreads: 2);
+
+        ResourceLease lease = resourceBudget.Acquire(requirement);
 
         storage.CreateDirectory(input.OutputDirectory);
 
@@ -99,6 +109,8 @@ public class LiveFfmpegRunner(
         }
         finally
         {
+            resourceBudget.Release(lease);
+
             try
             {
                 await stopPolling.CancelAsync();
