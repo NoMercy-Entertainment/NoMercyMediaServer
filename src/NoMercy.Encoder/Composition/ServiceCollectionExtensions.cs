@@ -150,6 +150,12 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IEncoderActivityProbe, NullEncoderActivityProbe>();
         services.AddHostedService<HardwareBenchmarkBackgroundService>();
 
+        // Periodic recalibration — checks every hour whether the speed index
+        // is stale (> 30 days) or a driver change occurred; defers to idle
+        // before running. Separate from HardwareBenchmarkBackgroundService
+        // which only handles the first-boot case.
+        services.AddHostedService<HardwareBenchmarkRecalibrationService>();
+
         // HDR
         services.AddTransient<ITonemapSelector, TonemapSelector>();
 
