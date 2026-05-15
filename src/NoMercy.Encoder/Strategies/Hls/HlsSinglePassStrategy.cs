@@ -5,6 +5,7 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
+using NoMercy.Encoder.Strategies.Shared;
 
 namespace NoMercy.Encoder.Strategies.Hls;
 
@@ -46,7 +47,7 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Video,
                     OutputIndex: i,
-                    Resources: null,
+                    Resources: TaskResourceHelper.ForVideoOutput(video),
                     EstimatedCostUnits: EstimateVideoCost(video),
                     Label: $"{resolution}{hdr} {video.EncoderName}"
                 )
@@ -65,7 +66,7 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Audio,
                     OutputIndex: i,
-                    Resources: null,
+                    Resources: TaskResourceHelper.CpuOnly(1),
                     EstimatedCostUnits: 1,
                     Label: $"{lang} {audio.EncoderName} {audio.Channels}ch"
                 )
@@ -84,7 +85,7 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Subtitle,
                     OutputIndex: i,
-                    Resources: null,
+                    Resources: TaskResourceHelper.CpuOnly(1),
                     EstimatedCostUnits: 1,
                     Label: $"sub {lang} {sub.OutputCodec}"
                 )
@@ -100,7 +101,7 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Thumbnails,
                     OutputIndex: 0,
-                    Resources: null,
+                    Resources: TaskResourceHelper.CpuOnly(1),
                     EstimatedCostUnits: 1,
                     Label: $"thumbnails {plan.Thumbnails.Width}x{plan.Thumbnails.Height}"
                 )
@@ -120,7 +121,7 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                         GroupTag: groupTag,
                         Kind: EncodeTaskKind.Chapters,
                         OutputIndex: i,
-                        Resources: new ResourceRequirement(null, 0, 1),
+                        Resources: TaskResourceHelper.CpuOnly(1),
                         EstimatedCostUnits: 1,
                         Label: $"chapter still {i + 1}/{count} @ {chapter.Start.TotalSeconds:F0}s"
                     )
@@ -138,7 +139,6 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
     {
         int cost = 1;
 
-        // Higher resolution → proportionally heavier
         if (video.Width >= 3840)
             cost = 8;
         else if (video.Width >= 1920)
@@ -146,8 +146,6 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
         else if (video.Width >= 1280)
             cost = 2;
 
-        // Two-pass analysis in a separate step later, but HDR tonemapping adds
-        // filter-graph complexity worth a small bump here too.
         if (video.ConvertHdrToSdr)
             cost++;
 

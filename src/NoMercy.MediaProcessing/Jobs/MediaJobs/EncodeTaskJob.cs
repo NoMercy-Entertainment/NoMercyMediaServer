@@ -17,6 +17,7 @@ using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Resources;
 using NoMercy.Storage;
 using Serilog.Events;
 
@@ -25,14 +26,19 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 /// <summary>
 /// Executes a single decomposed encode task produced by
 /// <see cref="VideoEncodeJob"/> coordinator. One child job per video rung,
-/// audio group, subtitle track, or thumbnail strip. Lives in the
-/// <c>encoder-task</c> queue so that rung-level failures are isolated and
-/// individual rungs can be retried without restarting the whole encode.
+/// audio group, subtitle track, or thumbnail strip.
+///
+/// Routes to <c>encoder-gpu</c> when <see cref="DecomposedTask.Resources"/>
+/// carries a non-null GPU device key; otherwise to <c>encoder-cpu</c>.
+/// This keeps GPU-bound tasks (NVENC / AMF / QSV) from starving CPU-only
+/// tasks and prevents the GPU session cap from being exceeded.
 /// </summary>
 [Serializable]
-public class EncodeTaskJob : AbstractEncoderJob
+public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement
 {
-    public override string QueueName => "encoder-task";
+    public override string QueueName =>
+        Task?.Resources?.GpuDeviceKey is not null ? "encoder-gpu" : "encoder-cpu";
+
     public override int Priority => 4;
 
     /// <summary>Preset that defines the full encoding profile for this job.</summary>
@@ -40,6 +46,9 @@ public class EncodeTaskJob : AbstractEncoderJob
 
     /// <summary>Task descriptor from the coordinator's decompose call.</summary>
     public DecomposedTask Task { get; set; } = null!;
+
+    /// <inheritdoc/>
+    public ResourceRequirement? ResourceRequirement => Task?.Resources;
 
     public override async Task Handle()
     {

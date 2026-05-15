@@ -75,8 +75,21 @@ public static class Config
     public static KeyValuePair<string, int> ImportWorkers { get; set; } = new("import", 2);
     public static KeyValuePair<string, int> ExtrasWorkers { get; set; } = new("extras", 4);
     public static KeyValuePair<string, int> EncoderWorkers { get; set; } = new("encoder", 1);
+
+    // encoder-task is superseded by encoder-gpu + encoder-cpu (Task 2 resource scheduler).
+    // Kept for backward compatibility with any persisted queue-state that still references it.
     public static KeyValuePair<string, int> EncoderTaskWorkers { get; set; } =
-        new("encoder-task", 2);
+        new("encoder-task", 0);
+
+    // GPU-bound tasks (NVENC, AMF, QSV, VideoToolbox). Default = min(NVENC cap, 4).
+    // Capped conservatively so a single bad profile can't saturate all GPU encoder sessions.
+    public static KeyValuePair<string, int> GpuEncoderWorkers { get; set; } =
+        new("encoder-gpu", Math.Min(4, Math.Max(1, Environment.ProcessorCount / 4)));
+
+    // CPU-only tasks (audio, subtitles, thumbnails, software video). Default = half logical cores.
+    public static KeyValuePair<string, int> CpuEncoderWorkers { get; set; } =
+        new("encoder-cpu", Math.Max(1, Environment.ProcessorCount / 2));
+
     public static KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 3);
     public static KeyValuePair<string, int> FileWorkers { get; set; } = new("file", 2);

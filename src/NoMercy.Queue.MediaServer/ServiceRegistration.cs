@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Information;
 using NoMercy.Queue.MediaServer.Configuration;
+using NoMercy.Resources;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
@@ -22,6 +23,7 @@ public static class ServiceRegistration
             IServiceScopeFactory scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
             NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker =
                 sp.GetService<NoMercy.NmSystem.Lifecycle.IServerPhaseTracker>();
+            IResourceBudget? resourceBudget = sp.GetService<IResourceBudget>();
             QueueConfiguration configuration = new()
             {
                 WorkerCounts = new()
@@ -30,7 +32,8 @@ public static class ServiceRegistration
                     [Config.ImportWorkers.Key] = Config.ImportWorkers.Value,
                     [Config.ExtrasWorkers.Key] = Config.ExtrasWorkers.Value,
                     [Config.EncoderWorkers.Key] = Config.EncoderWorkers.Value,
-                    [Config.EncoderTaskWorkers.Key] = Config.EncoderTaskWorkers.Value,
+                    [Config.GpuEncoderWorkers.Key] = Config.GpuEncoderWorkers.Value,
+                    [Config.CpuEncoderWorkers.Key] = Config.CpuEncoderWorkers.Value,
                     [Config.CronWorkers.Key] = Config.CronWorkers.Value,
                     [Config.ImageWorkers.Key] = Config.ImageWorkers.Value,
                     [Config.FileWorkers.Key] = Config.FileWorkers.Value,
@@ -43,7 +46,8 @@ public static class ServiceRegistration
                 loggerFactory,
                 configStore,
                 scopeFactory,
-                phaseTracker
+                phaseTracker,
+                resourceBudget
             );
         });
         services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);

@@ -5,6 +5,7 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
+using NoMercy.Encoder.Strategies.Shared;
 
 namespace NoMercy.Encoder.Strategies.Dash;
 
@@ -42,7 +43,7 @@ public class DashSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Video,
                     OutputIndex: i,
-                    Resources: null,
+                    Resources: TaskResourceHelper.ForVideoOutput(video),
                     EstimatedCostUnits: EstimateVideoCost(video),
                     Label: $"{video.Width}p {video.EncoderName}"
                 )
@@ -59,7 +60,7 @@ public class DashSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Audio,
                     OutputIndex: i,
-                    Resources: null,
+                    Resources: TaskResourceHelper.CpuOnly(1),
                     EstimatedCostUnits: 1,
                     Label: $"{audio.Language ?? "und"} {audio.EncoderName}"
                 )
@@ -76,7 +77,7 @@ public class DashSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Subtitle,
                     OutputIndex: i,
-                    Resources: null,
+                    Resources: TaskResourceHelper.CpuOnly(1),
                     EstimatedCostUnits: 1,
                     Label: $"sub {sub.Language ?? "und"}"
                 )
@@ -96,7 +97,7 @@ public class DashSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                         GroupTag: groupTag,
                         Kind: EncodeTaskKind.Chapters,
                         OutputIndex: i,
-                        Resources: new ResourceRequirement(null, 0, 1),
+                        Resources: TaskResourceHelper.CpuOnly(1),
                         EstimatedCostUnits: 1,
                         Label: $"chapter still {i + 1}/{count} @ {chapter.Start.TotalSeconds:F0}s"
                     )

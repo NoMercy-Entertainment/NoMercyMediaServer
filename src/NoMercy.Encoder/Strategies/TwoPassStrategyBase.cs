@@ -8,6 +8,7 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
+using NoMercy.Encoder.Strategies.Shared;
 using NoMercy.Storage;
 using EncodeMode = NoMercy.Encoder.Codecs.EncodeMode;
 
@@ -61,7 +62,7 @@ public abstract class TwoPassStrategyBase(
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Pass1,
                     OutputIndex: i,
-                    Resources: null,
+                    Resources: TaskResourceHelper.ForVideoOutput(video),
                     EstimatedCostUnits: EstimateVideoCost(video),
                     Label: $"pass1 {video.Width}p {video.EncoderName}"
                 )
@@ -78,7 +79,7 @@ public abstract class TwoPassStrategyBase(
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Pass2,
                     OutputIndex: i,
-                    Resources: null,
+                    Resources: TaskResourceHelper.ForVideoOutput(video),
                     EstimatedCostUnits: EstimateVideoCost(video),
                     StatsFilePath: null,
                     Label: $"pass2 {video.Width}p {video.EncoderName}"
@@ -96,7 +97,7 @@ public abstract class TwoPassStrategyBase(
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Audio,
                     OutputIndex: i,
-                    Resources: null,
+                    Resources: TaskResourceHelper.CpuOnly(1),
                     EstimatedCostUnits: 1,
                     Label: $"{audio.Language ?? "und"} {audio.EncoderName}"
                 )
@@ -113,7 +114,7 @@ public abstract class TwoPassStrategyBase(
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Subtitle,
                     OutputIndex: i,
-                    Resources: null,
+                    Resources: TaskResourceHelper.CpuOnly(1),
                     EstimatedCostUnits: 1,
                     Label: $"sub {sub.Language ?? "und"}"
                 )
@@ -129,7 +130,7 @@ public abstract class TwoPassStrategyBase(
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Thumbnails,
                     OutputIndex: 0,
-                    Resources: null,
+                    Resources: TaskResourceHelper.CpuOnly(1),
                     EstimatedCostUnits: 1,
                     Label: "thumbnails"
                 )
@@ -149,7 +150,7 @@ public abstract class TwoPassStrategyBase(
                         GroupTag: groupTag,
                         Kind: EncodeTaskKind.Chapters,
                         OutputIndex: i,
-                        Resources: new ResourceRequirement(null, 0, 1),
+                        Resources: TaskResourceHelper.CpuOnly(1),
                         EstimatedCostUnits: 1,
                         Label: $"chapter still {i + 1}/{count} @ {chapter.Start.TotalSeconds:F0}s"
                     )
