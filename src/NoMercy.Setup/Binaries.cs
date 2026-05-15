@@ -739,6 +739,22 @@ public class Binaries
 
         string path = await Downloader.DownloadFile(_storage, "FFMpeg", downloadUrl);
 
+        // Re-check the lock right before extraction — the encoder worker may have
+        // reserved a job and started running ffmpeg between the pre-download check
+        // and the multi-minute zip download finishing. Without this gate, extraction
+        // races the encode: ExtractToFile deletes ffmpeg.exe, in-flight Process.Start
+        // hits ERROR_FILE_NOT_FOUND, encode fails. Keep the downloaded zip so the
+        // update lands on the next boot when no encode is in flight.
+        if (_storage.Exists(AppFiles.FfmpegPath) && Locking.IsFileLocked(AppFiles.FfmpegPath))
+        {
+            Logger.Setup(
+                "FFmpeg binary became locked by a running encode while the update downloaded — "
+                    + "deferring extraction to next boot.",
+                LogEventLevel.Information
+            );
+            return;
+        }
+
         List<string> files = await Archiving.ExtractArchive(_storage, path, AppFiles.FfmpegFolder);
         foreach (string file in files)
         {
