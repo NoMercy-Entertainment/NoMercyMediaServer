@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NoMercy.Resources;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 using NoMercyQueue.Workers;
@@ -31,6 +32,7 @@ public class QueueRunner
     private readonly ILogger<QueueRunner> _logger;
     private readonly IServiceScopeFactory? _scopeFactory;
     private readonly NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? _phaseTracker;
+    private readonly IResourceBudget? _resourceBudget;
 
     /// <summary>
     /// Static accessor for non-DI code paths (jobs, logic classes).
@@ -51,12 +53,14 @@ public class QueueRunner
         ILoggerFactory loggerFactory,
         IConfigurationStore? configurationStore = null,
         IServiceScopeFactory? scopeFactory = null,
-        NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker = null
+        NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker = null,
+        IResourceBudget? resourceBudget = null
     )
     {
         _configurationStore = configurationStore;
         _scopeFactory = scopeFactory;
         _phaseTracker = phaseTracker;
+        _resourceBudget = resourceBudget;
         _logger = loggerFactory.CreateLogger<QueueRunner>();
         _jobQueue = new(
             queueContext,
@@ -179,12 +183,17 @@ public class QueueRunner
 
     private void SpawnWorker(string name)
     {
+        IResourceBudget? budget = ResourceAwareQueues.IsResourceAware(name)
+            ? _resourceBudget
+            : null;
+
         QueueWorker queueWorkerInstance = new(
             _jobQueue,
             name,
             this,
             scopeFactory: _scopeFactory,
-            phaseTracker: _phaseTracker
+            phaseTracker: _phaseTracker,
+            resourceBudget: budget
         );
 
         queueWorkerInstance.WorkCompleted += QueueWorkerCompleted(name, queueWorkerInstance);

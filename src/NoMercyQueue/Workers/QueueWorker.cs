@@ -1,12 +1,24 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Lifecycle;
+using NoMercy.Resources;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 using BootStage = NoMercy.NmSystem.Lifecycle.BootStage;
 using Exception = System.Exception;
 
 namespace NoMercyQueue.Workers;
+
+/// <summary>
+/// Names of queues whose jobs participate in resource-budget gating.
+/// Workers on these queues check <see cref="IResourceBudget"/> before
+/// running a job and re-queue it when the budget is saturated.
+/// </summary>
+internal static class ResourceAwareQueues
+{
+    internal static bool IsResourceAware(string queueName) =>
+        queueName is "encoder-gpu" or "encoder-cpu";
+}
 
 public class QueueWorker(
     JobQueue queue,
@@ -15,9 +27,12 @@ public class QueueWorker(
     ILogger<QueueWorker>? logger = null,
     IServiceScopeFactory? scopeFactory = null,
     IServerReadinessGate? readinessGate = null,
-    IServerPhaseTracker? phaseTracker = null
+    IServerPhaseTracker? phaseTracker = null,
+    IResourceBudget? resourceBudget = null
 )
 {
+    private static readonly TimeSpan BudgetRetryDelay = TimeSpan.FromSeconds(5);
+
     private const int MaxTransientRetries = 5;
     private const int TransientRetryBaseMs = 3000;
     private const int TransientRetryJitterMs = 2000;
@@ -45,9 +60,6 @@ public class QueueWorker(
 
     public async Task StartAsync(CancellationToken stopToken)
     {
-        // Wait for every boot stage so jobs never run alongside in-flight startup
-        // work — most notably the FFmpeg download/extract, which would otherwise
-        // race the encoder worker's Process.Start and crash mid-encode.
         if (phaseTracker is not null)
         {
             NoMercy.NmSystem.SystemCalls.Logger.App(
@@ -92,6 +104,31 @@ public class QueueWorker(
 
             if (job != null)
             {
+                // Resource-budget gate: for encoder-gpu / encoder-cpu queues,
+                // check whether the budget has a free slot before executing.
+                // If not, release the reservation and let the job be picked up
+                // again after a short delay.
+                ResourceLease? lease = null;
+
+                if (resourceBudget is not null && ResourceAwareQueues.IsResourceAware(name))
+                {
+                    if (!TryAcquireBudget(job, out lease))
+                    {
+                        queue.ReleaseReservation(job, BudgetRetryDelay);
+
+                        try
+                        {
+                            queue.WorkAvailable.Wait(BudgetRetryDelay, stopToken);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
+
+                        continue;
+                    }
+                }
+
                 _currentJobId = job.Id;
 
                 try
@@ -149,6 +186,11 @@ public class QueueWorker(
                         ex
                     );
                 }
+                finally
+                {
+                    if (lease is not null)
+                        resourceBudget?.Release(lease);
+                }
             }
             else
             {
@@ -160,11 +202,72 @@ public class QueueWorker(
                 }
                 catch (OperationCanceledException)
                 {
-                    // Stop() was called — exit the loop cleanly.
                     break;
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Attempts to acquire budget for the given job payload.
+    /// Returns true and sets <paramref name="lease"/> when a slot is available.
+    /// Returns false when the budget is saturated — caller should release the reservation.
+    /// </summary>
+    private bool TryAcquireBudget(QueueJobModel job, out ResourceLease? lease)
+    {
+        lease = null;
+
+        if (resourceBudget is null)
+            return true;
+
+        ResourceRequirement? requirement = ExtractRequirement(job);
+        if (requirement is null)
+            return true;
+
+        lease = resourceBudget.TryAcquire(requirement, TimeSpan.Zero);
+
+        if (lease is null)
+        {
+            int gpuAvailable = requirement.GpuDeviceKey is not null
+                ? resourceBudget.AvailableGpuEncoderSlots(requirement.GpuDeviceKey)
+                : -1;
+            int cpuAvailable = resourceBudget.AvailableCpuThreads();
+
+            logger?.LogInformation(
+                "[{Queue}] budget saturated for job {JobId} — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Retrying in {Delay}s.",
+                name,
+                job.Id,
+                gpuAvailable,
+                cpuAvailable,
+                BudgetRetryDelay.TotalSeconds
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Lightly deserializes the job payload to read just the
+    /// <see cref="ResourceRequirement"/> from an <see cref="IHasResourceRequirement"/>
+    /// job without executing the full deserialization path.
+    /// Returns null when the job does not carry resource metadata.
+    /// </summary>
+    private static ResourceRequirement? ExtractRequirement(QueueJobModel job)
+    {
+        try
+        {
+            object deserialized = SerializationHelper.Deserialize<object>(job.Payload);
+            if (deserialized is IHasResourceRequirement carrier)
+                return carrier.ResourceRequirement;
+        }
+        catch
+        {
+            // Deserialization failure here is non-fatal — skip the gate.
+        }
+
+        return null;
     }
 
     protected virtual void OnWorkCompleted(EventArgs e)
@@ -194,7 +297,6 @@ public class QueueWorker(
             injector.InjectStorageServices(scope.ServiceProvider);
         }
 
-        // Give coordinator jobs their queue-job ID before Handle() runs.
         if (job is IJobIdReceiver idReceiver)
             idReceiver.ReceiveJobId((int)queueJob.Id);
 
@@ -204,10 +306,6 @@ public class QueueWorker(
             {
                 try
                 {
-                    // GetAwaiter().GetResult() rather than .Wait() so that the
-                    // original exception propagates unwrapped (not wrapped in
-                    // AggregateException) — this keeps catch-block handling and
-                    // retry classification correct.
                     job.Handle().GetAwaiter().GetResult();
                     return;
                 }
@@ -238,11 +336,6 @@ public class QueueWorker(
 
     private static bool IsTransientSqliteError(Exception ex)
     {
-        // Walk the exception chain looking for SQLite lock contention:
-        //   Error 5  (SQLITE_BUSY)   → "database is locked"
-        //   Error 6  (SQLITE_LOCKED) → "database table is locked" (shared-cache contention)
-        // We check the type name instead of casting because this assembly
-        // does not reference Microsoft.Data.Sqlite directly.
         for (Exception? current = ex; current != null; current = current.InnerException)
         {
             string typeName = current.GetType().Name;
@@ -282,8 +375,6 @@ public class QueueWorker(
     /// </summary>
     public void Start()
     {
-        // Replace the cancel source if it was already tripped by a prior Stop;
-        // otherwise StartAsync exits immediately on the first cancellation check.
         if (_stopCts.IsCancellationRequested)
             _stopCts = new();
         _isRunning = true;
