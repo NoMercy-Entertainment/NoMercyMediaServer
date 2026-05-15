@@ -1,3 +1,2 @@
-namespace NoMercy.Encoder.Hardware;
-
-public record ResourceLease(string LeaseId, GpuDevice? GpuDevice, int GpuSlots, int CpuThreads);
+// Shared record lives in NoMercy.Resources.
+global using ResourceLease = NoMercy.Resources.ResourceLease;

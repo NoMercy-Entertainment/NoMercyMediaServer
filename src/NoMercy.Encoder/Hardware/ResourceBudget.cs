@@ -1,11 +1,17 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using NoMercy.Resources;
 
 namespace NoMercy.Encoder.Hardware;
 
+/// <summary>
+/// Production implementation of <see cref="IResourceBudget"/>.
+/// GPU devices are keyed by their canonical name string so this class can be
+/// constructed from either <see cref="GpuDevice"/> lists or plain strings.
+/// </summary>
 public class ResourceBudget : IResourceBudget
 {
-    private readonly ConcurrentDictionary<GpuDevice, SemaphoreSlim> _gpuSemaphores;
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _gpuSemaphores;
     private readonly SemaphoreSlim _cpuSemaphore;
     private readonly IResourceMonitor? _monitor;
     private readonly ILogger<ResourceBudget>? _logger;
@@ -20,24 +26,23 @@ public class ResourceBudget : IResourceBudget
         _monitor = monitor;
         _logger = logger;
         _cpuSemaphore = new(cpuCores, cpuCores);
-
         _gpuSemaphores = new();
 
         foreach (GpuDevice device in gpuDevices)
         {
-            _gpuSemaphores[device] = new(device.MaxEncoderSessions, device.MaxEncoderSessions);
+            _gpuSemaphores[device.Name] = new(device.MaxEncoderSessions, device.MaxEncoderSessions);
         }
     }
 
-    public int AvailableGpuEncoderSlots(GpuDevice device)
+    public int AvailableGpuEncoderSlots(string gpuDeviceKey)
     {
-        return _gpuSemaphores.TryGetValue(device, out SemaphoreSlim? semaphore)
+        return _gpuSemaphores.TryGetValue(gpuDeviceKey, out SemaphoreSlim? semaphore)
             ? semaphore.CurrentCount
             : 0;
     }
 
-    public double CurrentGpuEncodeUtilization(GpuDevice device) =>
-        _monitor?.GetGpuEncodeUtilization(device) ?? 0.0;
+    public double CurrentGpuEncodeUtilization(string gpuDeviceKey) =>
+        _monitor?.GetGpuEncodeUtilization(gpuDeviceKey) ?? 0.0;
 
     public int AvailableCpuThreads()
     {
@@ -46,25 +51,25 @@ public class ResourceBudget : IResourceBudget
 
     public ResourceLease Acquire(ResourceRequirement requirement)
     {
-        if (requirement.GpuDevice is not null && requirement.GpuSlots > 0)
+        if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
         {
-            SemaphoreSlim gpuSemaphore = GetGpuSemaphore(requirement.GpuDevice);
+            SemaphoreSlim gpuSemaphore = GetGpuSemaphore(requirement.GpuDeviceKey);
 
-            for (int i = 0; i < requirement.GpuSlots; i++)
+            for (int slotIndex = 0; slotIndex < requirement.GpuSlots; slotIndex++)
             {
                 gpuSemaphore.Wait();
             }
 
             _logger?.LogDebug(
-                "Acquired {GpuSlots} GPU slot(s) on {GpuName}",
+                "Acquired {GpuSlots} GPU slot(s) on {GpuKey}",
                 requirement.GpuSlots,
-                requirement.GpuDevice.Name
+                requirement.GpuDeviceKey
             );
         }
 
         if (requirement.CpuThreads > 0)
         {
-            for (int i = 0; i < requirement.CpuThreads; i++)
+            for (int threadIndex = 0; threadIndex < requirement.CpuThreads; threadIndex++)
             {
                 _cpuSemaphore.Wait();
             }
@@ -76,33 +81,32 @@ public class ResourceBudget : IResourceBudget
 
         _logger?.LogDebug("Lease {LeaseId} granted", leaseId);
 
-        return new(leaseId, requirement.GpuDevice, requirement.GpuSlots, requirement.CpuThreads);
+        return new(leaseId, requirement.GpuDeviceKey, requirement.GpuSlots, requirement.CpuThreads);
     }
 
     public ResourceLease? TryAcquire(ResourceRequirement requirement, TimeSpan timeout)
     {
         int timeoutMs = (int)timeout.TotalMilliseconds;
 
-        if (requirement.GpuDevice is not null && requirement.GpuSlots > 0)
+        if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
         {
-            SemaphoreSlim gpuSemaphore = GetGpuSemaphore(requirement.GpuDevice);
+            SemaphoreSlim gpuSemaphore = GetGpuSemaphore(requirement.GpuDeviceKey);
             int acquiredGpuSlots = 0;
 
-            for (int i = 0; i < requirement.GpuSlots; i++)
+            for (int slotIndex = 0; slotIndex < requirement.GpuSlots; slotIndex++)
             {
                 if (!gpuSemaphore.Wait(timeoutMs))
                 {
-                    // Rollback partially acquired GPU slots
-                    for (int j = 0; j < acquiredGpuSlots; j++)
+                    for (int rollback = 0; rollback < acquiredGpuSlots; rollback++)
                     {
                         gpuSemaphore.Release();
                     }
 
                     _logger?.LogDebug(
-                        "TryAcquire timed out acquiring GPU slot {Slot}/{Total} on {GpuName}",
-                        i + 1,
+                        "TryAcquire timed out acquiring GPU slot {Slot}/{Total} on {GpuKey}",
+                        slotIndex + 1,
                         requirement.GpuSlots,
-                        requirement.GpuDevice.Name
+                        requirement.GpuDeviceKey
                     );
 
                     return null;
@@ -116,22 +120,20 @@ public class ResourceBudget : IResourceBudget
         {
             int acquiredCpuThreads = 0;
 
-            for (int i = 0; i < requirement.CpuThreads; i++)
+            for (int threadIndex = 0; threadIndex < requirement.CpuThreads; threadIndex++)
             {
                 if (!_cpuSemaphore.Wait(timeoutMs))
                 {
-                    // Rollback partially acquired CPU threads
-                    for (int j = 0; j < acquiredCpuThreads; j++)
+                    for (int rollback = 0; rollback < acquiredCpuThreads; rollback++)
                     {
                         _cpuSemaphore.Release();
                     }
 
-                    // Rollback GPU slots already acquired in this TryAcquire call
-                    if (requirement.GpuDevice is not null && requirement.GpuSlots > 0)
+                    if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
                     {
-                        SemaphoreSlim gpuSemaphore = GetGpuSemaphore(requirement.GpuDevice);
+                        SemaphoreSlim gpuSemaphore = GetGpuSemaphore(requirement.GpuDeviceKey);
 
-                        for (int k = 0; k < requirement.GpuSlots; k++)
+                        for (int rollback = 0; rollback < requirement.GpuSlots; rollback++)
                         {
                             gpuSemaphore.Release();
                         }
@@ -139,7 +141,7 @@ public class ResourceBudget : IResourceBudget
 
                     _logger?.LogDebug(
                         "TryAcquire timed out acquiring CPU thread {Thread}/{Total}, rolled back GPU slots",
-                        i + 1,
+                        threadIndex + 1,
                         requirement.CpuThreads
                     );
 
@@ -154,20 +156,20 @@ public class ResourceBudget : IResourceBudget
 
         _logger?.LogDebug("Lease {LeaseId} granted via TryAcquire", leaseId);
 
-        return new(leaseId, requirement.GpuDevice, requirement.GpuSlots, requirement.CpuThreads);
+        return new(leaseId, requirement.GpuDeviceKey, requirement.GpuSlots, requirement.CpuThreads);
     }
 
     public void Release(ResourceLease lease)
     {
-        if (lease.GpuDevice is not null && lease.GpuSlots > 0)
+        if (lease.GpuDeviceKey is not null && lease.GpuSlots > 0)
         {
-            SemaphoreSlim gpuSemaphore = GetGpuSemaphore(lease.GpuDevice);
+            SemaphoreSlim gpuSemaphore = GetGpuSemaphore(lease.GpuDeviceKey);
             gpuSemaphore.Release(lease.GpuSlots);
 
             _logger?.LogDebug(
-                "Released {GpuSlots} GPU slot(s) on {GpuName} for lease {LeaseId}",
+                "Released {GpuSlots} GPU slot(s) on {GpuKey} for lease {LeaseId}",
                 lease.GpuSlots,
-                lease.GpuDevice.Name,
+                lease.GpuDeviceKey,
                 lease.LeaseId
             );
         }
@@ -184,12 +186,12 @@ public class ResourceBudget : IResourceBudget
         }
     }
 
-    private SemaphoreSlim GetGpuSemaphore(GpuDevice device)
+    private SemaphoreSlim GetGpuSemaphore(string gpuDeviceKey)
     {
-        if (!_gpuSemaphores.TryGetValue(device, out SemaphoreSlim? semaphore))
+        if (!_gpuSemaphores.TryGetValue(gpuDeviceKey, out SemaphoreSlim? semaphore))
         {
             throw new InvalidOperationException(
-                $"GPU device '{device.Name}' is not registered with this ResourceBudget."
+                $"GPU device '{gpuDeviceKey}' is not registered with this ResourceBudget."
             );
         }
 

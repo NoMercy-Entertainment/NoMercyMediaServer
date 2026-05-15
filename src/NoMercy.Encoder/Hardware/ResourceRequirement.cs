@@ -1,3 +1,2 @@
-namespace NoMercy.Encoder.Hardware;
-
-public record ResourceRequirement(GpuDevice? GpuDevice, int GpuSlots, int CpuThreads);
+// Shared record lives in NoMercy.Resources.
+global using ResourceRequirement = NoMercy.Resources.ResourceRequirement;

@@ -1,5 +1,5 @@
-using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
+using NoMercy.Resources;
 
 namespace NoMercy.Encoder.Decomposition;
 

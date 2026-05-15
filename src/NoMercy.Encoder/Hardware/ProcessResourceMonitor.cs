@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Errors;
+using NoMercy.Resources;
 
 namespace NoMercy.Encoder.Hardware;
 
@@ -14,14 +15,17 @@ namespace NoMercy.Encoder.Hardware;
 /// </summary>
 public class ProcessResourceMonitor : IResourceMonitor
 {
-    // Cache last CPU snapshot so percentage reports relative work between
-    // calls instead of the total-since-process-start value.
     private DateTime _lastSnapshotAt = DateTime.UtcNow;
     private TimeSpan _lastCpuTime = TimeSpan.Zero;
     private readonly Lock _snapshotLock = new();
 
     private readonly ILogger<ProcessResourceMonitor>? _logger;
     private bool _gpuWarningLogged;
+
+    public ProcessResourceMonitor(ILogger<ProcessResourceMonitor>? logger = null)
+    {
+        _logger = logger;
+    }
 
     public double GetCpuUsagePercent()
     {
@@ -46,12 +50,7 @@ public class ProcessResourceMonitor : IResourceMonitor
         }
     }
 
-    public ProcessResourceMonitor(ILogger<ProcessResourceMonitor>? logger = null)
-    {
-        _logger = logger;
-    }
-
-    public double GetGpuEncodeUtilization(GpuDevice device) => 0.0;
+    public double GetGpuEncodeUtilization(string gpuDeviceKey) => 0.0;
 
     /// <inheritdoc />
     /// <remarks>
@@ -76,10 +75,6 @@ public class ProcessResourceMonitor : IResourceMonitor
 
     public long GetAvailableMemoryMb()
     {
-        // GC.GetGCMemoryInfo gives the host's perspective on available
-        // memory at the GC level. It's not a perfect proxy for system
-        // memory but it's cross-platform and framework-maintained, which
-        // beats spawning `free` or `wmic` on every query.
         GCMemoryInfo info = GC.GetGCMemoryInfo();
         long available = info.TotalAvailableMemoryBytes - info.MemoryLoadBytes;
         return Math.Max(0, available / (1024 * 1024));
@@ -88,15 +83,13 @@ public class ProcessResourceMonitor : IResourceMonitor
 
 /// <summary>
 /// Zero-valued monitor for installs that don't care about live resource
-/// metrics (e.g. tests or CLI-only runs). Registered when no real monitor
-/// is available so ResourceBudget + friends always have a non-null
-/// dependency.
+/// metrics (e.g. tests or CLI-only runs).
 /// </summary>
 public sealed class NullResourceMonitor : IResourceMonitor
 {
     public double GetCpuUsagePercent() => 0;
 
-    public double GetGpuEncodeUtilization(GpuDevice device) => 0;
+    public double GetGpuEncodeUtilization(string gpuDeviceKey) => 0;
 
     public long GetAvailableMemoryMb() => 0;
 
