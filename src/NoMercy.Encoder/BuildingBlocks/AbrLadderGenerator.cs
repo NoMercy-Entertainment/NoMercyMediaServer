@@ -104,10 +104,15 @@ public class AbrLadderGenerator : IAbrLadderGenerator
         VideoStreamInfo source = media.VideoStreams[0];
 
         // Step 1 — Filter candidate tiers.
+        // NeverUpscale uses width-vs-width because the encoder pipeline scales via
+        // `scale=W:-2`, so tier.Width is the actual output width. Height-only checks
+        // wrongly filter 1080p (tier height 1080) on cinema sources (e.g. 2048x858
+        // DCI 2K) where `scale=1920:-2` would yield 1920x803 — smaller than the
+        // source in both dimensions, not an upscale.
         List<LadderTier> filtered = [];
         foreach (LadderTier tier in autoConfig.Tiers)
         {
-            if (autoConfig.NeverUpscale && tier.Height > source.Height)
+            if (autoConfig.NeverUpscale && tier.Width > source.Width)
                 continue;
 
             // NeverUpsource: compute the tier bitrate first to compare with source.
@@ -142,7 +147,7 @@ public class AbrLadderGenerator : IAbrLadderGenerator
                 framerate = source.FrameRate * autoConfig.LowTierFramerateMultiplier;
 
             rungs.Add(
-                new LadderRung(
+                new(
                     Width: tier.Width,
                     Height: tier.Height,
                     Codec: codec,
