@@ -37,7 +37,7 @@ public static class BuiltinPresets
     private static Ulid IdFromName(string name)
     {
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(name));
-        return new Ulid(hash.AsSpan(0, 16).ToArray());
+        return new(hash.AsSpan(0, 16).ToArray());
     }
 
     private static EncodingProfile Web1080pBalanced()
@@ -1411,9 +1411,11 @@ public static class BuiltinPresets
                     CodecPolicy = LadderCodecPolicy.Uniform,
                     Crf = 22,
                     MaxRungs = 8,
-                    // YouTube ships every rung regardless of source bitrate — the whole
-                    // point is to serve high-quality variants when bandwidth allows. Default
-                    // NeverUpsource cuts 1080p+ on well-compressed sources.
+                    // YouTube ships every rung regardless of source size or bitrate —
+                    // the whole point is to serve high-quality variants when bandwidth
+                    // allows. NeverUpscale cuts 1440p+ on cinema 2K sources (2048x858);
+                    // NeverUpsource cuts 1080p+ on well-compressed sources. Disable both.
+                    NeverUpscale = false,
                     NeverUpsource = false,
                     // 50% gap collapse drops 1080p (5000) next to 1440p (9000) because
                     // their ratio is only 44%. YouTube keeps every named tier.
