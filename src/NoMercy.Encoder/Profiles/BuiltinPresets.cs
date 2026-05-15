@@ -1408,7 +1408,16 @@ public static class BuiltinPresets
                 {
                     Tiers = LadderTiers.YouTube,
                     BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
-                    CodecPolicy = LadderCodecPolicy.Uniform,
+                    // Mixed codec policy mirrors YouTube's actual ladder: H.264 8-bit
+                    // for SD/HD rungs so legacy devices and HEVC-blocked browsers
+                    // (notably desktop Chrome without a hardware HEVC decoder) can
+                    // still play, HEVC Main10 for 1080p+ where the bitrate savings
+                    // matter most and decoders are widespread. Split at 720 keeps
+                    // 720p H.264 as the highest-compat fallback variant.
+                    CodecPolicy = LadderCodecPolicy.Mixed,
+                    LowTierCodec = VideoCodecType.H264,
+                    HighTierCodec = VideoCodecType.H265,
+                    MixedPolicySplitHeight = 720,
                     Crf = 22,
                     MaxRungs = 8,
                     // YouTube ships every rung regardless of source bitrate — the whole
@@ -1423,19 +1432,24 @@ public static class BuiltinPresets
         )
         {
             Description =
-                "HEVC ABR ladder spanning 144p → 2160p, mirroring YouTube's quality range. "
-                + "HDR sources keep their HDR signal via passthrough; SDR sources stay SDR. "
-                + "Prefers a hardware encoder (NVENC / AMF / QSV / VideoToolbox) when one is "
-                + "detected — large ladders are too expensive on CPU.",
+                "Mixed-codec ABR ladder spanning 144p → 2160p, mirroring YouTube's actual "
+                + "device-targeted ladder. SD / HD rungs (≤720p) encode in H.264 High 8-bit "
+                + "for maximum browser + legacy-device compatibility; 1080p+ rungs encode in "
+                + "HEVC Main10 10-bit where bitrate savings matter most and modern decoders "
+                + "are widespread. HDR sources keep their HDR signal on the HEVC tier via "
+                + "passthrough; SDR sources stay SDR. Prefers a hardware encoder "
+                + "(NVENC / AMF / QSV / VideoToolbox) when one is detected.",
             IsBuiltin = true,
             HardwarePreference = HardwarePreference.PreferHardware,
             // HDR sources emit both HDR passthrough + SDR tonemap variants per
             // rung (matches the example media layout). SDR sources just emit SDR.
             HdrPolicy = HdrPolicy.EmitHdrAndSdr,
             ClientCompatibility =
-                ClientCompatibility.NativeAndroid
+                ClientCompatibility.BrowserMse
+                | ClientCompatibility.NativeAndroid
                 | ClientCompatibility.NativeIos
-                | ClientCompatibility.Cast,
+                | ClientCompatibility.Cast
+                | ClientCompatibility.LegacyDevices,
         };
     }
 

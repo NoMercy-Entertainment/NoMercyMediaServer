@@ -169,7 +169,8 @@ public class AbrLadderGenerator : IAbrLadderGenerator
             // cut every tier; skip the filter instead of producing zero rungs.
             if (autoConfig.NeverUpsource && source.BitRateKbps > 0)
             {
-                int candidateBitrate = ComputeBitrate(tier, source, profileCodec, autoConfig);
+                VideoCodecType tierCodec = SelectCodec(tier.Height, profileCodec, autoConfig);
+                int candidateBitrate = ComputeBitrate(tier, source, tierCodec, autoConfig);
                 if (candidateBitrate > source.BitRateKbps)
                     continue;
             }
@@ -181,11 +182,11 @@ public class AbrLadderGenerator : IAbrLadderGenerator
         List<LadderRung> rungs = [];
         foreach (LadderTier tier in filtered)
         {
-            int bitrate = ComputeBitrate(tier, source, profileCodec, autoConfig);
+            VideoCodecType codec = SelectCodec(tier.Height, profileCodec, autoConfig);
+
+            int bitrate = ComputeBitrate(tier, source, codec, autoConfig);
             int maxBitrate = (int)Math.Round(bitrate * autoConfig.VbrCeilingMultiplier);
             int bufSize = (int)Math.Round(bitrate * autoConfig.BufferSizeMultiplier);
-
-            VideoCodecType codec = SelectCodec(tier.Height, profileCodec, autoConfig);
 
             double framerate = source.FrameRate;
             if (
@@ -193,6 +194,19 @@ public class AbrLadderGenerator : IAbrLadderGenerator
                 && tier.Height <= autoConfig.LowTierFramerateThresholdHeight
             )
                 framerate = source.FrameRate * autoConfig.LowTierFramerateMultiplier;
+
+            // Reference settings (BitDepth / PixelFormat / CodecProfile) are tuned
+            // for the profile's primary codec. When a Mixed-policy rung selects a
+            // different codec, those settings must be overridden to safe per-codec
+            // defaults so we don't emit invalid combos like H.264 + Main10 + 10-bit.
+            (int bitDepth, string? pixelFormat, CodecProfile codecProfile) =
+                codec == profileCodec
+                    ? (
+                        reference?.BitDepth ?? 8,
+                        reference?.PixelFormat,
+                        reference?.CodecProfile ?? CodecProfile.Auto
+                    )
+                    : CodecDefaults(codec);
 
             rungs.Add(
                 new(
@@ -204,9 +218,9 @@ public class AbrLadderGenerator : IAbrLadderGenerator
                     BufferSizeKbps: bufSize,
                     Framerate: framerate,
                     Preset: reference?.Preset,
-                    CodecProfile: reference?.CodecProfile ?? CodecProfile.Auto,
-                    BitDepth: reference?.BitDepth ?? 8,
-                    PixelFormat: reference?.PixelFormat
+                    CodecProfile: codecProfile,
+                    BitDepth: bitDepth,
+                    PixelFormat: pixelFormat
                 )
             );
         }
@@ -313,6 +327,24 @@ public class AbrLadderGenerator : IAbrLadderGenerator
     }
 
     // ── Codec selection ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Safe per-codec defaults for (BitDepth, PixelFormat, CodecProfile) when a
+    /// Mixed-policy rung selects a codec different from the profile reference's.
+    /// H.264 outputs target the High profile in 8-bit yuv420p (broadest browser
+    /// + device coverage). H.265 / AV1 keep 10-bit Main10 since their tooling
+    /// and the player kits we target both handle 10-bit transparently.
+    /// </summary>
+    private static (int BitDepth, string? PixelFormat, CodecProfile Profile) CodecDefaults(
+        VideoCodecType codec
+    ) =>
+        codec switch
+        {
+            VideoCodecType.H264 => (8, "yuv420p", CodecProfile.High),
+            VideoCodecType.H265 => (10, "yuv420p10le", CodecProfile.Main10),
+            VideoCodecType.Av1 => (10, "yuv420p10le", CodecProfile.Main10),
+            _ => (8, "yuv420p", CodecProfile.Auto),
+        };
 
     private static VideoCodecType SelectCodec(
         int tierHeight,
