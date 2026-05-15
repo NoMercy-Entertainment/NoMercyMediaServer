@@ -1012,7 +1012,10 @@ public class BuildStage(
         TimeSpan timestamp
     )
     {
-        string outputFile = Path.Combine("chapters", $"{chapterIndex:D2}.webp");
+        // Forward-slash separator — matches HLS / sprite / audio / video output paths
+        // across the codebase. Windows ffmpeg accepts forward slashes; using
+        // Path.Combine here would emit backslashes that break manifest references.
+        string outputFile = $"chapters/{chapterIndex:D2}.webp";
 
         return new FfmpegCommandBuilder()
             .WithGlobalOptions(new GlobalOptions(ProgressPipe: false, Overwrite: true))
