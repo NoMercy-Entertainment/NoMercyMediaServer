@@ -20,6 +20,8 @@ public static class ServiceRegistration
             IConfigurationStore configStore = sp.GetRequiredService<IConfigurationStore>();
             ILoggerFactory loggerFactory = sp.GetRequiredService<ILoggerFactory>();
             IServiceScopeFactory scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+            NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker =
+                sp.GetService<NoMercy.NmSystem.Lifecycle.IServerPhaseTracker>();
             QueueConfiguration configuration = new()
             {
                 WorkerCounts = new()
@@ -34,7 +36,14 @@ public static class ServiceRegistration
                     [Config.MusicWorkers.Key] = Config.MusicWorkers.Value,
                 },
             };
-            return new(queueContext, configuration, loggerFactory, configStore, scopeFactory);
+            return new(
+                queueContext,
+                configuration,
+                loggerFactory,
+                configStore,
+                scopeFactory,
+                phaseTracker
+            );
         });
         services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
 

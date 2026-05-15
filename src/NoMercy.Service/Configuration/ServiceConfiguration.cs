@@ -346,6 +346,10 @@ public static class ServiceConfiguration
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
         services.AddSingleton<CastSessionTokenService>();
+        services.AddSingleton<
+            NoMercy.NmSystem.Lifecycle.IServerPhaseTracker,
+            NoMercy.NmSystem.Lifecycle.ServerPhaseTracker
+        >();
 
         services.AddScoped<NoMercy.Encoder.Profiles.BuiltinPresetSeeder>();
 

@@ -1,6 +1,7 @@
 ﻿using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
+using NoMercy.NmSystem.Lifecycle;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
@@ -67,7 +68,7 @@ public class Start
                 () =>
                 {
                     IStorageDriver driver = new LocalStorageDriver();
-                    IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+                    IStorage storage = new LocalStorage(driver, new([], driver));
                     return new Binaries(driver, storage).DownloadAll();
                 },
                 CanDefer: false,
@@ -136,6 +137,18 @@ public class Start
         StartupTaskRunner runner = new(remainingTasks, _phase1Completed);
 
         await runner.RunAll();
+
+        // Translate task completions into boot-stage advances so queue workers
+        // can gate on the specific stage they depend on. Binaries is the one the
+        // encoder cares about — its absence races ffmpeg.exe replacement.
+        IServerPhaseTracker? tracker = ServerPhaseTracker.Current;
+        if (tracker is not null)
+        {
+            if (runner.CompletedTasks.Contains("Binaries"))
+                tracker.MarkComplete(BootStage.Binaries);
+            if (runner.CompletedTasks.Contains("Networking"))
+                tracker.MarkComplete(BootStage.Network);
+        }
 
         if (runner.DeferredTasks.Count > 0)
         {

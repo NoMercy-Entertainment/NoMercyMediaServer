@@ -50,13 +50,23 @@ public class BootOrchestrator
 
         if (authSucceeded)
         {
+            NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
+                NmSystem.Lifecycle.BootStage.Auth
+            );
+
             // Check registration — if cert exists in DB, registration already happened
             // (cert is issued during registration). This survives process restarts
             // unlike the static Register.IsRegistered flag.
             bool isRegistered = Register.IsRegistered || Certificate.HasValidCertificate();
             _setupState.DetermineInitialPhase(hasValidToken: true, isRegistered: isRegistered);
 
-            if (!isRegistered)
+            if (isRegistered)
+            {
+                NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
+                    NmSystem.Lifecycle.BootStage.Registered
+                );
+            }
+            else
             {
                 // Phase 3: Registration (blocking on first boot)
                 await RunRegistrationAsync(ct);
@@ -92,6 +102,9 @@ public class BootOrchestrator
             return false;
 
         Logger.Setup("Authentication complete — running registration...");
+        NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
+            NmSystem.Lifecycle.BootStage.Auth
+        );
 
         // Phase 3: Registration + Certificate
         bool certAcquired = await RunRegistrationAsync(ct);
@@ -239,6 +252,10 @@ public class BootOrchestrator
             _setupState.TransitionTo(SetupPhase.Complete);
             Logger.Setup("Registration and certificate setup complete");
 
+            NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
+                NmSystem.Lifecycle.BootStage.Registered
+            );
+
             return hasCert;
         }
         catch (Exception ex)
@@ -246,7 +263,14 @@ public class BootOrchestrator
             _setupState.SetError($"Registration failed: {ex.Message}");
             Logger.Setup($"Registration failed: {ex.Message}", LogEventLevel.Error);
 
-            // Don't block — DegradedModeRecovery will retry
+            // Don't block — DegradedModeRecovery will retry. Mark Registered as
+            // complete so workers don't block forever on a known-degraded boot —
+            // partial functionality beats no functionality, and the recovery loop
+            // will quietly retry registration in the background.
+            NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
+                NmSystem.Lifecycle.BootStage.Registered
+            );
+
             _setupState.TransitionTo(SetupPhase.Complete);
             return false;
         }

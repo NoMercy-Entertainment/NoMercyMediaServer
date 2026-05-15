@@ -159,10 +159,7 @@ public static class Program
         // Pre-DI storage pair — used for seed calls that run before the DI
         // container is built. Same pattern as Start.cs Binaries task.
         IStorageDriver preBootBackend = new LocalStorageDriver();
-        IStorage preBootStorage = new LocalStorage(
-            preBootBackend,
-            new StoragePathGuard([], preBootBackend)
-        );
+        IStorage preBootStorage = new LocalStorage(preBootBackend, new([], preBootBackend));
 
         // Create database schema before anything else can query it.
         // This does NOT require auth — only migrations + EnsureCreated.
@@ -185,6 +182,16 @@ public static class Program
         bool hasCert = Certificate.HasValidCertificate();
 
         WebApplication app = CreateWebApplication(options, forceHttp: !hasCert);
+
+        // Hand the phase tracker to the static accessor so boot helpers in
+        // NoMercy.Setup (Start.cs, Binaries.cs) can advance stages without DI
+        // plumbing. Phase 1 (essentials) already completed pre-DI — mark it now.
+        NoMercy.NmSystem.Lifecycle.ServerPhaseTracker.RegisterCurrent(
+            app.Services.GetRequiredService<NoMercy.NmSystem.Lifecycle.IServerPhaseTracker>()
+        );
+        NoMercy.NmSystem.Lifecycle.ServerPhaseTracker.Current!.MarkComplete(
+            NoMercy.NmSystem.Lifecycle.BootStage.Essential
+        );
 
         // From this point on, use the DI-registered storage singletons.
         IStorage diStorage = app.Services.GetRequiredService<IStorage>();

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
+using NoMercy.NmSystem.Lifecycle;
 
 namespace NoMercy.Encoder.Startup;
 
@@ -11,7 +12,8 @@ public class HardwareInitializationService(
     IDriverChangeDetector driverChangeDetector,
     IBenchmarkJobTracker benchmarkJobTracker,
     HardwareCapabilitiesHolder capabilitiesHolder,
-    ILogger<HardwareInitializationService> logger
+    ILogger<HardwareInitializationService> logger,
+    IServerPhaseTracker? phaseTracker = null
 ) : IHostedService
 {
     public bool IsReady { get; private set; }
@@ -109,6 +111,8 @@ public class HardwareInitializationService(
                 "Driver fingerprint check failed — continuing without recalibration trigger"
             );
         }
+
+        phaseTracker?.MarkComplete(BootStage.Hardware);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Lifecycle;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
+using BootStage = NoMercy.NmSystem.Lifecycle.BootStage;
 using Exception = System.Exception;
 
 namespace NoMercyQueue.Workers;
@@ -13,7 +14,8 @@ public class QueueWorker(
     QueueRunner? runner = null,
     ILogger<QueueWorker>? logger = null,
     IServiceScopeFactory? scopeFactory = null,
-    IServerReadinessGate? readinessGate = null
+    IServerReadinessGate? readinessGate = null,
+    IServerPhaseTracker? phaseTracker = null
 )
 {
     private const int MaxTransientRetries = 5;
@@ -43,7 +45,22 @@ public class QueueWorker(
 
     public async Task StartAsync(CancellationToken stopToken)
     {
-        if (readinessGate is not null)
+        // Wait for every boot stage so jobs never run alongside in-flight startup
+        // work — most notably the FFmpeg download/extract, which would otherwise
+        // race the encoder worker's Process.Start and crash mid-encode.
+        if (phaseTracker is not null)
+        {
+            NoMercy.NmSystem.SystemCalls.Logger.App(
+                $"[QueueWorker {name}] awaiting boot stages [{BootStage.All}]",
+                Serilog.Events.LogEventLevel.Information
+            );
+            await phaseTracker.WhenReachedAsync(BootStage.All, stopToken).ConfigureAwait(false);
+            NoMercy.NmSystem.SystemCalls.Logger.App(
+                $"[QueueWorker {name}] all boot stages complete, entering poll loop",
+                Serilog.Events.LogEventLevel.Information
+            );
+        }
+        else if (readinessGate is not null)
         {
             NoMercy.NmSystem.SystemCalls.Logger.App(
                 $"[QueueWorker {name}] awaiting readiness gate",

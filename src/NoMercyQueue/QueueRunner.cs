@@ -30,6 +30,7 @@ public class QueueRunner
     private readonly IConfigurationStore? _configurationStore;
     private readonly ILogger<QueueRunner> _logger;
     private readonly IServiceScopeFactory? _scopeFactory;
+    private readonly NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? _phaseTracker;
 
     /// <summary>
     /// Static accessor for non-DI code paths (jobs, logic classes).
@@ -42,11 +43,13 @@ public class QueueRunner
         QueueConfiguration configuration,
         ILoggerFactory loggerFactory,
         IConfigurationStore? configurationStore = null,
-        IServiceScopeFactory? scopeFactory = null
+        IServiceScopeFactory? scopeFactory = null,
+        NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker = null
     )
     {
         _configurationStore = configurationStore;
         _scopeFactory = scopeFactory;
+        _phaseTracker = phaseTracker;
         _logger = loggerFactory.CreateLogger<QueueRunner>();
         _jobQueue = new(
             queueContext,
@@ -169,7 +172,13 @@ public class QueueRunner
 
     private void SpawnWorker(string name)
     {
-        QueueWorker queueWorkerInstance = new(_jobQueue, name, this, scopeFactory: _scopeFactory);
+        QueueWorker queueWorkerInstance = new(
+            _jobQueue,
+            name,
+            this,
+            scopeFactory: _scopeFactory,
+            phaseTracker: _phaseTracker
+        );
 
         queueWorkerInstance.WorkCompleted += QueueWorkerCompleted(name, queueWorkerInstance);
 
