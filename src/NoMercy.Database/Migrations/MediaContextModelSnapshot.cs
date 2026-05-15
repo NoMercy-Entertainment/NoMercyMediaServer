@@ -6077,6 +6077,47 @@ namespace NoMercy.Database.Migrations
 
                     b.Navigation("TvUser");
                 });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Encoder.EncodeTaskOutcome", b =>
+                {
+                    b.Property<string>("TaskId")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GroupTag")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OutputArtifactsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ParentJobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Success")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("TaskId");
+
+                    b.HasIndex("GroupTag");
+
+                    b.HasIndex("ParentJobId");
+
+                    b.ToTable("EncodeTaskOutcomes");
+                });
 #pragma warning restore 612, 618
         }
     }

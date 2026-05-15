@@ -2,6 +2,7 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Storage;
 using NoMercy.NmSystem.Information;
 
@@ -250,6 +251,16 @@ public class MediaContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // EncodeTaskOutcome.OutputArtifactsJson is free-form concatenated paths
+        // and must exceed the global 256-char string cap.
+        modelBuilder
+            .Entity<EncodeTaskOutcome>()
+            .Property(o => o.OutputArtifactsJson)
+            .HasMaxLength(int.MaxValue);
+
+        // EncodeTaskOutcome.ErrorMessage may hold detailed error text up to 4096 chars.
+        modelBuilder.Entity<EncodeTaskOutcome>().Property(o => o.ErrorMessage).HasMaxLength(4096);
+
         base.OnModelCreating(modelBuilder);
     }
 
@@ -352,4 +363,5 @@ public class MediaContext : DbContext
 
     public virtual DbSet<PlaybackPreference> PlaybackPreferences { get; init; }
     public virtual DbSet<TrustedPublisherKey> TrustedPublisherKeys { get; init; }
+    public virtual DbSet<EncodeTaskOutcome> EncodeTaskOutcomes { get; init; }
 }
