@@ -258,30 +258,103 @@ public class ChromeCast
                 .GetProperty("Channels", BindingFlags.Public | BindingFlags.Instance)
                 ?.GetValue(client);
 
-            if (channels is not System.Collections.IList channelList)
-                return;
-
-            List<object> heartbeats = [];
-
-            foreach (object? channel in channelList)
+            if (channels is System.Collections.IList channelList)
             {
-                if (
-                    channel is null
-                    || !channel.GetType().Name.Contains("Heartbeat", StringComparison.Ordinal)
-                )
-                    continue;
+                List<object> heartbeats = [];
 
-                heartbeats.Add(channel);
-                NeutralizeTimersIn(channel);
+                foreach (object? channel in channelList)
+                {
+                    if (
+                        channel is null
+                        || !channel.GetType().Name.Contains("Heartbeat", StringComparison.Ordinal)
+                    )
+                        continue;
+
+                    heartbeats.Add(channel);
+                    NeutralizeTimersIn(channel);
+                }
+
+                foreach (object heartbeat in heartbeats)
+                    channelList.Remove(heartbeat);
             }
 
-            foreach (object heartbeat in heartbeats)
-                channelList.Remove(heartbeat);
+            // Also reach the HeartbeatChannel via its public property — Sharpcaster
+            // exposes it directly, and the timer there can be constructed lazily
+            // after Channels is built. Hitting both paths catches every variant.
+            object? hbProp = client
+                .GetType()
+                .GetProperty("HeartbeatChannel", BindingFlags.Public | BindingFlags.Instance)
+                ?.GetValue(client);
+            if (hbProp is not null)
+                NeutralizeTimersIn(hbProp);
         }
         catch (Exception ex)
         {
             Logger.Ping($"DisableSharpcasterHeartbeat failed: {ex.Message}");
         }
+    }
+
+    // Sharpcaster reconstructs HeartbeatChannel._timer on internal reconnects, so a
+    // one-shot neutralize at Connect leaves a window where the new timer fires and
+    // an async-void TimerElapsed crashes the process. The warden re-applies the
+    // neutralize every WardenIntervalMs across every client in the pool. Catching
+    // here is mandatory — the warden's own Elapsed must never re-throw.
+    private const double WardenIntervalMs = 2000;
+    private static readonly System.Timers.Timer _heartbeatWarden = new(WardenIntervalMs)
+    {
+        AutoReset = true,
+    };
+    private static int _wardenStarted;
+
+    private static void EnsureHeartbeatWardenStarted()
+    {
+        if (Interlocked.CompareExchange(ref _wardenStarted, 1, 0) != 0)
+            return;
+
+        _heartbeatWarden.Elapsed += (_, _) =>
+        {
+            try
+            {
+                foreach (ChromecastClient pooled in ClientPool.Values)
+                {
+                    try
+                    {
+                        DisableSharpcasterHeartbeat(pooled);
+                    }
+                    catch
+                    {
+                        // best-effort per client
+                    }
+                }
+            }
+            catch
+            {
+                // best-effort — warden survives anything
+            }
+        };
+        _heartbeatWarden.Start();
+    }
+
+    // Wire disconnect cleanup once per client: when Sharpcaster reports the SSL/TCP
+    // session dropped, remove from the pool so the next caller gets a fresh client
+    // instead of reusing one whose heartbeat is about to PING a dead socket.
+    private static void WireDisconnectCleanup(string name, ChromecastClient client)
+    {
+        client.Disconnected += (_, _) =>
+        {
+            Logger.Ping($"Chromecast disconnected: {name} — removing from pool");
+            if (ClientPool.TryRemove(name, out ChromecastClient? removed))
+            {
+                try
+                {
+                    DisableSharpcasterHeartbeat(removed);
+                }
+                catch
+                {
+                    // best-effort
+                }
+            }
+        };
     }
 
     private static void NeutralizeTimersIn(object owner)
@@ -393,6 +466,8 @@ public class ChromeCast
             // Disable Sharpcaster's internal heartbeat after Connect — the
             // timer is only constructed once Connect spins up the channels.
             DisableSharpcasterHeartbeat(newClient);
+            WireDisconnectCleanup(name, newClient);
+            EnsureHeartbeatWardenStarted();
 
             ClientPool[name] = newClient;
             return newClient;
