@@ -103,6 +103,43 @@ public class AbrLadderGenerator : IAbrLadderGenerator
 
         VideoStreamInfo source = media.VideoStreams[0];
 
+        // Source promotion: when the source is wider than 1080p (1920) but narrower
+        // than 4K (3840) and the ladder defines a 4K slot, swap that slot's pixel
+        // dimensions for the source's. Result: the top rung encodes at the source's
+        // native resolution instead of being filtered out by NeverUpscale. No
+        // upscale, no dropped top rung, no synthesized variants beyond the source.
+        // Bitrate scales by pixel-count ratio so the HLS variant signals the right
+        // bandwidth band — using the raw 4K bitrate would mis-signal a 4K stream.
+        LadderTier[] effectiveTiers = autoConfig.Tiers;
+        if (source.Width > 1920 && source.Width < 3840)
+        {
+            LadderTier? slot4k = effectiveTiers.FirstOrDefault(t => t.Width >= 3840);
+            if (slot4k is not null)
+            {
+                long srcPx = (long)source.Width * source.Height;
+                long slotPx = (long)slot4k.Width * slot4k.Height;
+                double ratio = slotPx == 0 ? 1.0 : (double)srcPx / slotPx;
+
+                LadderTier promoted = slot4k with
+                {
+                    Width = source.Width,
+                    Height = source.Height,
+                    RecommendedBitrateH264Kbps = slot4k.RecommendedBitrateH264Kbps is int h264
+                        ? (int)Math.Round(h264 * ratio)
+                        : null,
+                    RecommendedBitrateHevcKbps = slot4k.RecommendedBitrateHevcKbps is int hevc
+                        ? (int)Math.Round(hevc * ratio)
+                        : null,
+                    RecommendedBitrateAv1Kbps = slot4k.RecommendedBitrateAv1Kbps is int av1
+                        ? (int)Math.Round(av1 * ratio)
+                        : null,
+                };
+                effectiveTiers = effectiveTiers
+                    .Select(t => ReferenceEquals(t, slot4k) ? promoted : t)
+                    .ToArray();
+            }
+        }
+
         // Step 1 — Filter candidate tiers.
         // NeverUpscale uses width-vs-width because the encoder pipeline scales via
         // `scale=W:-2`, so tier.Width is the actual output width. Height-only checks
@@ -110,7 +147,7 @@ public class AbrLadderGenerator : IAbrLadderGenerator
         // DCI 2K) where `scale=1920:-2` would yield 1920x803 — smaller than the
         // source in both dimensions, not an upscale.
         List<LadderTier> filtered = [];
-        foreach (LadderTier tier in autoConfig.Tiers)
+        foreach (LadderTier tier in effectiveTiers)
         {
             if (autoConfig.NeverUpscale && tier.Width > source.Width)
                 continue;
