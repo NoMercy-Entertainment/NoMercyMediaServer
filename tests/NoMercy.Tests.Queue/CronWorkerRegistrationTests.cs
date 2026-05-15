@@ -161,6 +161,8 @@ public class CronWorkerRegistrationTests
 
         public void RemoveCronJob(CronJobModel cronJob) { }
 
+        public bool IsParentFailed(int parentJobId) => false;
+
         public void SaveChanges() { }
 
         public void Dispose() { }

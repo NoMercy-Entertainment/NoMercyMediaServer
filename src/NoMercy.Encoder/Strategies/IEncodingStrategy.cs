@@ -1,4 +1,6 @@
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Decomposition;
+using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Progress;
@@ -67,4 +69,35 @@ public interface IEncodingStrategy : IStageOverrides
         IProgressObserver? progress,
         CancellationToken ct
     );
+
+    /// <summary>
+    /// Decompose the resolved <paramref name="plan"/> into independent tasks
+    /// that can each be enqueued as a separate child job. Strategies that
+    /// genuinely cannot split (MP4 single-pass, MKV, audio-only) return a
+    /// single <see cref="EncodeTaskKind.Whole"/> task.
+    ///
+    /// <para>The default implementation returns a single Whole task so all
+    /// existing strategies remain valid without any changes.</para>
+    ///
+    /// <para><paramref name="groupTag"/> is a caller-supplied ULID string
+    /// that groups all tasks from one coordinator run so child jobs can be
+    /// queried as a set.</para>
+    /// </summary>
+    DecomposedTask[] Decompose(OutputPlan plan, string groupTag) => [WholeTask(groupTag)];
+
+    /// <summary>
+    /// Helper used by the default <see cref="Decompose"/> implementation and
+    /// by strategies that still need a fallback whole task.
+    /// </summary>
+    static DecomposedTask WholeTask(string groupTag) =>
+        new(
+            TaskId: $"{groupTag}-whole",
+            ParentJobId: 0,
+            GroupTag: groupTag,
+            Kind: EncodeTaskKind.Whole,
+            OutputIndex: 0,
+            Resources: null,
+            EstimatedCostUnits: 1,
+            Label: "whole"
+        );
 }

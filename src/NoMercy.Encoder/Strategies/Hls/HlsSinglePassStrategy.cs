@@ -1,20 +1,20 @@
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Decomposition;
+using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 
 namespace NoMercy.Encoder.Strategies.Hls;
 
 /// <summary>
-/// HLS single-pass strategy. Currently delegates to the shared 6-stage
-/// <see cref="IEncoder"/> pipeline — the pipeline already produces a correct
-/// HLS single-pass encode. Future strategies (2-pass HLS, MKV, DASH, live)
-/// can either delegate similarly or own their own sub-stages while reusing
-/// the injected building blocks.
+/// HLS single-pass strategy. Delegates to the shared 6-stage
+/// <see cref="IEncoder"/> pipeline for single-task execution.
 ///
-/// This thin wrapper exists so the orchestrator can dispatch by
-/// {format, encode mode} today, and we can peel format-specific logic out
-/// of the shared stages into per-strategy code later without breaking the
-/// queue jobs.
+/// <see cref="Decompose"/> breaks a multi-variant HLS plan into independent
+/// per-rung tasks: one Video per ladder rung, one Audio per mix group, one
+/// Subtitle per text track, one Thumbnails task. Each task is enqueued as a
+/// separate child job by the coordinator, so individual rung failures are
+/// isolated and each gets its own progress row on the dashboard.
 /// </summary>
 public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
 {
@@ -26,4 +26,108 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
         IProgressObserver? progress,
         CancellationToken ct
     ) => encoder.EncodeAsync(request, progress, ct);
+
+    public DecomposedTask[] Decompose(OutputPlan plan, string groupTag)
+    {
+        List<DecomposedTask> tasks = [];
+
+        for (int i = 0; i < plan.VideoOutputs.Length; i++)
+        {
+            VideoOutputPlan video = plan.VideoOutputs[i];
+            string resolution = $"{video.Width}p";
+            string hdr = video.IsHdrOutput ? " HDR" : string.Empty;
+
+            tasks.Add(
+                new DecomposedTask(
+                    TaskId: $"{groupTag}-video-{i}",
+                    ParentJobId: 0,
+                    GroupTag: groupTag,
+                    Kind: EncodeTaskKind.Video,
+                    OutputIndex: i,
+                    Resources: null,
+                    EstimatedCostUnits: EstimateVideoCost(video),
+                    Label: $"{resolution}{hdr} {video.EncoderName}"
+                )
+            );
+        }
+
+        for (int i = 0; i < plan.AudioOutputs.Length; i++)
+        {
+            AudioOutputPlan audio = plan.AudioOutputs[i];
+            string lang = audio.Language ?? "und";
+
+            tasks.Add(
+                new DecomposedTask(
+                    TaskId: $"{groupTag}-audio-{i}",
+                    ParentJobId: 0,
+                    GroupTag: groupTag,
+                    Kind: EncodeTaskKind.Audio,
+                    OutputIndex: i,
+                    Resources: null,
+                    EstimatedCostUnits: 1,
+                    Label: $"{lang} {audio.EncoderName} {audio.Channels}ch"
+                )
+            );
+        }
+
+        for (int i = 0; i < plan.SubtitleOutputs.Length; i++)
+        {
+            SubtitleOutputPlan sub = plan.SubtitleOutputs[i];
+            string lang = sub.Language ?? "und";
+
+            tasks.Add(
+                new DecomposedTask(
+                    TaskId: $"{groupTag}-sub-{i}",
+                    ParentJobId: 0,
+                    GroupTag: groupTag,
+                    Kind: EncodeTaskKind.Subtitle,
+                    OutputIndex: i,
+                    Resources: null,
+                    EstimatedCostUnits: 1,
+                    Label: $"sub {lang} {sub.OutputCodec}"
+                )
+            );
+        }
+
+        if (plan.Thumbnails is not null)
+        {
+            tasks.Add(
+                new DecomposedTask(
+                    TaskId: $"{groupTag}-thumbs",
+                    ParentJobId: 0,
+                    GroupTag: groupTag,
+                    Kind: EncodeTaskKind.Thumbnails,
+                    OutputIndex: 0,
+                    Resources: null,
+                    EstimatedCostUnits: 1,
+                    Label: $"thumbnails {plan.Thumbnails.Width}x{plan.Thumbnails.Height}"
+                )
+            );
+        }
+
+        if (tasks.Count == 0)
+            return [IEncodingStrategy.WholeTask(groupTag)];
+
+        return tasks.ToArray();
+    }
+
+    private static int EstimateVideoCost(VideoOutputPlan video)
+    {
+        int cost = 1;
+
+        // Higher resolution → proportionally heavier
+        if (video.Width >= 3840)
+            cost = 8;
+        else if (video.Width >= 1920)
+            cost = 4;
+        else if (video.Width >= 1280)
+            cost = 2;
+
+        // Two-pass analysis in a separate step later, but HDR tonemapping adds
+        // filter-graph complexity worth a small bump here too.
+        if (video.ConvertHdrToSdr)
+            cost++;
+
+        return cost;
+    }
 }

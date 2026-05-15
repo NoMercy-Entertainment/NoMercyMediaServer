@@ -30,6 +30,7 @@ public static class ServiceRegistration
                     [Config.ImportWorkers.Key] = Config.ImportWorkers.Value,
                     [Config.ExtrasWorkers.Key] = Config.ExtrasWorkers.Value,
                     [Config.EncoderWorkers.Key] = Config.EncoderWorkers.Value,
+                    [Config.EncoderTaskWorkers.Key] = Config.EncoderTaskWorkers.Value,
                     [Config.CronWorkers.Key] = Config.CronWorkers.Value,
                     [Config.ImageWorkers.Key] = Config.ImageWorkers.Value,
                     [Config.FileWorkers.Key] = Config.FileWorkers.Value,

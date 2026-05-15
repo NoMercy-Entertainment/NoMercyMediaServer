@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Jobs;
+using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
@@ -34,6 +36,120 @@ public abstract class TwoPassStrategyBase(
 {
     public abstract OutputFormat Format { get; }
     public EncodeMode EncodeMode => EncodeMode.TwoPass;
+
+    /// <summary>
+    /// Two-pass decomposition: one Pass1 task per video variant (each
+    /// analyzing its rung independently), followed by one Pass2 task per
+    /// video variant. The coordinator must run all Pass1 tasks to completion
+    /// and propagate the stats file path before enqueuing Pass2 children.
+    ///
+    /// Audio, subtitle, and thumbnail tasks run in parallel with Pass2.
+    /// </summary>
+    public DecomposedTask[] Decompose(OutputPlan plan, string groupTag)
+    {
+        List<DecomposedTask> tasks = [];
+
+        for (int i = 0; i < plan.VideoOutputs.Length; i++)
+        {
+            VideoOutputPlan video = plan.VideoOutputs[i];
+            tasks.Add(
+                new DecomposedTask(
+                    TaskId: $"{groupTag}-pass1-{i}",
+                    ParentJobId: 0,
+                    GroupTag: groupTag,
+                    Kind: EncodeTaskKind.Pass1,
+                    OutputIndex: i,
+                    Resources: null,
+                    EstimatedCostUnits: EstimateVideoCost(video),
+                    Label: $"pass1 {video.Width}p {video.EncoderName}"
+                )
+            );
+        }
+
+        for (int i = 0; i < plan.VideoOutputs.Length; i++)
+        {
+            VideoOutputPlan video = plan.VideoOutputs[i];
+            tasks.Add(
+                new DecomposedTask(
+                    TaskId: $"{groupTag}-pass2-{i}",
+                    ParentJobId: 0,
+                    GroupTag: groupTag,
+                    Kind: EncodeTaskKind.Pass2,
+                    OutputIndex: i,
+                    Resources: null,
+                    EstimatedCostUnits: EstimateVideoCost(video),
+                    StatsFilePath: null,
+                    Label: $"pass2 {video.Width}p {video.EncoderName}"
+                )
+            );
+        }
+
+        for (int i = 0; i < plan.AudioOutputs.Length; i++)
+        {
+            AudioOutputPlan audio = plan.AudioOutputs[i];
+            tasks.Add(
+                new DecomposedTask(
+                    TaskId: $"{groupTag}-audio-{i}",
+                    ParentJobId: 0,
+                    GroupTag: groupTag,
+                    Kind: EncodeTaskKind.Audio,
+                    OutputIndex: i,
+                    Resources: null,
+                    EstimatedCostUnits: 1,
+                    Label: $"{audio.Language ?? "und"} {audio.EncoderName}"
+                )
+            );
+        }
+
+        for (int i = 0; i < plan.SubtitleOutputs.Length; i++)
+        {
+            SubtitleOutputPlan sub = plan.SubtitleOutputs[i];
+            tasks.Add(
+                new DecomposedTask(
+                    TaskId: $"{groupTag}-sub-{i}",
+                    ParentJobId: 0,
+                    GroupTag: groupTag,
+                    Kind: EncodeTaskKind.Subtitle,
+                    OutputIndex: i,
+                    Resources: null,
+                    EstimatedCostUnits: 1,
+                    Label: $"sub {sub.Language ?? "und"}"
+                )
+            );
+        }
+
+        if (plan.Thumbnails is not null)
+        {
+            tasks.Add(
+                new DecomposedTask(
+                    TaskId: $"{groupTag}-thumbs",
+                    ParentJobId: 0,
+                    GroupTag: groupTag,
+                    Kind: EncodeTaskKind.Thumbnails,
+                    OutputIndex: 0,
+                    Resources: null,
+                    EstimatedCostUnits: 1,
+                    Label: "thumbnails"
+                )
+            );
+        }
+
+        if (tasks.Count == 0)
+            return [IEncodingStrategy.WholeTask(groupTag)];
+
+        return tasks.ToArray();
+    }
+
+    private static int EstimateVideoCost(VideoOutputPlan video)
+    {
+        if (video.Width >= 3840)
+            return 8;
+        if (video.Width >= 1920)
+            return 4;
+        if (video.Width >= 1280)
+            return 2;
+        return 1;
+    }
 
     public async Task<EncodingResult> EncodeAsync(
         EncodingRequest request,

@@ -194,6 +194,10 @@ public class QueueWorker(
             injector.InjectStorageServices(scope.ServiceProvider);
         }
 
+        // Give coordinator jobs their queue-job ID before Handle() runs.
+        if (job is IJobIdReceiver idReceiver)
+            idReceiver.ReceiveJobId((int)queueJob.Id);
+
         try
         {
             for (int attempt = 0; ; attempt++)

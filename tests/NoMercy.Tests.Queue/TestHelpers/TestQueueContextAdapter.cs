@@ -112,6 +112,9 @@ public class TestQueueContextAdapter : IQueueContext
         CronJobs.RemoveAll(c => c.Id == cronJob.Id);
     }
 
+    public bool IsParentFailed(int parentJobId) =>
+        FailedJobs.Any(f => f.Payload.Contains($"\"Id\":{parentJobId}"));
+
     public void SaveChanges() { }
 
     public void Dispose() { }

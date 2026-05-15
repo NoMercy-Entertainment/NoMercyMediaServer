@@ -7,6 +7,7 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using V2EncodeMode = NoMercy.Encoder.Profiles.EncodeMode;
@@ -17,6 +18,18 @@ public class EncodingOrchestratorTests
 {
     private readonly Mock<IStrategyResolver> _resolver = new();
     private readonly Mock<IStorage> _storage = new();
+    private readonly Mock<IEncoder> _encoder = new();
+
+    public EncodingOrchestratorTests()
+    {
+        // Pass-through lease so tests that reach the staging step don't null-ref.
+        _storage
+            .Setup(s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string path, CancellationToken _) => new LocalPathLease(path));
+
+        // Driver is accessed when naming the publish stage — provide a non-null stub.
+        _storage.Setup(s => s.Driver).Returns(new LocalStorageDriver());
+    }
 
     [Fact]
     public async Task EncodeAsync_DispatchesToResolvedStrategy()
@@ -35,6 +48,7 @@ public class EncodingOrchestratorTests
         EncodingOrchestrator orchestrator = new(
             _resolver.Object,
             _storage.Object,
+            _encoder.Object,
             NullLogger<EncodingOrchestrator>.Instance
         );
 
@@ -44,7 +58,7 @@ public class EncodingOrchestratorTests
         strategy.Verify(
             s =>
                 s.EncodeAsync(
-                    request,
+                    It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
@@ -63,6 +77,7 @@ public class EncodingOrchestratorTests
         EncodingOrchestrator orchestrator = new(
             _resolver.Object,
             _storage.Object,
+            _encoder.Object,
             NullLogger<EncodingOrchestrator>.Instance
         );
 
@@ -87,6 +102,7 @@ public class EncodingOrchestratorTests
         EncodingOrchestrator orchestrator = new(
             _resolver.Object,
             _storage.Object,
+            _encoder.Object,
             NullLogger<EncodingOrchestrator>.Instance
         );
 
@@ -112,6 +128,7 @@ public class EncodingOrchestratorTests
         EncodingOrchestrator orchestrator = new(
             _resolver.Object,
             _storage.Object,
+            _encoder.Object,
             NullLogger<EncodingOrchestrator>.Instance
         );
 

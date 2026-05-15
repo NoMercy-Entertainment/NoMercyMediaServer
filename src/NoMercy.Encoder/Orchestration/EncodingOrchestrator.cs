@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
@@ -13,12 +14,14 @@ using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.Nfs;
 using NoMercy.Storage.Drivers.S3;
 using NoMercy.Storage.Drivers.WebDav;
+using EncodeMode = NoMercy.Encoder.Codecs.EncodeMode;
 
 namespace NoMercy.Encoder.Orchestration;
 
 public class EncodingOrchestrator(
     IStrategyResolver resolver,
     IStorage storage,
+    IEncoder encoder,
     ILogger<EncodingOrchestrator> logger,
     INvencSessionCap? nvencCap = null
 ) : IEncodingOrchestrator
@@ -72,7 +75,7 @@ public class EncodingOrchestrator(
                 Suggestion: "Register an IEncodingStrategy for this format + mode combination.",
                 Details: null
             );
-            return new EncodingResult(
+            return new(
                 Success: false,
                 OutputPath: string.Empty,
                 Duration: TimeSpan.Zero,
@@ -352,7 +355,7 @@ public class EncodingOrchestrator(
                 request.InputPath,
                 wall.Elapsed.TotalSeconds
             );
-            return new EncodingResult(
+            return new(
                 Success: false,
                 OutputPath: string.Empty,
                 Duration: wall.Elapsed,
@@ -381,7 +384,7 @@ public class EncodingOrchestrator(
                 Recoverable: false
             );
             progress?.OnError(error);
-            return new EncodingResult(
+            return new(
                 Success: false,
                 OutputPath: string.Empty,
                 Duration: wall.Elapsed,
@@ -411,7 +414,7 @@ public class EncodingOrchestrator(
                 Suggestion: null,
                 Details: null
             );
-            return new EncodingResult(
+            return new(
                 Success: false,
                 OutputPath: string.Empty,
                 Duration: wall.Elapsed,
@@ -423,6 +426,66 @@ public class EncodingOrchestrator(
                 EnrichedError = errorShape,
             };
         }
+    }
+
+    /// <summary>
+    /// Run a single decomposed task. Injects a <see cref="DecomposedTask"/>
+    /// into the request's <see cref="EncodingOptions.TaskFilter"/> so that
+    /// <see cref="BuildStage"/> emits only the commands relevant to this task.
+    /// All other pipeline stages run normally — the task still gets analyzed,
+    /// validated, and planned, but only its slice is built and executed.
+    /// </summary>
+    public Task<EncodingResult> EncodeAsync(
+        EncodingRequest request,
+        DecomposedTask task,
+        IProgressObserver? progress = null,
+        CancellationToken ct = default
+    )
+    {
+        EncodingOptions filteredOptions = (request.Options ?? new EncodingOptions()) with
+        {
+            TaskFilter = task,
+        };
+        return EncodeAsync(request with { Options = filteredOptions }, progress, ct);
+    }
+
+    public async Task<DecomposedTask[]> DecomposeAsync(
+        EncodingRequest request,
+        string groupTag,
+        CancellationToken ct = default
+    )
+    {
+        OutputFormat profileFormat = PlanStageHelpers.ContainerToOutputFormat(
+            request.Profile.Container
+        );
+
+        IEncodingStrategy? strategy = resolver.Resolve(
+            profileFormat,
+            (EncodeMode)(int)request.Profile.EncodeMode
+        );
+
+        if (strategy is null)
+            return [IEncodingStrategy.WholeTask(groupTag)];
+
+        // Stage the input file locally so PlanAsync can probe it via ffprobe
+        // regardless of the source storage backend.
+        await using LocalPathLease lease = await (
+            request.SourceStorage ?? storage
+        ).AcquireLocalPathAsync(request.InputPath, ct);
+
+        EncodingRequest stagedRequest = request with
+        {
+            InputPath = lease.Path,
+            SourceStorage = storage,
+            DestinationStorage = storage,
+        };
+
+        OutputPlan? plan = await encoder.PlanAsync(stagedRequest, ct);
+
+        if (plan is null)
+            return [IEncodingStrategy.WholeTask(groupTag)];
+
+        return strategy.Decompose(plan, groupTag);
     }
 
     // Stream-level artifacts only — the master + variant playlists for HLS,
@@ -475,7 +538,7 @@ public class EncodingOrchestrator(
             {
                 string hash = await stor.HashAsync(entry.Path, "sha256", ct);
                 string mime = OutputArtifact.MimeFromPath(entry.Path);
-                artifacts.Add(new OutputArtifact(entry.Path, entry.SizeBytes, hash, mime));
+                artifacts.Add(new(entry.Path, entry.SizeBytes, hash, mime));
             }
             catch (Exception ex)
             {

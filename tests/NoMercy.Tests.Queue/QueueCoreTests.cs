@@ -612,6 +612,9 @@ public class QueueCoreTests
 
         public void RemoveCronJob(CronJobModel cronJob) => _cronJobs.Remove(cronJob);
 
+        public bool IsParentFailed(int parentJobId) =>
+            _failedJobs.Any(f => f.Payload.Contains($"\"Id\":{parentJobId}"));
+
         public void SaveChanges() { }
 
         public void Dispose() { }

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -8,6 +8,7 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
@@ -21,16 +22,37 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
-public class VideoEncodeJob : AbstractEncoderJob
+/// <summary>
+/// Coordinator job for video encoding. Runs the pipeline through PlanStage,
+/// decomposes the output plan into per-rung child tasks, and enqueues each
+/// as a separate <see cref="EncodeTaskJob"/> in the <c>encoder-task</c> queue.
+///
+/// <para>When the resolved strategy returns a single
+/// <see cref="EncodeTaskKind.Whole"/> task (MP4, MKV, non-splittable formats)
+/// the coordinator falls back to the original inline-encode path so existing
+/// behaviour is fully preserved.</para>
+///
+/// <para>For decomposable strategies (HLS, DASH, two-pass) the coordinator
+/// returns immediately after enqueueing children. Post-encode work (history,
+/// OCR, library refresh) runs inside an <see cref="EncodeTaskCompletedEvent"/>
+/// handler on a thread-pool thread when all children complete.</para>
+/// </summary>
+public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
 {
     public override string QueueName => "encoder";
     public override int Priority => 4;
     public string Status { get; set; } = "pending";
+
+    private int _selfJobId;
+
+    public void ReceiveJobId(int jobId) => _selfJobId = jobId;
 
     public override async Task Handle()
     {
@@ -106,16 +128,12 @@ public class VideoEncodeJob : AbstractEncoderJob
                         "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
                     );
 
-                // Destination storage: the library folder the encoded output lands in.
                 IStorage destinationStorage = StorageFactory.For(
                     folder.Id,
                     folder.DriverId,
                     folder.Path
                 );
 
-                // Source storage: when SourceDriverId is set the input file lives on
-                // a different driver (e.g. a Vault NFS share). Resolve the root-level
-                // storage for that driver so AcquireLocalPathAsync can stage the file.
                 IStorage sourceStorage = SourceDriverId.HasValue
                     ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
                     : destinationStorage;
@@ -129,74 +147,43 @@ public class VideoEncodeJob : AbstractEncoderJob
                     DestinationStorage: destinationStorage
                 );
 
-                IEncoderProcessRegistry? processRegistry =
-                    EncoderProvider.ResolveService<IEncoderProcessRegistry>();
+                string groupTag = Ulid.NewUlid().ToString();
+                DecomposedTask[] tasks = await orchestrator.DecomposeAsync(request, groupTag);
 
-                EventBusProgressObserver progressObserver = new(
-                    jobId: fileMetadata.Id,
-                    title: fileMetadata.Title,
-                    baseFolder: fileMetadata.Path,
-                    sharePath: fileMetadata.Path,
-                    videoStreams: SummarizeVideo(encodingProfile),
-                    audioStreams: encodingProfile
-                        .Audio.Select(a =>
-                            $"{a.Codec.ToString().ToLowerInvariant()} {a.Channels}ch"
-                        )
-                        .ToList(),
-                    subtitleStreams: encodingProfile
-                        .Subtitles.Select(s => s.Codec.ToString().ToLowerInvariant())
-                        .ToList(),
-                    hasGpu: false,
-                    isHdr: false,
-                    registry: processRegistry
-                );
+                bool isWhole = tasks.Length == 1 && tasks[0].Kind == EncodeTaskKind.Whole;
 
-                EncodingResult result = await orchestrator.EncodeAsync(request, progressObserver);
-
-                if (!result.Success)
+                if (isWhole)
                 {
-                    throw new InvalidOperationException(
-                        $"Encoding failed for {InputFile}: {result.Error?.Message ?? "unknown error"}"
+                    await RunInlineAsync(
+                        orchestrator,
+                        request,
+                        encodingProfile,
+                        preset,
+                        fileMetadata,
+                        stopwatch,
+                        sourceStorage,
+                        context,
+                        fileManager,
+                        folder
                     );
+                    continue;
                 }
 
-                Logger.Encoder(
-                    $"Encoded {InputFile} → {result.OutputPath} in {result.Duration.TotalSeconds:F1}s ({result.Metrics?.EncoderUsed ?? "unknown"})"
+                await DispatchChildrenAsync(
+                    tasks,
+                    preset.Id,
+                    encodingProfile,
+                    fileMetadata,
+                    stopwatch,
+                    sourceStorage,
+                    context,
+                    fileManager,
+                    folder
                 );
-
-                await PublishStageAsync(fileMetadata, "Recording encoding history");
-                await RecordEncodingHistoryAsync(context, preset, result, InputFile, StorageDriver);
-
-                await PublishStageAsync(fileMetadata, "Checking source subtitles");
-                await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
-
-                await PublishStageAsync(fileMetadata, "Refreshing library");
-                fileManager.FilterFiles(fileMetadata.FileName);
-                await fileManager.FindFiles(
-                    fileMetadata.Id,
-                    folder.FolderLibraries.First().Library
-                );
-
-                if (EventBusProvider.IsConfigured)
-                {
-                    stopwatch.Stop();
-                    await EventBusProvider.Current.PublishAsync(
-                        new EncodingCompletedEvent
-                        {
-                            JobId = fileMetadata.Id,
-                            // Master playlist / muxed file from the orchestrator,
-                            // not the output directory — OcrPostEncodeSubscriber
-                            // checks the extension to gate HLS/DASH detection
-                            // and ffprobes this path directly.
-                            OutputPath = result.OutputPath,
-                            Duration = stopwatch.Elapsed,
-                        }
-                    );
-                }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Logger.Encoder(e, LogEventLevel.Error);
+                Logger.Encoder(ex, LogEventLevel.Error);
 
                 if (EventBusProvider.IsConfigured)
                 {
@@ -206,7 +193,7 @@ public class VideoEncodeJob : AbstractEncoderJob
                             JobId = fileMetadata.Id,
                             Status = "failed",
                             Title = fileMetadata.Title,
-                            Message = e.Message,
+                            Message = ex.Message,
                         }
                     );
 
@@ -215,8 +202,8 @@ public class VideoEncodeJob : AbstractEncoderJob
                         {
                             JobId = fileMetadata.Id,
                             InputPath = InputFile,
-                            ErrorMessage = e.Message,
-                            ExceptionType = e.GetType().Name,
+                            ErrorMessage = ex.Message,
+                            ExceptionType = ex.GetType().Name,
                         }
                     );
                 }
@@ -227,15 +214,249 @@ public class VideoEncodeJob : AbstractEncoderJob
     }
 
     /// <summary>
-    /// Append one EncodingHistory row per successful encode. Failures are
-    /// swallowed — a dashboard-history miss should never fail a working encode.
-    /// Denormalizes profile name / encoder so the row survives profile deletion.
+    /// Original single-process encode path. Used when the strategy returns a
+    /// single Whole task (MP4, MKV, audio-only formats that cannot split).
     /// </summary>
+    private async Task RunInlineAsync(
+        IEncodingOrchestrator orchestrator,
+        EncodingRequest request,
+        EncodingProfile encodingProfile,
+        EncodingPreset preset,
+        FileMetadata fileMetadata,
+        Stopwatch stopwatch,
+        IStorage sourceStorage,
+        MediaContext context,
+        FileManager fileManager,
+        Folder folder
+    )
+    {
+        IEncoderProcessRegistry? processRegistry =
+            EncoderProvider.ResolveService<IEncoderProcessRegistry>();
+
+        EventBusProgressObserver progressObserver = new(
+            jobId: fileMetadata.Id,
+            title: fileMetadata.Title,
+            baseFolder: fileMetadata.Path,
+            sharePath: fileMetadata.Path,
+            videoStreams: SummarizeVideo(encodingProfile),
+            audioStreams: encodingProfile
+                .Audio.Select(audio =>
+                    $"{audio.Codec.ToString().ToLowerInvariant()} {audio.Channels}ch"
+                )
+                .ToList(),
+            subtitleStreams: encodingProfile
+                .Subtitles.Select(subtitle => subtitle.Codec.ToString().ToLowerInvariant())
+                .ToList(),
+            hasGpu: false,
+            isHdr: false,
+            registry: processRegistry
+        );
+
+        EncodingResult result = await orchestrator.EncodeAsync(request, progressObserver);
+
+        if (!result.Success)
+        {
+            throw new InvalidOperationException(
+                $"Encoding failed for {InputFile}: {result.Error?.Message ?? "unknown error"}"
+            );
+        }
+
+        Logger.Encoder(
+            $"Encoded {InputFile} → {result.OutputPath} in {result.Duration.TotalSeconds:F1}s ({result.Metrics?.EncoderUsed ?? "unknown"})"
+        );
+
+        await PublishStageAsync(fileMetadata, "Recording encoding history");
+        await RecordEncodingHistoryAsync(context, preset, result, InputFile, StorageDriver);
+
+        await PublishStageAsync(fileMetadata, "Checking source subtitles");
+        await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
+
+        await PublishStageAsync(fileMetadata, "Refreshing library");
+        fileManager.FilterFiles(fileMetadata.FileName);
+        await fileManager.FindFiles(fileMetadata.Id, folder.FolderLibraries.First().Library);
+
+        if (EventBusProvider.IsConfigured)
+        {
+            stopwatch.Stop();
+            await EventBusProvider.Current.PublishAsync(
+                new EncodingCompletedEvent
+                {
+                    JobId = fileMetadata.Id,
+                    OutputPath = result.OutputPath,
+                    Duration = stopwatch.Elapsed,
+                }
+            );
+        }
+    }
+
     /// <summary>
-    /// One line per ladder rung (or the single reference Video) for the
-    /// progress observer. Auto ladders that haven't been expanded yet just
-    /// show the reference output — sufficient for the dashboard.
+    /// Decomposable encode path. Stamps each task with the coordinator's own
+    /// job ID as <c>ParentJobId</c>, subscribes to
+    /// <see cref="EncodeTaskCompletedEvent"/>, enqueues N child
+    /// <see cref="EncodeTaskJob"/> entries, then returns immediately so the
+    /// coordinator's worker thread is freed. Post-encode finalization runs
+    /// inside the event handler when all children complete.
     /// </summary>
+    private async Task DispatchChildrenAsync(
+        DecomposedTask[] tasks,
+        Ulid presetId,
+        EncodingProfile encodingProfile,
+        FileMetadata fileMetadata,
+        Stopwatch stopwatch,
+        IStorage sourceStorage,
+        MediaContext context,
+        FileManager fileManager,
+        Folder folder
+    )
+    {
+        int parentJobId = _selfJobId;
+        string groupTag = tasks[0].GroupTag;
+        int expectedCount = tasks.Length;
+        int completedCount = 0;
+        int failedCount = 0;
+        IDisposable? subscription = null;
+
+        Logger.Encoder(
+            $"[VideoEncodeJob] Decomposed into {expectedCount} child tasks (groupTag={groupTag})"
+        );
+
+        if (EventBusProvider.IsConfigured)
+        {
+            subscription = EventBusProvider.Current.Subscribe<EncodeTaskCompletedEvent>(
+                async (encodeTaskCompletedEvent, ct) =>
+                {
+                    if (encodeTaskCompletedEvent.GroupTag != groupTag)
+                        return;
+
+                    int completed = Interlocked.Increment(ref completedCount);
+                    if (!encodeTaskCompletedEvent.Success)
+                        Interlocked.Increment(ref failedCount);
+
+                    Logger.Encoder(
+                        $"[VideoEncodeJob] Child task '{encodeTaskCompletedEvent.TaskId}' {(encodeTaskCompletedEvent.Success ? "succeeded" : "failed")} ({completed}/{expectedCount})"
+                    );
+
+                    if (completed < expectedCount)
+                        return;
+
+                    subscription?.Dispose();
+
+                    await RunPostEncodeAsync(
+                        fileMetadata,
+                        stopwatch,
+                        sourceStorage,
+                        fileManager,
+                        folder,
+                        failedCount: Volatile.Read(ref failedCount)
+                    );
+                }
+            );
+        }
+
+        // Stamp each task with the coordinator's queue-job ID, then enqueue.
+        NoMercyQueue.JobDispatcher dispatcher =
+            QueueRunner.Current?.Dispatcher
+            ?? throw new InvalidOperationException(
+                "QueueRunner.Current is null — queue not initialized"
+            );
+
+        foreach (DecomposedTask task in tasks)
+        {
+            DecomposedTask stamped = task with { ParentJobId = parentJobId };
+
+            EncodeTaskJob childJob = new()
+            {
+                LibraryId = LibraryId,
+                FolderId = FolderId,
+                Id = Id,
+                InputFile = InputFile,
+                SourceDriverId = SourceDriverId,
+                PresetId = presetId,
+                Task = stamped,
+            };
+
+            dispatcher.DispatchChild(
+                childJob,
+                onQueue: childJob.QueueName,
+                priority: childJob.Priority,
+                parentJobId: parentJobId,
+                groupTag: groupTag
+            );
+        }
+
+        Logger.Encoder(
+            $"[VideoEncodeJob] Enqueued {tasks.Length} child tasks; coordinator returning"
+        );
+
+        await Task.CompletedTask;
+    }
+
+    private async Task RunPostEncodeAsync(
+        FileMetadata fileMetadata,
+        Stopwatch stopwatch,
+        IStorage sourceStorage,
+        FileManager fileManager,
+        Folder folder,
+        int failedCount
+    )
+    {
+        try
+        {
+            if (failedCount > 0)
+            {
+                Logger.Encoder(
+                    $"[VideoEncodeJob] {failedCount} child task(s) failed for groupTag — skipping post-encode steps",
+                    LogEventLevel.Warning
+                );
+
+                if (EventBusProvider.IsConfigured)
+                {
+                    await EventBusProvider.Current.PublishAsync(
+                        new EncodingStageChangedEvent
+                        {
+                            JobId = fileMetadata.Id,
+                            Status = "failed",
+                            Title = fileMetadata.Title,
+                            Message = $"{failedCount} rung(s) failed",
+                        }
+                    );
+                }
+
+                return;
+            }
+
+            await using MediaContext finCtx = new();
+
+            await PublishStageAsync(fileMetadata, "Checking source subtitles");
+            await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
+
+            await PublishStageAsync(fileMetadata, "Refreshing library");
+            Library library = folder.FolderLibraries.First().Library;
+            fileManager.FilterFiles(fileMetadata.FileName);
+            await fileManager.FindFiles(fileMetadata.Id, library);
+
+            stopwatch.Stop();
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(
+                    new EncodingCompletedEvent
+                    {
+                        JobId = fileMetadata.Id,
+                        OutputPath = fileMetadata.Path,
+                        Duration = stopwatch.Elapsed,
+                    }
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Encoder(
+                $"[VideoEncodeJob] Post-encode finalization failed: {ex.Message}",
+                LogEventLevel.Error
+            );
+        }
+    }
+
     private static List<string> SummarizeVideo(EncodingProfile profile)
     {
         List<string> summary = [];
@@ -278,9 +499,6 @@ public class VideoEncodeJob : AbstractEncoderJob
                 // keep inputSize = 0 when the file is inaccessible
             }
 
-            // Result.Metrics is nullable — strategies that bypass the metrics
-            // collector (e.g. dry-run / preview) leave it null. Skip the row
-            // entirely rather than NRE: history without metrics is useless.
             if (result.Metrics is null)
                 return;
 
@@ -317,11 +535,6 @@ public class VideoEncodeJob : AbstractEncoderJob
         }
     }
 
-    /// <summary>
-    /// V1 parity: after a successful encode, convert any bitmap subtitle streams
-    /// (PGS / VobSub / DVB) into WebVTT via Tesseract OCR. No-op when the encoder
-    /// analyzer isn't wired in the DI container or the source has no bitmap subs.
-    /// </summary>
     private async Task RunBitmapSubtitleOcrAsync(
         FileMetadata fileMetadata,
         string inputPath,
@@ -353,7 +566,7 @@ public class VideoEncodeJob : AbstractEncoderJob
         }
 
         List<SubtitleStreamInfo> bitmap = mediaInfo
-            .SubtitleStreams.Where(s => !s.IsTextBased)
+            .SubtitleStreams.Where(subtitle => !subtitle.IsTextBased)
             .ToList();
 
         if (bitmap.Count == 0)
@@ -417,9 +630,6 @@ public class VideoEncodeJob : AbstractEncoderJob
 
         string title = movie?.CreateTitle() ?? episode!.CreateTitle();
         string fileName = movie?.CreateFileName() ?? episode!.CreateFileName();
-        // Destination storage is already rooted at folder.Path (via StorageFactory.For).
-        // Pass only folderName so paths stay relative to the storage root — avoids
-        // double-prefix on NFS (export/folder.Path/folder.Path/folderName).
         string basePath = folderName;
         int baseId = movie?.Id ?? episode!.Id;
         string? imgPath = movie?.Backdrop ?? episode?.Still;

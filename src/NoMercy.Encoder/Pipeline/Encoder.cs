@@ -4,6 +4,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
@@ -101,7 +102,8 @@ public class Encoder(
             DurationLimit: null,
             Pass: request.Options?.Pass ?? EncodingPass.Single,
             StatsFilePath: request.Options?.StatsFilePath,
-            Pass1VariantIndex: request.Options?.Pass1VariantIndex ?? 0
+            Pass1VariantIndex: request.Options?.Pass1VariantIndex ?? 0,
+            TaskFilter: request.Options?.TaskFilter
         );
         StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
         if (buildResult is StageFailure buildFailure)
@@ -299,6 +301,36 @@ public class Encoder(
             OutputSizeBytes: finalizeOutput.OutputSizeBytes,
             Error: null
         );
+    }
+
+    public async Task<OutputPlan?> PlanAsync(
+        EncodingRequest request,
+        CancellationToken ct = default
+    )
+    {
+        EncodingContext context = EncodingContext.Create() with
+        {
+            SourceStorage = request.SourceStorage,
+            DestinationStorage = request.DestinationStorage ?? request.SourceStorage,
+        };
+
+        StageResult analyzeResult = await analyzeStage.ExecuteAsync(request.InputPath, context, ct);
+        if (analyzeResult is StageFailure)
+            return null;
+
+        MediaInfo mediaInfo = ((StageSuccess<MediaInfo>)analyzeResult).Value;
+        context = context with { MediaInfo = mediaInfo };
+
+        ValidateInput validateInput = new(mediaInfo, request.Profile);
+        StageResult validateResult = await validateStage.ExecuteAsync(validateInput, context, ct);
+        if (validateResult is StageFailure)
+            return null;
+
+        StageResult planResult = await planStage.ExecuteAsync(validateInput, context, ct);
+        if (planResult is StageFailure)
+            return null;
+
+        return ((StageSuccess<ExecutionPlan>)planResult).Value.OutputPlan;
     }
 
     private static PreviewResult PreviewFail(EncodingError error, TimeSpan elapsed)

@@ -1,3 +1,5 @@
+using NoMercy.Encoder.Decomposition;
+using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
@@ -17,6 +19,14 @@ public interface IEncoder
         int previewDurationSeconds = 10,
         CancellationToken ct = default
     );
+
+    /// <summary>
+    /// Run Analyze → Validate → Plan stages only (no ffmpeg process).
+    /// Returns the <see cref="OutputPlan"/> so callers can call
+    /// <see cref="IEncodingStrategy.Decompose"/> without running the full encode.
+    /// Returns null when any stage fails.
+    /// </summary>
+    Task<OutputPlan?> PlanAsync(EncodingRequest request, CancellationToken ct = default);
 }
 
 public record EncodingRequest(
@@ -57,7 +67,14 @@ public record EncodingOptions(
     Priority Priority = Priority.Normal,
     EncodingPass Pass = EncodingPass.Single,
     string? StatsFilePath = null,
-    int Pass1VariantIndex = 0
+    int Pass1VariantIndex = 0,
+    /// <summary>
+    /// When set, restricts the BuildStage to emit commands only for the
+    /// outputs described by this task. Null means "emit everything" (normal
+    /// full-plan execution). Set by the orchestrator when running a
+    /// single decomposed child task.
+    /// </summary>
+    DecomposedTask? TaskFilter = null
 );
 
 public enum Priority

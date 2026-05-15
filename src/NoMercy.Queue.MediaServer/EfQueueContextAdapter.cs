@@ -68,6 +68,8 @@ public class EfQueueContextAdapter : IQueueContext
                 ReservedAt = job.ReservedAt,
                 AvailableAt = job.AvailableAt,
                 CreatedAt = job.CreatedAt,
+                ParentJobId = job.ParentJobId,
+                GroupTag = job.GroupTag,
             };
             context.QueueJobs.Add(entity);
             context.SaveChanges();
@@ -210,6 +212,8 @@ public class EfQueueContextAdapter : IQueueContext
             ReleaseContext(context);
         }
     }
+
+
 
     public void AddFailedJob(FailedJobModel failedJob)
     {
@@ -412,6 +416,22 @@ public class EfQueueContextAdapter : IQueueContext
         // No shared context to dispose when using per-operation contexts
     }
 
+    public bool IsParentFailed(int parentJobId)
+    {
+        QueueContext context = AcquireContext();
+        try
+        {
+            string parentPayloadPrefix = $"\"Id\":{parentJobId},";
+            return context
+                .FailedJobs.AsNoTracking()
+                .Any(f => f.Payload.Contains(parentPayloadPrefix));
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
+    }
+
     private static QueueJobModel ToModel(QueueJob entity)
     {
         return new()
@@ -424,6 +444,8 @@ public class EfQueueContextAdapter : IQueueContext
             ReservedAt = entity.ReservedAt,
             AvailableAt = entity.AvailableAt,
             CreatedAt = entity.CreatedAt,
+            ParentJobId = entity.ParentJobId,
+            GroupTag = entity.GroupTag,
         };
     }
 

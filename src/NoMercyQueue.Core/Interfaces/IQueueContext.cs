@@ -13,6 +13,13 @@ public interface IQueueContext : IDisposable
     void ResetAllReservedJobs();
     IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc);
 
+    /// <summary>
+    /// Returns true when the specified parent job ID is present in the
+    /// <see cref="FailedJobModel"/> table — indicating that child jobs with this
+    /// <paramref name="parentJobId"/> should be skipped (marked as failed-by-parent).
+    /// </summary>
+    bool IsParentFailed(int parentJobId);
+
     void AddFailedJob(FailedJobModel failedJob);
     void RemoveFailedJob(FailedJobModel failedJob);
     FailedJobModel? FindFailedJob(int id);

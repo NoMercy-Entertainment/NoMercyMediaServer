@@ -75,6 +75,8 @@ public static class Config
     public static KeyValuePair<string, int> ImportWorkers { get; set; } = new("import", 2);
     public static KeyValuePair<string, int> ExtrasWorkers { get; set; } = new("extras", 4);
     public static KeyValuePair<string, int> EncoderWorkers { get; set; } = new("encoder", 1);
+    public static KeyValuePair<string, int> EncoderTaskWorkers { get; set; } =
+        new("encoder-task", 2);
     public static KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 3);
     public static KeyValuePair<string, int> FileWorkers { get; set; } = new("file", 2);

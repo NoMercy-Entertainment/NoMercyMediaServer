@@ -66,6 +66,27 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                 if (job == null)
                     return job;
 
+                // Child jobs whose coordinator has already failed should not
+                // run — they would produce orphaned output. Move them directly
+                // to FailedJobs with a synthetic exception so the dashboard
+                // shows "failed-by-parent" rather than silently dropping them.
+                if (job.ParentJobId.HasValue && context.IsParentFailed(job.ParentJobId.Value))
+                {
+                    FailedJobModel skipped = new()
+                    {
+                        Uuid = Guid.NewGuid(),
+                        Connection = "default",
+                        Queue = job.Queue,
+                        Payload = job.Payload,
+                        Exception = $"{{\"Message\":\"Skipped: parent job {job.ParentJobId} failed\"}}",
+                        FailedAt = DateTime.UtcNow,
+                    };
+                    context.AddFailedJob(skipped);
+                    context.RemoveJob(job);
+                    context.SaveChanges();
+                    return null;
+                }
+
                 job.ReservedAt = DateTime.UtcNow;
                 job.Attempts++;
 

@@ -46,6 +46,8 @@ public class SqliteQueueContext : IQueueContext
             ReservedAt = job.ReservedAt,
             AvailableAt = job.AvailableAt,
             CreatedAt = job.CreatedAt,
+            ParentJobId = job.ParentJobId,
+            GroupTag = job.GroupTag,
         };
         _context.QueueJobs.Add(entity);
         SaveAndClear();
@@ -134,8 +136,18 @@ public class SqliteQueueContext : IQueueContext
                 ReservedAt = e.ReservedAt,
                 AvailableAt = e.AvailableAt,
                 CreatedAt = e.CreatedAt,
+                ParentJobId = e.ParentJobId,
+                GroupTag = e.GroupTag,
             })
             .ToList();
+    }
+
+    public bool IsParentFailed(int parentJobId)
+    {
+        string parentPayloadPrefix = $"\"Id\":{parentJobId},";
+        return _context
+            .FailedJobs.AsNoTracking()
+            .Any(f => f.Payload.Contains(parentPayloadPrefix));
     }
 
     public void AddFailedJob(FailedJobModel failedJob)
@@ -281,6 +293,8 @@ public class SqliteQueueContext : IQueueContext
             ReservedAt = entity.ReservedAt,
             AvailableAt = entity.AvailableAt,
             CreatedAt = entity.CreatedAt,
+            ParentJobId = entity.ParentJobId,
+            GroupTag = entity.GroupTag,
         };
     }
 
