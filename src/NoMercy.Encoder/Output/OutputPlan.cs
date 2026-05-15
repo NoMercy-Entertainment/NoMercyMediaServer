@@ -42,7 +42,10 @@ public record OutputPlan(
     BundleLayout? Layout = null,
     // Subtitles downloaded by SubtitleAcquisitionService during PlanStage.
     // BuildStage adds exact-match entries as FFmpeg -i inputs.
-    IReadOnlyList<AcquiredSubtitle>? AcquiredSubtitles = null
+    IReadOnlyList<AcquiredSubtitle>? AcquiredSubtitles = null,
+    // Opt-in: when true the decomposer emits one Chapters task per chapter
+    // and BuildStage extracts a single still at the chapter's exact timestamp.
+    bool GenerateChapterThumbs = false
 );
 
 public record VideoOutputPlan(

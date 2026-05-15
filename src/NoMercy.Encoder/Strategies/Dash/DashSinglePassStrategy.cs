@@ -1,5 +1,7 @@
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
+using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
@@ -79,6 +81,27 @@ public class DashSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                     Label: $"sub {sub.Language ?? "und"}"
                 )
             );
+        }
+
+        if (plan.GenerateChapterThumbs && plan.Chapters is { Count: > 0 })
+        {
+            int count = plan.Chapters.Count;
+            for (int i = 0; i < count; i++)
+            {
+                ChapterInfo chapter = plan.Chapters[i];
+                tasks.Add(
+                    new DecomposedTask(
+                        TaskId: $"{groupTag}-chapter-{i}",
+                        ParentJobId: 0,
+                        GroupTag: groupTag,
+                        Kind: EncodeTaskKind.Chapters,
+                        OutputIndex: i,
+                        Resources: new ResourceRequirement(null, 0, 1),
+                        EstimatedCostUnits: 1,
+                        Label: $"chapter still {i + 1}/{count} @ {chapter.Start.TotalSeconds:F0}s"
+                    )
+                );
+            }
         }
 
         if (tasks.Count == 0)

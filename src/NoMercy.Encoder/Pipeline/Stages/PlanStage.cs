@@ -794,6 +794,10 @@ public class PlanStage(
                 ? outputNamingResolver.Resolve(context.MediaItem, profile)
                 : null;
 
+        bool generateChapterThumbs = (
+            profile.HlsDerivatives ?? new HlsDerivatives()
+        ).GenerateChapterThumbs;
+
         return new(
             outputFormat,
             videoPlan,
@@ -804,7 +808,8 @@ public class PlanStage(
             PreserveDolbyVision: dvDecision.Preserved,
             Drm: ConvertDrmConfig(profile.Drm),
             HlsOptions: hlsOptions,
-            Layout: layout
+            Layout: layout,
+            GenerateChapterThumbs: generateChapterThumbs
         );
     }
 
