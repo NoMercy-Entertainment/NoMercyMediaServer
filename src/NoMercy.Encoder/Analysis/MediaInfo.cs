@@ -33,7 +33,9 @@ public record MediaInfo(
     DolbyVisionInfo? DolbyVision = null,
     bool HasHdr10Plus = false,
     CropArea? DetectedCrop = null,
-    double CropAspectRatio = 0
+    double CropAspectRatio = 0,
+    string? StereoMode = null,
+    string? SphericalProjection = null
 )
 {
     public IReadOnlyList<AttachmentInfo> Attachments { get; init; } = Attachments ?? [];

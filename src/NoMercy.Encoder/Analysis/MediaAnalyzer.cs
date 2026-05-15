@@ -111,6 +111,8 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage) : IMe
         string formatName = format.Value<string>("format_name") ?? "unknown";
 
         DolbyVisionInfo? dolbyVision = ParseDolbyVision(streams);
+        string? stereoMode = ParseStereoMode(streams);
+        string? sphericalProjection = ParseSphericalProjection(streams);
 
         return new(
             FilePath: filePath,
@@ -123,8 +125,75 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage) : IMe
             SubtitleStreams: subtitleStreams,
             Chapters: chapterList,
             Attachments: attachments,
-            DolbyVision: dolbyVision
+            DolbyVision: dolbyVision,
+            StereoMode: stereoMode,
+            SphericalProjection: sphericalProjection
         );
+    }
+
+    internal static string? ParseStereoMode(JArray streams)
+    {
+        foreach (JToken stream in streams)
+        {
+            if (stream.Value<string>("codec_type") != "video")
+                continue;
+
+            string? tagValue = stream["tags"]?.Value<string>("stereo_mode");
+            if (!string.IsNullOrEmpty(tagValue))
+                return tagValue;
+
+            JArray? sideData = stream["side_data_list"] as JArray;
+            if (sideData is null)
+                continue;
+
+            foreach (JToken entry in sideData)
+            {
+                string? sideDataType = entry.Value<string>("side_data_type");
+                if (
+                    sideDataType is null
+                    || !sideDataType.Contains("Stereo 3D", StringComparison.OrdinalIgnoreCase)
+                )
+                    continue;
+
+                string? mode = entry.Value<string>("type");
+                if (!string.IsNullOrEmpty(mode))
+                    return mode;
+            }
+        }
+
+        return null;
+    }
+
+    internal static string? ParseSphericalProjection(JArray streams)
+    {
+        foreach (JToken stream in streams)
+        {
+            if (stream.Value<string>("codec_type") != "video")
+                continue;
+
+            JArray? sideData = stream["side_data_list"] as JArray;
+            if (sideData is null)
+                continue;
+
+            foreach (JToken entry in sideData)
+            {
+                string? sideDataType = entry.Value<string>("side_data_type");
+                if (
+                    sideDataType is null
+                    || !sideDataType.Contains(
+                        "Spherical Mapping",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                    continue;
+
+                string? projection = entry.Value<string>("projection");
+                if (!string.IsNullOrEmpty(projection))
+                    return projection;
+            }
+        }
+
+        return null;
     }
 
     private static VideoStreamInfo ParseVideoStream(JToken stream)
