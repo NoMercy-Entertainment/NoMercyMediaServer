@@ -8,6 +8,21 @@ namespace NoMercy.Encoder.PostProcess;
 
 public class FontExtractor(IStorage storage) : IFontExtractor
 {
+    private static readonly HashSet<string> FontExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".ttf",
+        ".otf",
+        ".woff",
+        ".woff2",
+    };
+
+    private static readonly HashSet<string> LutExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".cube",
+        ".3dl",
+        ".look",
+    };
+
     // FFmpeg dumps attachments via -dump_attachment:t "" which is a pre-input flag.
     // The standard builder does not model pre-input attachment flags, so we build
     // the argument list directly to keep the contract explicit and simple.
@@ -42,21 +57,41 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         if (!storage.Exists(fontDir))
             return;
 
-        IReadOnlyList<StorageEntry> fontFiles = storage
+        IReadOnlyList<StorageEntry> allDumped = storage
             .List(fontDir, "*", recursive: false)
             .Where(e => !e.IsDirectory)
             .ToList();
 
-        if (fontFiles.Count == 0)
+        if (allDumped.Count == 0)
         {
             storage.DeleteDirectory(fontDir, recursive: false);
+            return;
+        }
+
+        List<StorageEntry> fontFiles = allDumped
+            .Where(f => IsFontExtension(storage.GetName(f.Path)))
+            .ToList();
+
+        List<StorageEntry> lutFiles = allDumped
+            .Where(f => IsLutExtension(storage.GetName(f.Path)))
+            .ToList();
+
+        await MoveLutsAndWriteManifestAsync(outputDirectory, lutFiles, ct);
+
+        if (fontFiles.Count == 0)
+        {
+            if (
+                !storage.Exists(fontDir)
+                || storage.List(fontDir, "*", recursive: false).All(e => e.IsDirectory)
+            )
+                storage.DeleteDirectory(fontDir, recursive: false);
             return;
         }
 
         List<FontEntry> entries = fontFiles
             .Select(f => new FontEntry(
                 File: $"fonts/{storage.GetName(f.Path)}",
-                MimeType: GetFontMimeType(f.Path)
+                MimeType: GetFontMimeType(storage.GetName(f.Path))
             ))
             .ToList();
 
@@ -68,10 +103,60 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         );
     }
 
-    private static string GetFontMimeType(string path)
+    private async Task MoveLutsAndWriteManifestAsync(
+        string outputDirectory,
+        List<StorageEntry> lutFiles,
+        CancellationToken ct
+    )
     {
-        int dot = path.LastIndexOf('.');
-        string ext = dot < 0 ? string.Empty : path[dot..].ToLowerInvariant();
+        if (lutFiles.Count == 0)
+            return;
+
+        string lutDir = storage.CombinePath(outputDirectory, "luts");
+        storage.CreateDirectory(lutDir);
+
+        List<LutEntry> lutEntries = [];
+
+        foreach (StorageEntry lutFile in lutFiles)
+        {
+            string fileName = storage.GetName(lutFile.Path);
+            string destination = storage.CombinePath(lutDir, fileName);
+
+            byte[] data = await storage.ReadAsync(lutFile.Path, ct);
+            await storage.WriteAsync(destination, data, ct);
+            storage.Delete(lutFile.Path);
+
+            lutEntries.Add(
+                new LutEntry(File: $"luts/{fileName}", MimeType: "application/octet-stream")
+            );
+        }
+
+        string lutsJson = JsonConvert.SerializeObject(lutEntries, Formatting.Indented);
+        await storage.WriteAsync(
+            storage.CombinePath(outputDirectory, "luts.json"),
+            Encoding.UTF8.GetBytes(lutsJson),
+            ct
+        );
+    }
+
+    private static bool IsFontExtension(string fileName)
+    {
+        int dot = fileName.LastIndexOf('.');
+        string ext = dot < 0 ? string.Empty : fileName[dot..];
+        return FontExtensions.Contains(ext);
+    }
+
+    private static bool IsLutExtension(string fileName)
+    {
+        int dot = fileName.LastIndexOf('.');
+        string ext = dot < 0 ? string.Empty : fileName[dot..];
+        return LutExtensions.Contains(ext);
+    }
+
+    private static string GetFontMimeType(string fileName)
+    {
+        int dot = fileName.LastIndexOf('.');
+        string ext = dot < 0 ? string.Empty : fileName[dot..].ToLowerInvariant();
         return ext switch
         {
             ".ttf" => "application/x-font-truetype",
@@ -83,6 +168,11 @@ public class FontExtractor(IStorage storage) : IFontExtractor
     }
 
     private record FontEntry(
+        [property: JsonProperty("file")] string File,
+        [property: JsonProperty("mimeType")] string MimeType
+    );
+
+    private record LutEntry(
         [property: JsonProperty("file")] string File,
         [property: JsonProperty("mimeType")] string MimeType
     );

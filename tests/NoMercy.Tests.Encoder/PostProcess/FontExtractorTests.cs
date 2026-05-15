@@ -170,20 +170,88 @@ public class FontExtractorTests : IDisposable
     }
 
     // ------------------------------------------------------------------
-    // Unknown extension gets octet-stream mime type
+    // Unknown extension is excluded from fonts.json
     // ------------------------------------------------------------------
 
     [Fact]
-    public async Task WriteFontManifestAsync_UnknownExtension_OctetStreamMimeType()
+    public async Task WriteFontManifestAsync_UnknownExtension_ExcludedFromFontsJson()
     {
         string fontDir = Path.Combine(_tempDir, "fonts");
         Directory.CreateDirectory(fontDir);
-        await File.WriteAllTextAsync(Path.Combine(fontDir, "font.bin"), "dummy");
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "font.ttf"), "dummy");
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "profile.icc"), "dummy");
 
         await _extractor.WriteFontManifestAsync(_tempDir, default);
 
         string json = await File.ReadAllTextAsync(Path.Combine(_tempDir, "fonts.json"));
         JArray entries = JArray.Parse(json);
+        entries.Should().HaveCount(1);
+        entries[0]["file"]!.Value<string>().Should().Be("fonts/font.ttf");
+    }
+
+    // ------------------------------------------------------------------
+    // .cube LUT is moved from fonts/ to luts/ — not in fonts.json
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task WriteFontManifestAsync_CubeLut_MovedToLutsDir()
+    {
+        string fontDir = Path.Combine(_tempDir, "fonts");
+        Directory.CreateDirectory(fontDir);
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "YouTube_HDRtoSDR_1.cube"), "LUT data");
+
+        await _extractor.WriteFontManifestAsync(_tempDir, default);
+
+        File.Exists(Path.Combine(_tempDir, "luts", "YouTube_HDRtoSDR_1.cube")).Should().BeTrue();
+        File.Exists(Path.Combine(_tempDir, "fonts", "YouTube_HDRtoSDR_1.cube")).Should().BeFalse();
+        File.Exists(Path.Combine(_tempDir, "fonts.json")).Should().BeFalse();
+    }
+
+    // ------------------------------------------------------------------
+    // .cube LUT produces a luts.json manifest with correct shape
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task WriteFontManifestAsync_CubeLut_WritesLutsJson()
+    {
+        string fontDir = Path.Combine(_tempDir, "fonts");
+        Directory.CreateDirectory(fontDir);
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "YouTube_HDRtoSDR_1.cube"), "LUT data");
+
+        await _extractor.WriteFontManifestAsync(_tempDir, default);
+
+        string lutsJsonPath = Path.Combine(_tempDir, "luts.json");
+        File.Exists(lutsJsonPath).Should().BeTrue();
+
+        string json = await File.ReadAllTextAsync(lutsJsonPath);
+        JArray entries = JArray.Parse(json);
+        entries.Should().HaveCount(1);
+        entries[0]["file"]!.Value<string>().Should().Be("luts/YouTube_HDRtoSDR_1.cube");
         entries[0]["mimeType"]!.Value<string>().Should().Be("application/octet-stream");
+    }
+
+    // ------------------------------------------------------------------
+    // Mix of font + LUT: font stays in fonts.json, LUT goes to luts.json
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task WriteFontManifestAsync_MixedContent_SeparatedCorrectly()
+    {
+        string fontDir = Path.Combine(_tempDir, "fonts");
+        Directory.CreateDirectory(fontDir);
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "Arial.ttf"), "font data");
+        await File.WriteAllTextAsync(Path.Combine(fontDir, "Grading.cube"), "LUT data");
+
+        await _extractor.WriteFontManifestAsync(_tempDir, default);
+
+        string fontsJson = await File.ReadAllTextAsync(Path.Combine(_tempDir, "fonts.json"));
+        JArray fontEntries = JArray.Parse(fontsJson);
+        fontEntries.Should().HaveCount(1);
+        fontEntries[0]["file"]!.Value<string>().Should().Be("fonts/Arial.ttf");
+
+        string lutsJson = await File.ReadAllTextAsync(Path.Combine(_tempDir, "luts.json"));
+        JArray lutEntries = JArray.Parse(lutsJson);
+        lutEntries.Should().HaveCount(1);
+        lutEntries[0]["file"]!.Value<string>().Should().Be("luts/Grading.cube");
     }
 }
