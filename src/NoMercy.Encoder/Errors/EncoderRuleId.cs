@@ -64,6 +64,10 @@ public static class EncoderRuleId
     public const string SourceVariableFrameRate = "source.variable_frame_rate";
     public const string SourceDolbyVisionWillBeStripped = "source.dolby_vision_will_be_stripped";
     public const string SourceUpscalingDetected = "source.upscaling_detected";
+    public const string LevelFrameRateCapExceeded = "level.frame_rate_cap_exceeded";
+    public const string StereoscopicSourceUnsupported = "source.stereoscopic_unsupported";
+    public const string SphericalMetadataWillBeStripped =
+        "source.spherical_metadata_will_be_stripped";
 
     // ---- Inheritance -----------------------------------------------------
     public const string ParentIdCycle = "parent_id.cycle";

@@ -1,3 +1,4 @@
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 
 namespace NoMercy.Encoder.Profiles;
@@ -256,6 +257,109 @@ public static class ProfileValidator
             warnings.Add(
                 "TitleOnly + ExactMatchOnly will never embed; titles can't satisfy exact-match. Acquisition will run sidecar-only."
             );
+    }
+
+    /// <summary>
+    /// Validates the profile against source media properties (HFR level cap,
+    /// 3D stereoscopic, VR spherical). Callers that have a <see cref="MediaInfo"/>
+    /// should call this after <see cref="Validate"/> — it produces additional
+    /// errors and warnings based on what the source actually contains.
+    /// </summary>
+    public static ProfileValidationResult ValidateWithSource(
+        EncodingProfile profile,
+        MediaInfo source
+    )
+    {
+        List<string> errors = [];
+        List<string> warnings = [];
+
+        ValidateLevelFrameRateCap(profile, source, errors);
+        ValidateStereoscopicSource(profile, source, errors);
+        ValidateSphericalMetadata(profile, source, warnings);
+
+        return new(errors.Count == 0, errors, warnings);
+    }
+
+    private static void ValidateLevelFrameRateCap(
+        EncodingProfile profile,
+        MediaInfo source,
+        List<string> errors
+    )
+    {
+        if (
+            profile.Video is not { Policy: StreamPolicy.Transcode } video
+            || string.IsNullOrEmpty(video.Level)
+        )
+            return;
+
+        if (source.VideoStreams.Count == 0)
+            return;
+
+        VideoStreamInfo primaryVideo = source.VideoStreams[0];
+        double fps = primaryVideo.AverageFrameRate ?? primaryVideo.FrameRate;
+
+        if (fps <= 0)
+            return;
+
+        long lumaSamplesPerSec = (long)(video.Width * (video.Height ?? primaryVideo.Height) * fps);
+
+        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(video.Codec, video.Level);
+        if (cap is null)
+            return;
+
+        if (lumaSamplesPerSec <= cap.MaxLumaSamplesPerSec)
+            return;
+
+        CodecLevelFpsCaps.LevelCap? nextFit = CodecLevelFpsCaps.FindNextFit(
+            video.Codec,
+            lumaSamplesPerSec
+        );
+
+        string fix = nextFit is not null
+            ? $"Raise level to {nextFit.Level} (supports up to {nextFit.MaxLumaSamplesPerSec:N0} luma samples/sec)."
+            : "No standard level supports this resolution × frame-rate combination.";
+
+        errors.Add(
+            $"Level {video.Level} cap exceeded: {lumaSamplesPerSec:N0} luma samples/sec required "
+                + $"but level {video.Level} allows {cap.MaxLumaSamplesPerSec:N0}. {fix}"
+        );
+    }
+
+    private static void ValidateStereoscopicSource(
+        EncodingProfile profile,
+        MediaInfo source,
+        List<string> errors
+    )
+    {
+        if (source.StereoMode is null)
+            return;
+
+        if (profile.Video is not { Policy: StreamPolicy.Transcode })
+            return;
+
+        errors.Add(
+            $"3D source detected (stereo_mode={source.StereoMode}). "
+                + "NoMercy does not support 3D re-encode. "
+                + "Switch the video output policy to Copy to preserve the source."
+        );
+    }
+
+    private static void ValidateSphericalMetadata(
+        EncodingProfile profile,
+        MediaInfo source,
+        List<string> warnings
+    )
+    {
+        if (source.SphericalProjection is null)
+            return;
+
+        if (profile.Video is not { Policy: StreamPolicy.Transcode })
+            return;
+
+        warnings.Add(
+            $"VR projection metadata ({source.SphericalProjection}) will be stripped on re-encode. "
+                + "Use a stream-copy video output to preserve it."
+        );
     }
 
     private static void ValidateHlsDerivatives(
