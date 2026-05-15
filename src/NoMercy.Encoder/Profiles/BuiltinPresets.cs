@@ -1411,11 +1411,9 @@ public static class BuiltinPresets
                     CodecPolicy = LadderCodecPolicy.Uniform,
                     Crf = 22,
                     MaxRungs = 8,
-                    // YouTube ships every rung regardless of source size or bitrate —
-                    // the whole point is to serve high-quality variants when bandwidth
-                    // allows. NeverUpscale cuts 1440p+ on cinema 2K sources (2048x858);
-                    // NeverUpsource cuts 1080p+ on well-compressed sources. Disable both.
-                    NeverUpscale = false,
+                    // YouTube ships every rung regardless of source bitrate — the whole
+                    // point is to serve high-quality variants when bandwidth allows. Default
+                    // NeverUpsource cuts 1080p+ on well-compressed sources.
                     NeverUpsource = false,
                     // 50% gap collapse drops 1080p (5000) next to 1440p (9000) because
                     // their ratio is only 44%. YouTube keeps every named tier.
