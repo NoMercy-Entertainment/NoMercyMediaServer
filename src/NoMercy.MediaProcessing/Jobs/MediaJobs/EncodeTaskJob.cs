@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
+using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
@@ -96,6 +97,19 @@ public class EncodeTaskJob : AbstractEncoderJob
             DestinationStorage: destinationStorage
         );
 
+        // Propagate StatsFilePath from the task descriptor so TwoPassStrategyBase
+        // receives the coordinator-resolved path for Pass2 tasks.
+        if (!string.IsNullOrEmpty(Task.StatsFilePath))
+        {
+            request = request with
+            {
+                Options = (request.Options ?? new EncodingOptions()) with
+                {
+                    StatsFilePath = Task.StatsFilePath,
+                },
+            };
+        }
+
         IEncoderProcessRegistry? processRegistry =
             EncoderProvider.ResolveService<IEncoderProcessRegistry>();
 
@@ -147,12 +161,20 @@ public class EncodeTaskJob : AbstractEncoderJob
         }
     }
 
+    /// <summary>
+    /// Writes a durable <see cref="EncodeTaskOutcome"/> row to <c>media.db</c>
+    /// BEFORE publishing the EventBus event. The outcome row is the authoritative
+    /// source of truth that survives server restarts; the EventBus publish is
+    /// best-effort for real-time dashboard updates only.
+    /// </summary>
     private async Task PublishCompletedAsync(
         bool success,
         string? error,
         IReadOnlyList<string> artifacts
     )
     {
+        await WriteOutcomeRowAsync(success, error, artifacts);
+
         if (!EventBusProvider.IsConfigured)
             return;
 
@@ -168,6 +190,49 @@ public class EncodeTaskJob : AbstractEncoderJob
                 OutputArtifacts = artifacts,
             }
         );
+    }
+
+    private async Task WriteOutcomeRowAsync(
+        bool success,
+        string? error,
+        IReadOnlyList<string> artifacts
+    )
+    {
+        try
+        {
+            await using MediaContext outcomeContext = new();
+            bool alreadyExists = await outcomeContext.EncodeTaskOutcomes.AnyAsync(row =>
+                row.TaskId == Task.TaskId
+            );
+
+            if (alreadyExists)
+                return;
+
+            string? artifactsJson = artifacts.Count > 0 ? string.Join("\n", artifacts) : null;
+
+            outcomeContext.EncodeTaskOutcomes.Add(
+                new EncodeTaskOutcome
+                {
+                    TaskId = Task.TaskId,
+                    ParentJobId = Task.ParentJobId,
+                    GroupTag = Task.GroupTag,
+                    Success = success,
+                    ErrorMessage = error,
+                    Kind = Task.Kind.ToString(),
+                    OutputArtifactsJson = artifactsJson,
+                    CompletedAt = DateTime.UtcNow,
+                }
+            );
+
+            await outcomeContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.Encoder(
+                $"[EncodeTaskJob] Failed to write outcome row for task '{Task.TaskId}': {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
     }
 
     private async Task<FileMetadata> GetFileMetaData(Folder folder, MediaContext context)
