@@ -162,6 +162,26 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     }
 
     /// <summary>
+    /// Returns a reserved job to the available pool without executing it.
+    /// Used by resource-gate logic: when the budget is saturated the worker
+    /// releases the reservation and bumps <paramref name="availableAfter"/>
+    /// so the job is not immediately picked up again.
+    /// </summary>
+    public void ReleaseReservation(QueueJobModel job, TimeSpan availableAfter)
+    {
+        lock (_writeLock)
+        {
+            job.ReservedAt = null;
+            job.AvailableAt = DateTime.UtcNow + availableAfter;
+            job.Attempts = (byte)Math.Max(0, job.Attempts - 1);
+            context.UpdateJob(job);
+            context.SaveChanges();
+        }
+
+        WorkAvailable.Release();
+    }
+
+    /// <summary>
     /// Replaces the serialized payload of a coordinator job in place and
     /// resets its reservation so it re-enters the queue after
     /// <paramref name="availableAfter"/>. The job's existing ID and queue
