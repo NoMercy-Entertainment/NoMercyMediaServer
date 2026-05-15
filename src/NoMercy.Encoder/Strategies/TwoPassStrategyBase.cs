@@ -161,6 +161,15 @@ public abstract class TwoPassStrategyBase(
         // fall back to the DI-injected singleton for default installs.
         IStorage effectiveStorage = request.DestinationStorage ?? request.SourceStorage ?? storage;
 
+        // When the coordinator decomposes a two-pass encode into child tasks it
+        // sets Options.Pass explicitly so each child runs exactly one pass.
+        // Only the legacy inline path (Options.Pass == null) runs both passes.
+        if (request.Options?.Pass == EncodingPass.One)
+            return await RunSinglePassOneAsync(request, effectiveStorage, progress, ct);
+
+        if (request.Options?.Pass == EncodingPass.Two)
+            return await RunSinglePassTwoAsync(request, effectiveStorage, progress, ct);
+
         try
         {
             return await EncodeInternalAsync(request, effectiveStorage, progress, ct);
@@ -174,6 +183,81 @@ public abstract class TwoPassStrategyBase(
             DeletePartialOutput(request.OutputDirectory, effectiveStorage);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Runs only the first pass of the two-pass encode for a single variant.
+    /// Called by child <c>EncodeTaskJob</c> instances for Pass1 tasks.
+    /// Does NOT write a checkpoint — the coordinator tracks phase state durably.
+    /// </summary>
+    private async Task<EncodingResult> RunSinglePassOneAsync(
+        EncodingRequest request,
+        IStorage effectiveStorage,
+        IProgressObserver? progress,
+        CancellationToken ct
+    )
+    {
+        string statsFilePath =
+            request.Options?.StatsFilePath ?? ResolveStatsFilePath(request, effectiveStorage);
+
+        int variantIndex = request.Options?.Pass1VariantIndex ?? 0;
+        string stageName = $"Pass 1 variant {variantIndex}";
+
+        progress?.OnStageStarted(stageName);
+
+        EncodingRequest pass1Request = request with
+        {
+            Options = (request.Options ?? new EncodingOptions()) with
+            {
+                Pass = EncodingPass.One,
+                StatsFilePath = statsFilePath,
+                Pass1VariantIndex = variantIndex,
+            },
+        };
+
+        EncodingResult result = await encoder.EncodeAsync(pass1Request, progress, ct);
+
+        if (result.Success)
+            progress?.OnStageCompleted(stageName, result.Duration);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Runs only the second pass of the two-pass encode.
+    /// Called by child <c>EncodeTaskJob</c> instances for Pass2 tasks.
+    /// Requires <c>request.Options.StatsFilePath</c> to be set by the coordinator.
+    /// </summary>
+    private async Task<EncodingResult> RunSinglePassTwoAsync(
+        EncodingRequest request,
+        IStorage effectiveStorage,
+        IProgressObserver? progress,
+        CancellationToken ct
+    )
+    {
+        string statsFilePath =
+            request.Options?.StatsFilePath ?? ResolveStatsFilePath(request, effectiveStorage);
+
+        progress?.OnStageStarted("Pass 2");
+
+        EncodingRequest pass2Request = request with
+        {
+            Options = (request.Options ?? new EncodingOptions()) with
+            {
+                Pass = EncodingPass.Two,
+                StatsFilePath = statsFilePath,
+            },
+        };
+
+        EncodingResult result = await encoder.EncodeAsync(pass2Request, progress, ct);
+
+        if (result.Success)
+        {
+            progress?.OnStageCompleted("Pass 2", result.Duration);
+            DeleteStatsFiles(statsFilePath, effectiveStorage);
+        }
+
+        return result;
     }
 
     private async Task DeleteCheckpointOnCancelAsync(string outputDirectory)
