@@ -38,6 +38,13 @@ public class QueueRunner
     /// </summary>
     public static QueueRunner? Current { get; private set; }
 
+    /// <summary>
+    /// Exposes the underlying <see cref="JobQueue"/> for coordinator jobs that
+    /// need to enqueue continuation work without going through the dispatcher's
+    /// deduplication path.
+    /// </summary>
+    public JobQueue Queue => _jobQueue;
+
     public QueueRunner(
         IQueueContext queueContext,
         QueueConfiguration configuration,

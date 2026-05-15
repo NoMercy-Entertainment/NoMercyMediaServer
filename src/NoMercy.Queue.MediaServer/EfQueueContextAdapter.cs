@@ -178,6 +178,27 @@ public class EfQueueContextAdapter : IQueueContext
         }
     }
 
+    public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
+    {
+        QueueContext context = AcquireContext();
+        try
+        {
+            QueueJob? entity = context.QueueJobs.Find(jobId);
+            if (entity == null)
+                return;
+
+            entity.Payload = newPayload;
+            entity.ReservedAt = null;
+            entity.AvailableAt = availableAt;
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
+    }
+
     public void ResetAllReservedJobs()
     {
         QueueContext context = AcquireContext();
@@ -212,8 +233,6 @@ public class EfQueueContextAdapter : IQueueContext
             ReleaseContext(context);
         }
     }
-
-
 
     public void AddFailedJob(FailedJobModel failedJob)
     {

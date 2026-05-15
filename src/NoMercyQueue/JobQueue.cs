@@ -78,7 +78,8 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                         Connection = "default",
                         Queue = job.Queue,
                         Payload = job.Payload,
-                        Exception = $"{{\"Message\":\"Skipped: parent job {job.ParentJobId} failed\"}}",
+                        Exception =
+                            $"{{\"Message\":\"Skipped: parent job {job.ParentJobId} failed\"}}",
                         FailedAt = DateTime.UtcNow,
                     };
                     context.AddFailedJob(skipped);
@@ -158,6 +159,22 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                 logger?.LogError("{Message}", e.Message);
             }
         }
+    }
+
+    /// <summary>
+    /// Replaces the serialized payload of a coordinator job in place and
+    /// resets its reservation so it re-enters the queue after
+    /// <paramref name="availableAfter"/>. The job's existing ID and queue
+    /// slot are preserved — no deduplication check fires.
+    /// </summary>
+    public void UpdateJobPayload(int jobId, string newPayload, TimeSpan availableAfter)
+    {
+        lock (_writeLock)
+        {
+            context.UpdateJobPayload(jobId, newPayload, DateTime.UtcNow + availableAfter);
+        }
+
+        WorkAvailable.Release();
     }
 
     public void DeleteJob(QueueJobModel queueJob, int attempt = 0)

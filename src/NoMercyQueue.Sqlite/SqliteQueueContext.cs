@@ -111,6 +111,18 @@ public class SqliteQueueContext : IQueueContext
         SaveAndClear();
     }
 
+    public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
+    {
+        QueueJobEntity? entity = _context.QueueJobs.Find(jobId);
+        if (entity == null)
+            return;
+
+        entity.Payload = newPayload;
+        entity.ReservedAt = null;
+        entity.AvailableAt = availableAt;
+        SaveAndClear();
+    }
+
     public void ResetAllReservedJobs()
     {
         foreach (QueueJobEntity job in _context.QueueJobs)
@@ -145,9 +157,7 @@ public class SqliteQueueContext : IQueueContext
     public bool IsParentFailed(int parentJobId)
     {
         string parentPayloadPrefix = $"\"Id\":{parentJobId},";
-        return _context
-            .FailedJobs.AsNoTracking()
-            .Any(f => f.Payload.Contains(parentPayloadPrefix));
+        return _context.FailedJobs.AsNoTracking().Any(f => f.Payload.Contains(parentPayloadPrefix));
     }
 
     public void AddFailedJob(FailedJobModel failedJob)

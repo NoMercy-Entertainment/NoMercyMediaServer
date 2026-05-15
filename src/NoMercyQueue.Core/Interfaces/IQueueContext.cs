@@ -10,6 +10,16 @@ public interface IQueueContext : IDisposable
     QueueJobModel? FindJob(int id);
     bool JobExists(string payload);
     void UpdateJob(QueueJobModel job);
+
+    /// <summary>
+    /// Replaces the payload of an existing queue job and resets its
+    /// <c>ReservedAt</c> to null with the given <paramref name="availableAt"/>.
+    /// Used by coordinator jobs that need to persist phase state and re-queue
+    /// themselves without removing and re-inserting (which would trip the
+    /// deduplication check in <see cref="JobQueue.Enqueue"/>).
+    /// </summary>
+    void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt);
+
     void ResetAllReservedJobs();
     IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc);
 
