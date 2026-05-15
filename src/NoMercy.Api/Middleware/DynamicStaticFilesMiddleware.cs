@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
@@ -158,10 +159,10 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
             await ServeFile(context, storage, relativeWithinFolder);
         }
-        catch (FileNotFoundException ex)
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
-            // Race: file vanished between Exists() and Size()/OpenRead().
-            // Translate to 404 instead of an opaque 500.
+            // Race: file or its containing directory vanished between Exists()
+            // and Size()/OpenRead(). Translate to 404 instead of an opaque 500.
             Logger.App(
                 $"[DynamicStaticFiles] file vanished mid-serve for '{context.Request.Path}': {ex.Message}",
                 Serilog.Events.LogEventLevel.Warning
@@ -169,11 +170,13 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             if (!context.Response.HasStarted)
                 context.Response.StatusCode = (int)HttpStatusCode.NotFound;
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or HttpRequestException)
         {
-            // Storage-layer failure (NFS hiccup, S3 throttling, disk error).
+            // Storage-layer transport failure (NFS hiccup, S3 / WebDAV 5xx, disk
+            // error). 502 reflects "we couldn't reach the backend that holds
+            // this file" — distinct from "the file doesn't exist."
             Logger.App(
-                $"[DynamicStaticFiles] storage IO failure for '{context.Request.Path}': {ex.Message}",
+                $"[DynamicStaticFiles] storage transport failure for '{context.Request.Path}': {ex.Message}",
                 Serilog.Events.LogEventLevel.Warning
             );
             if (!context.Response.HasStarted)
@@ -185,13 +188,17 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         }
         catch (Exception ex)
         {
-            // Promote to Error so the stack trace reaches the log sink instead
-            // of being filtered at default Information level.
+            // Anything else escaping ServeFile is treated as a backend fault,
+            // not a server bug — surface as 502 so ExoPlayer / browser fall
+            // through to the next track gracefully instead of crashing on a
+            // 500 with a stack trace body. Logged at Error so genuine bugs
+            // remain visible in the sink.
             Logger.App(
                 $"[DynamicStaticFiles] unhandled exception for path '{context.Request.Path}': {ex}",
                 Serilog.Events.LogEventLevel.Error
             );
-            throw;
+            if (!context.Response.HasStarted)
+                context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
         }
     }
 
