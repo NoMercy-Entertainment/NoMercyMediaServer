@@ -7,6 +7,7 @@ public interface IChapterWriter
     Task WriteChaptersAsync(
         string outputDirectory,
         IReadOnlyList<ChapterInfo> chapters,
-        CancellationToken ct
+        CancellationToken ct,
+        bool includeThumbUris = false
     );
 }

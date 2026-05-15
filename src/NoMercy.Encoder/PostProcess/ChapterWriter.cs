@@ -10,7 +10,8 @@ public class ChapterWriter(IStorage storage) : IChapterWriter
     public async Task WriteChaptersAsync(
         string outputDirectory,
         IReadOnlyList<ChapterInfo> chapters,
-        CancellationToken ct
+        CancellationToken ct,
+        bool includeThumbUris = false
     )
     {
         if (chapters.Count == 0)
@@ -26,6 +27,10 @@ public class ChapterWriter(IStorage storage) : IChapterWriter
             sb.AppendLine($"Chapter {i + 1}");
             sb.AppendLine($"{FormatVttTime(chapter.Start)} --> {FormatVttTime(chapter.End)}");
             sb.AppendLine(chapter.Title ?? $"Chapter {i + 1}");
+
+            if (includeThumbUris)
+                sb.AppendLine($"chapters/{i:D2}.webp");
+
             sb.AppendLine();
         }
 

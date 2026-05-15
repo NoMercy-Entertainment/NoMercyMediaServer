@@ -83,7 +83,8 @@ public class FinalizeStage(
                 await chapterWriter.WriteChaptersAsync(
                     input.OutputDirectory,
                     context.MediaInfo.Chapters,
-                    ct
+                    ct,
+                    includeThumbUris: derivatives.GenerateChapterThumbs
                 );
                 input.Progress?.OnStageCompleted("Extracting chapters", TimeSpan.Zero);
 

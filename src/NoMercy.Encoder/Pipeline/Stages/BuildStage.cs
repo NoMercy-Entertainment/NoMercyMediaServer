@@ -4,6 +4,7 @@ using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
@@ -24,7 +25,8 @@ public record BuildInput(
     TimeSpan? DurationLimit = null,
     EncodingPass Pass = EncodingPass.Single,
     string? StatsFilePath = null,
-    int Pass1VariantIndex = 0
+    int Pass1VariantIndex = 0,
+    DecomposedTask? TaskFilter = null
 );
 
 public class BuildStage(
@@ -122,6 +124,45 @@ public class BuildStage(
                     input.Pass1VariantIndex
                 );
                 return new StageSuccess<FfmpegCommand[]>([pass1]);
+            }
+
+            // Chapter-still extraction: one single-frame WebP per chapter at
+            // the chapter's exact timestamp. Triggered when a Chapters task
+            // filter is present and the plan carries chapter metadata.
+            if (
+                input.TaskFilter?.Kind == EncodeTaskKind.Chapters
+                && input.Plan.OutputPlan.Chapters is not null
+            )
+            {
+                int chapterIndex = input.TaskFilter.OutputIndex;
+                if (chapterIndex < 0 || chapterIndex >= input.Plan.OutputPlan.Chapters.Count)
+                {
+                    return new StageFailure(
+                        new(
+                            EncodingErrorKind.Unknown,
+                            $"Chapter index {chapterIndex} is out of range "
+                                + $"(plan has {input.Plan.OutputPlan.Chapters.Count} chapters).",
+                            null,
+                            Name,
+                            false
+                        )
+                    );
+                }
+
+                effectiveStorage.CreateDirectory(input.OutputDirectory);
+                effectiveStorage.CreateDirectory(
+                    effectiveStorage.CombinePath(input.OutputDirectory, "chapters")
+                );
+
+                ChapterInfo chapter = input.Plan.OutputPlan.Chapters[chapterIndex];
+                FfmpegCommand chapterCmd = BuildChapterStillCommand(
+                    options.FfmpegPath,
+                    input.InputPath,
+                    input.OutputDirectory,
+                    chapterIndex,
+                    chapter.Start
+                );
+                return new StageSuccess<FfmpegCommand[]>([chapterCmd]);
             }
 
             IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.OutputPlan.Format);
@@ -954,5 +995,39 @@ public class BuildStage(
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Builds a single-frame WebP extraction command for one chapter still.
+    /// Output: <c>chapters/{index:D2}.webp</c> at 240 px wide, aspect-preserved.
+    /// <c>-ss</c> before <c>-i</c> (input seek) is used for accuracy on keyframe-
+    /// aligned chapter timestamps; the output is a single frame so decode cost
+    /// is minimal regardless of seek position.
+    /// </summary>
+    internal static FfmpegCommand BuildChapterStillCommand(
+        string ffmpegPath,
+        string inputPath,
+        string outputDirectory,
+        int chapterIndex,
+        TimeSpan timestamp
+    )
+    {
+        string outputFile = Path.Combine("chapters", $"{chapterIndex:D2}.webp");
+
+        return new FfmpegCommandBuilder()
+            .WithGlobalOptions(new GlobalOptions(ProgressPipe: false, Overwrite: true))
+            .AddInput(new InputOptions(FilePath: inputPath, SeekTo: timestamp))
+            .AddOutput(
+                new OutputOptions(
+                    FilePath: outputFile,
+                    VideoCodec: "libwebp",
+                    ExtraFlags: new Dictionary<string, string>
+                    {
+                        ["-frames:v"] = "1",
+                        ["-vf"] = "scale=240:-2",
+                    }
+                )
+            )
+            .Build(ffmpegPath, outputDirectory);
     }
 }
