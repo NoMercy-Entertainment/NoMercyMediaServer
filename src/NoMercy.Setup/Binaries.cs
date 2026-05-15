@@ -49,7 +49,7 @@ public class Binaries
     {
         _driver = driver;
         _storage = storage;
-        _httpClient = new HttpClient
+        _httpClient = new()
         {
             // Default HttpClient.Timeout is 100s which is fine for API calls
             // but binary downloads can be hundreds of MB. Cap at 10 minutes
@@ -662,6 +662,19 @@ public class Binaries
             Logger.Setup(
                 $"Ffmpeg is already up to date (version {version})",
                 LogEventLevel.Verbose
+            );
+            return;
+        }
+
+        // Skip the update when ffmpeg is locked by a running encode — the zip
+        // extraction would fail mid-way, leave AppFiles.FfmpegFolder in a partial
+        // state, and trip the Phase 4 "required startup task failed" alert. The
+        // update will land on the next boot when no encode is in flight.
+        if (_storage.Exists(AppFiles.FfmpegPath) && Locking.IsFileLocked(AppFiles.FfmpegPath))
+        {
+            Logger.Setup(
+                "FFmpeg binary is in use by a running encode — deferring update to next boot.",
+                LogEventLevel.Information
             );
             return;
         }
