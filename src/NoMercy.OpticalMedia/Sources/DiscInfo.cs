@@ -10,7 +10,24 @@ public record DiscInfo(
     DiscTrack[]? AudioTracks,
     TimeSpan TotalDuration,
     DiscProtection? Protection = null
-);
+)
+{
+    /// <summary>
+    /// Duration in whole seconds of the main feature title on this disc.
+    /// Picks the title flagged <see cref="DiscTitle.IsMainFeature"/>, or the
+    /// longest title when none is flagged. Zero when the disc has no titles.
+    /// </summary>
+    public int MainTitleDurationSec =>
+        (
+            Titles.FirstOrDefault(t => t.IsMainFeature)
+            ?? Titles.OrderByDescending(t => t.Duration).FirstOrDefault()
+        )
+            ?.Duration
+            .TotalSeconds
+            is { } secs
+            ? (int)secs
+            : 0;
+}
 
 /// <summary>
 /// What's blocking decryption when a probe encountered DRM the host
