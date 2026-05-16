@@ -172,18 +172,33 @@ public class BuildStage(
             // encoder sessions, blowing past hardware concurrency limits and
             // double-writing every output file. Chapters already filters at
             // the dedicated branch above; Pass1 / Pass2 use Pass1VariantIndex
-            // for their own slicing. Whole tasks (single-pass MKV / MP4)
-            // keep the full plan because they're the only command emitted.
-            if (
-                input.TaskFilter is { } taskFilter
-                && taskFilter.Kind
+            // for their own slicing. Whole tasks normally keep the full plan,
+            // but a dispatch-time bundle with per-kind slice descriptors set
+            // narrows the plan to what this batch should emit (resource cap
+            // enforcement — see VideoEncodeJob.DispatchDecomposedAsync).
+            bool isPerStreamSlice =
+                input.TaskFilter is { } perStreamFilter
+                && perStreamFilter.Kind
                     is EncodeTaskKind.Video
                         or EncodeTaskKind.Audio
                         or EncodeTaskKind.Subtitle
                         or EncodeTaskKind.Thumbnails
-                && input.Pass == EncodingPass.Single
-            )
+                && input.Pass == EncodingPass.Single;
+
+            bool isBundledWhole =
+                input.TaskFilter is { } bundleFilter
+                && bundleFilter.Kind == EncodeTaskKind.Whole
+                && (
+                    bundleFilter.VideoSliceIndexes is not null
+                    || bundleFilter.AudioSliceIndexes is not null
+                    || bundleFilter.SubtitleSliceIndexes is not null
+                    || bundleFilter.IncludeThumbnails is not null
+                )
+                && input.Pass == EncodingPass.Single;
+
+            if (isPerStreamSlice || isBundledWhole)
             {
+                DecomposedTask taskFilter = input.TaskFilter!;
                 OutputPlan sliced = SliceForTask(input.Plan.OutputPlan, taskFilter);
                 input = input with { Plan = input.Plan with { OutputPlan = sliced } };
                 logger.LogInformation(
@@ -718,6 +733,9 @@ public class BuildStage(
     /// </summary>
     private static OutputPlan SliceForTask(OutputPlan plan, DecomposedTask task)
     {
+        if (task.Kind == EncodeTaskKind.Whole)
+            return SliceForBundle(plan, task);
+
         VideoOutputPlan[] videoSlice =
             task.Kind == EncodeTaskKind.Video ? PickMany(plan.VideoOutputs, task) : [];
 
@@ -743,19 +761,66 @@ public class BuildStage(
         };
     }
 
+    /// <summary>
+    /// A dispatch-time bundle (Whole task with per-kind slice descriptors set)
+    /// narrows the plan to just the entries this batch should emit. Null per-
+    /// kind descriptor means "all of that kind"; an empty array means "none of
+    /// that kind". This is how the coordinator carves a large encode into
+    /// resource-friendly ffmpeg invocations sized to host hardware.
+    /// </summary>
+    private static OutputPlan SliceForBundle(OutputPlan plan, DecomposedTask task)
+    {
+        VideoOutputPlan[] videoSlice = task.VideoSliceIndexes is { } videoIndexes
+            ? PickIndexes(plan.VideoOutputs, videoIndexes)
+            : plan.VideoOutputs;
+
+        AudioOutputPlan[] audioSlice = task.AudioSliceIndexes is { } audioIndexes
+            ? PickIndexes(plan.AudioOutputs, audioIndexes)
+            : plan.AudioOutputs;
+
+        SubtitleOutputPlan[] subtitleSlice = task.SubtitleSliceIndexes is { } subIndexes
+            ? PickIndexes(plan.SubtitleOutputs, subIndexes)
+            : plan.SubtitleOutputs;
+
+        ThumbnailOutputPlan? thumbsSlice = task.IncludeThumbnails switch
+        {
+            false => null,
+            _ => plan.Thumbnails,
+        };
+
+        IReadOnlyList<AcquiredSubtitle>? acquiredSubs =
+            subtitleSlice.Length > 0 ? plan.AcquiredSubtitles : null;
+
+        return plan with
+        {
+            VideoOutputs = videoSlice,
+            AudioOutputs = audioSlice,
+            SubtitleOutputs = subtitleSlice,
+            Thumbnails = thumbsSlice,
+            AcquiredSubtitles = acquiredSubs,
+        };
+    }
+
     private static T[] PickMany<T>(T[] source, DecomposedTask task)
     {
         if (task.SourceIndexes is { Length: > 0 } indexes)
-        {
-            List<T> picked = new(indexes.Length);
-            foreach (int index in indexes)
-            {
-                if (index >= 0 && index < source.Length)
-                    picked.Add(source[index]);
-            }
-            return picked.ToArray();
-        }
+            return PickIndexes(source, indexes);
+
         return OneOrEmpty(source, task.OutputIndex);
+    }
+
+    private static T[] PickIndexes<T>(T[] source, int[] indexes)
+    {
+        if (indexes.Length == 0)
+            return [];
+
+        List<T> picked = new(indexes.Length);
+        foreach (int index in indexes)
+        {
+            if (index >= 0 && index < source.Length)
+                picked.Add(source[index]);
+        }
+        return picked.ToArray();
     }
 
     private static T[] OneOrEmpty<T>(T[] source, int index) =>
@@ -794,6 +859,35 @@ public class BuildStage(
 
         FilterGraphBuilder fg = new();
 
+        // Tonemap dedupe: when 2+ video branches need the SAME HDR→SDR
+        // tonemap chain we run it ONCE on the source and route every SDR
+        // branch from the shared [sdr] intermediate. Per-frame the
+        // zscale/tonemap chain is the most expensive filter in the graph —
+        // running it 7-8 times in the same ffmpeg burns CPU for identical
+        // output. Thumbnails also branch from [sdr] when present so the
+        // sprite reflects SDR colors instead of crushed HDR values.
+        bool[] needsTonemapPerBranch = new bool[videoOutputs.Length];
+        for (int i = 0; i < videoOutputs.Length; i++)
+        {
+            needsTonemapPerBranch[i] =
+                videoOutputs[i].ConvertHdrToSdr && videoOutputs[i].TonemapFilterChain is not null;
+        }
+
+        string? sharedTonemap = null;
+        bool dedupeTonemap = false;
+        if (needsTonemapPerBranch.Count(needs => needs) >= 2)
+        {
+            string?[] tonemapChains = videoOutputs
+                .Where((_, idx) => needsTonemapPerBranch[idx])
+                .Select(video => video.TonemapFilterChain)
+                .ToArray();
+            if (tonemapChains.Distinct().Count() == 1)
+            {
+                sharedTonemap = tonemapChains[0];
+                dedupeTonemap = true;
+            }
+        }
+
         // Total split branches: one per video output + one for thumbnails (if enabled)
         int totalBranches = videoOutputs.Length + (hasThumbnails ? 1 : 0);
 
@@ -810,12 +904,110 @@ public class BuildStage(
                 sourceWidth,
                 sourceHeight,
                 sourceIs10Bit,
-                burnInExpr
+                burnInExpr,
+                tonemapAlreadyApplied: false
             );
+        }
+        else if (dedupeTonemap)
+        {
+            // Shared HDR→SDR tonemap: run tonemap once, then split.
+            //
+            // Branches split into two groups:
+            //   - HDR-pass branches (needsTonemap=false): use [0:v:0] directly
+            //   - SDR-tonemapped branches: use [sdr] intermediate
+            // Thumbnails (SDR-friendly format) branch from [sdr] when present.
+            int sdrBranchCount = needsTonemapPerBranch.Count(needs => needs);
+            int hdrPassBranchCount = videoOutputs.Length - sdrBranchCount;
+            int thumbsFromSdr = hasThumbnails ? 1 : 0;
+
+            int sourceSplitCount = hdrPassBranchCount + 1; // +1 for tonemap source
+
+            List<string> sourceSplitLabels = new();
+            for (int i = 0; i < hdrPassBranchCount; i++)
+                sourceSplitLabels.Add($"hdr{i}");
+            sourceSplitLabels.Add("tonemap_in");
+
+            if (sourceSplitCount == 1)
+            {
+                // Only one downstream consumer of [0:v:0] — the tonemap input.
+                // No source split needed; tonemap directly from [0:v:0].
+                fg.AddFilter("0:v:0", sharedTonemap!, "sdr");
+            }
+            else
+            {
+                fg.AddSplit("0:v:0", sourceSplitLabels.ToArray());
+                fg.AddFilter("tonemap_in", sharedTonemap!, "sdr");
+            }
+
+            // Split [sdr] into per-SDR-branch labels + thumbnail source.
+            int sdrSplitCount = sdrBranchCount + thumbsFromSdr;
+            List<string> sdrSplitLabels = new();
+            for (int i = 0; i < sdrBranchCount; i++)
+                sdrSplitLabels.Add($"sdr{i}");
+            if (hasThumbnails)
+                sdrSplitLabels.Add("thumbsrc");
+
+            if (sdrSplitCount == 1)
+            {
+                // One consumer of [sdr] — feed it directly without a split.
+                // Rewrite the consumer's input label later.
+            }
+            else
+            {
+                fg.AddSplit("sdr", sdrSplitLabels.ToArray());
+            }
+
+            int hdrIdx = 0;
+            int sdrIdx = 0;
+            string sdrInputForSingleConsumer = "sdr";
+            for (int i = 0; i < videoOutputs.Length; i++)
+            {
+                VideoOutputPlan video = videoOutputs[i];
+                string outputLabel = video.MapLabel.Trim('[', ']');
+                string inputLabel;
+                bool tonemapApplied;
+
+                if (needsTonemapPerBranch[i])
+                {
+                    inputLabel =
+                        sdrSplitCount == 1 ? sdrInputForSingleConsumer : sdrSplitLabels[sdrIdx++];
+                    tonemapApplied = true;
+                }
+                else
+                {
+                    inputLabel = sourceSplitCount == 1 ? "0:v:0" : $"hdr{hdrIdx++}";
+                    tonemapApplied = false;
+                }
+
+                BuildBranchFilter(
+                    fg,
+                    inputLabel,
+                    outputLabel,
+                    video,
+                    sourceWidth,
+                    sourceHeight,
+                    sourceIs10Bit,
+                    burnInExpr,
+                    tonemapAlreadyApplied: tonemapApplied
+                );
+            }
+
+            if (hasThumbnails)
+            {
+                ThumbnailOutputPlan thumbs = plan.Thumbnails!;
+                string thumbInput = sdrSplitCount == 1 ? sdrInputForSingleConsumer : "thumbsrc";
+                fg.AddFilter(
+                    thumbInput,
+                    $"format=yuvj420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
+                    "thumbs"
+                );
+            }
         }
         else
         {
-            // Split source into N video branches + optional thumbnail branch
+            // Legacy path: no dedupe possible (mixed tonemap params, single
+            // tonemap branch, or none at all). Split source N+1 ways and let
+            // each branch run its own filter chain.
             List<string> splitLabels = videoOutputs.Select((_, i) => $"split{i}").ToList();
             if (hasThumbnails)
                 splitLabels.Add("thumbsrc");
@@ -835,19 +1027,17 @@ public class BuildStage(
                     sourceWidth,
                     sourceHeight,
                     sourceIs10Bit,
-                    burnInExpr
+                    burnInExpr,
+                    tonemapAlreadyApplied: false
                 );
             }
 
-            // Thumbnail branch: format=yuvj420p (full-range 8-bit) → fps → scale → [thumbs]
-            // The spritevtt muxer handles tiling and VTT generation — no tile filter needed.
-            // Using yuvj420p (JPEG full range) instead of yuv420p (TV limited range)
-            // because libwebp interprets limited-range Y=16 as "darker than black",
-            // which surfaces as a green tint on otherwise dark thumbnails.
+            // Thumbnail branch — uses HDR source directly when no dedupe is
+            // possible (thumbnails from HDR may show crushed colors but this
+            // branch only fires in the rare mixed-tonemap fallback).
             if (hasThumbnails)
             {
                 ThumbnailOutputPlan thumbs = plan.Thumbnails!;
-
                 fg.AddFilter(
                     "thumbsrc",
                     $"format=yuvj420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
@@ -863,6 +1053,12 @@ public class BuildStage(
     /// Builds the filter chain for a single video output branch.
     /// Pipeline: tonemap (HDR→SDR) → scale (resolution) → format (pixel format) → burn-in subs.
     /// Each step is skipped when not needed.
+    ///
+    /// <paramref name="tonemapAlreadyApplied"/> is set by the dedupe path
+    /// in <see cref="BuildFilterGraph"/> when the source has been
+    /// pre-tonemapped once (shared <c>[sdr]</c> intermediate) — this branch
+    /// then skips its own tonemap chain and the implicit 8-bit conversion
+    /// it carries.
     /// </summary>
     private static void BuildBranchFilter(
         IFilterGraphBuilder fg,
@@ -872,13 +1068,15 @@ public class BuildStage(
         int sourceWidth,
         int sourceHeight,
         bool sourceIs10Bit,
-        string? burnInExpr
+        string? burnInExpr,
+        bool tonemapAlreadyApplied
     )
     {
         bool needsCrop = !string.IsNullOrWhiteSpace(video.CropFilter);
-        bool needsTonemap = video.ConvertHdrToSdr && video.TonemapFilterChain is not null;
+        bool needsTonemap =
+            !tonemapAlreadyApplied && video.ConvertHdrToSdr && video.TonemapFilterChain is not null;
         bool needsScale = video.Width != sourceWidth || video.Height != sourceHeight;
-        bool needs8BitConversion = sourceIs10Bit && !video.TenBit;
+        bool needs8BitConversion = !tonemapAlreadyApplied && sourceIs10Bit && !video.TenBit;
         bool needsBurnIn = burnInExpr is not null;
 
         if (!needsCrop && !needsTonemap && !needsScale && !needs8BitConversion && !needsBurnIn)

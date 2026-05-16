@@ -83,5 +83,26 @@ public record DecomposedTask(
     /// completed (separation of streams preserved for tracking even though
     /// one process did the work).
     /// </summary>
-    string[]? BundledTaskIds = null
+    string[]? BundledTaskIds = null,
+    /// <summary>
+    /// For Whole-kind bundles, the subset of <see cref="OutputPlan.VideoOutputs"/>
+    /// indexes this bundle covers. Null means "all video outputs"; empty
+    /// array means "no video in this bundle" (aux-only bundle).
+    /// </summary>
+    int[]? VideoSliceIndexes = null,
+    /// <summary>
+    /// For Whole-kind bundles, the subset of <see cref="OutputPlan.AudioOutputs"/>
+    /// indexes this bundle covers. Null means "all audio outputs".
+    /// </summary>
+    int[]? AudioSliceIndexes = null,
+    /// <summary>
+    /// For Whole-kind bundles, the subset of <see cref="OutputPlan.SubtitleOutputs"/>
+    /// indexes this bundle covers. Null means "all subtitle outputs".
+    /// </summary>
+    int[]? SubtitleSliceIndexes = null,
+    /// <summary>
+    /// For Whole-kind bundles, whether to include the thumbnail strip. Null
+    /// means "include if the plan has one"; false omits it from this bundle.
+    /// </summary>
+    bool? IncludeThumbnails = null
 );

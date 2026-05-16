@@ -12,6 +12,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
@@ -634,42 +635,33 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         }
         else
         {
-            // Single-pass: smart-combine into ONE ffmpeg invocation.
+            // Single-pass: pack into resource-proportional bundles.
             //
-            // Decomposition emits one DecomposedTask per stream (preserves the
-            // unit of tracking, retry, and future distributed-worker dispatch).
-            // The coordinator packs every ready task into a single synthetic
-            // Whole-bundle task that runs ONE ffmpeg covering all streams via
-            // filter_complex multi-output. After success, the executor writes
-            // per-stream outcome rows from Task.BundledTaskIds so this WaitChildren
-            // phase still sees each stream completed.
-            //
-            // Net effect: 1 video rung + 3 audio + 2 sub + thumbs + chapters
-            // becomes 1 EncodeTaskJob → 1 ffmpeg process instead of 8 concurrent
-            // jobs racing the GPU and shared writes.
-            DecomposedTask bundle = new(
-                TaskId: $"{groupTag}-bundle",
-                ParentJobId: parentJobId,
-                GroupTag: groupTag,
-                Kind: EncodeTaskKind.Whole,
-                OutputIndex: 0,
-                Resources: ResolveBundleResources(tasks),
-                EstimatedCostUnits: tasks.Sum(task => task.EstimatedCostUnits),
-                Label: $"bundle ({tasks.Length} streams)",
-                BundledTaskIds: allTaskIds
-            );
+            // Decomposition emits one DecomposedTask per stream (preserves
+            // unit of tracking, retry, future distributed dispatch). The
+            // coordinator now packs ready tasks into bundles sized to host
+            // hardware — NVENC session cap for GPU rungs, sensible CPU
+            // budget for software rungs — so each bundle is one ffmpeg
+            // invocation that respects the worker's actual capacity. The
+            // queue worker pulls bundles sequentially, so a 10-rung HEVC
+            // ladder on a 5-session GPU yields 2 sequential ffmpegs (5+5)
+            // and never oversubscribes the encoder.
+            DecomposedTask[] bundles = BuildResourceBundles(tasks, parentJobId, groupTag);
 
-            EncodeTaskJob bundleJob = BuildChildJob(bundle, presetId);
-            dispatcher.DispatchChild(
-                bundleJob,
-                onQueue: bundleJob.QueueName,
-                priority: bundleJob.Priority,
-                parentJobId: parentJobId,
-                groupTag: groupTag
-            );
+            foreach (DecomposedTask bundle in bundles)
+            {
+                EncodeTaskJob bundleJob = BuildChildJob(bundle, presetId);
+                dispatcher.DispatchChild(
+                    bundleJob,
+                    onQueue: bundleJob.QueueName,
+                    priority: bundleJob.Priority,
+                    parentJobId: parentJobId,
+                    groupTag: groupTag
+                );
+            }
 
             Logger.Encoder(
-                $"[VideoEncodeJob] Dispatched bundle covering {tasks.Length} streams as ONE child job. Transitioning to WaitChildren."
+                $"[VideoEncodeJob] Dispatched {bundles.Length} bundle(s) covering {tasks.Length} streams. Transitioning to WaitChildren."
             );
 
             ReEnqueueSelf(
@@ -753,6 +745,243 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             ?? throw new InvalidOperationException(
                 "QueueRunner.Current is null — queue not initialized"
             );
+    }
+
+    /// <summary>
+    /// Pack ready single-pass tasks into resource-proportional bundles.
+    ///
+    /// <para>GPU-encoder video tasks are chunked by the host's NVENC session
+    /// cap (the smallest <see cref="GpuDevice.MaxEncoderSessions"/> across
+    /// detected GPUs — typically 5 on consumer cards, 8 on RTX 40-series,
+    /// unlimited on pro cards). CPU-encoder video tasks chunk by half the
+    /// physical core count so libx264 / libx265 / libsvtav1 don't overcommit
+    /// the box.</para>
+    ///
+    /// <para>The first bundle absorbs all audio / subtitle / thumbnail /
+    /// chapter aux tasks so a single-bundle encode is exactly one ffmpeg.
+    /// Additional video-only bundles (when the ladder exceeds the host cap)
+    /// queue behind it and the worker pulls them sequentially.</para>
+    /// </summary>
+    private static DecomposedTask[] BuildResourceBundles(
+        DecomposedTask[] tasks,
+        int parentJobId,
+        string groupTag
+    )
+    {
+        DecomposedTask[] stamped = tasks
+            .Select(task => task with { ParentJobId = parentJobId })
+            .ToArray();
+
+        (int gpuCap, int cpuCap) = ResolveHostCaps();
+
+        List<(int index, DecomposedTask task)> videoTasks = stamped
+            .Select((task, index) => (index, task))
+            .Where(entry => entry.task.Kind == EncodeTaskKind.Video)
+            .ToList();
+
+        List<(int index, DecomposedTask task)> gpuVideoTasks = videoTasks
+            .Where(entry => entry.task.Resources?.GpuDeviceKey is not null)
+            .ToList();
+
+        List<(int index, DecomposedTask task)> cpuVideoTasks = videoTasks
+            .Where(entry => entry.task.Resources?.GpuDeviceKey is null)
+            .ToList();
+
+        List<int[]> videoChunks = new();
+        videoChunks.AddRange(ChunkIndexes(gpuVideoTasks, gpuCap));
+        videoChunks.AddRange(ChunkIndexes(cpuVideoTasks, cpuCap));
+
+        // Audio / Subtitle / Thumbnails / Chapters — light enough to ride
+        // along the first video bundle (or stand alone when there is no
+        // video). Keep them in one batch attached to bundle[0].
+        int[] audioIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Audio);
+        int[] subIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Subtitle);
+        bool hasThumbs = stamped.Any(task => task.Kind == EncodeTaskKind.Thumbnails);
+        int[] chapterIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Chapters);
+
+        List<DecomposedTask> bundles = new();
+        bool auxAttached = false;
+
+        for (int bundleIndex = 0; bundleIndex < videoChunks.Count; bundleIndex++)
+        {
+            int[] videoChunk = videoChunks[bundleIndex];
+            int[] inThisBundle = videoChunk.ToArray();
+
+            int[] audioForBundle;
+            int[] subsForBundle;
+            bool thumbsForBundle;
+            int[] chaptersForBundle;
+
+            if (!auxAttached)
+            {
+                audioForBundle = audioIndexes;
+                subsForBundle = subIndexes;
+                thumbsForBundle = hasThumbs;
+                chaptersForBundle = chapterIndexes;
+                auxAttached = true;
+
+                inThisBundle = inThisBundle
+                    .Concat(audioIndexes)
+                    .Concat(subIndexes)
+                    .Concat(chapterIndexes)
+                    .ToArray();
+                if (hasThumbs)
+                    inThisBundle = inThisBundle
+                        .Concat(IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Thumbnails))
+                        .ToArray();
+            }
+            else
+            {
+                audioForBundle = [];
+                subsForBundle = [];
+                thumbsForBundle = false;
+                chaptersForBundle = [];
+            }
+
+            bundles.Add(
+                BuildBundleTask(
+                    stamped,
+                    inThisBundle,
+                    videoChunk,
+                    audioForBundle,
+                    subsForBundle,
+                    thumbsForBundle,
+                    chaptersForBundle,
+                    parentJobId,
+                    groupTag,
+                    bundleIndex
+                )
+            );
+        }
+
+        // No video at all? Emit one aux-only bundle so audio/subs/thumb still
+        // run. (Edge case: profile with no video rungs.)
+        if (
+            videoChunks.Count == 0
+            && (
+                audioIndexes.Length > 0
+                || subIndexes.Length > 0
+                || hasThumbs
+                || chapterIndexes.Length > 0
+            )
+        )
+        {
+            int[] auxOnly = audioIndexes.Concat(subIndexes).Concat(chapterIndexes).ToArray();
+            if (hasThumbs)
+                auxOnly = auxOnly
+                    .Concat(IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Thumbnails))
+                    .ToArray();
+
+            bundles.Add(
+                BuildBundleTask(
+                    stamped,
+                    auxOnly,
+                    videoChunk: [],
+                    audioForBundle: audioIndexes,
+                    subsForBundle: subIndexes,
+                    thumbsForBundle: hasThumbs,
+                    chaptersForBundle: chapterIndexes,
+                    parentJobId,
+                    groupTag,
+                    0
+                )
+            );
+        }
+
+        return bundles.ToArray();
+    }
+
+    /// <summary>
+    /// Resolve per-host bundle caps. GPU cap = smallest NVENC session limit
+    /// across detected GPUs. CPU cap = half the physical core count (each
+    /// software encode tends to need ~2 cores to keep up). Sentinel values
+    /// when no GPU / no detection.
+    /// </summary>
+    private static (int GpuCap, int CpuCap) ResolveHostCaps()
+    {
+        IHardwareCapabilities? hardware = EncoderProvider.ResolveService<IHardwareCapabilities>();
+
+        int gpuCap = int.MaxValue;
+        if (hardware is { HasGpu: true } && hardware.Gpus.Count > 0)
+        {
+            int hwCap = hardware.Gpus.Min(gpu => gpu.MaxEncoderSessions);
+            gpuCap = hwCap > 0 ? hwCap : int.MaxValue;
+        }
+
+        int cores = Math.Max(1, Environment.ProcessorCount);
+        int cpuCap = Math.Max(1, cores / 2);
+
+        return (gpuCap, cpuCap);
+    }
+
+    private static int[] IndexesOf(DecomposedTask[] tasks, Func<DecomposedTask, bool> predicate)
+    {
+        List<int> indexes = new();
+        for (int i = 0; i < tasks.Length; i++)
+        {
+            if (predicate(tasks[i]))
+                indexes.Add(i);
+        }
+        return indexes.ToArray();
+    }
+
+    private static List<int[]> ChunkIndexes(List<(int index, DecomposedTask task)> entries, int cap)
+    {
+        List<int[]> chunks = new();
+        if (entries.Count == 0 || cap <= 0)
+            return chunks;
+
+        for (int offset = 0; offset < entries.Count; offset += cap)
+        {
+            int[] chunk = entries.Skip(offset).Take(cap).Select(entry => entry.index).ToArray();
+            chunks.Add(chunk);
+        }
+        return chunks;
+    }
+
+    private static DecomposedTask BuildBundleTask(
+        DecomposedTask[] allTasks,
+        int[] containedTaskIndexes,
+        int[] videoChunk,
+        int[] audioForBundle,
+        int[] subsForBundle,
+        bool thumbsForBundle,
+        int[] chaptersForBundle,
+        int parentJobId,
+        string groupTag,
+        int bundleIndex
+    )
+    {
+        string[] bundledIds = containedTaskIndexes.Select(idx => allTasks[idx].TaskId).ToArray();
+
+        // Video slice descriptors point at OutputPlan.VideoOutputs indexes
+        // (DecomposedTask.OutputIndex on each Video task is the index).
+        int[] videoSliceIndexes = videoChunk.Select(idx => allTasks[idx].OutputIndex).ToArray();
+
+        int[] audioSliceIndexes = audioForBundle.Select(idx => allTasks[idx].OutputIndex).ToArray();
+
+        int[] subSliceIndexes = subsForBundle.Select(idx => allTasks[idx].OutputIndex).ToArray();
+
+        int videoCount = videoSliceIndexes.Length;
+        int totalCount = bundledIds.Length;
+
+        DecomposedTask[] bundleTasks = containedTaskIndexes.Select(idx => allTasks[idx]).ToArray();
+
+        return new DecomposedTask(
+            TaskId: $"{groupTag}-bundle-{bundleIndex}",
+            ParentJobId: parentJobId,
+            GroupTag: groupTag,
+            Kind: EncodeTaskKind.Whole,
+            OutputIndex: 0,
+            Resources: ResolveBundleResources(bundleTasks),
+            EstimatedCostUnits: bundleTasks.Sum(task => task.EstimatedCostUnits),
+            Label: $"bundle {bundleIndex} ({videoCount} video / {totalCount} total)",
+            BundledTaskIds: bundledIds,
+            VideoSliceIndexes: videoSliceIndexes,
+            AudioSliceIndexes: audioSliceIndexes,
+            SubtitleSliceIndexes: subSliceIndexes,
+            IncludeThumbnails: thumbsForBundle ? null : false
+        );
     }
 
     /// <summary>
