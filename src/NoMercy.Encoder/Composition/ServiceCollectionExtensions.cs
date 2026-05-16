@@ -131,12 +131,21 @@ public static class ServiceCollectionExtensions
         // IHardwareCapabilities.Gpus[*].MaxEncoderSessions.
         services.AddSingleton<INvencSessionCap, NvencSessionCap>();
 
-        // IResourceBudget — built from IHardwareCapabilities after detection completes
+        // IResourceBudget — holds IHardwareCapabilities live so the GPU list
+        // is re-read after async detection completes. The previous factory
+        // captured hw.Gpus eagerly (an empty list at startup since
+        // HardwareInitializationService runs as a hosted service AFTER the DI
+        // graph is built), which silently produced a semaphore map with zero
+        // entries. Every encoder-gpu task then crashed on first job pick
+        // because GetGpuSemaphore threw "device 'h264_nvenc' is not
+        // registered" — see UnobservedTaskException entries in encoder logs
+        // before this fix.
         services.AddSingleton<IResourceBudget>(sp =>
         {
             IHardwareCapabilities hw = sp.GetRequiredService<IHardwareCapabilities>();
             IResourceMonitor monitor = sp.GetRequiredService<IResourceMonitor>();
-            return new ResourceBudget(hw.Gpus, hw.CpuCores, monitor);
+            ILogger<ResourceBudget> logger = sp.GetRequiredService<ILogger<ResourceBudget>>();
+            return new ResourceBudget(hw, monitor, logger);
         });
 
         // Startup — register concrete first so IHostedService resolves same instance

@@ -16,6 +16,17 @@ public class ResourceBudget : IResourceBudget
     private readonly IResourceMonitor? _monitor;
     private readonly ILogger<ResourceBudget>? _logger;
 
+    // Live source of truth for GPUs. Held through IHardwareCapabilities so
+    // we re-read it on every lookup — HardwareInitializationService finishes
+    // detection AFTER the DI container instantiates this singleton, so
+    // capturing GPUs at construction time gives an empty list forever (which
+    // is what caused every encoder-gpu worker to crash on first job pick
+    // with "GPU device 'h264_nvenc' is not registered" — alias registration
+    // ran inside an empty foreach loop).
+    private readonly IHardwareCapabilities? _hardware;
+    private readonly object _registrationLock = new();
+    private bool _gpusRegistered;
+
     // FFmpeg encoder name suffixes that identify a GPU vendor. Same list as
     // TaskResourceHelper.GpuEncoderTokens — kept in sync so encoder-name
     // resource requirements (e.g. "h264_nvenc") resolve to the right GPU
@@ -31,6 +42,30 @@ public class ResourceBudget : IResourceBudget
         ("videotoolbox", GpuVendor.Apple),
     ];
 
+    /// <summary>
+    /// Primary constructor used by DI. Holds <see cref="IHardwareCapabilities"/>
+    /// live so the GPU list is re-read after async detection completes — see
+    /// <c>_hardware</c> field comment for why eager capture is broken.
+    /// </summary>
+    public ResourceBudget(
+        IHardwareCapabilities hardware,
+        IResourceMonitor? monitor = null,
+        ILogger<ResourceBudget>? logger = null
+    )
+    {
+        _hardware = hardware;
+        _monitor = monitor;
+        _logger = logger;
+        _cpuSemaphore = new(hardware.CpuCores, hardware.CpuCores);
+        _gpuSemaphores = new();
+        TryRegisterGpus();
+    }
+
+    /// <summary>
+    /// Legacy constructor used by tests that pass an explicit GPU list (and
+    /// don't want to spin up an IHardwareCapabilities). Marks the GPU set as
+    /// final so lazy registration doesn't fire and shadow the test fixture.
+    /// </summary>
     public ResourceBudget(
         IReadOnlyList<GpuDevice> gpuDevices,
         int cpuCores,
@@ -42,7 +77,38 @@ public class ResourceBudget : IResourceBudget
         _logger = logger;
         _cpuSemaphore = new(cpuCores, cpuCores);
         _gpuSemaphores = new();
+        RegisterGpus(gpuDevices);
+        _gpusRegistered = true; // explicit list — no lazy re-registration
+    }
 
+    private void TryRegisterGpus()
+    {
+        if (_gpusRegistered || _hardware is null)
+            return;
+
+        lock (_registrationLock)
+        {
+            if (_gpusRegistered)
+                return;
+
+            IReadOnlyList<GpuDevice> gpus = _hardware.Gpus;
+            if (gpus.Count == 0)
+                return; // detection still pending — try again on next lookup
+
+            RegisterGpus(gpus);
+            _gpusRegistered = true;
+
+            _logger?.LogDebug(
+                "ResourceBudget GPU semaphores registered lazily: {Count} device(s), "
+                    + "{KeyCount} lookup keys (incl. vendor + encoder aliases)",
+                gpus.Count,
+                _gpuSemaphores.Count
+            );
+        }
+    }
+
+    private void RegisterGpus(IReadOnlyList<GpuDevice> gpuDevices)
+    {
         foreach (GpuDevice device in gpuDevices)
         {
             SemaphoreSlim semaphore = new(device.MaxEncoderSessions, device.MaxEncoderSessions);
@@ -245,13 +311,18 @@ public class ResourceBudget : IResourceBudget
 
     private SemaphoreSlim GetGpuSemaphore(string gpuDeviceKey)
     {
-        if (!_gpuSemaphores.TryGetValue(gpuDeviceKey, out SemaphoreSlim? semaphore))
-        {
-            throw new InvalidOperationException(
-                $"GPU device '{gpuDeviceKey}' is not registered with this ResourceBudget."
-            );
-        }
+        if (_gpuSemaphores.TryGetValue(gpuDeviceKey, out SemaphoreSlim? semaphore))
+            return semaphore;
 
-        return semaphore;
+        // Detection may have completed since the DI container instantiated us
+        // with an empty GPU list. Try registering now and re-check.
+        TryRegisterGpus();
+        if (_gpuSemaphores.TryGetValue(gpuDeviceKey, out semaphore))
+            return semaphore;
+
+        throw new InvalidOperationException(
+            $"GPU device '{gpuDeviceKey}' is not registered with this ResourceBudget. "
+                + $"Available keys: {string.Join(", ", _gpuSemaphores.Keys)}"
+        );
     }
 }
