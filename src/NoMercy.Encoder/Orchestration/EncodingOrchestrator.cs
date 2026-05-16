@@ -175,126 +175,49 @@ public class EncodingOrchestrator(
                 result = await strategy.EncodeAsync(stagedRequest, progress, ct);
                 wall.Stop();
 
-                if (result.Success)
+                // Per-task encodes (TaskFilter set on EncodingOptions) write
+                // to a SHARED tempDir derived from the relative OutputDirectory.
+                // All decomposed tasks for a single coordinator end up pointing
+                // at the same cache path. If each task ran the publish loop it
+                // would race every other task in the group: enumerate ALL files
+                // (including in-progress writes from other tasks), File.Move
+                // them, then Directory.Delete the tempDir — wiping outputs the
+                // peers haven't finished writing yet. The coordinator
+                // (VideoEncodeJob.HandleFinalizeAsync) publishes once after
+                // every task in the group completes, so per-task runs skip
+                // both the publish loop and the cleanup finally.
+                bool isPerTaskRun = request.Options?.TaskFilter is not null;
+
+                if (result.Success && !isPerTaskRun)
                 {
-                    // Decide stage name before entering the loop so the UI
-                    // shows an accurate label from the first notification.
-                    bool isLocalDest = destinationStorage is LocalStorage;
-                    bool sameVolume = false;
-
-                    if (isLocalDest)
-                    {
-                        // Probe the first file to determine whether source
-                        // temp dir and destination share a volume. If temp dir
-                        // is empty this stays false and we fall through to copy.
-                        string? firstFile = Directory
-                            .EnumerateFiles(tempDir, "*", SearchOption.AllDirectories)
-                            .FirstOrDefault();
-                        if (firstFile is not null)
-                        {
-                            // Compute the destination absolute path for the probe file.
-                            string probeRel = Path.GetRelativePath(tempDir, firstFile)
-                                .Replace('\\', '/');
-                            string probeDest = string.Join(
-                                '/',
-                                request.OutputDirectory.TrimEnd('/'),
-                                probeRel.TrimStart('/')
-                            );
-                            try
-                            {
-                                string destAbs = destinationStorage.GetFullPath(probeDest);
-                                sameVolume = string.Equals(
-                                    Path.GetPathRoot(firstFile),
-                                    Path.GetPathRoot(destAbs),
-                                    StringComparison.OrdinalIgnoreCase
-                                );
-                            }
-                            catch (NotSupportedException) { }
-                        }
-                    }
-
-                    string stageName = ResolvePublishStageName(destinationStorage, sameVolume);
-                    progress?.OnStageStarted(stageName);
-                    Stopwatch stageWatch = Stopwatch.StartNew();
-                    try
-                    {
-                        foreach (
-                            string localFile in Directory.EnumerateFiles(
-                                tempDir,
-                                "*",
-                                SearchOption.AllDirectories
-                            )
-                        )
-                        {
-                            string rel = Path.GetRelativePath(tempDir, localFile)
-                                .Replace('\\', '/');
-                            string remoteDest = string.Join(
-                                '/',
-                                request.OutputDirectory.TrimEnd('/'),
-                                rel.TrimStart('/')
-                            );
-
-                            if (sameVolume)
-                            {
-                                // Same-volume atomic rename — near-zero cost.
-                                bool moved = false;
-                                try
-                                {
-                                    string destAbs = destinationStorage.GetFullPath(remoteDest);
-                                    Directory.CreateDirectory(Path.GetDirectoryName(destAbs)!);
-                                    File.Move(localFile, destAbs, overwrite: true);
-                                    moved = true;
-                                }
-                                catch (IOException)
-                                {
-                                    // Cross-volume race or permission edge-case —
-                                    // fall through to the copy path below.
-                                }
-
-                                if (moved)
-                                    continue;
-                            }
-
-                            // Remote backend OR fallback from a failed move. Ensure the
-                            // parent directory exists on the destination — NFS creat
-                            // returns NF4ERR_NOENT(-2) when the enclosing dir is
-                            // missing, so without this the first segment write blows
-                            // up on every fresh show / season folder.
-                            string? remoteParent = destinationStorage.GetParent(remoteDest);
-                            if (!string.IsNullOrEmpty(remoteParent))
-                                destinationStorage.CreateDirectory(remoteParent);
-
-                            await using FileStream src = File.OpenRead(localFile);
-                            await using Stream dst = await destinationStorage.OpenWriteAsync(
-                                remoteDest,
-                                overwrite: true,
-                                ct
-                            );
-                            await src.CopyToAsync(dst, ct);
-                        }
-                        stageWatch.Stop();
-                        progress?.OnStageCompleted(stageName, stageWatch.Elapsed);
-                    }
-                    catch
-                    {
-                        stageWatch.Stop();
-                        throw;
-                    }
+                    await PublishTempDirAsync(
+                        tempDir,
+                        request.OutputDirectory,
+                        destinationStorage,
+                        progress,
+                        ct
+                    );
                 }
             }
             finally
             {
-                try
+                // Per-task runs leave files for the coordinator to publish +
+                // sweep — see isPerTaskRun comment above the publish loop.
+                bool isPerTaskRun = request.Options?.TaskFilter is not null;
+                if (!isPerTaskRun)
                 {
-                    Directory.Delete(tempDir, recursive: true);
-                }
-                catch (Exception cleanEx)
-                {
-                    logger.LogWarning(
-                        cleanEx,
-                        "Could not clean up temp encode dir {TempDir}",
-                        tempDir
-                    );
+                    try
+                    {
+                        Directory.Delete(tempDir, recursive: true);
+                    }
+                    catch (Exception cleanEx)
+                    {
+                        logger.LogWarning(
+                            cleanEx,
+                            "Could not clean up temp encode dir {TempDir}",
+                            tempDir
+                        );
+                    }
                 }
             }
 
@@ -486,6 +409,166 @@ public class EncodingOrchestrator(
             return [IEncodingStrategy.WholeTask(groupTag)];
 
         return strategy.Decompose(plan, groupTag);
+    }
+
+    /// <summary>
+    /// Publish whatever was written to the shared per-encode tempDir to the
+    /// destination storage, then delete the tempDir. Called once by the
+    /// coordinator after all decomposed child tasks complete — per-task runs
+    /// skip the publish + cleanup steps so the moves don't race each other.
+    /// No-op when the tempDir doesn't exist (no tasks wrote anything).
+    /// </summary>
+    public async Task PublishCachedArtifactsAsync(
+        string outputDirectory,
+        IStorage destinationStorage,
+        IProgressObserver? progress = null,
+        CancellationToken ct = default
+    )
+    {
+        string relativeOutputPath = (outputDirectory ?? string.Empty).Replace('\\', '/').Trim('/');
+        string tempDir = string.IsNullOrEmpty(relativeOutputPath)
+            ? Path.Combine(StoragePaths.TranscodeRoot, $"nomercy-enc-{Ulid.NewUlid()}")
+            : Path.Combine(
+                StoragePaths.TranscodeRoot,
+                relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
+            );
+
+        if (!Directory.Exists(tempDir))
+        {
+            logger.LogWarning(
+                "PublishCachedArtifactsAsync: temp dir {TempDir} does not exist — "
+                    + "no decomposed task wrote here. Nothing to publish.",
+                tempDir
+            );
+            return;
+        }
+
+        try
+        {
+            await PublishTempDirAsync(tempDir, outputDirectory, destinationStorage, progress, ct);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+            catch (Exception cleanEx)
+            {
+                logger.LogWarning(
+                    cleanEx,
+                    "Could not clean up temp encode dir {TempDir} after coordinator publish",
+                    tempDir
+                );
+            }
+        }
+    }
+
+    /// <summary>
+    /// Moves every file under <paramref name="tempDir"/> to its mirrored path
+    /// under <paramref name="outputDirectory"/> on <paramref name="destinationStorage"/>.
+    /// Uses an atomic <c>File.Move</c> on same-volume local destinations, falls
+    /// back to a copy stream for remote backends or cross-volume cases. Parent
+    /// directories are created on demand because NFS <c>creat</c> rejects writes
+    /// when the enclosing directory is missing.
+    /// </summary>
+    private async Task PublishTempDirAsync(
+        string tempDir,
+        string outputDirectory,
+        IStorage destinationStorage,
+        IProgressObserver? progress,
+        CancellationToken ct
+    )
+    {
+        bool isLocalDest = destinationStorage is LocalStorage;
+        bool sameVolume = false;
+
+        if (isLocalDest)
+        {
+            string? firstFile = Directory
+                .EnumerateFiles(tempDir, "*", SearchOption.AllDirectories)
+                .FirstOrDefault();
+            if (firstFile is not null)
+            {
+                string probeRel = Path.GetRelativePath(tempDir, firstFile).Replace('\\', '/');
+                string probeDest = string.Join(
+                    '/',
+                    outputDirectory.TrimEnd('/'),
+                    probeRel.TrimStart('/')
+                );
+                try
+                {
+                    string destAbs = destinationStorage.GetFullPath(probeDest);
+                    sameVolume = string.Equals(
+                        Path.GetPathRoot(firstFile),
+                        Path.GetPathRoot(destAbs),
+                        StringComparison.OrdinalIgnoreCase
+                    );
+                }
+                catch (NotSupportedException) { }
+            }
+        }
+
+        string stageName = ResolvePublishStageName(destinationStorage, sameVolume);
+        progress?.OnStageStarted(stageName);
+        Stopwatch stageWatch = Stopwatch.StartNew();
+        try
+        {
+            foreach (
+                string localFile in Directory.EnumerateFiles(
+                    tempDir,
+                    "*",
+                    SearchOption.AllDirectories
+                )
+            )
+            {
+                string rel = Path.GetRelativePath(tempDir, localFile).Replace('\\', '/');
+                string remoteDest = string.Join(
+                    '/',
+                    outputDirectory.TrimEnd('/'),
+                    rel.TrimStart('/')
+                );
+
+                if (sameVolume)
+                {
+                    bool moved = false;
+                    try
+                    {
+                        string destAbs = destinationStorage.GetFullPath(remoteDest);
+                        Directory.CreateDirectory(Path.GetDirectoryName(destAbs)!);
+                        File.Move(localFile, destAbs, overwrite: true);
+                        moved = true;
+                    }
+                    catch (IOException)
+                    {
+                        // Cross-volume race or permission edge-case —
+                        // fall through to the copy path below.
+                    }
+
+                    if (moved)
+                        continue;
+                }
+
+                string? remoteParent = destinationStorage.GetParent(remoteDest);
+                if (!string.IsNullOrEmpty(remoteParent))
+                    destinationStorage.CreateDirectory(remoteParent);
+
+                await using FileStream src = File.OpenRead(localFile);
+                await using Stream dst = await destinationStorage.OpenWriteAsync(
+                    remoteDest,
+                    overwrite: true,
+                    ct
+                );
+                await src.CopyToAsync(dst, ct);
+            }
+            stageWatch.Stop();
+            progress?.OnStageCompleted(stageName, stageWatch.Elapsed);
+        }
+        catch
+        {
+            stageWatch.Stop();
+            throw;
+        }
     }
 
     // Stream-level artifacts only — the master + variant playlists for HLS,

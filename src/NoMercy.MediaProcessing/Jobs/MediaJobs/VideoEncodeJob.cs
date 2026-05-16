@@ -468,6 +468,33 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
             : StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
 
+        IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
+
+        // Move everything the child tasks wrote into the shared per-encode
+        // cache dir over to the final destination, then wipe the cache.
+        // Per-task EncodeAsync runs skip publish + cleanup precisely so this
+        // step doesn't race them — see EncodingOrchestrator.EncodeAsync's
+        // isPerTaskRun branch.
+        IEncodingOrchestrator orchestrator =
+            EncoderProvider.ResolveService<IEncodingOrchestrator>()
+            ?? throw new InvalidOperationException(
+                "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
+            );
+
+        await PublishStageAsync(fileMetadata, "Publishing artifacts");
+        try
+        {
+            await orchestrator.PublishCachedArtifactsAsync(fileMetadata.Path, destinationStorage);
+        }
+        catch (Exception ex)
+        {
+            Logger.Encoder(
+                $"[VideoEncodeJob] Publish failed for GroupTag={state.GroupTag}: {ex.Message}",
+                LogEventLevel.Error
+            );
+            throw;
+        }
+
         await PublishStageAsync(fileMetadata, "Checking source subtitles");
         await RunBitmapSubtitleOcrAsync(fileMetadata, InputFile, sourceStorage);
 
