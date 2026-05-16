@@ -596,6 +596,14 @@ public class PlanStage(
                     .ToArray()
                 : [];
 
+        // Disambiguate any video plans whose templates would resolve to the
+        // same on-disk path. The HdrPolicy.EmitHdrAndSdr expansion plus
+        // H264FallbackHeights can produce two 1080p rungs (HEVC tonemap + H.264
+        // fallback) that both label as "video_1920x1080_SDR" via TemplateResolver.
+        // Append a codec-family token to colliding entries so they land in
+        // distinct directories (video_1920x1080_SDR_avc/ vs _hevc/).
+        videoPlan = DisambiguateVideo(videoPlan);
+
         // Build one AudioOutputPlan per matching source stream.
         // AllowedLanguages is a FILTER — the actual language comes from the source stream.
         List<AudioOutputPlan> audioPlans = [];
@@ -641,7 +649,13 @@ public class PlanStage(
             }
         }
 
-        AudioOutputPlan[] audioPlan = audioPlans.ToArray();
+        // Disambiguate any audio plans whose templates would resolve to the
+        // same on-disk path. The default audio template is
+        // "audio_{lang}_{codec}/audio_{lang}_{codec}", so three English AAC
+        // streams all collapse to the same directory + filename. Append the
+        // source stream index to colliding plans only — single-stream-per-
+        // language sources keep their stable templates.
+        AudioOutputPlan[] audioPlan = DisambiguateAudio(audioPlans).ToArray();
 
         // Build one SubtitleOutputPlan per matching source stream.
         // Deduplicate by source stream index — first matching profile wins.
@@ -995,5 +1009,148 @@ public class PlanStage(
         string keyUri = v2Drm.Parameters?.GetValueOrDefault("key_uri") ?? string.Empty;
 
         return new LegacyDrmConfig(Method: method, KeyUri: keyUri);
+    }
+
+    /// <summary>
+    /// Detects audio plans whose resolved template would land on the same
+    /// on-disk path (same language + same codec token) and appends a per-stream
+    /// suffix derived from the MapLabel <c>0:a:N</c> source index. Single-
+    /// stream-per-language sources see no change. Plans that already differ
+    /// (different language, different codec, or already suffixed) are left
+    /// alone.
+    /// </summary>
+    private static IEnumerable<AudioOutputPlan> DisambiguateAudio(
+        IReadOnlyList<AudioOutputPlan> plans
+    )
+    {
+        // Group by the natural collision key — same resolved language + codec
+        // token + same template lands on the same path.
+        var groups = plans
+            .Select((plan, idx) => new { plan, idx })
+            .GroupBy(entry =>
+                (
+                    entry.plan.Language ?? "und",
+                    AudioCodecTokenFor(entry.plan.EncoderName),
+                    entry.plan.SegmentNameTemplate,
+                    entry.plan.PlaylistNameTemplate
+                )
+            )
+            .ToList();
+
+        AudioOutputPlan[] result = plans.ToArray();
+        foreach (var group in groups)
+        {
+            if (group.Count() < 2)
+                continue;
+
+            foreach (var entry in group)
+            {
+                int sourceIndex = ParseAudioSourceIndex(entry.plan.MapLabel);
+                string suffix = $"_{sourceIndex}";
+                result[entry.idx] = entry.plan with
+                {
+                    SegmentNameTemplate = AppendToTemplate(entry.plan.SegmentNameTemplate, suffix),
+                    PlaylistNameTemplate = AppendToTemplate(
+                        entry.plan.PlaylistNameTemplate,
+                        suffix
+                    ),
+                };
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Detects video plans whose resolved template would land on the same
+    /// on-disk path (same dimensions + same HDR/SDR designation) and appends a
+    /// codec-family suffix so two different-codec rungs at the same resolution
+    /// (e.g. H.264 1080p fallback + HEVC 1080p tonemap under EmitHdrAndSdr)
+    /// don't share <c>video_1920x1080_SDR/</c>.
+    /// </summary>
+    private static VideoOutputPlan[] DisambiguateVideo(IReadOnlyList<VideoOutputPlan> plans)
+    {
+        var groups = plans
+            .Select((plan, idx) => new { plan, idx })
+            .GroupBy(entry =>
+                (
+                    entry.plan.Width,
+                    entry.plan.Height,
+                    entry.plan.IsHdrOutput,
+                    entry.plan.SegmentNameTemplate,
+                    entry.plan.PlaylistNameTemplate
+                )
+            )
+            .ToList();
+
+        VideoOutputPlan[] result = plans.ToArray();
+        foreach (var group in groups)
+        {
+            if (group.Count() < 2)
+                continue;
+
+            foreach (var entry in group)
+            {
+                string suffix = $"_{VideoCodecFamilyToken(entry.plan.EncoderName)}";
+                result[entry.idx] = entry.plan with
+                {
+                    SegmentNameTemplate = AppendToTemplate(entry.plan.SegmentNameTemplate, suffix),
+                    PlaylistNameTemplate = AppendToTemplate(
+                        entry.plan.PlaylistNameTemplate,
+                        suffix
+                    ),
+                };
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Appends a suffix to every <c>/</c>-separated segment in a template so
+    /// both the directory and filename halves get disambiguated.
+    /// <c>"audio_eng_aac/audio_eng_aac"</c> + <c>"_0"</c> becomes
+    /// <c>"audio_eng_aac_0/audio_eng_aac_0"</c>, not
+    /// <c>"audio_eng_aac/audio_eng_aac_0"</c> — the latter would still
+    /// collide on the .m4s segment files since they live in the same dir.
+    /// </summary>
+    private static string AppendToTemplate(string template, string suffix) =>
+        string.Join('/', template.Split('/').Select(segment => segment + suffix));
+
+    private static int ParseAudioSourceIndex(string mapLabel)
+    {
+        // MapLabel is "0:a:N" for audio streams. Pull N; fall back to 0 on
+        // unexpected shapes so we still produce a unique-per-call suffix.
+        int lastColon = mapLabel.LastIndexOf(':');
+        return lastColon >= 0 && int.TryParse(mapLabel[(lastColon + 1)..], out int idx) ? idx : 0;
+    }
+
+    private static string AudioCodecTokenFor(string encoderName)
+    {
+        // Mirrors HlsOutputStrategy's codec-name shortening (lib / libfdk_
+        // prefixes stripped) so the collision grouping uses the same key
+        // the template would resolve to.
+        return encoderName.Replace("libfdk_", "").Replace("lib", "");
+    }
+
+    /// <summary>
+    /// Codec family token used to disambiguate same-resolution rungs encoded
+    /// by different codecs. Matches the codec strings consumers expect in
+    /// folder names: <c>avc</c> for H.264, <c>hevc</c> for H.265, <c>av1</c>
+    /// for AV1, <c>vp9</c> for VP9. Falls back to the raw encoder name when
+    /// the encoder doesn't match a known family.
+    /// </summary>
+    private static string VideoCodecFamilyToken(string encoderName)
+    {
+        string lower = encoderName.ToLowerInvariant();
+        if (lower.Contains("264") || lower.Contains("h264") || lower == "libx264")
+            return "avc";
+        if (lower.Contains("265") || lower.Contains("hevc") || lower == "libx265")
+            return "hevc";
+        if (lower.Contains("av1"))
+            return "av1";
+        if (lower.Contains("vp9"))
+            return "vp9";
+        return lower;
     }
 }
