@@ -470,26 +470,71 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
 
         IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
 
-        // Move everything the child tasks wrote into the shared per-encode
-        // cache dir over to the final destination, then wipe the cache.
-        // Per-task EncodeAsync runs skip publish + cleanup precisely so this
-        // step doesn't race them — see EncodingOrchestrator.EncodeAsync's
-        // isPerTaskRun branch.
+        // Coordinator finalize: run the pipeline once over the shared cache
+        // tempDir with Options.FinalizeOnly=true. The orchestrator skips
+        // Build + Execute, runs FinalizeStage against the variant playlists
+        // the children produced (writing master m3u8, chapters.vtt,
+        // fonts.json, manifest.json), then publishes the whole cache to
+        // the destination and deletes it. Per-task EncodeAsync runs skip
+        // FinalizeStage + publish + cleanup precisely to avoid racing this
+        // single coordinator-driven pass.
         IEncodingOrchestrator orchestrator =
             EncoderProvider.ResolveService<IEncodingOrchestrator>()
             ?? throw new InvalidOperationException(
                 "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
             );
 
+        EncodingProfile finalizeProfile;
+        await using (MediaContext profileLookup = new())
+        {
+            try
+            {
+                finalizeProfile = PresetResolver.Resolve(
+                    state.PresetId,
+                    new DbPresetLookup(profileLookup)
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.Encoder(
+                    $"[VideoEncodeJob] Finalize: cannot resolve preset {state.PresetId} — {ex.Message}",
+                    LogEventLevel.Warning
+                );
+                return;
+            }
+        }
+
+        EncodingRequest finalizeRequest = new(
+            InputPath: InputFile,
+            OutputDirectory: fileMetadata.Path,
+            Profile: finalizeProfile,
+            Options: new(FinalizeOnly: true),
+            MediaTitle: fileMetadata.FileName,
+            SourceStorage: sourceStorage,
+            DestinationStorage: destinationStorage
+        );
+
         await PublishStageAsync(fileMetadata, "Publishing artifacts");
         try
         {
-            await orchestrator.PublishCachedArtifactsAsync(fileMetadata.Path, destinationStorage);
+            EncodingResult publishResult = await orchestrator.EncodeAsync(finalizeRequest);
+            if (!publishResult.Success)
+            {
+                string err =
+                    publishResult.Error?.Message
+                    ?? publishResult.EnrichedError?.Message
+                    ?? "finalize-only pass failed with no details";
+                Logger.Encoder(
+                    $"[VideoEncodeJob] Coordinator finalize failed for GroupTag={state.GroupTag}: {err}",
+                    LogEventLevel.Error
+                );
+                return;
+            }
         }
         catch (Exception ex)
         {
             Logger.Encoder(
-                $"[VideoEncodeJob] Publish failed for GroupTag={state.GroupTag}: {ex.Message}",
+                $"[VideoEncodeJob] Coordinator finalize threw for GroupTag={state.GroupTag}: {ex.Message}",
                 LogEventLevel.Error
             );
             throw;

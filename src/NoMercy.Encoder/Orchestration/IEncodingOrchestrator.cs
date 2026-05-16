@@ -1,7 +1,6 @@
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
-using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Orchestration;
 
@@ -53,22 +52,6 @@ public interface IEncodingOrchestrator
     Task<DecomposedTask[]> DecomposeAsync(
         EncodingRequest request,
         string groupTag,
-        CancellationToken ct = default
-    );
-
-    /// <summary>
-    /// Move all artifacts the decomposed child tasks wrote to their shared
-    /// per-encode tempDir over to <paramref name="outputDirectory"/> on
-    /// <paramref name="destinationStorage"/>, then clean up the tempDir.
-    /// Called by the encode coordinator (VideoEncodeJob) exactly once after
-    /// every child task has completed — per-task EncodeAsync calls
-    /// intentionally skip the publish + cleanup steps so concurrent task
-    /// finishers don't move each other's in-progress writes.
-    /// </summary>
-    Task PublishCachedArtifactsAsync(
-        string outputDirectory,
-        IStorage destinationStorage,
-        IProgressObserver? progress = null,
         CancellationToken ct = default
     );
 }

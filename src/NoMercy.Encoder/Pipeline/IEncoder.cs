@@ -74,7 +74,18 @@ public record EncodingOptions(
     /// full-plan execution). Set by the orchestrator when running a
     /// single decomposed child task.
     /// </summary>
-    DecomposedTask? TaskFilter = null
+    DecomposedTask? TaskFilter = null,
+    /// <summary>
+    /// When true the pipeline runs Analyze → Validate → Plan → Finalize,
+    /// skipping Build + Execute. Used by the encode coordinator after all
+    /// decomposed child tasks have written their slices to the shared
+    /// tempDir — the coordinator then runs FinalizeStage once against the
+    /// existing variant playlists / segments to produce the master m3u8,
+    /// chapters.vtt, fonts.json, and bundle manifest. Concurrent per-task
+    /// FinalizeStage runs would race those shared outputs and corrupt
+    /// them, so per-task encodes leave FinalizeStage to this flag.
+    /// </summary>
+    bool FinalizeOnly = false
 );
 
 public enum Priority

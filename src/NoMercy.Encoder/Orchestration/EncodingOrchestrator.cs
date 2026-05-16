@@ -412,59 +412,6 @@ public class EncodingOrchestrator(
     }
 
     /// <summary>
-    /// Publish whatever was written to the shared per-encode tempDir to the
-    /// destination storage, then delete the tempDir. Called once by the
-    /// coordinator after all decomposed child tasks complete — per-task runs
-    /// skip the publish + cleanup steps so the moves don't race each other.
-    /// No-op when the tempDir doesn't exist (no tasks wrote anything).
-    /// </summary>
-    public async Task PublishCachedArtifactsAsync(
-        string outputDirectory,
-        IStorage destinationStorage,
-        IProgressObserver? progress = null,
-        CancellationToken ct = default
-    )
-    {
-        string relativeOutputPath = (outputDirectory ?? string.Empty).Replace('\\', '/').Trim('/');
-        string tempDir = string.IsNullOrEmpty(relativeOutputPath)
-            ? Path.Combine(StoragePaths.TranscodeRoot, $"nomercy-enc-{Ulid.NewUlid()}")
-            : Path.Combine(
-                StoragePaths.TranscodeRoot,
-                relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
-            );
-
-        if (!Directory.Exists(tempDir))
-        {
-            logger.LogWarning(
-                "PublishCachedArtifactsAsync: temp dir {TempDir} does not exist — "
-                    + "no decomposed task wrote here. Nothing to publish.",
-                tempDir
-            );
-            return;
-        }
-
-        try
-        {
-            await PublishTempDirAsync(tempDir, outputDirectory, destinationStorage, progress, ct);
-        }
-        finally
-        {
-            try
-            {
-                Directory.Delete(tempDir, recursive: true);
-            }
-            catch (Exception cleanEx)
-            {
-                logger.LogWarning(
-                    cleanEx,
-                    "Could not clean up temp encode dir {TempDir} after coordinator publish",
-                    tempDir
-                );
-            }
-        }
-    }
-
-    /// <summary>
     /// Moves every file under <paramref name="tempDir"/> to its mirrored path
     /// under <paramref name="outputDirectory"/> on <paramref name="destinationStorage"/>.
     /// Uses an atomic <c>File.Move</c> on same-volume local destinations, falls

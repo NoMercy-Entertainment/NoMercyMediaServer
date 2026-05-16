@@ -92,54 +92,101 @@ public class Encoder(
         );
         progress?.OnStageCompleted("Plan", stopwatch.Elapsed);
 
-        // Stage 4: Build
-        progress?.OnStageStarted("Build");
-        BuildInput buildInput = new(
-            plan,
-            request.InputPath,
-            request.OutputDirectory,
-            request.ResolvedTitle,
-            DurationLimit: null,
-            Pass: request.Options?.Pass ?? EncodingPass.Single,
-            StatsFilePath: request.Options?.StatsFilePath,
-            Pass1VariantIndex: request.Options?.Pass1VariantIndex ?? 0,
-            TaskFilter: request.Options?.TaskFilter
-        );
-        StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
-        if (buildResult is StageFailure buildFailure)
-            return Fail(buildFailure.Error, stopwatch.Elapsed, progress);
+        // Coordinator finalize path: when FinalizeOnly is set the pipeline
+        // skips Build + Execute and proceeds straight to FinalizeStage against
+        // the variant playlists / segments the child tasks already wrote to
+        // the shared tempDir. The synthetic ExecutionResult[] keeps the
+        // downstream signature happy — FinalizeStage only reads the count.
+        bool finalizeOnly = request.Options?.FinalizeOnly ?? false;
+        ExecutionResult[] executionResults;
 
-        FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)buildResult).Value;
-        progress?.OnStageCompleted("Build", stopwatch.Elapsed);
+        if (finalizeOnly)
+        {
+            executionResults = [];
+            logger.LogInformation(
+                "[{CorrelationId}] FinalizeOnly run — skipping Build + Execute; "
+                    + "finalizing against the existing tempDir contents.",
+                context.CorrelationId
+            );
+        }
+        else
+        {
+            // Stage 4: Build
+            progress?.OnStageStarted("Build");
+            BuildInput buildInput = new(
+                plan,
+                request.InputPath,
+                request.OutputDirectory,
+                request.ResolvedTitle,
+                DurationLimit: null,
+                Pass: request.Options?.Pass ?? EncodingPass.Single,
+                StatsFilePath: request.Options?.StatsFilePath,
+                Pass1VariantIndex: request.Options?.Pass1VariantIndex ?? 0,
+                TaskFilter: request.Options?.TaskFilter
+            );
+            StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
+            if (buildResult is StageFailure buildFailure)
+                return Fail(buildFailure.Error, stopwatch.Elapsed, progress);
 
-        // Stage 5: Execute
-        progress?.OnStageStarted("Encode");
-        ExecuteInput executeInput = new(commands, mediaInfo.Duration, progress);
-        StageResult executeResult = await executeStage.ExecuteAsync(executeInput, context, ct);
-        if (executeResult is StageFailure executeFailure)
-            return Fail(executeFailure.Error, stopwatch.Elapsed, progress);
+            FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)buildResult).Value;
+            progress?.OnStageCompleted("Build", stopwatch.Elapsed);
 
-        ExecutionResult[] executionResults = ((StageSuccess<ExecutionResult[]>)executeResult).Value;
-        progress?.OnStageCompleted("Encode", stopwatch.Elapsed);
+            // Stage 5: Execute
+            progress?.OnStageStarted("Encode");
+            ExecuteInput executeInput = new(commands, mediaInfo.Duration, progress);
+            StageResult executeResult = await executeStage.ExecuteAsync(executeInput, context, ct);
+            if (executeResult is StageFailure executeFailure)
+                return Fail(executeFailure.Error, stopwatch.Elapsed, progress);
+
+            executionResults = ((StageSuccess<ExecutionResult[]>)executeResult).Value;
+            progress?.OnStageCompleted("Encode", stopwatch.Elapsed);
+        }
 
         // Stage 6: Finalize
-        progress?.OnStageStarted("Finalize");
-        FinalizeInput finalizeInput = new(
-            executionResults,
-            plan.OutputPlan,
-            request.OutputDirectory,
-            request.ResolvedTitle,
-            Progress: progress,
-            HlsDerivatives: request.Profile.HlsDerivatives
-        );
-        StageResult finalizeResult = await finalizeStage.ExecuteAsync(finalizeInput, context, ct);
-        if (finalizeResult is StageFailure finalizeFailure)
-            return Fail(finalizeFailure.Error, stopwatch.Elapsed, progress);
+        // Per-task runs (TaskFilter set on EncodingOptions) all share the same
+        // tempDir. If every per-task EncodeAsync called FinalizeStage they
+        // would race on the SAME master playlist, chapters.vtt, fonts.json,
+        // manifest.json — concurrent writes to those files corrupt them and
+        // the WriteFontManifestAsync path takes an exclusive lock on the
+        // fonts/ directory ("being used by another process" in production
+        // logs). The coordinator (VideoEncodeJob.HandleFinalizeAsync) runs
+        // a FinalizeOnly pass once after every child task is done, so
+        // per-task encodes stop at ExecuteStage and return a synthetic
+        // FinalizeOutput.
+        FinalizeOutput finalizeOutput;
+        if (request.Options?.TaskFilter is not null)
+        {
+            finalizeOutput = new(request.OutputDirectory, 0);
+            logger.LogDebug(
+                "[{CorrelationId}] Per-task run — skipping FinalizeStage; coordinator handles "
+                    + "master playlist, chapters, fonts.json, manifest.",
+                context.CorrelationId
+            );
+        }
+        else
+        {
+            progress?.OnStageStarted("Finalize");
+            FinalizeInput finalizeInput = new(
+                executionResults,
+                plan.OutputPlan,
+                request.OutputDirectory,
+                request.ResolvedTitle,
+                Progress: progress,
+                HlsDerivatives: request.Profile.HlsDerivatives
+            );
+            StageResult finalizeResult = await finalizeStage.ExecuteAsync(
+                finalizeInput,
+                context,
+                ct
+            );
+            if (finalizeResult is StageFailure finalizeFailure)
+                return Fail(finalizeFailure.Error, stopwatch.Elapsed, progress);
 
-        FinalizeOutput finalizeOutput = ((StageSuccess<FinalizeOutput>)finalizeResult).Value;
+            finalizeOutput = ((StageSuccess<FinalizeOutput>)finalizeResult).Value;
+            progress?.OnStageCompleted("Finalize", stopwatch.Elapsed);
+        }
 
         stopwatch.Stop();
-        progress?.OnStageCompleted("Finalize", stopwatch.Elapsed);
         progress?.OnCompleted();
 
         logger.LogInformation(
