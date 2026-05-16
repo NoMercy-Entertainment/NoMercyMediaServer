@@ -35,10 +35,10 @@ public class AutoLadderConfigTests
     }
 
     [Fact]
-    public void Default_MaxRungs_is_5()
+    public void Default_MaxRungs_is_10()
     {
         AutoLadderConfig config = new();
-        config.MaxRungs.Should().Be(5);
+        config.MaxRungs.Should().Be(10);
     }
 
     [Fact]

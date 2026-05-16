@@ -66,7 +66,47 @@ public class DecomposeTests
                 ExtraFlags: []
             ))
             .ToArray();
+        return BuildPlan(videos, audioCount, subtitleCount, hasThumbnails);
+    }
 
+    private static OutputPlan MakeMixedCodecPlan()
+    {
+        // Smart-combine focus: HEVC ladder + H.264 1080p fallback should
+        // collapse to TWO video tasks (one per encoder bucket), not 5.
+        VideoOutputPlan[] videos =
+        [
+            MakeVideo(3840, 2160, "hevc_nvenc", index: 0),
+            MakeVideo(1920, 1080, "hevc_nvenc", index: 1),
+            MakeVideo(1280, 720, "hevc_nvenc", index: 2),
+            MakeVideo(854, 480, "hevc_nvenc", index: 3),
+            MakeVideo(1920, 1080, "libx264", index: 4),
+        ];
+        return BuildPlan(videos, audioCount: 0, subtitleCount: 0, hasThumbnails: false);
+    }
+
+    private static VideoOutputPlan MakeVideo(int width, int height, string encoder, int index) =>
+        new(
+            Width: width,
+            Height: height,
+            EncoderName: encoder,
+            Crf: 23,
+            BitrateKbps: 0,
+            Preset: "medium",
+            Profile: "main",
+            Level: "4.0",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: $"[v{index}]",
+            ExtraFlags: []
+        );
+
+    private static OutputPlan BuildPlan(
+        VideoOutputPlan[] videos,
+        int audioCount,
+        int subtitleCount,
+        bool hasThumbnails
+    )
+    {
         AudioOutputPlan[] audios = Enumerable
             .Range(0, audioCount)
             .Select(index => new AudioOutputPlan(
@@ -120,28 +160,62 @@ public class DecomposeTests
     }
 
     [Fact]
-    public void HlsSinglePass_Decompose_TwoVideoOneAudio_ReturnsSeparateTasks()
+    public void HlsSinglePass_Decompose_SingleVideoEncoder_BatchesAllRungsIntoOneVideoTask()
     {
+        // Two same-codec video rungs collapse to ONE video task that emits
+        // both rungs from one ffmpeg via filter_complex split.
         HlsSinglePassStrategy strategy = new(MockEncoder());
         OutputPlan plan = MakePlan(videoCount: 2, audioCount: 1);
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        tasks.Should().HaveCount(3);
+        DecomposedTask[] videoTasks = tasks
+            .Where(task => task.Kind == EncodeTaskKind.Video)
+            .ToArray();
+
+        videoTasks.Should().HaveCount(1);
+        videoTasks[0].SourceIndexes.Should().BeEquivalentTo(new[] { 0, 1 });
+
+        tasks.Where(task => task.Kind == EncodeTaskKind.Audio).Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void HlsSinglePass_Decompose_MixedCodecs_OneVideoTaskPerEncoderBucket()
+    {
+        // HEVC ladder + H.264 fallback at the same resolution → exactly
+        // two video tasks (smart-combine target).
+        HlsSinglePassStrategy strategy = new(MockEncoder());
+        OutputPlan plan = MakeMixedCodecPlan();
+
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
         DecomposedTask[] videoTasks = tasks
             .Where(task => task.Kind == EncodeTaskKind.Video)
             .ToArray();
+
+        videoTasks.Should().HaveCount(2);
+
+        DecomposedTask hevcBucket = videoTasks.Single(task => task.Label.Contains("hevc_nvenc"));
+        DecomposedTask avcBucket = videoTasks.Single(task => task.Label.Contains("libx264"));
+
+        hevcBucket.SourceIndexes.Should().BeEquivalentTo(new[] { 0, 1, 2, 3 });
+        avcBucket.SourceIndexes.Should().BeEquivalentTo(new[] { 4 });
+    }
+
+    [Fact]
+    public void HlsSinglePass_Decompose_AudioBatchedIntoOneTask()
+    {
+        HlsSinglePassStrategy strategy = new(MockEncoder());
+        OutputPlan plan = MakePlan(videoCount: 1, audioCount: 3);
+
+        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
+
         DecomposedTask[] audioTasks = tasks
             .Where(task => task.Kind == EncodeTaskKind.Audio)
             .ToArray();
 
-        videoTasks.Should().HaveCount(2);
         audioTasks.Should().HaveCount(1);
-
-        videoTasks[0].OutputIndex.Should().Be(0);
-        videoTasks[1].OutputIndex.Should().Be(1);
-        audioTasks[0].OutputIndex.Should().Be(0);
+        audioTasks[0].SourceIndexes.Should().BeEquivalentTo(new[] { 0, 1, 2 });
     }
 
     [Fact]
@@ -160,8 +234,9 @@ public class DecomposeTests
     }
 
     [Fact]
-    public void HlsSinglePass_Decompose_WithSubtitles_IncludesSubtitleTasks()
+    public void HlsSinglePass_Decompose_WithSubtitles_KeepsOneTaskPerSubtitle()
     {
+        // Subtitles stay fanned out — each track is cheap and independent.
         HlsSinglePassStrategy strategy = new(MockEncoder());
         OutputPlan plan = MakePlan(videoCount: 1, audioCount: 1, subtitleCount: 2);
 
@@ -189,21 +264,6 @@ public class DecomposeTests
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
         tasks.Should().AllSatisfy(task => task.GroupTag.Should().Be(GroupTag));
-    }
-
-    [Fact]
-    public void HlsSinglePass_Decompose_HighRes_HigherCostUnit()
-    {
-        HlsSinglePassStrategy strategy = new(MockEncoder());
-        OutputPlan plan = MakePlan(videoCount: 2); // [0] = 1920p (cost=4), [1] = 1280p (cost=2)
-
-        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
-
-        DecomposedTask[] videoTasks = tasks
-            .Where(task => task.Kind == EncodeTaskKind.Video)
-            .ToArray();
-        videoTasks[0].EstimatedCostUnits.Should().Be(4);
-        videoTasks[1].EstimatedCostUnits.Should().Be(2);
     }
 
     // ------------------------------------------------------------------ DASH

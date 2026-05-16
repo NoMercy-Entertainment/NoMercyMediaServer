@@ -706,6 +706,11 @@ public class BuildStage(
     /// and lets <see cref="EncodeTaskKind.Pass1"/> / <see cref="EncodeTaskKind.Pass2"/>
     /// keep using Pass1VariantIndex for their own slicing.
     ///
+    /// When <see cref="DecomposedTask.SourceIndexes"/> is set the slice
+    /// includes every entry it lists (smart-batched bucket of rungs sharing
+    /// one ffmpeg via filter_complex split); otherwise the legacy single
+    /// <see cref="DecomposedTask.OutputIndex"/> slice is used.
+    ///
     /// Acquired subtitles are kept on Subtitle tasks (the consumer) and
     /// dropped from Video / Audio / Thumbnails tasks so they don't add
     /// spurious <c>-i</c> inputs to encodes that won't consume them.
@@ -714,19 +719,13 @@ public class BuildStage(
     private static OutputPlan SliceForTask(OutputPlan plan, DecomposedTask task)
     {
         VideoOutputPlan[] videoSlice =
-            task.Kind == EncodeTaskKind.Video
-                ? OneOrEmpty(plan.VideoOutputs, task.OutputIndex)
-                : [];
+            task.Kind == EncodeTaskKind.Video ? PickMany(plan.VideoOutputs, task) : [];
 
         AudioOutputPlan[] audioSlice =
-            task.Kind == EncodeTaskKind.Audio
-                ? OneOrEmpty(plan.AudioOutputs, task.OutputIndex)
-                : [];
+            task.Kind == EncodeTaskKind.Audio ? PickMany(plan.AudioOutputs, task) : [];
 
         SubtitleOutputPlan[] subtitleSlice =
-            task.Kind == EncodeTaskKind.Subtitle
-                ? OneOrEmpty(plan.SubtitleOutputs, task.OutputIndex)
-                : [];
+            task.Kind == EncodeTaskKind.Subtitle ? PickMany(plan.SubtitleOutputs, task) : [];
 
         ThumbnailOutputPlan? thumbsSlice =
             task.Kind == EncodeTaskKind.Thumbnails ? plan.Thumbnails : null;
@@ -742,6 +741,21 @@ public class BuildStage(
             Thumbnails = thumbsSlice,
             AcquiredSubtitles = acquiredSubs,
         };
+    }
+
+    private static T[] PickMany<T>(T[] source, DecomposedTask task)
+    {
+        if (task.SourceIndexes is { Length: > 0 } indexes)
+        {
+            List<T> picked = new(indexes.Length);
+            foreach (int index in indexes)
+            {
+                if (index >= 0 && index < source.Length)
+                    picked.Add(source[index]);
+            }
+            return picked.ToArray();
+        }
+        return OneOrEmpty(source, task.OutputIndex);
     }
 
     private static T[] OneOrEmpty<T>(T[] source, int index) =>
