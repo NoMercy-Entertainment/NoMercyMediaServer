@@ -165,6 +165,40 @@ public class BuildStage(
                 return new StageSuccess<FfmpegCommand[]>([chapterCmd]);
             }
 
+            // Per-task slicing: when a DecomposedTask is supplied, prune the
+            // OutputPlan down to the single variant this task is responsible
+            // for. Without this, every task spawns an ffmpeg that emits the
+            // full ladder — 8 video tasks × 16 outputs = 128 parallel
+            // encoder sessions, blowing past hardware concurrency limits and
+            // double-writing every output file. Chapters already filters at
+            // the dedicated branch above; Pass1 / Pass2 use Pass1VariantIndex
+            // for their own slicing. Whole tasks (single-pass MKV / MP4)
+            // keep the full plan because they're the only command emitted.
+            if (
+                input.TaskFilter is { } taskFilter
+                && taskFilter.Kind
+                    is EncodeTaskKind.Video
+                        or EncodeTaskKind.Audio
+                        or EncodeTaskKind.Subtitle
+                        or EncodeTaskKind.Thumbnails
+                && input.Pass == EncodingPass.Single
+            )
+            {
+                OutputPlan sliced = SliceForTask(input.Plan.OutputPlan, taskFilter);
+                input = input with { Plan = input.Plan with { OutputPlan = sliced } };
+                logger.LogInformation(
+                    "[{CorrelationId}] Sliced plan for {Kind} task #{Idx}: "
+                        + "{V} video / {A} audio / {S} sub / thumbs={T}",
+                    context.CorrelationId,
+                    taskFilter.Kind,
+                    taskFilter.OutputIndex,
+                    sliced.VideoOutputs.Length,
+                    sliced.AudioOutputs.Length,
+                    sliced.SubtitleOutputs.Length,
+                    sliced.Thumbnails is not null
+                );
+            }
+
             IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.OutputPlan.Format);
 
             // Ensure output subdirectories exist before FFmpeg runs
@@ -344,7 +378,26 @@ public class BuildStage(
             // Font extraction — only when the source has embedded attachments (fonts).
             // This requires a separate command because -dump_attachment is incompatible
             // with encoding outputs.
-            if (context.MediaInfo is not null && context.MediaInfo.HasAttachments)
+            //
+            // Run-once semantics: when tasks are decomposed, fonts are extracted by
+            // EXACTLY ONE task to keep the on-disk fonts/ dir stable. We gate on the
+            // first video task (OutputIndex=0) or the Thumbnails task when there is
+            // no video. Without this gate every per-rung task would race the same
+            // -dump_attachment writes, and Whole-plan executions would still extract
+            // alongside their normal outputs.
+            bool isFontOwner =
+                input.TaskFilter is null
+                || input.TaskFilter.Kind == EncodeTaskKind.Whole
+                || (
+                    input.TaskFilter.Kind == EncodeTaskKind.Video
+                    && input.TaskFilter.OutputIndex == 0
+                )
+                || (
+                    input.TaskFilter.Kind == EncodeTaskKind.Thumbnails
+                    && input.Plan.OutputPlan.VideoOutputs.Length == 0
+                );
+
+            if (isFontOwner && context.MediaInfo is not null && context.MediaInfo.HasAttachments)
             {
                 string fontDir = effectiveStorage.CombinePath(input.OutputDirectory, "fonts");
                 effectiveStorage.CreateDirectory(fontDir);
@@ -644,6 +697,55 @@ public class BuildStage(
 
         return builder.Build(ffmpegPath, outputDirectory);
     }
+
+    /// <summary>
+    /// Reduces a multi-variant <see cref="OutputPlan"/> down to just the
+    /// outputs a single <see cref="DecomposedTask"/> needs to emit. Returns
+    /// the plan unchanged for <see cref="EncodeTaskKind.Whole"/>, leaves
+    /// <see cref="EncodeTaskKind.Chapters"/> to the dedicated chapter branch,
+    /// and lets <see cref="EncodeTaskKind.Pass1"/> / <see cref="EncodeTaskKind.Pass2"/>
+    /// keep using Pass1VariantIndex for their own slicing.
+    ///
+    /// Acquired subtitles are kept on Subtitle tasks (the consumer) and
+    /// dropped from Video / Audio / Thumbnails tasks so they don't add
+    /// spurious <c>-i</c> inputs to encodes that won't consume them.
+    /// Chapters / Drm / Layout are preserved as metadata across all slices.
+    /// </summary>
+    private static OutputPlan SliceForTask(OutputPlan plan, DecomposedTask task)
+    {
+        VideoOutputPlan[] videoSlice =
+            task.Kind == EncodeTaskKind.Video
+                ? OneOrEmpty(plan.VideoOutputs, task.OutputIndex)
+                : [];
+
+        AudioOutputPlan[] audioSlice =
+            task.Kind == EncodeTaskKind.Audio
+                ? OneOrEmpty(plan.AudioOutputs, task.OutputIndex)
+                : [];
+
+        SubtitleOutputPlan[] subtitleSlice =
+            task.Kind == EncodeTaskKind.Subtitle
+                ? OneOrEmpty(plan.SubtitleOutputs, task.OutputIndex)
+                : [];
+
+        ThumbnailOutputPlan? thumbsSlice =
+            task.Kind == EncodeTaskKind.Thumbnails ? plan.Thumbnails : null;
+
+        IReadOnlyList<AcquiredSubtitle>? acquiredSubs =
+            task.Kind == EncodeTaskKind.Subtitle ? plan.AcquiredSubtitles : null;
+
+        return plan with
+        {
+            VideoOutputs = videoSlice,
+            AudioOutputs = audioSlice,
+            SubtitleOutputs = subtitleSlice,
+            Thumbnails = thumbsSlice,
+            AcquiredSubtitles = acquiredSubs,
+        };
+    }
+
+    private static T[] OneOrEmpty<T>(T[] source, int index) =>
+        index >= 0 && index < source.Length ? [source[index]] : [];
 
     private static string? BuildFilterGraph(
         OutputPlan plan,

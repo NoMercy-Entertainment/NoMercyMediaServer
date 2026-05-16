@@ -16,6 +16,21 @@ public class ResourceBudget : IResourceBudget
     private readonly IResourceMonitor? _monitor;
     private readonly ILogger<ResourceBudget>? _logger;
 
+    // FFmpeg encoder name suffixes that identify a GPU vendor. Same list as
+    // TaskResourceHelper.GpuEncoderTokens — kept in sync so encoder-name
+    // resource requirements (e.g. "h264_nvenc") resolve to the right GPU
+    // semaphore. Vendor tokens are registered as alias keys alongside each
+    // GpuDevice.Name so callers can hand us either form.
+    private static readonly (string Token, GpuVendor Vendor)[] VendorTokens =
+    [
+        ("nvenc", GpuVendor.Nvidia),
+        ("cuvid", GpuVendor.Nvidia),
+        ("amf", GpuVendor.Amd),
+        ("qsv", GpuVendor.Intel),
+        ("vaapi", GpuVendor.Intel),
+        ("videotoolbox", GpuVendor.Apple),
+    ];
+
     public ResourceBudget(
         IReadOnlyList<GpuDevice> gpuDevices,
         int cpuCores,
@@ -30,9 +45,51 @@ public class ResourceBudget : IResourceBudget
 
         foreach (GpuDevice device in gpuDevices)
         {
-            _gpuSemaphores[device.Name] = new(device.MaxEncoderSessions, device.MaxEncoderSessions);
+            SemaphoreSlim semaphore = new(device.MaxEncoderSessions, device.MaxEncoderSessions);
+            _gpuSemaphores[device.Name] = semaphore;
+
+            // Alias the same semaphore under every encoder vendor token this
+            // GPU supports, so a ResourceRequirement keyed by encoder name
+            // ("h264_nvenc", "hevc_nvenc", …) resolves to the same per-device
+            // slot pool as one keyed by GPU name. Multi-GPU same-vendor systems
+            // share a single semaphore per vendor — acceptable trade-off
+            // against the alternative of every encoder-gpu worker crashing on
+            // "device 'h264_nvenc' is not registered."
+            foreach ((string token, GpuVendor vendor) in VendorTokens)
+            {
+                if (vendor != device.Vendor)
+                    continue;
+
+                // First-vendor-wins: don't clobber another GPU's alias when
+                // two same-vendor GPUs are present. The first becomes the
+                // default lane for that vendor; second-GPU callers must opt in
+                // by passing GpuDevice.Name explicitly.
+                _gpuSemaphores.TryAdd(token, semaphore);
+
+                // Also alias every concrete encoder FfmpegName that contains
+                // the token — covers h264_nvenc / hevc_nvenc / av1_nvenc with
+                // one loop iteration per vendor.
+                foreach (string encoderName in EncoderNamesForVendor(token))
+                    _gpuSemaphores.TryAdd(encoderName, semaphore);
+            }
         }
     }
+
+    /// <summary>
+    /// Encoder FfmpegName values that should resolve to a vendor's GPU
+    /// semaphore. Kept in sync with the per-codec definitions in
+    /// <c>NoMercy.Encoder.Codecs.Definitions</c>.
+    /// </summary>
+    private static IEnumerable<string> EncoderNamesForVendor(string token) =>
+        token switch
+        {
+            "nvenc" => ["h264_nvenc", "hevc_nvenc", "av1_nvenc"],
+            "amf" => ["h264_amf", "hevc_amf", "av1_amf"],
+            "qsv" => ["h264_qsv", "hevc_qsv", "av1_qsv", "vp9_qsv"],
+            "vaapi" => ["h264_vaapi", "hevc_vaapi", "av1_vaapi", "vp9_vaapi"],
+            "videotoolbox" => ["h264_videotoolbox", "hevc_videotoolbox"],
+            _ => [],
+        };
 
     public int AvailableGpuEncoderSlots(string gpuDeviceKey)
     {
