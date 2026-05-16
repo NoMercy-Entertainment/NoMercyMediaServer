@@ -13,20 +13,20 @@ namespace NoMercy.Encoder.Strategies.Hls;
 /// HLS single-pass strategy. Delegates to the shared 6-stage
 /// <see cref="IEncoder"/> pipeline for single-task execution.
 ///
-/// <para><see cref="Decompose"/> collapses all video rungs into a single
-/// video task and all audio outputs into a single audio task. One ffmpeg
-/// per kind, with <c>filter_complex split</c> handling every rung from one
-/// decode (and one shared HDR→SDR tonemap when the source is HDR). Mixed
-/// codecs (HEVC + H.264 fallback) coexist in the same filter graph —
-/// each output gets its own <c>-map [vN] -c:v &lt;encoder&gt;</c> block.
+/// <para><see cref="Decompose"/> emits one <see cref="DecomposedTask"/> per
+/// stream-unit of work: one Video per ladder rung, one Audio per mix group,
+/// one Subtitle per text track, one Thumbnails, one Chapter still. This is
+/// the model the rest of the pipeline tracks against — per-stream outcome
+/// rows, per-stream retry, per-stream dashboard progress.
 /// </para>
 ///
-/// <para>Subtitles, thumbnails, and chapter stills stay fanned out (cheap +
-/// independent, easy to fail-in-isolation).</para>
-///
-/// <para>This caps NVENC session count to the actual rung count of one
-/// ffmpeg (not concurrent-processes × rungs) and eliminates the race over
-/// shared publish/finalize writes.</para>
+/// <para><b>Smart-combine is NOT done here.</b> The coordinator
+/// (<c>VideoEncodeJob.DispatchDecomposedAsync</c>) inspects worker capacity
+/// at dispatch time and packs N stream-tasks into one <c>EncodeTaskJob</c>
+/// covering all of them. That job runs ONE ffmpeg with filter_complex
+/// multi-output (each contained task keeps its own -map / filter chain)
+/// and writes per-stream outcome rows. The decomposition layer stays
+/// per-stream so the bundler has the granularity it needs.</para>
 /// </summary>
 public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
 {
@@ -43,55 +43,41 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
     {
         List<DecomposedTask> tasks = [];
 
-        // ── Video: one task covering every rung in one filter_complex graph ──
-        if (plan.VideoOutputs.Length > 0)
+        for (int i = 0; i < plan.VideoOutputs.Length; i++)
         {
-            int[] videoIndexes = Enumerable.Range(0, plan.VideoOutputs.Length).ToArray();
-            VideoOutputPlan representative = plan
-                .VideoOutputs.OrderByDescending(video => video.Width)
-                .First();
-            string sizes = string.Join("+", plan.VideoOutputs.Select(video => $"{video.Width}p"));
-            string hdr = plan.VideoOutputs.Any(video => video.IsHdrOutput) ? " HDR" : string.Empty;
-            string codecs = string.Join(
-                "/",
-                plan.VideoOutputs.Select(video => video.EncoderName).Distinct()
-            );
+            VideoOutputPlan video = plan.VideoOutputs[i];
+            string resolution = $"{video.Width}p";
+            string hdr = video.IsHdrOutput ? " HDR" : string.Empty;
 
             tasks.Add(
                 new DecomposedTask(
-                    TaskId: $"{groupTag}-video-0",
+                    TaskId: $"{groupTag}-video-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Video,
-                    OutputIndex: 0,
-                    Resources: TaskResourceHelper.ForVideoOutput(representative),
-                    EstimatedCostUnits: plan.VideoOutputs.Sum(EstimateVideoCost),
-                    Label: $"{sizes}{hdr} {codecs}",
-                    SourceIndexes: videoIndexes
+                    OutputIndex: i,
+                    Resources: TaskResourceHelper.ForVideoOutput(video),
+                    EstimatedCostUnits: EstimateVideoCost(video),
+                    Label: $"{resolution}{hdr} {video.EncoderName}"
                 )
             );
         }
 
-        // ── Audio: one task covering all audio outputs ────────────────────────
-        if (plan.AudioOutputs.Length > 0)
+        for (int i = 0; i < plan.AudioOutputs.Length; i++)
         {
-            int[] audioIndexes = Enumerable.Range(0, plan.AudioOutputs.Length).ToArray();
-            string label =
-                plan.AudioOutputs.Length == 1
-                    ? $"{plan.AudioOutputs[0].Language ?? "und"} {plan.AudioOutputs[0].EncoderName}"
-                    : $"{plan.AudioOutputs.Length} tracks";
+            AudioOutputPlan audio = plan.AudioOutputs[i];
+            string lang = audio.Language ?? "und";
 
             tasks.Add(
                 new DecomposedTask(
-                    TaskId: $"{groupTag}-audio-0",
+                    TaskId: $"{groupTag}-audio-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Audio,
-                    OutputIndex: 0,
-                    Resources: TaskResourceHelper.CpuOnly(2),
-                    EstimatedCostUnits: plan.AudioOutputs.Length,
-                    Label: label,
-                    SourceIndexes: audioIndexes
+                    OutputIndex: i,
+                    Resources: TaskResourceHelper.CpuOnly(1),
+                    EstimatedCostUnits: 1,
+                    Label: $"{lang} {audio.EncoderName} {audio.Channels}ch"
                 )
             );
         }

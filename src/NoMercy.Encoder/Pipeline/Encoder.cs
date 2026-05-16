@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Commands;
+using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Output;
@@ -154,7 +155,14 @@ public class Encoder(
         // per-task encodes stop at ExecuteStage and return a synthetic
         // FinalizeOutput.
         FinalizeOutput finalizeOutput;
-        if (request.Options?.TaskFilter is not null)
+        // A dispatch-time bundled Whole task is the only execution — it must
+        // finalize. Only per-stream slices (Video / Audio / Subtitle /
+        // Thumbnails) defer FinalizeStage to the coordinator's FinalizeOnly
+        // pass to avoid racing the shared master playlist / fonts manifest.
+        bool isPerStreamSlice =
+            request.Options?.TaskFilter is { } taskFilter
+            && taskFilter.Kind != EncodeTaskKind.Whole;
+        if (isPerStreamSlice)
         {
             finalizeOutput = new(request.OutputDirectory, 0);
             logger.LogDebug(

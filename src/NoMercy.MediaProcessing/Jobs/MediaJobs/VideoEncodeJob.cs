@@ -23,6 +23,7 @@ using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -633,22 +634,42 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         }
         else
         {
-            // Single-pass: dispatch all tasks immediately.
-            foreach (DecomposedTask task in tasks)
-            {
-                DecomposedTask stamped = task with { ParentJobId = parentJobId };
-                EncodeTaskJob childJob = BuildChildJob(stamped, presetId);
-                dispatcher.DispatchChild(
-                    childJob,
-                    onQueue: childJob.QueueName,
-                    priority: childJob.Priority,
-                    parentJobId: parentJobId,
-                    groupTag: groupTag
-                );
-            }
+            // Single-pass: smart-combine into ONE ffmpeg invocation.
+            //
+            // Decomposition emits one DecomposedTask per stream (preserves the
+            // unit of tracking, retry, and future distributed-worker dispatch).
+            // The coordinator packs every ready task into a single synthetic
+            // Whole-bundle task that runs ONE ffmpeg covering all streams via
+            // filter_complex multi-output. After success, the executor writes
+            // per-stream outcome rows from Task.BundledTaskIds so this WaitChildren
+            // phase still sees each stream completed.
+            //
+            // Net effect: 1 video rung + 3 audio + 2 sub + thumbs + chapters
+            // becomes 1 EncodeTaskJob → 1 ffmpeg process instead of 8 concurrent
+            // jobs racing the GPU and shared writes.
+            DecomposedTask bundle = new(
+                TaskId: $"{groupTag}-bundle",
+                ParentJobId: parentJobId,
+                GroupTag: groupTag,
+                Kind: EncodeTaskKind.Whole,
+                OutputIndex: 0,
+                Resources: ResolveBundleResources(tasks),
+                EstimatedCostUnits: tasks.Sum(task => task.EstimatedCostUnits),
+                Label: $"bundle ({tasks.Length} streams)",
+                BundledTaskIds: allTaskIds
+            );
+
+            EncodeTaskJob bundleJob = BuildChildJob(bundle, presetId);
+            dispatcher.DispatchChild(
+                bundleJob,
+                onQueue: bundleJob.QueueName,
+                priority: bundleJob.Priority,
+                parentJobId: parentJobId,
+                groupTag: groupTag
+            );
 
             Logger.Encoder(
-                $"[VideoEncodeJob] Dispatched {tasks.Length} child tasks. Transitioning to WaitChildren."
+                $"[VideoEncodeJob] Dispatched bundle covering {tasks.Length} streams as ONE child job. Transitioning to WaitChildren."
             );
 
             ReEnqueueSelf(
@@ -732,6 +753,28 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             ?? throw new InvalidOperationException(
                 "QueueRunner.Current is null — queue not initialized"
             );
+    }
+
+    /// <summary>
+    /// Pick the strictest resource requirement across a bundle. If any task
+    /// needs a GPU device, the bundle queues on <c>encoder-gpu</c> and carries
+    /// that GPU key — the bundled ffmpeg will dispatch its own NVENC sessions
+    /// based on the rungs it covers. CPU thread requirement uses the max so
+    /// the scheduler reserves enough headroom.
+    /// </summary>
+    private static ResourceRequirement? ResolveBundleResources(DecomposedTask[] tasks)
+    {
+        string? gpuKey = tasks
+            .Select(task => task.Resources?.GpuDeviceKey)
+            .FirstOrDefault(key => key is not null);
+
+        int gpuSlots = tasks.Max(task => task.Resources?.GpuSlots ?? 0);
+        int cpuThreads = Math.Max(1, tasks.Max(task => task.Resources?.CpuThreads ?? 0));
+
+        if (gpuKey is null && gpuSlots == 0 && cpuThreads == 0)
+            return null;
+
+        return new ResourceRequirement(gpuKey, gpuSlots, cpuThreads);
     }
 
     // ------------------------------------------------------------------

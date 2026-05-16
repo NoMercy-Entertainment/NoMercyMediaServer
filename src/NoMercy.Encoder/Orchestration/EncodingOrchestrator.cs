@@ -186,7 +186,14 @@ public class EncodingOrchestrator(
                 // (VideoEncodeJob.HandleFinalizeAsync) publishes once after
                 // every task in the group completes, so per-task runs skip
                 // both the publish loop and the cleanup finally.
-                bool isPerTaskRun = request.Options?.TaskFilter is not null;
+                // A bundled Whole task (dispatch-time smart-combine: one ffmpeg
+                // covering N stream-tasks) IS the only execution — it must
+                // publish + cleanup like a plain Whole strategy run. Only
+                // per-stream slices (Video/Audio/Subtitle/Thumbnails) defer
+                // these to the coordinator's FinalizeOnly pass.
+                bool isPerTaskRun =
+                    request.Options?.TaskFilter is { } filter
+                    && filter.Kind != EncodeTaskKind.Whole;
 
                 if (result.Success && !isPerTaskRun)
                 {
@@ -203,7 +210,9 @@ public class EncodingOrchestrator(
             {
                 // Per-task runs leave files for the coordinator to publish +
                 // sweep — see isPerTaskRun comment above the publish loop.
-                bool isPerTaskRun = request.Options?.TaskFilter is not null;
+                bool isPerTaskRun =
+                    request.Options?.TaskFilter is { } filter
+                    && filter.Kind != EncodeTaskKind.Whole;
                 if (!isPerTaskRun)
                 {
                     try

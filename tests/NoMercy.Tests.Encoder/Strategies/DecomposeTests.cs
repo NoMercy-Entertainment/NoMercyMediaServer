@@ -160,10 +160,12 @@ public class DecomposeTests
     }
 
     [Fact]
-    public void HlsSinglePass_Decompose_SingleVideoEncoder_BatchesAllRungsIntoOneVideoTask()
+    public void HlsSinglePass_Decompose_PerStreamVideoTasks()
     {
-        // All video rungs collapse to ONE video task — one ffmpeg with
-        // filter_complex split emits every rung from one decode.
+        // Decompose emits one task per video rung — separation preserved
+        // as the unit of tracking, retry, future distributed dispatch.
+        // Dispatch-time bundling (in VideoEncodeJob.DispatchDecomposedAsync)
+        // packs these into ONE ffmpeg invocation.
         HlsSinglePassStrategy strategy = new(MockEncoder());
         OutputPlan plan = MakePlan(videoCount: 2, audioCount: 1);
 
@@ -173,18 +175,19 @@ public class DecomposeTests
             .Where(task => task.Kind == EncodeTaskKind.Video)
             .ToArray();
 
-        videoTasks.Should().HaveCount(1);
-        videoTasks[0].SourceIndexes.Should().BeEquivalentTo(new[] { 0, 1 });
+        videoTasks.Should().HaveCount(2);
+        videoTasks[0].OutputIndex.Should().Be(0);
+        videoTasks[1].OutputIndex.Should().Be(1);
 
         tasks.Where(task => task.Kind == EncodeTaskKind.Audio).Should().HaveCount(1);
     }
 
     [Fact]
-    public void HlsSinglePass_Decompose_MixedCodecs_SingleVideoTaskWithAllRungs()
+    public void HlsSinglePass_Decompose_MixedCodecs_OneTaskPerRung()
     {
-        // HEVC ladder + H.264 fallback → still ONE video task. The single
-        // filter_complex emits every rung; each output declares its own
-        // encoder via -map [vN] -c:v <encoder>.
+        // HEVC ladder + H.264 fallback → one task per rung. The bundler
+        // packs them into ONE ffmpeg at dispatch — each rung keeps its own
+        // -map [vN] -c:v <encoder> block in the bundled invocation.
         HlsSinglePassStrategy strategy = new(MockEncoder());
         OutputPlan plan = MakeMixedCodecPlan();
 
@@ -194,14 +197,15 @@ public class DecomposeTests
             .Where(task => task.Kind == EncodeTaskKind.Video)
             .ToArray();
 
-        videoTasks.Should().HaveCount(1);
-        videoTasks[0].SourceIndexes.Should().BeEquivalentTo(new[] { 0, 1, 2, 3, 4 });
-        videoTasks[0].Label.Should().Contain("hevc_nvenc");
-        videoTasks[0].Label.Should().Contain("libx264");
+        videoTasks.Should().HaveCount(5);
+        videoTasks
+            .Select(task => task.OutputIndex)
+            .Should()
+            .BeEquivalentTo(new[] { 0, 1, 2, 3, 4 });
     }
 
     [Fact]
-    public void HlsSinglePass_Decompose_AudioBatchedIntoOneTask()
+    public void HlsSinglePass_Decompose_PerTrackAudioTasks()
     {
         HlsSinglePassStrategy strategy = new(MockEncoder());
         OutputPlan plan = MakePlan(videoCount: 1, audioCount: 3);
@@ -212,8 +216,8 @@ public class DecomposeTests
             .Where(task => task.Kind == EncodeTaskKind.Audio)
             .ToArray();
 
-        audioTasks.Should().HaveCount(1);
-        audioTasks[0].SourceIndexes.Should().BeEquivalentTo(new[] { 0, 1, 2 });
+        audioTasks.Should().HaveCount(3);
+        audioTasks.Select(task => task.OutputIndex).Should().BeEquivalentTo(new[] { 0, 1, 2 });
     }
 
     [Fact]

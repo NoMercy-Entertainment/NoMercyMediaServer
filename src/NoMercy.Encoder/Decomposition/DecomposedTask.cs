@@ -73,5 +73,15 @@ public record DecomposedTask(
     /// covers. Null / empty means "use OutputIndex as a single-output slice"
     /// (the legacy one-rung-per-task path).
     /// </summary>
-    int[]? SourceIndexes = null
+    int[]? SourceIndexes = null,
+    /// <summary>
+    /// Dispatch-time bundle: when the coordinator packs N per-stream tasks
+    /// into one ffmpeg invocation, it dispatches a single synthetic Whole
+    /// task carrying the original stream-task IDs here. After the bundled
+    /// encode succeeds the executor writes one <see cref="Database.Models.Encoder.EncodeTaskOutcome"/>
+    /// row per ID so the coordinator's WaitChildren phase sees each stream
+    /// completed (separation of streams preserved for tracking even though
+    /// one process did the work).
+    /// </summary>
+    string[]? BundledTaskIds = null
 );

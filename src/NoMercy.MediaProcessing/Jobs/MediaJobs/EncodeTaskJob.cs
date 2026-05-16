@@ -207,6 +207,17 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement
         IReadOnlyList<string> artifacts
     )
     {
+        // Dispatch-time bundle: one ffmpeg covered N original stream-tasks.
+        // Write one EncodeTaskOutcome row per bundled ID so the coordinator's
+        // WaitChildren phase sees each stream completed. The synthetic Whole
+        // wrapper task is not tracked by the coordinator and gets no row.
+        string[]? bundledIds = Task.BundledTaskIds;
+        if (bundledIds is { Length: > 0 })
+        {
+            await WriteBundleOutcomesAsync(bundledIds, success, error, artifacts);
+            return;
+        }
+
         try
         {
             await using MediaContext outcomeContext = new();
@@ -239,6 +250,56 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement
         {
             Logger.Encoder(
                 $"[EncodeTaskJob] Failed to write outcome row for task '{Task.TaskId}': {ex.Message}",
+                LogEventLevel.Warning
+            );
+        }
+    }
+
+    private async Task WriteBundleOutcomesAsync(
+        string[] bundledIds,
+        bool success,
+        string? error,
+        IReadOnlyList<string> artifacts
+    )
+    {
+        try
+        {
+            await using MediaContext outcomeContext = new();
+            HashSet<string> existing = (
+                await outcomeContext
+                    .EncodeTaskOutcomes.Where(row => bundledIds.Contains(row.TaskId))
+                    .Select(row => row.TaskId)
+                    .ToListAsync()
+            ).ToHashSet();
+
+            string? artifactsJson = artifacts.Count > 0 ? string.Join("\n", artifacts) : null;
+
+            foreach (string id in bundledIds)
+            {
+                if (existing.Contains(id))
+                    continue;
+
+                outcomeContext.EncodeTaskOutcomes.Add(
+                    new EncodeTaskOutcome
+                    {
+                        TaskId = id,
+                        ParentJobId = Task.ParentJobId,
+                        GroupTag = Task.GroupTag,
+                        Success = success,
+                        ErrorMessage = error,
+                        Kind = Task.Kind.ToString(),
+                        OutputArtifactsJson = artifactsJson,
+                        CompletedAt = DateTime.UtcNow,
+                    }
+                );
+            }
+
+            await outcomeContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.Encoder(
+                $"[EncodeTaskJob] Failed to write bundle outcome rows for {bundledIds.Length} tasks: {ex.Message}",
                 LogEventLevel.Warning
             );
         }
