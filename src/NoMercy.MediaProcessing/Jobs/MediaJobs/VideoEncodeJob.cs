@@ -772,7 +772,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             .Select(task => task with { ParentJobId = parentJobId })
             .ToArray();
 
-        (int gpuCap, int cpuCap) = ResolveHostCaps();
+        (int gpuCap, int cpuCap) = ResolveHostCaps(stamped);
 
         List<(int index, DecomposedTask task)> videoTasks = stamped
             .Select((task, index) => (index, task))
@@ -892,26 +892,51 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
     }
 
     /// <summary>
-    /// Resolve per-host bundle caps. GPU cap = smallest NVENC session limit
-    /// across detected GPUs. CPU cap = half the physical core count (each
-    /// software encode tends to need ~2 cores to keep up). Sentinel values
-    /// when no GPU / no detection.
+    /// Resolve per-host bundle caps from <see cref="BundleCapResolver"/>.
+    /// Caps are derived from real per-rung benchmark measurements
+    /// (<see cref="IHardwareBenchmark"/> → <see cref="SpeedIndex"/>) on this
+    /// exact host — no hardcoded model-name tiers, no driver-allowed
+    /// maximums conflated with practical throughput. A weak GPU with a
+    /// slow benchmark earns a smaller cap; a strong GPU earns a larger
+    /// one. Driver-imposed session limits still apply as an outer ceiling.
     /// </summary>
-    private static (int GpuCap, int CpuCap) ResolveHostCaps()
+    private static (int GpuCap, int CpuCap) ResolveHostCaps(DecomposedTask[] tasks)
     {
+        IHardwareBenchmark? benchmark = EncoderProvider.ResolveService<IHardwareBenchmark>();
         IHardwareCapabilities? hardware = EncoderProvider.ResolveService<IHardwareCapabilities>();
 
-        int gpuCap = int.MaxValue;
-        if (hardware is { HasGpu: true } && hardware.Gpus.Count > 0)
-        {
-            int hwCap = hardware.Gpus.Min(gpu => gpu.MaxEncoderSessions);
-            gpuCap = hwCap > 0 ? hwCap : int.MaxValue;
-        }
+        BundleCapResolver.PlannedRung[] plannedRungs = tasks
+            .Where(task =>
+                task.Kind == EncodeTaskKind.Video
+                && !string.IsNullOrEmpty(task.VideoEncoderName)
+                && task.VideoWidth > 0
+            )
+            .Select(task => new BundleCapResolver.PlannedRung(
+                Codec: InferCodec(task.VideoEncoderName!),
+                EncoderName: task.VideoEncoderName!,
+                Width: task.VideoWidth,
+                IsGpu: task.Resources?.GpuDeviceKey is not null
+            ))
+            .ToArray();
 
-        int cores = Math.Max(1, Environment.ProcessorCount);
-        int cpuCap = Math.Max(1, cores / 2);
+        return BundleCapResolver.Resolve(plannedRungs, benchmark, hardware);
+    }
 
-        return (gpuCap, cpuCap);
+    /// <summary>
+    /// Derive the video codec family from an ffmpeg encoder name. Matches
+    /// the convention used by <see cref="SpeedIndex"/> keys so a benchmark
+    /// lookup hits the same row written by the calibration run.
+    /// </summary>
+    private static VideoCodecType InferCodec(string encoderName)
+    {
+        string lower = encoderName.ToLowerInvariant();
+        if (lower.Contains("av1"))
+            return VideoCodecType.Av1;
+        if (lower.Contains("265") || lower.Contains("hevc"))
+            return VideoCodecType.H265;
+        if (lower.Contains("vp9"))
+            return VideoCodecType.Vp9;
+        return VideoCodecType.H264;
     }
 
     private static int[] IndexesOf(DecomposedTask[] tasks, Func<DecomposedTask, bool> predicate)

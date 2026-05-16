@@ -104,5 +104,19 @@ public record DecomposedTask(
     /// For Whole-kind bundles, whether to include the thumbnail strip. Null
     /// means "include if the plan has one"; false omits it from this bundle.
     /// </summary>
-    bool? IncludeThumbnails = null
+    bool? IncludeThumbnails = null,
+    /// <summary>
+    /// For Video tasks: output width in pixels. Used by the dispatch-time
+    /// bundler to look up the encoder's benchmarked speed at this resolution
+    /// (<see cref="Hardware.SpeedIndex"/>). Zero for non-video kinds.
+    /// </summary>
+    int VideoWidth = 0,
+    /// <summary>
+    /// For Video tasks: the ffmpeg encoder name (e.g. <c>h264_nvenc</c>,
+    /// <c>libx265</c>). Required by the bundler to query
+    /// <see cref="Hardware.SpeedIndex"/> even for software encoders where
+    /// <see cref="Resources"/> carries a null <c>GpuDeviceKey</c>. Null for
+    /// non-video kinds.
+    /// </summary>
+    string? VideoEncoderName = null
 );

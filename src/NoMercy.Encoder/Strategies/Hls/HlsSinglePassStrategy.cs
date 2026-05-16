@@ -58,7 +58,9 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
                     OutputIndex: i,
                     Resources: TaskResourceHelper.ForVideoOutput(video),
                     EstimatedCostUnits: EstimateVideoCost(video),
-                    Label: $"{resolution}{hdr} {video.EncoderName}"
+                    Label: $"{resolution}{hdr} {video.EncoderName}",
+                    VideoWidth: video.Width,
+                    VideoEncoderName: video.EncoderName
                 )
             );
         }
