@@ -162,8 +162,8 @@ public class DecomposeTests
     [Fact]
     public void HlsSinglePass_Decompose_SingleVideoEncoder_BatchesAllRungsIntoOneVideoTask()
     {
-        // Two same-codec video rungs collapse to ONE video task that emits
-        // both rungs from one ffmpeg via filter_complex split.
+        // All video rungs collapse to ONE video task — one ffmpeg with
+        // filter_complex split emits every rung from one decode.
         HlsSinglePassStrategy strategy = new(MockEncoder());
         OutputPlan plan = MakePlan(videoCount: 2, audioCount: 1);
 
@@ -180,10 +180,11 @@ public class DecomposeTests
     }
 
     [Fact]
-    public void HlsSinglePass_Decompose_MixedCodecs_OneVideoTaskPerEncoderBucket()
+    public void HlsSinglePass_Decompose_MixedCodecs_SingleVideoTaskWithAllRungs()
     {
-        // HEVC ladder + H.264 fallback at the same resolution → exactly
-        // two video tasks (smart-combine target).
+        // HEVC ladder + H.264 fallback → still ONE video task. The single
+        // filter_complex emits every rung; each output declares its own
+        // encoder via -map [vN] -c:v <encoder>.
         HlsSinglePassStrategy strategy = new(MockEncoder());
         OutputPlan plan = MakeMixedCodecPlan();
 
@@ -193,13 +194,10 @@ public class DecomposeTests
             .Where(task => task.Kind == EncodeTaskKind.Video)
             .ToArray();
 
-        videoTasks.Should().HaveCount(2);
-
-        DecomposedTask hevcBucket = videoTasks.Single(task => task.Label.Contains("hevc_nvenc"));
-        DecomposedTask avcBucket = videoTasks.Single(task => task.Label.Contains("libx264"));
-
-        hevcBucket.SourceIndexes.Should().BeEquivalentTo(new[] { 0, 1, 2, 3 });
-        avcBucket.SourceIndexes.Should().BeEquivalentTo(new[] { 4 });
+        videoTasks.Should().HaveCount(1);
+        videoTasks[0].SourceIndexes.Should().BeEquivalentTo(new[] { 0, 1, 2, 3, 4 });
+        videoTasks[0].Label.Should().Contain("hevc_nvenc");
+        videoTasks[0].Label.Should().Contain("libx264");
     }
 
     [Fact]

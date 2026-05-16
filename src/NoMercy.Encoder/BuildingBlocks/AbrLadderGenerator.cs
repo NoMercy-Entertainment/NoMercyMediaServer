@@ -211,7 +211,7 @@ public class AbrLadderGenerator : IAbrLadderGenerator
             rungs.Add(
                 new(
                     Width: tier.Width,
-                    Height: tier.Height,
+                    Height: ComputeAspectAwareHeight(tier.Width, source),
                     Codec: codec,
                     BitrateKbps: bitrate,
                     MaxBitrateKbps: maxBitrate,
@@ -264,7 +264,7 @@ public class AbrLadderGenerator : IAbrLadderGenerator
                 rungs.Add(
                     new(
                         Width: tier.Width,
-                        Height: tier.Height,
+                        Height: ComputeAspectAwareHeight(tier.Width, source),
                         Codec: VideoCodecType.H264,
                         BitrateKbps: bitrate,
                         MaxBitrateKbps: maxBitrate,
@@ -478,6 +478,26 @@ public class AbrLadderGenerator : IAbrLadderGenerator
     }
 
     private static int EvenRound(int value) => value - (value % 2);
+
+    /// <summary>
+    /// Derive the output height for a ladder rung at <paramref name="outputWidth"/>
+    /// from the source's aspect ratio. The encoder always emits <c>scale=W:-2</c>
+    /// (width-fixed, height auto-rounded to a multiple of 2 from source AR), so
+    /// the height we record on the rung must match what ffmpeg will actually
+    /// produce — otherwise variant directory names, the master playlist's
+    /// RESOLUTION attribute, and the BuildBranchFilter "needs scale?" check all
+    /// disagree with the encoded file for non-16:9 sources (e.g. 2048x858 cinema
+    /// AR would otherwise be tagged 1920x1080 while the file is actually 1920x804).
+    /// </summary>
+    private static int ComputeAspectAwareHeight(int outputWidth, VideoStreamInfo source)
+    {
+        if (source.Width <= 0 || source.Height <= 0)
+            return 0;
+
+        double computed = outputWidth * (double)source.Height / source.Width;
+        int rounded = (int)Math.Round(computed);
+        return rounded % 2 == 0 ? rounded : rounded + 1;
+    }
 
     private record LegacyTierDef(int Height, int DefaultBitrateKbps);
 }

@@ -13,21 +13,20 @@ namespace NoMercy.Encoder.Strategies.Hls;
 /// HLS single-pass strategy. Delegates to the shared 6-stage
 /// <see cref="IEncoder"/> pipeline for single-task execution.
 ///
-/// <para><see cref="Decompose"/> groups variants by (codec × hardware bucket)
-/// so each emitted task is ONE ffmpeg process running filter_complex split
-/// over the rungs in its bucket — one HDR→SDR tonemap per bucket, one source
-/// read per bucket, one batched output. Buckets:
-/// <list type="bullet">
-///   <item><b>VideoGroup-&lt;encoder&gt;</b> — all video rungs sharing the same
-///   encoder name (e.g. all <c>hevc_nvenc</c>, all <c>libx264</c>) → one
-///   filter_complex split-scale-encode chain.</item>
-///   <item><b>AudioGroup</b> — all audio outputs in one ffmpeg.</item>
-///   <item><b>Subtitle / Thumbnails / Chapters</b> — light tasks, one each.</item>
-/// </list>
-/// This caps concurrent NVENC sessions to the rung-count of the heaviest
-/// bucket (not total processes × rungs) and avoids racing shared
-/// publish/finalize writes, while still letting CPU and GPU buckets run in
-/// parallel.</para>
+/// <para><see cref="Decompose"/> collapses all video rungs into a single
+/// video task and all audio outputs into a single audio task. One ffmpeg
+/// per kind, with <c>filter_complex split</c> handling every rung from one
+/// decode (and one shared HDR→SDR tonemap when the source is HDR). Mixed
+/// codecs (HEVC + H.264 fallback) coexist in the same filter graph —
+/// each output gets its own <c>-map [vN] -c:v &lt;encoder&gt;</c> block.
+/// </para>
+///
+/// <para>Subtitles, thumbnails, and chapter stills stay fanned out (cheap +
+/// independent, easy to fail-in-isolation).</para>
+///
+/// <para>This caps NVENC session count to the actual rung count of one
+/// ffmpeg (not concurrent-processes × rungs) and eliminates the race over
+/// shared publish/finalize writes.</para>
 /// </summary>
 public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
 {
@@ -44,34 +43,33 @@ public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
     {
         List<DecomposedTask> tasks = [];
 
-        // ── Video: one task per encoder bucket (filter_complex split inside) ──
-        IEnumerable<IGrouping<string, (VideoOutputPlan video, int sourceIndex)>> videoGroups = plan
-            .VideoOutputs.Select((video, index) => (video, sourceIndex: index))
-            .GroupBy(entry => entry.video.EncoderName);
-
-        int bucketIndex = 0;
-        foreach (IGrouping<string, (VideoOutputPlan video, int sourceIndex)> bucket in videoGroups)
+        // ── Video: one task covering every rung in one filter_complex graph ──
+        if (plan.VideoOutputs.Length > 0)
         {
-            (VideoOutputPlan video, int sourceIndex)[] rungs = bucket.ToArray();
-            int[] sourceIndexes = rungs.Select(rung => rung.sourceIndex).ToArray();
-            VideoOutputPlan representative = rungs[0].video;
-            string sizes = string.Join("+", rungs.Select(rung => $"{rung.video.Width}p"));
-            string hdr = rungs.Any(rung => rung.video.IsHdrOutput) ? " HDR" : string.Empty;
+            int[] videoIndexes = Enumerable.Range(0, plan.VideoOutputs.Length).ToArray();
+            VideoOutputPlan representative = plan
+                .VideoOutputs.OrderByDescending(video => video.Width)
+                .First();
+            string sizes = string.Join("+", plan.VideoOutputs.Select(video => $"{video.Width}p"));
+            string hdr = plan.VideoOutputs.Any(video => video.IsHdrOutput) ? " HDR" : string.Empty;
+            string codecs = string.Join(
+                "/",
+                plan.VideoOutputs.Select(video => video.EncoderName).Distinct()
+            );
 
             tasks.Add(
                 new DecomposedTask(
-                    TaskId: $"{groupTag}-video-{bucketIndex}",
+                    TaskId: $"{groupTag}-video-0",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Video,
-                    OutputIndex: bucketIndex,
+                    OutputIndex: 0,
                     Resources: TaskResourceHelper.ForVideoOutput(representative),
-                    EstimatedCostUnits: rungs.Sum(rung => EstimateVideoCost(rung.video)),
-                    Label: $"{sizes}{hdr} {bucket.Key}",
-                    SourceIndexes: sourceIndexes
+                    EstimatedCostUnits: plan.VideoOutputs.Sum(EstimateVideoCost),
+                    Label: $"{sizes}{hdr} {codecs}",
+                    SourceIndexes: videoIndexes
                 )
             );
-            bucketIndex++;
         }
 
         // ── Audio: one task covering all audio outputs ────────────────────────
