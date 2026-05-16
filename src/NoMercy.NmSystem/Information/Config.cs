@@ -81,14 +81,20 @@ public static class Config
     public static KeyValuePair<string, int> EncoderTaskWorkers { get; set; } =
         new("encoder-task", 0);
 
-    // GPU-bound tasks (NVENC, AMF, QSV, VideoToolbox). Default = min(NVENC cap, 4).
-    // Capped conservatively so a single bad profile can't saturate all GPU encoder sessions.
-    public static KeyValuePair<string, int> GpuEncoderWorkers { get; set; } =
-        new("encoder-gpu", Math.Min(4, Math.Max(1, Environment.ProcessorCount / 4)));
+    // Dispatch-time bundling (VideoEncodeJob.BuildResourceBundles) packs every
+    // ready stream-task into a single ffmpeg invocation per bundle sized to the
+    // host's measured throughput. The queue worker should therefore pull ONE
+    // bundle at a time per queue — running multiple bundles concurrently on the
+    // same GPU oversubscribes the encoder block, and the bundler can't reason
+    // about combined load if the queue secretly fans out behind it. Sequential
+    // bundles is what "resource-friendly dispatching" means in practice.
+    //
+    // Distributed-worker mode (future) will give each remote worker its own
+    // queue process running one bundle at a time — parallelism comes from
+    // dispatching to more workers, not from running more bundles per worker.
+    public static KeyValuePair<string, int> GpuEncoderWorkers { get; set; } = new("encoder-gpu", 1);
 
-    // CPU-only tasks (audio, subtitles, thumbnails, software video). Default = half logical cores.
-    public static KeyValuePair<string, int> CpuEncoderWorkers { get; set; } =
-        new("encoder-cpu", Math.Max(1, Environment.ProcessorCount / 2));
+    public static KeyValuePair<string, int> CpuEncoderWorkers { get; set; } = new("encoder-cpu", 1);
 
     public static KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 3);
