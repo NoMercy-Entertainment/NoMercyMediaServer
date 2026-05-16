@@ -1418,8 +1418,12 @@ public static class BuiltinPresets
                     LowTierCodec = VideoCodecType.H264,
                     HighTierCodec = VideoCodecType.H265,
                     MixedPolicySplitHeight = 720,
+                    // Also ship a 1080p H.264 8-bit variant alongside the 1080p
+                    // HEVC rung. HEVC-blocked browsers can then climb past 720p
+                    // to a real 1080p quality instead of capping at HD.
+                    H264FallbackHeights = [1080],
                     Crf = 22,
-                    MaxRungs = 8,
+                    MaxRungs = 9,
                     // YouTube ships every rung regardless of source bitrate — the whole
                     // point is to serve high-quality variants when bandwidth allows. Default
                     // NeverUpsource cuts 1080p+ on well-compressed sources.

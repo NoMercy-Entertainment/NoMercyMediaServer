@@ -225,6 +225,60 @@ public class AbrLadderGenerator : IAbrLadderGenerator
             );
         }
 
+        // Step 2.5 — Emit explicit H.264 fallback rungs alongside the auto-selected
+        // codec at the requested heights. Use case: the YouTube profile keeps the
+        // 1080p tier on HEVC for efficiency but also ships a 1080p H.264 sibling
+        // so HEVC-blocked clients (desktop Chrome without HEVC HW decode) still
+        // get a 1080p variant in their ladder instead of dropping to 720p.
+        // No-op when the height isn't in the filtered tier list or when an H.264
+        // rung at that height already exists (codec policy already picked it).
+        if (autoConfig.H264FallbackHeights.Length > 0)
+        {
+            foreach (int targetHeight in autoConfig.H264FallbackHeights)
+            {
+                LadderTier? tier = filtered.FirstOrDefault(t => t.Height == targetHeight);
+                if (tier is null)
+                    continue;
+
+                bool alreadyH264 = rungs.Any(r =>
+                    r.Height == targetHeight && r.Codec == VideoCodecType.H264
+                );
+                if (alreadyH264)
+                    continue;
+
+                int bitrate = ComputeBitrate(tier, source, VideoCodecType.H264, autoConfig);
+                int maxBitrate = (int)Math.Round(bitrate * autoConfig.VbrCeilingMultiplier);
+                int bufSize = (int)Math.Round(bitrate * autoConfig.BufferSizeMultiplier);
+
+                double framerate = source.FrameRate;
+                if (
+                    autoConfig.ReduceFramerateForLowTiers
+                    && tier.Height <= autoConfig.LowTierFramerateThresholdHeight
+                )
+                    framerate = source.FrameRate * autoConfig.LowTierFramerateMultiplier;
+
+                (int bitDepth, string? pixelFormat, CodecProfile codecProfile) = CodecDefaults(
+                    VideoCodecType.H264
+                );
+
+                rungs.Add(
+                    new(
+                        Width: tier.Width,
+                        Height: tier.Height,
+                        Codec: VideoCodecType.H264,
+                        BitrateKbps: bitrate,
+                        MaxBitrateKbps: maxBitrate,
+                        BufferSizeKbps: bufSize,
+                        Framerate: framerate,
+                        Preset: reference?.Preset,
+                        CodecProfile: codecProfile,
+                        BitDepth: bitDepth,
+                        PixelFormat: pixelFormat
+                    )
+                );
+            }
+        }
+
         // Step 3 — Collapse rungs whose bitrates are within MinTierGapPercent of an adjacent rung.
         rungs = CollapseClose(rungs, autoConfig.MinTierGapPercent);
 

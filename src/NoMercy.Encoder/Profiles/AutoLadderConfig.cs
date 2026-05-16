@@ -26,4 +26,20 @@ public record AutoLadderConfig
     public bool ReduceFramerateForLowTiers { get; init; }
     public double LowTierFramerateMultiplier { get; init; } = 0.5;
     public int LowTierFramerateThresholdHeight { get; init; } = 480;
+
+    /// <summary>
+    /// Tier heights at which an extra H.264 8-bit yuv420p fallback rung is
+    /// emitted in addition to whatever the codec policy picks. Use this when
+    /// a mixed-codec ladder needs a duplicate H.264 variant at a high tier
+    /// so HEVC-blocked clients (notably desktop Chrome without an HEVC HW
+    /// decoder) can still pull a high-quality stream.
+    ///
+    /// Example: YouTube profile sets <c>[1080]</c> so 1080p ships as both
+    /// HEVC (efficient) AND H.264 (compatible), while 1440p+ stays HEVC-only.
+    ///
+    /// A height in this list that already resolves to H.264 via the codec
+    /// policy is a no-op — no duplicate is emitted. Heights without a
+    /// matching tier in <see cref="Tiers"/> are also ignored.
+    /// </summary>
+    public int[] H264FallbackHeights { get; init; } = [];
 }
