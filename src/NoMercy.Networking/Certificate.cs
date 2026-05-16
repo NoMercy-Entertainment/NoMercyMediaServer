@@ -170,6 +170,15 @@ public static class Certificate
         return X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
     }
 
+    // Must stay strictly below the API's renewal window (currently 14 days at
+    // nomercy-tv's ServerCertificateController::renew). When the client trips
+    // the renewal threshold while the cert is still outside the API window,
+    // the API rejects with 400 "Certificate is not due for renewal yet" and
+    // we hit a 30-attempt retry storm. 13 days gives a 1-day clock-drift safety
+    // margin while keeping the renewal proactive (still ~1 month before
+    // browsers start showing warnings for Let's Encrypt's 90-day certs).
+    private const int RenewalThresholdDays = 13;
+
     private static bool ValidateSslCertificate()
     {
         lock (_certLock)
@@ -182,7 +191,7 @@ public static class Certificate
             if (_cachedCertificate.NotAfter <= DateTime.Now)
                 return false; // Actually expired
 
-            if (_cachedCertificate.NotAfter < DateTime.Now.AddDays(30))
+            if (_cachedCertificate.NotAfter < DateTime.Now.AddDays(RenewalThresholdDays))
             {
                 Logger.Certificate(
                     $"SSL cert expires {_cachedCertificate.NotAfter:yyyy-MM-dd} — will attempt renewal"
@@ -249,6 +258,17 @@ public static class Certificate
                     );
                     await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
                 }
+                catch (CertificateNotDueException ex)
+                {
+                    // Permanent (for this attempt window): the API rejected the
+                    // renewal request because the cert isn't due yet. Bail out
+                    // without retrying — daily cron will try again tomorrow.
+                    Logger.Certificate(
+                        $"Skipping renewal: {ex.Message}",
+                        LogEventLevel.Information
+                    );
+                    return;
+                }
                 catch (Exception ex)
                     when (attempt < maxRetries
                         && (ex is HttpRequestException || ex is InvalidOperationException)
@@ -287,6 +307,21 @@ public static class Certificate
 
         if (response.StatusCode == HttpStatusCode.GatewayTimeout)
             throw new HttpRequestException("Gateway timeout waiting for certificate");
+
+        // 400 from the renewal endpoint means the API doesn't think the cert is
+        // due yet (it gates renewal at 14 days from expiry). Surface the body
+        // as a typed exception so the outer retry loop can bail instead of
+        // hammering 30 times with the same predictable rejection.
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            string body = await response.Content.ReadAsStringAsync();
+            string apiMessage = ExtractApiMessage(body);
+            throw new CertificateNotDueException(
+                string.IsNullOrEmpty(apiMessage)
+                    ? "API rejected renewal with 400 Bad Request (no body)"
+                    : apiMessage
+            );
+        }
 
         response.EnsureSuccessStatusCode();
         string content = await response.Content.ReadAsStringAsync();
@@ -359,6 +394,43 @@ public static class Certificate
 
     /// <summary>Sentinel returned by FetchCertificate to indicate a successfully written certificate.</summary>
     private sealed class CertificateDto { }
+
+    /// <summary>
+    /// API responded with 400 because the cert is not yet within its renewal
+    /// window. Distinct from generic HttpRequestException so the retry loop
+    /// can short-circuit instead of hammering the endpoint.
+    /// </summary>
+    private sealed class CertificateNotDueException : Exception
+    {
+        public CertificateNotDueException(string message)
+            : base(message) { }
+    }
+
+    /// <summary>
+    /// Pulls the human-readable message out of nomercy-tv's standard error
+    /// envelope (<c>{ "status": "...", "message": "..." }</c>). Falls back to
+    /// the raw body when the JSON doesn't parse, and to the empty string when
+    /// the body is missing — the caller decides how to phrase the no-message
+    /// case.
+    /// </summary>
+    private static string ExtractApiMessage(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+            return string.Empty;
+
+        try
+        {
+            ApiResponse<object>? parsed = body.FromJson<ApiResponse<object>>();
+            if (!string.IsNullOrEmpty(parsed?.Message))
+                return parsed.Message;
+        }
+        catch
+        {
+            // Body isn't our standard envelope — fall through to raw return.
+        }
+
+        return body.Trim();
+    }
 
     public class ApiResponse<T>
     {
