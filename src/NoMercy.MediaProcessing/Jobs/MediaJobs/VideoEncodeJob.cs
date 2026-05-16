@@ -1010,11 +1010,20 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
     }
 
     /// <summary>
-    /// Pick the strictest resource requirement across a bundle. If any task
-    /// needs a GPU device, the bundle queues on <c>encoder-gpu</c> and carries
-    /// that GPU key — the bundled ffmpeg will dispatch its own NVENC sessions
-    /// based on the rungs it covers. CPU thread requirement uses the max so
-    /// the scheduler reserves enough headroom.
+    /// Sum the real resource demand of every task in the bundle. The bundle
+    /// will spawn ONE ffmpeg that internally runs all the contained encodes
+    /// in parallel via filter_complex, so the GPU/CPU semaphore claim must
+    /// reflect the TOTAL hardware footprint — not the per-task max. Without
+    /// this, eight per-rung tasks each declaring GpuSlots=1 collapse into a
+    /// bundle that only claims one slot from the 8-slot consumer NVIDIA
+    /// semaphore — four such bundles would happily run concurrently, asking
+    /// for 32 NVENC sessions against an 8-session cap.
+    ///
+    /// <para>With the sum, a bundle of 8 NVENC rungs claims 8 slots → uses
+    /// the whole consumer GPU budget → the queue worker correctly defers
+    /// the next bundle until a slot frees. Mixed-encoder bundles only count
+    /// GPU slots for GPU-encoded rungs and CPU threads for everyone (NVENC
+    /// rungs still spend ~2 host threads on filtering / muxing).</para>
     /// </summary>
     private static ResourceRequirement? ResolveBundleResources(DecomposedTask[] tasks)
     {
@@ -1022,13 +1031,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             .Select(task => task.Resources?.GpuDeviceKey)
             .FirstOrDefault(key => key is not null);
 
-        int gpuSlots = tasks.Max(task => task.Resources?.GpuSlots ?? 0);
-        int cpuThreads = Math.Max(1, tasks.Max(task => task.Resources?.CpuThreads ?? 0));
+        int gpuSlots = tasks.Sum(task => task.Resources?.GpuSlots ?? 0);
+        int cpuThreads = tasks.Sum(task => task.Resources?.CpuThreads ?? 0);
 
         if (gpuKey is null && gpuSlots == 0 && cpuThreads == 0)
             return null;
 
-        return new ResourceRequirement(gpuKey, gpuSlots, cpuThreads);
+        return new ResourceRequirement(gpuKey, gpuSlots, Math.Max(1, cpuThreads));
     }
 
     // ------------------------------------------------------------------
