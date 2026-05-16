@@ -72,10 +72,18 @@ public class PlanStage(
 
             VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
 
-            // EmitHdrAndSdr: when source is HDR, duplicate every video output —
-            // first copy as HDR passthrough (ConvertHdrToSdr=false), second copy
-            // as SDR tonemap (ConvertHdrToSdr=true). Template label suffix
+            // EmitHdrAndSdr: when source is HDR, emit the HDR passthrough copy
+            // (ConvertHdrToSdr=false) AND a tonemapped SDR companion
+            // (ConvertHdrToSdr=true) per resolution. Template label suffix
             // distinguishes the two on disk (video_WxH/ vs video_WxH_SDR/).
+            //
+            // 10-bit-only gate: HDR PQ / HLG requires 10-bit. A rung that
+            // declares 8-bit (e.g. H.264 NVENC, which doesn't support 10-bit
+            // reliably) cannot preserve HDR even when we ask it to — both the
+            // "passthrough" and "tonemap" copy would end up SDR and collide on
+            // the same _SDR filename. So 8-bit rungs only emit the tonemap
+            // copy; 10-bit rungs emit both.
+            //
             // SDR source: behaves like AlwaysTonemap, no doubling.
             if (
                 profile.HdrPolicy == HdrPolicy.EmitHdrAndSdr
@@ -85,17 +93,19 @@ public class PlanStage(
             {
                 videoOutputs = videoOutputs
                     .SelectMany(v =>
-                        new[]
-                        {
-                            v with
+                        v.BitDepth >= 10
+                            ? new[]
                             {
-                                ConvertHdrToSdr = false,
-                            },
-                            v with
-                            {
-                                ConvertHdrToSdr = true,
-                            },
-                        }
+                                v with
+                                {
+                                    ConvertHdrToSdr = false,
+                                },
+                                v with
+                                {
+                                    ConvertHdrToSdr = true,
+                                },
+                            }
+                            : new[] { v with { ConvertHdrToSdr = true } }
                     )
                     .ToArray();
             }
@@ -364,7 +374,8 @@ public class PlanStage(
         VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
 
         // EmitHdrAndSdr: same expansion as in the resolver block above so
-        // VideoOutputPlan count matches resolvedCodecs count.
+        // VideoOutputPlan count matches resolvedCodecs count. Keep the 10-bit
+        // gate identical — 8-bit rungs only emit the tonemap copy.
         if (
             profile.HdrPolicy == HdrPolicy.EmitHdrAndSdr
             && media.VideoStreams.Count > 0
@@ -373,7 +384,19 @@ public class PlanStage(
         {
             videoOutputs = videoOutputs
                 .SelectMany(v =>
-                    new[] { v with { ConvertHdrToSdr = false }, v with { ConvertHdrToSdr = true } }
+                    v.BitDepth >= 10
+                        ? new[]
+                        {
+                            v with
+                            {
+                                ConvertHdrToSdr = false,
+                            },
+                            v with
+                            {
+                                ConvertHdrToSdr = true,
+                            },
+                        }
+                        : new[] { v with { ConvertHdrToSdr = true } }
                 )
                 .ToArray();
         }
