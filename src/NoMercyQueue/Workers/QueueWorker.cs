@@ -41,6 +41,16 @@ public class QueueWorker(
     private bool _isRunning = true;
     private CancellationTokenSource _stopCts = new();
 
+    /// <summary>
+    /// Set when the resource budget gate rejected the most recent acquire
+    /// attempt and cleared on the next successful acquire. Used to log the
+    /// "budget saturated, retrying" line ONCE per saturation episode instead
+    /// of every <see cref="BudgetRetryDelay"/> tick — multiple workers
+    /// polling against a fully-leased semaphore otherwise spam the log with
+    /// retry notices for the entire duration of the holding ffmpeg.
+    /// </summary>
+    private bool _suppressBudgetSaturationLog;
+
     private int CurrentIndex => runner?.GetWorkerIndex(name, this) ?? -1;
 
     /// <summary>
@@ -228,23 +238,36 @@ public class QueueWorker(
 
         if (lease is null)
         {
-            int gpuAvailable = requirement.GpuDeviceKey is not null
-                ? resourceBudget.AvailableGpuEncoderSlots(requirement.GpuDeviceKey)
-                : -1;
-            int cpuAvailable = resourceBudget.AvailableCpuThreads();
+            // Log only the FIRST saturated retry per episode. A long-running
+            // ffmpeg bundle can hold the semaphore for tens of minutes; with
+            // four workers polling every BudgetRetryDelay against a fully-
+            // leased budget, an Info-level log per retry produces thousands
+            // of identical lines that drown out the rest of the encoder log
+            // and (via synchronous Serilog sinks) contribute to host
+            // unresponsiveness. The flag resets on the next successful
+            // acquire so a new saturation episode logs once again.
+            if (!_suppressBudgetSaturationLog)
+            {
+                int gpuAvailable = requirement.GpuDeviceKey is not null
+                    ? resourceBudget.AvailableGpuEncoderSlots(requirement.GpuDeviceKey)
+                    : -1;
+                int cpuAvailable = resourceBudget.AvailableCpuThreads();
 
-            logger?.LogInformation(
-                "[{Queue}] budget saturated for job {JobId} — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Retrying in {Delay}s.",
-                name,
-                job.Id,
-                gpuAvailable,
-                cpuAvailable,
-                BudgetRetryDelay.TotalSeconds
-            );
+                logger?.LogDebug(
+                    "[{Queue}] budget saturated for job {JobId} — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Will retry every {Delay}s until a slot frees.",
+                    name,
+                    job.Id,
+                    gpuAvailable,
+                    cpuAvailable,
+                    BudgetRetryDelay.TotalSeconds
+                );
+                _suppressBudgetSaturationLog = true;
+            }
 
             return false;
         }
 
+        _suppressBudgetSaturationLog = false;
         return true;
     }
 
