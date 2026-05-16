@@ -225,12 +225,22 @@ public class ResourceBudget : IResourceBudget
                         gpuSemaphore.Release();
                     }
 
-                    _logger?.LogDebug(
-                        "TryAcquire timed out acquiring GPU slot {Slot}/{Total} on {GpuKey}",
-                        slotIndex + 1,
-                        requirement.GpuSlots,
-                        requirement.GpuDeviceKey
-                    );
+                    // Only log when an actual wait elapsed — the immediate
+                    // polling path (timeoutMs == 0) from QueueWorker is the
+                    // expected "budget saturated, try later" loop. Worker
+                    // logs the saturation episode once on its own; this
+                    // line would fire per-rung × per-worker × per-retry and
+                    // bury the rest of the encoder log under thousands of
+                    // identical messages.
+                    if (timeoutMs > 0)
+                    {
+                        _logger?.LogDebug(
+                            "TryAcquire timed out acquiring GPU slot {Slot}/{Total} on {GpuKey}",
+                            slotIndex + 1,
+                            requirement.GpuSlots,
+                            requirement.GpuDeviceKey
+                        );
+                    }
 
                     return null;
                 }
@@ -262,11 +272,14 @@ public class ResourceBudget : IResourceBudget
                         }
                     }
 
-                    _logger?.LogDebug(
-                        "TryAcquire timed out acquiring CPU thread {Thread}/{Total}, rolled back GPU slots",
-                        threadIndex + 1,
-                        requirement.CpuThreads
-                    );
+                    if (timeoutMs > 0)
+                    {
+                        _logger?.LogDebug(
+                            "TryAcquire timed out acquiring CPU thread {Thread}/{Total}, rolled back GPU slots",
+                            threadIndex + 1,
+                            requirement.CpuThreads
+                        );
+                    }
 
                     return null;
                 }
