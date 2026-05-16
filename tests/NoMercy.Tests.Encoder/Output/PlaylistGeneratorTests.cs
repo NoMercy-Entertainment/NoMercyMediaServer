@@ -8,25 +8,36 @@ public class PlaylistGeneratorTests
 {
     private const string MediaTitle = "Movie.Name.NoMercy";
 
-    private static readonly Dictionary<
-        string,
-        HlsVariantAnalyzer.VariantMetrics
-    > EmptyVideoMetrics = [];
-
-    private static readonly Dictionary<
-        string,
-        HlsVariantAnalyzer.VariantMetrics
-    > EmptyAudioMetrics = [];
-
     private string Generate(OutputPlan plan)
     {
+        // GenerateMasterPlaylist now skips variants whose measured bandwidth
+        // is zero (the analyzer's signal for "playlist / segments missing on
+        // disk") to keep dead variants out of the published master. Tests
+        // that build a synthetic OutputPlan need to seed non-zero metrics so
+        // the variant rows still render — otherwise the master is empty and
+        // every codec-tag / structure assertion fails.
+        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics = plan
+            .VideoOutputs.Where(v => !string.IsNullOrEmpty(v.MapLabel))
+            .ToDictionary(
+                v => v.MapLabel,
+                _ => new HlsVariantAnalyzer.VariantMetrics(
+                    PeakBandwidth: 5_000_000,
+                    AverageBandwidth: 4_500_000
+                )
+            );
+
+        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics = plan
+            .AudioOutputs.Where(a => !string.IsNullOrEmpty(a.MapLabel))
+            .ToDictionary(
+                a => a.MapLabel,
+                _ => new HlsVariantAnalyzer.VariantMetrics(
+                    PeakBandwidth: 192_000,
+                    AverageBandwidth: 180_000
+                )
+            );
+
         PlaylistGenerator generator = new();
-        return generator.GenerateMasterPlaylist(
-            plan,
-            MediaTitle,
-            EmptyVideoMetrics,
-            EmptyAudioMetrics
-        );
+        return generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
     }
 
     [Fact]

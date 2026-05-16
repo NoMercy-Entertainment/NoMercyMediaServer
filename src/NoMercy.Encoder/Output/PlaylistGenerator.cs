@@ -77,9 +77,21 @@ public class PlaylistGenerator : IPlaylistGenerator
             audioGroupId = $"audio_{firstCodecName}";
         }
 
+        bool defaultAudioEmitted = false;
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
         {
             if (audio.Action is not (StreamAction.Copy or StreamAction.Transcode))
+                continue;
+
+            // Skip audio variants whose segments never materialised. The
+            // analyzer returns zero bandwidth when the playlist or its
+            // segments are missing on disk — listing those in the master
+            // makes hls.js / VLC bail on the first variant fetch.
+            HlsVariantAnalyzer.VariantMetrics audMetrics = audioMetrics.GetValueOrDefault(
+                audio.MapLabel,
+                new(0, 0)
+            );
+            if (audMetrics.PeakBandwidth == 0)
                 continue;
 
             string codecName = audio.EncoderName.Replace("libfdk_", "").Replace("lib", "");
@@ -96,7 +108,8 @@ public class PlaylistGenerator : IPlaylistGenerator
             string uri = $"{subDir}/{playlistFile}.m3u8";
             string language = audio.Language ?? "und";
             string displayName = GetAudioDisplayName(language);
-            bool isDefault = audio == plan.AudioOutputs[0];
+            bool isDefault = !defaultAudioEmitted;
+            defaultAudioEmitted = true;
 
             sb.AppendLine(
                 $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{audioGroupId}\",LANGUAGE=\"{language}\",AUTOSELECT=YES,DEFAULT={YesNo(isDefault)},URI=\"{uri}\",NAME=\"{displayName}\""
@@ -145,6 +158,15 @@ public class PlaylistGenerator : IPlaylistGenerator
                 video.MapLabel,
                 new(0, 0)
             );
+
+            // Skip video variants whose segments never materialised — bundle
+            // got cancelled / failed / didn't publish. Listing them in the
+            // master makes VLC and hls.js bail on first init.mp4 fetch with
+            // a 404. The analyzer returns zero bandwidth for a missing
+            // playlist or empty segment dir.
+            if (vidMetrics.PeakBandwidth == 0)
+                continue;
+
             HlsVariantAnalyzer.VariantMetrics audMetrics =
                 plan.AudioOutputs.Length > 0
                     ? audioMetrics.GetValueOrDefault(plan.AudioOutputs[0].MapLabel, new(0, 0))

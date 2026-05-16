@@ -11,20 +11,25 @@ namespace NoMercy.Tests.Encoder.Strategies.Hls;
 /// </summary>
 public class HlsSubtitleMediaTagTests
 {
-    private static readonly Dictionary<
-        string,
-        HlsVariantAnalyzer.VariantMetrics
-    > EmptyVideoMetrics = [];
-
-    private static readonly Dictionary<
-        string,
-        HlsVariantAnalyzer.VariantMetrics
-    > EmptyAudioMetrics = [];
-
     private static string GenerateMaster(OutputPlan plan)
     {
+        // Seed non-zero metrics so the variant rows render — GenerateMasterPlaylist
+        // skips any variant whose measured bandwidth is zero (dead-variant guard).
+        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics = plan
+            .VideoOutputs.Where(v => !string.IsNullOrEmpty(v.MapLabel))
+            .ToDictionary(
+                v => v.MapLabel,
+                _ => new HlsVariantAnalyzer.VariantMetrics(5_000_000, 4_500_000)
+            );
+        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics = plan
+            .AudioOutputs.Where(a => !string.IsNullOrEmpty(a.MapLabel))
+            .ToDictionary(
+                a => a.MapLabel,
+                _ => new HlsVariantAnalyzer.VariantMetrics(192_000, 180_000)
+            );
+
         PlaylistGenerator gen = new();
-        return gen.GenerateMasterPlaylist(plan, "Test.Movie", EmptyVideoMetrics, EmptyAudioMetrics);
+        return gen.GenerateMasterPlaylist(plan, "Test.Movie", videoMetrics, audioMetrics);
     }
 
     // ----------------------------------------------------------------
