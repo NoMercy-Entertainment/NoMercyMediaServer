@@ -391,9 +391,57 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             .Select(o => o.TaskId)
             .ToListAsync();
 
-        // Filter: only non-pass1 tasks count toward completion in WaitChildren.
-        string[] nonPass1TaskIds = state.TaskIds.Where(tid => !tid.Contains("-pass1-")).ToArray();
+        // Sequential bundle dispatch: when Bundles[] is set on state, only
+        // the CURRENT bundle's BundledTaskIds need to be complete to advance.
+        // Each bundle = one ffmpeg invocation; running them one at a time
+        // means the host never has two encoder processes fighting for the
+        // GPU/CPU at once. The next bundle dispatches on this wake-up.
+        if (state.Bundles is { Length: > 0 } bundles && state.CurrentBundleIndex < bundles.Length)
+        {
+            DecomposedTask currentBundle = bundles[state.CurrentBundleIndex];
+            string[] currentBundleTaskIds = currentBundle.BundledTaskIds ?? [currentBundle.TaskId];
 
+            bool currentBundleDone = currentBundleTaskIds.All(tid =>
+                completedTaskIds.Contains(tid)
+            );
+
+            if (!currentBundleDone)
+            {
+                int doneCount = currentBundleTaskIds.Count(tid => completedTaskIds.Contains(tid));
+                Logger.Encoder(
+                    $"[VideoEncodeJob] WaitChildren: bundle {state.CurrentBundleIndex + 1}/{bundles.Length}, {doneCount}/{currentBundleTaskIds.Length} streams done — re-enqueueing"
+                );
+                ReEnqueueSelf(state with { Phase = CoordinatorPhase.WaitChildren });
+                return;
+            }
+
+            int nextIndex = state.CurrentBundleIndex + 1;
+            if (nextIndex < bundles.Length)
+            {
+                Logger.Encoder(
+                    $"[VideoEncodeJob] Bundle {state.CurrentBundleIndex + 1}/{bundles.Length} complete. Dispatching bundle {nextIndex + 1}/{bundles.Length}."
+                );
+                DispatchSingleBundle(bundles[nextIndex], state.PresetId, state.GroupTag);
+                ReEnqueueSelf(
+                    state with
+                    {
+                        Phase = CoordinatorPhase.WaitChildren,
+                        CurrentBundleIndex = nextIndex,
+                    }
+                );
+                return;
+            }
+
+            Logger.Encoder(
+                $"[VideoEncodeJob] All {bundles.Length} bundles complete. Transitioning to Finalize."
+            );
+            ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize });
+            return;
+        }
+
+        // Legacy path (no Bundles tracked, e.g. two-pass): wait for every
+        // non-pass1 task to land.
+        string[] nonPass1TaskIds = state.TaskIds.Where(tid => !tid.Contains("-pass1-")).ToArray();
         bool allDone = nonPass1TaskIds.All(tid => completedTaskIds.Contains(tid));
 
         if (!allDone)
@@ -410,6 +458,20 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             $"[VideoEncodeJob] WaitChildren complete — all tasks done. Transitioning to Finalize."
         );
         ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize });
+    }
+
+    private void DispatchSingleBundle(DecomposedTask bundle, Ulid presetId, string groupTag)
+    {
+        DecomposedTask stamped = bundle with { ParentJobId = _selfJobId };
+        EncodeTaskJob bundleJob = BuildChildJob(stamped, presetId);
+        GetDispatcher()
+            .DispatchChild(
+                bundleJob,
+                onQueue: bundleJob.QueueName,
+                priority: bundleJob.Priority,
+                parentJobId: _selfJobId,
+                groupTag: groupTag
+            );
     }
 
     private async Task HandleFinalizeAsync(CoordinatorState state)
@@ -635,33 +697,31 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         }
         else
         {
-            // Single-pass: pack into resource-proportional bundles.
-            //
-            // Decomposition emits one DecomposedTask per stream (preserves
-            // unit of tracking, retry, future distributed dispatch). The
-            // coordinator now packs ready tasks into bundles sized to host
-            // hardware — NVENC session cap for GPU rungs, sensible CPU
-            // budget for software rungs — so each bundle is one ffmpeg
-            // invocation that respects the worker's actual capacity. The
-            // queue worker pulls bundles sequentially, so a 10-rung HEVC
-            // ladder on a 5-session GPU yields 2 sequential ffmpegs (5+5)
-            // and never oversubscribes the encoder.
+            // Single-pass: pack tasks into resource-proportional bundles and
+            // dispatch ONE bundle at a time. The coordinator state carries
+            // the full bundle list and an index; WaitChildren waits for the
+            // current bundle's BundledTaskIds, then dispatches the next on
+            // wake-up. One ffmpeg in flight per source — never N parallel
+            // bundles racing the GPU / CPU / shared writes.
             DecomposedTask[] bundles = BuildResourceBundles(tasks, parentJobId, groupTag);
 
-            foreach (DecomposedTask bundle in bundles)
+            if (bundles.Length == 0)
             {
-                EncodeTaskJob bundleJob = BuildChildJob(bundle, presetId);
-                dispatcher.DispatchChild(
-                    bundleJob,
-                    onQueue: bundleJob.QueueName,
-                    priority: bundleJob.Priority,
-                    parentJobId: parentJobId,
-                    groupTag: groupTag
-                );
+                Logger.Encoder("[VideoEncodeJob] No bundles produced — nothing to dispatch.");
+                return;
             }
 
+            EncodeTaskJob firstBundleJob = BuildChildJob(bundles[0], presetId);
+            dispatcher.DispatchChild(
+                firstBundleJob,
+                onQueue: firstBundleJob.QueueName,
+                priority: firstBundleJob.Priority,
+                parentJobId: parentJobId,
+                groupTag: groupTag
+            );
+
             Logger.Encoder(
-                $"[VideoEncodeJob] Dispatched {bundles.Length} bundle(s) covering {tasks.Length} streams. Transitioning to WaitChildren."
+                $"[VideoEncodeJob] Dispatched bundle 1/{bundles.Length} covering {tasks.Length} streams. Sequential dispatch — bundle N+1 fires on bundle N completion. Transitioning to WaitChildren."
             );
 
             ReEnqueueSelf(
@@ -673,7 +733,9 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                     Pass2DispatchedAt: null,
                     Pass1StatsPath: null,
                     PresetId: presetId,
-                    ExpectedFinalCount: tasks.Length
+                    ExpectedFinalCount: tasks.Length,
+                    Bundles: bundles,
+                    CurrentBundleIndex: 0
                 )
             );
         }
@@ -1019,11 +1081,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
     /// semaphore — four such bundles would happily run concurrently, asking
     /// for 32 NVENC sessions against an 8-session cap.
     ///
-    /// <para>With the sum, a bundle of 8 NVENC rungs claims 8 slots → uses
-    /// the whole consumer GPU budget → the queue worker correctly defers
-    /// the next bundle until a slot frees. Mixed-encoder bundles only count
-    /// GPU slots for GPU-encoded rungs and CPU threads for everyone (NVENC
-    /// rungs still spend ~2 host threads on filtering / muxing).</para>
+    /// <para>Per-task CpuThreads values double-count (each NVENC task
+    /// declares 2 threads of muxing overhead; software-encoder tasks
+    /// declare half the box). Naive summing produces a claim larger than
+    /// the CPU semaphore — which is sized to the host's core count — and
+    /// the bundle waits forever for threads it can never acquire. Cap at
+    /// <c>cores - 1</c> so a real-world bundle still leaves headroom for
+    /// SignalR / HTTP / other queue work to make progress.</para>
     /// </summary>
     private static ResourceRequirement? ResolveBundleResources(DecomposedTask[] tasks)
     {
@@ -1032,12 +1096,16 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             .FirstOrDefault(key => key is not null);
 
         int gpuSlots = tasks.Sum(task => task.Resources?.GpuSlots ?? 0);
-        int cpuThreads = tasks.Sum(task => task.Resources?.CpuThreads ?? 0);
+        int summedCpuThreads = tasks.Sum(task => task.Resources?.CpuThreads ?? 0);
 
-        if (gpuKey is null && gpuSlots == 0 && cpuThreads == 0)
+        int cores = Math.Max(1, Environment.ProcessorCount);
+        int cpuCap = Math.Max(1, cores - 1);
+        int cpuThreads = Math.Clamp(summedCpuThreads, 1, cpuCap);
+
+        if (gpuKey is null && gpuSlots == 0 && summedCpuThreads == 0)
             return null;
 
-        return new ResourceRequirement(gpuKey, gpuSlots, Math.Max(1, cpuThreads));
+        return new ResourceRequirement(gpuKey, gpuSlots, cpuThreads);
     }
 
     // ------------------------------------------------------------------

@@ -1,3 +1,5 @@
+using NoMercy.Encoder.Decomposition;
+
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 /// <summary>
@@ -24,7 +26,20 @@ public sealed record CoordinatorState(
     /// Total number of non-Pass1 tasks expected. Used to detect completion in
     /// <see cref="CoordinatorPhase.WaitChildren"/>.
     /// </summary>
-    int ExpectedFinalCount
+    int ExpectedFinalCount,
+    /// <summary>
+    /// Ordered list of bundles for sequential dispatch. The coordinator
+    /// dispatches one bundle, waits for its <see cref="DecomposedTask.BundledTaskIds"/>
+    /// to all land in <c>EncodeTaskOutcomes</c>, then dispatches the next.
+    /// Null for two-pass runs (their Pass1/Pass2 dispatch path predates this).
+    /// </summary>
+    DecomposedTask[]? Bundles = null,
+    /// <summary>
+    /// Index of the bundle currently being executed (in <see cref="Bundles"/>).
+    /// On wake-up the coordinator checks whether this bundle's task IDs have
+    /// completed; if yes, increments and dispatches the next.
+    /// </summary>
+    int CurrentBundleIndex = 0
 );
 
 /// <summary>
