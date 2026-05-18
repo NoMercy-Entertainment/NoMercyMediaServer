@@ -71,17 +71,34 @@ public class GenresController : BaseController
 
         string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        List<ComponentEnvelope> items =
-        [
-            Component.Container(),
-            Component
-                .Carousel()
-                .WithId($"genres-{letter}")
-                .WithTitle($"Genres: {displayLetter}".Localize())
-                .WithItems(genres.Select(Component.GenreCard)),
-        ];
+        bool isLolomo = string.Equals(
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
+        );
 
-        return Ok(ComponentResponse.From(items));
+        if (isLolomo)
+        {
+            List<ComponentEnvelope> items =
+            [
+                Component.Container(),
+                Component
+                    .Carousel()
+                    .WithId($"genres-{letter}")
+                    .WithTitle($"Genres starting with {displayLetter}".Localize())
+                    .WithItems(genres.Select(Component.GenreCard)),
+            ];
+
+            return Ok(ComponentResponse.From(items));
+        }
+
+        ComponentEnvelope grid = Component
+            .Grid()
+            .WithId($"genres-{letter}")
+            .WithTitle($"Genres starting with {displayLetter}".Localize())
+            .WithItems(genres.Select(Component.GenreCard));
+
+        return Ok(ComponentResponse.From(grid));
     }
 
     [HttpGet]
