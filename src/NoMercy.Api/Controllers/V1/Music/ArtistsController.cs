@@ -52,50 +52,25 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view artists");
 
-        // Optional hero card — most-listened artist overall. Falls through silently
-        // when the user has no play history yet.
-        TopMusicItemDto? topArtist = await _musicRepository.GetTopArtistAsync(userId);
-        ComponentEnvelope hero = topArtist is not null
-            ? Component
-                .Container()
-                .WithItems(
-                    Component
-                        .MusicHomeCard(new(new TopMusicDto(topArtist)))
-                        .WithId("favorite-artist")
-                        .WithTitle("Most listened artist".Localize())
-                        .Build()
-                )
-            : Component.Container();
-
-        // The "all" marker (`_`) returns one carousel per first-letter bucket in
-        // alphabetical order, with the symbol bucket (#) at the end.
-        if (letter == "_" || letter == "all")
+        // Lolomo with the "all" marker (`_`) returns one carousel per first-letter
+        // bucket in alphabetical order, with the symbol bucket (#) at the end.
+        if (request.Version == "lolomo" && (letter == "_" || letter == "all"))
         {
             List<ArtistCardDto> allCards = await _musicRepository.GetAllArtistCardsAsync(userId);
 
-            List<IGrouping<string, ArtistCardDto>> groups = allCards
+            List<ComponentEnvelope> items = [Component.Container()];
+
+            IOrderedEnumerable<IGrouping<string, ArtistCardDto>> groups = allCards
                 .GroupBy(a => BucketLetter(a.Name))
-                .OrderBy(g => g.Key == "#" ? "zz" : g.Key)
-                .ToList();
+                .OrderBy(g => g.Key == "#" ? "zz" : g.Key);
 
-            List<ComponentEnvelope> items = [hero];
-
-            for (int i = 0; i < groups.Count; i++)
+            foreach (IGrouping<string, ArtistCardDto> group in groups)
             {
-                IGrouping<string, ArtistCardDto> group = groups[i];
-                string id = $"artists-{group.Key.ToLowerInvariant()}";
-                string? prevId = i == 0 ? null : $"artists-{groups[i - 1].Key.ToLowerInvariant()}";
-                string? nextId =
-                    i == groups.Count - 1
-                        ? null
-                        : $"artists-{groups[i + 1].Key.ToLowerInvariant()}";
-
                 items.Add(
                     Component
                         .Carousel()
-                        .WithId(id)
-                        .WithNavigation(prevId, nextId)
-                        .WithTitle($"Artists: {group.Key}".Localize())
+                        .WithId($"artists-{group.Key.ToLowerInvariant()}")
+                        .WithTitle($"Artists starting with {group.Key}".Localize())
                         .WithItems(group.Select(a => Component.MusicCard(new MusicCardData(a))))
                 );
             }
@@ -110,17 +85,28 @@ public class ArtistsController : BaseController
 
         string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        List<ComponentEnvelope> letterItems =
-        [
-            hero,
-            Component
-                .Carousel()
-                .WithId($"artists-{letter}")
-                .WithTitle($"Artists: {displayLetter}".Localize())
-                .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
-        ];
+        if (request.Version == "lolomo")
+        {
+            List<ComponentEnvelope> items =
+            [
+                Component.Container(),
+                Component
+                    .Carousel()
+                    .WithId($"artists-{letter}")
+                    .WithTitle($"Artists starting with {displayLetter}".Localize())
+                    .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
+            ];
 
-        return Ok(ComponentResponse.From(letterItems));
+            return Ok(ComponentResponse.From(items));
+        }
+
+        ComponentEnvelope grid = Component
+            .Grid()
+            .WithId($"artists-{letter}")
+            .WithTitle($"Artists starting with {displayLetter}".Localize())
+            .WithItems(artistCards.Select(a => Component.MusicCard(new MusicCardData(a))));
+
+        return Ok(ComponentResponse.From(grid));
     }
 
     private static string BucketLetter(string name)

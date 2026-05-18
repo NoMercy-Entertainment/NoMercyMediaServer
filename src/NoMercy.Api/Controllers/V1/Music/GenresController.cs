@@ -8,7 +8,6 @@ using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
 using NoMercy.Helpers.Extensions;
-using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -68,19 +67,9 @@ public class GenresController : BaseController
             .Select(genre => new NmGenreCardDto(genre))
             .DistinctBy(genre => genre.Title);
 
-        string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
+        ComponentEnvelope response = Component.Grid().WithItems(genres.Select(Component.GenreCard));
 
-        List<ComponentEnvelope> items =
-        [
-            Component.Container(),
-            Component
-                .Carousel()
-                .WithId($"genres-{letter}")
-                .WithTitle($"Genres: {displayLetter}".Localize())
-                .WithItems(genres.Select(Component.GenreCard)),
-        ];
-
-        return Ok(ComponentResponse.From(items));
+        return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]
