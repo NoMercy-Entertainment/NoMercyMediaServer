@@ -203,7 +203,12 @@ public class MusicHub : ConnectionHub
         List<PlaylistTrackDto> playlist
     )
     {
-        Device device = GetCurrentDevice(user);
+        // GetOrPromoteActiveDevice respects an existing connected active
+        // device, falling back to the caller only when there isn't one.
+        // This prevents a passive sender (phone tapping a playlist after
+        // a stop) from being promoted to active just because the previous
+        // state had no CurrentItem — the active flag stays on the TV.
+        Device device = GetOrPromoteActiveDevice(user);
         MusicPlayerState musicPlayerState = MusicPlayerStateFactory.Create(
             device,
             item,
@@ -240,16 +245,41 @@ public class MusicHub : ConnectionHub
         }
     }
 
-    private Device GetCurrentDevice(User user)
+    /// <summary>
+    /// Returns the Client belonging to the connection that invoked this hub
+    /// method. Does NOT mutate CurrentDevice — use this when you need to log
+    /// who triggered an action but do not want to promote them to active.
+    /// </summary>
+    private Device GetCallerDevice(User user)
     {
         if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
             throw new InvalidOperationException(
                 $"Connection {Context.ConnectionId} not found in ConnectedClients"
             );
-
-        CurrentDevice[user.Id] = device;
-
         return device;
+    }
+
+    /// <summary>
+    /// Returns the user's current active device. If no active device is
+    /// recorded, or the recorded device has disconnected, the caller is
+    /// promoted to active. Otherwise the existing active is preserved —
+    /// passive callers do NOT steal active away from a live target.
+    /// </summary>
+    private Device GetOrPromoteActiveDevice(User user)
+    {
+        Device caller = GetCallerDevice(user);
+
+        if (CurrentDevice.TryGetValue(user.Id, out Device? existing) && existing is not null)
+        {
+            bool existingStillConnected = ConnectedClients.Clients.Values.Any(c =>
+                c.DeviceId.Equals(existing.DeviceId, StringComparison.OrdinalIgnoreCase)
+            );
+            if (existingStillConnected)
+                return existing;
+        }
+
+        CurrentDevice[user.Id] = caller;
+        return caller;
     }
 
     /// <summary>
@@ -443,7 +473,10 @@ public class MusicHub : ConnectionHub
         await _musicPlaybackService.UpdatePlaybackState(user, state);
         await _musicPlaybackService.PublishStartedEventAsync(user.Id, state);
 
-        Device device = GetCurrentDevice(user);
+        // Logging only — record who triggered the playlist change without
+        // promoting them to active. The active flag is governed by
+        // UpdateDeviceInfo, which respects an existing active device.
+        Device device = GetCallerDevice(user);
         try
         {
             await ActivityLogger.LogPlaybackAsync(
@@ -821,6 +854,17 @@ public class MusicHub : ConnectionHub
             // `UpdatePlaybackState(user, null)` call would have NRE'd; just return.
             return;
         }
+
+        // Keep the CurrentDevice registry in sync with playerState.DeviceId.
+        // Without this, CurrentDevice could still point at whoever last
+        // promoted themselves (e.g. the web client that initiated this
+        // ChangeDevice), while playerState says TV — and downstream calls
+        // that consult CurrentDevice would see a stale active.
+        Device? targetClient = ConnectedClients.Clients.Values.FirstOrDefault(c =>
+            c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+        );
+        if (targetClient is not null)
+            CurrentDevice[user.Id] = targetClient;
 
         EventPayload<BroadcastEventPayload> payload = new()
         {
