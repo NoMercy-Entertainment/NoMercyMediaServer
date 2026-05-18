@@ -29,42 +29,24 @@ public class GenresController : BaseController
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
-        return await BuildLetterResponseAsync(letter: "_", request: request);
-    }
-
-    [HttpGet]
-    [Route("letter/{letter}")]
-    public async Task<IActionResult> LibraryByLetter(
-        Ulid libraryId,
-        string letter,
-        [FromQuery] PageRequestDto request
-    )
-    {
-        return await BuildLetterResponseAsync(letter: letter, request: request);
-    }
-
-    private async Task<IActionResult> BuildLetterResponseAsync(
-        string letter,
-        PageRequestDto request
-    )
-    {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view genres");
 
         Guid userId = User.UserId();
 
-        // The "all" marker (`_`) returns one carousel per first-letter bucket in
-        // alphabetical order, with the symbol bucket (#) at the end.
-        if (letter == "_" || letter == "all")
+        List<MusicGenreCardDto> genreCards = await _genreRepository.GetMusicGenreCardsAsync(userId);
+        IEnumerable<NmGenreCardDto> allGenres = genreCards
+            .Select(genre => new NmGenreCardDto(genre))
+            .DistinctBy(genre => genre.Title);
+
+        bool isLolomo = string.Equals(
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        if (isLolomo)
         {
-            List<MusicGenreCardDto> allCards = await _genreRepository.GetMusicGenreCardsAsync(
-                userId
-            );
-
-            IEnumerable<NmGenreCardDto> allGenres = allCards
-                .Select(genre => new NmGenreCardDto(genre))
-                .DistinctBy(genre => genre.Title);
-
             List<IGrouping<string, NmGenreCardDto>> groups = allGenres
                 .GroupBy(g => BucketLetter(g.Title))
                 .OrderBy(g => g.Key == "#" ? "zz" : g.Key)
@@ -93,6 +75,26 @@ public class GenresController : BaseController
             return Ok(ComponentResponse.From(items));
         }
 
+        ComponentEnvelope response = Component
+            .Grid()
+            .WithItems(allGenres.Select(Component.GenreCard));
+
+        return Ok(ComponentResponse.From(response));
+    }
+
+    [HttpGet]
+    [Route("letter/{letter}")]
+    public async Task<IActionResult> LibraryByLetter(
+        Ulid libraryId,
+        string letter,
+        [FromQuery] PageRequestDto request
+    )
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view genres");
+
+        Guid userId = User.UserId();
+
         List<MusicGenreCardDto> genreCards =
             await _genreRepository.GetPaginatedMusicGenreCardsAsync(
                 userId,
@@ -100,24 +102,40 @@ public class GenresController : BaseController
                 request.Take,
                 request.Page
             );
-
         IEnumerable<NmGenreCardDto> genres = genreCards
             .Select(genre => new NmGenreCardDto(genre))
             .DistinctBy(genre => genre.Title);
 
-        string displayLetter = letter.ToUpperInvariant();
+        string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        List<ComponentEnvelope> letterItems =
-        [
-            Component.Container(),
-            Component
-                .Carousel()
-                .WithId($"genres-{letter}")
-                .WithTitle($"Genres: {displayLetter}".Localize())
-                .WithItems(genres.Select(Component.GenreCard)),
-        ];
+        bool isLolomo = string.Equals(
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
+        );
 
-        return Ok(ComponentResponse.From(letterItems));
+        if (isLolomo)
+        {
+            List<ComponentEnvelope> items =
+            [
+                Component.Container(),
+                Component
+                    .Carousel()
+                    .WithId($"genres-{letter}")
+                    .WithTitle($"Genres: {displayLetter}".Localize())
+                    .WithItems(genres.Select(Component.GenreCard)),
+            ];
+
+            return Ok(ComponentResponse.From(items));
+        }
+
+        ComponentEnvelope grid = Component
+            .Grid()
+            .WithId($"genres-{letter}")
+            .WithTitle($"Genres: {displayLetter}".Localize())
+            .WithItems(genres.Select(Component.GenreCard));
+
+        return Ok(ComponentResponse.From(grid));
     }
 
     private static string BucketLetter(string name)
