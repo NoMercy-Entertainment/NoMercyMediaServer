@@ -34,23 +34,29 @@ public sealed class DeviceHub : ConnectionHub
     public async Task<List<DeviceListItem>> GetDevices()
     {
         User? user = Context.User.User();
-        if (user is null) return [];
+        if (user is null)
+            return [];
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        List<Device> rows = await ctx.Devices
-            .Where(d => d.OwnerUserId == user.Id && d.Fingerprint != null)
+        List<Device> rows = await ctx
+            .Devices.Where(d => d.OwnerUserId == user.Id && d.Fingerprint != null)
             .ToListAsync();
 
-        return rows
-            .Select(d => new DeviceListItem
+        return rows.Select(d =>
             {
-                DeviceId = d.Id,
-                Fingerprint = d.Fingerprint!,
-                Name = d.CustomName ?? d.Name,
-                Type = d.Type,
-                Online = _busRegistry.IsOnline(d.Id),
-                LanIp = d.LanIp,
-                LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
+                DeviceStatus status = _busRegistry.GetStatus(d.Id);
+                return new DeviceListItem
+                {
+                    DeviceId = d.Id,
+                    Fingerprint = d.Fingerprint!,
+                    Name = d.CustomName ?? d.Name,
+                    Type = d.Type,
+                    Online = _busRegistry.IsOnline(d.Id),
+                    Foreground = status.Foreground,
+                    ScreenOn = status.ScreenOn,
+                    LanIp = d.LanIp,
+                    LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
+                };
             })
             .ToList();
     }
@@ -58,9 +64,11 @@ public sealed class DeviceHub : ConnectionHub
     public async Task<WakeResult> WakeForMusic(string deviceId)
     {
         User? user = Context.User.User();
-        if (user is null) return new WakeResult("not_owned");
+        if (user is null)
+            return new WakeResult("not_owned");
 
-        if (!Ulid.TryParse(deviceId, out Ulid id)) return new WakeResult("not_owned");
+        if (!Ulid.TryParse(deviceId, out Ulid id))
+            return new WakeResult("not_owned");
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
         Device? device = await ctx.Devices.FindAsync(id);

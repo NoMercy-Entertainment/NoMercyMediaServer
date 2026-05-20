@@ -216,7 +216,12 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
 
     private void HandleStop(MusicPlayerState state)
     {
-        state.DeviceId = null;
+        // Do NOT clear state.DeviceId here. The active device remains the
+        // active device until it actually disconnects from the WebSocket —
+        // clearing it on stop made every subsequent StartPlaybackCommand
+        // from a passive sender (phone tapping a playlist) route through
+        // HandleNewPlayerState, which unconditionally promoted the caller
+        // to active and audibly hijacked playback away from the TV.
         state.CurrentItem = null;
         state.PlayState = false;
         state.Time = 0;

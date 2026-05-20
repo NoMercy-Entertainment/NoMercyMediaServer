@@ -125,7 +125,12 @@ public class MusicHub : ConnectionHub
         List<PlaylistTrackDto> playlist
     )
     {
-        Device device = GetCurrentDevice(user);
+        // GetOrPromoteActiveDevice respects an existing connected active
+        // device, falling back to the caller only when there isn't one.
+        // This prevents a passive sender (phone tapping a playlist after
+        // a stop) from being promoted to active just because the previous
+        // state had no CurrentItem — the active flag stays on the TV.
+        Device device = GetOrPromoteActiveDevice(user);
         MusicPlayerState musicPlayerState = MusicPlayerStateFactory.Create(
             device,
             item,
@@ -142,16 +147,77 @@ public class MusicHub : ConnectionHub
         await _musicPlaybackService.PublishStartedEventAsync(user.Id, musicPlayerState);
     }
 
-    private Device GetCurrentDevice(User user)
+    /// <summary>
+    /// Returns the Client belonging to the connection that invoked this hub
+    /// method. Does NOT mutate CurrentDevice — use this when you need to log
+    /// who triggered an action but do not want to promote them to active.
+    /// </summary>
+    private Device GetCallerDevice(User user)
     {
         if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
             throw new InvalidOperationException(
                 $"Connection {Context.ConnectionId} not found in ConnectedClients"
             );
-
-        CurrentDevice[user.Id] = device;
-
         return device;
+    }
+
+    /// <summary>
+    /// Returns the user's current active device. Tries to preserve an
+    /// existing active across all the places it may have been recorded:
+    ///
+    ///  1. CurrentDevice[user.Id] — set by GetOrPromoteActiveDevice and
+    ///     ChangeDeviceCommand. Cleared in OnDisconnectedAsync, so this
+    ///     can be stale-empty for a moment after a WS blip.
+    ///  2. playerState.DeviceId — set by every state mutation that hits
+    ///     UpdateDeviceInfo / the factory. Survives stop and WS drops
+    ///     (cleared only on full session teardown), so it is the most
+    ///     durable record of "who the active device WAS".
+    ///
+    /// If either points at a Client currently in ConnectedClients, we
+    /// return that Client and refresh CurrentDevice for next time. Only
+    /// when neither source points at a connected device do we promote
+    /// the caller — that is the "first-tap when truly alone" path.
+    /// </summary>
+    private Device GetOrPromoteActiveDevice(User user)
+    {
+        Device caller = GetCallerDevice(user);
+
+        Device? FindConnectedByDeviceId(string? deviceId)
+        {
+            if (string.IsNullOrEmpty(deviceId))
+                return null;
+            return ConnectedClients.Clients.Values.FirstOrDefault(c =>
+                c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+            );
+        }
+
+        // Prefer the in-memory CurrentDevice if its DeviceId is still on the bus.
+        if (CurrentDevice.TryGetValue(user.Id, out Device? existing) && existing is not null)
+        {
+            Device? live = FindConnectedByDeviceId(existing.DeviceId);
+            if (live is not null)
+                return live;
+        }
+
+        // Fall back to the durable state.DeviceId — survives WS blips that
+        // would otherwise drop CurrentDevice and cause an unintended
+        // promotion of whoever taps next.
+        if (
+            _musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state)
+            && !string.IsNullOrEmpty(state.DeviceId)
+        )
+        {
+            Device? recoveredActive = FindConnectedByDeviceId(state.DeviceId);
+            if (recoveredActive is not null)
+            {
+                CurrentDevice[user.Id] = recoveredActive;
+                return recoveredActive;
+            }
+        }
+
+        // Neither source points at a connected device — caller is alone.
+        CurrentDevice[user.Id] = caller;
+        return caller;
     }
 
     private static bool IsSamePlaylist(MusicPlayerState state, string type, Guid listId)
@@ -290,8 +356,21 @@ public class MusicHub : ConnectionHub
     {
         if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
             return;
-        state.DeviceId = device.DeviceId;
-        state.VolumePercentage = device.VolumePercent;
+
+        // Only adopt the caller's device as active when there is no active
+        // device yet, or when the caller IS the current active. A passive
+        // device that initiates a playlist change (e.g. phone tapping an
+        // album while music plays on the TV) must NOT steal active back —
+        // the new playlist should land on the existing active device.
+        bool callerIsActiveOrNoActive =
+            string.IsNullOrEmpty(state.DeviceId)
+            || state.DeviceId.Equals(device.DeviceId, StringComparison.OrdinalIgnoreCase);
+
+        if (callerIsActiveOrNoActive)
+        {
+            state.DeviceId = device.DeviceId;
+            state.VolumePercentage = device.VolumePercent;
+        }
     }
 
     private void UpdatePlaylistInfo(
@@ -484,6 +563,17 @@ public class MusicHub : ConnectionHub
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);
             return;
         }
+
+        // Keep the CurrentDevice registry in sync with playerState.DeviceId.
+        // Without this, CurrentDevice could still point at whoever last
+        // promoted themselves (e.g. the web client that initiated this
+        // ChangeDevice), while playerState says TV — and downstream calls
+        // that consult CurrentDevice would see a stale active.
+        Device? targetClient = ConnectedClients.Clients.Values.FirstOrDefault(c =>
+            c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+        );
+        if (targetClient is not null)
+            CurrentDevice[user.Id] = targetClient;
 
         EventPayload<BroadcastEventPayload> payload = new()
         {

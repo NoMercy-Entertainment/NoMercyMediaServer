@@ -94,6 +94,14 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             else
                 await next(context);
         }
+        catch (Exception) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Client disconnected mid-stream — surfaces as OperationCanceledException
+            // (mid-write) or IOException "client reset" (mid-read). Happens on every
+            // seek, source switch, passive-device teardown in the player. Swallow so
+            // the global handler doesn't log a wall of stack traces for routine
+            // client cancellations.
+        }
         catch (Exception ex)
         {
             Logger.App(

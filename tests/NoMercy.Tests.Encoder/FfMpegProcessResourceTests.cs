@@ -27,9 +27,7 @@ public class FfMpegProcessResourceTests
         int countBefore = FfMpeg.FfmpegProcess.Count;
 
         // Use a simple command that exits immediately
-        await FfMpeg.ExecStdErrOut(
-            "-version",
-            executable: "/bin/echo");
+        await FfMpeg.ExecStdErrOut("-version", executable: "/bin/echo");
 
         Assert.Equal(countBefore, FfMpeg.FfmpegProcess.Count);
     }
@@ -44,9 +42,7 @@ public class FfMpegProcessResourceTests
         int countBefore = FfMpeg.FfmpegProcess.Count;
 
         // Run a command that will fail (nonexistent arg, but echo will still exit 0)
-        await FfMpeg.ExecStdErrOut(
-            "",
-            executable: "/bin/echo");
+        await FfMpeg.ExecStdErrOut("", executable: "/bin/echo");
 
         Assert.Equal(countBefore, FfMpeg.FfmpegProcess.Count);
     }
@@ -60,17 +56,24 @@ public class FfMpegProcessResourceTests
     {
         int countBefore = FfMpeg.FfmpegProcess.Count;
 
-        // Use sleep to keep process alive long enough to observe
-        Task<string> task = FfMpeg.ExecStdErrOut(
-            "0.5",
-            executable: "/bin/sleep");
+        // Use sleep long enough that startup latency on shared CI runners
+        // doesn't eat the entire observation window.
+        Task<string> task = FfMpeg.ExecStdErrOut("3", executable: "/bin/sleep");
 
-        // Give it a moment to start
-        await Task.Delay(100);
+        // Poll for up to 2s for the process to land in the dictionary —
+        // shared CI runners have observed >500ms process spawn latency.
+        bool tracked = false;
+        for (int attempt = 0; attempt < 40; attempt++)
+        {
+            if (FfMpeg.FfmpegProcess.Count > countBefore)
+            {
+                tracked = true;
+                break;
+            }
+            await Task.Delay(50);
+        }
 
-        // Process should be tracked while running
-        Assert.True(FfMpeg.FfmpegProcess.Count > countBefore,
-            "Process should be tracked in dictionary while running");
+        Assert.True(tracked, "Process should be tracked in dictionary while running");
 
         await task;
 
@@ -88,10 +91,9 @@ public class FfMpegProcessResourceTests
         int countBefore = FfMpeg.FfmpegProcess.Count;
 
         // Launch 10 concurrent processes
-        Task<string>[] tasks = Enumerable.Range(0, 10)
-            .Select(_ => FfMpeg.ExecStdErrOut(
-                "concurrent test",
-                executable: "/bin/echo"))
+        Task<string>[] tasks = Enumerable
+            .Range(0, 10)
+            .Select(_ => FfMpeg.ExecStdErrOut("concurrent test", executable: "/bin/echo"))
             .ToArray();
 
         await Task.WhenAll(tasks);
@@ -129,9 +131,7 @@ public class FfMpegProcessResourceTests
     public async Task Pause_ReturnsTrue_ForTrackedProcess()
     {
         // Start a long-running process
-        Task<string> task = FfMpeg.ExecStdErrOut(
-            "5",
-            executable: "/bin/sleep");
+        Task<string> task = FfMpeg.ExecStdErrOut("5", executable: "/bin/sleep");
 
         // Wait for process to start
         await Task.Delay(200);
@@ -155,9 +155,17 @@ public class FfMpegProcessResourceTests
                 if (!kvp.Value.HasExited)
                     kvp.Value.Kill();
             }
-            catch { /* ignore */ }
+            catch
+            { /* ignore */
+            }
         }
 
-        try { await task; } catch { /* process was killed */ }
+        try
+        {
+            await task;
+        }
+        catch
+        { /* process was killed */
+        }
     }
 }

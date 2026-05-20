@@ -73,7 +73,7 @@ public class AlbumsController : BaseController
                     Component
                         .Carousel()
                         .WithId($"albums-{group.Key.ToLowerInvariant()}")
-                        .WithTitle($"Albums starting with {group.Key}".Localize())
+                        .WithTitle($"Albums: {group.Key}".Localize())
                         .WithItems(group.Select(a => Component.MusicCard(new MusicCardData(a))))
                 );
             }
@@ -97,7 +97,7 @@ public class AlbumsController : BaseController
                 Component
                     .Carousel()
                     .WithId($"albums-{letter}")
-                    .WithTitle($"Albums starting with {displayLetter}".Localize())
+                    .WithTitle($"Albums: {displayLetter}".Localize())
                     .WithItems(albumCards.Select(a => Component.MusicCard(new MusicCardData(a)))),
             ];
 
@@ -107,7 +107,7 @@ public class AlbumsController : BaseController
         ComponentEnvelope grid = Component
             .Grid()
             .WithId($"albums-{letter}")
-            .WithTitle($"Albums starting with {displayLetter}".Localize())
+            .WithTitle($"Albums: {displayLetter}".Localize())
             .WithItems(albumCards.Select(a => Component.MusicCard(new MusicCardData(a))));
 
         return Ok(ComponentResponse.From(grid));

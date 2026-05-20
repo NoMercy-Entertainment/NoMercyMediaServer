@@ -8,6 +8,7 @@ using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -26,7 +27,7 @@ public class GenresController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view genres");
@@ -34,11 +35,49 @@ public class GenresController : BaseController
         Guid userId = User.UserId();
 
         List<MusicGenreCardDto> genreCards = await _genreRepository.GetMusicGenreCardsAsync(userId);
-        IEnumerable<NmGenreCardDto> genres = genreCards
+        IEnumerable<NmGenreCardDto> allGenres = genreCards
             .Select(genre => new NmGenreCardDto(genre))
             .DistinctBy(genre => genre.Title);
 
-        ComponentEnvelope response = Component.Grid().WithItems(genres.Select(Component.GenreCard));
+        bool isLolomo = string.Equals(
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        if (isLolomo)
+        {
+            List<IGrouping<string, NmGenreCardDto>> groups = allGenres
+                .GroupBy(g => BucketLetter(g.Title))
+                .OrderBy(g => g.Key == "#" ? "zz" : g.Key)
+                .ToList();
+
+            List<ComponentEnvelope> items = [Component.Container()];
+
+            for (int i = 0; i < groups.Count; i++)
+            {
+                IGrouping<string, NmGenreCardDto> group = groups[i];
+                string id = $"genres-{group.Key.ToLowerInvariant()}";
+                string? prevId = i == 0 ? null : $"genres-{groups[i - 1].Key.ToLowerInvariant()}";
+                string? nextId =
+                    i == groups.Count - 1 ? null : $"genres-{groups[i + 1].Key.ToLowerInvariant()}";
+
+                items.Add(
+                    Component
+                        .Carousel()
+                        .WithId(id)
+                        .WithNavigation(prevId, nextId)
+                        .WithTitle($"Genres: {group.Key}".Localize())
+                        .WithItems(group.Select(Component.GenreCard))
+                );
+            }
+
+            return Ok(ComponentResponse.From(items));
+        }
+
+        ComponentEnvelope response = Component
+            .Grid()
+            .WithItems(allGenres.Select(Component.GenreCard));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -67,9 +106,44 @@ public class GenresController : BaseController
             .Select(genre => new NmGenreCardDto(genre))
             .DistinctBy(genre => genre.Title);
 
-        ComponentEnvelope response = Component.Grid().WithItems(genres.Select(Component.GenreCard));
+        string displayLetter = letter == "_" ? "#" : letter.ToUpperInvariant();
 
-        return Ok(ComponentResponse.From(response));
+        bool isLolomo = string.Equals(
+            request.Version,
+            "lolomo",
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        if (isLolomo)
+        {
+            List<ComponentEnvelope> items =
+            [
+                Component.Container(),
+                Component
+                    .Carousel()
+                    .WithId($"genres-{letter}")
+                    .WithTitle($"Genres: {displayLetter}".Localize())
+                    .WithItems(genres.Select(Component.GenreCard)),
+            ];
+
+            return Ok(ComponentResponse.From(items));
+        }
+
+        ComponentEnvelope grid = Component
+            .Grid()
+            .WithId($"genres-{letter}")
+            .WithTitle($"Genres: {displayLetter}".Localize())
+            .WithItems(genres.Select(Component.GenreCard));
+
+        return Ok(ComponentResponse.From(grid));
+    }
+
+    private static string BucketLetter(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "#";
+        char first = char.ToLowerInvariant(name[0]);
+        return first >= 'a' && first <= 'z' ? first.ToString().ToUpperInvariant() : "#";
     }
 
     [HttpGet]

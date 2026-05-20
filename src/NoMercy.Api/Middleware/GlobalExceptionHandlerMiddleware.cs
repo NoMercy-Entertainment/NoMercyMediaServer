@@ -21,6 +21,15 @@ public class GlobalExceptionHandlerMiddleware
         {
             await _next(context);
         }
+        catch (Exception) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Client disconnected — Kestrel surfaces this as either
+            // OperationCanceledException (mid-write to the response body) or
+            // IOException "client reset the request stream" (mid-read of the
+            // request body). Fired on every seek, source switch, passive
+            // teardown, and any rapid POST cancel. No client to write to, not
+            // an error condition. Swallow silently.
+        }
         catch (Exception ex)
         {
             string traceId = context.TraceIdentifier;
