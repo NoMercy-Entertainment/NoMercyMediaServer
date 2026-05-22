@@ -27,7 +27,7 @@ public class BundleCapResolverTests
     private static IHardwareBenchmark MakeBenchmark(SpeedIndex? index)
     {
         Mock<IHardwareBenchmark> mock = new();
-        mock.Setup(b => b.GetCachedIndex()).Returns(index);
+        mock.Setup(b => b.GetCachedIndex()).Returns(index!);
         return mock.Object;
     }
 
