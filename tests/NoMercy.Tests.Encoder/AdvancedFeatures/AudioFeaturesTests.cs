@@ -1,4 +1,5 @@
 using NoMercy.Encoder.Audio;
+using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Tests.Encoder.AdvancedFeatures;
 
