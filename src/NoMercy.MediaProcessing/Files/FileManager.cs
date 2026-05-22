@@ -926,6 +926,19 @@ public partial class FileManager(
             null,
             recursive: false
         );
+
+        // First pass: index every .vtt by {lang}|{type} so we can spot bitmap subs
+        // (.sup / .vob) whose OCR pass left no companion .vtt behind. Without this
+        // an orphaned bitmap silently disappears from the API track list and the
+        // operator has no signal the OCR failed.
+        HashSet<string> vttKeys = new(StringComparer.OrdinalIgnoreCase);
+        foreach (StorageEntry subtitleEntry in subtitleFiles.Where(e => !e.IsDirectory))
+        {
+            Match vttMatch = SubtitleFileRegex().Match(subtitleEntry.Path);
+            if (vttMatch.Success && vttMatch.Groups["ext"].Value == "vtt")
+                vttKeys.Add($"{vttMatch.Groups["lang"].Value}|{vttMatch.Groups["type"].Value}");
+        }
+
         foreach (StorageEntry subtitleEntry in subtitleFiles.Where(e => !e.IsDirectory))
         {
             Regex regex = SubtitleFileRegex();
@@ -937,7 +950,14 @@ public partial class FileManager(
             // Reject binary subtitle formats; accept every text format.
             string ext = match.Groups["ext"].Value;
             if (ext == "sup" || ext == "vob")
+            {
+                string siblingKey = $"{match.Groups["lang"].Value}|{match.Groups["type"].Value}";
+                if (!vttKeys.Contains(siblingKey))
+                    Logger.App(
+                        $"Orphaned bitmap subtitle (no sibling .vtt): {Path.GetFileName(subtitleEntry.Path)} — OCR likely failed or never ran"
+                    );
                 continue;
+            }
 
             subtitles.Add(
                 new()
