@@ -9,6 +9,7 @@ shows up below wrapped in backticks. Add a new ID → add a new bullet here in t
 
 ## Audio
 - `audio.ac3_off_ladder_bitrate` — AC-3 bitrate is not on the standard ladder.
+- `audio.bitrate_missing` — lossy audio encoder configured with bitrate_kbps = 0; needs a positive target.
 - `audio.codec_container_mismatch` — audio codec is not allowed by the chosen container.
 - `audio.eac3_off_ladder_bitrate` — E-AC-3 bitrate is not on the standard ladder.
 
@@ -75,6 +76,8 @@ shows up below wrapped in backticks. Add a new ID → add a new bullet here in t
 ## Ladder
 - `ladder.duplicate_variant` — two variants resolve to identical codec/resolution/bitrate/CRF/bit-depth.
 - `ladder.inverted` — manual ladder is not monotonically ordered by bitrate or resolution.
+- `ladder.manual_empty` — Manual ladder mode declared with an empty rungs[] array.
+- `ladder.manual_unsorted` — manual ladder rungs are not sorted ascending by bitrate.
 
 ## Levels
 - `level.frame_rate_cap_exceeded` — the source fps × resolution exceeds the declared codec level's luma sample rate cap; the encoder will reject it at runtime.

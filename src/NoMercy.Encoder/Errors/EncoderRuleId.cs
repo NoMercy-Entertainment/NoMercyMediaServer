@@ -30,6 +30,9 @@ public static class EncoderRuleId
     public const string AudioCodecContainerMismatch = "audio.codec_container_mismatch";
     public const string AudioAc3OffLadderBitrate = "audio.ac3_off_ladder_bitrate";
     public const string AudioEac3OffLadderBitrate = "audio.eac3_off_ladder_bitrate";
+    public const string AudioBitrateMissing = "audio.bitrate_missing";
+    public const string LadderManualEmpty = "ladder.manual_empty";
+    public const string LadderManualUnsorted = "ladder.manual_unsorted";
 
     // ---- Bitrate / CRF ---------------------------------------------------
     public const string BitrateTooLowForResolution = "bitrate.too_low_for_resolution";

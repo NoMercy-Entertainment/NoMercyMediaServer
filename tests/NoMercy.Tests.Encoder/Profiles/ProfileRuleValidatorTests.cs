@@ -1044,6 +1044,133 @@ public class ProfileRuleValidatorTests
         Assert.False(HasRule(env, EncoderRuleId.SourceUpscalingDetected));
     }
 
+    // ── AudioBitrateMissing ─────────────────────────────────────────────────
+
+    [Fact]
+    public void AudioBitrateMissing_LossyAudioBitrateZero_Fires()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            audio: [Audio(AudioCodecType.Aac, bitrate: 0)]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.AudioBitrateMissing));
+    }
+
+    [Fact]
+    public void AudioBitrateMissing_FlacBitrateZero_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            container: Container.Mkv,
+            audio: [Audio(AudioCodecType.Flac, bitrate: 0)]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.AudioBitrateMissing));
+    }
+
+    [Fact]
+    public void AudioBitrateMissing_TrueHdBitrateZero_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            container: Container.Mkv,
+            audio: [Audio(AudioCodecType.TrueHd, bitrate: 0)]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.AudioBitrateMissing));
+    }
+
+    [Fact]
+    public void AudioBitrateMissing_ValidAacBitrate_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            audio: [Audio(AudioCodecType.Aac, bitrate: 192)]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.AudioBitrateMissing));
+    }
+
+    // ── LadderManualEmpty ───────────────────────────────────────────────────
+
+    [Fact]
+    public void LadderManualEmpty_ManualWithEmptyRungs_Fires()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            ladder: new() { Mode = LadderMode.Manual, Rungs = [] }
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.LadderManualEmpty));
+    }
+
+    [Fact]
+    public void LadderManualEmpty_ManualWithRungs_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            ladder: new()
+            {
+                Mode = LadderMode.Manual,
+                Rungs = [new(1920, 1080, VideoCodecType.H264, 4000, 4800, 8000, 24)],
+            }
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.LadderManualEmpty));
+    }
+
+    [Fact]
+    public void LadderManualEmpty_AutoMode_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            ladder: new() { Mode = LadderMode.Auto, Rungs = [] }
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.LadderManualEmpty));
+    }
+
+    // ── LadderManualUnsorted ────────────────────────────────────────────────
+
+    [Fact]
+    public void LadderManualUnsorted_DescendingBitrates_Fires()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            ladder: new()
+            {
+                Mode = LadderMode.Manual,
+                Rungs =
+                [
+                    new(1920, 1080, VideoCodecType.H264, 8000, 9600, 16000, 24),
+                    new(1280, 720, VideoCodecType.H264, 4000, 4800, 8000, 24),
+                ],
+            }
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.LadderManualUnsorted));
+    }
+
+    [Fact]
+    public void LadderManualUnsorted_AscendingBitrates_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            ladder: new()
+            {
+                Mode = LadderMode.Manual,
+                Rungs =
+                [
+                    new(1280, 720, VideoCodecType.H264, 4000, 4800, 8000, 24),
+                    new(1920, 1080, VideoCodecType.H264, 8000, 9600, 16000, 24),
+                ],
+            }
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.LadderManualUnsorted));
+    }
+
     [Fact]
     public void EveryEmittedRule_HasNonEmptyMessageAndFix()
     {

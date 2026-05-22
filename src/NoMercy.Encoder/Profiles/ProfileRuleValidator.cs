@@ -34,8 +34,11 @@ public static class ProfileRuleValidator
         EmitVideoRateControlConflict(profile, rules);
         EmitCodecContainerMismatch(profile, rules);
         EmitAudioCodecContainerMismatch(profile, rules);
+        EmitAudioBitrateMissing(profile, rules);
         EmitHlsFmp4CodecMismatch(profile, rules);
         EmitLadderDuplicateVariant(profile, rules);
+        EmitLadderManualEmpty(profile, rules);
+        EmitLadderManualUnsorted(profile, rules);
         EmitProfileLevelResolutionMismatch(profile, rules);
         EmitBitrateTooLowForResolution(profile, rules);
         EmitCrfOutOfTypicalRange(profile, rules);
@@ -302,6 +305,77 @@ public static class ProfileRuleValidator
                     Fix: $"Change audio.codec or pick a container that supports {audio.Codec}."
                 )
             );
+        }
+    }
+
+    private static void EmitAudioBitrateMissing(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        // Lossy audio encoders need a target bitrate. FLAC and TrueHD are lossless and
+        // ignore -b:a — leave those alone. Copy-mode audio is a passthrough.
+        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        {
+            if (audio.Codec is AudioCodecType.Flac or AudioCodecType.TrueHd)
+                continue;
+            if (audio.BitrateKbps > 0)
+                continue;
+
+            rules.Add(
+                new EncoderRule(
+                    Id: EncoderRuleId.AudioBitrateMissing,
+                    Severity: EncoderRuleSeverity.Error,
+                    Field: "audio.bitrate_kbps",
+                    Message: $"Audio output for codec {audio.Codec} has bitrate_kbps={audio.BitrateKbps}; "
+                        + "lossy encoders require a positive target bitrate.",
+                    Fix: $"Set audio.bitrate_kbps to a positive value (typical: "
+                        + $"{(audio.Codec is AudioCodecType.Aac ? "128–256" : "192–448")} kbps)."
+                )
+            );
+        }
+    }
+
+    private static void EmitLadderManualEmpty(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        if (profile.Ladder is not { Mode: LadderMode.Manual } ladder)
+            return;
+        if (ladder.Rungs is { Length: > 0 })
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.LadderManualEmpty,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "ladder.rungs",
+                Message: "Manual ladder mode requires at least one rung; rungs[] is empty.",
+                Fix: "Add at least one LadderRung entry, or switch to LadderMode.Auto."
+            )
+        );
+    }
+
+    private static void EmitLadderManualUnsorted(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        if (profile.Ladder is not { Mode: LadderMode.Manual } ladder)
+            return;
+        if (ladder.Rungs is not { Length: > 1 } rungs)
+            return;
+
+        for (int i = 1; i < rungs.Length; i++)
+        {
+            if (rungs[i].BitrateKbps > rungs[i - 1].BitrateKbps)
+                continue;
+
+            rules.Add(
+                new EncoderRule(
+                    Id: EncoderRuleId.LadderManualUnsorted,
+                    Severity: EncoderRuleSeverity.Error,
+                    Field: "ladder.rungs",
+                    Message: $"Manual ladder rungs must be sorted ascending by bitrate; "
+                        + $"rung[{i}] ({rungs[i].BitrateKbps} kbps) <= rung[{i - 1}] "
+                        + $"({rungs[i - 1].BitrateKbps} kbps).",
+                    Fix: "Reorder rungs by increasing bitrate_kbps so HLS variant negotiation "
+                        + "selects the right rung at each bandwidth."
+                )
+            );
+            return;
         }
     }
 
