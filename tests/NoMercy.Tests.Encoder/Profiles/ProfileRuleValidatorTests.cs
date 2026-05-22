@@ -1171,6 +1171,132 @@ public class ProfileRuleValidatorTests
         Assert.False(HasRule(env, EncoderRuleId.LadderManualUnsorted));
     }
 
+    // ── SourceVariableFrameRate ─────────────────────────────────────────────
+
+    [Fact]
+    public void SourceVariableFrameRate_VfrSource_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        MediaInfo source = Source(variableFrameRate: true);
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.True(HasRule(env, EncoderRuleId.SourceVariableFrameRate));
+        Assert.True(env.Valid); // warning only
+    }
+
+    [Fact]
+    public void SourceVariableFrameRate_CfrSource_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        MediaInfo source = Source(variableFrameRate: false);
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.False(HasRule(env, EncoderRuleId.SourceVariableFrameRate));
+    }
+
+    // ── SourceDolbyVisionWillBeStripped ─────────────────────────────────────
+
+    [Fact]
+    public void SourceDolbyVisionWillBeStripped_DvSource_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        MediaInfo source = Source(
+            dolbyVision: new DolbyVisionInfo(
+                Profile: 8,
+                Level: 6,
+                HasRpu: true,
+                HasEl: false,
+                BlCompat: DvBlCompatibility.Hdr10
+            )
+        );
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.True(HasRule(env, EncoderRuleId.SourceDolbyVisionWillBeStripped));
+    }
+
+    [Fact]
+    public void SourceDolbyVisionWillBeStripped_NoDv_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        MediaInfo source = Source();
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.False(HasRule(env, EncoderRuleId.SourceDolbyVisionWillBeStripped));
+    }
+
+    // ── StereoscopicSourceUnsupported ───────────────────────────────────────
+
+    [Fact]
+    public void StereoscopicSourceUnsupported_3dSource_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        MediaInfo source = Source(stereoMode: "side_by_side_left");
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.True(HasRule(env, EncoderRuleId.StereoscopicSourceUnsupported));
+        Assert.False(env.Valid); // error
+    }
+
+    [Fact]
+    public void StereoscopicSourceUnsupported_FlatSource_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        MediaInfo source = Source(stereoMode: null);
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.False(HasRule(env, EncoderRuleId.StereoscopicSourceUnsupported));
+    }
+
+    // ── SphericalMetadataWillBeStripped ─────────────────────────────────────
+
+    [Fact]
+    public void SphericalMetadataWillBeStripped_VrSource_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        MediaInfo source = Source(sphericalProjection: "equirectangular");
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.True(HasRule(env, EncoderRuleId.SphericalMetadataWillBeStripped));
+    }
+
+    [Fact]
+    public void SphericalMetadataWillBeStripped_FlatSource_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        MediaInfo source = Source(sphericalProjection: null);
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.False(HasRule(env, EncoderRuleId.SphericalMetadataWillBeStripped));
+    }
+
+    // ── LevelFrameRateCapExceeded ───────────────────────────────────────────
+
+    [Fact]
+    public void LevelFrameRateCapExceeded_4kAt60FpsAtLevel5_0_Fires()
+    {
+        // H.264 Level 5.0 caps at 1,082,400 mb/s ≈ 4K30 luma rate. 4K60 exceeds it.
+        EncodingProfile profile = ProfileFor(
+            Video(codec: VideoCodecType.H264, width: 3840, height: 2160, level: "5.0")
+        );
+        MediaInfo source = Source(width: 3840, height: 2160, frameRate: 60);
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.True(HasRule(env, EncoderRuleId.LevelFrameRateCapExceeded));
+    }
+
+    [Fact]
+    public void LevelFrameRateCapExceeded_1080pAt30FpsAtLevel4_1_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(codec: VideoCodecType.H264, width: 1920, height: 1080, level: "4.1")
+        );
+        MediaInfo source = Source(width: 1920, height: 1080, frameRate: 30);
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.False(HasRule(env, EncoderRuleId.LevelFrameRateCapExceeded));
+    }
+
+    [Fact]
+    public void LevelFrameRateCapExceeded_NoLevel_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(codec: VideoCodecType.H264, width: 3840, height: 2160, level: null)
+        );
+        MediaInfo source = Source(width: 3840, height: 2160, frameRate: 60);
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.False(HasRule(env, EncoderRuleId.LevelFrameRateCapExceeded));
+    }
+
     [Fact]
     public void EveryEmittedRule_HasNonEmptyMessageAndFix()
     {
