@@ -24,7 +24,8 @@ namespace NoMercy.Encoder.Hardware;
 public class DbDriverFingerprintStore(
     EncoderOptions options,
     ILogger<DbDriverFingerprintStore> logger,
-    IStorage storage
+    IStorage storage,
+    IDbContextFactory<AppDbContext> contextFactory
 ) : IDriverFingerprintStore
 {
     public const string ConfigKey = "encoder.driver_fingerprint";
@@ -41,7 +42,7 @@ public class DbDriverFingerprintStore(
     {
         try
         {
-            await using AppDbContext db = new();
+            await using AppDbContext db = await contextFactory.CreateDbContextAsync(ct);
             Configuration? row = await db
                 .Configuration.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Key == ConfigKey, ct);
@@ -71,7 +72,7 @@ public class DbDriverFingerprintStore(
     {
         try
         {
-            await using AppDbContext db = new();
+            await using AppDbContext db = await contextFactory.CreateDbContextAsync(ct);
             Configuration? row = await db.Configuration.FirstOrDefaultAsync(
                 c => c.Key == ConfigKey,
                 ct

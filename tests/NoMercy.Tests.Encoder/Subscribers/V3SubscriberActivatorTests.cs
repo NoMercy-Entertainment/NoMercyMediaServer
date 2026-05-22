@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NoMercy.Database;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Subscribers;
 using NoMercy.Events;
@@ -14,6 +16,8 @@ public class V3SubscriberActivatorTests
         services.AddLogging();
         services.AddSingleton<IHostApplicationLifetime, TestHostLifetime>();
         services.AddSingleton<IEventBus, InMemoryEventBus>();
+        services.AddDbContextFactory<MediaContext>(o => o.UseInMemoryDatabase("test-media"));
+        services.AddDbContextFactory<AppDbContext>(o => o.UseInMemoryDatabase("test-app"));
         services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";

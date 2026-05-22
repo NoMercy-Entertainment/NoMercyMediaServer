@@ -28,6 +28,7 @@ public class IntroDetectSubscriber : IDisposable
     private readonly EncoderOptions _options;
     private readonly ILogger<IntroDetectSubscriber> _logger;
     private readonly IStorage _storage;
+    private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly List<IDisposable> _subscriptions = [];
 
     // Fingerprint the first 3 minutes for intro detection.
@@ -48,7 +49,8 @@ public class IntroDetectSubscriber : IDisposable
         IIntroDetector introDetector,
         EncoderOptions options,
         ILogger<IntroDetectSubscriber> logger,
-        IStorage storage
+        IStorage storage,
+        IDbContextFactory<MediaContext> contextFactory
     )
     {
         _fingerprinter = fingerprinter;
@@ -56,6 +58,7 @@ public class IntroDetectSubscriber : IDisposable
         _options = options;
         _logger = logger;
         _storage = storage;
+        _contextFactory = contextFactory;
 
         _subscriptions.Add(eventBus.Subscribe<LibraryScanCompletedEvent>(OnLibraryScanCompleted));
     }
@@ -76,7 +79,7 @@ public class IntroDetectSubscriber : IDisposable
 
         // Load all TV seasons whose show belongs to this library.
         List<int> seasonIds;
-        await using (MediaContext context = new())
+        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
         {
             seasonIds = await context
                 .Seasons.AsNoTracking()
@@ -104,7 +107,7 @@ public class IntroDetectSubscriber : IDisposable
         HashSet<int> episodesWithManualIntro;
         HashSet<int> episodesWithManualOutro;
 
-        await using (MediaContext context = new())
+        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
         {
             episodes = await context
                 .Episodes.AsNoTracking()
@@ -245,7 +248,7 @@ public class IntroDetectSubscriber : IDisposable
         if (newSegments.Count == 0)
             return;
 
-        await using (MediaContext context = new())
+        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
         {
             context.ContentSegments.AddRange(newSegments);
             await context.SaveChangesAsync(ct);
@@ -266,7 +269,7 @@ public class IntroDetectSubscriber : IDisposable
         List<int> episodeIds = episodes.Select(e => e.Id).ToList();
 
         List<(int EpisodeId, string HostFolder, string Filename)> fileRows;
-        await using (MediaContext context = new())
+        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
         {
             fileRows = await context
                 .VideoFiles.AsNoTracking()

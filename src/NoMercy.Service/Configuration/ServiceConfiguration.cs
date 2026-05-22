@@ -449,7 +449,15 @@ public static class ServiceConfiguration
         services.AddWallpaperService();
 
         // Add DbContexts
-        services.AddDbContext<AppDbContext>(options =>
+        services.AddDbContext<AppDbContext>(
+            options => options.UseSqlite($"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;"),
+            optionsLifetime: ServiceLifetime.Singleton
+        );
+
+        // DbDriverFingerprintStore is a singleton — it needs the factory form so
+        // each save/load gets a fresh disposable AppDbContext rather than sharing
+        // a singleton-scoped tracker.
+        services.AddDbContextFactory<AppDbContext>(options =>
             options.UseSqlite($"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;")
         );
 

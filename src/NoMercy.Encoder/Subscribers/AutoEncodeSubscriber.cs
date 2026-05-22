@@ -24,18 +24,21 @@ public class AutoEncodeSubscriber : IDisposable
     private readonly IEncodingOrchestrator _orchestrator;
     private readonly EncoderOptions _options;
     private readonly ILogger<AutoEncodeSubscriber> _logger;
+    private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly List<IDisposable> _subscriptions = [];
 
     public AutoEncodeSubscriber(
         IEventBus eventBus,
         IEncodingOrchestrator orchestrator,
         EncoderOptions options,
-        ILogger<AutoEncodeSubscriber> logger
+        ILogger<AutoEncodeSubscriber> logger,
+        IDbContextFactory<MediaContext> contextFactory
     )
     {
         _orchestrator = orchestrator;
         _options = options;
         _logger = logger;
+        _contextFactory = contextFactory;
 
         _subscriptions.Add(eventBus.Subscribe<MediaFilesScannedEvent>(OnMediaFilesScanned));
     }
@@ -50,7 +53,7 @@ public class AutoEncodeSubscriber : IDisposable
 
         // Resolve the primary source file from the database.
         VideoFile? videoFile;
-        await using (MediaContext context = new())
+        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
         {
             videoFile = await context
                 .VideoFiles.AsNoTracking()

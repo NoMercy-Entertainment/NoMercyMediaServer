@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NoMercy.Database;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
@@ -27,6 +29,8 @@ public class ServiceRegistrationTests
         // here so GetServices<IHostedService>() can construct background
         // services that depend on it without setting up a full host.
         services.AddSingleton<IHostApplicationLifetime, TestHostLifetime>();
+        services.AddDbContextFactory<MediaContext>(o => o.UseInMemoryDatabase("test-media"));
+        services.AddDbContextFactory<AppDbContext>(o => o.UseInMemoryDatabase("test-app"));
         services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";
