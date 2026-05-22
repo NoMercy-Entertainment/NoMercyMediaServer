@@ -217,7 +217,7 @@ public static class Register
             Owner = true,
             Allowed = true,
             Manage = true,
-            CreatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
             AudioTranscoding = true,
             NoTranscoding = true,
             VideoTranscoding = true,

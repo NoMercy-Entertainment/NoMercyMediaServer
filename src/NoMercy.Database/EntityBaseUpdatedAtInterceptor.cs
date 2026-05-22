@@ -22,7 +22,7 @@ public class EntityBaseUpdatedAtInterceptor : SaveChangesInterceptor
 
         foreach (Timestamps entry in entries)
         {
-            entry.UpdatedAt = DateTime.Now;
+            entry.UpdatedAt = DateTime.UtcNow;
         }
 
         return await base.SavingChangesAsync(eventData, result, cancellationToken);

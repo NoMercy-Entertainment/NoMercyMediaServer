@@ -26,7 +26,8 @@
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="10.0.7" />
     <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.17.0" />
     <PackageVersion Include="MimeMapping" Version="4.0.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.15.3" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
     <!-- Swagger -->
     <PackageVersion Include="Swashbuckle.AspNetCore.Newtonsoft" Version="10.1.7" />
