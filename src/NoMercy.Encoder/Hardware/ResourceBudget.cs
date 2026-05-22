@@ -24,7 +24,7 @@ public class ResourceBudget : IResourceBudget
     // with "GPU device 'h264_nvenc' is not registered" — alias registration
     // ran inside an empty foreach loop).
     private readonly IHardwareCapabilities? _hardware;
-    private readonly object _registrationLock = new();
+    private readonly Lock _registrationLock = new();
     private bool _gpusRegistered;
 
     // FFmpeg encoder name suffixes that identify a GPU vendor. Same list as
