@@ -125,10 +125,9 @@ public partial class CropDetector(
             );
         }
 
-        (string bestCrop, int count) = observations.OrderByDescending(kv => kv.Value).First()
-            is var first
-            ? (first.Key, first.Value)
-            : ("", 0);
+        KeyValuePair<string, int> top = observations.OrderByDescending(kv => kv.Value).First();
+        string bestCrop = top.Key;
+        int count = top.Value;
 
         double confidence = totalObservations > 0 ? (double)count / totalObservations : 0;
 
