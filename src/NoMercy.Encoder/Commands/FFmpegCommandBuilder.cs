@@ -329,7 +329,9 @@ public class FFmpegCommandBuilder
         if (string.IsNullOrEmpty(stream.PixelFormat))
             return false;
 
-        bool profileRequests10Bit = stream.PixelFormat.Contains("10");
+        // Substring "10" was matching unrelated pixel formats like yuv410p (4:1:0 chroma, not HDR)
+        // and would match any future format containing the digit. Explicit set is the safe check.
+        bool profileRequests10Bit = HighBitDepthPixelFormats.Contains(stream.PixelFormat);
 
         // If the profile requests 10-bit (HDR) but the input stream is not HDR, skip it.
         if (profileRequests10Bit && !stream.IsHdr)
@@ -337,6 +339,26 @@ public class FFmpegCommandBuilder
 
         return false;
     }
+
+    private static readonly HashSet<string> HighBitDepthPixelFormats = new(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        "yuv420p10le",
+        "yuv420p10be",
+        "yuv422p10le",
+        "yuv422p10be",
+        "yuv444p10le",
+        "yuv444p10be",
+        "p010le",
+        "p010be",
+        "p210le",
+        "p210be",
+        "p410le",
+        "p410be",
+        "yuv420p12le",
+        "yuv420p12be",
+    };
 
     private void AddContainerParameters(Dictionary<string, dynamic> commandDictionary)
     {

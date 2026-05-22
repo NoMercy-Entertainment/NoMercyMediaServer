@@ -20,7 +20,7 @@ public class BaseAudio : Classes
     public string Language
     {
         get => _language ?? AudioStream?.Language ?? "und";
-        set => _language = value != null ? value : _language ?? "und";
+        set => _language = string.IsNullOrWhiteSpace(value) ? _language ?? "und" : value;
     }
 
     public int StreamIndex => AudioStream?.Index ?? -1;
@@ -129,8 +129,6 @@ public class BaseAudio : Classes
             );
 
         AudioCodec = AvailableCodecs.First(codec => codec.Value == audioCodec);
-
-        lock (AudioCodec.SimpleValue) { }
 
         return this;
     }

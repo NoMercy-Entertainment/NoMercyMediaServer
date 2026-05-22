@@ -1,4 +1,5 @@
 using NoMercy.Encoder.Format.Container;
+using NoMercy.Encoder.Format.Rules;
 
 namespace NoMercy.Tests.Encoder;
 
@@ -32,6 +33,22 @@ public class ContainerFactoryTests
     public void Create_UnknownContainer_Throws()
     {
         Assert.Throws<Exception>(() => BaseContainer.Create("realmedia"));
+    }
+
+    [Fact]
+    public void Create_RoundTripsEveryAvailableContainer()
+    {
+        // Anything advertised through BaseContainer.AvailableContainers — the same list the
+        // /api/v1/dashboard/encoderprofiles/containers endpoint returns and the EncoderProfile
+        // seed data uses — must instantiate without throwing. If a new container is added to the
+        // AvailableContainers list it has to ship with a Create-arm and its own concrete class
+        // before this test passes.
+        foreach (Classes.ContainerDto dto in BaseContainer.AvailableContainers)
+        {
+            BaseContainer container = BaseContainer.Create(dto.Name);
+            Assert.NotNull(container);
+            Assert.Equal(dto.Name, container.ContainerDto.Name);
+        }
     }
 
     [Theory]

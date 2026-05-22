@@ -15,7 +15,10 @@ public class EncoderCommandBuildingTests : IDisposable
 
     public EncoderCommandBuildingTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), "NoMercy_EncoderTests_" + Guid.NewGuid().ToString("N")[..8]);
+        _tempDir = Path.Combine(
+            Path.GetTempPath(),
+            "NoMercy_EncoderTests_" + Guid.NewGuid().ToString("N")[..8]
+        );
         Directory.CreateDirectory(_tempDir);
     }
 
@@ -28,8 +31,11 @@ public class EncoderCommandBuildingTests : IDisposable
     #region Helper Methods
 
     private static FfProbeData CreateSdrProbeData(
-        int width = 1920, int height = 1080,
-        string pixelFormat = "yuv420p", string colorSpace = "bt709")
+        int width = 1920,
+        int height = 1080,
+        string pixelFormat = "yuv420p",
+        string colorSpace = "bt709"
+    )
     {
         return new()
         {
@@ -38,7 +44,7 @@ public class EncoderCommandBuildingTests : IDisposable
             VideoStreams = [CreateVideoStream(width, height, pixelFormat, colorSpace)],
             AudioStreams = [CreateAudioStream("eng", 2, 48000, 128000)],
             PrimaryVideoStream = CreateVideoStream(width, height, pixelFormat, colorSpace),
-            PrimaryAudioStream = CreateAudioStream("eng", 2, 48000, 128000)
+            PrimaryAudioStream = CreateAudioStream("eng", 2, 48000, 128000),
         };
     }
 
@@ -51,14 +57,17 @@ public class EncoderCommandBuildingTests : IDisposable
             VideoStreams = [CreateVideoStream(3840, 2160, "yuv420p10le", "bt2020nc")],
             AudioStreams = [CreateAudioStream("eng", 6, 48000, 640000)],
             PrimaryVideoStream = CreateVideoStream(3840, 2160, "yuv420p10le", "bt2020nc"),
-            PrimaryAudioStream = CreateAudioStream("eng", 6, 48000, 640000)
+            PrimaryAudioStream = CreateAudioStream("eng", 6, 48000, 640000),
         };
     }
 
     private static FfProbeVideoStream CreateVideoStream(
-        int width, int height,
-        string pixelFormat = "yuv420p", string colorSpace = "bt709",
-        int index = 0)
+        int width,
+        int height,
+        string pixelFormat = "yuv420p",
+        string colorSpace = "bt709",
+        int index = 0
+    )
     {
         return new()
         {
@@ -67,14 +76,17 @@ public class EncoderCommandBuildingTests : IDisposable
             PixFmt = pixelFormat,
             ColorSpace = colorSpace,
             Index = index,
-            CodecName = "h264"
+            CodecName = "h264",
         };
     }
 
     private static FfProbeAudioStream CreateAudioStream(
-        string language = "eng", int channels = 2,
-        int sampleRate = 48000, long bitRate = 128000,
-        int index = 1)
+        string language = "eng",
+        int channels = 2,
+        int sampleRate = 48000,
+        long bitRate = 128000,
+        int index = 1
+    )
     {
         return new()
         {
@@ -83,11 +95,15 @@ public class EncoderCommandBuildingTests : IDisposable
             SampleRate = sampleRate,
             BitRate = bitRate,
             Index = index,
-            CodecName = "aac"
+            CodecName = "aac",
         };
     }
 
-    private Hls CreateHlsContainer(FfProbeData probeData, BaseVideo videoCodec, BaseAudio audioCodec)
+    private Hls CreateHlsContainer(
+        FfProbeData probeData,
+        BaseVideo videoCodec,
+        BaseAudio audioCodec
+    )
     {
         Hls hls = new();
         hls.InputFile = probeData.FilePath;
@@ -121,6 +137,44 @@ public class EncoderCommandBuildingTests : IDisposable
         hls.AudioStreams.AddRange(audioStreams);
 
         return hls;
+    }
+
+    private Mp4 CreateMp4Container(
+        FfProbeData probeData,
+        BaseVideo videoCodec,
+        BaseAudio audioCodec
+    )
+    {
+        Mp4 mp4 = new();
+        mp4.InputFile = probeData.FilePath;
+        mp4.FfProbeData = probeData;
+        mp4.Title = "Test Movie";
+        mp4.BasePath = _tempDir;
+        mp4.FileName = "out";
+        mp4.IsVideo = true;
+
+        videoCodec.VideoStreams = probeData.VideoStreams;
+        videoCodec.VideoStream = probeData.PrimaryVideoStream;
+        videoCodec.Index = probeData.PrimaryVideoStream!.Index;
+        videoCodec.Title = "Test Movie";
+        videoCodec.Container = mp4;
+        videoCodec.FileName = "out";
+        videoCodec.BasePath = _tempDir;
+        BaseVideo builtVideo = videoCodec.Build();
+        builtVideo.ApplyFlags();
+        mp4.VideoStreams.Add(builtVideo);
+
+        audioCodec.AudioStreams = probeData.AudioStreams;
+        audioCodec.AudioStream = probeData.PrimaryAudioStream!;
+        audioCodec.IsAudio = true;
+        audioCodec.FileName = "out";
+        audioCodec.BasePath = _tempDir;
+        List<BaseAudio> audioStreams = audioCodec.Build();
+        foreach (BaseAudio a in audioStreams)
+            a.Extension = mp4.Extension;
+        mp4.AudioStreams.AddRange(audioStreams);
+
+        return mp4;
     }
 
     private static string BuildCommand(BaseContainer container, FfProbeData probeData)
@@ -317,7 +371,7 @@ public class EncoderCommandBuildingTests : IDisposable
 
         List<GpuAccelerator> accelerators =
         [
-            new(GpuVendor.Nvidia, "-init_hw_device cuda=cu:0", "cuda")
+            new(GpuVendor.Nvidia, "-init_hw_device cuda=cu:0", "cuda"),
         ];
 
         FFmpegCommandBuilder builder = new(
@@ -471,6 +525,25 @@ public class EncoderCommandBuildingTests : IDisposable
     }
 
     [Fact]
+    public void BuildCommand_Mp4Container_DoesNotApplyAnnexBBitstreamFilter()
+    {
+        // h264_mp4toannexb rewrites the H.264 bitstream into Annex-B (start codes + NALU). MP4
+        // demuxers expect AVCC (length-prefixed NALUs). Applying the bsf on MP4 output corrupts
+        // the file. Only HLS / MPEG-TS muxes need it.
+        FfProbeData probe = CreateSdrProbeData();
+        X264 video = new();
+        video.SetScale(1920, 1080);
+        video.SetColorSpace(VideoPixelFormats.Yuv420P);
+        Aac audio = new();
+        Mp4 mp4 = CreateMp4Container(probe, video, audio);
+
+        string command = BuildCommand(mp4, probe);
+
+        Assert.DoesNotContain("h264_mp4toannexb", command);
+        Assert.DoesNotContain("hevc_mp4toannexb", command);
+    }
+
+    [Fact]
     public void BuildCommand_HlsContainer_ContainsBitstreamFilter_H264()
     {
         FfProbeData probe = CreateSdrProbeData();
@@ -610,7 +683,9 @@ public class EncoderCommandBuildingTests : IDisposable
         string command = BuildCommand(hls, probe);
 
         Assert.Contains("-hls_time 4", command);
-        Assert.Contains("-hls_init_time 4", command);
+        // -hls_init_time is redundant when equal to -hls_time (ffmpeg's default is to fall back
+        // to hls_time anyway). Asserting absence locks in the cleanup.
+        Assert.DoesNotContain("-hls_init_time", command);
     }
 
     [Fact]
@@ -1455,7 +1530,10 @@ public class EncoderCommandBuildingTests : IDisposable
         int videoCodecPos = command.IndexOf("-c:v", StringComparison.Ordinal);
         int audioCodecPos = command.IndexOf("-c:a", StringComparison.Ordinal);
 
-        Assert.True(videoCodecPos < audioCodecPos, "Video outputs should appear before audio outputs");
+        Assert.True(
+            videoCodecPos < audioCodecPos,
+            "Video outputs should appear before audio outputs"
+        );
     }
 
     #endregion

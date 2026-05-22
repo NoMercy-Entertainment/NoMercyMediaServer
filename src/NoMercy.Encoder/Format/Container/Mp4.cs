@@ -34,7 +34,8 @@ public class Mp4 : BaseContainer
     public override Mp4 ApplyFlags()
     {
         base.ApplyFlags();
-        AddCustomArgument("-bsf:v", "h264_mp4toannexb");
+        // h264_mp4toannexb belongs on HLS/TS muxes (BaseVideo.AddToDictionary handles it there),
+        // not on MP4 output. It rewrites the bitstream to Annex-B which an MP4 demuxer can't read.
         AddCustomArgument("-use_wallclock_as_timestamps", 1);
         return this;
     }

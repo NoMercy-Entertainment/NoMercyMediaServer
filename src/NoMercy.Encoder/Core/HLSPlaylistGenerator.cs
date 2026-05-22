@@ -151,10 +151,13 @@ public static class HlsPlaylistGenerator
                 // Otherwise:
                 //   - Folders ending with _SDR are SDR versions
                 //   - All others (including _HDR or no suffix) are HDR versions
+                // When ANY folder is explicitly tagged _SDR/_HDR, untagged folders default to HDR
+                // (true). When NO folder carries an explicit tag, default everything to SDR
+                // (false). The reason strings now match the boolean.
                 bool detectedHdr = hasExplicitSdrOrHdr;
                 string detectedReason = hasExplicitSdrOrHdr
-                    ? "default (no _SDR suffix)"
-                    : "no explicit _SDR/_HDR markers found, defaulting to SDR";
+                    ? "siblings carry _SDR/_HDR; untagged folder defaults to HDR"
+                    : "no _SDR/_HDR markers in sibling set; defaulting to SDR";
 
                 if (!string.IsNullOrEmpty(folderName))
                 {
@@ -399,11 +402,18 @@ public static class HlsPlaylistGenerator
             )
         ).Trim();
 
-        string x = output.Replace("N/A", "0").Trim();
-        if (string.IsNullOrEmpty(x))
+        string trimmed = output.Replace("N/A", "0").Trim();
+        if (string.IsNullOrEmpty(trimmed))
             return 0;
-        if (double.TryParse(x, NumberStyles.Any, CultureInfo.InvariantCulture, out double d))
-            return d;
+        if (
+            double.TryParse(
+                trimmed,
+                NumberStyles.Any,
+                CultureInfo.InvariantCulture,
+                out double seconds
+            )
+        )
+            return seconds;
         return 0;
     }
 
