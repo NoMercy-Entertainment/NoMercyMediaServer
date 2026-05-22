@@ -132,4 +132,97 @@ public class HlsCodecsStringBuilderTests
             .Should()
             .Be("avc1.640028");
     }
+
+    // ── ParseH264Level numeric input ───────────────────────────────────────
+
+    [Theory]
+    [InlineData("40", "avc1.640028")] // "40" parses as numeric 40 = level 4.0
+    [InlineData("51", "avc1.640033")] // "51" → 0x33 = level 5.1
+    public void ForH264_AcceptsNumericLevelInput(string level, string expected)
+    {
+        HlsCodecsStringBuilder.ForH264("high", level).Should().Be(expected);
+    }
+
+    [Fact]
+    public void ForH264_UnknownLevelString_DefaultsTo4_0()
+    {
+        // Garbage that fails numeric parse falls through the lookup default.
+        HlsCodecsStringBuilder.ForH264("high", "garbage").Should().Be("avc1.640028");
+    }
+
+    // ── HEVC additional levels ──────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("3", "hvc1.1.6.L90.B0")]
+    [InlineData("4.1", "hvc1.1.6.L123.B0")]
+    [InlineData("6.0", "hvc1.1.6.L180.B0")]
+    [InlineData("6.2", "hvc1.1.6.L186.B0")]
+    public void ForHevc_AdditionalLevels(string level, string expected)
+    {
+        HlsCodecsStringBuilder.ForHevc("main", level, tenBit: false).Should().Be(expected);
+    }
+
+    [Fact]
+    public void ForHevc_UnknownLevel_DefaultsByBitDepth()
+    {
+        // Garbage level falls through the switch's `_ =>` arm.
+        HlsCodecsStringBuilder
+            .ForHevc("main", "weird", tenBit: false)
+            .Should()
+            .Be("hvc1.1.6.L93.B0");
+        HlsCodecsStringBuilder
+            .ForHevc("main", "weird", tenBit: true)
+            .Should()
+            .Be("hvc1.2.4.L120.B0");
+    }
+
+    // ── AV1 additional levels ──────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("2.0", false, "av01.0.00M.08")]
+    [InlineData("2.1", false, "av01.0.01M.08")]
+    [InlineData("3.1", false, "av01.0.05M.08")]
+    [InlineData("4.1", false, "av01.0.09M.08")]
+    [InlineData("5.1", false, "av01.0.13M.08")]
+    [InlineData("5.2", true, "av01.0.14M.10")]
+    [InlineData("6.0", false, "av01.0.16M.08")]
+    [InlineData("6.3", true, "av01.0.19M.10")]
+    public void ForAv1_AdditionalLevels(string level, bool tenBit, string expected)
+    {
+        HlsCodecsStringBuilder.ForAv1(level, tenBit).Should().Be(expected);
+    }
+
+    [Fact]
+    public void ForAv1_UnknownLevel_Defaults_AndBitDepthIndependent()
+    {
+        // Non-empty garbage level → switch falls through to index 8 (level 4.0)
+        // regardless of bit depth. Only the null/empty case defaults to 15 for
+        // 10-bit content — the lookup default is always 8.
+        HlsCodecsStringBuilder.ForAv1("garbage", tenBit: false).Should().Be("av01.0.08M.08");
+        HlsCodecsStringBuilder.ForAv1("garbage", tenBit: true).Should().Be("av01.0.08M.10");
+    }
+
+    // ── Audio constants ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void AudioConstants_ReturnSpecExactStrings()
+    {
+        // Pin the exact strings — these are wire-format identifiers from
+        // the MP4 Registration Authority. Any drift breaks player parsers
+        // that string-match against well-known values.
+        HlsCodecsStringBuilder.ForAacLc().Should().Be("mp4a.40.2");
+        HlsCodecsStringBuilder.ForHeAac().Should().Be("mp4a.40.5");
+        HlsCodecsStringBuilder.ForAc3().Should().Be("ac-3");
+        HlsCodecsStringBuilder.ForEac3().Should().Be("ec-3");
+    }
+
+    [Fact]
+    public void AudioCodecString_CaseInsensitiveEncoderName()
+    {
+        // Encoder names land here as-is from PlaylistGenerator; the matcher
+        // must accept the canonical lowercase as well as upper/mixed case.
+        HlsCodecsStringBuilder.AudioCodecString("AAC", false).Should().Be("mp4a.40.2");
+        HlsCodecsStringBuilder.AudioCodecString("OPUS", false).Should().Be("opus");
+        HlsCodecsStringBuilder.AudioCodecString("EAC3", false).Should().Be("ec-3");
+    }
 }
