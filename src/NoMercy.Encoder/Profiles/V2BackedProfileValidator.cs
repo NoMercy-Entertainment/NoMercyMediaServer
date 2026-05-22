@@ -34,25 +34,41 @@ public sealed class V2BackedProfileValidator : IProfileValidator
 
     public ValidationEnvelope ValidateAsEnvelope(EncodingProfile profile)
     {
-        ProfileValidationResult result = V2ProfileValidator.Validate(profile);
-        List<EncoderRule> errors = result
-            .Errors.Select(e => new EncoderRule(
-                EncoderRuleId.ProfileNoOutputs,
-                EncoderRuleSeverity.Error,
-                "profile",
-                e,
-                "Edit the offending field per the message."
-            ))
-            .ToList();
-        List<EncoderRule> warnings = result
-            .Warnings.Select(w => new EncoderRule(
-                EncoderRuleId.ProfileNoOutputs,
-                EncoderRuleSeverity.Warning,
-                "profile",
-                w,
-                "Review the warning and adjust the profile if needed."
-            ))
-            .ToList();
-        return new(errors.Count == 0, errors, warnings);
+        // Modern catalogued rules first — these carry stable IDs the dashboard deep-links into.
+        ValidationEnvelope structured = ProfileRuleValidator.Validate(profile);
+
+        // Legacy string-based validator runs on top so any rule not yet migrated to the
+        // catalogued form still surfaces. Bucketed under a generic id until V2 strings are
+        // converted to typed rules.
+        ProfileValidationResult legacy = V2ProfileValidator.Validate(profile);
+        List<EncoderRule> errors = [.. structured.Errors];
+        List<EncoderRule> warnings = [.. structured.Warnings];
+
+        foreach (string message in legacy.Errors)
+        {
+            errors.Add(
+                new EncoderRule(
+                    EncoderRuleId.ProfileNoOutputs,
+                    EncoderRuleSeverity.Error,
+                    "profile",
+                    message,
+                    "Edit the offending field per the message."
+                )
+            );
+        }
+        foreach (string message in legacy.Warnings)
+        {
+            warnings.Add(
+                new EncoderRule(
+                    EncoderRuleId.ProfileNoOutputs,
+                    EncoderRuleSeverity.Warning,
+                    "profile",
+                    message,
+                    "Review the warning and adjust the profile if needed."
+                )
+            );
+        }
+
+        return new ValidationEnvelope(errors.Count == 0, errors, warnings);
     }
 }
