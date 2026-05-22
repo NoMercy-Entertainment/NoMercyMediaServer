@@ -20,11 +20,8 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/encoderprofiles", Order = 10)]
-public class EncoderController(
-    EncoderRepository encoderRepository,
-    EncodingPresetRepository presetRepository,
-    CodecRegistry codecRegistry
-) : BaseController
+public class EncoderController(EncoderRepository encoderRepository, CodecRegistry codecRegistry)
+    : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index()

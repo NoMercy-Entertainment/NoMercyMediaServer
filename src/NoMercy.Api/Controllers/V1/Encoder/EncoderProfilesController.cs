@@ -38,7 +38,6 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 [Route("api/v{version:apiVersion}/encoder/profiles")]
 public class EncoderProfilesController(
     IProfileValidator profileValidator,
-    IMediaAnalyzer mediaAnalyzer,
     IProfileSignatureVerifier signatureVerifier,
     IHttpClientFactory httpClientFactory,
     MediaContext mediaContext,

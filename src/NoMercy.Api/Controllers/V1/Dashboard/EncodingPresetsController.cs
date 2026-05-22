@@ -26,10 +26,7 @@ public class EncodingPresetsController(
     EncodingPresetRepository presetRepository,
     INamePresetResolver presetResolver,
     IProfileValidator profileValidator,
-    IMediaAnalyzer mediaAnalyzer,
-    IDbContextFactory<MediaContext> contextFactory,
-    IHttpClientFactory httpClientFactory,
-    IStorageDriver storageDriver
+    IHttpClientFactory httpClientFactory
 ) : BaseController
 {
     [Obsolete("Use GET /api/v1/encoder/profiles")]
