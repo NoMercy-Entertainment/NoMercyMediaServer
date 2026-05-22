@@ -52,7 +52,7 @@ public class TwoPassStatsFileTests
                     failPass
                         ? new EncodingResult(
                             Success: false,
-                            OutputPath: null,
+                            OutputPath: string.Empty,
                             Duration: TimeSpan.Zero,
                             Error: new EncodingError(
                                 EncodingErrorKind.Unknown,
