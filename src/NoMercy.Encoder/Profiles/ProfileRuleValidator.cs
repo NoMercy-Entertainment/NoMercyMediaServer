@@ -26,6 +26,15 @@ public static class ProfileRuleValidator
     {
         List<EncoderRule> rules = [];
 
+        EmitProfileNameMissing(profile, rules);
+        EmitProfileNoOutputs(profile, rules);
+        EmitVideoWidthInvalid(profile, rules);
+        EmitVideoHeightInvalid(profile, rules);
+        EmitVideoRateControlConflict(profile, rules);
+        EmitCodecContainerMismatch(profile, rules);
+        EmitAudioCodecContainerMismatch(profile, rules);
+        EmitHlsFmp4CodecMismatch(profile, rules);
+        EmitLadderDuplicateVariant(profile, rules);
         EmitProfileLevelResolutionMismatch(profile, rules);
         EmitBitrateTooLowForResolution(profile, rules);
         EmitCrfOutOfTypicalRange(profile, rules);
@@ -33,6 +42,7 @@ public static class ProfileRuleValidator
         EmitLadderInverted(profile, rules);
         EmitAudioAc3OffLadderBitrate(profile, rules);
         EmitSubtitlesContainerIncompatible(profile, rules);
+        EmitSubtitlesBurnInPermanent(profile, rules);
         EmitHdrInverseTonemapUnsupported(profile, rules);
         EmitCustomArgsReservedFlag(profile, rules);
 
@@ -93,6 +103,237 @@ public static class ProfileRuleValidator
         return ValidationEnvelope.FromRules(
             baseEnvelope.Errors.Concat(baseEnvelope.Warnings).Concat(sourceRules)
         );
+    }
+
+    // ----------------------------------------------------------------------
+    // Structural profile rules
+    // ----------------------------------------------------------------------
+
+    private static void EmitProfileNameMissing(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        if (!string.IsNullOrWhiteSpace(profile.Name))
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.ProfileNameMissing,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "name",
+                Message: "Profile name is required so operators can identify the preset in the dashboard.",
+                Fix: "Set a non-empty profile.name (e.g. \"General 1080p Fast\")."
+            )
+        );
+    }
+
+    private static void EmitProfileNoOutputs(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        // A profile must produce at least one output stream — every encode call would be a no-op.
+        bool hasVideo = profile.Video is { Policy: not StreamPolicy.Omit };
+        bool hasAudio = profile.Audio.Any(a => a.Policy != StreamPolicy.Omit);
+        bool hasSubtitles = profile.Subtitles.Any(s => s.Policy != SubtitlePolicy.Omit);
+
+        if (hasVideo || hasAudio || hasSubtitles)
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.ProfileNoOutputs,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "outputs",
+                Message: "Profile declares no video, audio, or subtitle outputs; an encode run "
+                    + "would produce no streams.",
+                Fix: "Add at least one VideoOutput, AudioOutput, or SubtitleOutput with policy != Skip / Omit."
+            )
+        );
+    }
+
+    private static void EmitVideoWidthInvalid(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video || video.Width > 0)
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.VideoWidthInvalid,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "video.width",
+                Message: $"Video width must be a positive integer (got {video.Width}); the encoder "
+                    + "cannot produce a 0-pixel-wide output.",
+                Fix: "Set video.width to a positive value (typical values: 854, 1280, 1920, 2560, 3840)."
+            )
+        );
+    }
+
+    private static void EmitVideoHeightInvalid(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video || video.Height is null)
+            return;
+
+        if (video.Height.Value > 0)
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.VideoHeightInvalid,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "video.height",
+                Message: $"Video height must be positive when set (got {video.Height}); "
+                    + "leave it null to derive from source aspect ratio.",
+                Fix: "Set video.height to a positive integer or null."
+            )
+        );
+    }
+
+    private static void EmitVideoRateControlConflict(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video)
+            return;
+
+        // ABR / VBR / CBR want a positive bitrate; pure CRF wants the CRF value populated.
+        bool isBitrateMode =
+            video.RateControl == RateControlMode.Vbr || video.RateControl == RateControlMode.Cbr;
+        bool hasBitrate = video.BitrateKbps > 0;
+        bool hasCrf = video.Crf > 0;
+
+        if (isBitrateMode && hasCrf && !hasBitrate)
+        {
+            rules.Add(
+                new EncoderRule(
+                    Id: EncoderRuleId.VideoRateControlConflict,
+                    Severity: EncoderRuleSeverity.Error,
+                    Field: "video.rate_control",
+                    Message: $"Rate control is {video.RateControl} (bitrate-targeted) but bitrate_kbps "
+                        + $"is unset and crf is {video.Crf}; the encoder cannot decide which value to honour.",
+                    Fix: "Either set bitrate_kbps and keep rate_control at VBR/CBR, "
+                        + "or change rate_control to Crf and clear bitrate_kbps."
+                )
+            );
+        }
+    }
+
+    private static void EmitCodecContainerMismatch(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video)
+            return;
+
+        if (ContainerCompatibility.SupportsVideo(profile.Container, video.Codec))
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.CodecContainerMismatch,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "video.codec",
+                Message: $"Container {profile.Container} does not support video codec {video.Codec}; "
+                    + "the muxer will refuse the stream.",
+                Fix: $"Change video.codec or pick a container that supports {video.Codec} "
+                    + "(see the codec/container matrix in The Effortless Encoder part 02)."
+            )
+        );
+    }
+
+    private static void EmitAudioCodecContainerMismatch(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        {
+            if (ContainerCompatibility.SupportsAudio(profile.Container, audio.Codec))
+                continue;
+
+            rules.Add(
+                new EncoderRule(
+                    Id: EncoderRuleId.AudioCodecContainerMismatch,
+                    Severity: EncoderRuleSeverity.Error,
+                    Field: "audio.codec",
+                    Message: $"Container {profile.Container} does not support audio codec {audio.Codec}.",
+                    Fix: $"Change audio.codec or pick a container that supports {audio.Codec}."
+                )
+            );
+        }
+    }
+
+    private static void EmitHlsFmp4CodecMismatch(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        // HlsTs only carries H.264 per Apple HLS Authoring Specification §1.5. The codec/container
+        // matrix already enforces this at SupportsVideo, but we want a dedicated rule with a stable
+        // ID so the dashboard can deep-link the HLS-fmp4 explanation.
+        if (
+            profile.Container != Container.HlsTs
+            || profile.Video is not { Policy: StreamPolicy.Transcode } video
+            || video.Codec == VideoCodecType.H264
+        )
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.HlsFmp4CodecMismatch,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "container",
+                Message: $"HLS MPEG-TS only carries H.264 (Apple HLS Authoring §1.5); "
+                    + $"video.codec is {video.Codec}.",
+                Fix: "Switch container to HlsFmp4 for HEVC / AV1, or change video.codec to H264."
+            )
+        );
+    }
+
+    private static void EmitLadderDuplicateVariant(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        if (profile.Ladder is not { Mode: LadderMode.Manual, Rungs: { Length: > 1 } rungs })
+            return;
+
+        HashSet<string> seen = [];
+        for (int i = 0; i < rungs.Length; i++)
+        {
+            string key =
+                $"{rungs[i].Codec}|{rungs[i].Width}x{rungs[i].Height}|{rungs[i].BitrateKbps}";
+            if (seen.Add(key))
+                continue;
+
+            rules.Add(
+                new EncoderRule(
+                    Id: EncoderRuleId.LadderDuplicateVariant,
+                    Severity: EncoderRuleSeverity.Warning,
+                    Field: $"ladder.rungs[{i}]",
+                    Message: $"Ladder rung {i} duplicates an earlier rung ({rungs[i].Codec} "
+                        + $"{rungs[i].Width}x{rungs[i].Height} @ {rungs[i].BitrateKbps} kbps); "
+                        + "the second copy is wasted CPU.",
+                    Fix: $"Remove or differentiate rung {i} (change bitrate, resolution, or codec)."
+                )
+            );
+            return;
+        }
+    }
+
+    private static void EmitSubtitlesBurnInPermanent(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // BurnIn writes subtitles into video pixels permanently. Worth flagging once so users
+        // who pick the policy by accident see what they signed up for.
+        foreach (
+            SubtitleOutput subtitle in profile.Subtitles.Where(s =>
+                s.Policy == SubtitlePolicy.BurnIn
+            )
+        )
+        {
+            rules.Add(
+                new EncoderRule(
+                    Id: EncoderRuleId.SubtitlesBurnInPermanent,
+                    Severity: EncoderRuleSeverity.Info,
+                    Field: "subtitles.policy",
+                    Message: $"Subtitle policy BurnIn writes {subtitle.Codec} into video pixels permanently; "
+                        + "viewers cannot turn this off.",
+                    Fix: "Switch subtitles.policy to Extract or Copy to keep the track toggleable."
+                )
+            );
+            return;
+        }
     }
 
     // ----------------------------------------------------------------------

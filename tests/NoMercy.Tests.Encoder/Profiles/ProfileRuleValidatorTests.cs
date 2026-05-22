@@ -429,6 +429,240 @@ public class ProfileRuleValidatorTests
         Assert.False(HasRule(env, EncoderRuleId.HdrInverseTonemapUnsupported));
     }
 
+    // ── ProfileNameMissing ───────────────────────────────────────────────────
+
+    [Fact]
+    public void ProfileNameMissing_EmptyName_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with { Name = "" };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.ProfileNameMissing));
+        Assert.False(env.Valid);
+    }
+
+    [Fact]
+    public void ProfileNameMissing_WhitespaceName_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with { Name = "   " };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.ProfileNameMissing));
+    }
+
+    [Fact]
+    public void ProfileNameMissing_RealName_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with { Name = "1080p Streaming" };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.ProfileNameMissing));
+    }
+
+    // ── ProfileNoOutputs ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void ProfileNoOutputs_NoStreams_Fires()
+    {
+        EncodingProfile profile = ProfileFor();
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.ProfileNoOutputs));
+        Assert.False(env.Valid);
+    }
+
+    [Fact]
+    public void ProfileNoOutputs_AudioOnly_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(audio: [Audio(AudioCodecType.Aac, 192)]);
+        // Audio-only container so other rules don't trip
+        profile = profile with
+        {
+            Container = Container.Aac,
+        };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.ProfileNoOutputs));
+    }
+
+    [Fact]
+    public void ProfileNoOutputs_OmittedOutputs_StillFires()
+    {
+        // Even when an output exists, if it's Omitted there's nothing to encode.
+        EncodingProfile profile = ProfileFor(
+            audio: [Audio(AudioCodecType.Aac, 192) with { Policy = StreamPolicy.Omit }]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.ProfileNoOutputs));
+    }
+
+    // ── VideoWidthInvalid / VideoHeightInvalid ───────────────────────────────
+
+    [Fact]
+    public void VideoWidthInvalid_ZeroWidth_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video(width: 0));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.VideoWidthInvalid));
+    }
+
+    [Fact]
+    public void VideoHeightInvalid_ZeroHeight_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video(height: 0));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.VideoHeightInvalid));
+    }
+
+    [Fact]
+    public void VideoHeightInvalid_NullHeight_DoesNotFire()
+    {
+        // null is valid — encoder derives height from source aspect ratio.
+        EncodingProfile profile = ProfileFor(Video(height: null));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.VideoHeightInvalid));
+    }
+
+    // ── VideoRateControlConflict ─────────────────────────────────────────────
+
+    [Fact]
+    public void VideoRateControlConflict_VbrWithoutBitrate_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video(rc: RateControlMode.Vbr, bitrate: 0, crf: 23));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.VideoRateControlConflict));
+    }
+
+    [Fact]
+    public void VideoRateControlConflict_VbrWithBitrate_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video(rc: RateControlMode.Vbr, bitrate: 5000, crf: 0));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.VideoRateControlConflict));
+    }
+
+    // ── CodecContainerMismatch ───────────────────────────────────────────────
+
+    [Fact]
+    public void CodecContainerMismatch_Vp9InMp4_Fires()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(codec: VideoCodecType.Vp9),
+            container: Container.Mp4
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.CodecContainerMismatch));
+    }
+
+    [Fact]
+    public void CodecContainerMismatch_H264InMp4_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(codec: VideoCodecType.H264),
+            container: Container.Mp4
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.CodecContainerMismatch));
+    }
+
+    // ── AudioCodecContainerMismatch ──────────────────────────────────────────
+
+    [Fact]
+    public void AudioCodecContainerMismatch_FlacInMp4_Fires()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            container: Container.Mp4,
+            audio: [Audio(AudioCodecType.Flac, 0)]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.AudioCodecContainerMismatch));
+    }
+
+    // ── HlsFmp4CodecMismatch ─────────────────────────────────────────────────
+
+    [Fact]
+    public void HlsFmp4CodecMismatch_HevcInHlsTs_Fires()
+    {
+        // HLS MPEG-TS only carries H.264 per Apple HLS Authoring §1.5
+        EncodingProfile profile = ProfileFor(
+            Video(codec: VideoCodecType.H265),
+            container: Container.HlsTs
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.HlsFmp4CodecMismatch));
+    }
+
+    [Fact]
+    public void HlsFmp4CodecMismatch_H264InHlsTs_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(codec: VideoCodecType.H264),
+            container: Container.HlsTs
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.HlsFmp4CodecMismatch));
+    }
+
+    // ── LadderDuplicateVariant ───────────────────────────────────────────────
+
+    [Fact]
+    public void LadderDuplicateVariant_DuplicateRung_Fires()
+    {
+        LadderRung[] rungs =
+        [
+            new(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
+            new(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24), // duplicate
+            new(1920, 1080, VideoCodecType.H264, 4500, 5400, 9000, 24),
+        ];
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            ladder: new() { Mode = LadderMode.Manual, Rungs = rungs }
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.LadderDuplicateVariant));
+    }
+
+    [Fact]
+    public void LadderDuplicateVariant_UniqueRungs_DoesNotFire()
+    {
+        LadderRung[] rungs =
+        [
+            new(854, 480, VideoCodecType.H264, 1000, 1200, 2000, 24),
+            new(1280, 720, VideoCodecType.H264, 2500, 3000, 5000, 24),
+            new(1920, 1080, VideoCodecType.H264, 4500, 5400, 9000, 24),
+        ];
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            ladder: new() { Mode = LadderMode.Manual, Rungs = rungs }
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.LadderDuplicateVariant));
+    }
+
+    // ── SubtitlesBurnInPermanent ─────────────────────────────────────────────
+
+    [Fact]
+    public void SubtitlesBurnInPermanent_BurnInPolicy_FiresAsInfo()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            subtitles: [Subtitle(SubtitleCodecType.Ass, SubtitlePolicy.BurnIn)]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.SubtitlesBurnInPermanent));
+        // Info severity → does NOT invalidate the envelope.
+        EncoderRule rule = env.Warnings.First(r => r.Id == EncoderRuleId.SubtitlesBurnInPermanent);
+        Assert.Equal(EncoderRuleSeverity.Info, rule.Severity);
+        Assert.True(env.Valid);
+    }
+
+    [Fact]
+    public void SubtitlesBurnInPermanent_ExtractPolicy_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            subtitles: [Subtitle(SubtitleCodecType.WebVtt, SubtitlePolicy.Extract)]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.SubtitlesBurnInPermanent));
+    }
+
     // ── CustomArgsReservedFlag ───────────────────────────────────────────────
 
     [Theory]
