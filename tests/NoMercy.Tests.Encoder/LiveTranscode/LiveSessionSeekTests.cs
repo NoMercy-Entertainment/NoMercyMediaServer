@@ -134,12 +134,14 @@ public class LiveSessionSeekTests
     public async Task SeekAsync_PassesCorrectPositionToFactory()
     {
         LiveSession session = new("seek-007", MakeQuality());
-        TimeSpan capturedPosition = TimeSpan.Zero;
+        TaskCompletionSource<TimeSpan> factoryCalled = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
 
         session.AttachRunnerFactory(
             (pos, _) =>
             {
-                capturedPosition = pos;
+                factoryCalled.TrySetResult(pos);
                 return Task.CompletedTask;
             }
         );
@@ -147,8 +149,9 @@ public class LiveSessionSeekTests
         TimeSpan targetPosition = TimeSpan.FromSeconds(75);
         await session.SeekAsync(targetPosition, CancellationToken.None);
 
-        // The factory task is fire-and-forget — allow microtask queue to flush.
-        await Task.Delay(50);
+        // The factory task is fire-and-forget — wait on the TCS deterministically
+        // instead of guessing how long the runtime needs to schedule it.
+        TimeSpan capturedPosition = await factoryCalled.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
         capturedPosition.Should().Be(targetPosition);
     }
