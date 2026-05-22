@@ -93,7 +93,7 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
 
         foreach (VideoStreamInfo v in info.VideoStreams)
         {
-            if (IsVariableFrameRate(v))
+            if (v.IsVariableFrameRate)
             {
                 sink.Add(
                     new DecisionLog(
@@ -135,15 +135,6 @@ public class AnalyzeStage(IMediaAnalyzer analyzer, IStorage storage, ILogger<Ana
                 )
             );
         }
-    }
-
-    private static bool IsVariableFrameRate(VideoStreamInfo v)
-    {
-        if (v.RealFrameRate is null || v.AverageFrameRate is null)
-            return false;
-        // 1% spread is the standard threshold ffmpeg/handbrake use.
-        double diff = Math.Abs(v.RealFrameRate.Value - v.AverageFrameRate.Value);
-        return diff / Math.Max(v.RealFrameRate.Value, 1.0) > 0.01;
     }
 
     private static bool IsFontMimeType(string? mime) =>

@@ -25,8 +25,19 @@ public record VideoStreamInfo(
         && HdrTransfers.Contains(ColorTransfer)
         && ColorPrimaries is "bt2020";
 
-    public bool IsVariableFrameRate =>
-        AverageFrameRate.HasValue
-        && RealFrameRate.HasValue
-        && Math.Abs(AverageFrameRate.Value - RealFrameRate.Value) > 1.0;
+    // 1% spread between real and average frame-rate is the standard VFR
+    // threshold ffmpeg / handbrake use. AnalyzeStage's decision-log emitter
+    // and ProfileRuleValidator's SourceVariableFrameRate rule both consume
+    // this property — keeping them in sync means a stream that triggers the
+    // validation warning also surfaces in the decision log, and vice versa.
+    public bool IsVariableFrameRate
+    {
+        get
+        {
+            if (!AverageFrameRate.HasValue || !RealFrameRate.HasValue)
+                return false;
+            double diff = Math.Abs(RealFrameRate.Value - AverageFrameRate.Value);
+            return diff / Math.Max(RealFrameRate.Value, 1.0) > 0.01;
+        }
+    }
 }
