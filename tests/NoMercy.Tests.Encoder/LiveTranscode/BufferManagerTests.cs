@@ -110,4 +110,65 @@ public class BufferManagerTests
         above.Should().Be(BufferAction.Suspend);
         boundary.Should().Be(BufferAction.None);
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Configurable thresholds (LiveSessionLimits.BufferThresholds)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void CustomSuspendThreshold_Respected()
+    {
+        // Operator wants a tighter suspend point — e.g. low-storage hosts.
+        LiveSessionLimits limits = new() { Buffer = new() { SuspendAboveSeconds = 10 } };
+        BufferManager manager = new(limits);
+
+        manager
+            .Evaluate(TimeSpan.FromSeconds(11), isSuspended: false)
+            .Should()
+            .Be(BufferAction.Suspend);
+        manager
+            .Evaluate(TimeSpan.FromSeconds(9), isSuspended: false)
+            .Should()
+            .Be(BufferAction.None);
+    }
+
+    [Fact]
+    public void CustomDropThresholds_Respected()
+    {
+        // Operator wants more aggressive quality drops — e.g. spotty network.
+        LiveSessionLimits limits = new()
+        {
+            Buffer = new() { DropQualityBelowSeconds = 10, EmergencyDropBelowSeconds = 6 },
+        };
+        BufferManager manager = new(limits);
+
+        manager
+            .Evaluate(TimeSpan.FromSeconds(9), isSuspended: false)
+            .Should()
+            .Be(BufferAction.DropQuality);
+        manager
+            .Evaluate(TimeSpan.FromSeconds(5), isSuspended: false)
+            .Should()
+            .Be(BufferAction.EmergencyDropQuality);
+    }
+
+    [Fact]
+    public void CustomResumeThreshold_Respected()
+    {
+        // Operator wants a wider hysteresis between suspend / resume.
+        LiveSessionLimits limits = new()
+        {
+            Buffer = new() { SuspendAboveSeconds = 30, ResumeBelowSeconds = 25 },
+        };
+        BufferManager manager = new(limits);
+
+        manager
+            .Evaluate(TimeSpan.FromSeconds(24), isSuspended: true)
+            .Should()
+            .Be(BufferAction.Resume);
+        manager
+            .Evaluate(TimeSpan.FromSeconds(26), isSuspended: true)
+            .Should()
+            .Be(BufferAction.None);
+    }
 }

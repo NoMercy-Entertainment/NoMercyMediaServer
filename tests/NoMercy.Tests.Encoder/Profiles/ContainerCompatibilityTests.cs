@@ -152,6 +152,56 @@ public class ContainerCompatibilityTests
         }
     }
 
+    [Theory]
+    [InlineData(Container.Mkv, SubtitleCodecType.WebVtt, true)]
+    [InlineData(Container.Mkv, SubtitleCodecType.Srt, true)]
+    [InlineData(Container.Mkv, SubtitleCodecType.Ass, true)]
+    [InlineData(Container.Mkv, SubtitleCodecType.Pgs, true)]
+    [InlineData(Container.Mp4, SubtitleCodecType.WebVtt, true)]
+    [InlineData(Container.Mp4, SubtitleCodecType.Srt, true)]
+    [InlineData(Container.Mp4, SubtitleCodecType.Ass, false)] // ASS is MKV-only
+    [InlineData(Container.Mp4, SubtitleCodecType.Pgs, false)] // PGS bitmap is MKV-only
+    [InlineData(Container.HlsTs, SubtitleCodecType.WebVtt, true)]
+    [InlineData(Container.HlsTs, SubtitleCodecType.Ass, false)]
+    [InlineData(Container.HlsFmp4, SubtitleCodecType.WebVtt, true)]
+    [InlineData(Container.Dash, SubtitleCodecType.WebVtt, true)]
+    [InlineData(Container.Mp3, SubtitleCodecType.WebVtt, false)] // audio-only
+    [InlineData(Container.Aac, SubtitleCodecType.WebVtt, false)]
+    [InlineData(Container.Flac, SubtitleCodecType.WebVtt, false)]
+    [InlineData(Container.Mka, SubtitleCodecType.WebVtt, false)]
+    [InlineData(Container.AudioHlsTs, SubtitleCodecType.WebVtt, false)]
+    [InlineData(Container.AudioHlsFmp4, SubtitleCodecType.WebVtt, false)]
+    public void Subtitle_codec_compatibility(
+        Container container,
+        SubtitleCodecType codec,
+        bool expected
+    )
+    {
+        ContainerCompatibility.SupportsSubtitle(container, codec).Should().Be(expected);
+    }
+
+    [Fact]
+    public void Audio_only_containers_reject_all_subtitle_codecs()
+    {
+        Container[] audioOnly =
+        [
+            Container.Mp3,
+            Container.Aac,
+            Container.Flac,
+            Container.Ogg,
+            Container.Mka,
+            Container.AudioHlsTs,
+            Container.AudioHlsFmp4,
+        ];
+
+        foreach (Container c in audioOnly)
+        foreach (SubtitleCodecType s in Enum.GetValues<SubtitleCodecType>())
+            ContainerCompatibility
+                .SupportsSubtitle(c, s)
+                .Should()
+                .BeFalse($"{c} is audio-only but accepted subtitle codec {s}");
+    }
+
     private static Dictionary<(Container, VideoCodecType), bool> BuildExpectedVideoMatrix()
     {
         Dictionary<(Container, VideoCodecType), bool> map = new();
