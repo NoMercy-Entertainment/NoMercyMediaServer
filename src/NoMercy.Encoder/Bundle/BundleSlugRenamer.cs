@@ -61,6 +61,19 @@ public class BundleSlugRenamer(
     {
         foreach (KeyValuePair<string, string> pair in slugMap)
         {
+            // Guard: empty/whitespace slugs would resolve to "encodes/" and
+            // mass-rename every bundle in the folder. Slugs come from
+            // BuiltinPresets which never emits empty strings, but a faulty
+            // override map must NOT corrupt the library.
+            if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(pair.Value))
+            {
+                Logger.Setup(
+                    $"BundleSlugRenamer: skipping empty slug pair '{pair.Key}' → '{pair.Value}'",
+                    LogEventLevel.Warning
+                );
+                continue;
+            }
+
             string oldDir = $"encodes/{pair.Key}";
             string newDir = $"encodes/{pair.Value}";
 
