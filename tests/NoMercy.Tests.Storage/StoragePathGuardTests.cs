@@ -121,9 +121,15 @@ public class StoragePathGuardTests
 
         Action act = () => guard.Validate(escape);
 
+        // Structural validation catches the literal ".." in the path before
+        // the allowlist check ever runs. Either rejection path proves the
+        // guard refused to let the traversal through.
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(e => e.Reason.StartsWith("path is not under any allowed root"));
+            .Where(e =>
+                e.Reason.StartsWith("path is not under any allowed root")
+                || e.Reason.StartsWith(".. traversal is not allowed")
+            );
     }
 
     [Fact]
@@ -204,9 +210,14 @@ public class StoragePathGuardTests
 
         Action act = () => guard.Validate(escape);
 
+        // Either structural traversal-rejection or post-canonicalization
+        // allowlist rejection proves the deep traversal can't slip through.
         act.Should()
             .Throw<StoragePathNotAllowedException>()
-            .Where(e => e.Reason.StartsWith("path is not under any allowed root"));
+            .Where(e =>
+                e.Reason.StartsWith("path is not under any allowed root")
+                || e.Reason.StartsWith(".. traversal is not allowed")
+            );
     }
 
     [Fact]

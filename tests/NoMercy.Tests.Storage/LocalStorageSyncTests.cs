@@ -163,7 +163,10 @@ public class LocalStorageSyncTests
         IReadOnlyList<StorageEntry> entries = storage.List(root, "*", recursive: false);
 
         entries.Should().HaveCount(2);
-        entries[0].Path.Should().Be(fileA);
+        // LocalStorage normalizes paths to forward-slash per the IStorage
+        // Rule 2 contract — driver hands out OS-native paths but the
+        // facade emits forward-slash for consumer uniformity.
+        entries[0].Path.Should().Be(fileA.Replace('\\', '/'));
         entries[0].IsDirectory.Should().BeFalse();
         entries[0].SizeBytes.Should().Be(42);
         entries[1].IsDirectory.Should().BeTrue();

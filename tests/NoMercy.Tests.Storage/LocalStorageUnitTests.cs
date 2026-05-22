@@ -213,7 +213,9 @@ public class LocalStorageUnitTests
             result.Add(e);
 
         result.Should().HaveCount(2);
-        result[0].Path.Should().Be(fileA);
+        // LocalStorage emits forward-slash per the IStorage Rule 2 contract;
+        // the driver feeds it OS-native paths but the facade normalizes.
+        result[0].Path.Should().Be(fileA.Replace('\\', '/'));
         result[0].IsDirectory.Should().BeFalse();
         result[0].SizeBytes.Should().Be(99);
         result[1].IsDirectory.Should().BeTrue();
