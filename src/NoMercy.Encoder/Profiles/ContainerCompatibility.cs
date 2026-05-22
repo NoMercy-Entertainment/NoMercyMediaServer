@@ -77,6 +77,34 @@ public static class ContainerCompatibility
         [Container.Dash] = [AudioCodecType.Aac, AudioCodecType.Eac3, AudioCodecType.Opus],
     };
 
+    private static readonly Dictionary<Container, HashSet<SubtitleCodecType>> SubtitleMatrix = new()
+    {
+        // MKV carries every text + image subtitle codec NoMercy can produce.
+        [Container.Mkv] =
+        [
+            SubtitleCodecType.WebVtt,
+            SubtitleCodecType.Srt,
+            SubtitleCodecType.Ass,
+            SubtitleCodecType.Pgs,
+            SubtitleCodecType.Copy,
+        ],
+        // MP4 supports TX3G text tracks (Srt → tx3g) and WebVTT (mp4 wvtt sample entry). PGS
+        // bitmap subs and ASS typesetting are MKV-only.
+        [Container.Mp4] = [SubtitleCodecType.WebVtt, SubtitleCodecType.Srt, SubtitleCodecType.Copy],
+        // HLS carries WebVTT as sidecar subtitle renditions. Burned-in tracks don't appear here.
+        [Container.HlsTs] = [SubtitleCodecType.WebVtt],
+        [Container.HlsFmp4] = [SubtitleCodecType.WebVtt],
+        [Container.Dash] = [SubtitleCodecType.WebVtt],
+        // Audio-only containers do not carry subtitle tracks.
+        [Container.Mp3] = [],
+        [Container.Aac] = [],
+        [Container.Flac] = [],
+        [Container.Ogg] = [],
+        [Container.Mka] = [],
+        [Container.AudioHlsTs] = [],
+        [Container.AudioHlsFmp4] = [],
+    };
+
     private static readonly HashSet<VideoCodecType> CmafVideo =
     [
         VideoCodecType.H264,
@@ -94,6 +122,10 @@ public static class ContainerCompatibility
 
     public static bool SupportsAudio(Container container, AudioCodecType codec) =>
         AudioMatrix.TryGetValue(container, out HashSet<AudioCodecType>? set) && set.Contains(codec);
+
+    public static bool SupportsSubtitle(Container container, SubtitleCodecType codec) =>
+        SubtitleMatrix.TryGetValue(container, out HashSet<SubtitleCodecType>? set)
+        && set.Contains(codec);
 
     public static bool IsCmafCompatible(VideoCodecType codec) => CmafVideo.Contains(codec);
 

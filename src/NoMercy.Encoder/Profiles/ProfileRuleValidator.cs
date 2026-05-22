@@ -1,0 +1,498 @@
+using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Errors;
+
+namespace NoMercy.Encoder.Profiles;
+
+/// <summary>
+///     Structured rule emitter for encoding profiles. Returns an
+///     <see cref="ValidationEnvelope"/> whose entries are typed
+///     <see cref="EncoderRule"/> records with stable IDs from
+///     <see cref="EncoderRuleId"/>, the spec field path, a human-readable message,
+///     and a concrete fix.
+///     <para>
+///         Replaces the string-based <see cref="ProfileValidator.Validate"/> for new callers.
+///         The legacy method stays for backward compatibility while consumers migrate.
+///     </para>
+/// </summary>
+public static class ProfileRuleValidator
+{
+    /// <summary>
+    ///     Run every static rule against the profile alone (no source media). Use
+    ///     <see cref="ValidateWithSource"/> to layer source-dependent rules on top
+    ///     (HFR level cap, stereoscopic, spherical).
+    /// </summary>
+    public static ValidationEnvelope Validate(EncodingProfile profile)
+    {
+        List<EncoderRule> rules = [];
+
+        EmitProfileLevelResolutionMismatch(profile, rules);
+        EmitBitrateTooLowForResolution(profile, rules);
+        EmitCrfOutOfTypicalRange(profile, rules);
+        EmitHlsKeyframeSegmentMisalignment(profile, rules);
+        EmitLadderInverted(profile, rules);
+        EmitAudioAc3OffLadderBitrate(profile, rules);
+        EmitSubtitlesContainerIncompatible(profile, rules);
+        EmitHdrInverseTonemapUnsupported(profile, rules);
+
+        return ValidationEnvelope.FromRules(rules);
+    }
+
+    /// <summary>
+    ///     Layer source-dependent rules on top of <see cref="Validate"/>. Returns a combined envelope.
+    /// </summary>
+    public static ValidationEnvelope ValidateWithSource(EncodingProfile profile, MediaInfo source)
+    {
+        ValidationEnvelope baseEnvelope = Validate(profile);
+        List<EncoderRule> sourceRules = [];
+
+        EmitLevelFrameRateCapExceeded(profile, source, sourceRules);
+
+        return ValidationEnvelope.FromRules(
+            baseEnvelope.Errors.Concat(baseEnvelope.Warnings).Concat(sourceRules)
+        );
+    }
+
+    // ----------------------------------------------------------------------
+    // Profile-only rules
+    // ----------------------------------------------------------------------
+
+    private static void EmitProfileLevelResolutionMismatch(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // Level vs resolution check at profile-save time: assume the spec target frame rate
+        // (30 fps for SDR, 60 fps for HFR-marked profiles). Without a source we can only check
+        // the static side: width × height × DefaultProfileFps vs the level's MaxLumaSamplesPerSec.
+        if (
+            profile.Video is not { Policy: StreamPolicy.Transcode } video
+            || string.IsNullOrEmpty(video.Level)
+            || video.Width <= 0
+        )
+            return;
+
+        int height = video.Height ?? video.Width * 9 / 16; // fall back to 16:9
+        const double assumedFps = 30.0;
+        long lumaSamplesPerSec = (long)(video.Width * height * assumedFps);
+
+        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(video.Codec, video.Level);
+        if (cap is null || lumaSamplesPerSec <= cap.MaxLumaSamplesPerSec)
+            return;
+
+        CodecLevelFpsCaps.LevelCap? nextFit = CodecLevelFpsCaps.FindNextFit(
+            video.Codec,
+            lumaSamplesPerSec
+        );
+
+        string fix = nextFit is not null
+            ? $"Raise video.level to {nextFit.Level} (supports up to {nextFit.MaxLumaSamplesPerSec:N0} luma samples/sec)."
+            : "No standard level supports this resolution at 30 fps.";
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.LevelResolutionMismatch,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "video.level",
+                Message: $"Level {video.Level} cannot sustain {video.Width}x{height} at 30 fps "
+                    + $"({lumaSamplesPerSec:N0} luma samples/sec required, "
+                    + $"level {video.Level} allows {cap.MaxLumaSamplesPerSec:N0}).",
+                Fix: fix
+            )
+        );
+    }
+
+    private static void EmitBitrateTooLowForResolution(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // Rough rule of thumb per resolution tier, in kbps. Source: SRGS encoding guidelines.
+        if (
+            profile.Video is not { Policy: StreamPolicy.Transcode } video
+            || (
+                video.RateControl != RateControlMode.Vbr && video.RateControl != RateControlMode.Cbr
+            )
+            || video.BitrateKbps <= 0
+            || video.Width <= 0
+        )
+            return;
+
+        int minBitrate = MinimumBitrateKbpsFor(video.Width);
+        if (video.BitrateKbps >= minBitrate)
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.BitrateTooLowForResolution,
+                Severity: EncoderRuleSeverity.Warning,
+                Field: "video.bitrate_kbps",
+                Message: $"Bitrate {video.BitrateKbps} kbps is below the conservative minimum "
+                    + $"({minBitrate} kbps) for {video.Width}-wide output; visible artefacts likely.",
+                Fix: $"Raise video.bitrate_kbps to at least {minBitrate}, "
+                    + "or switch rate_control to CRF for quality-targeted encoding."
+            )
+        );
+    }
+
+    /// <summary>
+    ///     Conservative minimum encoded bitrate for an output width, derived from the SRGS encoding
+    ///     guideline ladder. Anything below the minimum is almost certainly artefact-heavy at the
+    ///     declared resolution.
+    /// </summary>
+    public static int MinimumBitrateKbpsFor(int width)
+    {
+        if (width >= 3840)
+            return 8_000;
+        if (width >= 2560)
+            return 5_000;
+        if (width >= 1920)
+            return 2_500;
+        if (width >= 1280)
+            return 1_500;
+        if (width >= 854)
+            return 700;
+        return 300;
+    }
+
+    private static void EmitCrfOutOfTypicalRange(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        // Typical x264/x265 CRF range is 17..28 for visually transparent / good quality. The codec
+        // accepts 0..51 but values outside the typical range almost always mean a typo (e.g. 5
+        // instead of 25) or a deliberate exotic choice. Surface as a warning either way.
+        if (
+            profile.Video is not { Policy: StreamPolicy.Transcode } video
+            || video.RateControl != RateControlMode.Crf
+            || (video.Codec != VideoCodecType.H264 && video.Codec != VideoCodecType.H265)
+        )
+            return;
+
+        if (video.Crf is >= 17 and <= 28)
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.CrfOutOfTypicalRange,
+                Severity: EncoderRuleSeverity.Warning,
+                Field: "video.crf",
+                Message: $"CRF {video.Crf} is outside the typical 17..28 range for {video.Codec}; "
+                    + (video.Crf < 17 ? "expect very large output." : "expect heavy artefacts."),
+                Fix: "Set video.crf to 23 for transparent quality, "
+                    + "20 for archival, or 26 for size-constrained delivery."
+            )
+        );
+    }
+
+    private static void EmitHlsKeyframeSegmentMisalignment(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // HLS segments must start on a keyframe. When the configured keyframe interval doesn't
+        // divide evenly into the segment duration, the muxer either truncates segments early
+        // (causing playback hiccups) or skips keyframes (hurting seek precision).
+        if (
+            profile.Container
+            is not (
+                Container.HlsTs
+                or Container.HlsFmp4
+                or Container.AudioHlsTs
+                or Container.AudioHlsFmp4
+            )
+        )
+            return;
+
+        if (
+            profile.Video is not { Policy: StreamPolicy.Transcode } video
+            || video.KeyframeIntervalSeconds <= 0
+            || profile.SegmentDurationSeconds <= 0
+        )
+            return;
+
+        if (profile.SegmentDurationSeconds % video.KeyframeIntervalSeconds == 0)
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.HlsKeyframeSegmentMisalignment,
+                Severity: EncoderRuleSeverity.Warning,
+                Field: "video.keyframe_interval_seconds",
+                Message: $"Keyframe interval {video.KeyframeIntervalSeconds}s does not divide segment "
+                    + $"duration {profile.SegmentDurationSeconds}s; segments may end mid-GOP and "
+                    + "seek precision will suffer.",
+                Fix: $"Set video.keyframe_interval_seconds to a divisor of {profile.SegmentDurationSeconds} "
+                    + "(typically 2 for 6s segments)."
+            )
+        );
+    }
+
+    private static void EmitLadderInverted(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        // Manual ladder inverted: a higher resolution rung has a lower bitrate than a lower-res
+        // rung. ProfileValidator already rejects unsorted ascending bitrate; this rule catches the
+        // resolution × bitrate inversion that the bitrate-only check misses.
+        if (profile.Ladder is not { Mode: LadderMode.Manual, Rungs: { Length: > 1 } rungs })
+            return;
+
+        for (int i = 1; i < rungs.Length; i++)
+        {
+            LadderRung lower = rungs[i - 1];
+            LadderRung higher = rungs[i];
+            if (higher.Width <= lower.Width || higher.BitrateKbps >= lower.BitrateKbps)
+                continue;
+
+            rules.Add(
+                new EncoderRule(
+                    Id: EncoderRuleId.LadderInverted,
+                    Severity: EncoderRuleSeverity.Error,
+                    Field: $"ladder.rungs[{i}]",
+                    Message: $"Ladder rung {i} ({higher.Width}x{higher.Height}, {higher.BitrateKbps} kbps) has "
+                        + $"a wider resolution but a lower bitrate than rung {i - 1} "
+                        + $"({lower.Width}x{lower.Height}, {lower.BitrateKbps} kbps).",
+                    Fix: $"Raise rung {i} bitrate above rung {i - 1}, or reorder so wider resolutions come last."
+                )
+            );
+            return;
+        }
+    }
+
+    private static void EmitAudioAc3OffLadderBitrate(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // AC-3 / E-AC-3 only accept a fixed bitrate ladder per the AC-3 (ATSC A/52) spec. Any
+        // bitrate outside this set silently picks the nearest supported value in libavcodec —
+        // surprises the user when the encode output doesn't match the request.
+        foreach (AudioOutput audio in profile.Audio.Where(a => a.Policy == StreamPolicy.Transcode))
+        {
+            int[]? ladder = audio.Codec switch
+            {
+                AudioCodecType.Ac3 => Ac3BitrateLadderKbps,
+                AudioCodecType.Eac3 => Eac3BitrateLadderKbps,
+                _ => null,
+            };
+            if (ladder is null || audio.BitrateKbps <= 0)
+                continue;
+            if (Array.IndexOf(ladder, audio.BitrateKbps) >= 0)
+                continue;
+
+            int nearest = ladder.OrderBy(b => Math.Abs(b - audio.BitrateKbps)).First();
+            rules.Add(
+                new EncoderRule(
+                    Id: audio.Codec == AudioCodecType.Ac3
+                        ? EncoderRuleId.AudioAc3OffLadderBitrate
+                        : EncoderRuleId.AudioEac3OffLadderBitrate,
+                    Severity: EncoderRuleSeverity.Warning,
+                    Field: "audio.bitrate_kbps",
+                    Message: $"{audio.Codec} only supports a fixed bitrate ladder; {audio.BitrateKbps} kbps "
+                        + "will be coerced by the encoder to the nearest supported value.",
+                    Fix: $"Set audio.bitrate_kbps to {nearest} (nearest supported value)."
+                )
+            );
+        }
+    }
+
+    /// <summary>ATSC A/52 AC-3 ladder, kbps. Any value outside the set is coerced by libavcodec.</summary>
+    private static readonly int[] Ac3BitrateLadderKbps =
+    [
+        32,
+        40,
+        48,
+        56,
+        64,
+        80,
+        96,
+        112,
+        128,
+        160,
+        192,
+        224,
+        256,
+        320,
+        384,
+        448,
+        512,
+        576,
+        640,
+    ];
+
+    /// <summary>E-AC-3 ladder, kbps. Supports finer steps but still a fixed set.</summary>
+    private static readonly int[] Eac3BitrateLadderKbps =
+    [
+        32,
+        40,
+        48,
+        56,
+        64,
+        80,
+        96,
+        112,
+        128,
+        160,
+        192,
+        224,
+        256,
+        288,
+        320,
+        384,
+        448,
+        512,
+        576,
+        640,
+        768,
+        896,
+        1024,
+        1152,
+        1280,
+        1408,
+        1536,
+        1664,
+        1792,
+        1920,
+        2048,
+        2304,
+        2560,
+        2688,
+        2816,
+        2944,
+        3072,
+        3200,
+        3328,
+        3456,
+        3584,
+        3712,
+        3840,
+        3968,
+        4096,
+        4224,
+        4352,
+        4480,
+        4608,
+        4736,
+        4864,
+        4992,
+        5120,
+        5248,
+        5376,
+        5504,
+        5632,
+        5760,
+        5888,
+        6016,
+        6144,
+    ];
+
+    private static void EmitSubtitlesContainerIncompatible(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // ContainerCompatibility owns the codec×container matrix; ask it whether each declared
+        // subtitle codec round-trips through the chosen container without re-encoding.
+        // Extract + Copy both write the subtitle track into the output. BurnIn renders into video
+        // pixels — no track in the container — and Omit drops the track entirely. Validate only
+        // the two policies that need container compatibility.
+        foreach (
+            SubtitleOutput subtitle in profile.Subtitles.Where(s =>
+                s.Policy is SubtitlePolicy.Extract or SubtitlePolicy.Copy
+            )
+        )
+        {
+            if (ContainerCompatibility.SupportsSubtitle(profile.Container, subtitle.Codec))
+                continue;
+
+            rules.Add(
+                new EncoderRule(
+                    Id: EncoderRuleId.SubtitlesContainerIncompatible,
+                    Severity: EncoderRuleSeverity.Error,
+                    Field: "subtitles.codec",
+                    Message: $"Container {profile.Container} does not support subtitle codec "
+                        + $"{subtitle.Codec}; the muxer will drop the track.",
+                    Fix: $"Pick a container that supports {subtitle.Codec}, switch the subtitle "
+                        + "codec to a compatible one, or change subtitles.policy to BurnIn."
+                )
+            );
+        }
+    }
+
+    private static void EmitHdrInverseTonemapUnsupported(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // Reverse direction of HDR conversion: the encoder can tonemap HDR -> SDR, but never
+        // synthesises HDR from an SDR source (inverse tonemap requires colour-volume metadata
+        // the source doesn't have).
+        if (profile.HdrPolicy != HdrPolicy.AlwaysPreserve)
+            return;
+
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video)
+            return;
+
+        if (video.BitDepth >= 10)
+            return; // request is consistent — preserve HDR from a 10-bit source.
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.HdrInverseTonemapUnsupported,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "hdr_policy",
+                Message: "HdrPolicy.AlwaysPreserve with an 8-bit video output asks the encoder to "
+                    + "synthesise HDR from an SDR-shaped pipeline; no inverse-tonemap is provided.",
+                Fix: "Either raise video.bit_depth to 10+ on an HDR-capable codec (H.265 / AV1 / VP9), "
+                    + "or change hdr_policy to PassthroughWhenPossible / AlwaysTonemap."
+            )
+        );
+    }
+
+    // ----------------------------------------------------------------------
+    // Source-dependent rules
+    // ----------------------------------------------------------------------
+
+    private static void EmitLevelFrameRateCapExceeded(
+        EncodingProfile profile,
+        MediaInfo source,
+        List<EncoderRule> rules
+    )
+    {
+        if (
+            profile.Video is not { Policy: StreamPolicy.Transcode } video
+            || string.IsNullOrEmpty(video.Level)
+            || source.VideoStreams.Count == 0
+        )
+            return;
+
+        VideoStreamInfo primaryVideo = source.VideoStreams[0];
+        double fps = primaryVideo.AverageFrameRate ?? primaryVideo.FrameRate;
+        if (fps <= 0)
+            return;
+
+        long lumaSamplesPerSec = (long)(video.Width * (video.Height ?? primaryVideo.Height) * fps);
+
+        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(video.Codec, video.Level);
+        if (cap is null || lumaSamplesPerSec <= cap.MaxLumaSamplesPerSec)
+            return;
+
+        CodecLevelFpsCaps.LevelCap? nextFit = CodecLevelFpsCaps.FindNextFit(
+            video.Codec,
+            lumaSamplesPerSec
+        );
+
+        string fix = nextFit is not null
+            ? $"Raise video.level to {nextFit.Level} (supports up to {nextFit.MaxLumaSamplesPerSec:N0} luma samples/sec)."
+            : "No standard level supports this resolution × frame rate.";
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.LevelFrameRateCapExceeded,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "video.level",
+                Message: $"Source {fps:F2} fps × {video.Width}x{video.Height ?? primaryVideo.Height} "
+                    + $"requires {lumaSamplesPerSec:N0} luma samples/sec; level "
+                    + $"{video.Level} allows {cap.MaxLumaSamplesPerSec:N0}.",
+                Fix: fix
+            )
+        );
+    }
+}
