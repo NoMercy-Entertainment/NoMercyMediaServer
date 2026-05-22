@@ -43,8 +43,10 @@ public static class ProfileRuleValidator
         EmitAudioAc3OffLadderBitrate(profile, rules);
         EmitSubtitlesContainerIncompatible(profile, rules);
         EmitSubtitlesBurnInPermanent(profile, rules);
+        EmitSubtitlesAssNeedsCapableClient(profile, rules);
         EmitHdrInverseTonemapUnsupported(profile, rules);
         EmitCustomArgsReservedFlag(profile, rules);
+        EmitDrmHttpNotHttps(profile, rules);
 
         return ValidationEnvelope.FromRules(rules);
     }
@@ -99,6 +101,10 @@ public static class ProfileRuleValidator
         List<EncoderRule> sourceRules = [];
 
         EmitLevelFrameRateCapExceeded(profile, source, sourceRules);
+        EmitSourceVariableFrameRate(profile, source, sourceRules);
+        EmitSourceDolbyVisionWillBeStripped(profile, source, sourceRules);
+        EmitStereoscopicSourceUnsupported(profile, source, sourceRules);
+        EmitSphericalMetadataWillBeStripped(profile, source, sourceRules);
 
         return ValidationEnvelope.FromRules(
             baseEnvelope.Errors.Concat(baseEnvelope.Warnings).Concat(sourceRules)
@@ -307,6 +313,180 @@ public static class ProfileRuleValidator
             );
             return;
         }
+    }
+
+    private static void EmitSubtitlesAssNeedsCapableClient(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // ASS / SSA typesetting renders correctly only on players that ship a libass-backed
+        // engine. Most browsers don't, so an HLS extract-mode ASS track is silently fallback-
+        // rendered as plain text on Safari / Edge / Firefox without a player extension.
+        bool isHlsExtract =
+            profile.Container
+            is Container.HlsTs
+                or Container.HlsFmp4
+                or Container.AudioHlsTs
+                or Container.AudioHlsFmp4
+                or Container.Dash;
+
+        foreach (
+            SubtitleOutput subtitle in profile.Subtitles.Where(s =>
+                s.Codec == SubtitleCodecType.Ass && s.Policy == SubtitlePolicy.Extract
+            )
+        )
+        {
+            if (!isHlsExtract)
+                continue;
+
+            rules.Add(
+                new EncoderRule(
+                    Id: EncoderRuleId.SubtitlesAssNeedsCapableClient,
+                    Severity: EncoderRuleSeverity.Info,
+                    Field: "subtitles.codec",
+                    Message: $"ASS subtitle extracted to {profile.Container} is rendered with typesetting "
+                        + "only on players that bundle a libass-compatible engine; most browsers fall "
+                        + "back to plain text without positioning, fonts, or effects.",
+                    Fix: "Use the SubtitlesOctopus plugin in the web player, ship ASS rendering at the client, "
+                        + "or set subtitles.policy to BurnIn for guaranteed-fidelity playback."
+                )
+            );
+            return;
+        }
+    }
+
+    private static void EmitDrmHttpNotHttps(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        // DRM key URLs must travel over HTTPS — plain HTTP exposes the decryption key to any
+        // on-path observer. Spec part 07 §"DRM" + part 10 §"HTTPS enforcement".
+        if (profile.Drm?.Parameters is null)
+            return;
+
+        foreach ((string key, string value) in profile.Drm.Parameters)
+        {
+            string normalisedKey = key.ToLowerInvariant();
+            bool looksLikeKeyUri =
+                normalisedKey is "key_uri" or "key_url" or "keyuri" or "license_url";
+            if (!looksLikeKeyUri || string.IsNullOrWhiteSpace(value))
+                continue;
+
+            if (value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                rules.Add(
+                    new EncoderRule(
+                        Id: EncoderRuleId.DrmHttpNotHttps,
+                        Severity: EncoderRuleSeverity.Error,
+                        Field: $"drm.parameters[{key}]",
+                        Message: $"DRM key URI uses plain HTTP ({value}); the decryption key would "
+                            + "travel in cleartext to every on-path observer.",
+                        Fix: "Switch the key URI scheme to https:// or terminate TLS at a "
+                            + "reverse proxy in front of the key endpoint."
+                    )
+                );
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // Source-dependent rule emitters
+    // ----------------------------------------------------------------------
+
+    private static void EmitSourceVariableFrameRate(
+        EncodingProfile profile,
+        MediaInfo source,
+        List<EncoderRule> rules
+    )
+    {
+        if (!source.IsVariableFrameRate)
+            return;
+        if (profile.Video is not { Policy: StreamPolicy.Transcode })
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.SourceVariableFrameRate,
+                Severity: EncoderRuleSeverity.Warning,
+                Field: "source.frame_rate",
+                Message: "Source is variable frame rate (VFR); the encoder will resample to a "
+                    + "constant frame rate. Long-duration content can drift up to ~1 second per hour.",
+                Fix: "If drift is unacceptable, set video.policy to Copy to preserve the source "
+                    + "frame-rate timing, or convert via -fps_mode passthrough manually."
+            )
+        );
+    }
+
+    private static void EmitSourceDolbyVisionWillBeStripped(
+        EncodingProfile profile,
+        MediaInfo source,
+        List<EncoderRule> rules
+    )
+    {
+        if (source.DolbyVision is null)
+            return;
+        if (profile.Video is not { Policy: StreamPolicy.Transcode })
+            return;
+
+        // Dolby Vision RPU survives only when the encoder + container combo preserves it. Without
+        // a DV-capable path the RPU is stripped and the output becomes HDR10 (BL only).
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.SourceDolbyVisionWillBeStripped,
+                Severity: EncoderRuleSeverity.Warning,
+                Field: "source.dolby_vision",
+                Message: "Source contains Dolby Vision metadata (RPU). The encoder strips the RPU "
+                    + "on re-encode; the output retains HDR10 base layer only.",
+                Fix: "Set video.policy to Copy to preserve the Dolby Vision stream end-to-end."
+            )
+        );
+    }
+
+    private static void EmitStereoscopicSourceUnsupported(
+        EncodingProfile profile,
+        MediaInfo source,
+        List<EncoderRule> rules
+    )
+    {
+        if (source.StereoMode is null)
+            return;
+        if (profile.Video is not { Policy: StreamPolicy.Transcode })
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.StereoscopicSourceUnsupported,
+                Severity: EncoderRuleSeverity.Error,
+                Field: "source.stereo_mode",
+                Message: $"3D source detected (stereo_mode={source.StereoMode}). NoMercy does not "
+                    + "support 3D re-encode; the stereo frame layout would be flattened.",
+                Fix: "Switch video.policy to Copy to preserve the 3D stream."
+            )
+        );
+    }
+
+    private static void EmitSphericalMetadataWillBeStripped(
+        EncodingProfile profile,
+        MediaInfo source,
+        List<EncoderRule> rules
+    )
+    {
+        if (source.SphericalProjection is null)
+            return;
+        if (profile.Video is not { Policy: StreamPolicy.Transcode })
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.SphericalMetadataWillBeStripped,
+                Severity: EncoderRuleSeverity.Warning,
+                Field: "source.spherical_projection",
+                Message: $"VR projection metadata ({source.SphericalProjection}) will be stripped "
+                    + "on re-encode; the output plays as a flat panoramic stretch.",
+                Fix: "Use a Copy video policy to preserve the spherical metadata box."
+            )
+        );
     }
 
     private static void EmitSubtitlesBurnInPermanent(

@@ -723,6 +723,101 @@ public class ProfileRuleValidatorTests
         Assert.False(HasRule(env, EncoderRuleId.CustomArgsReservedFlag));
     }
 
+    // ── SubtitlesAssNeedsCapableClient ───────────────────────────────────────
+
+    [Fact]
+    public void SubtitlesAssNeedsCapableClient_AssInHls_FiresInfo()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            container: Container.HlsFmp4,
+            subtitles: [Subtitle(SubtitleCodecType.Ass, SubtitlePolicy.Extract)]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.SubtitlesAssNeedsCapableClient));
+        EncoderRule rule = env.Warnings.First(r =>
+            r.Id == EncoderRuleId.SubtitlesAssNeedsCapableClient
+        );
+        Assert.Equal(EncoderRuleSeverity.Info, rule.Severity);
+    }
+
+    [Fact]
+    public void SubtitlesAssNeedsCapableClient_AssInMkv_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            container: Container.Mkv,
+            subtitles: [Subtitle(SubtitleCodecType.Ass, SubtitlePolicy.Extract)]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.SubtitlesAssNeedsCapableClient));
+    }
+
+    [Fact]
+    public void SubtitlesAssNeedsCapableClient_WebVttInHls_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(
+            Video(),
+            container: Container.HlsFmp4,
+            subtitles: [Subtitle(SubtitleCodecType.WebVtt, SubtitlePolicy.Extract)]
+        );
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.SubtitlesAssNeedsCapableClient));
+    }
+
+    // ── DrmHttpNotHttps ──────────────────────────────────────────────────────
+
+    [Fact]
+    public void DrmHttpNotHttps_HttpKeyUri_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            Drm = new DrmConfig(
+                "aes-128",
+                new Dictionary<string, string> { ["key_uri"] = "http://server/key.bin" }
+            ),
+        };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.DrmHttpNotHttps));
+        Assert.False(env.Valid);
+    }
+
+    [Fact]
+    public void DrmHttpNotHttps_HttpsKeyUri_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            Drm = new DrmConfig(
+                "aes-128",
+                new Dictionary<string, string> { ["key_uri"] = "https://server/key.bin" }
+            ),
+        };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.DrmHttpNotHttps));
+    }
+
+    [Fact]
+    public void DrmHttpNotHttps_HttpLicenseUrl_AlsoFires()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            Drm = new DrmConfig(
+                "cenc",
+                new Dictionary<string, string> { ["license_url"] = "http://license.example/issue" }
+            ),
+        };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.DrmHttpNotHttps));
+    }
+
+    [Fact]
+    public void DrmHttpNotHttps_NoDrm_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.DrmHttpNotHttps));
+    }
+
     // ── Envelope integrity ───────────────────────────────────────────────────
 
     [Fact]
