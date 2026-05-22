@@ -1020,39 +1020,45 @@ public class PlanStage(
     /// (different language, different codec, or already suffixed) are left
     /// alone.
     /// </summary>
+    private sealed record IndexedAudioPlan(AudioOutputPlan Plan, int Index);
+
+    private sealed record AudioGroupKey(
+        string Language,
+        string CodecToken,
+        string SegmentTemplate,
+        string PlaylistTemplate
+    );
+
     private static IEnumerable<AudioOutputPlan> DisambiguateAudio(
         IReadOnlyList<AudioOutputPlan> plans
     )
     {
         // Group by the natural collision key — same resolved language + codec
         // token + same template lands on the same path.
-        var groups = plans
-            .Select((plan, idx) => new { plan, idx })
-            .GroupBy(entry =>
-                (
-                    entry.plan.Language ?? "und",
-                    AudioCodecTokenFor(entry.plan.EncoderName),
-                    entry.plan.SegmentNameTemplate,
-                    entry.plan.PlaylistNameTemplate
-                )
-            )
-            .ToList();
+        IEnumerable<IGrouping<AudioGroupKey, IndexedAudioPlan>> groups = plans
+            .Select((plan, idx) => new IndexedAudioPlan(plan, idx))
+            .GroupBy(entry => new AudioGroupKey(
+                entry.Plan.Language ?? "und",
+                AudioCodecTokenFor(entry.Plan.EncoderName),
+                entry.Plan.SegmentNameTemplate,
+                entry.Plan.PlaylistNameTemplate
+            ));
 
         AudioOutputPlan[] result = plans.ToArray();
-        foreach (var group in groups)
+        foreach (IGrouping<AudioGroupKey, IndexedAudioPlan> group in groups)
         {
             if (group.Count() < 2)
                 continue;
 
-            foreach (var entry in group)
+            foreach (IndexedAudioPlan entry in group)
             {
-                int sourceIndex = ParseAudioSourceIndex(entry.plan.MapLabel);
+                int sourceIndex = ParseAudioSourceIndex(entry.Plan.MapLabel);
                 string suffix = $"_{sourceIndex}";
-                result[entry.idx] = entry.plan with
+                result[entry.Index] = entry.Plan with
                 {
-                    SegmentNameTemplate = AppendToTemplate(entry.plan.SegmentNameTemplate, suffix),
+                    SegmentNameTemplate = AppendToTemplate(entry.Plan.SegmentNameTemplate, suffix),
                     PlaylistNameTemplate = AppendToTemplate(
-                        entry.plan.PlaylistNameTemplate,
+                        entry.Plan.PlaylistNameTemplate,
                         suffix
                     ),
                 };
@@ -1069,35 +1075,42 @@ public class PlanStage(
     /// (e.g. H.264 1080p fallback + HEVC 1080p tonemap under EmitHdrAndSdr)
     /// don't share <c>video_1920x1080_SDR/</c>.
     /// </summary>
+    private sealed record IndexedVideoPlan(VideoOutputPlan Plan, int Index);
+
+    private sealed record VideoGroupKey(
+        int Width,
+        int? Height,
+        bool IsHdrOutput,
+        string SegmentTemplate,
+        string PlaylistTemplate
+    );
+
     private static VideoOutputPlan[] DisambiguateVideo(IReadOnlyList<VideoOutputPlan> plans)
     {
-        var groups = plans
-            .Select((plan, idx) => new { plan, idx })
-            .GroupBy(entry =>
-                (
-                    entry.plan.Width,
-                    entry.plan.Height,
-                    entry.plan.IsHdrOutput,
-                    entry.plan.SegmentNameTemplate,
-                    entry.plan.PlaylistNameTemplate
-                )
-            )
-            .ToList();
+        IEnumerable<IGrouping<VideoGroupKey, IndexedVideoPlan>> groups = plans
+            .Select((plan, idx) => new IndexedVideoPlan(plan, idx))
+            .GroupBy(entry => new VideoGroupKey(
+                entry.Plan.Width,
+                entry.Plan.Height,
+                entry.Plan.IsHdrOutput,
+                entry.Plan.SegmentNameTemplate,
+                entry.Plan.PlaylistNameTemplate
+            ));
 
         VideoOutputPlan[] result = plans.ToArray();
-        foreach (var group in groups)
+        foreach (IGrouping<VideoGroupKey, IndexedVideoPlan> group in groups)
         {
             if (group.Count() < 2)
                 continue;
 
-            foreach (var entry in group)
+            foreach (IndexedVideoPlan entry in group)
             {
-                string suffix = $"_{VideoCodecFamilyToken(entry.plan.EncoderName)}";
-                result[entry.idx] = entry.plan with
+                string suffix = $"_{VideoCodecFamilyToken(entry.Plan.EncoderName)}";
+                result[entry.Index] = entry.Plan with
                 {
-                    SegmentNameTemplate = AppendToTemplate(entry.plan.SegmentNameTemplate, suffix),
+                    SegmentNameTemplate = AppendToTemplate(entry.Plan.SegmentNameTemplate, suffix),
                     PlaylistNameTemplate = AppendToTemplate(
-                        entry.plan.PlaylistNameTemplate,
+                        entry.Plan.PlaylistNameTemplate,
                         suffix
                     ),
                 };
@@ -1134,24 +1147,6 @@ public class PlanStage(
         return encoderName.Replace("libfdk_", "").Replace("lib", "");
     }
 
-    /// <summary>
-    /// Codec family token used to disambiguate same-resolution rungs encoded
-    /// by different codecs. Matches the codec strings consumers expect in
-    /// folder names: <c>avc</c> for H.264, <c>hevc</c> for H.265, <c>av1</c>
-    /// for AV1, <c>vp9</c> for VP9. Falls back to the raw encoder name when
-    /// the encoder doesn't match a known family.
-    /// </summary>
-    private static string VideoCodecFamilyToken(string encoderName)
-    {
-        string lower = encoderName.ToLowerInvariant();
-        if (lower.Contains("264") || lower.Contains("h264") || lower == "libx264")
-            return "avc";
-        if (lower.Contains("265") || lower.Contains("hevc") || lower == "libx265")
-            return "hevc";
-        if (lower.Contains("av1"))
-            return "av1";
-        if (lower.Contains("vp9"))
-            return "vp9";
-        return lower;
-    }
+    private static string VideoCodecFamilyToken(string encoderName) =>
+        CodecFamilyClassifier.FamilyToken(encoderName);
 }

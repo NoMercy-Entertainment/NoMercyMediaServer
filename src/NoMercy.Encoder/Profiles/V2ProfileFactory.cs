@@ -263,45 +263,9 @@ public static class V2ProfileFactory
         };
     }
 
-    private static VideoCodecType ParseVideoCodec(string codec)
-    {
-        string lower = codec.ToLowerInvariant();
-        if (lower == "copy" || lower.Contains("passthrough"))
-            return VideoCodecType.Copy;
-        if (lower.Contains("264") || lower.Contains("avc"))
-            return VideoCodecType.H264;
-        if (lower.Contains("265") || lower.Contains("hevc"))
-            return VideoCodecType.H265;
-        if (lower.Contains("av1") || lower.Contains("aom"))
-            return VideoCodecType.Av1;
-        if (lower.Contains("vp9"))
-            return VideoCodecType.Vp9;
-        return VideoCodecType.H264;
-    }
+    private static VideoCodecType ParseVideoCodec(string codec) =>
+        CodecFamilyClassifier.ClassifyVideo(codec) ?? VideoCodecType.H264;
 
-    private static AudioCodecType ParseAudioCodec(string codec)
-    {
-        string lower = codec.ToLowerInvariant();
-        if (lower == "copy" || lower.Contains("passthrough"))
-            return AudioCodecType.Copy;
-        if (lower.Contains("aac") || lower.Contains("fdk"))
-            return AudioCodecType.Aac;
-        if (lower.Contains("opus"))
-            return AudioCodecType.Opus;
-        if (lower.Contains("flac"))
-            return AudioCodecType.Flac;
-        if (lower.Contains("eac3") || lower.Contains("e-ac3"))
-            return AudioCodecType.Eac3;
-        if (lower.Contains("ac3") || lower.Contains("dolby"))
-            return AudioCodecType.Ac3;
-        if (lower.Contains("mp3") || lower.Contains("lame"))
-            return AudioCodecType.Mp3;
-        if (lower.Contains("vorbis"))
-            return AudioCodecType.Vorbis;
-        if (lower.Contains("truehd"))
-            return AudioCodecType.TrueHd;
-        if (lower.Contains("dts") || lower.Contains("dca"))
-            return AudioCodecType.Dts;
-        return AudioCodecType.Aac;
-    }
+    private static AudioCodecType ParseAudioCodec(string codec) =>
+        CodecFamilyClassifier.ClassifyAudio(codec) ?? AudioCodecType.Aac;
 }

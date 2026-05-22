@@ -26,40 +26,29 @@ namespace NoMercy.Encoder.Bundle;
 /// pair is silently skipped. If the destination <c>encodes/{newSlug}/</c> already
 /// exists a warning is logged and the old directory is left untouched.
 /// </summary>
-public class BundleSlugRenamer
+public class BundleSlugRenamer(
+    IReadOnlyDictionary<string, string> slugMap,
+    IStorageFactory storageFactory,
+    MediaContext context
+)
 {
-    private readonly IReadOnlyDictionary<string, string> _slugMap;
-    private readonly IStorageFactory _storageFactory;
-    private readonly MediaContext _context;
-
-    public BundleSlugRenamer(
-        IReadOnlyDictionary<string, string> slugMap,
-        IStorageFactory storageFactory,
-        MediaContext context
-    )
-    {
-        _slugMap = slugMap;
-        _storageFactory = storageFactory;
-        _context = context;
-    }
-
     /// <summary>
     /// Runs the rename pass. Reads all library folders from the database,
     /// then for each folder checks each slug pair and renames when applicable.
     /// </summary>
     public async Task RunAsync(CancellationToken ct = default)
     {
-        if (_slugMap.Count == 0)
+        if (slugMap.Count == 0)
             return;
 
-        List<Folder> folders = await _context
+        List<Folder> folders = await context
             .Folders.Include(f => f.Driver)
             .AsNoTracking()
             .ToListAsync(ct);
 
         foreach (Folder folder in folders)
         {
-            IStorage storage = _storageFactory.For(folder.Id, folder.DriverId, folder.Path);
+            IStorage storage = storageFactory.For(folder.Id, folder.DriverId, folder.Path);
             await RenameInFolderAsync(storage, folder.Path, ct);
         }
     }
@@ -70,7 +59,7 @@ public class BundleSlugRenamer
         CancellationToken ct
     )
     {
-        foreach (KeyValuePair<string, string> pair in _slugMap)
+        foreach (KeyValuePair<string, string> pair in slugMap)
         {
             string oldDir = $"encodes/{pair.Key}";
             string newDir = $"encodes/{pair.Value}";

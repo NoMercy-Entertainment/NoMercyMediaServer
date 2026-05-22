@@ -88,8 +88,8 @@ public class FontExtractor(IStorage storage) : IFontExtractor
             return;
         }
 
-        List<FontEntry> entries = fontFiles
-            .Select(f => new FontEntry(
+        List<AssetEntry> entries = fontFiles
+            .Select(f => new AssetEntry(
                 File: $"fonts/{storage.GetName(f.Path)}",
                 MimeType: GetFontMimeType(storage.GetName(f.Path))
             ))
@@ -115,7 +115,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         string lutDir = storage.CombinePath(outputDirectory, "luts");
         storage.CreateDirectory(lutDir);
 
-        List<LutEntry> lutEntries = [];
+        List<AssetEntry> lutEntries = [];
 
         foreach (StorageEntry lutFile in lutFiles)
         {
@@ -127,7 +127,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
             storage.Delete(lutFile.Path);
 
             lutEntries.Add(
-                new LutEntry(File: $"luts/{fileName}", MimeType: "application/octet-stream")
+                new AssetEntry(File: $"luts/{fileName}", MimeType: "application/octet-stream")
             );
         }
 
@@ -167,13 +167,10 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         };
     }
 
-    private record FontEntry(
+    // FontEntry + LutEntry shared the same shape (file path + mime type) so collapsing
+    // them avoids two definitions drifting apart over time.
+    private record AssetEntry(
         [property: JsonProperty("file")] string File,
-        [property: JsonProperty("mimeType")] string MimeType
-    );
-
-    private record LutEntry(
-        [property: JsonProperty("file")] string File,
-        [property: JsonProperty("mimeType")] string MimeType
+        [property: JsonProperty("mime_type")] string MimeType
     );
 }

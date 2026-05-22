@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace NoMercy.Encoder.Distribution;
 
@@ -266,20 +267,34 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
     // stays on the device — it must never transit the network in the request
     // body. If mTLS is needed, configure the HttpClient with an X509Certificate2
     // at the transport layer instead.
+    // Wire DTOs carry both System.Text.Json and Newtonsoft attributes so the same
+    // payload serialises to the same snake_case shape regardless of which serializer
+    // a caller picks up — the encoder ships both (BundleManifest etc. use Newtonsoft;
+    // PostAsJsonAsync uses System.Text.Json) and the audit flagged the asymmetry.
     private sealed record TokenRequestBody(
-        [property: JsonPropertyName("cert_pem")] string? CertPem
+        [property: JsonPropertyName("cert_pem")]
+        [property: JsonProperty("cert_pem")]
+            string? CertPem
     );
 
-    private sealed record IntrospectRequestBody([property: JsonPropertyName("token")] string Token);
+    private sealed record IntrospectRequestBody(
+        [property: JsonPropertyName("token")] [property: JsonProperty("token")] string Token
+    );
 
     private sealed record TokenResponse(
-        [property: JsonPropertyName("secret")] string? Secret,
-        [property: JsonPropertyName("expires_at")] DateTime ExpiresAt,
-        [property: JsonPropertyName("scopes")] List<string>? Scopes
+        [property: JsonPropertyName("secret")] [property: JsonProperty("secret")] string? Secret,
+        [property: JsonPropertyName("expires_at")]
+        [property: JsonProperty("expires_at")]
+            DateTime ExpiresAt,
+        [property: JsonPropertyName("scopes")]
+        [property: JsonProperty("scopes")]
+            List<string>? Scopes
     );
 
     private sealed record TokenIntrospectResponse(
-        [property: JsonPropertyName("active")] bool Active,
-        [property: JsonPropertyName("scopes")] List<string>? Scopes
+        [property: JsonPropertyName("active")] [property: JsonProperty("active")] bool Active,
+        [property: JsonPropertyName("scopes")]
+        [property: JsonProperty("scopes")]
+            List<string>? Scopes
     );
 }

@@ -1,10 +1,26 @@
 using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 
 namespace NoMercy.Encoder.Distribution;
+
+internal sealed record RegisterPayload(
+    [property: JsonPropertyName("worker_id")] string WorkerId,
+    [property: JsonPropertyName("base_url")] string? BaseUrl,
+    [property: JsonPropertyName("cpu_cores")] int CpuCores,
+    [property: JsonPropertyName("available_cpu_threads")] int AvailableCpuThreads,
+    [property: JsonPropertyName("available_gpu_slots")] int AvailableGpuSlots,
+    [property: JsonPropertyName("gpus")] IReadOnlyList<GpuDevice> Gpus
+);
+
+internal sealed record HeartbeatPayload(
+    [property: JsonPropertyName("available_cpu_threads")] int AvailableCpuThreads,
+    [property: JsonPropertyName("available_gpu_slots")] int AvailableGpuSlots,
+    [property: JsonPropertyName("gpu_utilization")] double GpuUtilization
+);
 
 /// <summary>
 /// Background service that self-registers this process as a remote worker
@@ -239,15 +255,14 @@ public class WorkerSelfRegistrationService(
     {
         try
         {
-            var payload = new
-            {
-                worker_id = options.WorkerId,
-                base_url = options.WorkerSelfBaseUrl,
-                cpu_cores = capabilities.CpuCores,
-                available_cpu_threads = capabilities.CpuCores,
-                available_gpu_slots = capabilities.Gpus.Sum(g => g.MaxEncoderSessions),
-                gpus = capabilities.Gpus,
-            };
+            RegisterPayload payload = new(
+                WorkerId: options.WorkerId,
+                BaseUrl: options.WorkerSelfBaseUrl,
+                CpuCores: capabilities.CpuCores,
+                AvailableCpuThreads: capabilities.CpuCores,
+                AvailableGpuSlots: capabilities.Gpus.Sum(g => g.MaxEncoderSessions),
+                Gpus: capabilities.Gpus
+            );
 
             using HttpResponseMessage response = await http.PostAsJsonAsync(
                     "api/v1/distribution/workers/register",
@@ -283,12 +298,11 @@ public class WorkerSelfRegistrationService(
     {
         try
         {
-            var payload = new
-            {
-                available_cpu_threads = capabilities.CpuCores,
-                available_gpu_slots = capabilities.Gpus.Sum(g => g.MaxEncoderSessions),
-                gpu_utilization = 0.0,
-            };
+            HeartbeatPayload payload = new(
+                AvailableCpuThreads: capabilities.CpuCores,
+                AvailableGpuSlots: capabilities.Gpus.Sum(g => g.MaxEncoderSessions),
+                GpuUtilization: 0.0
+            );
 
             using HttpResponseMessage response = await http.PostAsJsonAsync(
                     $"api/v1/distribution/workers/{options.WorkerId}/heartbeat",

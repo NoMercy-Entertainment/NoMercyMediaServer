@@ -71,7 +71,7 @@ public class AudioHlsOutputStrategy : IOutputStrategy
         );
     }
 
-    public async Task FinalizeAsync(
+    public Task FinalizeAsync(
         string outputDirectory,
         OutputPlan plan,
         string mediaTitle,
@@ -80,7 +80,7 @@ public class AudioHlsOutputStrategy : IOutputStrategy
     {
         // Audio HLS playlists are self-contained — no master playlist needed.
         // The music player loads audio.m3u8 directly. Nothing to rename.
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     public string[] GetOutputSubdirectories(OutputPlan plan) => [];

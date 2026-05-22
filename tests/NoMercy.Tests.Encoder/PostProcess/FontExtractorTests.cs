@@ -112,7 +112,7 @@ public class FontExtractorTests : IDisposable
         files.Should().Contain("fonts/Font.ttf");
         files.Should().Contain("fonts/Another.otf");
 
-        List<string> mimeTypes = entries.Select(e => e["mimeType"]!.Value<string>()!).ToList();
+        List<string> mimeTypes = entries.Select(e => e["mime_type"]!.Value<string>()!).ToList();
         mimeTypes.Should().Contain("application/x-font-truetype");
         mimeTypes.Should().Contain("application/x-font-opentype");
     }
@@ -134,7 +134,7 @@ public class FontExtractorTests : IDisposable
         string json = await File.ReadAllTextAsync(Path.Combine(_tempDir, "fonts.json"));
         JArray entries = JArray.Parse(json);
 
-        List<string> mimeTypes = entries.Select(e => e["mimeType"]!.Value<string>()!).ToList();
+        List<string> mimeTypes = entries.Select(e => e["mime_type"]!.Value<string>()!).ToList();
         mimeTypes.Should().Contain("font/woff");
         mimeTypes.Should().Contain("font/woff2");
     }
@@ -227,7 +227,7 @@ public class FontExtractorTests : IDisposable
         JArray entries = JArray.Parse(json);
         entries.Should().HaveCount(1);
         entries[0]["file"]!.Value<string>().Should().Be("luts/YouTube_HDRtoSDR_1.cube");
-        entries[0]["mimeType"]!.Value<string>().Should().Be("application/octet-stream");
+        entries[0]["mime_type"]!.Value<string>().Should().Be("application/octet-stream");
     }
 
     // ------------------------------------------------------------------

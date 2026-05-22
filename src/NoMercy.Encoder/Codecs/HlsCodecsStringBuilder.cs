@@ -138,26 +138,18 @@ public static class HlsCodecsStringBuilder
         bool tenBit
     )
     {
-        string lower = encoderName.ToLowerInvariant();
+        VideoCodecType? family = CodecFamilyClassifier.ClassifyVideo(encoderName);
 
-        if (lower.Contains("264") || lower.Contains("x264") || lower.Contains("h264"))
-            return ForH264(profile, level);
-
-        if (lower.Contains("265") || lower.Contains("hevc"))
-            return ForHevc(profile, level, tenBit);
-
-        if (lower.Contains("av1") || lower.Contains("svtav1") || lower.Contains("aom"))
-            return ForAv1(level, tenBit);
-
-        // VP9 — no RFC 6381 standardised short-form; use vp09 signaling
-        if (lower.Contains("vp9") || lower.Contains("libvpx"))
+        return family switch
         {
-            string bitDepth = tenBit ? "10" : "08";
-            return $"vp09.00.41.{bitDepth}";
-        }
-
-        // Fallback: treat as H.264 High 4.0
-        return ForH264(profile ?? "high", level ?? "4.0");
+            VideoCodecType.H264 => ForH264(profile, level),
+            VideoCodecType.H265 => ForHevc(profile, level, tenBit),
+            VideoCodecType.Av1 => ForAv1(level, tenBit),
+            // VP9 — no RFC 6381 standardised short-form; use vp09 signaling
+            VideoCodecType.Vp9 => $"vp09.00.41.{(tenBit ? "10" : "08")}",
+            // Fallback: treat as H.264 High 4.0
+            _ => ForH264(profile ?? "high", level ?? "4.0"),
+        };
     }
 
     /// <summary>
