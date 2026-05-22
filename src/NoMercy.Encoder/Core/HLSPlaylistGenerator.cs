@@ -182,6 +182,7 @@ public static class HlsPlaylistGenerator
                 }
 
                 // Get codec info for CODECS attribute (simplified - probe one file)
+                string codecName = "";
                 string profile = "";
                 string levelStr = "";
                 string frameRateStr = "";
@@ -214,7 +215,7 @@ public static class HlsPlaylistGenerator
                         string probeResult = (
                             await Shell.ExecStdOutAsync(
                                 AppFiles.FfProbePath,
-                                $"-v error -select_streams v:0 -show_entries stream=profile,level,r_frame_rate -of default=noprint_wrappers=1:nokey=1 \"{probeTarget}\""
+                                $"-v error -select_streams v:0 -show_entries stream=codec_name,profile,level,r_frame_rate -of default=noprint_wrappers=1:nokey=1 \"{probeTarget}\""
                             )
                         ).Trim();
 
@@ -225,11 +226,13 @@ public static class HlsPlaylistGenerator
                                 StringSplitOptions.RemoveEmptyEntries
                             );
                             if (parts.Length > 0)
-                                profile = parts[0].Trim();
+                                codecName = parts[0].Trim();
                             if (parts.Length > 1)
-                                levelStr = parts[1].Trim();
+                                profile = parts[1].Trim();
                             if (parts.Length > 2)
-                                frameRateStr = parts[2].Trim();
+                                levelStr = parts[2].Trim();
+                            if (parts.Length > 3)
+                                frameRateStr = parts[3].Trim();
                         }
                     }
                     catch (Exception ex)
@@ -245,21 +248,21 @@ public static class HlsPlaylistGenerator
                 }
 
                 int level = int.TryParse(levelStr, out int l) ? l : 40;
-                string vCodecProfile = MapProfileToCodec(profile, level);
+                string vCodecProfile = MapVideoCodec(codecName, profile, level);
 
                 // Parse frame rate (e.g., "24000/1001" or "30/1")
                 double frameRate = ParseFrameRate(frameRateStr);
 
                 long totalSize = GetTotalSize(Path.Combine(basePath, folderName.OrEmpty()));
 
-                double bandwidth = duration > 0 ? (totalSize * 8.0 / duration) : 0.0;
-                bandwidth = Math.Round(bandwidth);
-                long averageBandwidth = (long)bandwidth;
-                long maxBandwidth = (long)(bandwidth * 1.1); // 10% peak over average
-                bandwidth += 128000; // audio overhead estimate
-
-                // Target duration is typically ceil of max segment duration (usually 6-10 seconds)
-                int targetDuration = Math.Max(6, (int)Math.Ceiling(10.0));
+                // HLS spec: BANDWIDTH = peak per-segment bitrate, AVERAGE-BANDWIDTH = mean.
+                // Both must include audio if the variant is muxed or grouped with an audio rendition.
+                // We estimate audio at 128 kbps for both (default AAC stereo) — accurate enough until
+                // we read the actual audio bitrate from the rendition.
+                const long AudioOverheadBps = 128_000;
+                double videoAverageBps = duration > 0 ? (totalSize * 8.0 / duration) : 0.0;
+                long averageBandwidth = (long)Math.Round(videoAverageBps) + AudioOverheadBps;
+                long peakBandwidth = (long)Math.Round(videoAverageBps * 1.1) + AudioOverheadBps;
 
                 return new VideoVariantInfo
                 {
@@ -267,11 +270,9 @@ public static class HlsPlaylistGenerator
                     FolderName = folderName!,
                     VideoFile = videoFile,
                     VCodecProfile = vCodecProfile,
-                    Bandwidth = (long)bandwidth,
+                    Bandwidth = peakBandwidth,
                     AverageBandwidth = averageBandwidth,
-                    MaxBandwidth = maxBandwidth,
                     FrameRate = frameRate,
-                    TargetDuration = targetDuration,
                     IsSdr = isSdr,
                 };
             })
@@ -293,14 +294,7 @@ public static class HlsPlaylistGenerator
                 {
                     string streamName = $"{video.Resolution} {(video.IsSdr ? "SDR" : "HDR")}";
 
-                    // Map audio codec name to proper codec string
-                    string audioCodec = audioGroup.ToLowerInvariant() switch
-                    {
-                        "aac" => "mp4a.40.2", // AAC-LC
-                        "eac3" => "ec-3", // E-AC-3 (Dolby Digital Plus)
-                        "ac3" => "ac-3", // AC-3 (Dolby Digital)
-                        _ => "mp4a.40.2", // Default to AAC-LC
-                    };
+                    string audioCodec = MapAudioCodec(audioGroup);
 
                     string codecs = video.VCodecProfile;
                     if (!string.IsNullOrEmpty(codecs))
@@ -320,7 +314,10 @@ public static class HlsPlaylistGenerator
                     streamInf.Append($",CODECS=\"{codecs}\"");
                     streamInf.Append($",AUDIO=\"audio_{audioGroup}\"");
 
-                    // Add VIDEO-RANGE and COLOUR-SPACE
+                    // Add VIDEO-RANGE and COLOUR-SPACE.
+                    // REQ-VIDEO-LAYOUT takes layout strings (e.g. CH-STEREO) — not HDR signaling.
+                    // VIDEO-RANGE=PQ is the canonical HDR10 marker; players read transfer characteristics
+                    // from the bitstream itself, not from a separate attribute.
                     if (video.IsSdr)
                     {
                         streamInf.Append(",VIDEO-RANGE=SDR,COLOUR-SPACE=BT.709");
@@ -328,8 +325,6 @@ public static class HlsPlaylistGenerator
                     else
                     {
                         streamInf.Append(",VIDEO-RANGE=PQ,COLOUR-SPACE=BT.2020");
-                        // Extended HDR metadata for PQ (HDR10)
-                        streamInf.Append(",REQ-VIDEO-LAYOUT=BYTE");
                     }
 
                     streamInf.Append($",NAME=\"{streamName}\"");
@@ -395,9 +390,44 @@ public static class HlsPlaylistGenerator
         return 0;
     }
 
-    private static string MapProfileToCodec(string profile, int level)
+    /// <summary>
+    ///     Build the RFC 6381 CODECS string for a video rendition. Falls back to H.264 Main 4.0
+    ///     (<c>avc1.4D0028</c>) when the codec name is unknown — matches the historical default for
+    ///     callers that never read codec_name from ffprobe.
+    /// </summary>
+    public static string MapVideoCodec(string codecName, string profile, int level)
     {
-        // Profile to hex mapping for H.264
+        string normalized = (codecName ?? string.Empty).ToLowerInvariant();
+        return normalized switch
+        {
+            "hevc" or "h265" or "x265" => MapHevcCodec(profile, level),
+            "av1" => MapAv1Codec(profile, level),
+            "vp9" => MapVp9Codec(profile, level),
+            _ => MapH264Codec(profile, level),
+        };
+    }
+
+    /// <summary>
+    ///     Map an audio rendition codec name to its RFC 6381 fourCC. Falls back to AAC-LC when the
+    ///     codec name is unknown — matches what the HLS folder convention emits for the encoder's
+    ///     default audio profile.
+    /// </summary>
+    public static string MapAudioCodec(string codecName)
+    {
+        return (codecName ?? string.Empty).ToLowerInvariant() switch
+        {
+            "aac" => "mp4a.40.2",
+            "eac3" or "e-ac-3" => "ec-3",
+            "ac3" or "ac-3" => "ac-3",
+            "opus" => "opus",
+            "flac" => "fLaC",
+            "mp3" => "mp4a.40.34",
+            _ => "mp4a.40.2",
+        };
+    }
+
+    private static string MapH264Codec(string profile, int level)
+    {
         string profileHex = profile switch
         {
             "Baseline" => "42",
@@ -408,20 +438,66 @@ public static class HlsPlaylistGenerator
             "High 10" => "6E",
             "High 4:2:2" => "7A",
             "High 4:4:4" => "F4",
-            _ => "4D", // Default to Main
+            _ => "4D",
         };
 
-        // Constraint flags (00 for most profiles, 40 for Constrained Baseline)
         string constraintHex =
             profile?.Contains("Constrained", StringComparison.OrdinalIgnoreCase) == true
                 ? "40"
                 : "00";
 
-        // Level is provided as integer (e.g., 30 = 3.0, 40 = 4.0, 41 = 4.1, 51 = 5.1)
-        // Convert to hex
         string levelHex = level.ToString("X2");
-
         return $"avc1.{profileHex}{constraintHex}{levelHex}";
+    }
+
+    private static string MapHevcCodec(string profile, int level)
+    {
+        // RFC 7798: hvc1.{profile_space}{profile_idc}.{compat_flags}.{tier}{level}.{constraint}
+        // profile_space is 0 for typical profiles → emit empty (omit prefix digit).
+        // ffprobe encodes the level as 30 × actual_level (e.g. Main 4.0 = 120, Main 5.1 = 153).
+        (string profileIdc, string compatFlags) = profile switch
+        {
+            "Main" => ("1", "6"),
+            "Main 10" => ("2", "4"),
+            "Main 10 Intra" => ("2", "4"),
+            "Main Still Picture" => ("3", "2"),
+            "Main 4:2:2 10" or "Rext" => ("4", "8"),
+            _ => ("1", "6"),
+        };
+
+        int hevcLevel = level > 0 ? level : 120; // ffprobe default → Main 4.0
+        return $"hvc1.{profileIdc}.{compatFlags}.L{hevcLevel}.B0";
+    }
+
+    private static string MapAv1Codec(string profile, int level)
+    {
+        // AV1 codec string: av01.{seq_profile}.{seq_level_idx}{tier}.{bit_depth}
+        // seq_profile: 0 = Main (8/10-bit 4:2:0), 1 = High (8/10-bit 4:4:4), 2 = Professional.
+        // Tier letter: M = Main, H = High. seq_level_idx is two digits.
+        string seqProfile = profile switch
+        {
+            "High" => "1",
+            "Professional" => "2",
+            _ => "0",
+        };
+
+        int av1Level = level > 0 ? level : 4; // default to level 4.0
+        return $"av01.{seqProfile}.{av1Level:D2}M.08";
+    }
+
+    private static string MapVp9Codec(string profile, int level)
+    {
+        // VP9: vp09.{profile}.{level}.{bit_depth}
+        string vp9Profile = profile switch
+        {
+            "Profile 1" => "01",
+            "Profile 2" => "02",
+            "Profile 3" => "03",
+            _ => "00",
+        };
+
+        int vp9Level = level > 0 ? level : 40;
+        return $"vp09.{vp9Profile}.{vp9Level:D2}.08";
     }
 
     private static string ToTitleCase(string s)
@@ -490,9 +566,7 @@ public static class HlsPlaylistGenerator
         public string VCodecProfile { get; init; } = "";
         public long Bandwidth { get; init; }
         public long AverageBandwidth { get; init; }
-        public long MaxBandwidth { get; init; }
         public double FrameRate { get; init; }
-        public int TargetDuration { get; init; }
         public bool IsSdr { get; init; }
     }
 }

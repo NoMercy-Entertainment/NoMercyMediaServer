@@ -9,7 +9,10 @@ public class HlsPlaylistGeneratorTests : IDisposable
 
     public HlsPlaylistGeneratorTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), "NoMercy_HlsTests_" + Guid.NewGuid().ToString("N")[..8]);
+        _tempDir = Path.Combine(
+            Path.GetTempPath(),
+            "NoMercy_HlsTests_" + Guid.NewGuid().ToString("N")[..8]
+        );
         Directory.CreateDirectory(_tempDir);
     }
 
@@ -19,14 +22,20 @@ public class HlsPlaylistGeneratorTests : IDisposable
             Directory.Delete(_tempDir, true);
     }
 
-    private void CreateVideoFolder(string folderName, string playlistContent = "#EXTM3U\n#EXT-X-VERSION:6\n")
+    private void CreateVideoFolder(
+        string folderName,
+        string playlistContent = "#EXTM3U\n#EXT-X-VERSION:6\n"
+    )
     {
         string folderPath = Path.Combine(_tempDir, folderName);
         Directory.CreateDirectory(folderPath);
         File.WriteAllText(Path.Combine(folderPath, "playlist.m3u8"), playlistContent);
     }
 
-    private void CreateAudioFolder(string folderName, string playlistContent = "#EXTM3U\n#EXT-X-VERSION:6\n")
+    private void CreateAudioFolder(
+        string folderName,
+        string playlistContent = "#EXTM3U\n#EXT-X-VERSION:6\n"
+    )
     {
         string folderPath = Path.Combine(_tempDir, folderName);
         Directory.CreateDirectory(folderPath);
@@ -244,5 +253,127 @@ public class HlsPlaylistGeneratorTests : IDisposable
 
         Assert.Contains("#EXT-X-STREAM-INF:BANDWIDTH=", content);
         Assert.Contains("AVERAGE-BANDWIDTH=", content);
+    }
+
+    [Fact]
+    public async Task Build_HdrVariant_DoesNotEmitInvalidReqVideoLayout()
+    {
+        CreateVideoFolder("video_1920x1080_SDR");
+        CreateVideoFolder("video_3840x2160_HDR");
+        CreateAudioFolder("audio_eng_aac");
+
+        await HlsPlaylistGenerator.Build(_tempDir, "master");
+
+        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "master.m3u8"));
+
+        // REQ-VIDEO-LAYOUT takes layout strings (e.g. CH-STEREO), not "BYTE".
+        // It is not an HDR signaling attribute. VIDEO-RANGE alone identifies HDR10.
+        Assert.DoesNotContain("REQ-VIDEO-LAYOUT", content);
+    }
+
+    [Fact]
+    public async Task Build_StreamInf_BandwidthIsAtLeastAverageBandwidth()
+    {
+        CreateVideoFolder("video_1920x1080");
+        CreateAudioFolder("audio_eng_aac");
+
+        await HlsPlaylistGenerator.Build(_tempDir, "master");
+
+        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "master.m3u8"));
+        string streamInf = content
+            .Split('\n')
+            .First(l => l.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal));
+
+        long peak = ParseAttribute(streamInf, "BANDWIDTH");
+        long average = ParseAttribute(streamInf, "AVERAGE-BANDWIDTH");
+
+        // HLS spec: BANDWIDTH is the peak per-segment bitrate, AVERAGE-BANDWIDTH the mean.
+        // Peak must be >= average. The old code inverted this by adding audio overhead only to BANDWIDTH.
+        Assert.True(
+            peak >= average,
+            $"BANDWIDTH ({peak}) must be >= AVERAGE-BANDWIDTH ({average})"
+        );
+    }
+
+    private static long ParseAttribute(string streamInf, string name)
+    {
+        int start = streamInf.IndexOf(name + "=", StringComparison.Ordinal);
+        if (start < 0)
+            return 0;
+        start += name.Length + 1;
+        int end = streamInf.IndexOfAny([',', '\r', '\n'], start);
+        if (end < 0)
+            end = streamInf.Length;
+        return long.Parse(streamInf[start..end]);
+    }
+
+    [Theory]
+    [InlineData("h264", "Main", 40, "avc1.4D0028")]
+    [InlineData("h264", "High", 41, "avc1.640029")]
+    [InlineData("h264", "Constrained Baseline", 30, "avc1.42401E")]
+    [InlineData("", "Main", 40, "avc1.4D0028")] // unknown codec falls back to H.264
+    public void MapVideoCodec_H264_ReturnsAvc1FourCc(
+        string codecName,
+        string profile,
+        int level,
+        string expected
+    )
+    {
+        Assert.Equal(expected, HlsPlaylistGenerator.MapVideoCodec(codecName, profile, level));
+    }
+
+    [Theory]
+    [InlineData("hevc", "Main", 120, "hvc1.1.6.L120.B0")]
+    [InlineData("hevc", "Main 10", 153, "hvc1.2.4.L153.B0")]
+    [InlineData("h265", "Main", 90, "hvc1.1.6.L90.B0")]
+    public void MapVideoCodec_Hevc_ReturnsHvc1FourCc(
+        string codecName,
+        string profile,
+        int level,
+        string expected
+    )
+    {
+        Assert.Equal(expected, HlsPlaylistGenerator.MapVideoCodec(codecName, profile, level));
+    }
+
+    [Theory]
+    [InlineData("av1", "Main", 4, "av01.0.04M.08")]
+    [InlineData("av1", "High", 8, "av01.1.08M.08")]
+    [InlineData("av1", "Main", 12, "av01.0.12M.08")]
+    public void MapVideoCodec_Av1_ReturnsAv01FourCc(
+        string codecName,
+        string profile,
+        int level,
+        string expected
+    )
+    {
+        Assert.Equal(expected, HlsPlaylistGenerator.MapVideoCodec(codecName, profile, level));
+    }
+
+    [Theory]
+    [InlineData("vp9", "Profile 0", 40, "vp09.00.40.08")]
+    [InlineData("vp9", "Profile 2", 51, "vp09.02.51.08")]
+    public void MapVideoCodec_Vp9_ReturnsVp09FourCc(
+        string codecName,
+        string profile,
+        int level,
+        string expected
+    )
+    {
+        Assert.Equal(expected, HlsPlaylistGenerator.MapVideoCodec(codecName, profile, level));
+    }
+
+    [Theory]
+    [InlineData("aac", "mp4a.40.2")]
+    [InlineData("AAC", "mp4a.40.2")]
+    [InlineData("eac3", "ec-3")]
+    [InlineData("ac3", "ac-3")]
+    [InlineData("opus", "opus")]
+    [InlineData("flac", "fLaC")]
+    [InlineData("mp3", "mp4a.40.34")]
+    [InlineData("", "mp4a.40.2")] // unknown falls back to AAC-LC
+    public void MapAudioCodec_ReturnsRfc6381FourCc(string codecName, string expected)
+    {
+        Assert.Equal(expected, HlsPlaylistGenerator.MapAudioCodec(codecName));
     }
 }

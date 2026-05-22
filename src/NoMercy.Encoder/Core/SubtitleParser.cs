@@ -28,27 +28,22 @@ public partial class SubtitleParser
     }
 
     /// <summary>
-    /// Fixes common OCR misrecognitions from Tesseract on bitmap subtitles.
-    /// DVD/Blu-ray subtitle bitmaps contain glyphs that Tesseract cannot recognize
-    /// (e.g. ♪) and consistently misreads as ASCII characters.
+    ///     Fixes common OCR misrecognitions from Tesseract on bitmap subtitles. DVD/Blu-ray subtitle
+    ///     bitmaps contain glyphs that Tesseract cannot recognize (e.g. ♪) and consistently misreads
+    ///     as ASCII characters. The follow-up letter check accepts any Unicode letter so subtitles in
+    ///     CJK, Cyrillic, Arabic and other non-Latin scripts get the same correction as Latin ones.
     /// </summary>
-    private static string PostProcessOcrText(string text)
+    public static string PostProcessOcrText(string text)
     {
-        // Fix music note symbols: Tesseract reads ♪ as &, J, I, or ' at the start of lines.
-        // Pattern: line starts with a single non-word character followed by a space and an uppercase letter.
-        // Also handles dialog prefix "- " before the misread music note.
         text = MusicNoteRegex().Replace(text, "${prefix}♪ ");
-
-        // Fix double music notes (e.g. "J'" or "&'" at start of line)
         text = DoubleMusicNoteRegex().Replace(text, "${prefix}♪ ");
-
         return text;
     }
 
-    [GeneratedRegex(@"^(?<prefix>- ?)?[&JI'] (?=[A-Z])", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^(?<prefix>- ?)?[&JI'] (?=\p{L})", RegexOptions.Multiline)]
     private static partial Regex MusicNoteRegex();
 
-    [GeneratedRegex(@"^(?<prefix>- ?)?[&JI][&JI'] (?=[A-Z])", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^(?<prefix>- ?)?[&JI][&JI'] (?=\p{L})", RegexOptions.Multiline)]
     private static partial Regex DoubleMusicNoteRegex();
 
     public static void SaveToVtt(Subtitle[] subtitles, string filePath)
