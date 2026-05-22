@@ -1,3 +1,4 @@
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
@@ -97,6 +98,51 @@ public class ProfileRuleValidatorTests
 
     private static bool HasRule(ValidationEnvelope env, string id) =>
         env.Errors.Any(r => r.Id == id) || env.Warnings.Any(r => r.Id == id);
+
+    private static MediaInfo Source(
+        int width = 1920,
+        int height = 1080,
+        double frameRate = 24,
+        string? colorTransfer = null,
+        string? colorPrimaries = null,
+        string? stereoMode = null,
+        string? sphericalProjection = null,
+        DolbyVisionInfo? dolbyVision = null,
+        bool variableFrameRate = false
+    )
+    {
+        VideoStreamInfo video = new(
+            Index: 0,
+            Codec: "h264",
+            Width: width,
+            Height: height,
+            FrameRate: frameRate,
+            BitDepth: 8,
+            PixelFormat: "yuv420p",
+            ColorPrimaries: colorPrimaries,
+            ColorTransfer: colorTransfer,
+            ColorSpace: null,
+            IsDefault: true,
+            BitRateKbps: 5000,
+            AverageFrameRate: frameRate,
+            RealFrameRate: variableFrameRate ? frameRate + 5 : frameRate,
+            Rotation: 0
+        );
+        return new MediaInfo(
+            FilePath: "/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromMinutes(90),
+            OverallBitRateKbps: 5000,
+            FileSizeBytes: 0,
+            VideoStreams: [video],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: [],
+            DolbyVision: dolbyVision,
+            StereoMode: stereoMode,
+            SphericalProjection: sphericalProjection
+        );
+    }
 
     // ── LevelResolutionMismatch ──────────────────────────────────────────────
 
@@ -848,6 +894,154 @@ public class ProfileRuleValidatorTests
         ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
         Assert.True(env.Valid);
         Assert.NotEmpty(env.Warnings);
+    }
+
+    // ── VideoRateControlMissing ──────────────────────────────────────────────
+
+    [Fact]
+    public void VideoRateControlMissing_CrfModeButCrfZero_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video(rc: RateControlMode.Crf, crf: 0));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.VideoRateControlMissing));
+        Assert.False(env.Valid);
+    }
+
+    [Fact]
+    public void VideoRateControlMissing_VbrModeButBitrateZero_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video(rc: RateControlMode.Vbr, crf: 0, bitrate: 0));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.VideoRateControlMissing));
+    }
+
+    [Fact]
+    public void VideoRateControlMissing_CbrModeButBitrateZero_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video(rc: RateControlMode.Cbr, crf: 0, bitrate: 0));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.VideoRateControlMissing));
+    }
+
+    [Fact]
+    public void VideoRateControlMissing_CrfModeWithValidCrf_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video(rc: RateControlMode.Crf, crf: 23));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.VideoRateControlMissing));
+    }
+
+    [Fact]
+    public void VideoRateControlMissing_VbrModeWithValidBitrate_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video(rc: RateControlMode.Vbr, crf: 0, bitrate: 4000));
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.VideoRateControlMissing));
+    }
+
+    // ── DrmKeyMissing ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void DrmKeyMissing_SchemeSetButNoParameters_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            Drm = new DrmConfig("aes-128", new Dictionary<string, string>()),
+        };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.DrmKeyMissing));
+        Assert.False(env.Valid);
+    }
+
+    [Fact]
+    public void DrmKeyMissing_SchemeSetButParametersWithoutKeyUri_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            Drm = new DrmConfig(
+                "cenc",
+                new Dictionary<string, string> { ["scheme_id_uri"] = "urn:something" }
+            ),
+        };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.DrmKeyMissing));
+    }
+
+    [Fact]
+    public void DrmKeyMissing_KeyUriPresent_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            Drm = new DrmConfig(
+                "aes-128",
+                new Dictionary<string, string> { ["key_uri"] = "https://server/key.bin" }
+            ),
+        };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.DrmKeyMissing));
+    }
+
+    [Fact]
+    public void DrmKeyMissing_LicenseUrlPresent_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            Drm = new DrmConfig(
+                "cenc",
+                new Dictionary<string, string> { ["license_url"] = "https://license.example/issue" }
+            ),
+        };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.DrmKeyMissing));
+    }
+
+    [Fact]
+    public void DrmKeyMissing_NoDrm_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.DrmKeyMissing));
+    }
+
+    [Fact]
+    public void DrmKeyMissing_SchemeNone_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            Drm = new DrmConfig("none", new Dictionary<string, string>()),
+        };
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.DrmKeyMissing));
+    }
+
+    // ── SourceUpscalingDetected (source-dependent) ──────────────────────────
+
+    [Fact]
+    public void SourceUpscalingDetected_TargetExceedsSource_Fires()
+    {
+        EncodingProfile profile = ProfileFor(Video(width: 1920, height: 1080));
+        MediaInfo source = Source(width: 720, height: 480);
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.True(HasRule(env, EncoderRuleId.SourceUpscalingDetected));
+        Assert.True(env.Valid); // warning only
+    }
+
+    [Fact]
+    public void SourceUpscalingDetected_TargetMatchesSource_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video(width: 1920, height: 1080));
+        MediaInfo source = Source(width: 1920, height: 1080);
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.False(HasRule(env, EncoderRuleId.SourceUpscalingDetected));
+    }
+
+    [Fact]
+    public void SourceUpscalingDetected_TargetBelowSource_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video(width: 1280, height: 720));
+        MediaInfo source = Source(width: 3840, height: 2160);
+        ValidationEnvelope env = ProfileRuleValidator.ValidateWithSource(profile, source);
+        Assert.False(HasRule(env, EncoderRuleId.SourceUpscalingDetected));
     }
 
     [Fact]

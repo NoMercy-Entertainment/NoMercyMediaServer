@@ -30,6 +30,7 @@ public static class ProfileRuleValidator
         EmitProfileNoOutputs(profile, rules);
         EmitVideoWidthInvalid(profile, rules);
         EmitVideoHeightInvalid(profile, rules);
+        EmitVideoRateControlMissing(profile, rules);
         EmitVideoRateControlConflict(profile, rules);
         EmitCodecContainerMismatch(profile, rules);
         EmitAudioCodecContainerMismatch(profile, rules);
@@ -47,6 +48,7 @@ public static class ProfileRuleValidator
         EmitHdrInverseTonemapUnsupported(profile, rules);
         EmitCustomArgsReservedFlag(profile, rules);
         EmitDrmHttpNotHttps(profile, rules);
+        EmitDrmKeyMissing(profile, rules);
 
         return ValidationEnvelope.FromRules(rules);
     }
@@ -103,6 +105,7 @@ public static class ProfileRuleValidator
         EmitLevelFrameRateCapExceeded(profile, source, sourceRules);
         EmitSourceVariableFrameRate(profile, source, sourceRules);
         EmitSourceDolbyVisionWillBeStripped(profile, source, sourceRules);
+        EmitSourceUpscalingDetected(profile, source, sourceRules);
         EmitStereoscopicSourceUnsupported(profile, source, sourceRules);
         EmitSphericalMetadataWillBeStripped(profile, source, sourceRules);
 
@@ -186,6 +189,45 @@ public static class ProfileRuleValidator
                 Message: $"Video height must be positive when set (got {video.Height}); "
                     + "leave it null to derive from source aspect ratio.",
                 Fix: "Set video.height to a positive integer or null."
+            )
+        );
+    }
+
+    private static void EmitVideoRateControlMissing(
+        EncodingProfile profile,
+        List<EncoderRule> rules
+    )
+    {
+        // Every transcode needs a quality target — either a CRF value or a bitrate. A profile that
+        // pinned RateControlMode.Crf but left Crf at 0 (default) silently encodes near-lossless and
+        // produces enormous files. A profile that pinned Vbr / Cbr but left BitrateKbps at 0 has
+        // no target at all and the muxer falls back to whatever the encoder default is.
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video)
+            return;
+
+        bool isCrfMode = video.RateControl == RateControlMode.Crf;
+        bool isBitrateMode =
+            video.RateControl == RateControlMode.Vbr || video.RateControl == RateControlMode.Cbr;
+
+        bool crfMissing = isCrfMode && video.Crf <= 0;
+        bool bitrateMissing = isBitrateMode && video.BitrateKbps <= 0;
+
+        if (!crfMissing && !bitrateMissing)
+            return;
+
+        string field = isCrfMode ? "video.crf" : "video.bitrate_kbps";
+        string mode = isCrfMode ? "Crf" : video.RateControl.ToString();
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.VideoRateControlMissing,
+                Severity: EncoderRuleSeverity.Error,
+                Field: field,
+                Message: $"Rate control is {mode} but {field} is unset; the encoder has no quality "
+                    + "target and would emit a stream nobody asked for.",
+                Fix: isCrfMode
+                    ? "Set video.crf to a value in 17..28 (23 is the typical default)."
+                    : "Set video.bitrate_kbps to a positive value matched to the resolution."
             )
         );
     }
@@ -356,6 +398,48 @@ public static class ProfileRuleValidator
         }
     }
 
+    private static void EmitDrmKeyMissing(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        // DRM enabled but no key delivery configured: HLS AES-128 needs a key_uri the client can
+        // fetch the raw key from, CENC needs an inline key id + value or a license server URL.
+        // Without either, packaging fails late.
+        if (profile.Drm is null)
+            return;
+
+        string scheme = (profile.Drm.Scheme ?? string.Empty).ToLowerInvariant();
+        if (scheme is "" or "none")
+            return;
+
+        if (profile.Drm.Parameters is null || profile.Drm.Parameters.Count == 0)
+        {
+            rules.Add(BuildDrmKeyMissingRule(scheme, "drm.parameters"));
+            return;
+        }
+
+        // Accept conventional key field names — schemes vary.
+        bool hasKeyUri = profile.Drm.Parameters.Keys.Any(k =>
+            k.Equals("key_uri", StringComparison.OrdinalIgnoreCase)
+            || k.Equals("key_url", StringComparison.OrdinalIgnoreCase)
+            || k.Equals("license_url", StringComparison.OrdinalIgnoreCase)
+            || k.Equals("keyfile", StringComparison.OrdinalIgnoreCase)
+            || k.Equals("key_file", StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (!hasKeyUri)
+            rules.Add(BuildDrmKeyMissingRule(scheme, "drm.parameters"));
+    }
+
+    private static EncoderRule BuildDrmKeyMissingRule(string scheme, string field) =>
+        new(
+            Id: EncoderRuleId.DrmKeyMissing,
+            Severity: EncoderRuleSeverity.Error,
+            Field: field,
+            Message: $"DRM scheme '{scheme}' is enabled but no key delivery URI is configured; "
+                + "packaging will fail at encode time.",
+            Fix: "Add a key_uri / license_url entry to drm.parameters pointing to "
+                + "the key server, or set drm.scheme to 'none' to disable DRM."
+        );
+
     private static void EmitDrmHttpNotHttps(EncodingProfile profile, List<EncoderRule> rules)
     {
         // DRM key URLs must travel over HTTPS — plain HTTP exposes the decryption key to any
@@ -414,6 +498,38 @@ public static class ProfileRuleValidator
                     + "constant frame rate. Long-duration content can drift up to ~1 second per hour.",
                 Fix: "If drift is unacceptable, set video.policy to Copy to preserve the source "
                     + "frame-rate timing, or convert via -fps_mode passthrough manually."
+            )
+        );
+    }
+
+    private static void EmitSourceUpscalingDetected(
+        EncodingProfile profile,
+        MediaInfo source,
+        List<EncoderRule> rules
+    )
+    {
+        // Upscaling a low-res source to a higher target resolution wastes bytes without adding
+        // detail. The encoder will produce the larger output but it carries the same information
+        // as the source — and a poorly-tuned bitrate ladder can hide quality regressions behind
+        // the resolution change.
+        if (profile.Video is not { Policy: StreamPolicy.Transcode } video || video.Width <= 0)
+            return;
+        if (source.VideoStreams.Count == 0)
+            return;
+
+        VideoStreamInfo primary = source.VideoStreams[0];
+        if (primary.Width <= 0 || video.Width <= primary.Width)
+            return;
+
+        rules.Add(
+            new EncoderRule(
+                Id: EncoderRuleId.SourceUpscalingDetected,
+                Severity: EncoderRuleSeverity.Warning,
+                Field: "video.width",
+                Message: $"Target width {video.Width} exceeds source width {primary.Width}; "
+                    + "the encoder will upscale, adding bytes without adding detail.",
+                Fix: $"Lower video.width to {primary.Width} (or below) to avoid wasted bitrate, "
+                    + "or accept the upscale if the larger frame is needed for player compatibility."
             )
         );
     }
