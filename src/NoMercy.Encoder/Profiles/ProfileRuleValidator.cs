@@ -34,9 +34,51 @@ public static class ProfileRuleValidator
         EmitAudioAc3OffLadderBitrate(profile, rules);
         EmitSubtitlesContainerIncompatible(profile, rules);
         EmitHdrInverseTonemapUnsupported(profile, rules);
+        EmitCustomArgsReservedFlag(profile, rules);
 
         return ValidationEnvelope.FromRules(rules);
     }
+
+    /// <summary>
+    ///     The full set of ffmpeg flags whose values are derived from the profile's typed fields
+    ///     and must not be hand-overridden via <see cref="EncodingProfile.CustomArguments"/>.
+    ///     Letting users smuggle these through silently desyncs the validator from what ffmpeg
+    ///     actually runs (the profile says one thing, the encode does another). Spec part 04
+    ///     §"reserved flags".
+    /// </summary>
+    public static readonly IReadOnlySet<string> ReservedFlags = new HashSet<string>(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        // Codec selection — driven by VideoOutput.Codec / AudioOutput.Codec / SubtitleOutput.Codec
+        "-c:v",
+        "-c:a",
+        "-c:s",
+        "-vcodec",
+        "-acodec",
+        "-scodec",
+        // Container muxer — driven by EncodingProfile.Container
+        "-f",
+        // Encoder tuning — driven by VideoOutput.Preset
+        "-preset",
+        // Hardware pipeline — chosen by HardwarePreferenceResolver based on the profile policy
+        "-init_hw_device",
+        "-filter_hw_device",
+        "-hwaccel",
+        "-hwaccel_output_format",
+        // Stream mapping — derived from the policy + ladder + audio/subtitle selection
+        "-map",
+        "-map_metadata",
+        // Filter graph — built by FilterGraphBuilder from crop / scale / tonemap settings
+        "-vf",
+        "-af",
+        "-filter_complex",
+        // HLS muxer arguments — driven by HlsConfig + SegmentDurationSeconds
+        "-hls_time",
+        "-hls_segment_filename",
+        "-hls_playlist_type",
+        "-hls_segment_type",
+    };
 
     /// <summary>
     ///     Layer source-dependent rules on top of <see cref="Validate"/>. Returns a combined envelope.
@@ -444,6 +486,33 @@ public static class ProfileRuleValidator
                     + "or change hdr_policy to PassthroughWhenPossible / AlwaysTonemap."
             )
         );
+    }
+
+    private static void EmitCustomArgsReservedFlag(EncodingProfile profile, List<EncoderRule> rules)
+    {
+        if (profile.CustomArguments is null || profile.CustomArguments.Count == 0)
+            return;
+
+        foreach (string key in profile.CustomArguments.Keys)
+        {
+            // Normalize: callers may store keys with or without the leading dash.
+            string normalized = key.StartsWith('-') ? key : $"-{key}";
+            if (!ReservedFlags.Contains(normalized))
+                continue;
+
+            rules.Add(
+                new EncoderRule(
+                    Id: EncoderRuleId.CustomArgsReservedFlag,
+                    Severity: EncoderRuleSeverity.Error,
+                    Field: $"custom_arguments[{key}]",
+                    Message: $"CustomArgument '{key}' overrides a flag the encoder derives from typed "
+                        + "profile fields. The profile's declared values would be ignored and the "
+                        + "validator can no longer guarantee the output matches the profile.",
+                    Fix: $"Remove the '{key}' override and set the matching typed field "
+                        + "(codec / container / preset / hardware preference / ladder) instead."
+                )
+            );
+        }
     }
 
     // ----------------------------------------------------------------------

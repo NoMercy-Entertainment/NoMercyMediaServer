@@ -429,6 +429,66 @@ public class ProfileRuleValidatorTests
         Assert.False(HasRule(env, EncoderRuleId.HdrInverseTonemapUnsupported));
     }
 
+    // ── CustomArgsReservedFlag ───────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("-c:v")]
+    [InlineData("-preset")]
+    [InlineData("-hwaccel")]
+    [InlineData("-map")]
+    [InlineData("-vf")]
+    [InlineData("-hls_time")]
+    [InlineData("-hls_segment_filename")]
+    [InlineData("-filter_complex")]
+    [InlineData("-init_hw_device")]
+    public void CustomArgsReservedFlag_FiresAsError(string flag)
+    {
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            CustomArguments = new Dictionary<string, string> { [flag] = "anything" },
+        };
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        EncoderRule rule = env.Errors.First(r => r.Id == EncoderRuleId.CustomArgsReservedFlag);
+        Assert.Equal(EncoderRuleSeverity.Error, rule.Severity);
+        Assert.Contains(flag, rule.Field);
+        Assert.False(env.Valid);
+    }
+
+    [Fact]
+    public void CustomArgsReservedFlag_AllowsKeyWithoutLeadingDash()
+    {
+        // Some callers store keys as "c:v" (without dash). Normalize before checking.
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            CustomArguments = new Dictionary<string, string> { ["c:v"] = "libx264" },
+        };
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.True(HasRule(env, EncoderRuleId.CustomArgsReservedFlag));
+    }
+
+    [Fact]
+    public void CustomArgsReservedFlag_AllowsNonReservedFlag()
+    {
+        // -loglevel is informational, not derived from profile fields. Permitted.
+        EncodingProfile profile = ProfileFor(Video()) with
+        {
+            CustomArguments = new Dictionary<string, string> { ["-loglevel"] = "info" },
+        };
+
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.CustomArgsReservedFlag));
+    }
+
+    [Fact]
+    public void CustomArgsReservedFlag_NoCustomArgs_DoesNotFire()
+    {
+        EncodingProfile profile = ProfileFor(Video());
+        ValidationEnvelope env = ProfileRuleValidator.Validate(profile);
+        Assert.False(HasRule(env, EncoderRuleId.CustomArgsReservedFlag));
+    }
+
     // ── Envelope integrity ───────────────────────────────────────────────────
 
     [Fact]
