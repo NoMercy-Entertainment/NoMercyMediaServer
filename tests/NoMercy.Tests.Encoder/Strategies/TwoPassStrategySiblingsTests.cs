@@ -11,7 +11,6 @@ using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Tests.Encoder.Storage;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
-using V2EncodeMode = NoMercy.Encoder.Profiles.EncodeMode;
 
 namespace NoMercy.Tests.Encoder.Strategies;
 
@@ -209,7 +208,7 @@ public class TwoPassStrategySiblingsTests : IDisposable
                 Video: null,
                 Audio: [],
                 Subtitles: [],
-                EncodeMode: V2EncodeMode.TwoPass
+                EncodeMode: EncodeMode.TwoPass
             )
         );
 }

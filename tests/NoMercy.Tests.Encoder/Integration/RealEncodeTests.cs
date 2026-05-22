@@ -20,7 +20,6 @@ using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
 using SubtitleOutput = NoMercy.Encoder.Profiles.SubtitleOutput;
 using SubtitlePolicy = NoMercy.Encoder.Profiles.SubtitlePolicy;
 using ThumbnailOutput = NoMercy.Encoder.Profiles.ThumbnailOutput;
-using V2EncodeMode = NoMercy.Encoder.Profiles.EncodeMode;
 using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Integration;
@@ -537,7 +536,7 @@ public class RealEncodeTests : IAsyncLifetime
                 ),
             ],
             Subtitles: [],
-            EncodeMode: V2EncodeMode.TwoPass
+            EncodeMode: EncodeMode.TwoPass
         );
 
         EncodingRequest request = new(

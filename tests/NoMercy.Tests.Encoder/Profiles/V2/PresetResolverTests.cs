@@ -1,7 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Profiles;
-using EncodeMode = NoMercy.Encoder.Profiles.EncodeMode;
 
 namespace NoMercy.Tests.Encoder.Profiles.V2;
 

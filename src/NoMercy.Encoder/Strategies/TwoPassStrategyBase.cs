@@ -10,7 +10,6 @@ using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Shared;
 using NoMercy.Storage;
-using EncodeMode = NoMercy.Encoder.Codecs.EncodeMode;
 
 namespace NoMercy.Encoder.Strategies;
 

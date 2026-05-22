@@ -9,22 +9,23 @@ public enum BufferAction
     EmergencyDropQuality,
 }
 
-public class BufferManager
+public class BufferManager(LiveSessionLimits limits)
 {
     public BufferAction Evaluate(TimeSpan bufferAhead, bool isSuspended)
     {
         double seconds = bufferAhead.TotalSeconds;
+        BufferThresholds t = limits.Buffer;
 
-        if (seconds > 30 && !isSuspended)
+        if (seconds > t.SuspendAboveSeconds && !isSuspended)
             return BufferAction.Suspend;
 
-        if (seconds < 15 && isSuspended)
+        if (seconds < t.ResumeBelowSeconds && isSuspended)
             return BufferAction.Resume;
 
-        if (seconds < 3)
+        if (seconds < t.EmergencyDropBelowSeconds)
             return BufferAction.EmergencyDropQuality;
 
-        if (seconds < 5)
+        if (seconds < t.DropQualityBelowSeconds)
             return BufferAction.DropQuality;
 
         return BufferAction.None;

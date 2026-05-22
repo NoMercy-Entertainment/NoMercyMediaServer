@@ -14,7 +14,6 @@ using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.Nfs;
 using NoMercy.Storage.Drivers.S3;
 using NoMercy.Storage.Drivers.WebDav;
-using EncodeMode = NoMercy.Encoder.Codecs.EncodeMode;
 
 namespace NoMercy.Encoder.Orchestration;
 
@@ -52,10 +51,7 @@ public class EncodingOrchestrator(
             request.Profile.Container
         );
 
-        IEncodingStrategy? strategy = resolver.Resolve(
-            profileFormat,
-            (NoMercy.Encoder.Codecs.EncodeMode)(int)request.Profile.EncodeMode
-        );
+        IEncodingStrategy? strategy = resolver.Resolve(profileFormat, request.Profile.EncodeMode);
 
         if (strategy is null)
         {
@@ -391,10 +387,7 @@ public class EncodingOrchestrator(
             request.Profile.Container
         );
 
-        IEncodingStrategy? strategy = resolver.Resolve(
-            profileFormat,
-            (EncodeMode)(int)request.Profile.EncodeMode
-        );
+        IEncodingStrategy? strategy = resolver.Resolve(profileFormat, request.Profile.EncodeMode);
 
         if (strategy is null)
             return [IEncodingStrategy.WholeTask(groupTag)];

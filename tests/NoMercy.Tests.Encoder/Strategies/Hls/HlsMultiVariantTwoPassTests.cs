@@ -13,7 +13,6 @@ using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using LadderConfig = NoMercy.Encoder.Profiles.LadderConfig;
 using LadderMode = NoMercy.Encoder.Profiles.LadderMode;
 using LadderRung = NoMercy.Encoder.Profiles.LadderRung;
-using V2EncodeMode = NoMercy.Encoder.Profiles.EncodeMode;
 
 namespace NoMercy.Tests.Encoder.Strategies.Hls;
 
@@ -280,7 +279,7 @@ public class HlsMultiVariantTwoPassTests : IDisposable
                 Video: null,
                 Audio: [],
                 Subtitles: [],
-                EncodeMode: V2EncodeMode.TwoPass,
+                EncodeMode: EncodeMode.TwoPass,
                 Ladder: new LadderConfig
                 {
                     Mode = LadderMode.Manual,

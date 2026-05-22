@@ -10,7 +10,6 @@ using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
-using V2EncodeMode = NoMercy.Encoder.Profiles.EncodeMode;
 
 namespace NoMercy.Tests.Encoder.Orchestration;
 
@@ -151,9 +150,6 @@ public class EncodingOrchestratorTests
             _ => Container.HlsTs,
         };
 
-    private static V2EncodeMode ToV2EncodeMode(EncodeMode mode) =>
-        mode == EncodeMode.TwoPass ? V2EncodeMode.TwoPass : V2EncodeMode.SinglePass;
-
     private static EncodingRequest BuildRequest(OutputFormat format, EncodeMode mode) =>
         new(
             InputPath: "/media/test.mkv",
@@ -165,7 +161,7 @@ public class EncodingOrchestratorTests
                 Video: null,
                 Audio: [],
                 Subtitles: [],
-                EncodeMode: ToV2EncodeMode(mode)
+                EncodeMode: mode
             )
         );
 

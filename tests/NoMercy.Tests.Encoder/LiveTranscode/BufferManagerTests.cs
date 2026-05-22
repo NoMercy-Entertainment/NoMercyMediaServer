@@ -4,7 +4,7 @@ namespace NoMercy.Tests.Encoder.LiveTranscode;
 
 public class BufferManagerTests
 {
-    private readonly BufferManager _manager = new();
+    private readonly BufferManager _manager = new(new LiveSessionLimits());
 
     // ──────────────────────────────────────────────────────────────────────────
     // Suspend

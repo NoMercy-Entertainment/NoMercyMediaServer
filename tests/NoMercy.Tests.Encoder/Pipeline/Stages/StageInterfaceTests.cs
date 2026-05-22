@@ -1,9 +1,12 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using NoMercy.Database;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
 
@@ -15,6 +18,8 @@ public class StageInterfaceTests
     {
         ServiceCollection services = new();
         services.AddLogging();
+        services.AddDbContextFactory<MediaContext>(o => o.UseInMemoryDatabase("test-media"));
+        services.AddDbContextFactory<AppDbContext>(o => o.UseInMemoryDatabase("test-app"));
         services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";

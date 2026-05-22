@@ -9,7 +9,6 @@ using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Tests.Encoder.Storage;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
-using V2EncodeMode = NoMercy.Encoder.Profiles.EncodeMode;
 
 namespace NoMercy.Tests.Encoder.Strategies.Hls;
 
@@ -334,7 +333,7 @@ public class HlsTwoPassStrategyTests : IDisposable
                 Video: null,
                 Audio: [],
                 Subtitles: [],
-                EncodeMode: V2EncodeMode.TwoPass
+                EncodeMode: EncodeMode.TwoPass
             )
         );
 }
