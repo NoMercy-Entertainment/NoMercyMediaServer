@@ -99,4 +99,64 @@ public class ProcessThrottleTests
         throttle.IsSuspended(200).Should().BeFalse();
         throttle.IsSuspended(300).Should().BeTrue();
     }
+
+    [Fact]
+    public async Task ConcurrentSuspendResume_LeavesConsistentState()
+    {
+        // ProcessThrottle is a DI singleton — multiple worker threads hit it
+        // simultaneously. Without the internal lock the HashSet would corrupt
+        // under contention. Pid 999999 doesn't exist, so each NtOpenProcess
+        // throws + is caught — keep iterations small to bound wall time.
+        ProcessThrottle throttle = Build();
+        const int pidCount = 8;
+        const int iterations = 50;
+
+        Task[] tasks = Enumerable
+            .Range(1, pidCount)
+            .Select(p =>
+                Task.Run(() =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        throttle.Suspend(p);
+                        throttle.Resume(p);
+                    }
+                })
+            )
+            .ToArray();
+
+        await Task.WhenAll(tasks);
+
+        for (int p = 1; p <= pidCount; p++)
+            throttle.IsSuspended(p).Should().BeFalse($"pid {p} must be resumed");
+    }
+
+    [Fact]
+    public async Task ConcurrentDifferentPids_AllRemainSuspendedUntilResumed()
+    {
+        // Distinct pids in flight at once — the set must end up containing
+        // exactly the suspended ones, no phantom membership from races.
+        ProcessThrottle throttle = Build();
+        const int pidCount = 16;
+
+        Task[] suspendTasks = Enumerable
+            .Range(1, pidCount)
+            .Select(p => Task.Run(() => throttle.Suspend(p)))
+            .ToArray();
+
+        await Task.WhenAll(suspendTasks);
+
+        for (int p = 1; p <= pidCount; p++)
+            throttle.IsSuspended(p).Should().BeTrue($"pid {p} must be suspended");
+
+        Task[] resumeTasks = Enumerable
+            .Range(1, pidCount)
+            .Select(p => Task.Run(() => throttle.Resume(p)))
+            .ToArray();
+
+        await Task.WhenAll(resumeTasks);
+
+        for (int p = 1; p <= pidCount; p++)
+            throttle.IsSuspended(p).Should().BeFalse($"pid {p} must be resumed");
+    }
 }
