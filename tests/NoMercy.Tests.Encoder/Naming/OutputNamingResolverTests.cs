@@ -125,4 +125,89 @@ public class OutputNamingResolverTests
             .Should()
             .Be("encodes/web-1080p/thumbnails.vtt");
     }
+
+    // ── audio init + segment paths ──────────────────────────────────────────
+
+    [Fact]
+    public void AudioInitPath_UsesLangAndCodecFolder()
+    {
+        BundleLayout layout = WebHls1080pLayoutForFightClub();
+        string path = _resolver.AudioInitPath(layout, language: "eng", codec: "aac");
+        path.Should().Be("encodes/web-1080p/audio/eng-aac/mfa_eng_aac_init.mp4");
+    }
+
+    [Fact]
+    public void AudioSegmentPath_AppliesSeqFormatter()
+    {
+        BundleLayout layout = WebHls1080pLayoutForFightClub();
+        string path = _resolver.AudioSegmentPath(layout, language: "fra", codec: "opus", seq: 42);
+        path.Should().Be("encodes/web-1080p/audio/fra-opus/mfa_fra_opus_00042.m4s");
+    }
+
+    // ── single-file container variants ──────────────────────────────────────
+
+    [Theory]
+    [InlineData(Container.Mp3, "mp3")]
+    [InlineData(Container.Flac, "flac")]
+    [InlineData(Container.Aac, "aac")]
+    [InlineData(Container.Ogg, "ogg")]
+    [InlineData(Container.Mka, "mka")]
+    [InlineData(Container.Mp4, "mp4")]
+    [InlineData(Container.Mkv, "mkv")]
+    public void Resolve_SingleFileContainer_UsesContainerExtension(
+        Container container,
+        string expectedExt
+    )
+    {
+        EncodingProfile profile = TestProfiles.WithContainer(container);
+        MediaItemRef media = new(MediaType.Movie, 550, "Fight Club", 1999);
+
+        BundleLayout layout = _resolver.Resolve(media, profile);
+
+        layout.IsSingleFile.Should().BeTrue();
+        layout.SingleFileName.Should().Be($"Fight Club.(1999).NoMercy.{expectedExt}");
+    }
+
+    [Fact]
+    public void Resolve_NoYear_SkipsYearSuffix()
+    {
+        // Year=null → no ".(YYYY)" segment between title and NoMercy marker.
+        EncodingProfile profile = TestProfiles.WithContainer(Container.Mkv);
+        MediaItemRef media = new(MediaType.Movie, 7, "Untitled", null);
+
+        BundleLayout layout = _resolver.Resolve(media, profile);
+
+        layout.SingleFileName.Should().Be("Untitled.NoMercy.mkv");
+        layout.ManifestPath.Should().Be("Untitled.NoMercy.manifest.json");
+    }
+
+    [Fact]
+    public void Resolve_StreamingContainer_StringMapsToFriendlyForm()
+    {
+        // Pinned: the container string in BundleLayout.ContainerString is the
+        // dashed friendly form, never the enum's ToString().
+        BundleLayout layout = _resolver.Resolve(
+            new MediaItemRef(MediaType.Movie, 1, "X", null),
+            TestProfiles.WebHls1080p()
+        );
+
+        layout.ContainerString.Should().Be("hls-fmp4");
+    }
+
+    [Theory]
+    [InlineData(Container.HlsTs, "hls-ts")]
+    [InlineData(Container.HlsFmp4, "hls-fmp4")]
+    [InlineData(Container.Dash, "dash")]
+    [InlineData(Container.AudioHlsTs, "audio-hls-ts")]
+    [InlineData(Container.AudioHlsFmp4, "audio-hls-fmp4")]
+    public void Resolve_ContainerString_DashedFriendlyForm(Container container, string expected)
+    {
+        EncodingProfile profile = TestProfiles.WithContainer(container);
+        BundleLayout layout = _resolver.Resolve(
+            new MediaItemRef(MediaType.Movie, 1, "X", null),
+            profile
+        );
+
+        layout.ContainerString.Should().Be(expected);
+    }
 }

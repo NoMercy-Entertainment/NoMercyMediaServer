@@ -124,6 +124,16 @@ internal static class TestProfiles
             IsBuiltin = true,
         };
 
+    public static EncodingProfile WithContainer(Container container) =>
+        new(
+            Id: Ulid.NewUlid(),
+            Name: "Test",
+            Container: container,
+            Video: null,
+            Audio: [],
+            Subtitles: []
+        );
+
     public static EncodingProfile WithName(string name) =>
         new(
             Id: Ulid.NewUlid(),
