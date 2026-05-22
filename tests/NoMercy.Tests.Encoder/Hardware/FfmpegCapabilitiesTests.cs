@@ -81,6 +81,147 @@ public class FfmpegCapabilitiesTests
         caps.AvailableEncoders.Should().Contain("libx264");
     }
 
+    [Fact]
+    public async Task ProbeDemuxers_ParsesCorrectly()
+    {
+        SetupResponse("-encoders", "");
+        SetupResponse("-decoders", "");
+        SetupResponse("-filters", "");
+        SetupResponse("-protocols", "");
+        // The demuxer regex only captures single-name demuxers — multi-name
+        // entries like "matroska,webm" or "mov,mp4,m4a,3gp" fail the pattern
+        // because the comma isn't whitespace, so the name lookup intentionally
+        // misses them. Operators query the canonical short names that ffmpeg
+        // also accepts as separate demuxers when passed via -f.
+        string demuxerOutput = """
+            File formats:
+             D   3dostr             3DO STR
+             D   flv                FLV (Flash Video)
+             D   image2             image2 sequence
+            """;
+        SetupResponse("-demuxers", demuxerOutput);
+
+        FfmpegCapabilities caps = new(_processRunner.Object);
+        await caps.ProbeAsync();
+
+        caps.HasDemuxer("3dostr").Should().BeTrue();
+        caps.HasDemuxer("flv").Should().BeTrue();
+        caps.HasDemuxer("image2").Should().BeTrue();
+        caps.HasDemuxer("nonexistent").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ProbeProtocols_ParsesCorrectly()
+    {
+        SetupResponse("-encoders", "");
+        SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-filters", "");
+        string protocolOutput = """
+            Supported file protocols:
+            Input:
+            file
+            http
+            https
+            tcp
+            Output:
+            file
+            http
+            tcp
+            """;
+        SetupResponse("-protocols", protocolOutput);
+
+        FfmpegCapabilities caps = new(_processRunner.Object);
+        await caps.ProbeAsync();
+
+        caps.HasProtocol("file").Should().BeTrue();
+        caps.HasProtocol("http").Should().BeTrue();
+        caps.HasProtocol("https").Should().BeTrue();
+        caps.HasProtocol("rtmp").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ProbeDecoders_ParsesCorrectly()
+    {
+        // Decoders share the same row format as encoders — VASD prefix.
+        string decoderOutput = """
+            Decoders:
+             V..... h264                 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+             V..... hevc                 HEVC (High Efficiency Video Coding)
+             V..... av1                  Alliance for Open Media AV1
+             A..... aac                  AAC (Advanced Audio Coding)
+            """;
+        SetupResponse("-encoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-filters", "");
+        SetupResponse("-protocols", "");
+        SetupResponse("-decoders", decoderOutput);
+
+        FfmpegCapabilities caps = new(_processRunner.Object);
+        await caps.ProbeAsync();
+
+        caps.AvailableDecoders.Should().Contain("h264");
+        caps.AvailableDecoders.Should().Contain("hevc");
+        caps.AvailableDecoders.Should().Contain("av1");
+        caps.AvailableDecoders.Should().Contain("aac");
+    }
+
+    [Fact]
+    public async Task ProbeAsync_AllListsBeforeProbe_AreEmpty()
+    {
+        FfmpegCapabilities caps = new(_processRunner.Object);
+
+        caps.AvailableEncoders.Should().BeEmpty();
+        caps.AvailableDecoders.Should().BeEmpty();
+        caps.AvailableDemuxers.Should().BeEmpty();
+        caps.AvailableFilters.Should().BeEmpty();
+        caps.AvailableProtocols.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ProbeAsync_EmptyOutput_LeavesListsEmpty()
+    {
+        SetupResponse("-encoders", "");
+        SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-filters", "");
+        SetupResponse("-protocols", "");
+
+        FfmpegCapabilities caps = new(_processRunner.Object);
+        await caps.ProbeAsync();
+
+        caps.AvailableEncoders.Should().BeEmpty();
+        caps.AvailableFilters.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ProbeFilters_RejectsLegendRowsWithoutSignature()
+    {
+        // ffmpeg's -filters list includes a small legend ("T.. = Timeline support")
+        // above the actual filter rows. The regex requires the "type->type"
+        // signature to exclude legend lines.
+        SetupResponse("-encoders", "");
+        SetupResponse("-decoders", "");
+        SetupResponse("-demuxers", "");
+        SetupResponse("-protocols", "");
+        string filterOutput = """
+            Filters:
+              T.. = Timeline support
+              .S. = Slice threading
+              ..C = Command support
+              ... scale            V->V       Scale the input video
+            """;
+        SetupResponse("-filters", filterOutput);
+
+        FfmpegCapabilities caps = new(_processRunner.Object);
+        await caps.ProbeAsync();
+
+        caps.HasFilter("scale").Should().BeTrue();
+        // Legend descriptors must NOT register as filters.
+        caps.HasFilter("=").Should().BeFalse();
+        caps.HasFilter("Timeline").Should().BeFalse();
+    }
+
     private void SetupResponse(string flag, string output)
     {
         _processRunner
