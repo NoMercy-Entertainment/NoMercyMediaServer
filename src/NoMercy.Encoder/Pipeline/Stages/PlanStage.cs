@@ -878,7 +878,7 @@ public class PlanStage(
             };
         }
 
-        VideoOutput reference =
+        VideoOutput? reference =
             profile.Video
             ?? (
                 existingRungs.Length == 1
