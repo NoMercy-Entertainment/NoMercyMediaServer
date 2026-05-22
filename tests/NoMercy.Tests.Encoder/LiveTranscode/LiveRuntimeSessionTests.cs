@@ -241,7 +241,8 @@ public class LiveRuntimeSessionTests
     {
         LiveRuntimeSession runtime = Build();
         DateTime initial = runtime.LastAccess;
-        Thread.Sleep(20); // give the clock a chance to advance
+        // Windows DateTime.UtcNow resolution is ~15.6ms. 50ms guarantees a tick.
+        Thread.Sleep(50);
 
         runtime.TouchLastAccess();
 

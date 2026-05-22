@@ -189,8 +189,9 @@ public class TaskSerializerBranchTests
         EncodeTask task = MakeTask();
 
         string wire1 = _serializer.Serialize(task, _signingKey);
-        // Sleep just enough for the timestamp's ticks to advance.
-        Thread.Sleep(20);
+        // Windows DateTime.UtcNow resolution can drift up to ~15.6ms — sleep
+        // 50ms so the second timestamp reliably differs from the first.
+        Thread.Sleep(50);
         string wire2 = _serializer.Serialize(task, _signingKey);
 
         wire1.Should().NotBe(wire2);
