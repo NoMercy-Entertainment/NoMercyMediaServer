@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using NoMercy.Database;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
@@ -88,6 +90,15 @@ public class RealEncodeTests : IAsyncLifetime
         // Build DI — full encoder pipeline with software-only encoding for deterministic tests
         ServiceCollection services = new();
         services.AddLogging();
+        // EF Core db-context factories needed by DbDriverFingerprintStore /
+        // subscribers — in-memory provider keeps integration tests hermetic.
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        services.AddDbContextFactory<MediaContext>(o =>
+            o.UseInMemoryDatabase($"real-media-{suffix}")
+        );
+        services.AddDbContextFactory<AppDbContext>(o =>
+            o.UseInMemoryDatabase($"real-app-{suffix}")
+        );
         services.AddNoMercyEncoder(opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";
@@ -157,12 +168,13 @@ public class RealEncodeTests : IAsyncLifetime
             ),
             Audio:
             [
-                // Use Opus — libopus is available in both the bundled FFmpeg and standard builds.
-                // libfdk_aac is only in the bundled build (nomercy-ffmpeg), so tests that
-                // run with system FFmpeg would fail with "Unknown encoder 'libfdk_aac'".
+                // Use MP3 — libmp3lame is in standard FFmpeg builds AND is a valid HlsTs
+                // codec. libfdk_aac (AudioCodecType.Aac) is bundle-only and Opus is
+                // not in the HlsTs compatibility matrix, so neither works for these
+                // integration tests when running against system FFmpeg.
                 new(
                     Policy: StreamPolicy.Transcode,
-                    Codec: AudioCodecType.Opus,
+                    Codec: AudioCodecType.Mp3,
                     BitrateKbps: 64,
                     Channels: 2,
                     SampleRateHz: 48000,
@@ -247,7 +259,7 @@ public class RealEncodeTests : IAsyncLifetime
             [
                 new(
                     Policy: StreamPolicy.Transcode,
-                    Codec: AudioCodecType.Opus,
+                    Codec: AudioCodecType.Mp3,
                     BitrateKbps: 64,
                     Channels: 2,
                     SampleRateHz: 48000,
@@ -338,7 +350,7 @@ public class RealEncodeTests : IAsyncLifetime
             [
                 new(
                     Policy: StreamPolicy.Transcode,
-                    Codec: AudioCodecType.Opus,
+                    Codec: AudioCodecType.Mp3,
                     BitrateKbps: 64,
                     Channels: 2,
                     SampleRateHz: 48000,
@@ -433,7 +445,7 @@ public class RealEncodeTests : IAsyncLifetime
             [
                 new(
                     Policy: StreamPolicy.Transcode,
-                    Codec: AudioCodecType.Opus,
+                    Codec: AudioCodecType.Mp3,
                     BitrateKbps: 64,
                     Channels: 2,
                     SampleRateHz: 48000,
@@ -523,7 +535,7 @@ public class RealEncodeTests : IAsyncLifetime
             [
                 new(
                     Policy: StreamPolicy.Transcode,
-                    Codec: AudioCodecType.Opus,
+                    Codec: AudioCodecType.Mp3,
                     BitrateKbps: 64,
                     Channels: 2,
                     SampleRateHz: 48000,
@@ -663,7 +675,7 @@ public class RealEncodeTests : IAsyncLifetime
             [
                 new(
                     Policy: StreamPolicy.Transcode,
-                    Codec: AudioCodecType.Opus,
+                    Codec: AudioCodecType.Mp3,
                     BitrateKbps: 128,
                     Channels: 2,
                     SampleRateHz: 48000,
@@ -703,7 +715,7 @@ public class RealEncodeTests : IAsyncLifetime
         deserialized.Video.Codec.Should().Be(VideoCodecType.H264);
 
         deserialized.Audio.Should().HaveCount(original.Audio.Length);
-        deserialized.Audio[0].Codec.Should().Be(AudioCodecType.Opus);
+        deserialized.Audio[0].Codec.Should().Be(AudioCodecType.Mp3);
         deserialized.Audio[0].BitrateKbps.Should().Be(128);
         deserialized.Audio[0].AllowedLanguages.Should().BeEquivalentTo("eng", "und");
 
