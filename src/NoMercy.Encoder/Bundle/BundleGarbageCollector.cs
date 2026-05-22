@@ -5,9 +5,6 @@ using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Bundle;
 
-// TODO: wire a hosted/cron service here once Phase I lands so sweeps can run
-// on a schedule (e.g. every 24 h) without requiring a dashboard request.
-
 public class BundleGarbageCollector(
     IStorage storage,
     IDbContextFactory<MediaContext> contextFactory,

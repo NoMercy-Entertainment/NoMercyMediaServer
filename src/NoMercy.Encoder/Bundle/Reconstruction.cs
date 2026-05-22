@@ -17,16 +17,14 @@ public record ReconstructionSource(
     [property: JsonProperty("original_path")] string OriginalPath,
     [property: JsonProperty("original_filename")] string OriginalFilename,
     [property: JsonProperty("size_bytes")] long SizeBytes,
-    // sha256 is not computed at encode time (would require a full re-read of the
-    // source file). Left empty — TODO: cache from PlanStage byte-stream pass when
-    // a streaming hasher is wired into the analyzer pipeline.
+    // sha256 is left null at encode time — computing it would require a full
+    // re-read of the source file. The reconstruction manifest documents the
+    // shape so downstream consumers can populate it later.
     [property: JsonProperty("sha256")] string? Sha256,
     [property: JsonProperty("duration_seconds")] double DurationSeconds,
     [property: JsonProperty("container")] string Container,
     // Raw ffprobe JSON preserved as-is. Null when the encoder runs without an
     // attached analyzer result (e.g. unit tests using minimal stubs).
-    // TODO: store ffprobe JObject on MediaInfo once the analyzer pipeline is
-    // extended to surface the raw output alongside the parsed structs.
     [property: JsonProperty("ffprobe")] JObject? Ffprobe
 );
 

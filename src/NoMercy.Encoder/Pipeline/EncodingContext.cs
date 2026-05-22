@@ -20,10 +20,10 @@ namespace NoMercy.Encoder.Pipeline;
 /// </param>
 /// <param name="DestinationStorage">
 /// Per-folder storage for the encode output directory. When null the stage
-/// falls back to SourceStorage (if set) or the DI singleton.
-/// TODO: cross-backend — when source and destination differ, stages that
-/// read from source and write to destination must acquire a local path
-/// from SourceStorage, encode, then stream-write to DestinationStorage.
+/// falls back to SourceStorage (if set) or the DI singleton. Cross-backend
+/// encodes (e.g. NFS source, S3 destination) are handled by EncodingOrchestrator
+/// which stages the source via <c>AcquireLocalPathAsync</c> and stream-writes
+/// outputs to the destination storage.
 /// </param>
 public record EncodingContext(
     string CorrelationId,

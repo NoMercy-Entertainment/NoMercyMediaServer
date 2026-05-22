@@ -36,7 +36,6 @@ public record SourceTrackMetadata(
     /// <summary>
     /// Per-stream comment tag from the source. Null when the analyzer does not
     /// expose it yet. The merger always preserves this value — DB never overwrites.
-    /// TODO: expose Comment from MediaInfo stream records in a later pass.
     /// </summary>
     string? Comment,
     bool IsDefault,

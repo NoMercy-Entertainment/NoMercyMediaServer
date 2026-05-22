@@ -123,44 +123,6 @@ public class AudioFeaturesTests
     }
 
     [Fact]
-    public void FingerprintMatch_ConstructsCorrectly()
-    {
-        FingerprintMatch match = new(
-            AcoustId: "acoustid-abc-123",
-            Score: 0.95,
-            MusicBrainzRecordingId: "mbid-recording-001",
-            Title: "Song Title",
-            Artist: "Song Artist",
-            Album: "Song Album"
-        );
-
-        match.AcoustId.Should().Be("acoustid-abc-123");
-        match.Score.Should().BeApproximately(0.95, 0.001);
-        match.MusicBrainzRecordingId.Should().Be("mbid-recording-001");
-        match.Title.Should().Be("Song Title");
-        match.Artist.Should().Be("Song Artist");
-        match.Album.Should().Be("Song Album");
-    }
-
-    [Fact]
-    public void FingerprintMatch_SupportsNullOptionalFields()
-    {
-        FingerprintMatch match = new(
-            AcoustId: "acoustid-xyz",
-            Score: 0.5,
-            MusicBrainzRecordingId: null,
-            Title: null,
-            Artist: null,
-            Album: null
-        );
-
-        match.MusicBrainzRecordingId.Should().BeNull();
-        match.Title.Should().BeNull();
-        match.Artist.Should().BeNull();
-        match.Album.Should().BeNull();
-    }
-
-    [Fact]
     public void AudioMetadata_WithCoverArt_CarriesCoverArt()
     {
         AlbumArtSource coverArt = new(

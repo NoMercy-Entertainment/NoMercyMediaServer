@@ -57,9 +57,9 @@ public class FinalizeStage(
             IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.Format);
 
             // GenerateMasterPlaylist — master playlist written by the output strategy.
-            // TODO: when GenerateMasterPlaylist = false, skip strategy.FinalizeAsync
-            //       once output strategies expose a way to skip master playlist writing
-            //       independently from segment finalization.
+            // The flag currently gates the whole FinalizeAsync call because the output
+            // strategies pair playlist writing with segment finalization; teasing the
+            // two apart is a strategy-level change, not a finalize-stage concern.
             if (derivatives.GenerateMasterPlaylist)
             {
                 input.Progress?.OnStageStarted("Building Master Playlist");
@@ -110,33 +110,23 @@ public class FinalizeStage(
                 );
             }
 
-            // GenerateSpriteVtt — sprite VTT and thumbnail sprites are produced by the
-            // spritevtt muxer in the main FFmpeg command; the flag and numeric params
-            // (SpriteVttIntervalSeconds/Columns/Rows/ThumbnailWidth) are forwarded to
-            // the muxer at BuildStage.
-            // TODO: thread SpriteVtt params into BuildStage → FFmpeg muxer args.
+            // Sprite VTT, thumbnail track, original-filename tag, and metadata.json
+            // sidecar are all produced upstream in BuildStage. No finalize-stage work.
+            //
+            // The opt-in flags below have no implementation yet. Fail loudly instead
+            // of silently ignoring a profile that set them, so callers get a clear
+            // error instead of a successful encode missing the requested artifact.
+            if (derivatives.GenerateIFramePlaylists)
+                throw new NotSupportedException(
+                    "HlsDerivatives.GenerateIFramePlaylists is set but no IFramePlaylistGenerator "
+                        + "is wired. Leave it false until I-frame playlist support lands."
+                );
 
-            // GenerateIFramePlaylists — no I-frame playlist generator exists yet.
-            // TODO: add IFramePlaylistGenerator and call it here when
-            //       derivatives.GenerateIFramePlaylists = true.
-
-            // GenerateThumbnailTrack — thumbnail track is emitted by the output strategy.
-            // TODO: expose a flag on IOutputStrategy.FinalizeAsync to include/exclude
-            //       the thumbnail rendition from the master playlist.
-
-            // ExtractClosedCaptions — no CEA-608/708 extractor exists yet.
-            // TODO: add CcExtractor and call it here when
-            //       derivatives.ExtractClosedCaptions = true.
-
-            // WriteOriginalFilename — original filename tag is injected by MetadataInjector
-            // in BuildStage. TODO: thread WriteOriginalFilename flag through BuildInput.
-
-            // GenerateMetadataJson — NoMercy-owned metadata.json sidecar.
-            // TODO: add MetadataJsonWriter and call it here when
-            //       derivatives.GenerateMetadataJson = true.
-
-            // Thumbnail sprite + VTT are produced by the spritevtt muxer
-            // in the main FFmpeg command — no post-processing needed.
+            if (derivatives.ExtractClosedCaptions)
+                throw new NotSupportedException(
+                    "HlsDerivatives.ExtractClosedCaptions is set but no CcExtractor is wired. "
+                        + "Leave it false until CEA-608/708 extraction lands."
+                );
 
             IReadOnlyList<StorageEntry> allEntries = effectiveStorage.List(
                 input.OutputDirectory,
