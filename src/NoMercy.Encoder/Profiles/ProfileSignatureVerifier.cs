@@ -2,8 +2,10 @@ using System.Security.Cryptography;
 using System.Text;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Errors;
+using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Signers;
+using Org.BouncyCastle.Security;
 
 namespace NoMercy.Encoder.Profiles;
 
@@ -77,12 +79,29 @@ public sealed class ProfileSignatureVerifier : IProfileSignatureVerifier
         signer.Init(false, pubKey);
         signer.BlockUpdate(digest, 0, digest.Length);
 
+        // Narrow the catch: BouncyCastle's Ed25519 verifier raises InvalidKey /
+        // GeneralSecurity / DataLength on malformed key or signature input —
+        // those legitimately mean "not a valid signature." A broad Exception
+        // catch hid OOM, ArgumentNullException, and similar real bugs as
+        // silent "invalid" results.
         bool valid;
         try
         {
             valid = signer.VerifySignature(signatureBytes);
         }
-        catch (Exception)
+        catch (InvalidKeyException)
+        {
+            valid = false;
+        }
+        catch (GeneralSecurityException)
+        {
+            valid = false;
+        }
+        catch (DataLengthException)
+        {
+            valid = false;
+        }
+        catch (ArgumentException)
         {
             valid = false;
         }

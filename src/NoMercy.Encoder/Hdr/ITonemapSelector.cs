@@ -19,11 +19,12 @@ public interface ITonemapSelector
     /// fall back to the algorithm-based filter and emit a
     /// <c>plan.tonemap_lut_path_rejected</c> decision.
     /// </summary>
-    TonemapPlan Build(
+    Task<TonemapPlan> BuildAsync(
         ProfileHdrOptions? options,
         string? profileTonemapAlgorithm,
         IDecisionLogSink decisions,
-        IStorage? storage = null
+        IStorage? storage = null,
+        CancellationToken cancellationToken = default
     );
 }
 

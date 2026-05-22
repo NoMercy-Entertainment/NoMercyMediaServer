@@ -148,7 +148,8 @@ public partial class PlatformHardwareDetector(
             _ = long.TryParse(adapterRamStr, out long adapterRamBytes);
             long vramMb = adapterRamBytes / (1024 * 1024);
 
-            GpuDevice? device = BuildGpuDevice(name, vramMb, driverVersion);
+            GpuDevice? device = await BuildGpuDeviceAsync(name, vramMb, driverVersion)
+                .ConfigureAwait(false);
             if (device is not null)
                 devices.Add(device);
         }
@@ -219,7 +220,8 @@ public partial class PlatformHardwareDetector(
             string? driverVersion =
                 parts.Length >= 3 && !string.IsNullOrWhiteSpace(parts[2]) ? parts[2].Trim() : null;
 
-            GpuDevice? device = BuildGpuDevice(name, vramMb, driverVersion);
+            GpuDevice? device = await BuildGpuDeviceAsync(name, vramMb, driverVersion)
+                .ConfigureAwait(false);
             if (device is not null)
                 devices.Add(device);
         }
@@ -258,7 +260,7 @@ public partial class PlatformHardwareDetector(
             // Linux lspci doesn't report VRAM — estimate from name or use 0
             long vramMb = EstimateVramFromName(name);
 
-            GpuDevice? device = BuildGpuDevice(name, vramMb);
+            GpuDevice? device = await BuildGpuDeviceAsync(name, vramMb).ConfigureAwait(false);
             if (device is not null)
                 devices.Add(device);
         }
@@ -300,7 +302,8 @@ public partial class PlatformHardwareDetector(
                 // Flush previous GPU if any
                 if (currentChipset is not null)
                 {
-                    GpuDevice? prev = BuildGpuDevice(currentChipset, currentVramMb);
+                    GpuDevice? prev = await BuildGpuDeviceAsync(currentChipset, currentVramMb)
+                        .ConfigureAwait(false);
                     if (prev is not null)
                         devices.Add(prev);
                 }
@@ -325,7 +328,8 @@ public partial class PlatformHardwareDetector(
         // Flush last GPU
         if (currentChipset is not null)
         {
-            GpuDevice? last = BuildGpuDevice(currentChipset, currentVramMb);
+            GpuDevice? last = await BuildGpuDeviceAsync(currentChipset, currentVramMb)
+                .ConfigureAwait(false);
             if (last is not null)
                 devices.Add(last);
         }
@@ -333,7 +337,11 @@ public partial class PlatformHardwareDetector(
         return devices;
     }
 
-    private GpuDevice? BuildGpuDevice(string name, long vramMb, string? driverVersion = null)
+    private async Task<GpuDevice?> BuildGpuDeviceAsync(
+        string name,
+        long vramMb,
+        string? driverVersion = null
+    )
     {
         GpuVendor? vendor = ClassifyVendor(name);
         if (vendor is null)
@@ -342,7 +350,8 @@ public partial class PlatformHardwareDetector(
             return null;
         }
 
-        List<VideoCodecType> supportedCodecs = DetectSupportedCodecs(vendor.Value, name);
+        List<VideoCodecType> supportedCodecs = await DetectSupportedCodecsAsync(vendor.Value, name)
+            .ConfigureAwait(false);
         if (supportedCodecs.Count == 0)
         {
             logger.LogDebug(
@@ -365,11 +374,6 @@ public partial class PlatformHardwareDetector(
         );
 
         return new(vendor.Value, name, vramMb, maxSessions, supportedCodecs, driverVersion);
-    }
-
-    private List<VideoCodecType> DetectSupportedCodecs(GpuVendor vendor, string gpuName)
-    {
-        return DetectSupportedCodecsAsync(vendor, gpuName).GetAwaiter().GetResult();
     }
 
     private async Task<List<VideoCodecType>> DetectSupportedCodecsAsync(

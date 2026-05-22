@@ -24,8 +24,12 @@ public class LiveFfmpegRunnerTests
     private static IResourceBudget NoopBudget()
     {
         Mock<IResourceBudget> mock = new();
-        mock.Setup(b => b.Acquire(It.IsAny<ResourceRequirement>()))
-            .Returns(new ResourceLease("noop", null, 0, 0));
+        ResourceLease lease = new("noop", null, 0, 0);
+        mock.Setup(b => b.Acquire(It.IsAny<ResourceRequirement>())).Returns(lease);
+        mock.Setup(b =>
+                b.AcquireAsync(It.IsAny<ResourceRequirement>(), It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync(lease);
         mock.Setup(b => b.Release(It.IsAny<ResourceLease>()));
         return mock.Object;
     }

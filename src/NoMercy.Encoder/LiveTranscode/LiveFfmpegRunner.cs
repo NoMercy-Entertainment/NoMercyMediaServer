@@ -39,7 +39,9 @@ public class LiveFfmpegRunner(
             ? new ResourceRequirement(gpuName, GpuSlots: 1, CpuThreads: 2)
             : new ResourceRequirement(null, GpuSlots: 0, CpuThreads: 2);
 
-        ResourceLease lease = resourceBudget.Acquire(requirement);
+        ResourceLease lease = await resourceBudget
+            .AcquireAsync(requirement, ct)
+            .ConfigureAwait(false);
 
         storage.CreateDirectory(input.OutputDirectory);
 

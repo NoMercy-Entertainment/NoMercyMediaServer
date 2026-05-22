@@ -45,11 +45,12 @@ public class TonemapSelector : ITonemapSelector
     }
 
     /// <inheritdoc/>
-    public TonemapPlan Build(
+    public async Task<TonemapPlan> BuildAsync(
         ProfileHdrOptions? options,
         string? profileTonemapAlgorithm,
         IDecisionLogSink decisions,
-        IStorage? storage = null
+        IStorage? storage = null,
+        CancellationToken cancellationToken = default
     )
     {
         // --- Algorithm resolution -------------------------------------------
@@ -85,8 +86,9 @@ public class TonemapSelector : ITonemapSelector
             // is outside the configured allowed roots or fails structural checks.
             try
             {
-                LocalPathLease lease = storage.AcquireLocalPath(lutPath);
-                lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                await using LocalPathLease lease = await storage
+                    .AcquireLocalPathAsync(lutPath, cancellationToken)
+                    .ConfigureAwait(false);
 
                 string lutFilter = $"lut3d={lutPath}";
 

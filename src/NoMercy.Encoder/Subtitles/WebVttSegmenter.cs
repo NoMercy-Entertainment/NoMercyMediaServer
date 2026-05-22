@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using NoMercy.Storage;
@@ -170,11 +171,11 @@ public sealed class WebVttSegmenter
     private static TimeSpan ParseTs(Match m, int hourGroupIndex)
     {
         int hours = m.Groups[hourGroupIndex].Success
-            ? int.Parse(m.Groups[hourGroupIndex].Value)
+            ? int.Parse(m.Groups[hourGroupIndex].Value, CultureInfo.InvariantCulture)
             : 0;
-        int minutes = int.Parse(m.Groups[hourGroupIndex + 1].Value);
-        int seconds = int.Parse(m.Groups[hourGroupIndex + 2].Value);
-        int ms = int.Parse(m.Groups[hourGroupIndex + 3].Value);
+        int minutes = int.Parse(m.Groups[hourGroupIndex + 1].Value, CultureInfo.InvariantCulture);
+        int seconds = int.Parse(m.Groups[hourGroupIndex + 2].Value, CultureInfo.InvariantCulture);
+        int ms = int.Parse(m.Groups[hourGroupIndex + 3].Value, CultureInfo.InvariantCulture);
         return new TimeSpan(0, hours, minutes, seconds, ms);
     }
 

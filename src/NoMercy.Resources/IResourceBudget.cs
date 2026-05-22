@@ -18,6 +18,17 @@ public interface IResourceBudget
 
     ResourceLease Acquire(ResourceRequirement requirement);
 
+    /// <summary>
+    /// Async variant of <see cref="Acquire"/>. Live transcode workers run on
+    /// the thread pool — calling the sync version blocks a worker thread for
+    /// the entire wait, which starves the pool under load. Always prefer this
+    /// from async callers.
+    /// </summary>
+    Task<ResourceLease> AcquireAsync(
+        ResourceRequirement requirement,
+        CancellationToken cancellationToken = default
+    );
+
     ResourceLease? TryAcquire(ResourceRequirement requirement, TimeSpan timeout);
 
     void Release(ResourceLease lease);

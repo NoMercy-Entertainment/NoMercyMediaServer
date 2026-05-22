@@ -509,7 +509,10 @@ public class EncodingOrchestrator(
                 if (!string.IsNullOrEmpty(remoteParent))
                     destinationStorage.CreateDirectory(remoteParent);
 
-                await using FileStream src = File.OpenRead(localFile);
+                // Read through the local IStorage so the guard layer still
+                // applies — File.OpenRead would bypass the path allowlist that
+                // every other read path honours.
+                await using Stream src = await storage.OpenReadAsync(localFile, ct);
                 await using Stream dst = await destinationStorage.OpenWriteAsync(
                     remoteDest,
                     overwrite: true,

@@ -207,13 +207,15 @@ public class PlanStage(
 
             TimeSpan totalEstimate = costEstimator.EstimateTotal(groups, input.Media.Duration);
 
-            OutputPlan outputPlan = BuildOutputPlan(
-                profile,
-                input.Media,
-                resolvedCodecs,
-                cropFilter,
-                context
-            );
+            OutputPlan outputPlan = await BuildOutputPlanAsync(
+                    profile,
+                    input.Media,
+                    resolvedCodecs,
+                    cropFilter,
+                    context,
+                    ct
+                )
+                .ConfigureAwait(false);
 
             logger.LogInformation(
                 "[{CorrelationId}] Plan: {Groups} groups, estimated {Duration}",
@@ -342,12 +344,13 @@ public class PlanStage(
         }
     }
 
-    private OutputPlan BuildOutputPlan(
+    private async Task<OutputPlan> BuildOutputPlanAsync(
         EncodingProfile profile,
         MediaInfo media,
         ResolvedCodec[] resolvedCodecs,
         string? cropFilter,
-        EncodingContext context
+        EncodingContext context,
+        CancellationToken ct
     )
     {
         OutputFormat outputFormat = PlanStageHelpers.ContainerToOutputFormat(profile.Container);
@@ -365,11 +368,9 @@ public class PlanStage(
 
         // Per-profile plan: resolves algorithm + nits + optional LUT from HdrOptions.
         // V2 profile has no TonemapAlgorithm shorthand — pass null; HdrOptions takes over.
-        TonemapPlan tonemapPlan = tonemapSelector.Build(
-            profile.HdrOptions,
-            null,
-            context.DecisionsOrNoOp
-        );
+        TonemapPlan tonemapPlan = await tonemapSelector
+            .BuildAsync(profile.HdrOptions, null, context.DecisionsOrNoOp, cancellationToken: ct)
+            .ConfigureAwait(false);
 
         VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
 

@@ -74,6 +74,9 @@ public class LiveEncoder(
             catch (Exception ex)
             {
                 logger.LogError(ex, "Live runner task faulted for session {SessionId}", sessionId);
+                // Without this the session lingers in Running state forever and the reaper
+                // can't tell a wedged runner apart from a live one.
+                session.SetState(LiveSessionState.Error);
             }
         }
 

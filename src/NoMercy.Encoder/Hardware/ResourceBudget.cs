@@ -207,6 +207,62 @@ public class ResourceBudget : IResourceBudget
         return new(leaseId, requirement.GpuDeviceKey, requirement.GpuSlots, requirement.CpuThreads);
     }
 
+    public async Task<ResourceLease> AcquireAsync(
+        ResourceRequirement requirement,
+        CancellationToken cancellationToken = default
+    )
+    {
+        int acquiredGpuSlots = 0;
+        SemaphoreSlim? gpuSemaphore = null;
+        int acquiredCpuThreads = 0;
+
+        try
+        {
+            if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
+            {
+                gpuSemaphore = GetGpuSemaphore(requirement.GpuDeviceKey);
+
+                for (int slotIndex = 0; slotIndex < requirement.GpuSlots; slotIndex++)
+                {
+                    await gpuSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    acquiredGpuSlots++;
+                }
+
+                _logger?.LogDebug(
+                    "Acquired {GpuSlots} GPU slot(s) on {GpuKey}",
+                    requirement.GpuSlots,
+                    requirement.GpuDeviceKey
+                );
+            }
+
+            if (requirement.CpuThreads > 0)
+            {
+                for (int threadIndex = 0; threadIndex < requirement.CpuThreads; threadIndex++)
+                {
+                    await _cpuSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    acquiredCpuThreads++;
+                }
+
+                _logger?.LogDebug("Acquired {CpuThreads} CPU thread(s)", requirement.CpuThreads);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Roll back partial acquisitions so cancelled callers don't leak slots.
+            if (gpuSemaphore is not null && acquiredGpuSlots > 0)
+                gpuSemaphore.Release(acquiredGpuSlots);
+            if (acquiredCpuThreads > 0)
+                _cpuSemaphore.Release(acquiredCpuThreads);
+            throw;
+        }
+
+        string leaseId = Ulid.NewUlid().ToString();
+
+        _logger?.LogDebug("Lease {LeaseId} granted via AcquireAsync", leaseId);
+
+        return new(leaseId, requirement.GpuDeviceKey, requirement.GpuSlots, requirement.CpuThreads);
+    }
+
     public ResourceLease? TryAcquire(ResourceRequirement requirement, TimeSpan timeout)
     {
         int timeoutMs = (int)timeout.TotalMilliseconds;

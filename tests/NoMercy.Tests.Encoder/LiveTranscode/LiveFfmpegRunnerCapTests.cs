@@ -106,9 +106,13 @@ public class LiveFfmpegRunnerCapTests
         };
 
         Mock<IResourceBudget> noopBudget = new();
+        ResourceLease noopLease = new("noop", null, 0, 0);
+        noopBudget.Setup(b => b.Acquire(It.IsAny<ResourceRequirement>())).Returns(noopLease);
         noopBudget
-            .Setup(b => b.Acquire(It.IsAny<ResourceRequirement>()))
-            .Returns(new ResourceLease("noop", null, 0, 0));
+            .Setup(b =>
+                b.AcquireAsync(It.IsAny<ResourceRequirement>(), It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync(noopLease);
         noopBudget.Setup(b => b.Release(It.IsAny<ResourceLease>()));
 
         return new LiveFfmpegRunner(
