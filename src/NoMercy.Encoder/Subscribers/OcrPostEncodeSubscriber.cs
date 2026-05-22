@@ -85,7 +85,7 @@ public sealed class OcrPostEncodeSubscriber : IDisposable
         for (int i = 0; i < info.SubtitleStreams.Count; i++)
         {
             SubtitleStreamInfo stream = info.SubtitleStreams[i];
-            if (!IsBitmapCodec(stream.Codec))
+            if (!SubtitleClassifier.IsBitmapBased(stream.Codec))
                 continue;
 
             try
@@ -130,13 +130,6 @@ public sealed class OcrPostEncodeSubscriber : IDisposable
         return ext.Equals(".m3u8", StringComparison.OrdinalIgnoreCase)
             || ext.Equals(".mpd", StringComparison.OrdinalIgnoreCase);
     }
-
-    private static bool IsBitmapCodec(string codec) =>
-        codec.Equals("hdmv_pgs_subtitle", StringComparison.OrdinalIgnoreCase)
-        || codec.Equals("pgs", StringComparison.OrdinalIgnoreCase)
-        || codec.Equals("dvd_subtitle", StringComparison.OrdinalIgnoreCase)
-        || codec.Equals("vobsub", StringComparison.OrdinalIgnoreCase)
-        || codec.Equals("dvb_subtitle", StringComparison.OrdinalIgnoreCase);
 
     public void Dispose()
     {

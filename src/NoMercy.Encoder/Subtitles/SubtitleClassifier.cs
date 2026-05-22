@@ -15,10 +15,18 @@ public static class SubtitleClassifier
         "text",
     ];
 
+    // Includes both canonical FFmpeg codec names (hdmv_pgs_subtitle / dvd_subtitle /
+    // dvb_subtitle) and the short aliases NoMercy normalises to internally
+    // (pgs / vobsub). Different code paths see different forms depending on
+    // whether the codec came from ffprobe (canonical) or from a normalized
+    // reconstruction-manifest field (short), so a permissive matcher keeps
+    // the bitmap-vs-text classification consistent across both.
     private static readonly HashSet<string> BitmapCodecs =
     [
         "hdmv_pgs_subtitle",
+        "pgs",
         "dvd_subtitle",
+        "vobsub",
         "dvb_subtitle",
     ];
 

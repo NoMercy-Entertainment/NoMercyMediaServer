@@ -28,7 +28,9 @@ public class SubtitleClassifierTests
 
     [Theory]
     [InlineData("hdmv_pgs_subtitle")]
+    [InlineData("pgs")] // NoMercy short alias for hdmv_pgs_subtitle
     [InlineData("dvd_subtitle")]
+    [InlineData("vobsub")] // libavformat alternative name for dvd_subtitle
     [InlineData("dvb_subtitle")]
     public void IsBitmapBased_KnownBitmapCodecs_ReturnsTrue(string codec)
     {
@@ -91,7 +93,14 @@ public class SubtitleClassifierTests
         // extractor has no deterministic path. Check every known text
         // codec is NOT bitmap, and every known bitmap codec is NOT text.
         string[] textCodecs = ["srt", "subrip", "ass", "ssa", "webvtt", "mov_text", "text"];
-        string[] bitmapCodecs = ["hdmv_pgs_subtitle", "dvd_subtitle", "dvb_subtitle"];
+        string[] bitmapCodecs =
+        [
+            "hdmv_pgs_subtitle",
+            "pgs",
+            "dvd_subtitle",
+            "vobsub",
+            "dvb_subtitle",
+        ];
 
         foreach (string t in textCodecs)
             SubtitleClassifier.IsBitmapBased(t).Should().BeFalse();
