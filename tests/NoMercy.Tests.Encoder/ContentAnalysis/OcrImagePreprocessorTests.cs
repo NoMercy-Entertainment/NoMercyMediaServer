@@ -85,4 +85,81 @@ public class OcrImagePreprocessorTests
 
         result.Should().AllSatisfy(b => b.Should().Be(128));
     }
+
+    // ── BT.601 luma weights — pinning the per-channel math ─────────────────
+
+    [Fact]
+    public void PreprocessForOcr_PureRedOpaque_UsesBt601RedWeight()
+    {
+        // BT.601: R coefficient = 0.299, full alpha → 0.299 * 255 ≈ 76.
+        // Wrong weight here = subtle but real OCR regressions on coloured
+        // PGS subs that use the red channel as a foreground marker.
+        byte[] rgba = [0xFF, 0x00, 0x00, 0xFF];
+
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 1, 1);
+
+        result[0].Should().Be(76);
+    }
+
+    [Fact]
+    public void PreprocessForOcr_PureGreenOpaque_UsesBt601GreenWeight()
+    {
+        // BT.601: G coefficient = 0.587 — the dominant channel for luma.
+        byte[] rgba = [0x00, 0xFF, 0x00, 0xFF];
+
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 1, 1);
+
+        result[0].Should().Be(150);
+    }
+
+    [Fact]
+    public void PreprocessForOcr_PureBlueOpaque_UsesBt601BlueWeight()
+    {
+        // BT.601: B coefficient = 0.114 — darkest perceived channel.
+        byte[] rgba = [0x00, 0x00, 0xFF, 0xFF];
+
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 1, 1);
+
+        result[0].Should().Be(29);
+    }
+
+    [Fact]
+    public void PreprocessForOcr_MultiPixelMix_ProducesPerPixelOutput()
+    {
+        // 2×1 frame: pixel0 = opaque white, pixel1 = opaque black.
+        // Verifies the loop indexes the RGBA buffer correctly (no
+        // off-by-one or row-stride confusion).
+        byte[] rgba = [0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0xFF];
+
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 2, 1);
+
+        result.Should().HaveCount(2);
+        result[0].Should().Be(255);
+        result[1].Should().Be(0);
+    }
+
+    [Fact]
+    public void PreprocessForOcr_ZeroDimensions_ReturnsEmpty()
+    {
+        // 0×0 frame is a degenerate but valid input — buffer length must
+        // match (0). Result is an empty array, not an exception.
+        byte[] rgba = [];
+
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 0, 0);
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void PreprocessForOcr_WrongBufferSize_ParamNameMatches()
+    {
+        // ArgumentException's ParamName must be the actual parameter so
+        // callers' error-handling switches don't drift if the parameter
+        // ever gets renamed.
+        byte[] tooShort = new byte[3];
+
+        Action act = () => OcrImagePreprocessor.PreprocessForOcr(tooShort, 1, 1);
+
+        act.Should().Throw<ArgumentException>().And.ParamName.Should().Be("rgbaImage");
+    }
 }

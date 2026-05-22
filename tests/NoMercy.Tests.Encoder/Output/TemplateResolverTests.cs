@@ -147,4 +147,150 @@ public class TemplateResolverTests
 
         resolved.Should().Be("audio_jpn_opus/audio_jpn_opus");
     }
+
+    // ── Brace syntax (V2 built-in preset form) ──────────────────────────────
+
+    [Fact]
+    public void Resolve_BraceSyntax_SingleToken_Replaced()
+    {
+        // V2 built-in presets use {token} not :token:
+        string result = TemplateResolver.Resolve(
+            "video/{label}",
+            new() { ["label"] = "1920x1080" }
+        );
+        result.Should().Be("video/1920x1080");
+    }
+
+    [Fact]
+    public void Resolve_BraceSyntax_MultipleTokens_AllReplaced()
+    {
+        string result = TemplateResolver.Resolve(
+            "{type}_{label}/{type}_{label}",
+            new() { ["type"] = "video", ["label"] = "1280x720_SDR" }
+        );
+        result.Should().Be("video_1280x720_SDR/video_1280x720_SDR");
+    }
+
+    [Fact]
+    public void Resolve_BraceSyntax_AudioPreset_EndToEnd()
+    {
+        // Verbatim V2 brace-style audio preset template.
+        string template = "audio/{lang}-{codec}";
+        Dictionary<string, string> tokens = TemplateResolver.AudioTokens("eng", "aac", 2);
+
+        string resolved = TemplateResolver.Resolve(template, tokens);
+
+        resolved.Should().Be("audio/eng-aac");
+    }
+
+    [Fact]
+    public void Resolve_MixedColonAndBrace_BothReplaced()
+    {
+        // Legacy + modern in the same template — both must resolve so we can
+        // ship V2 presets while V1 rows still live in the DB.
+        string result = TemplateResolver.Resolve(
+            ":type:_{label}",
+            new() { ["type"] = "video", ["label"] = "1080p" }
+        );
+        result.Should().Be("video_1080p");
+    }
+
+    // ── HDR label suffix logic ──────────────────────────────────────────────
+
+    [Fact]
+    public void VideoTokens_SdrOutput_LabelHasSdrSuffix()
+    {
+        // SDR variants append "_SDR" to disambiguate from HDR variants of
+        // the same resolution that get the bare framesize.
+        Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+            1920,
+            795,
+            isHdrOutput: false
+        );
+        tokens["label"].Should().Be("1920x795_SDR");
+    }
+
+    [Fact]
+    public void VideoTokens_HdrOutput_LabelIsBareFrameSize()
+    {
+        // HDR keeps the bare framesize — matches the example media layout
+        // where "1920x795/" is the HDR folder and "1920x795_SDR/" is the
+        // tonemapped sibling.
+        Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
+            1920,
+            795,
+            isHdrOutput: true
+        );
+        tokens["label"].Should().Be("1920x795");
+    }
+
+    [Fact]
+    public void VideoTokens_ColorspaceAndColorrange_AreAliases()
+    {
+        // Both tokens carry the same value — templates can use either form.
+        Dictionary<string, string> sdr = TemplateResolver.VideoTokens(1920, 1080, false);
+        sdr["colorspace"].Should().Be(sdr["colorrange"]);
+
+        Dictionary<string, string> hdr = TemplateResolver.VideoTokens(3840, 2160, true);
+        hdr["colorspace"].Should().Be("HDR");
+        hdr["colorspace"].Should().Be(hdr["colorrange"]);
+    }
+
+    // ── Audio aliases ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void AudioTokens_LanguageAndLang_AreAliases()
+    {
+        // {lang} is the V2 brace-style alias for :language: — templates
+        // written in either form must resolve identically.
+        Dictionary<string, string> tokens = TemplateResolver.AudioTokens("jpn", "opus", 2);
+        tokens["language"].Should().Be("jpn");
+        tokens["lang"].Should().Be("jpn");
+    }
+
+    // ── Subtitle tokens / variant-as-type alias ────────────────────────────
+
+    [Fact]
+    public void SubtitleTokens_LangAlias_PresentAndMatchesLanguage()
+    {
+        Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
+            language: "fra",
+            variant: "full",
+            filename: "movie"
+        );
+        tokens["lang"].Should().Be("fra");
+        tokens["language"].Should().Be("fra");
+    }
+
+    [Fact]
+    public void SubtitleTokens_TypeAliasesVariant()
+    {
+        // In subtitle context {type} is the variant — different from
+        // video/audio where {type} is the literal "video"/"audio". This
+        // dual meaning is by design so the standard subtitle template
+        // "subtitles/{filename}.{lang}.{type}" works without per-variant
+        // surgery.
+        Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
+            language: "eng",
+            variant: "sign",
+            filename: "movie"
+        );
+        tokens["type"].Should().Be("sign");
+        tokens["variant"].Should().Be("sign");
+    }
+
+    [Fact]
+    public void Resolve_SubtitleTemplate_EndToEnd()
+    {
+        Dictionary<string, string> tokens = TemplateResolver.SubtitleTokens(
+            language: "eng",
+            variant: "sdh",
+            filename: "Movie.2024"
+        );
+        string template = "subtitles/{filename}.{lang}.{type}.vtt";
+
+        string resolved = TemplateResolver.Resolve(template, tokens);
+
+        resolved.Should().Be("subtitles/Movie.2024.eng.sdh.vtt");
+    }
 }

@@ -1,3 +1,4 @@
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Subtitles;
 
 namespace NoMercy.Tests.Encoder.Subtitles;
@@ -96,5 +97,81 @@ public class SubtitleClassifierTests
             SubtitleClassifier.IsBitmapBased(t).Should().BeFalse();
         foreach (string b in bitmapCodecs)
             SubtitleClassifier.IsTextBased(b).Should().BeFalse();
+    }
+
+    // ── ResolveVariant ──────────────────────────────────────────────────────
+
+    private static SubtitleStreamInfo Stream(
+        string? title = null,
+        bool isForced = false,
+        bool isDefault = false
+    ) =>
+        new(
+            Index: 0,
+            Codec: "srt",
+            Language: "eng",
+            IsDefault: isDefault,
+            IsForced: isForced,
+            Title: title
+        );
+
+    [Theory]
+    [InlineData("Signs & Songs")]
+    [InlineData("s&s")]
+    [InlineData("English [Signs]")]
+    [InlineData("English (Songs)")]
+    public void ResolveVariant_TitleMentionsSignsOrSongs_ReturnsSign(string title)
+    {
+        SubtitleClassifier.ResolveVariant(Stream(title: title)).Should().Be("sign");
+    }
+
+    [Theory]
+    [InlineData("SDH")]
+    [InlineData("English SDH")]
+    [InlineData("English (Hearing Impaired)")]
+    public void ResolveVariant_TitleMentionsSdhOrHearing_ReturnsSdh(string title)
+    {
+        SubtitleClassifier.ResolveVariant(Stream(title: title)).Should().Be("sdh");
+    }
+
+    [Fact]
+    public void ResolveVariant_ForcedFlag_WithoutTitle_ReturnsSign()
+    {
+        // Forced subs are typically signs / foreign-language passages.
+        SubtitleClassifier.ResolveVariant(Stream(isForced: true)).Should().Be("sign");
+    }
+
+    [Fact]
+    public void ResolveVariant_DefaultFlag_WithoutTitleOrForced_ReturnsFull()
+    {
+        SubtitleClassifier.ResolveVariant(Stream(isDefault: true)).Should().Be("full");
+    }
+
+    [Fact]
+    public void ResolveVariant_NoFlags_ReturnsAlt()
+    {
+        // Secondary tracks land in alt — the player UI groups them under
+        // a non-default listing.
+        SubtitleClassifier.ResolveVariant(Stream()).Should().Be("alt");
+    }
+
+    [Fact]
+    public void ResolveVariant_TitleTakesPrecedenceOverForcedFlag()
+    {
+        // Title beats disposition flags so a "Sign & Song" track flagged
+        // as default doesn't land in "full".
+        SubtitleClassifier
+            .ResolveVariant(Stream(title: "SDH", isForced: true, isDefault: true))
+            .Should()
+            .Be("sdh");
+    }
+
+    [Fact]
+    public void ResolveVariant_TitleCaseInsensitive()
+    {
+        SubtitleClassifier.ResolveVariant(Stream(title: "SDH")).Should().Be("sdh");
+        SubtitleClassifier.ResolveVariant(Stream(title: "sdh")).Should().Be("sdh");
+        SubtitleClassifier.ResolveVariant(Stream(title: "Sign")).Should().Be("sign");
+        SubtitleClassifier.ResolveVariant(Stream(title: "SIGNS")).Should().Be("sign");
     }
 }
