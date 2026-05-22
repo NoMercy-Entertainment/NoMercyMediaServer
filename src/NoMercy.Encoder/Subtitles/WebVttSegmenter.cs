@@ -215,7 +215,7 @@ public sealed class WebVttSegmenter
         foreach (ParsedCue cue in cues)
         {
             sb.AppendLine();
-            if (cue.Id != null)
+            if (cue.Id is not null)
                 sb.AppendLine(cue.Id);
             sb.AppendLine(cue.TimestampLine);
             sb.AppendLine(cue.Payload);
