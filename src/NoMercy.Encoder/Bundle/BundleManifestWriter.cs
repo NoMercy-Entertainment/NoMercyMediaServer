@@ -51,8 +51,11 @@ public class BundleManifestWriter(IStorage storage) : IBundleManifestWriter
 
         HashSet<string> manifestSet = new(manifest.Files, StringComparer.OrdinalIgnoreCase);
 
-        List<string> extra = [.. diskRel.Except(manifestSet)];
-        List<string> missing = [.. manifestSet.Except(diskRel)];
+        // Pass the comparer explicitly — Enumerable.Except ignores the source
+        // HashSet's custom comparer and would do an ordinal-case-sensitive
+        // diff, mass-flagging mixed-case filenames as extra+missing.
+        List<string> extra = [.. diskRel.Except(manifestSet, StringComparer.OrdinalIgnoreCase)];
+        List<string> missing = [.. manifestSet.Except(diskRel, StringComparer.OrdinalIgnoreCase)];
 
         return Task.FromResult(new ReconcileReport(extra, missing));
     }
