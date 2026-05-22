@@ -113,4 +113,98 @@ public class EncoderOptionsTests
         EncoderOptions options = new();
         options.AutoCalibrate.Should().BeTrue();
     }
+
+    // ── Distributed encoding ────────────────────────────────────────────────
+
+    [Fact]
+    public void IsDistributedEncodingEnabled_NoSigningKey_False()
+    {
+        // No signing key configured → distribution stays OFF. The API layer
+        // uses this flag to gate worker-registration endpoints.
+        EncoderOptions options = new();
+
+        options.IsDistributedEncodingEnabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsDistributedEncodingEnabled_WhitespaceSigningKey_False()
+    {
+        // Empty / whitespace key is NOT a valid HMAC key — treat as unset.
+        EncoderOptions options = new() { DistributedEncodingSigningKey = "   " };
+
+        options.IsDistributedEncodingEnabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsDistributedEncodingEnabled_WithSigningKey_True()
+    {
+        EncoderOptions options = new() { DistributedEncodingSigningKey = "shared-hmac-secret" };
+
+        options.IsDistributedEncodingEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsCoordinatorMode_NoKey_False()
+    {
+        EncoderOptions options = new();
+
+        options.IsCoordinatorMode.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsCoordinatorMode_KeyWithoutCoordinatorUrl_True()
+    {
+        // Signing key set + no upstream coordinator URL ⇒ this server IS the
+        // coordinator. The JsonRemoteWorkerRegistry only loads in this mode.
+        EncoderOptions options = new() { DistributedEncodingSigningKey = "k" };
+
+        options.IsCoordinatorMode.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsCoordinatorMode_KeyAndCoordinatorUrlBothSet_False()
+    {
+        // Worker mode: this server points at an upstream coordinator. It is
+        // NOT itself a coordinator, even though it has the signing key.
+        EncoderOptions options = new()
+        {
+            DistributedEncodingSigningKey = "k",
+            CoordinatorUrl = "https://upstream.example.com",
+        };
+
+        options.IsCoordinatorMode.Should().BeFalse();
+    }
+
+    // ── Subscriber toggles default ON ───────────────────────────────────────
+
+    [Fact]
+    public void AutoEncodeSubscriber_DefaultsOn()
+    {
+        new EncoderOptions().EnableAutoEncodeSubscriber.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IntroDetectSubscriber_DefaultsOn()
+    {
+        new EncoderOptions().EnableIntroDetectSubscriber.Should().BeTrue();
+    }
+
+    [Fact]
+    public void OcrPostEncodeSubscriber_DefaultsOn()
+    {
+        new EncoderOptions().EnableOcrPostEncodeSubscriber.Should().BeTrue();
+    }
+
+    [Fact]
+    public void WorkerRegistryPath_DefaultsUnderLocalAppData()
+    {
+        // Fresh install → workers.json lands in LocalApplicationData under
+        // NoMercy/distribution. Anything outside the user's profile would
+        // leak persistence across machine reinstalls.
+        EncoderOptions options = new();
+
+        options.WorkerRegistryPath.Should().Contain("NoMercy");
+        options.WorkerRegistryPath.Should().Contain("distribution");
+        options.WorkerRegistryPath.Should().EndWith("workers.json");
+    }
 }
