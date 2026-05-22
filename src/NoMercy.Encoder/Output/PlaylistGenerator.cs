@@ -319,7 +319,9 @@ public class PlaylistGenerator : IPlaylistGenerator
                 ? segFile
                 : $"{segmentUriPrefix}/{segFile}";
 
-            sb.AppendLine($"#EXTINF:{actualDuration:F3},");
+            sb.AppendLine(
+                $"#EXTINF:{actualDuration.ToString("F3", CultureInfo.InvariantCulture)},"
+            );
             sb.AppendLine(uri);
         }
 
