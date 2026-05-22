@@ -1,3 +1,5 @@
+using NoMercy.Encoder.Subtitles;
+
 namespace NoMercy.Encoder.Analysis;
 
 public record SubtitleStreamInfo(
@@ -9,16 +11,9 @@ public record SubtitleStreamInfo(
     string? Title = null
 )
 {
-    private static readonly HashSet<string> TextCodecs =
-    [
-        "srt",
-        "subrip",
-        "ass",
-        "ssa",
-        "webvtt",
-        "mov_text",
-        "text",
-    ];
-
-    public bool IsTextBased => TextCodecs.Contains(Codec.ToLowerInvariant());
+    // Delegates to SubtitleClassifier so the text/bitmap classification has
+    // a single source of truth. Previously the TextCodecs set was duplicated
+    // here and in SubtitleClassifier, which is exactly the kind of split-table
+    // bug the consolidation guards against.
+    public bool IsTextBased => SubtitleClassifier.IsTextBased(Codec);
 }
