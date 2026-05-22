@@ -24,6 +24,15 @@ public class EncoderProviderTests
         field?.SetValue(null, null);
     }
 
+    private static void ResetServiceResolver()
+    {
+        FieldInfo? field = typeof(EncoderProvider).GetField(
+            "_serviceResolver",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
+        field?.SetValue(null, null);
+    }
+
     [Fact]
     public void Resolve_WhenNotConfigured_ThrowsInvalidOperation()
     {
@@ -63,5 +72,66 @@ public class EncoderProviderTests
         Action act = () => EncoderProvider.Configure(null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("factory");
+    }
+
+    // ── Service resolver surface ────────────────────────────────────────────
+
+    [Fact]
+    public void ResolveService_BeforeConfigure_ReturnsNull()
+    {
+        // Before any ConfigureServiceResolver call (server didn't wire DI),
+        // ResolveService MUST return null instead of throwing — consumers
+        // are expected to handle "service not available" gracefully.
+        ResetServiceResolver();
+
+        IEncoder? resolved = EncoderProvider.ResolveService<IEncoder>();
+
+        resolved.Should().BeNull();
+    }
+
+    [Fact]
+    public void ResolveService_ResolverReturnsInstance_ReturnsTypedInstance()
+    {
+        Mock<IEncoder> encoder = new();
+        EncoderProvider.ConfigureServiceResolver(type =>
+            type == typeof(IEncoder) ? encoder.Object : null
+        );
+
+        IEncoder? resolved = EncoderProvider.ResolveService<IEncoder>();
+
+        resolved.Should().BeSameAs(encoder.Object);
+    }
+
+    [Fact]
+    public void ResolveService_ResolverReturnsNull_ReturnsNull()
+    {
+        // DI container is wired but the asked-for service isn't registered.
+        // Must return null (no throw, no exception type leak).
+        EncoderProvider.ConfigureServiceResolver(_ => null);
+
+        IEncoder? resolved = EncoderProvider.ResolveService<IEncoder>();
+
+        resolved.Should().BeNull();
+    }
+
+    [Fact]
+    public void ResolveService_ResolverReturnsWrongType_ReturnsNull()
+    {
+        // Defensive: if the underlying resolver returns the wrong runtime
+        // type (e.g. a misconfigured fake), the `as T` cast yields null
+        // rather than throwing InvalidCastException at the call site.
+        EncoderProvider.ConfigureServiceResolver(_ => "not an IEncoder");
+
+        IEncoder? resolved = EncoderProvider.ResolveService<IEncoder>();
+
+        resolved.Should().BeNull();
+    }
+
+    [Fact]
+    public void ConfigureServiceResolver_WithNull_ThrowsArgumentNull()
+    {
+        Action act = () => EncoderProvider.ConfigureServiceResolver(null!);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("resolver");
     }
 }
