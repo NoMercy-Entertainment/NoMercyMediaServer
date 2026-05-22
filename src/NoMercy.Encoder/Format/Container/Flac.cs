@@ -15,6 +15,10 @@ public class Flac : BaseContainer
 
     public override CodecDto[] AvailableCodecs => [AudioCodecs.Flac];
 
+    public override bool SupportsSpriteStream => false;
+
+    public override bool SupportsFontsExtraction => false;
+
     public override Flac ApplyFlags()
     {
         base.ApplyFlags();

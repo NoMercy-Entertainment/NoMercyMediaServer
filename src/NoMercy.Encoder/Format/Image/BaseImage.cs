@@ -1,4 +1,3 @@
-using System.Text;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem;
@@ -161,95 +160,32 @@ public class BaseImage : Classes
 
     public async Task BuildSprite()
     {
-        string spriteFilename = Filename.Split("/").First() + ".webp";
-        string spriteFile = Path.Combine(BasePath, spriteFilename);
-        string timeFile = Path.Combine(BasePath, Filename.Split("/").First() + ".vtt");
-
-        string thumbnailsFolder = Path.Combine(BasePath, Filename.Split("/").First());
+        string baseName = Filename.Split("/").First();
+        string spriteFile = Path.Combine(BasePath, baseName + ".webp");
+        string thumbnailsFolder = Path.Combine(BasePath, baseName);
 
         if (File.Exists(spriteFile) || !Directory.Exists(thumbnailsFolder))
             return;
 
         string[] imageFiles = Directory.GetFiles(thumbnailsFolder).OrderBy(f => f).ToArray();
-
         if (imageFiles.Length == 0)
             return;
 
-        (int thumbWidth, int thumbHeight) = GetImageDimensions(imageFiles.First());
+        // The spritevtt muxer in nomercy-ffmpeg tiles the input frames into a single sprite sheet
+        // and writes a sibling .vtt with #xywh= cues in one invocation. Input framerate is set to
+        // 1/FrameRate so the VTT cues land at the original sampling interval rather than playback
+        // speed of the JPG sequence.
+        string inputPattern = Path.Combine(thumbnailsFolder, baseName + "-%04d.jpg");
+        string spritevttCommand =
+            $"-framerate 1/{FrameRate} -i \"{inputPattern}\" -f spritevtt -y \"{spriteFile}\"";
 
-        int gridWidth = (int)Math.Ceiling(Math.Sqrt(imageFiles.Length));
-        int gridHeight = (int)Math.Ceiling((double)imageFiles.Length / gridWidth);
-
-        string montageCommand =
-            $"-i \"{Path.Combine(thumbnailsFolder, Filename.Split("/").First() + "-%04d.jpg")}\" -filter_complex tile=\"{gridWidth}x{gridHeight}\" -y \"{spriteFile}\"";
-
-        await FfMpeg.ExecStdErrOut(montageCommand, BasePath);
-
-        List<string> times = CreateTimeInterval(imageFiles.Length * FrameRate + 1, FrameRate);
-
-        int dstX = 0;
-        int dstY = 0;
-
-        int jpg = 1;
-        int line = 1;
-
-        StringBuilder thumbContent = new();
-        thumbContent.AppendLine("WEBVTT");
-        thumbContent.AppendLine("");
-
-        foreach (string time in times.Take(times.Count - 1))
-        {
-            int index = times.IndexOf(time);
-            thumbContent.AppendLine(jpg.ToString());
-            thumbContent.AppendLine($"{time} --> {times[index + 1]}");
-            thumbContent.AppendLine(
-                $"{spriteFilename}#xywh={dstX},{dstY},{thumbWidth},{thumbHeight}"
-            );
-            thumbContent.AppendLine("");
-
-            if (line > gridHeight)
-                continue;
-
-            if (jpg % gridWidth == 0)
-            {
-                dstX = 0;
-                dstY += thumbHeight;
-            }
-            else
-            {
-                dstX += thumbWidth;
-            }
-
-            jpg++;
-        }
-
-        await File.WriteAllTextAsync(timeFile, thumbContent.ToString());
+        await FfMpeg.ExecStdErrOut(spritevttCommand, BasePath);
 
         if (Directory.Exists(thumbnailsFolder))
         {
             Logger.Encoder($"Deleting folder {thumbnailsFolder}");
             Directory.Delete(thumbnailsFolder, true);
         }
-    }
-
-    private List<string> CreateTimeInterval(double duration, int interval)
-    {
-        DateTime d = new DateTime().Date;
-        List<string> timeArr = new();
-
-        for (int i = 0; i <= duration / interval; i++)
-        {
-            string hours = d.Hour.ToString("D2");
-            string minute = d.Minute.ToString("D2");
-            string second = d.Second.ToString("D2");
-            string millisecond = d.Millisecond.ToString("D3");
-
-            timeArr.Add($"{hours}:{minute}:{second}.{millisecond}");
-
-            d = d.AddSeconds(interval);
-        }
-
-        return timeArr;
     }
 
     public BaseImage Build()

@@ -49,6 +49,8 @@ public class Hls : BaseContainer
     public override CodecDto[] AvailableSubtitleCodecs =>
         [SubtitleCodecs.Webvtt, SubtitleCodecs.Srt, SubtitleCodecs.Ass, SubtitleCodecs.Copy];
 
+    public override bool SupportsMasterPlaylist => true;
+
     public Hls SetHlsTime(int value)
     {
         HlsTime = value;

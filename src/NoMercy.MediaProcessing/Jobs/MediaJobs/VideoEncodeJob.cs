@@ -95,8 +95,15 @@ public class VideoEncodeJob : AbstractEncoderJob
                     "Preparing to encode"
                 );
 
-                BaseImage sprite = new Sprite().SetScale(320).SetFilename("thumbs_:framesize:");
-                container.AddStream(sprite);
+                // Audio-only containers (Mp3, Flac, M4a, Ogg) have no video frames to sample.
+                // Adding a sprite stream to them produces either a failed ffmpeg invocation or an
+                // empty / garbage thumbnail sheet, so skip it.
+                BaseImage? sprite = null;
+                if (container.SupportsSpriteStream)
+                {
+                    sprite = new Sprite().SetScale(320).SetFilename("thumbs_:framesize:");
+                    container.AddStream(sprite);
+                }
 
                 VideoAudioFile ffmpeg = await new FfMpeg().OpenAsync(InputFile);
 
@@ -146,22 +153,25 @@ public class VideoEncodeJob : AbstractEncoderJob
                 // Post-encoding steps: non-critical tasks that must not prevent
                 // the movie from being added to the library if they fail.
 
-                try
+                if (sprite is not null)
                 {
-                    await PublishStageAsync(
-                        fileMetadata,
-                        progressMeta,
-                        "running",
-                        "Building sprite images"
-                    );
-                    await sprite.BuildSprite();
-                }
-                catch (Exception spriteEx)
-                {
-                    Logger.Encoder(
-                        $"Sprite generation failed (non-fatal): {spriteEx.Message}",
-                        LogEventLevel.Warning
-                    );
+                    try
+                    {
+                        await PublishStageAsync(
+                            fileMetadata,
+                            progressMeta,
+                            "running",
+                            "Building sprite images"
+                        );
+                        await sprite.BuildSprite();
+                    }
+                    catch (Exception spriteEx)
+                    {
+                        Logger.Encoder(
+                            $"Sprite generation failed (non-fatal): {spriteEx.Message}",
+                            LogEventLevel.Warning
+                        );
+                    }
                 }
 
                 await PublishStageAsync(

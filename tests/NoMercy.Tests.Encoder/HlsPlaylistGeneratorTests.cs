@@ -376,4 +376,64 @@ public class HlsPlaylistGeneratorTests : IDisposable
     {
         Assert.Equal(expected, HlsPlaylistGenerator.MapAudioCodec(codecName));
     }
+
+    [Theory]
+    [InlineData("smpte2084", true)] // HDR10 (PQ)
+    [InlineData("arib-std-b67", true)] // HLG
+    [InlineData("SMPTE2084", true)] // case-insensitive
+    [InlineData("bt2020-10", true)]
+    [InlineData("bt2020-12", true)]
+    [InlineData("bt709", false)] // standard SDR
+    [InlineData("smpte170m", false)] // SD SDR
+    [InlineData("gamma22", false)]
+    [InlineData("", false)] // unknown → fall back to caller's heuristic
+    [InlineData("unknown-transfer", false)]
+    public void IsHdrTransfer_RecognisesPqAndHlg(string colorTransfer, bool expected)
+    {
+        Assert.Equal(expected, HlsPlaylistGenerator.IsHdrTransfer(colorTransfer));
+    }
+
+    [Theory]
+    [InlineData("bt709", true)]
+    [InlineData("smpte170m", true)]
+    [InlineData("gamma22", true)]
+    [InlineData("iec61966-2-1", true)]
+    [InlineData("smpte2084", false)] // HDR
+    [InlineData("arib-std-b67", false)] // HLG
+    [InlineData("", false)] // unknown → fall back to caller's heuristic
+    [InlineData("unknown-transfer", false)]
+    public void IsSdrTransfer_RecognisesKnownSdrTransfers(string colorTransfer, bool expected)
+    {
+        Assert.Equal(expected, HlsPlaylistGenerator.IsSdrTransfer(colorTransfer));
+    }
+
+    [Fact]
+    public void IsHdrTransfer_AndIsSdrTransfer_AreMutuallyExclusive()
+    {
+        string[] hdrSamples = ["smpte2084", "arib-std-b67", "bt2020-10", "bt2020-12"];
+        string[] sdrSamples =
+        [
+            "bt709",
+            "smpte170m",
+            "bt470m",
+            "bt470bg",
+            "gamma22",
+            "gamma28",
+            "linear",
+            "iec61966-2-1",
+            "iec61966-2-4",
+        ];
+
+        foreach (string hdr in hdrSamples)
+        {
+            Assert.True(HlsPlaylistGenerator.IsHdrTransfer(hdr));
+            Assert.False(HlsPlaylistGenerator.IsSdrTransfer(hdr));
+        }
+
+        foreach (string sdr in sdrSamples)
+        {
+            Assert.True(HlsPlaylistGenerator.IsSdrTransfer(sdr));
+            Assert.False(HlsPlaylistGenerator.IsHdrTransfer(sdr));
+        }
+    }
 }

@@ -59,6 +59,18 @@ public class BaseContainer : Classes
                 Type = "audio",
                 IsDefault = true,
             },
+            new()
+            {
+                Name = AudioContainers.M4A,
+                Type = "audio",
+                IsDefault = false,
+            },
+            new()
+            {
+                Name = AudioContainers.Ogg,
+                Type = "audio",
+                IsDefault = false,
+            },
         ];
 
     public static string GetName(string container)
@@ -72,6 +84,8 @@ public class BaseContainer : Classes
             "flv" => "Flv",
             "flac" => "Flac",
             "mp3" => "Mp3",
+            "m4a" => "M4a",
+            "ogg" => "Ogg",
             _ => throw new ArgumentOutOfRangeException(nameof(container), container, null),
         };
     }
@@ -204,21 +218,48 @@ public class BaseContainer : Classes
 
     public Task BuildMasterPlaylist()
     {
+        if (!SupportsMasterPlaylist)
+            return Task.CompletedTask;
         return HlsPlaylistGenerator.Build(BasePath, FileName);
     }
 
+    /// <summary>
+    ///     True for adaptive-streaming containers that require a master playlist on top of the
+    ///     per-variant playlists (HLS, future DASH). Single-file containers (Mp4, Mkv, Mp3, Flac,
+    ///     M4a, Ogg, WebM) leave this false so the encoder doesn't pollute their output directory
+    ///     with an empty <c>master.m3u8</c>.
+    /// </summary>
+    public virtual bool SupportsMasterPlaylist => false;
+
+    /// <summary>
+    ///     True for containers that can carry attached fonts (MKV) or stream subtitles that
+    ///     reference embedded font glyphs (HLS's ASS sidecars). Audio-only containers never need
+    ///     font extraction.
+    /// </summary>
+    public virtual bool SupportsFontsExtraction => true;
+
     public static BaseContainer Create(string? profileContainer)
     {
-        return profileContainer switch
+        return (profileContainer ?? string.Empty).ToLowerInvariant() switch
         {
             "mkv" => new Mkv(),
-            "Mp4" => new Mp4(),
+            "mp4" => new Mp4(),
             "mp3" => new Mp3(),
             "flac" => new Flac(),
-            "m3u8" => new Hls().SetHlsFlags("independent_segments"),
+            "m4a" => new M4a(),
+            "ogg" => new Ogg(),
+            "webm" => new WebM(),
+            "m3u8" or "hls" => new Hls().SetHlsFlags("independent_segments"),
             _ => throw new($"Container {profileContainer} not supported"),
         };
     }
+
+    /// <summary>
+    ///     Video-bearing containers can carry the thumbnail sprite stream. Audio-only containers
+    ///     (Mp3, Flac, M4a, Ogg) have no frames to sample — adding a sprite stream to them produces
+    ///     either a failed ffmpeg invocation or an empty / garbage sprite.
+    /// </summary>
+    public virtual bool SupportsSpriteStream => true;
 
     public Task ExtractChapters()
     {
@@ -227,6 +268,8 @@ public class BaseContainer : Classes
 
     public Task ExtractFonts()
     {
+        if (!SupportsFontsExtraction)
+            return Task.CompletedTask;
         return Fonts.Extract(InputFile, BasePath);
     }
 

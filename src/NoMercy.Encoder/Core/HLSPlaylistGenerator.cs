@@ -171,6 +171,8 @@ public static class HlsPlaylistGenerator
                     }
                 }
 
+                // Folder-name heuristic — kept as the fallback. The stream-metadata read
+                // a few lines below takes priority once the probe lands.
                 if (detectedHdr)
                 {
                     isSdr = false;
@@ -186,6 +188,8 @@ public static class HlsPlaylistGenerator
                 string profile = "";
                 string levelStr = "";
                 string frameRateStr = "";
+                string colorTransfer = "";
+                string colorSpace = "";
                 double duration = 0;
 
                 await FfProbeThrottle.WaitAsync();
@@ -215,7 +219,7 @@ public static class HlsPlaylistGenerator
                         string probeResult = (
                             await Shell.ExecStdOutAsync(
                                 AppFiles.FfProbePath,
-                                $"-v error -select_streams v:0 -show_entries stream=codec_name,profile,level,r_frame_rate -of default=noprint_wrappers=1:nokey=1 \"{probeTarget}\""
+                                $"-v error -select_streams v:0 -show_entries stream=codec_name,profile,level,r_frame_rate,color_transfer,color_space -of default=noprint_wrappers=1:nokey=1 \"{probeTarget}\""
                             )
                         ).Trim();
 
@@ -233,6 +237,10 @@ public static class HlsPlaylistGenerator
                                 levelStr = parts[2].Trim();
                             if (parts.Length > 3)
                                 frameRateStr = parts[3].Trim();
+                            if (parts.Length > 4)
+                                colorTransfer = parts[4].Trim();
+                            if (parts.Length > 5)
+                                colorSpace = parts[5].Trim();
                         }
                     }
                     catch (Exception ex)
@@ -249,6 +257,15 @@ public static class HlsPlaylistGenerator
 
                 int level = int.TryParse(levelStr, out int l) ? l : 40;
                 string vCodecProfile = MapVideoCodec(codecName, profile, level);
+
+                // Authoritative HDR detection: read transfer characteristics from the bitstream.
+                // bt2020nc + smpte2084 = HDR10 (PQ). bt2020nc + arib-std-b67 = HLG. Anything else
+                // (bt709, smpte170m, gamma22, empty/unknown) = SDR. Fall back to the folder-name
+                // heuristic only when the probe didn't return a useful transfer value.
+                if (IsHdrTransfer(colorTransfer))
+                    isSdr = false;
+                else if (IsSdrTransfer(colorTransfer))
+                    isSdr = true;
 
                 // Parse frame rate (e.g., "24000/1001" or "30/1")
                 double frameRate = ParseFrameRate(frameRateStr);
@@ -388,6 +405,53 @@ public static class HlsPlaylistGenerator
         if (double.TryParse(x, NumberStyles.Any, CultureInfo.InvariantCulture, out double d))
             return d;
         return 0;
+    }
+
+    /// <summary>
+    ///     <c>true</c> when the ffprobe <c>color_transfer</c> value identifies an HDR transfer
+    ///     function — SMPTE 2084 (HDR10 / PQ) or ARIB STD-B67 (HLG). Empty or unrecognized values
+    ///     return <c>false</c> so callers fall back to their own heuristic.
+    /// </summary>
+    public static bool IsHdrTransfer(string colorTransfer)
+    {
+        string normalized = (colorTransfer ?? string.Empty).ToLowerInvariant();
+        return normalized switch
+        {
+            "smpte2084" => true,
+            "arib-std-b67" => true,
+            "bt2020-10" => true,
+            "bt2020-12" => true,
+            _ => false,
+        };
+    }
+
+    /// <summary>
+    ///     <c>true</c> when the ffprobe <c>color_transfer</c> value names a known SDR transfer
+    ///     (bt709, smpte170m, gamma22, gamma28, bt470m, bt470bg, linear, log, iec61966-2-1).
+    ///     Used together with <see cref="IsHdrTransfer"/> to decide HDR/SDR without folder-name
+    ///     heuristics.
+    /// </summary>
+    public static bool IsSdrTransfer(string colorTransfer)
+    {
+        string normalized = (colorTransfer ?? string.Empty).ToLowerInvariant();
+        return normalized switch
+        {
+            "bt709" => true,
+            "smpte170m" => true,
+            "bt470m" => true,
+            "bt470bg" => true,
+            "gamma22" => true,
+            "gamma28" => true,
+            "linear" => true,
+            "log" => true,
+            "log100" => true,
+            "log316" => true,
+            "iec61966-2-1" => true,
+            "iec61966-2-4" => true,
+            "bt1361e" => true,
+            "smpte240m" => true,
+            _ => false,
+        };
     }
 
     /// <summary>

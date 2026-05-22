@@ -14,6 +14,10 @@ public class Mp3 : BaseContainer
 
     public override CodecDto[] AvailableCodecs => [AudioCodecs.Mp3];
 
+    public override bool SupportsSpriteStream => false;
+
+    public override bool SupportsFontsExtraction => false;
+
     public override Mp3 ApplyFlags()
     {
         base.ApplyFlags();

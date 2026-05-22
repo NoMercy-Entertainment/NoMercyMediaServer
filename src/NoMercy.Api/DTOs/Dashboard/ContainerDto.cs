@@ -8,7 +8,9 @@ using NoMercy.Encoder.Format.Video;
 using NoMercy.NmSystem.Extensions;
 using Ass = NoMercy.Encoder.Format.Container.Ass;
 using Flac = NoMercy.Encoder.Format.Container.Flac;
+using M4a = NoMercy.Encoder.Format.Container.M4a;
 using Mp3 = NoMercy.Encoder.Format.Container.Mp3;
+using Ogg = NoMercy.Encoder.Format.Container.Ogg;
 using Srt = NoMercy.Encoder.Format.Container.Srt;
 using Vtt = NoMercy.Encoder.Format.Container.Vtt;
 
@@ -51,6 +53,8 @@ public record ContainerDto
             { Name: "ass" } => new Ass(),
             { Name: "flac" } => new Flac(),
             { Name: "mp3" } => new Mp3(),
+            { Name: "m4a" } => new M4a(),
+            { Name: "ogg" } => new Ogg(),
             { Name: "vtt" } => new Vtt(),
             { Name: "srt" } => new Srt(),
             _ => throw new ArgumentOutOfRangeException(nameof(container.Name)),
