@@ -155,4 +155,97 @@ public class WebVttSegmenterTests
         segments[1].StartTime.Should().Be(TimeSpan.FromSeconds(6));
         segments[2].StartTime.Should().Be(TimeSpan.FromSeconds(12));
     }
+
+    // ── argument validation ────────────────────────────────────────────────
+
+    [Fact]
+    public void SliceContent_ZeroSegmentDuration_Throws()
+    {
+        // Zero would divide by zero downstream — guard the entry point.
+        Action act = () => _sut.SliceContent(Vtt(), TimeSpan.Zero);
+
+        act.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("segmentDuration");
+    }
+
+    [Fact]
+    public void SliceContent_NegativeSegmentDuration_Throws()
+    {
+        Action act = () => _sut.SliceContent(Vtt(), TimeSpan.FromSeconds(-1));
+
+        act.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("segmentDuration");
+    }
+
+    // ── multiple cues in one segment ───────────────────────────────────────
+
+    [Fact]
+    public void MultipleCues_InSameSegment_BothPresent()
+    {
+        // Two cues fully inside segment 0 — both must land together.
+        string vttContent = Vtt(
+            Cue("00:00:01.000", "00:00:02.000", "First"),
+            Cue("00:00:03.000", "00:00:04.000", "Second")
+        );
+
+        IReadOnlyList<WebVttSegment> segments = _sut.SliceContent(
+            vttContent,
+            TimeSpan.FromSeconds(6)
+        );
+
+        segments.Should().HaveCount(1);
+        segments[0].Content.Should().Contain("First");
+        segments[0].Content.Should().Contain("Second");
+    }
+
+    // ── hour-format timestamps ─────────────────────────────────────────────
+
+    [Fact]
+    public void HourFormatTimestamps_ParseCorrectly()
+    {
+        // VTT supports both HH:MM:SS.mmm and MM:SS.mmm. The regex accepts
+        // optional hours — a long movie cue at 1h:00:01 must parse.
+        string vttContent = Vtt(Cue("01:00:01.000", "01:00:03.000", "Late"));
+
+        IReadOnlyList<WebVttSegment> segments = _sut.SliceContent(
+            vttContent,
+            TimeSpan.FromSeconds(6)
+        );
+
+        // 1h = 3600s → segment 600 covers [3600, 3606); cue at 3601s lands there.
+        segments.Should().HaveCountGreaterThan(599);
+        segments[600].Content.Should().Contain("Late");
+    }
+
+    // ── cue exactly on boundary ────────────────────────────────────────────
+
+    [Fact]
+    public void CueEndingExactlyOnBoundary_OnlyInPriorSegment()
+    {
+        // Cue end == segment end → overlap predicate is `c.End > segStart`,
+        // so cue does NOT carry into the next segment.
+        string vttContent = Vtt(Cue("00:00:04.000", "00:00:06.000", "BoundaryEnd"));
+
+        IReadOnlyList<WebVttSegment> segments = _sut.SliceContent(
+            vttContent,
+            TimeSpan.FromSeconds(6)
+        );
+
+        segments.Should().HaveCount(1, "cue ends exactly at the 6 s boundary");
+        segments[0].Content.Should().Contain("BoundaryEnd");
+    }
+
+    [Fact]
+    public void CueStartingExactlyOnBoundary_OnlyInNextSegment()
+    {
+        // Cue starts at 6s exactly → only in segment 1, not segment 0.
+        string vttContent = Vtt(Cue("00:00:06.000", "00:00:08.000", "BoundaryStart"));
+
+        IReadOnlyList<WebVttSegment> segments = _sut.SliceContent(
+            vttContent,
+            TimeSpan.FromSeconds(6)
+        );
+
+        segments.Should().HaveCount(2);
+        segments[0].Content.Should().NotContain("BoundaryStart");
+        segments[1].Content.Should().Contain("BoundaryStart");
+    }
 }
