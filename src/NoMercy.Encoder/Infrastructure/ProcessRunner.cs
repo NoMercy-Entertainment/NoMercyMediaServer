@@ -199,8 +199,11 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
                 using CancellationTokenSource finalizeCts = new(TimeSpan.FromSeconds(5));
                 await process.WaitForExitAsync(finalizeCts.Token);
             }
-            catch
-            { /* best effort */
+            catch (Exception)
+            {
+                // Best effort — process is already being killed; if the
+                // finalize wait fails or times out, exit code is reported
+                // as the kill-signal value either way.
             }
         }
         catch (OperationCanceledException)
@@ -294,7 +297,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             );
             return;
         }
-        catch
+        catch (Exception)
         {
             // Grace period expired or wait failed — fall through to force-kill.
         }

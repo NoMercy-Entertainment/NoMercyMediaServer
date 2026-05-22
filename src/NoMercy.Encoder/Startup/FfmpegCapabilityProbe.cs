@@ -153,7 +153,7 @@ public sealed class FfmpegCapabilityProbe(
         {
             return storage.Exists(modelPath);
         }
-        catch
+        catch (Exception)
         {
             return false;
         }
@@ -170,7 +170,7 @@ public sealed class FfmpegCapabilityProbe(
         {
             return (storage.Exists(engPath), dir);
         }
-        catch
+        catch (Exception)
         {
             return (false, dir);
         }

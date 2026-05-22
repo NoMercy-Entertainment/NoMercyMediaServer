@@ -516,7 +516,7 @@ public class EncodingOrchestrator(
             stageWatch.Stop();
             progress?.OnStageCompleted(stageName, stageWatch.Elapsed);
         }
-        catch
+        catch (Exception)
         {
             stageWatch.Stop();
             throw;
@@ -620,7 +620,7 @@ public class EncodingOrchestrator(
         {
             return await stor.SizeAsync(inputPath, ct);
         }
-        catch
+        catch (Exception)
         {
             return 0;
         }

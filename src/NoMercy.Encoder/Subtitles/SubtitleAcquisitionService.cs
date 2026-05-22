@@ -278,7 +278,7 @@ public class SubtitleAcquisitionService(
             ulong hash = MovieHashHelper.ComputeMovieHash(fs, fileSize);
             return MovieHashHelper.FormatHash(hash);
         }
-        catch
+        catch (Exception)
         {
             return MovieHashHelper.FormatHash((ulong)fileSize);
         }

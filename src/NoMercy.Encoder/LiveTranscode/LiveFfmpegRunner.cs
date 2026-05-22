@@ -300,7 +300,7 @@ public class LiveFfmpegRunner(
             {
                 size = storage.Size(segmentFile);
             }
-            catch
+            catch (Exception)
             {
                 // Race with rename — size stays 0, pick up real value next time
             }

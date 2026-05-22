@@ -480,7 +480,7 @@ public abstract class TwoPassStrategyBase(
             {
                 stor.Delete(file);
             }
-            catch
+            catch (Exception)
             {
                 // Best-effort cleanup.
             }
