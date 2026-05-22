@@ -19,8 +19,15 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
     {
         // Until the host signals ApplicationStarted, the probe MUST NOT run.
         TestLifetime lifetime = new();
+        TaskCompletionSource probeCalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Mock<IFfmpegCapabilityProbe> probe = new();
-        probe.Setup(p => p.ProbeAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        probe
+            .Setup(p => p.ProbeAsync(It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                probeCalled.TrySetResult();
+                return Task.CompletedTask;
+            });
 
         FfmpegCapabilityProbeBackgroundService service = new(
             probe.Object,
@@ -30,7 +37,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
         );
 
         using CancellationTokenSource cts = new();
-        Task executeTask = StartExecuteAsync(service, cts.Token);
+        await StartExecuteAsync(service, cts.Token);
 
         // Allow the wait-for-start path to register the callback.
         await Task.Delay(50);
@@ -41,7 +48,10 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
         );
 
         lifetime.SignalStarted();
-        await executeTask.WaitAsync(TimeSpan.FromSeconds(2));
+        // Wait deterministically on the probe-call TCS — BackgroundService's
+        // StartAsync returns when ExecuteAsync yields (not when it completes),
+        // so awaiting StartAsync's task races against the post-start probe.
+        await probeCalled.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
         probe.Verify(p => p.ProbeAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
