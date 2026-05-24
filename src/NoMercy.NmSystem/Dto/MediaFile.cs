@@ -1,3 +1,5 @@
+using NoMercy.NmSystem.FFProbe;
+
 namespace NoMercy.NmSystem.Dto;
 
 public class MediaFile

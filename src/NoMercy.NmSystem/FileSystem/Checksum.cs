@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.FileSystem;
 
 public static class Checksum
 {

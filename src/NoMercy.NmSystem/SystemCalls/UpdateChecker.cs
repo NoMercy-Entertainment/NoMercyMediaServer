@@ -4,7 +4,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.SystemCalls;
 
 public static class UpdateChecker
 {

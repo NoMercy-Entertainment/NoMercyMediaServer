@@ -4,7 +4,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.SystemCalls;
 
 public class AppProcessManager
 {

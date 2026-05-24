@@ -4,7 +4,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using Serilog.Events;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.Logging;
 
 public static class LogReader
 {

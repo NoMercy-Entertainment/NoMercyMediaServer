@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using NoMercy.NmSystem.Dto;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.Dto;
 
 public class AnimeParser
 {

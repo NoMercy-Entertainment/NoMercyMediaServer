@@ -11,7 +11,7 @@ using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.FFProbe;
 
 public static class FfProbe
 {

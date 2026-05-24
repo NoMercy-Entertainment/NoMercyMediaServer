@@ -1,4 +1,4 @@
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.FFProbe;
 
 /// <summary>
 /// Global throttle for ffprobe process instances to prevent spawning too many

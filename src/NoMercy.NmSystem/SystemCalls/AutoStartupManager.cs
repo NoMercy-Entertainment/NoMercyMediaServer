@@ -4,7 +4,7 @@ using Microsoft.Win32;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.SystemCalls;
 
 public class AutoStartupManager
 {

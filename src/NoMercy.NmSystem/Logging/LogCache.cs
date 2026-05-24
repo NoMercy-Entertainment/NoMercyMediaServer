@@ -1,6 +1,6 @@
 using NoMercy.NmSystem.Dto;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.Logging;
 
 public static class LogCache
 {

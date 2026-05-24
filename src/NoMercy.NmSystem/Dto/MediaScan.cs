@@ -3,13 +3,14 @@ using System.Text.RegularExpressions;
 using MovieFileLibrary;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.FFProbe;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.Dto;
 
 public class MediaScan : IDisposable, IAsyncDisposable
 {

@@ -1,4 +1,4 @@
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.FFProbe;
 
 public class FfProbeData
 {

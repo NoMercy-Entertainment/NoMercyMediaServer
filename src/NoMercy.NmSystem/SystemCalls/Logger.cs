@@ -4,6 +4,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Lifecycle;
 using NoMercy.NmSystem.LogEnrichers;
+using NoMercy.NmSystem.Logging;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;

@@ -4,11 +4,11 @@ using Polly.Retry;
 using Polly.Timeout;
 using Polly.Wrap;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.Extensions;
 
 public class GenericHttpClient
 {
-    private readonly HttpClient _client;
+    private readonly System.Net.Http.HttpClient _client;
     private readonly AsyncPolicyWrap<HttpResponseMessage> _resiliencePolicy;
 
     public GenericHttpClient(string? baseUrl = null, int timeoutSeconds = 5, int retryCount = 3)
