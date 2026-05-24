@@ -10,7 +10,7 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Plugins.Abstractions;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Plugins;
 
 [ApiController]
 [Tags("Dashboard Server Plugins")]

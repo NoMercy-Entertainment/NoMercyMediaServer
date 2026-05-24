@@ -10,7 +10,7 @@ using NoMercy.Database;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
 [Tags("Media Recommendations")]

@@ -22,7 +22,7 @@ using NoMercy.OpticalMedia.Sources;
 using NoMercy.Storage;
 using DriveMonitor = NoMercy.MediaSources.OpticalMedia.DriveMonitor;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
 [Tags("Dashboard Optical")]

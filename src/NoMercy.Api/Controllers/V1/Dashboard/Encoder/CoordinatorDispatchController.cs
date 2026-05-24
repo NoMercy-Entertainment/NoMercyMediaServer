@@ -7,7 +7,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Helpers.Extensions;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
 /// <summary>
 /// Coordinator-side dispatch controller. Accepts an encode job from the

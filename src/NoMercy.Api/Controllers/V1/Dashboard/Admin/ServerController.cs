@@ -36,7 +36,7 @@ using HttpClient = System.Net.Http.HttpClient;
 using Image = NoMercy.Database.Models.Media.Image;
 using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
 [Tags("Dashboard Server Management")]

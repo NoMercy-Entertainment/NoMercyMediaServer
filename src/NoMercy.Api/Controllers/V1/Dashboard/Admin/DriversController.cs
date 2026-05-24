@@ -14,7 +14,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using Serilog.Events;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
 [Tags("Dashboard Drivers")]

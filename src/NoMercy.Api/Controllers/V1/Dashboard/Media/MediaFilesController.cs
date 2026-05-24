@@ -8,7 +8,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Helpers.Extensions;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 /// <summary>
 /// Cross-library video-file search for the dashboard. Used by every page that

@@ -10,7 +10,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
 [Tags("Dashboard Server Devices")]

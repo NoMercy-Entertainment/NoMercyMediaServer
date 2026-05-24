@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Helpers.Extensions;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
 [ApiController]
 [Tags("Dashboard Hardware Benchmark")]

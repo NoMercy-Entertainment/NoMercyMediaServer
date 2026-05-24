@@ -10,7 +10,7 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Helpers.Extensions;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 /// <summary>
 /// Manages the registry of remote encoder workers. Remote workers POST to

@@ -15,7 +15,7 @@ using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Storage;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
 [ApiController]
 [Tags("Dashboard Encoding Presets")]

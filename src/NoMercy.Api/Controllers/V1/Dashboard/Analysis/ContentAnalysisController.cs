@@ -13,7 +13,7 @@ using NoMercy.Encoder.Subtitles;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Storage;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Analysis;
 
 /// <summary>
 /// On-demand content-analysis probes. Useful when dialing in profiles

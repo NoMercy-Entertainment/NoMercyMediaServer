@@ -9,7 +9,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Storage;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
 [Tags("Dashboard Folders")]

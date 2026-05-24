@@ -9,7 +9,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Filesystem;
 
 [ApiController]
 [Tags("Dashboard Filesystem")]

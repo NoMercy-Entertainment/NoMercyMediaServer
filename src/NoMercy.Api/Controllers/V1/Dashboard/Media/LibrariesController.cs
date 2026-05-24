@@ -25,7 +25,7 @@ using NoMercy.Storage;
 using Serilog.Events;
 using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
 [Tags("Dashboard Libraries")]

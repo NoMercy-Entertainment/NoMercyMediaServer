@@ -13,7 +13,7 @@ using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
 [ApiController]
 [Tags("Dashboard Server Encoder Profiles")]

@@ -27,7 +27,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Queue.MediaServer;
 using NoMercyQueue;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
 [Tags("Dashboard Tasks")]

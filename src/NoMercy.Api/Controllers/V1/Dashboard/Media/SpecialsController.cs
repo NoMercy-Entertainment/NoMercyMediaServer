@@ -17,7 +17,7 @@ using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard;
+namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
 [Tags(tags: "Dashboard Specials")]
