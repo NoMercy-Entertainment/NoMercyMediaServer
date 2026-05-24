@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
+using NoMercy.Api.WebSockets;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;

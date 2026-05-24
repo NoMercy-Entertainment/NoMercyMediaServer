@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.SignalR;
-using NoMercy.Api.Controllers.Socket;
 using NoMercy.Data.Activity;
 using NoMercy.Database.Models.Users;
 

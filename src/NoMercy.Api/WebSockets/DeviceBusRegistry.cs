@@ -9,7 +9,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Networking.Devices;
 
-namespace NoMercy.Api.Controllers.Socket;
+namespace NoMercy.Api.WebSockets;
 
 public sealed class DeviceBusRegistry(
     IDbContextFactory<MediaContext> contextFactory,

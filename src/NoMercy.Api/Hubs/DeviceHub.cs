@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.Socket;
+using NoMercy.Api.WebSockets;
 using NoMercy.Database;
 using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Users;

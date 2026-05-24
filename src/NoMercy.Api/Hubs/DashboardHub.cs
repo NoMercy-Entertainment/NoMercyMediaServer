@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.WebSockets;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Helpers.Extensions;
@@ -8,7 +9,7 @@ using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
-namespace NoMercy.Api.Controllers.Socket;
+namespace NoMercy.Api.Hubs;
 
 public class DashboardHub : ConnectionHub
 {

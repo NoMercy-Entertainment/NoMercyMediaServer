@@ -2,7 +2,7 @@ using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.SystemCalls;
 
-namespace NoMercy.Api.Controllers.Socket;
+namespace NoMercy.Api.WebSockets;
 
 public static class LogBroadcaster
 {

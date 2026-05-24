@@ -13,7 +13,7 @@ using NoMercy.NmSystem.SystemCalls;
 using Sharpcaster.Models.ChromecastStatus;
 using Sharpcaster.Models.Media;
 
-namespace NoMercy.Api.Controllers.Socket;
+namespace NoMercy.Api.Hubs;
 
 public class CastHub : ConnectionHub
 {

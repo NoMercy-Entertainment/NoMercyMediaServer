@@ -13,7 +13,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
-namespace NoMercy.Api.Controllers.Socket;
+namespace NoMercy.Api.Hubs;
 
 public class RipperHub : ConnectionHub
 {

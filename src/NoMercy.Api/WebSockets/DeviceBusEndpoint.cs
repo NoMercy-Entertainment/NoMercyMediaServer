@@ -11,7 +11,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 
-namespace NoMercy.Api.Controllers.Socket;
+namespace NoMercy.Api.WebSockets;
 
 [ApiController]
 [Authorize]
