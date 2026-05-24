@@ -1,6 +1,6 @@
 using NoMercy.Encoder.Decomposition;
 
-namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
+namespace NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 
 /// <summary>
 /// Serialized into the <see cref="VideoEncodeJob"/> payload on every re-enqueue.

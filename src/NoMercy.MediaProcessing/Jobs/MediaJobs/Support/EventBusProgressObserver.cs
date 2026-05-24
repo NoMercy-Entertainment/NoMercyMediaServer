@@ -4,7 +4,7 @@ using NoMercy.Encoder.Progress;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 
-namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
+namespace NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 
 public class EventBusProgressObserver : IProgressObserver
 {

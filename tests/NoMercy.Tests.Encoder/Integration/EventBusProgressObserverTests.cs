@@ -2,7 +2,7 @@ using System.Reflection;
 using NoMercy.Encoder.Progress;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
-using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 
 namespace NoMercy.Tests.Encoder.Integration;
 

@@ -20,6 +20,7 @@ using NoMercy.Encoder.Subtitles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;

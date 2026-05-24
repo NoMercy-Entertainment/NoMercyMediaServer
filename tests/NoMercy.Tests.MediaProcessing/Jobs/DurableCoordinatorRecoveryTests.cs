@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
