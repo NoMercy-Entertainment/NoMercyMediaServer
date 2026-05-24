@@ -1,8 +1,7 @@
 using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.AcoustId.Client;
 using NoMercy.Providers.AcoustId.Models;
 
-namespace NoMercy.Providers.AcoustId;
+namespace NoMercy.Providers.AcoustId.Client;
 
 public static class FingerPrint
 {

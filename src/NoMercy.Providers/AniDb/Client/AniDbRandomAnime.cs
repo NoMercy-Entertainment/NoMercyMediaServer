@@ -4,7 +4,7 @@ using AniDB.ResponseItems;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.AniDb.Models;
 
-namespace NoMercy.Providers.AniDb.Clients;
+namespace NoMercy.Providers.AniDb.Client;
 
 public static class AniDbRandomAnime
 {
