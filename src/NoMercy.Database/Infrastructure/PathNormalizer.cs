@@ -1,4 +1,4 @@
-namespace NoMercy.Database.Internal;
+namespace NoMercy.Database.Infrastructure;
 
 internal static class PathNormalizer
 {

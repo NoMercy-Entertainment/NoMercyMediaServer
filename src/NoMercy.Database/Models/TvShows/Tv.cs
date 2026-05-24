@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.Database.Internal;
+using NoMercy.Database.Infrastructure;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Database.Models.TvShows;
