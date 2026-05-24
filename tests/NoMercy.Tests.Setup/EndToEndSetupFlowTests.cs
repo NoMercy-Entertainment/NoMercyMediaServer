@@ -7,7 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Boot;
+using NoMercy.Setup.Server;
+using NoMercy.Setup.Ui;
 using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;

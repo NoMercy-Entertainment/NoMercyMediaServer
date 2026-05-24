@@ -13,13 +13,16 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Boot;
 using NoMercy.Setup.Dto;
+using NoMercy.Setup.Ui;
 using NoMercyQueue.Workers;
 using QRCoder;
 using Serilog.Events;
 using SystemHttpClient = System.Net.Http.HttpClient;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Server;
 
 public class SetupServer
 {

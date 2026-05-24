@@ -3,7 +3,7 @@ using System.Web;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Ui;
 
 /// <summary>
 /// Displays a QR code for device auth in the terminal.

@@ -7,7 +7,7 @@ using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Auth;
 
 public static class OfflineJwksCache
 {

@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 using RegexMatch = System.Text.RegularExpressions.Match;
 
 namespace NoMercy.Tests.Providers.Setup;

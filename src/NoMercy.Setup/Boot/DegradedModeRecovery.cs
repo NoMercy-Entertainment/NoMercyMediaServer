@@ -2,9 +2,11 @@ using System.IdentityModel.Tokens.Jwt;
 using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Server;
 using Serilog.Events;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Boot;
 
 public class DeferredTasks
 {

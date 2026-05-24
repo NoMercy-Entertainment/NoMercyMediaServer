@@ -6,8 +6,11 @@ using NoMercy.Networking;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Boot;
 using NoMercy.Setup.Dto;
+using NoMercy.Setup.Server;
+using NoMercy.Setup.Ui;
 using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;

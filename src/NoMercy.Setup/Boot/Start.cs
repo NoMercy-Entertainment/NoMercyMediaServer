@@ -4,6 +4,8 @@ using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Lifecycle;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Server;
+using NoMercy.Setup.Ui;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
@@ -12,7 +14,7 @@ using Serilog.Events;
 using AppFiles = NoMercy.NmSystem.Information.AppFiles;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Boot;
 
 public class Start
 {

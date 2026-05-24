@@ -1,4 +1,4 @@
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Boot;
 
 public record StartupTask(
     string Name,

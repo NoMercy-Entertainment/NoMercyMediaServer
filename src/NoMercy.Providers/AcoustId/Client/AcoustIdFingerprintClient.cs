@@ -1,6 +1,6 @@
 ﻿using AcoustID;
 using NoMercy.Providers.AcoustId.Models;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 
 namespace NoMercy.Providers.AcoustId.Client;
 

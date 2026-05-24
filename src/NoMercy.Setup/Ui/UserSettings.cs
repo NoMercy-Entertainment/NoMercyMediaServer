@@ -6,7 +6,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Ui;
 
 public static class UserSettings
 {

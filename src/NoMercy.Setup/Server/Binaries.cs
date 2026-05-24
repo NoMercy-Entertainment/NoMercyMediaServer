@@ -14,7 +14,7 @@ using Downloader = NoMercy.NmSystem.SystemCalls.Download;
 using FileAttributes = NoMercy.NmSystem.FileSystem.FileAttributes;
 using HttpClient = System.Net.Http.HttpClient;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Server;
 
 public enum ServerUpdateResult
 {

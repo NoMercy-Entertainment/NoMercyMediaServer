@@ -15,7 +15,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
 using Serilog.Events;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Auth;
 
 public static class Register
 {

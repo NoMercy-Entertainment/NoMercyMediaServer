@@ -1,7 +1,7 @@
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Server;
 
 public enum SetupPhase
 {

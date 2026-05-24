@@ -1,7 +1,7 @@
 ﻿using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Models;
 using NoMercy.Providers.Helpers;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;

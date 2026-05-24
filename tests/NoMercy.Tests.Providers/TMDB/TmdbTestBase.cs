@@ -1,6 +1,6 @@
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Client.Mocks;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 
 namespace NoMercy.Tests.Providers.TMDB;
 

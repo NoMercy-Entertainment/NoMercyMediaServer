@@ -11,7 +11,7 @@ using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 using Config = NoMercy.NmSystem.Information.Config;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Server;
 
 public class ApiInfo
 {

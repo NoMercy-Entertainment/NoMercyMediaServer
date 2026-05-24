@@ -4,7 +4,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Service.Seeds;
-using NoMercy.Setup;
+using NoMercy.Setup.Ui;
 using Serilog.Events;
 using ConfigurationModel = NoMercy.Database.Models.Common.Configuration;
 

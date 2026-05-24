@@ -16,7 +16,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using NoMercyQueue;
 using Serilog.Events;

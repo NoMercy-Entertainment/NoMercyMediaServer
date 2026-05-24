@@ -13,7 +13,7 @@ using NoMercy.Setup.Dto;
 using NoMercy.Storage;
 using Serilog.Events;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Auth;
 
 public class AuthManager
 {

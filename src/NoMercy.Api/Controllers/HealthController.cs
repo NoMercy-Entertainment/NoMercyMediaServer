@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.NmSystem.Information;
-using NoMercy.Setup;
+using NoMercy.Setup.Boot;
 
 namespace NoMercy.Api.Controllers;
 

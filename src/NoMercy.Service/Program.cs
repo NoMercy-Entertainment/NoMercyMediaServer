@@ -19,7 +19,10 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Service.Configuration;
 using NoMercy.Service.Seeds;
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Boot;
+using NoMercy.Setup.Server;
+using NoMercy.Setup.Ui;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
@@ -147,7 +150,7 @@ public static class Program
         stopWatch.Start();
 
         // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
-        await Setup.Start.InitEssential();
+        await NoMercy.Setup.Boot.Start.InitEssential();
 
         // Route storage-facade temp + transcode writes inside the NoMercy data
         // directory instead of the OS temp folder. StoragePaths defaults to

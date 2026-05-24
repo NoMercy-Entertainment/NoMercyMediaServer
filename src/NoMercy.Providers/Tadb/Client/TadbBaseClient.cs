@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 using Serilog.Events;
 
 namespace NoMercy.Providers.Tadb.Client;

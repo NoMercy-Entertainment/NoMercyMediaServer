@@ -4,7 +4,7 @@ using InfiniFrame;
 using InfiniFrame.Js.MessageHandlers;
 using InfiniFrame.WebServer;
 using NoMercy.App.EmbeddedStaticAssets;
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
 
 namespace NoMercy.App;
 

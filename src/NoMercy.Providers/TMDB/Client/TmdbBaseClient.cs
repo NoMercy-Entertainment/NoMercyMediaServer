@@ -5,7 +5,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Models.Shared;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 using Serilog.Events;
 
 namespace NoMercy.Providers.TMDB.Client;

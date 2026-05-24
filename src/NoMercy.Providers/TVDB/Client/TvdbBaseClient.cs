@@ -6,7 +6,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TVDB.Models.Auth;
 using NoMercy.Providers.TVDB.Models.Shared;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 using Serilog.Events;
 
 namespace NoMercy.Providers.TVDB.Client;

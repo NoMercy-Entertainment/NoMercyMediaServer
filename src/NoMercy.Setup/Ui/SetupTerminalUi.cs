@@ -2,7 +2,7 @@ using NoMercy.NmSystem.SystemCalls;
 using QRCoder;
 using Serilog.Events;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Ui;
 
 /// <summary>
 /// Manages a persistent, full-screen terminal display during setup mode.

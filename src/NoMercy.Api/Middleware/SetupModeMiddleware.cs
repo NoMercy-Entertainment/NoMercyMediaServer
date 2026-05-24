@@ -2,7 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 
 namespace NoMercy.Api.Middleware;
 

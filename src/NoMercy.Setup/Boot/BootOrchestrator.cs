@@ -4,10 +4,13 @@ using NoMercy.Networking;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Auth;
 using NoMercy.Setup.Dto;
+using NoMercy.Setup.Server;
+using NoMercy.Setup.Ui;
 using Serilog.Events;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Boot;
 
 public class BootOrchestrator
 {

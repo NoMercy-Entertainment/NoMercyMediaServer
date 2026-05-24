@@ -4,7 +4,7 @@ using System.Text;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Ui;
 
 public static class DesktopIconCreator
 {

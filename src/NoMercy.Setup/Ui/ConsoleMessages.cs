@@ -1,10 +1,11 @@
 using System.Text;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Server;
 using Pastel;
 using Serilog.Events;
 
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Ui;
 
 public abstract class ConsoleMessages
 {

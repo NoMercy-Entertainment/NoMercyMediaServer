@@ -1,4 +1,4 @@
-namespace NoMercy.Setup;
+namespace NoMercy.Setup.Ui;
 
 public class ConsoleLetters
 {

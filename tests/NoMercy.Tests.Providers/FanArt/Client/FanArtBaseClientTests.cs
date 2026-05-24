@@ -1,6 +1,6 @@
 using System.Reflection;
 using NoMercy.Providers.FanArt.Client;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 
 namespace NoMercy.Tests.Providers.FanArt.Client;
 

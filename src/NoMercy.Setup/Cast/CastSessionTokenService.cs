@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Auth;
 using NoMercy.Setup.Dto;
 using Serilog.Events;
 
