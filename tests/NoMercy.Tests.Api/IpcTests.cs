@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
 using Xunit;
 

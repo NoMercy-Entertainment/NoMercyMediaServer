@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 

@@ -12,6 +12,7 @@ using NoMercy.Encoder.Devices;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
 using NoMercy.Networking.Devices;
+using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 
 namespace NoMercy.Api.Hubs;

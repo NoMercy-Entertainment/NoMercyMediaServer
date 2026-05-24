@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Information;
 
-namespace NoMercy.Networking;
+namespace NoMercy.Networking.Discovery;
 
 public sealed class IpcClient : IDisposable
 {

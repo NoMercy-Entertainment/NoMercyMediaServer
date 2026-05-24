@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using NoMercy.Networking.Http;
 
 namespace NoMercy.Networking.Messaging;
 

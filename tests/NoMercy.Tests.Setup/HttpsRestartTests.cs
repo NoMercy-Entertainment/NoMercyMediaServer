@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using NoMercy.Networking;
+using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
 using NoMercy.Setup;
 

@@ -2,7 +2,7 @@ using System.Net.Sockets;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
-namespace NoMercy.Networking;
+namespace NoMercy.Networking.Discovery;
 
 public static class NetworkProbe
 {

@@ -16,7 +16,7 @@ using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 using DnsHttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
-namespace NoMercy.Networking;
+namespace NoMercy.Networking.Certificate;
 
 public static class Certificate
 {

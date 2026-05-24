@@ -14,7 +14,7 @@ using Sharpcaster.Models.ChromecastStatus;
 using Sharpcaster.Models.Media;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace NoMercy.Networking;
+namespace NoMercy.Networking.Cast;
 
 public class ChromeCast
 {

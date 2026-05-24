@@ -5,6 +5,7 @@ using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
+using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;

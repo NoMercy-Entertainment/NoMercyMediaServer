@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace NoMercy.Networking;
+namespace NoMercy.Networking.Http;
 
 public class ClientRequest
 {

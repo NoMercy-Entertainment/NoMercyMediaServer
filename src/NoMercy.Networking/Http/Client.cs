@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using NoMercy.Database.Models.Users;
 
-namespace NoMercy.Networking;
+namespace NoMercy.Networking.Http;
 
 public class Client : Device
 {

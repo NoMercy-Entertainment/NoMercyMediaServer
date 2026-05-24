@@ -10,6 +10,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.Networking;
+using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;

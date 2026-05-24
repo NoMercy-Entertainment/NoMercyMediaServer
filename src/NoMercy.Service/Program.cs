@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Networking;
+using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;

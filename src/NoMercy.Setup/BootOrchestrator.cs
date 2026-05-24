@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Networking;
+using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
