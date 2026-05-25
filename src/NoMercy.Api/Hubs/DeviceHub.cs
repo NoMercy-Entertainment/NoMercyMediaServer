@@ -151,6 +151,20 @@ public sealed class DeviceHub : ConnectionHub
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
+
+        // Wait briefly so the client's 'DeviceListChanged' handler is registered
+        // before the broadcast lands. Mirrors the same fix on MusicHub — without
+        // this delay the SignalR Java client drops the initial push because the
+        // handler registration happens after the connection's Started callback.
+        try
+        {
+            await Task.Delay(500, Context.ConnectionAborted);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
         List<DeviceListItem> list = await GetDevices();
         await Clients.Caller.SendAsync("DeviceListChanged", list);
     }
