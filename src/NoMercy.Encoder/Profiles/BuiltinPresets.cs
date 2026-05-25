@@ -339,7 +339,7 @@ public static class BuiltinPresets
                 ),
             ],
             Hls: new(),
-            HlsDerivatives: new() { GenerateIFramePlaylists = true },
+            HlsDerivatives: new(),
             Ladder: new()
             {
                 Mode = LadderMode.Auto,
@@ -1032,7 +1032,7 @@ public static class BuiltinPresets
                 ),
             ],
             Hls: new(CmafCompatible: false),
-            HlsDerivatives: new() { GenerateIFramePlaylists = true }
+            HlsDerivatives: new()
         )
         {
             Description = "H.264 1080p fast with AAC stereo and AC3 5.1 for Chromecast playback.",
@@ -1110,7 +1110,7 @@ public static class BuiltinPresets
                 ),
             ],
             Hls: new(),
-            HlsDerivatives: new() { GenerateIFramePlaylists = true }
+            HlsDerivatives: new()
         )
         {
             Description =
@@ -1400,7 +1400,7 @@ public static class BuiltinPresets
                 ),
             ],
             Hls: new(),
-            HlsDerivatives: new() { GenerateIFramePlaylists = true },
+            HlsDerivatives: new(),
             Ladder: new()
             {
                 Mode = LadderMode.Auto,
