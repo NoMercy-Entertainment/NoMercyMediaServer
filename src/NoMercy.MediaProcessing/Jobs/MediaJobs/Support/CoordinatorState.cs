@@ -39,7 +39,16 @@ public sealed record CoordinatorState(
     /// On wake-up the coordinator checks whether this bundle's task IDs have
     /// completed; if yes, increments and dispatches the next.
     /// </summary>
-    int CurrentBundleIndex = 0
+    int CurrentBundleIndex = 0,
+    /// <summary>
+    /// Monotonic counter bumped on every <c>VideoEncodeJob.ReEnqueueSelf</c>.
+    /// Exists solely to keep the serialized payload byte-distinct across
+    /// successive wake-ups — <c>JobQueue.Enqueue</c> dedups by payload string,
+    /// and <c>ReEnqueueSelf</c> runs from inside the worker BEFORE the original
+    /// (still-reserved) coordinator row is deleted, so identical payloads were
+    /// silently dropped and the coordinator died after one wake-up.
+    /// </summary>
+    int WakeSequence = 0
 );
 
 /// <summary>

@@ -753,6 +753,18 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
     /// </summary>
     private void ReEnqueueSelf(CoordinatorState newState)
     {
+        // Bump WakeSequence so the serialized payload differs from the row this
+        // worker is currently processing. JobQueue.Enqueue dedups by Payload, and
+        // ReEnqueueSelf is invoked from inside Handle BEFORE the worker calls
+        // DeleteJob on the original — without this nonce, identical-state
+        // wake-ups (e.g. WaitChildren polling the same bundle) collide with the
+        // still-reserved original and get silently dropped, killing the
+        // coordinator after one tick.
+        CoordinatorState bumped = newState with
+        {
+            WakeSequence = newState.WakeSequence + 1,
+        };
+
         VideoEncodeJob continueJob = new()
         {
             Id = Id,
@@ -761,7 +773,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             InputFile = InputFile,
             SourceDriverId = SourceDriverId,
             Status = "running",
-            Coordinator = newState,
+            Coordinator = bumped,
         };
 
         QueueJobDispatcher dispatcher = GetDispatcher();
