@@ -350,10 +350,15 @@ public static class ServiceConfiguration
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
         services.AddSingleton<CastSessionTokenService>();
-        services.AddSingleton<
-            NoMercy.NmSystem.Lifecycle.IServerPhaseTracker,
-            NoMercy.NmSystem.Lifecycle.ServerPhaseTracker
-        >();
+        // Route every container to the same tracker. The Service rebuilds its host
+        // on the HTTPS restart and on port-conflict retry; a per-container singleton
+        // would mean queue workers in the live host wait on a tracker that the static
+        // MarkComplete callers (BootOrchestrator, Setup.Start) never reached.
+        services.AddSingleton<NoMercy.NmSystem.Lifecycle.IServerPhaseTracker>(sp =>
+            NoMercy.NmSystem.Lifecycle.ServerPhaseTracker.Shared(
+                sp.GetService<Microsoft.Extensions.Logging.ILogger<NoMercy.NmSystem.Lifecycle.ServerPhaseTracker>>()
+            )
+        );
 
         services.AddScoped<NoMercy.Encoder.Profiles.BuiltinPresetSeeder>();
 

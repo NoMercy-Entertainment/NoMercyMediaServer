@@ -12,8 +12,46 @@ public sealed class ServerPhaseTracker : IServerPhaseTracker
 
     public static void RegisterCurrent(IServerPhaseTracker tracker) => Current = tracker;
 
+    // Process-wide singleton. The Service rebuilds its WebApplication on the HTTPS
+    // restart (and again on port-conflict retry), giving each host its own DI
+    // container. A per-container tracker meant the live host's queue workers gated
+    // on a tracker the static MarkComplete callers (BootOrchestrator, Setup.Start)
+    // never reached — so jobs sat in the queue forever. Returning the same instance
+    // from every container keeps the gate aligned with the markers.
+    private static readonly object SharedLock = new();
+    private static ServerPhaseTracker? _shared;
+
+    public static ServerPhaseTracker Shared(ILogger<ServerPhaseTracker>? logger = null)
+    {
+        lock (SharedLock)
+        {
+            if (_shared is null)
+            {
+                _shared = new(logger);
+            }
+            else if (logger is not null)
+            {
+                _shared._logger = logger;
+            }
+
+            Current = _shared;
+            return _shared;
+        }
+    }
+
+    // Test seam — process-wide singleton would otherwise leak state across xUnit
+    // collections that share the AppDomain.
+    internal static void ResetSharedForTests()
+    {
+        lock (SharedLock)
+        {
+            _shared = null;
+            Current = null;
+        }
+    }
+
     private readonly object _lock = new();
-    private readonly ILogger<ServerPhaseTracker> _logger;
+    private ILogger<ServerPhaseTracker> _logger;
     private readonly Dictionary<BootStage, TaskCompletionSource> _stageSignals = new();
 
     private BootStage _completed = BootStage.None;
