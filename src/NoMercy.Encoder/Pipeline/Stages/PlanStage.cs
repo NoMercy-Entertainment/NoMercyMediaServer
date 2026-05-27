@@ -72,19 +72,26 @@ public class PlanStage(
 
             VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
 
-            // EmitHdrAndSdr: when source is HDR, emit the HDR passthrough copy
-            // (ConvertHdrToSdr=false) AND a tonemapped SDR companion
-            // (ConvertHdrToSdr=true) per resolution. Template label suffix
-            // distinguishes the two on disk (video_WxH/ vs video_WxH_SDR/).
+            // EmitHdrAndSdr (HDR source): split coverage along the bit-depth /
+            // codec role. 10-bit rungs (HEVC Main10) preserve HDR via
+            // passthrough; 8-bit rungs (H.264) carry the tonemapped SDR copy.
+            // Each 10-bit rung emits ONE output (HDR), each 8-bit rung emits
+            // ONE output (SDR) — no per-rung doubling. Net coverage for an
+            // HDR source therefore relies on the ladder containing both 10-bit
+            // and 8-bit rungs at the heights you want available in both ranges
+            // (e.g. YouTube's H264FallbackHeights = [1080]). SDR-only clients
+            // at heights without an 8-bit rung simply step down to the next
+            // height that has one.
             //
-            // 10-bit-only gate: HDR PQ / HLG requires 10-bit. A rung that
-            // declares 8-bit (e.g. H.264 NVENC, which doesn't support 10-bit
-            // reliably) cannot preserve HDR even when we ask it to — both the
-            // "passthrough" and "tonemap" copy would end up SDR and collide on
-            // the same _SDR filename. So 8-bit rungs only emit the tonemap
-            // copy; 10-bit rungs emit both.
+            // Rationale: an SDR-tonemapped HEVC copy at a height that already
+            // has an AVC SDR fallback is redundant — the AVC sibling already
+            // covers HEVC-blocked / SDR-only clients. Doubling the 10-bit
+            // rung wastes encode time + storage for a niche middle case
+            // (HEVC-capable but cannot tonemap HDR client-side) that almost
+            // no real-world client falls into.
             //
-            // SDR source: behaves like AlwaysTonemap, no doubling.
+            // SDR source: this block is skipped (IsHdr gate); rungs emit
+            // SDR as-is from EnumerateVideo regardless of bit depth.
             if (
                 profile.HdrPolicy == HdrPolicy.EmitHdrAndSdr
                 && input.Media.VideoStreams.Count > 0
@@ -92,20 +99,16 @@ public class PlanStage(
             )
             {
                 videoOutputs = videoOutputs
-                    .SelectMany(v =>
+                    .Select(v =>
                         v.BitDepth >= 10
-                            ? new[]
+                            ? v with
                             {
-                                v with
-                                {
-                                    ConvertHdrToSdr = false,
-                                },
-                                v with
-                                {
-                                    ConvertHdrToSdr = true,
-                                },
+                                ConvertHdrToSdr = false,
                             }
-                            : new[] { v with { ConvertHdrToSdr = true } }
+                            : v with
+                            {
+                                ConvertHdrToSdr = true,
+                            }
                     )
                     .ToArray();
             }
@@ -374,9 +377,9 @@ public class PlanStage(
 
         VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
 
-        // EmitHdrAndSdr: same expansion as in the resolver block above so
-        // VideoOutputPlan count matches resolvedCodecs count. Keep the 10-bit
-        // gate identical — 8-bit rungs only emit the tonemap copy.
+        // EmitHdrAndSdr: same role split as in the resolver block above. Must
+        // stay in lockstep so VideoOutputPlan count matches resolvedCodecs
+        // count — 10-bit rung → HDR-only, 8-bit rung → SDR-only.
         if (
             profile.HdrPolicy == HdrPolicy.EmitHdrAndSdr
             && media.VideoStreams.Count > 0
@@ -384,20 +387,16 @@ public class PlanStage(
         )
         {
             videoOutputs = videoOutputs
-                .SelectMany(v =>
+                .Select(v =>
                     v.BitDepth >= 10
-                        ? new[]
+                        ? v with
                         {
-                            v with
-                            {
-                                ConvertHdrToSdr = false,
-                            },
-                            v with
-                            {
-                                ConvertHdrToSdr = true,
-                            },
+                            ConvertHdrToSdr = false,
                         }
-                        : new[] { v with { ConvertHdrToSdr = true } }
+                        : v with
+                        {
+                            ConvertHdrToSdr = true,
+                        }
                 )
                 .ToArray();
         }

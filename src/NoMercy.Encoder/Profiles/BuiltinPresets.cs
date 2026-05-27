@@ -1445,8 +1445,10 @@ public static class BuiltinPresets
                 + "(NVENC / AMF / QSV / VideoToolbox) when one is detected.",
             IsBuiltin = true,
             HardwarePreference = HardwarePreference.PreferHardware,
-            // HDR sources emit both HDR passthrough + SDR tonemap variants per
-            // rung (matches the example media layout). SDR sources just emit SDR.
+            // HDR sources split coverage by bit depth: 10-bit HEVC rungs
+            // preserve HDR via passthrough, 8-bit H.264 rungs (driven by
+            // H264FallbackHeights) carry the tonemapped SDR copy. SDR sources
+            // just emit SDR.
             HdrPolicy = HdrPolicy.EmitHdrAndSdr,
             ClientCompatibility =
                 ClientCompatibility.BrowserMse
