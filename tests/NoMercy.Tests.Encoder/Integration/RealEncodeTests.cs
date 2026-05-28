@@ -10,19 +10,17 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Startup;
-using AudioOutput = NoMercy.Encoder.Profiles.AudioOutput;
 using BuiltinPresets = NoMercy.Encoder.Profiles.BuiltinPresets;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using HardwarePreference = NoMercy.Encoder.Profiles.HardwarePreference;
+using HlsDerivatives = NoMercy.Encoder.Profiles.HlsDerivatives;
 using LoudnessConfig = NoMercy.Encoder.Profiles.LoudnessConfig;
 using LoudnessMode = NoMercy.Encoder.Profiles.LoudnessMode;
 using RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
-using SubtitleOutput = NoMercy.Encoder.Profiles.SubtitleOutput;
 using SubtitlePolicy = NoMercy.Encoder.Profiles.SubtitlePolicy;
-using ThumbnailOutput = NoMercy.Encoder.Profiles.ThumbnailOutput;
-using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Integration;
 
@@ -30,12 +28,28 @@ namespace NoMercy.Tests.Encoder.Integration;
 [Collection("RealEncode")]
 public class RealEncodeTests : IAsyncLifetime
 {
+    private const string ForkRequiredSkipReason =
+        "Requires nomercy-ffmpeg (spritevtt muxer). Set NOMERCY_FFMPEG_PATH or install via "
+        + "AppData/Local/NoMercy_dev/binaries/ffmpeg.";
+
     private string _testDir = string.Empty;
     private string _inputFile = string.Empty;
     private ServiceProvider _serviceProvider = null!;
+    private string? _ffmpegPath;
+    private string? _ffprobePath;
+    private bool _forkSupportsSpritevtt;
 
     public async Task InitializeAsync()
     {
+        // Resolve nomercy-ffmpeg before anything else. Real-encode tests use
+        // the spritevtt muxer (fork-only) — pointing FfmpegPathOverride at the
+        // system "ffmpeg" PATH would surface as "Unrecognized option
+        // 'vtt_filename'" and report environment problems as code failures.
+        _ffmpegPath = NoMercyFfmpegProbe.ResolveFfmpegPath();
+        _ffprobePath = NoMercyFfmpegProbe.ResolveFfprobePath(_ffmpegPath);
+        _forkSupportsSpritevtt =
+            _ffmpegPath is not null && NoMercyFfmpegProbe.SupportsSpritevtt(_ffmpegPath);
+
         _testDir = Path.Combine(
             Path.GetTempPath(),
             "nomercy-encode-test-" + Guid.NewGuid().ToString("N")[..8]
@@ -44,10 +58,12 @@ public class RealEncodeTests : IAsyncLifetime
 
         _inputFile = Path.Combine(_testDir, "test-input.mp4");
 
-        // Generate a 3-second test clip — short to minimize encode time
+        // Generate a 3-second test clip — short to minimize encode time. Use
+        // the resolved fork binary so the clip + the encode under test agree
+        // on which ffmpeg they're driving.
         ProcessStartInfo psi = new()
         {
-            FileName = "ffmpeg",
+            FileName = _ffmpegPath ?? "ffmpeg",
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
@@ -101,8 +117,8 @@ public class RealEncodeTests : IAsyncLifetime
         );
         services.AddNoMercyEncoder(opts =>
         {
-            opts.FfmpegPathOverride = "ffmpeg";
-            opts.FfprobePathOverride = "ffprobe";
+            opts.FfmpegPathOverride = _ffmpegPath ?? "ffmpeg";
+            opts.FfprobePathOverride = _ffprobePath ?? "ffprobe";
         });
 
         // Force software encoding — override hardware detector so tests don't depend on GPU
@@ -133,9 +149,10 @@ public class RealEncodeTests : IAsyncLifetime
         return Task.CompletedTask;
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task EncodeAsync_HlsProfile_ProducesPlaylistAndSegments()
     {
+        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
 
         string outputDir = Path.Combine(_testDir, "output");
@@ -187,7 +204,18 @@ public class RealEncodeTests : IAsyncLifetime
                 ),
             ],
             Subtitles: []
-        );
+        )
+        {
+            HardwarePreference = HardwarePreference.ForceSoftware,
+            HlsDerivatives = new HlsDerivatives
+            {
+                GenerateSpriteVtt = false,
+                GenerateThumbnailTrack = false,
+                GenerateMetadataJson = false,
+                GenerateChapters = false,
+                GenerateFontsJson = false,
+            },
+        };
 
         EncodingRequest request = new(
             InputPath: _inputFile,
@@ -222,9 +250,10 @@ public class RealEncodeTests : IAsyncLifetime
             .BeGreaterThan(0, "should receive at least one progress callback");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task EncodeAsync_ScalingProfile_ProducesDownscaledOutput()
     {
+        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
 
         string outputDir = Path.Combine(_testDir, "output-scale");
@@ -272,7 +301,18 @@ public class RealEncodeTests : IAsyncLifetime
                 ),
             ],
             Subtitles: []
-        );
+        )
+        {
+            HardwarePreference = HardwarePreference.ForceSoftware,
+            HlsDerivatives = new HlsDerivatives
+            {
+                GenerateSpriteVtt = false,
+                GenerateThumbnailTrack = false,
+                GenerateMetadataJson = false,
+                GenerateChapters = false,
+                GenerateFontsJson = false,
+            },
+        };
 
         EncodingRequest request = new(
             InputPath: _inputFile,
@@ -313,9 +353,10 @@ public class RealEncodeTests : IAsyncLifetime
         segments.Should().NotBeEmpty("video dir should contain .ts segments");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task EncodeAsync_MultiOutputProfile_ProducesMultipleVariants()
     {
+        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
 
         string outputDir = Path.Combine(_testDir, "output-multi");
@@ -366,13 +407,27 @@ public class RealEncodeTests : IAsyncLifetime
             Ladder: new NoMercy.Encoder.Profiles.LadderConfig
             {
                 Mode = NoMercy.Encoder.Profiles.LadderMode.Manual,
+                // Validator requires manual rungs sorted ascending by bitrate
+                // (100 kbps before 200 kbps) — keeps master-playlist BANDWIDTH
+                // ordering deterministic.
                 Rungs =
                 [
-                    new(320, 180, VideoCodecType.H264, 200, 400, 800, 25.0, "ultrafast"),
                     new(160, 90, VideoCodecType.H264, 100, 200, 400, 25.0, "ultrafast"),
+                    new(320, 180, VideoCodecType.H264, 200, 400, 800, 25.0, "ultrafast"),
                 ],
             }
-        );
+        )
+        {
+            HardwarePreference = HardwarePreference.ForceSoftware,
+            HlsDerivatives = new HlsDerivatives
+            {
+                GenerateSpriteVtt = false,
+                GenerateThumbnailTrack = false,
+                GenerateMetadataJson = false,
+                GenerateChapters = false,
+                GenerateFontsJson = false,
+            },
+        };
 
         EncodingRequest request = new(
             InputPath: _inputFile,
@@ -408,9 +463,10 @@ public class RealEncodeTests : IAsyncLifetime
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task EncodeAsync_ScalingProfile_ProducesCorrectResolution()
     {
+        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
 
         string outputDir = Path.Combine(_testDir, "output-scale-160x90");
@@ -458,7 +514,18 @@ public class RealEncodeTests : IAsyncLifetime
                 ),
             ],
             Subtitles: []
-        );
+        )
+        {
+            HardwarePreference = HardwarePreference.ForceSoftware,
+            HlsDerivatives = new HlsDerivatives
+            {
+                GenerateSpriteVtt = false,
+                GenerateThumbnailTrack = false,
+                GenerateMetadataJson = false,
+                GenerateChapters = false,
+                GenerateFontsJson = false,
+            },
+        };
 
         EncodingRequest request = new(
             InputPath: _inputFile,
@@ -497,9 +564,10 @@ public class RealEncodeTests : IAsyncLifetime
             .NotBeEmpty("video_160x90 dir should contain .ts segments");
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task EncodeAsync_HlsTwoPassProfile_ProducesValidPlaylist()
     {
+        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
         // Two-pass encodes are slower — give them a longer timeout.
         using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
 
@@ -549,7 +617,18 @@ public class RealEncodeTests : IAsyncLifetime
             ],
             Subtitles: [],
             EncodeMode: EncodeMode.TwoPass
-        );
+        )
+        {
+            HardwarePreference = HardwarePreference.ForceSoftware,
+            HlsDerivatives = new HlsDerivatives
+            {
+                GenerateSpriteVtt = false,
+                GenerateThumbnailTrack = false,
+                GenerateMetadataJson = false,
+                GenerateChapters = false,
+                GenerateFontsJson = false,
+            },
+        };
 
         EncodingRequest request = new(
             InputPath: _inputFile,

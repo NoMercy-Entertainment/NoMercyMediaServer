@@ -12,33 +12,22 @@ public class BuiltinPresetsHlsDerivativesTests
     private static EncodingProfile Find(string name) =>
         BuiltinPresets.All().Single(p => p.Name == name);
 
-    // ── Presets with explicit IFramePlaylists = true ──────────────────────────
+    // ── I-frame playlists stay disabled across every preset ──────────────────
+    // GenerateIFramePlaylists=true was dropped from all built-in presets in
+    // e4836ec4 because no IFramePlaylistGenerator is wired yet — FinalizeStage
+    // throws NotSupportedException for any preset that opted in. The presets
+    // below are the ones that previously carried the override.
 
-    [Fact]
-    public void AbrPremiumHevc_HasIFramePlaylists_True()
+    [Theory]
+    [InlineData("ABR Premium HEVC 720/1080/2160")]
+    [InlineData("Chromecast 1080p")]
+    [InlineData("Chromecast 4K HEVC")]
+    public void Hls_Presets_That_Previously_Enabled_IFramePlaylists_Now_Default_False(string name)
     {
-        EncodingProfile preset = Find("ABR Premium HEVC 720/1080/2160");
+        EncodingProfile preset = Find(name);
 
-        preset.HlsDerivatives.Should().NotBeNull();
-        preset.HlsDerivatives!.GenerateIFramePlaylists.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Chromecast1080p_HasIFramePlaylists_True()
-    {
-        EncodingProfile preset = Find("Chromecast 1080p");
-
-        preset.HlsDerivatives.Should().NotBeNull();
-        preset.HlsDerivatives!.GenerateIFramePlaylists.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Chromecast4kHevc_HasIFramePlaylists_True()
-    {
-        EncodingProfile preset = Find("Chromecast 4K HEVC");
-
-        preset.HlsDerivatives.Should().NotBeNull();
-        preset.HlsDerivatives!.GenerateIFramePlaylists.Should().BeTrue();
+        HlsDerivatives effective = preset.HlsDerivatives ?? new HlsDerivatives();
+        effective.GenerateIFramePlaylists.Should().BeFalse();
     }
 
     // ── Full Remux HLS — GenerateFontsJson = false ───────────────────────────
