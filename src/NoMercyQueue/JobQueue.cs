@@ -167,6 +167,15 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     /// releases the reservation and bumps <paramref name="availableAfter"/>
     /// so the job is not immediately picked up again.
     /// </summary>
+    /// <remarks>
+    /// Do NOT signal <see cref="WorkAvailable"/> here. The job is deferred by
+    /// <paramref name="availableAfter"/> — there is no new work for OTHER
+    /// workers to wake up for, and the calling worker is about to sleep its
+    /// own retry interval. Releasing the semaphore woke every worker on the
+    /// shared queue runner, which then burnt through the rest of the queue's
+    /// deferred jobs in a tight loop (per-job DB query + JSON deserialize +
+    /// budget probe) before any of them landed under the headroom threshold.
+    /// </remarks>
     public void ReleaseReservation(QueueJobModel job, TimeSpan availableAfter)
     {
         lock (_writeLock)
@@ -177,8 +186,6 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             context.UpdateJob(job);
             context.SaveChanges();
         }
-
-        WorkAvailable.Release();
     }
 
     /// <summary>

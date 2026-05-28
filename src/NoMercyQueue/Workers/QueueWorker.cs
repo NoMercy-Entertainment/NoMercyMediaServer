@@ -126,14 +126,14 @@ public class QueueWorker(
                     {
                         queue.ReleaseReservation(job, BudgetRetryDelay);
 
-                        try
-                        {
-                            queue.WorkAvailable.Wait(BudgetRetryDelay, stopToken);
-                        }
-                        catch (OperationCanceledException)
-                        {
+                        // Honor the full retry interval — using WorkAvailable
+                        // here would let an unrelated Enqueue wake us up early
+                        // and immediately re-probe the budget, which spins
+                        // through deferred jobs at DB-query rate when many
+                        // are stacked up under headroom denial. WaitHandle on
+                        // the stop token keeps the sleep cancellation-aware.
+                        if (stopToken.WaitHandle.WaitOne(BudgetRetryDelay))
                             break;
-                        }
 
                         continue;
                     }
