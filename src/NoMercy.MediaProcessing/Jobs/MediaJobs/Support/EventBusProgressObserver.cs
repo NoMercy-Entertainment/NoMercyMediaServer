@@ -6,6 +6,25 @@ using NoMercy.Events.Encoding;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 
+internal static class EventBusFireAndForget
+{
+    public static void Publish(EncoderProgressBroadcastEvent evt)
+    {
+        if (!EventBusProvider.IsConfigured)
+            return;
+
+        // Fire-and-forget. The previous .GetAwaiter().GetResult() blocked the
+        // ffmpeg-output reader thread on every snapshot — at 500ms throttle
+        // × N concurrent encodes that single line contributed measurably to
+        // server CPU during heavy queues. Dropped publishes self-heal on the
+        // next progress tick; faults are observed via ContinueWith so the
+        // task scheduler doesn't surface them as UnobservedTaskException.
+        _ = EventBusProvider
+            .Current.PublishAsync(evt)
+            .ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+    }
+}
+
 public class EventBusProgressObserver : IProgressObserver
 {
     private readonly int _jobId;
@@ -86,46 +105,43 @@ public class EventBusProgressObserver : IProgressObserver
 
         TimeSpan remaining = progress.EstimatedRemaining ?? TimeSpan.Zero;
 
-        EventBusProvider
-            .Current.PublishAsync(
-                new EncoderProgressBroadcastEvent
+        EventBusFireAndForget.Publish(
+            new EncoderProgressBroadcastEvent
+            {
+                ProgressData = new
                 {
-                    ProgressData = new
+                    id = _jobId,
+                    process_id = progress.ProcessId,
+                    title = _title,
+                    status = "running",
+                    message = "Encoding video",
+                    progress = progress.PercentComplete,
+                    speed = progress.CurrentSpeed ?? 0,
+                    fps = progress.CurrentFps ?? 0,
+                    frame = 0,
+                    bitrate = progress.Bitrate ?? "N/A",
+                    current_time = progress.CurrentTimeSeconds,
+                    duration = progress.DurationSeconds,
+                    remaining = remaining.TotalSeconds,
+                    remaining_hms = $"{remaining.Days}:{(int)remaining.TotalHours % 24:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}",
+                    remaining_split = new[]
                     {
-                        id = _jobId,
-                        process_id = progress.ProcessId,
-                        title = _title,
-                        status = "running",
-                        message = "Encoding video",
-                        progress = progress.PercentComplete,
-                        speed = progress.CurrentSpeed ?? 0,
-                        fps = progress.CurrentFps ?? 0,
-                        frame = 0,
-                        bitrate = progress.Bitrate ?? "N/A",
-                        current_time = progress.CurrentTimeSeconds,
-                        duration = progress.DurationSeconds,
-                        remaining = remaining.TotalSeconds,
-                        remaining_hms = $"{remaining.Days}:{(int)remaining.TotalHours % 24:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}",
-                        remaining_split = new[]
-                        {
-                            remaining.Days,
-                            (int)remaining.TotalHours % 24,
-                            remaining.Minutes,
-                            remaining.Seconds,
-                        },
-                        has_gpu = _hasGpu,
-                        is_hdr = _isHdr,
-                        base_folder = _baseFolder,
-                        share_path = _sharePath,
-                        video_streams = _videoStreams,
-                        audio_streams = _audioStreams,
-                        subtitle_streams = _subtitleStreams,
-                        thumbnails = "",
+                        remaining.Days,
+                        (int)remaining.TotalHours % 24,
+                        remaining.Minutes,
+                        remaining.Seconds,
                     },
-                }
-            )
-            .GetAwaiter()
-            .GetResult();
+                    has_gpu = _hasGpu,
+                    is_hdr = _isHdr,
+                    base_folder = _baseFolder,
+                    share_path = _sharePath,
+                    video_streams = _videoStreams,
+                    audio_streams = _audioStreams,
+                    subtitle_streams = _subtitleStreams,
+                    thumbnails = "",
+                },
+            }
+        );
     }
 
     public void OnStageCompleted(string stageName, TimeSpan duration)
@@ -154,35 +170,29 @@ public class EventBusProgressObserver : IProgressObserver
 
     private void Publish(string status, string message)
     {
-        if (!EventBusProvider.IsConfigured)
-            return;
-
-        EventBusProvider
-            .Current.PublishAsync(
-                new EncoderProgressBroadcastEvent
+        EventBusFireAndForget.Publish(
+            new EncoderProgressBroadcastEvent
+            {
+                ProgressData = new
                 {
-                    ProgressData = new
-                    {
-                        id = _jobId,
-                        process_id = _jobId,
-                        title = _title,
-                        value = 0,
-                        status,
-                        message,
-                        progress = 0,
-                        speed = 0,
-                        has_gpu = _hasGpu,
-                        is_hdr = _isHdr,
-                        base_folder = _baseFolder,
-                        share_path = _sharePath,
-                        thumbnails = "",
-                        video_streams = _videoStreams,
-                        audio_streams = _audioStreams,
-                        subtitle_streams = _subtitleStreams,
-                    },
-                }
-            )
-            .GetAwaiter()
-            .GetResult();
+                    id = _jobId,
+                    process_id = _jobId,
+                    title = _title,
+                    value = 0,
+                    status,
+                    message,
+                    progress = 0,
+                    speed = 0,
+                    has_gpu = _hasGpu,
+                    is_hdr = _isHdr,
+                    base_folder = _baseFolder,
+                    share_path = _sharePath,
+                    thumbnails = "",
+                    video_streams = _videoStreams,
+                    audio_streams = _audioStreams,
+                    subtitle_streams = _subtitleStreams,
+                },
+            }
+        );
     }
 }

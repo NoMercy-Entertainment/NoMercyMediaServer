@@ -4,8 +4,44 @@ using Microsoft.Extensions.Logging;
 
 namespace NoMercy.Encoder.Infrastructure;
 
+/// <summary>
+/// Captures stdout/stderr lines from a child process and exposes them as a
+/// single string at end-of-run, while capping memory at a hard byte budget.
+///
+/// The previous implementation buffered everything into an unbounded
+/// <see cref="StringBuilder"/>. Long ffmpeg runs (multi-rung HLS bundles,
+/// two-pass encodes) emit per-frame log lines for the entire duration —
+/// when nothing trims the buffer it can grow to tens of MB, and the final
+/// <c>ToString()</c> + every error-classification read became O(n) over
+/// useless filter-init noise. Capping at the last <see cref="MaxBytes"/>
+/// keeps the tail intact for error parsing without burning CPU on chatter.
+/// </summary>
+internal sealed class BoundedLineBuffer(int maxBytes)
+{
+    private readonly Queue<string> _lines = new();
+    public int MaxBytes { get; } = maxBytes;
+    private int _byteCount;
+
+    public void AppendLine(string line)
+    {
+        _lines.Enqueue(line);
+        // +1 for the implicit '\n' separator added by string.Join below.
+        _byteCount += line.Length + 1;
+        while (_byteCount > MaxBytes && _lines.Count > 1)
+            _byteCount -= _lines.Dequeue().Length + 1;
+    }
+
+    public override string ToString() => string.Join('\n', _lines);
+}
+
 public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
 {
+    // 256 KB stderr keeps the tail of any reasonable failure intact (banner +
+    // filter-init + actual error are well under this on every real-world
+    // failure mode) without retaining megabytes of per-frame logspam over a
+    // multi-hour encode.
+    private const int StdErrMaxBytes = 256 * 1024;
+
     public Task<ProcessResult> RunAsync(
         string executable,
         string[] arguments,
@@ -94,7 +130,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
         StringBuilder stdOutBuilder = new();
-        StringBuilder stdErrBuilder = new();
+        BoundedLineBuffer stdErrBuilder = new(StdErrMaxBytes);
 
         // Working directories on Windows must exist before Process.Start —
         // otherwise the API surfaces Win32 error 2 (ERROR_FILE_NOT_FOUND)
