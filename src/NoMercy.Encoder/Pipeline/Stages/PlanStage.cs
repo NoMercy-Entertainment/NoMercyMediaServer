@@ -839,9 +839,9 @@ public class PlanStage(
                 ? outputNamingResolver.Resolve(context.MediaItem, profile)
                 : null;
 
-        bool generateChapterThumbs = (
-            profile.HlsDerivatives ?? new HlsDerivatives()
-        ).GenerateChapterThumbs;
+        HlsDerivatives effectiveDerivatives = profile.HlsDerivatives ?? new HlsDerivatives();
+        bool generateChapterThumbs = effectiveDerivatives.GenerateChapterThumbs;
+        bool emitSubtitleChunks = effectiveDerivatives.SubtitleWebVtt;
 
         return new(
             outputFormat,
@@ -854,7 +854,8 @@ public class PlanStage(
             Drm: ConvertDrmConfig(profile.Drm),
             HlsOptions: hlsOptions,
             Layout: layout,
-            GenerateChapterThumbs: generateChapterThumbs
+            GenerateChapterThumbs: generateChapterThumbs,
+            EmitSubtitleWebVttChunks: emitSubtitleChunks
         );
     }
 

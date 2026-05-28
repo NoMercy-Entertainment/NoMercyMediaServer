@@ -48,8 +48,14 @@ public class PlaylistGenerator : IPlaylistGenerator
         HlsPlanOptions hlsOptions = plan.HlsOptions ?? new HlsPlanOptions();
 
         bool hasFmp4 = hlsOptions.SegmentType.Equals("fmp4", StringComparison.OrdinalIgnoreCase);
+        // WebVTT outputs only contribute a subs group when the slicer is
+        // going to emit the m3u8 wrapper they need. With chunking off the
+        // .vtt extracts still exist but there is no playable HLS playlist
+        // entry to advertise — referencing the raw .vtt would 404 on
+        // spec-compliant clients.
         bool hasSubsGroup = plan.SubtitleOutputs.Any(s =>
             s.Action is StreamAction.Extract or StreamAction.Copy
+            && (s.OutputCodec is not SubtitleCodecType.WebVtt || plan.EmitSubtitleWebVttChunks)
         );
 
         bool hasChapterDateRanges = plan.Chapters is { Count: > 0 };
@@ -120,8 +126,13 @@ public class PlaylistGenerator : IPlaylistGenerator
         // language + variant + codec, so the "English (Full)" / "(Sign)" /
         // "(SDH)" tracks of a single source land as three distinct entries
         // pointing at three distinct files instead of collapsing to one.
+        // WebVTT entries are filtered out when chunking is disabled — same
+        // reasoning as hasSubsGroup above.
         SubtitleOutputPlan[] activeSubs = plan
-            .SubtitleOutputs.Where(s => s.Action is StreamAction.Extract or StreamAction.Copy)
+            .SubtitleOutputs.Where(s =>
+                s.Action is StreamAction.Extract or StreamAction.Copy
+                && (s.OutputCodec is not SubtitleCodecType.WebVtt || plan.EmitSubtitleWebVttChunks)
+            )
             .ToArray();
 
         if (activeSubs.Length > 0)
@@ -274,8 +285,8 @@ public class PlaylistGenerator : IPlaylistGenerator
 
     // ASS/SRT sidecars play directly from the file URI; only WebVTT needs
     // a single-segment .m3u8 wrapper because that's what HLS spec requires
-    // for EXT-X-MEDIA. All subtitle assets live under subtitles/ so the
-    // root stays clean.
+    // for EXT-X-MEDIA. All subtitle assets live under subtitles/{lang}/ so
+    // a season with many tracks doesn't flatten into one giant directory.
     internal static string GetSubtitlePlaylistUri(SubtitleOutputPlan sub)
     {
         string lang = sub.Language ?? "und";
@@ -283,17 +294,18 @@ public class PlaylistGenerator : IPlaylistGenerator
 
         return sub.OutputCodec switch
         {
-            SubtitleCodecType.Ass => $"subtitles/subs.{lang}.{variant}.ass",
-            SubtitleCodecType.Srt => $"subtitles/subs.{lang}.{variant}.srt",
-            _ => $"subtitles/subs_{lang}_{variant}.m3u8",
+            SubtitleCodecType.Ass => $"subtitles/{lang}/{variant}.ass",
+            SubtitleCodecType.Srt => $"subtitles/{lang}/{variant}.srt",
+            _ => $"subtitles/{lang}/{variant}.m3u8",
         };
     }
 
     /// <summary>
     /// Emits the per-subtitle media playlist (.m3u8) referencing the WebVTT
-    /// segments produced by <see cref="WebVttSegmenter"/>. Segment filenames
-    /// follow subs_&lt;lang&gt;_&lt;variant&gt;_NNNNN.vtt to keep distinct
-    /// variants of the same language addressable on disk.
+    /// segments produced by <see cref="WebVttSegmenter"/>. Playlist lives at
+    /// <c>subtitles/{lang}/{variant}.m3u8</c>; segment URIs are relative to
+    /// that folder (<c>{variant}_NNNNN.vtt</c>), so the m3u8 is portable as
+    /// long as it stays alongside its segments.
     /// </summary>
     public static string GenerateSubtitleMediaPlaylist(
         SubtitleOutputPlan sub,
@@ -302,7 +314,6 @@ public class PlaylistGenerator : IPlaylistGenerator
         string segmentUriPrefix = ""
     )
     {
-        string lang = sub.Language ?? "und";
         string variant = string.IsNullOrEmpty(sub.Variant) ? "full" : sub.Variant;
 
         StringBuilder sb = new();
@@ -314,7 +325,7 @@ public class PlaylistGenerator : IPlaylistGenerator
         foreach (WebVttSegment seg in segments)
         {
             double actualDuration = (seg.EndTime - seg.StartTime).TotalSeconds;
-            string segFile = $"subs_{lang}_{variant}_{seg.Index:D5}.vtt";
+            string segFile = $"{variant}_{seg.Index:D5}.vtt";
             string uri = string.IsNullOrEmpty(segmentUriPrefix)
                 ? segFile
                 : $"{segmentUriPrefix}/{segFile}";

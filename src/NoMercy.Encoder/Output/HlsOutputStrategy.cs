@@ -262,6 +262,13 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         CancellationToken ct
     )
     {
+        // Profile opted out of WebVTT chunking (HlsDerivatives.SubtitleWebVtt=false).
+        // The raw .vtt extracts still live in subtitles/ for download; the master
+        // playlist's GetSubtitlePlaylistUri returns the bare file URI in that case
+        // so the master stays internally consistent.
+        if (!plan.EmitSubtitleWebVttChunks)
+            return;
+
         SubtitleOutputPlan[] webVttSubs = plan
             .SubtitleOutputs.Where(s =>
                 s.Action is StreamAction.Extract or StreamAction.Copy
@@ -288,7 +295,6 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         TimeSpan segmentDuration = TimeSpan.FromSeconds(segmentDurationSeconds);
 
         WebVttSegmenter segmenter = new();
-        PlaylistGenerator generator = new();
 
         foreach (SubtitleOutputPlan sub in webVttSubs)
         {
@@ -318,10 +324,18 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                 segmentDuration
             );
 
+            // Chunks land in a per-language subfolder so a season with 20+
+            // tracks doesn't dump 800 segment files into the root subtitles/
+            // dir. Segment URIs in the media playlist are relative to that
+            // folder so they stay short.
+            string languageDir = storage.CombinePath(subtitlesDir, lang);
+            if (!storage.Exists(languageDir))
+                storage.CreateDirectory(languageDir);
+
             for (int i = 0; i < segments.Count; i++)
             {
-                string segFile = $"subs_{lang}_{variant}_{i:D5}.vtt";
-                string segPath = storage.CombinePath(subtitlesDir, segFile);
+                string segFile = $"{variant}_{i:D5}.vtt";
+                string segPath = storage.CombinePath(languageDir, segFile);
                 await storage.WriteAsync(segPath, Encoding.UTF8.GetBytes(segments[i].Content), ct);
             }
 
@@ -330,7 +344,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                 segments,
                 segmentDurationSeconds
             );
-            string playlistPath = storage.CombinePath(subtitlesDir, $"subs_{lang}_{variant}.m3u8");
+            string playlistPath = storage.CombinePath(languageDir, $"{variant}.m3u8");
             await storage.WriteAsync(playlistPath, Encoding.UTF8.GetBytes(playlist), ct);
         }
     }

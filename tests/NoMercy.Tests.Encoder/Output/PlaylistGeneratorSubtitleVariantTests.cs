@@ -154,7 +154,7 @@ public class PlaylistGeneratorSubtitleVariantTests
 
         string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub);
 
-        uri.Should().Be("subtitles/subs.jpn.full.ass");
+        uri.Should().Be("subtitles/jpn/full.ass");
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public class PlaylistGeneratorSubtitleVariantTests
 
         string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub);
 
-        uri.Should().Be("subtitles/subs.fre.sdh.srt");
+        uri.Should().Be("subtitles/fre/sdh.srt");
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public class PlaylistGeneratorSubtitleVariantTests
 
         string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub);
 
-        uri.Should().Be("subtitles/subs_eng_full.m3u8");
+        uri.Should().Be("subtitles/eng/full.m3u8");
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public class PlaylistGeneratorSubtitleVariantTests
 
         string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub);
 
-        uri.Should().Be("subtitles/subs.und.full.srt");
+        uri.Should().Be("subtitles/und/full.srt");
     }
 
     [Fact]
@@ -212,7 +212,7 @@ public class PlaylistGeneratorSubtitleVariantTests
 
         string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub);
 
-        uri.Should().Be("subtitles/subs_eng_full.m3u8");
+        uri.Should().Be("subtitles/eng/full.m3u8");
     }
 
     // ── Action filter (Extract appears in master, Drop excluded) ─────────────
@@ -277,6 +277,40 @@ public class PlaylistGeneratorSubtitleVariantTests
         string playlist = Generate(Plan(Array.Empty<SubtitleOutputPlan>()));
 
         playlist.Should().Contain("CLOSED-CAPTIONS=NONE");
+    }
+
+    [Fact]
+    public void Master_playlist_omits_webvtt_subs_when_chunking_disabled()
+    {
+        // HlsDerivatives.SubtitleWebVtt=false (EmitSubtitleWebVttChunks=false
+        // on the plan): the raw .vtt extract still exists on disk for
+        // download, but the m3u8 wrapper isn't generated. Master playlist
+        // must skip the EXT-X-MEDIA subtitle entry — referencing a missing
+        // m3u8 would 404 on every spec-compliant client.
+        string playlist = Generate(
+            PlanWithoutChunks([
+                SubtitleEntry(language: "eng", variant: "full", codec: SubtitleCodecType.WebVtt),
+            ])
+        );
+
+        playlist.Should().NotContain("TYPE=SUBTITLES");
+        playlist.Should().Contain("CLOSED-CAPTIONS=NONE");
+    }
+
+    [Fact]
+    public void Master_playlist_keeps_ass_sidecars_when_chunking_disabled()
+    {
+        // Chunking only governs WebVTT — ASS/SRT sidecars play directly from
+        // the file URI and don't need a media playlist. They stay in the
+        // master even when WebVTT chunking is off.
+        string playlist = Generate(
+            PlanWithoutChunks([
+                SubtitleEntry(language: "jpn", variant: "full", codec: SubtitleCodecType.Ass),
+            ])
+        );
+
+        playlist.Should().Contain("TYPE=SUBTITLES");
+        playlist.Should().Contain("subtitles/jpn/full.ass");
     }
 
     // ── ASS sidecar media playlist ───────────────────────────────────────────
@@ -352,9 +386,10 @@ public class PlaylistGeneratorSubtitleVariantTests
         CountOccurrences(playlist, "#EXTINF:").Should().Be(3);
         playlist.Should().Contain("#EXTINF:6.000,");
         playlist.Should().Contain("#EXTINF:2.500,"); // partial last segment
-        playlist.Should().Contain("subs_eng_full_00000.vtt");
-        playlist.Should().Contain("subs_eng_full_00001.vtt");
-        playlist.Should().Contain("subs_eng_full_00002.vtt");
+        // Playlist lives in subtitles/eng/ — segment URIs are relative to it.
+        playlist.Should().Contain("full_00000.vtt");
+        playlist.Should().Contain("full_00001.vtt");
+        playlist.Should().Contain("full_00002.vtt");
         playlist.Should().EndWith("#EXT-X-ENDLIST" + Environment.NewLine);
     }
 
@@ -383,7 +418,7 @@ public class PlaylistGeneratorSubtitleVariantTests
             segmentUriPrefix: "subtitles"
         );
 
-        playlist.Should().Contain("subtitles/subs_eng_sdh_00000.vtt");
+        playlist.Should().Contain("subtitles/sdh_00000.vtt");
     }
 
     [Theory]
@@ -459,7 +494,7 @@ public class PlaylistGeneratorSubtitleVariantTests
             segmentDurationSeconds: 6
         );
 
-        playlist.Should().Contain("subs_und_full_00000.vtt");
+        playlist.Should().Contain("full_00000.vtt");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -486,6 +521,16 @@ public class PlaylistGeneratorSubtitleVariantTests
             AudioOutputs: [Audio()],
             SubtitleOutputs: [.. subs],
             Thumbnails: null
+        );
+
+    private static OutputPlan PlanWithoutChunks(IReadOnlyList<SubtitleOutputPlan> subs) =>
+        new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [Video()],
+            AudioOutputs: [Audio()],
+            SubtitleOutputs: [.. subs],
+            Thumbnails: null,
+            EmitSubtitleWebVttChunks: false
         );
 
     private static string Generate(OutputPlan plan)

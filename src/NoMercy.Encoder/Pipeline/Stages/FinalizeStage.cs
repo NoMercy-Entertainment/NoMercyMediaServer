@@ -128,6 +128,18 @@ public class FinalizeStage(
                         + "Leave it false until CEA-608/708 extraction lands."
                 );
 
+            // SubtitleImsc is reserved for future work — log a warning instead
+            // of throwing so existing profiles created before WebVtt/Imsc were
+            // wired (when the toggle was a no-op) don't suddenly hard-fail.
+            // The dashboard label flags it as "not yet implemented" so users
+            // see the same intent on the editor side.
+            if (derivatives.SubtitleImsc)
+                logger.LogWarning(
+                    "[{CorrelationId}] HlsDerivatives.SubtitleImsc is true but IMSC subtitle output "
+                        + "is not implemented — flag ignored. Untick it in the encoder profile to silence this warning.",
+                    context.CorrelationId
+                );
+
             IReadOnlyList<StorageEntry> allEntries = effectiveStorage.List(
                 input.OutputDirectory,
                 "*",

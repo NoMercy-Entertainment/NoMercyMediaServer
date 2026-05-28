@@ -1,5 +1,4 @@
 using NoMercy.Encoder.Analysis;
-using NoMercy.Encoder.BuildingBlocks.Drm;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Pipeline;
@@ -45,7 +44,13 @@ public record OutputPlan(
     IReadOnlyList<AcquiredSubtitle>? AcquiredSubtitles = null,
     // Opt-in: when true the decomposer emits one Chapters task per chapter
     // and BuildStage extracts a single still at the chapter's exact timestamp.
-    bool GenerateChapterThumbs = false
+    bool GenerateChapterThumbs = false,
+    // When true, HlsOutputStrategy slices each extracted WebVTT subtitle into
+    // HLS segments + per-track media playlist (subtitles/{lang}/{variant}.m3u8)
+    // and the master playlist references those m3u8 wrappers. When false the
+    // raw .vtt extract still lands on disk for download but no segments are
+    // produced and the master playlist omits the EXT-X-MEDIA subtitle entry.
+    bool EmitSubtitleWebVttChunks = true
 );
 
 public record VideoOutputPlan(

@@ -171,9 +171,10 @@ public class HlsSubtitleMediaTagTests
 
         string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(sub, segments, 6);
 
+        // Playlist lives in subtitles/eng/ — segment URIs are relative to it.
         playlist.Should().Contain("#EXTM3U");
-        playlist.Should().Contain("subs_eng_full_00000.vtt");
-        playlist.Should().Contain("subs_eng_full_00001.vtt");
+        playlist.Should().Contain("full_00000.vtt");
+        playlist.Should().Contain("full_00001.vtt");
         playlist.Should().Contain("#EXT-X-ENDLIST");
     }
 
