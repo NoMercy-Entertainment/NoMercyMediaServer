@@ -48,7 +48,15 @@ public sealed record CoordinatorState(
     /// (still-reserved) coordinator row is deleted, so identical payloads were
     /// silently dropped and the coordinator died after one wake-up.
     /// </summary>
-    int WakeSequence = 0
+    int WakeSequence = 0,
+    /// <summary>
+    /// Last <c>doneCount</c> the coordinator logged for the current bundle.
+    /// Used to throttle the WaitChildren progress line so a long-running
+    /// bundle doesn't stamp the log on every 200ms wake-up (the coordinator
+    /// re-enqueues itself faster than children complete). -1 means "no value
+    /// logged yet" so the first poll always emits.
+    /// </summary>
+    int LastLoggedDoneCount = -1
 );
 
 /// <summary>

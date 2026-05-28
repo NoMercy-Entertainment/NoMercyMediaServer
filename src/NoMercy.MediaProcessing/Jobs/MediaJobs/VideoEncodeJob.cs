@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Libraries;
@@ -137,7 +136,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                 if (encodingProfile.Video is null && encodingProfile.Audio.Length == 0)
                 {
                     Logger.Encoder(
-                        $"Skipping preset {preset.Name}: no video or audio outputs configured"
+                        $"Skipping preset {preset.Name}: no video or audio outputs configured",
+                        LogEventLevel.Warning
                     );
                     continue;
                 }
@@ -245,7 +245,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         CoordinatorState state = Coordinator!;
 
         Logger.Encoder(
-            $"[VideoEncodeJob] Coordinator wake-up — GroupTag={state.GroupTag} Phase={state.Phase}"
+            $"[VideoEncodeJob] Coordinator wake-up — GroupTag={state.GroupTag} Phase={state.Phase}",
+            LogEventLevel.Verbose
         );
 
         switch (state.Phase)
@@ -369,7 +370,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         }
 
         Logger.Encoder(
-            $"[VideoEncodeJob] WaitPass1 complete — dispatched {pass2TaskIds.Length} Pass2 + {otherTaskIds.Length} other tasks. Transitioning to WaitChildren."
+            $"[VideoEncodeJob] WaitPass1 complete — dispatched {pass2TaskIds.Length} Pass2 + {otherTaskIds.Length} other tasks. Transitioning to WaitChildren.",
+            LogEventLevel.Verbose
         );
 
         ReEnqueueSelf(
@@ -409,10 +411,25 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             if (!currentBundleDone)
             {
                 int doneCount = currentBundleTaskIds.Count(tid => completedTaskIds.Contains(tid));
-                Logger.Encoder(
-                    $"[VideoEncodeJob] WaitChildren: bundle {state.CurrentBundleIndex + 1}/{bundles.Length}, {doneCount}/{currentBundleTaskIds.Length} streams done — re-enqueueing"
+                // Polling is fast (sub-second re-enqueue intervals) but child
+                // tasks complete on encoder cadence (minutes). Logging on every
+                // wake-up produced ~thousands of identical lines per encode —
+                // emit only when the count actually advances + at Verbose so
+                // routine progress doesn't pollute Info-level dashboards.
+                if (doneCount != state.LastLoggedDoneCount)
+                {
+                    Logger.Encoder(
+                        $"[VideoEncodeJob] WaitChildren: bundle {state.CurrentBundleIndex + 1}/{bundles.Length}, {doneCount}/{currentBundleTaskIds.Length} streams done",
+                        LogEventLevel.Verbose
+                    );
+                }
+                ReEnqueueSelf(
+                    state with
+                    {
+                        Phase = CoordinatorPhase.WaitChildren,
+                        LastLoggedDoneCount = doneCount,
+                    }
                 );
-                ReEnqueueSelf(state with { Phase = CoordinatorPhase.WaitChildren });
                 return;
             }
 
@@ -428,6 +445,9 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                     {
                         Phase = CoordinatorPhase.WaitChildren,
                         CurrentBundleIndex = nextIndex,
+                        // Fresh bundle — reset the throttle so the first
+                        // progress line for this bundle always emits.
+                        LastLoggedDoneCount = -1,
                     }
                 );
                 return;
@@ -448,15 +468,26 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         if (!allDone)
         {
             int doneCount = nonPass1TaskIds.Count(tid => completedTaskIds.Contains(tid));
-            Logger.Encoder(
-                $"[VideoEncodeJob] WaitChildren: {doneCount}/{nonPass1TaskIds.Length} tasks done — re-enqueueing"
+            if (doneCount != state.LastLoggedDoneCount)
+            {
+                Logger.Encoder(
+                    $"[VideoEncodeJob] WaitChildren: {doneCount}/{nonPass1TaskIds.Length} tasks done",
+                    LogEventLevel.Verbose
+                );
+            }
+            ReEnqueueSelf(
+                state with
+                {
+                    Phase = CoordinatorPhase.WaitChildren,
+                    LastLoggedDoneCount = doneCount,
+                }
             );
-            ReEnqueueSelf(state with { Phase = CoordinatorPhase.WaitChildren });
             return;
         }
 
         Logger.Encoder(
-            $"[VideoEncodeJob] WaitChildren complete — all tasks done. Transitioning to Finalize."
+            $"[VideoEncodeJob] WaitChildren complete — all tasks done. Transitioning to Finalize.",
+            LogEventLevel.Verbose
         );
         ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize });
     }
@@ -647,7 +678,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         string groupTag = tasks[0].GroupTag;
 
         Logger.Encoder(
-            $"[VideoEncodeJob] Decomposed into {tasks.Length} child tasks (groupTag={groupTag})"
+            $"[VideoEncodeJob] Decomposed into {tasks.Length} child tasks (groupTag={groupTag})",
+            LogEventLevel.Verbose
         );
 
         QueueJobDispatcher dispatcher = GetDispatcher();
@@ -796,7 +828,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         );
 
         Logger.Encoder(
-            $"[VideoEncodeJob] Re-enqueued coordinator with Phase={newState.Phase}, GroupTag={newState.GroupTag}"
+            $"[VideoEncodeJob] Re-enqueued coordinator with Phase={newState.Phase}, GroupTag={newState.GroupTag}",
+            LogEventLevel.Verbose
         );
     }
 
