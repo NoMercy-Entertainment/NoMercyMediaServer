@@ -244,10 +244,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
     {
         CoordinatorState state = Coordinator!;
 
-        Logger.Encoder(
-            $"[VideoEncodeJob] Coordinator wake-up — GroupTag={state.GroupTag} Phase={state.Phase}",
-            LogEventLevel.Verbose
-        );
+        // No wake-up trace — the coordinator re-enters this method on every
+        // re-enqueue tick (multiple times per second while bundles encode),
+        // and even at Verbose it bombards the console. The state-transition
+        // logs further down already announce real progress.
 
         switch (state.Phase)
         {
@@ -827,10 +827,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             }
         );
 
-        Logger.Encoder(
-            $"[VideoEncodeJob] Re-enqueued coordinator with Phase={newState.Phase}, GroupTag={newState.GroupTag}",
-            LogEventLevel.Verbose
-        );
+        // No re-enqueue trace — fires every coordinator tick (sub-second cadence
+        // while bundles encode) and even at Verbose it floods the console. The
+        // companion wake-up trace was already dropped for the same reason; real
+        // phase transitions emit their own descriptive lines.
     }
 
     private EncodeTaskJob BuildChildJob(DecomposedTask task, Ulid presetId)
