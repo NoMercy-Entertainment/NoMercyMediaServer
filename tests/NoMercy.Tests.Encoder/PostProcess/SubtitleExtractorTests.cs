@@ -101,13 +101,16 @@ public class SubtitleExtractorTests
     }
 
     // ------------------------------------------------------------------
-    // Forced subtitle variant
+    // Variant propagation — the extractor trusts the plan's pre-classified
+    // variant rather than re-running classification per stream. PlanStage
+    // sees every source subtitle at once, so it can disambiguate
+    // full / alt across same-language peers; the extractor cannot.
     // ------------------------------------------------------------------
 
     [Fact]
-    public void ResolveOutput_ForcedSubtitle_VariantIsForced()
+    public void ResolveOutput_PropagatesPlanVariant_ForSign()
     {
-        SubtitleOutputPlan plan = MakePlan(0, "eng");
+        SubtitleOutputPlan plan = MakePlan(0, "eng") with { Variant = "sign" };
         SubtitleStreamInfo stream = new(
             Index: 0,
             Codec: "subrip",
@@ -119,6 +122,23 @@ public class SubtitleExtractorTests
         SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
 
         info.Variant.Should().Be("sign");
+    }
+
+    [Fact]
+    public void ResolveOutput_PropagatesPlanVariant_ForAlt()
+    {
+        // Second English track in the source — PlanStage promotes the first
+        // to "full" and demotes peers to "alt". The extractor must honour
+        // that decision, not re-classify and collide both back to "full".
+        SubtitleOutputPlan plan = MakePlan(1, "eng") with
+        {
+            Variant = "alt",
+        };
+        SubtitleStreamInfo stream = MakeStream(1, "subrip", "eng");
+
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
+
+        info.Variant.Should().Be("alt");
     }
 
     // ------------------------------------------------------------------

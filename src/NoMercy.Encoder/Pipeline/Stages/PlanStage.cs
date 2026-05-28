@@ -661,6 +661,12 @@ public class PlanStage(
 
         // Build one SubtitleOutputPlan per matching source stream.
         // Deduplicate by source stream index — first matching profile wins.
+        // Variants are resolved across ALL source streams once so the per-
+        // language "full vs alt" promotion sees every track, not just the
+        // ones a given profile happens to allow.
+        IReadOnlyList<string> subtitleVariants = SubtitleClassifier.ResolveVariants(
+            media.SubtitleStreams
+        );
         List<SubtitleOutputPlan> subtitlePlans = [];
         HashSet<int> claimedStreams = [];
         foreach (SubtitleOutput subProfile in profile.Subtitles)
@@ -696,7 +702,7 @@ public class PlanStage(
                         MapLabel: $"0:s:{si}",
                         PlaylistNameTemplate: subProfile.PlaylistNameTemplate,
                         Policy: subProfile.Policy,
-                        Variant: SubtitleClassifier.ResolveVariant(stream)
+                        Variant: subtitleVariants[si]
                     )
                 );
             }

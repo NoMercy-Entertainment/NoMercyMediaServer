@@ -27,7 +27,12 @@ public class SubtitleExtractor : ISubtitleExtractor
     )
     {
         string language = stream.Language ?? plan.Language ?? "und";
-        string variant = ResolveVariant(stream);
+        // Trust the plan's variant — PlanStage classifies across all source
+        // streams with per-language peer context. Re-running ResolveVariant
+        // here on a single stream would re-introduce the bug where every
+        // un-classified track collapses to "alt" (or worse, to "full" for
+        // multiple peers of the same language with no per-language tiebreak).
+        string variant = plan.Variant;
         bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
         bool isAss = AssCodecs.Contains(stream.Codec);
 
@@ -93,7 +98,7 @@ public class SubtitleExtractor : ISubtitleExtractor
     )
     {
         string language = stream.Language ?? plan.Language ?? "und";
-        string variant = ResolveVariant(stream);
+        string variant = plan.Variant;
         bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
         bool isAss = AssCodecs.Contains(stream.Codec);
 
@@ -119,9 +124,6 @@ public class SubtitleExtractor : ISubtitleExtractor
         string resolved = TemplateResolver.Resolve(plan.PlaylistNameTemplate, tokens);
         return $"{resolved}.{extension}";
     }
-
-    private static string ResolveVariant(SubtitleStreamInfo stream) =>
-        SubtitleClassifier.ResolveVariant(stream);
 
     // Map a source codec to the extension ffmpeg's `-c:s copy` will produce
     // without re-muxing. Falls through to a forced WebVTT conversion only

@@ -37,7 +37,68 @@ public static class SubtitleClassifier
 
     // Title takes priority over disposition flags so signs/songs and SDH
     // tracks land in the right slot even when the muxer mis-flagged them.
+    // Single-stream form: returns "full" when no signal classifies the
+    // stream as sign/sdh. Use ResolveVariants for multi-stream context where
+    // a second un-classified stream in the same language should become "alt".
     public static string ResolveVariant(SubtitleStreamInfo stream)
+    {
+        return PreClassify(stream) ?? "full";
+    }
+
+    /// <summary>
+    /// Resolves variants for a full set of subtitle streams at once. Use
+    /// this whenever multiple streams are in scope (encoding plan, full
+    /// media probe) — it groups un-classified streams by language and
+    /// promotes the first one (preferring <see cref="SubtitleStreamInfo.IsDefault"/>)
+    /// to "full". Remaining un-classified streams in that language become
+    /// "alt". The single-stream <see cref="ResolveVariant"/> overload has
+    /// no peer context and would mark every stream "full" — which collides
+    /// when a source carries multiple regular tracks per language.
+    /// </summary>
+    public static IReadOnlyList<string> ResolveVariants(IReadOnlyList<SubtitleStreamInfo> streams)
+    {
+        string[] variants = new string[streams.Count];
+        Dictionary<string, List<int>> unclassifiedByLanguage = new(
+            StringComparer.OrdinalIgnoreCase
+        );
+
+        for (int i = 0; i < streams.Count; i++)
+        {
+            string? preClassified = PreClassify(streams[i]);
+            if (preClassified is not null)
+            {
+                variants[i] = preClassified;
+                continue;
+            }
+
+            string language = streams[i].Language ?? "und";
+            if (!unclassifiedByLanguage.TryGetValue(language, out List<int>? indices))
+                unclassifiedByLanguage[language] = indices = [];
+            indices.Add(i);
+        }
+
+        foreach (List<int> indices in unclassifiedByLanguage.Values)
+        {
+            // Prefer the default-flagged stream as "full"; otherwise the
+            // first un-classified stream in source order.
+            int fullIndex = indices.FirstOrDefault(i => streams[i].IsDefault, -1);
+            if (fullIndex < 0)
+                fullIndex = indices[0];
+
+            foreach (int i in indices)
+                variants[i] = i == fullIndex ? "full" : "alt";
+        }
+
+        return variants;
+    }
+
+    /// <summary>
+    /// First-pass classification using only signals on the stream itself.
+    /// Returns null when no signal classifies the stream — caller decides
+    /// whether to default to "full" (single-stream context) or defer to
+    /// the per-language pass for "full" vs "alt" disambiguation.
+    /// </summary>
+    private static string? PreClassify(SubtitleStreamInfo stream)
     {
         string title = stream.Title?.ToLowerInvariant() ?? "";
 
@@ -50,9 +111,6 @@ public static class SubtitleClassifier
         if (stream.IsForced)
             return "sign";
 
-        if (stream.IsDefault)
-            return "full";
-
-        return "alt";
+        return null;
     }
 }

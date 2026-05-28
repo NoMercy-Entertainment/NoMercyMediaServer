@@ -157,11 +157,228 @@ public class SubtitleClassifierTests
     }
 
     [Fact]
-    public void ResolveVariant_NoFlags_ReturnsAlt()
+    public void ResolveVariant_NoFlags_ReturnsFull()
     {
-        // Secondary tracks land in alt — the player UI groups them under
-        // a non-default listing.
-        SubtitleClassifier.ResolveVariant(Stream()).Should().Be("alt");
+        // Single-stream context: a track that isn't sign / sdh / forced is
+        // the regular language track. "alt" is reserved for the per-language
+        // overflow case (see ResolveVariants) — it shouldn't be the fallback
+        // for a stream with no peer context.
+        SubtitleClassifier.ResolveVariant(Stream()).Should().Be("full");
+    }
+
+    // ── ResolveVariants (multi-stream, per-language disambiguation) ─────────
+
+    [Fact]
+    public void ResolveVariants_SingleStreamPerLanguage_AllFull()
+    {
+        IReadOnlyList<SubtitleStreamInfo> streams =
+        [
+            new(
+                Index: 0,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+            new(
+                Index: 1,
+                Codec: "srt",
+                Language: "nld",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+        ];
+
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
+
+        variants.Should().Equal("full", "full");
+    }
+
+    [Fact]
+    public void ResolveVariants_MultipleSameLanguage_FirstFullRestAlt()
+    {
+        IReadOnlyList<SubtitleStreamInfo> streams =
+        [
+            new(
+                Index: 0,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+            new(
+                Index: 1,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+            new(
+                Index: 2,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+        ];
+
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
+
+        variants.Should().Equal("full", "alt", "alt");
+    }
+
+    [Fact]
+    public void ResolveVariants_DefaultFlagWinsAsFullEvenWhenNotFirst()
+    {
+        IReadOnlyList<SubtitleStreamInfo> streams =
+        [
+            new(
+                Index: 0,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+            new(
+                Index: 1,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: true,
+                IsForced: false,
+                Title: null
+            ),
+            new(
+                Index: 2,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+        ];
+
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
+
+        variants.Should().Equal("alt", "full", "alt");
+    }
+
+    [Fact]
+    public void ResolveVariants_PreClassifiedSignAndSdh_DontConsumeFullSlot()
+    {
+        // Sign and SDH tracks shouldn't compete for the per-language "full"
+        // slot — they pre-classify by title / forced flag and the regular
+        // un-flagged track still becomes the language's "full".
+        IReadOnlyList<SubtitleStreamInfo> streams =
+        [
+            new(
+                Index: 0,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: false,
+                Title: "English [SDH]"
+            ),
+            new(
+                Index: 1,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: true,
+                Title: null
+            ),
+            new(
+                Index: 2,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+        ];
+
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
+
+        variants.Should().Equal("sdh", "sign", "full");
+    }
+
+    [Fact]
+    public void ResolveVariants_MixedLanguagesShareNoAltSlots()
+    {
+        // Per-language disambiguation must not leak across languages —
+        // English alt + Dutch full + Dutch alt is the expected shape.
+        IReadOnlyList<SubtitleStreamInfo> streams =
+        [
+            new(
+                Index: 0,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+            new(
+                Index: 1,
+                Codec: "srt",
+                Language: "eng",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+            new(
+                Index: 2,
+                Codec: "srt",
+                Language: "nld",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+            new(
+                Index: 3,
+                Codec: "srt",
+                Language: "nld",
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+        ];
+
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
+
+        variants.Should().Equal("full", "alt", "full", "alt");
+    }
+
+    [Fact]
+    public void ResolveVariants_NullLanguage_TreatedAsUnd()
+    {
+        IReadOnlyList<SubtitleStreamInfo> streams =
+        [
+            new(
+                Index: 0,
+                Codec: "srt",
+                Language: null,
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+            new(
+                Index: 1,
+                Codec: "srt",
+                Language: null,
+                IsDefault: false,
+                IsForced: false,
+                Title: null
+            ),
+        ];
+
+        IReadOnlyList<string> variants = SubtitleClassifier.ResolveVariants(streams);
+
+        variants.Should().Equal("full", "alt");
     }
 
     [Fact]
