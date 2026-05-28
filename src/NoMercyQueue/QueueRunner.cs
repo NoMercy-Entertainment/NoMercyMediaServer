@@ -320,6 +320,27 @@ public class QueueRunner
         _logger.LogInformation("Queue '{Name}' resumed and state persisted", name);
     }
 
+    /// <summary>
+    /// Persisted paused state for <paramref name="name"/>. Reads from the
+    /// configuration store rather than tracking it in-memory so the
+    /// dashboard sees the same value that was used to restore the queue at
+    /// boot time (otherwise a server restart while paused leaves the UI
+    /// showing "running" while the worker is actually stopped).
+    /// </summary>
+    public bool IsPaused(string name)
+    {
+        if (_configurationStore is null)
+            return false;
+
+        string key = $"queue.{name}.paused";
+        return _configurationStore.HasKey(key)
+            && string.Equals(
+                _configurationStore.GetValue(key),
+                "true",
+                StringComparison.OrdinalIgnoreCase
+            );
+    }
+
     #endregion
 
 

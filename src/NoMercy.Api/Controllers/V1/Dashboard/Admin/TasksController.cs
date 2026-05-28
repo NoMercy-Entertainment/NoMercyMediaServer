@@ -355,6 +355,22 @@ public class TasksController(
         );
     }
 
+    /// <summary>Source-of-truth paused state for the encoder queue. The
+    /// dashboard reads this on every queue refresh so its pause/resume
+    /// toggle reflects the persisted state across server restarts —
+    /// previously the UI tracked it in a client-side ref that defaulted to
+    /// "running" no matter what the server thought.</summary>
+    [HttpGet]
+    [Route("queue/status")]
+    public IActionResult EncoderQueueStatus()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view encoder queue status");
+
+        bool paused = QueueRunner.Current?.IsPaused("encoder") ?? false;
+        return Ok(new { paused });
+    }
+
     /// <summary>
     /// Estimated completion time for the current encoder queue. Based on the
     /// rolling average duration of the most recent 50 successful encodes in
