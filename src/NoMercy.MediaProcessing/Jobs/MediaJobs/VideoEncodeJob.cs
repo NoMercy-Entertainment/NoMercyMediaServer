@@ -456,7 +456,9 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             Logger.Encoder(
                 $"[VideoEncodeJob] All {bundles.Length} bundles complete. Transitioning to Finalize."
             );
-            ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize });
+            // Finalize is one-shot post-encode work — fire immediately so the
+            // library refresh doesn't wait out a full poll interval.
+            ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize }, TimeSpan.Zero);
             return;
         }
 
@@ -489,7 +491,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             $"[VideoEncodeJob] WaitChildren complete — all tasks done. Transitioning to Finalize.",
             LogEventLevel.Verbose
         );
-        ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize });
+        ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize }, TimeSpan.Zero);
     }
 
     private void DispatchSingleBundle(DecomposedTask bundle, Ulid presetId, string groupTag)
@@ -783,7 +785,32 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
     /// The current job instance is deleted by the worker after <see cref="Handle"/> returns.
     /// The new job has a different payload (new Phase), so the deduplication check passes.
     /// </summary>
-    private void ReEnqueueSelf(CoordinatorState newState)
+    /// <summary>
+    /// How long a polling coordinator (WaitPass1 / WaitChildren) sleeps
+    /// before its next wake-up. Children run on encoder cadence (minutes),
+    /// so a 5s poll interval just stamped the queue with thousands of
+    /// no-op DB hits per minute. 30s is well below typical encode lengths
+    /// while cutting wake-up rate ~6x.
+    /// </summary>
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// ±5s jitter prevents N concurrent coordinators from waking in
+    /// lockstep — a season with 12 episodes used to burst-poll all 12
+    /// in ~100ms every 5s. Jitter spreads them across the poll window.
+    /// </summary>
+    private static readonly TimeSpan PollJitterRange = TimeSpan.FromSeconds(5);
+
+    private static readonly Random PollJitterRng = new();
+
+    private static TimeSpan NextPollDelay()
+    {
+        double offsetSeconds =
+            (PollJitterRng.NextDouble() * 2.0 - 1.0) * PollJitterRange.TotalSeconds;
+        return PollInterval + TimeSpan.FromSeconds(offsetSeconds);
+    }
+
+    private void ReEnqueueSelf(CoordinatorState newState, TimeSpan? availableAfter = null)
     {
         // Bump WakeSequence so the serialized payload differs from the row this
         // worker is currently processing. JobQueue.Enqueue dedups by Payload, and
@@ -817,13 +844,14 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
 
         // Dispatch as a new top-level coordinator job (no parent ID).
         // The different Coordinator payload means deduplication won't block it.
+        TimeSpan delay = availableAfter ?? NextPollDelay();
         queue.Enqueue(
             new NoMercyQueue.Core.Models.QueueJobModel
             {
                 Queue = QueueName,
                 Payload = SerializationHelper.Serialize(continueJob),
                 Priority = Priority,
-                AvailableAt = DateTime.UtcNow + TimeSpan.FromSeconds(5),
+                AvailableAt = DateTime.UtcNow + delay,
             }
         );
 
