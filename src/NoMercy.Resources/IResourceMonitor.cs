@@ -20,6 +20,16 @@ public sealed record GpuProcessSample(
 public interface IResourceMonitor
 {
     double GetCpuUsagePercent();
+
+    /// <summary>
+    /// System-wide CPU utilization across every process on the host (not just
+    /// the server). This is the signal the dispatch gate consults before
+    /// granting a new encoder lease — <see cref="GetCpuUsagePercent"/> only
+    /// counts the server process itself, so ffmpeg child processes are
+    /// invisible to it and the budget never sees the encoder load it caused.
+    /// </summary>
+    double GetSystemCpuUsagePercent();
+
     double GetGpuEncodeUtilization(string gpuDeviceKey);
     long GetAvailableMemoryMb();
 

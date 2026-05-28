@@ -15,6 +15,11 @@ public static class ServiceRegistration
     {
         services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter());
         services.AddSingleton<IConfigurationStore, MediaConfigurationStore>();
+        services.AddSingleton(_ => new ResourceBudgetOptions(
+            CpuHeadroomPercent: Config.EncoderCpuHeadroomPercent,
+            GpuHeadroomPercent: Config.EncoderGpuHeadroomPercent,
+            MinFreeMemoryMb: Config.EncoderMinFreeMemoryMb
+        ));
         services.AddSingleton<QueueRunner>(sp =>
         {
             IQueueContext queueContext = sp.GetRequiredService<IQueueContext>();

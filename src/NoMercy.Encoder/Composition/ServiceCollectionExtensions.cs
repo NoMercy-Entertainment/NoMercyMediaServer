@@ -36,6 +36,7 @@ using NoMercy.Encoder.Strategies.Mkv;
 using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Encoder.Subscribers;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Composition;
@@ -144,8 +145,10 @@ public static class ServiceCollectionExtensions
         {
             IHardwareCapabilities hw = sp.GetRequiredService<IHardwareCapabilities>();
             IResourceMonitor monitor = sp.GetRequiredService<IResourceMonitor>();
+            ResourceBudgetOptions options =
+                sp.GetService<ResourceBudgetOptions>() ?? ResourceBudgetOptions.Disabled;
             ILogger<ResourceBudget> logger = sp.GetRequiredService<ILogger<ResourceBudget>>();
-            return new ResourceBudget(hw, monitor, logger);
+            return new ResourceBudget(hw, monitor, options, logger);
         });
 
         // Startup — register concrete first so IHostedService resolves same instance

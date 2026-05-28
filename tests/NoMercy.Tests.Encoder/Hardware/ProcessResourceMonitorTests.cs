@@ -63,7 +63,33 @@ public class ProcessResourceMonitorTests
         NullResourceMonitor sut = new();
 
         sut.GetCpuUsagePercent().Should().Be(0);
+        sut.GetSystemCpuUsagePercent().Should().Be(0);
         sut.GetAvailableMemoryMb().Should().Be(0);
         sut.GetGpuEncodeUtilization("n/a").Should().Be(0);
+    }
+
+    [Fact]
+    public void GetSystemCpuUsagePercent_FirstCall_ReturnsClampedValue()
+    {
+        ProcessResourceMonitor sut = new();
+
+        double percent = sut.GetSystemCpuUsagePercent();
+
+        percent.Should().BeGreaterThanOrEqualTo(0);
+        percent.Should().BeLessThanOrEqualTo(100);
+    }
+
+    [Fact]
+    public void GetSystemCpuUsagePercent_SecondCall_AfterDelay_ReturnsClampedValue()
+    {
+        ProcessResourceMonitor sut = new();
+        sut.GetSystemCpuUsagePercent();
+        Thread.Sleep(50);
+
+        double percent = sut.GetSystemCpuUsagePercent();
+
+        percent.Should().BeGreaterThanOrEqualTo(0);
+        percent.Should().BeLessThanOrEqualTo(100);
+        double.IsNaN(percent).Should().BeFalse();
     }
 }

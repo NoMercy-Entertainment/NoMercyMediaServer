@@ -81,20 +81,22 @@ public static class Config
     public static KeyValuePair<string, int> EncoderTaskWorkers { get; set; } =
         new("encoder-task", 0);
 
-    // Queue concurrency is the upper bound on how many bundles the queue can
-    // *attempt* to run in parallel. The actual concurrency cap is enforced by
-    // ResourceBudget's per-GPU and CPU semaphores at job pick-up time:
-    // VideoEncodeJob.ResolveBundleResources sums the real NVENC slot + CPU
-    // thread demand of every task in the bundle, so a bundle that uses all 8
-    // NVENC sessions claims 8 slots — and another bundle has to wait until a
-    // slot frees. Having multiple workers lets light bundles (audio, subs,
-    // thumbs) ride along when there's spare budget. Sequential vs parallel is
-    // a coordinator + semaphore decision, not a queue-worker count decision.
-    public static KeyValuePair<string, int> GpuEncoderWorkers { get; set; } =
-        new("encoder-gpu", Math.Min(4, Math.Max(1, Environment.ProcessorCount / 4)));
+    // Worker count is the upper bound on concurrent encodes. The actual cap is
+    // the lower of (a) this number, (b) ResourceBudget's static semaphores
+    // (NVENC session count, CPU thread budget), and (c) the live-headroom gate
+    // (system CPU + GPU encode utilization + free memory) — see
+    // ResourceBudgetOptions. Default to 1 so a fresh install never pegs the
+    // host; users with capable hardware can raise it via SetWorkerCount.
+    public static KeyValuePair<string, int> GpuEncoderWorkers { get; set; } = new("encoder-gpu", 1);
 
-    public static KeyValuePair<string, int> CpuEncoderWorkers { get; set; } =
-        new("encoder-cpu", Math.Max(1, Environment.ProcessorCount / 2));
+    public static KeyValuePair<string, int> CpuEncoderWorkers { get; set; } = new("encoder-cpu", 1);
+
+    // Live-headroom thresholds consulted by ResourceBudget.TryAcquire before
+    // granting a new encoder lease. Each value left at 0 disables that signal.
+    // Defaults leave room for the user's other work — they don't max the box.
+    public static double EncoderCpuHeadroomPercent { get; set; } = 75.0;
+    public static double EncoderGpuHeadroomPercent { get; set; } = 80.0;
+    public static long EncoderMinFreeMemoryMb { get; set; } = 1024;
 
     public static KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 3);

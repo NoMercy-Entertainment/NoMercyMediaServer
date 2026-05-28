@@ -14,7 +14,9 @@ public class ResourceBudget : IResourceBudget
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _gpuSemaphores;
     private readonly SemaphoreSlim _cpuSemaphore;
     private readonly IResourceMonitor? _monitor;
+    private readonly ResourceBudgetOptions _options;
     private readonly ILogger<ResourceBudget>? _logger;
+    private bool _headroomDenialLogged;
 
     // Live source of truth for GPUs. Held through IHardwareCapabilities so
     // we re-read it on every lookup — HardwareInitializationService finishes
@@ -50,11 +52,13 @@ public class ResourceBudget : IResourceBudget
     public ResourceBudget(
         IHardwareCapabilities hardware,
         IResourceMonitor? monitor = null,
+        ResourceBudgetOptions? options = null,
         ILogger<ResourceBudget>? logger = null
     )
     {
         _hardware = hardware;
         _monitor = monitor;
+        _options = options ?? ResourceBudgetOptions.Disabled;
         _logger = logger;
         _cpuSemaphore = new(hardware.CpuCores, hardware.CpuCores);
         _gpuSemaphores = new();
@@ -70,10 +74,12 @@ public class ResourceBudget : IResourceBudget
         IReadOnlyList<GpuDevice> gpuDevices,
         int cpuCores,
         IResourceMonitor? monitor = null,
+        ResourceBudgetOptions? options = null,
         ILogger<ResourceBudget>? logger = null
     )
     {
         _monitor = monitor;
+        _options = options ?? ResourceBudgetOptions.Disabled;
         _logger = logger;
         _cpuSemaphore = new(cpuCores, cpuCores);
         _gpuSemaphores = new();
@@ -267,6 +273,13 @@ public class ResourceBudget : IResourceBudget
     {
         int timeoutMs = (int)timeout.TotalMilliseconds;
 
+        // Live-headroom gate. Static semaphores cap peak concurrency at
+        // hardware limits, but the count we can actually sustain depends on
+        // current load. Refuse the lease when the host is saturated; the
+        // worker retries every BudgetRetryDelay so we re-check as load drops.
+        if (!HasHeadroom(requirement, timeoutMs > 0))
+            return null;
+
         if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
         {
             SemaphoreSlim gpuSemaphore = GetGpuSemaphore(requirement.GpuDeviceKey);
@@ -349,6 +362,87 @@ public class ResourceBudget : IResourceBudget
         _logger?.LogDebug("Lease {LeaseId} granted via TryAcquire", leaseId);
 
         return new(leaseId, requirement.GpuDeviceKey, requirement.GpuSlots, requirement.CpuThreads);
+    }
+
+    private bool HasHeadroom(ResourceRequirement requirement, bool logIfDenied)
+    {
+        if (_monitor is null)
+            return true;
+
+        if (_options.CpuHeadroomPercent > 0)
+        {
+            double systemCpu = _monitor.GetSystemCpuUsagePercent();
+            if (systemCpu >= _options.CpuHeadroomPercent)
+            {
+                LogHeadroomDenied(
+                    "system CPU",
+                    systemCpu,
+                    _options.CpuHeadroomPercent,
+                    logIfDenied
+                );
+                return false;
+            }
+        }
+
+        if (
+            _options.GpuHeadroomPercent > 0
+            && requirement.GpuDeviceKey is not null
+            && requirement.GpuSlots > 0
+        )
+        {
+            double gpuUtil = _monitor.GetGpuEncodeUtilization(requirement.GpuDeviceKey) * 100.0;
+            if (gpuUtil >= _options.GpuHeadroomPercent)
+            {
+                LogHeadroomDenied(
+                    $"GPU encode '{requirement.GpuDeviceKey}'",
+                    gpuUtil,
+                    _options.GpuHeadroomPercent,
+                    logIfDenied
+                );
+                return false;
+            }
+        }
+
+        if (_options.MinFreeMemoryMb > 0)
+        {
+            long freeMb = _monitor.GetAvailableMemoryMb();
+            if (freeMb > 0 && freeMb < _options.MinFreeMemoryMb)
+            {
+                LogHeadroomDenied(
+                    "free memory MB",
+                    freeMb,
+                    _options.MinFreeMemoryMb,
+                    logIfDenied,
+                    invert: true
+                );
+                return false;
+            }
+        }
+
+        _headroomDenialLogged = false;
+        return true;
+    }
+
+    private void LogHeadroomDenied(
+        string signal,
+        double current,
+        double threshold,
+        bool emit,
+        bool invert = false
+    )
+    {
+        if (!emit || _headroomDenialLogged)
+            return;
+
+        _headroomDenialLogged = true;
+        string comparison = invert ? "below" : "above";
+        _logger?.LogDebug(
+            "Headroom gate denied lease — {Signal} at {Current:F1} is {Cmp} threshold {Threshold:F1}",
+            signal,
+            current,
+            comparison,
+            threshold
+        );
     }
 
     public void Release(ResourceLease lease)
