@@ -135,6 +135,7 @@ public static class DatabaseSeeder
         [
             () => appDbContext.Init(),
             () => SeedSystemLocalDriver(mediaDbContext),
+            () => V1DriverBridgeSeed.RunAsync(mediaDbContext),
             () => LibrariesSeed.Init(mediaDbContext, storage, storageDriver),
             () => EncodingPresetsSeed.Init(mediaDbContext, storage),
             () => EncodingPresetsSeed.SeedExamplesAsync(mediaDbContext),
