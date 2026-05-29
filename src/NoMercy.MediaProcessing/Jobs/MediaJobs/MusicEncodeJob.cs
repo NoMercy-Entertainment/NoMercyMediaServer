@@ -33,9 +33,6 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
 
     public override async Task Handle()
     {
-        // TODO: cross-backend transfer — MediaFile.Path (source) and FolderMetaData.BasePath
-        // (encode output) both resolve through the same folder's StorageDriver today. When
-        // source and destination cross folder boundaries, staged copy semantics will be needed.
         await using MediaContext context = new();
 
         await using LibraryRepository libraryRepository = new(context, StorageDriver);
@@ -118,11 +115,6 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                         "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
                     );
 
-                // Resolve per-folder storage so the encoder operates under the
-                // correct backend and path guard for this library folder.
-                // TODO: cross-backend transfer — when source and output folders
-                // map to different backends, staged copy semantics will be needed.
-                // For now source == destination (same folder).
                 IStorage folderStorage = StorageFactory.For(
                     folder.Id,
                     folder.DriverId,

@@ -148,6 +148,7 @@ public partial class FileManager(
 
         string folderName = "";
         string sourceFolder = "";
+        IStorage? sourceStorage = null;
 
         if (tv?.Folder is not null)
             foreach (FolderLibrary libraryFolder in tv.Library.FolderLibraries)
@@ -170,6 +171,7 @@ public partial class FileManager(
 
                 folderName = tv.Folder;
                 sourceFolder = path;
+                sourceStorage = folderStorage;
 
                 break;
             }
@@ -194,11 +196,16 @@ public partial class FileManager(
 
                 folderName = movie.Folder;
                 sourceFolder = path;
+                sourceStorage = folderStorage;
 
                 break;
             }
 
-        if (string.IsNullOrEmpty(folderName) || string.IsNullOrEmpty(sourceFolder))
+        if (
+            string.IsNullOrEmpty(folderName)
+            || string.IsNullOrEmpty(sourceFolder)
+            || sourceStorage is null
+        )
         {
             Logger.App("Folder not found");
             return;
@@ -208,13 +215,8 @@ public partial class FileManager(
 
         Logger.App($"Moving {sourceFolder} to {destinationFolder}");
 
-        // TODO: cross-backend — if source and destination folders are on different backends
-        // this needs AcquireLocalPathAsync + Stream copy semantics. For now both sides are
-        // assumed to be on the same storage backend (local), so we resolve source storage from
-        // the destination folder (the only folder context available here). A full cross-backend
-        // move is tracked as a future task.
         IStorage destinationStorage = StorageFor(folder);
-        MoveFolder(sourceFolder, destinationFolder, destinationStorage);
+        await MoveFolderAsync(sourceFolder, destinationFolder, sourceStorage, destinationStorage);
 
         FolderLibrary? newFolderLibrary = await context
             .FolderLibrary.Include(fl => fl.Library)
@@ -753,18 +755,63 @@ public partial class FileManager(
         return entries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
     }
 
-    private static void MoveFolder(string sourceFolder, string destinationFolder, IStorage storage)
+    private static async Task MoveFolderAsync(
+        string sourceFolder,
+        string destinationFolder,
+        IStorage sourceStorage,
+        IStorage destinationStorage
+    )
     {
-        if (storage.Exists(sourceFolder))
-        {
-            storage.MoveDirectory(sourceFolder, destinationFolder);
-
-            Logger.App($"Moved {sourceFolder} to {destinationFolder}");
-        }
-        else
-        {
+        if (!sourceStorage.Exists(sourceFolder))
             throw new DirectoryNotFoundException($"Source folder not found: {sourceFolder}");
+
+        bool sameBackend =
+            ReferenceEquals(sourceStorage, destinationStorage)
+            || sourceStorage.Driver.GetType() == destinationStorage.Driver.GetType();
+
+        if (sameBackend)
+        {
+            sourceStorage.MoveDirectory(sourceFolder, destinationFolder);
+            Logger.App($"Moved {sourceFolder} to {destinationFolder}");
+            return;
         }
+
+        IReadOnlyList<StorageEntry> entries = sourceStorage.List(
+            sourceFolder,
+            pattern: null,
+            recursive: true
+        );
+
+        foreach (StorageEntry entry in entries)
+        {
+            if (entry.IsDirectory)
+                continue;
+
+            string relativePath = entry.Path.StartsWith(sourceFolder, StringComparison.Ordinal)
+                ? entry.Path[sourceFolder.Length..].TrimStart('/', '\\')
+                : entry.Path;
+
+            string destPath = string.Join(
+                '/',
+                destinationFolder.TrimEnd('/'),
+                relativePath.Replace('\\', '/')
+            );
+
+            string? parentDir = destinationStorage.GetParent(destPath);
+            if (!string.IsNullOrEmpty(parentDir))
+                destinationStorage.CreateDirectory(parentDir);
+
+            await using Stream readStream = sourceStorage.OpenRead(entry.Path);
+            await using Stream writeStream = destinationStorage.OpenWrite(
+                destPath,
+                overwrite: true
+            );
+            await readStream.CopyToAsync(writeStream);
+        }
+
+        sourceStorage.DeleteDirectory(sourceFolder, recursive: true);
+
+        Logger.App($"Cross-backend move: {sourceFolder} to {destinationFolder}");
     }
 
     private static (int Width, int Height) GetImageDimensions(string filePath)
