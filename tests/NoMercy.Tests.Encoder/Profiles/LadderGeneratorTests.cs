@@ -11,10 +11,11 @@ namespace NoMercy.Tests.Encoder.Profiles;
 ///   - User rungs (when non-empty) bypass the default table entirely.
 ///   - Rungs above source resolution are dropped (no upscaling, ever).
 ///   - HEVC bitrate is always 60% of H.264 at the same rung.
+///   - VP9 bitrate is always 65% of H.264 at the same rung.
+///   - AV1 bitrate is always 50% of H.264 at the same rung.
 ///   - Animated thinning drops every-other rung.
 ///   - Non-table source resolutions get a native rung at the top, with
 ///     bitrate interpolated between table neighbours.
-///   - AV1/VP9 emit a "ladder_codec_default" decision (logged fallback).
 /// </summary>
 public class LadderGeneratorTests
 {
@@ -179,10 +180,46 @@ public class LadderGeneratorTests
     }
 
     [Fact]
-    public void Generate_Av1Reference_EmitsCodecDefaultDecision()
+    public void Generate_Av1Reference_1080p_Is50PercentOfH264()
     {
-        // AV1 has no dedicated table → falls back to H.264 column with a
-        // clearly-labelled decision so the dashboard surfaces the gap.
+        // H.264 table entry at 1080p = 5000 kbps; AV1 = round(5000 * 0.50) = 2500.
+        ScopedDecisionLog log = new();
+
+        IReadOnlyList<VideoOutput> av1Outputs = _generator.Generate(
+            Reference(VideoCodecType.Av1),
+            Source(1920, 1080),
+            userRungs: null,
+            log
+        );
+
+        VideoOutput? rung1080 = av1Outputs.FirstOrDefault(o => o.Width == 1920);
+        rung1080.Should().NotBeNull();
+        rung1080!.BitrateKbps.Should().Be(2500);
+    }
+
+    [Fact]
+    public void Generate_Vp9Reference_1080p_Is65PercentOfH264()
+    {
+        // H.264 table entry at 1080p = 5000 kbps; VP9 = round(5000 * 0.65) = 3250.
+        ScopedDecisionLog log = new();
+
+        IReadOnlyList<VideoOutput> vp9Outputs = _generator.Generate(
+            Reference(VideoCodecType.Vp9),
+            Source(1920, 1080),
+            userRungs: null,
+            log
+        );
+
+        VideoOutput? rung1080 = vp9Outputs.FirstOrDefault(o => o.Width == 1920);
+        rung1080.Should().NotBeNull();
+        rung1080!.BitrateKbps.Should().Be(3250);
+    }
+
+    [Fact]
+    public void Generate_Av1Reference_NoCodecDefaultDecisionEmitted()
+    {
+        // AV1 now has real bitrate columns — the "ladder_codec_default" fallback
+        // notice must not appear.
         ScopedDecisionLog log = new();
 
         _ = _generator.Generate(
@@ -192,11 +229,11 @@ public class LadderGeneratorTests
             log
         );
 
-        log.Snapshot().Should().Contain(d => d.Key == "analyze.ladder_codec_default");
+        log.Snapshot().Should().NotContain(d => d.Key == "analyze.ladder_codec_default");
     }
 
     [Fact]
-    public void Generate_Vp9Reference_EmitsCodecDefaultDecision()
+    public void Generate_Vp9Reference_NoCodecDefaultDecisionEmitted()
     {
         ScopedDecisionLog log = new();
 
@@ -207,7 +244,163 @@ public class LadderGeneratorTests
             log
         );
 
-        log.Snapshot().Should().Contain(d => d.Key == "analyze.ladder_codec_default");
+        log.Snapshot().Should().NotContain(d => d.Key == "analyze.ladder_codec_default");
+    }
+
+    [Fact]
+    public void Generate_Av1Reference_AllRungs_SaneBitrates()
+    {
+        // Every AV1 rung must be positive and less than the H.264 rung.
+        ScopedDecisionLog h264Log = new();
+        ScopedDecisionLog av1Log = new();
+
+        IReadOnlyList<VideoOutput> h264Outputs = _generator.Generate(
+            Reference(VideoCodecType.H264),
+            Source(3840, 2160),
+            userRungs: null,
+            h264Log
+        );
+
+        IReadOnlyList<VideoOutput> av1Outputs = _generator.Generate(
+            Reference(VideoCodecType.Av1),
+            Source(3840, 2160),
+            userRungs: null,
+            av1Log
+        );
+
+        av1Outputs.Should().HaveCount(h264Outputs.Count);
+        av1Outputs.Should().AllSatisfy(rung => rung.BitrateKbps.Should().BePositive());
+
+        for (int i = 0; i < av1Outputs.Count; i++)
+        {
+            av1Outputs[i].BitrateKbps.Should().BeLessThan(h264Outputs[i].BitrateKbps);
+        }
+    }
+
+    [Fact]
+    public void Generate_Vp9Reference_AllRungs_SaneBitrates()
+    {
+        // Every VP9 rung must be positive and less than the H.264 rung.
+        ScopedDecisionLog h264Log = new();
+        ScopedDecisionLog vp9Log = new();
+
+        IReadOnlyList<VideoOutput> h264Outputs = _generator.Generate(
+            Reference(VideoCodecType.H264),
+            Source(3840, 2160),
+            userRungs: null,
+            h264Log
+        );
+
+        IReadOnlyList<VideoOutput> vp9Outputs = _generator.Generate(
+            Reference(VideoCodecType.Vp9),
+            Source(3840, 2160),
+            userRungs: null,
+            vp9Log
+        );
+
+        vp9Outputs.Should().HaveCount(h264Outputs.Count);
+        vp9Outputs.Should().AllSatisfy(rung => rung.BitrateKbps.Should().BePositive());
+
+        for (int i = 0; i < vp9Outputs.Count; i++)
+        {
+            vp9Outputs[i].BitrateKbps.Should().BeLessThan(h264Outputs[i].BitrateKbps);
+        }
+    }
+
+    [Fact]
+    public void Generate_Av1LessThanVp9_Vp9LessThanH264_AllRungs()
+    {
+        // Efficiency ordering must hold at every rung: AV1 < VP9 < H.264.
+        ScopedDecisionLog h264Log = new();
+        ScopedDecisionLog vp9Log = new();
+        ScopedDecisionLog av1Log = new();
+
+        IReadOnlyList<VideoOutput> h264Outputs = _generator.Generate(
+            Reference(VideoCodecType.H264),
+            Source(3840, 2160),
+            userRungs: null,
+            h264Log
+        );
+
+        IReadOnlyList<VideoOutput> vp9Outputs = _generator.Generate(
+            Reference(VideoCodecType.Vp9),
+            Source(3840, 2160),
+            userRungs: null,
+            vp9Log
+        );
+
+        IReadOnlyList<VideoOutput> av1Outputs = _generator.Generate(
+            Reference(VideoCodecType.Av1),
+            Source(3840, 2160),
+            userRungs: null,
+            av1Log
+        );
+
+        for (int i = 0; i < h264Outputs.Count; i++)
+        {
+            av1Outputs[i].BitrateKbps.Should().BeLessThan(vp9Outputs[i].BitrateKbps);
+            vp9Outputs[i].BitrateKbps.Should().BeLessThan(h264Outputs[i].BitrateKbps);
+        }
+    }
+
+    [Fact]
+    public void Generate_H264Ladder_UnchangedAfterCodecColumnAddition()
+    {
+        // Regression: adding AV1/VP9 columns must not alter H.264 output.
+        // Snapshot the expected bitrates from the DefaultTable.
+        ScopedDecisionLog log = new();
+
+        IReadOnlyList<VideoOutput> outputs = _generator.Generate(
+            Reference(VideoCodecType.H264),
+            Source(3840, 2160),
+            userRungs: null,
+            log
+        );
+
+        // All six rungs fit a 4K source; bitrates come directly from the H264 table.
+        outputs.Should().HaveCount(6);
+        outputs.Single(o => o.Width == 3840).BitrateKbps.Should().Be(15000);
+        outputs.Single(o => o.Width == 2560).BitrateKbps.Should().Be(8000);
+        outputs.Single(o => o.Width == 1920).BitrateKbps.Should().Be(5000);
+        outputs.Single(o => o.Width == 1280).BitrateKbps.Should().Be(3000);
+        outputs.Single(o => o.Width == 854).BitrateKbps.Should().Be(1500);
+        outputs.Single(o => o.Width == 640).BitrateKbps.Should().Be(800);
+    }
+
+    [Fact]
+    public void Generate_AllCodecs_LadderIsMonotonic()
+    {
+        // Bitrates must be monotonically descending as resolution decreases.
+        VideoCodecType[] codecs =
+        [
+            VideoCodecType.H264,
+            VideoCodecType.H265,
+            VideoCodecType.Vp9,
+            VideoCodecType.Av1,
+        ];
+
+        foreach (VideoCodecType codec in codecs)
+        {
+            ScopedDecisionLog log = new();
+            IReadOnlyList<VideoOutput> outputs = _generator.Generate(
+                Reference(codec),
+                Source(3840, 2160),
+                userRungs: null,
+                log
+            );
+
+            // Outputs are ordered descending by resolution already; bitrates should follow.
+            int[] bitrates = outputs.Select(o => o.BitrateKbps).ToArray();
+            for (int i = 1; i < bitrates.Length; i++)
+            {
+                bitrates[i]
+                    .Should()
+                    .BeLessThanOrEqualTo(
+                        bitrates[i - 1],
+                        $"codec {codec}: rung {i} bitrate {bitrates[i]} must not exceed rung {i - 1} bitrate {bitrates[i - 1]}"
+                    );
+            }
+        }
     }
 
     // ── complexity-aware thinning ───────────────────────────────────────────

@@ -6,5 +6,6 @@ public record LadderTier(
     string Label,
     int? RecommendedBitrateH264Kbps,
     int? RecommendedBitrateHevcKbps,
-    int? RecommendedBitrateAv1Kbps
+    int? RecommendedBitrateAv1Kbps,
+    int? RecommendedBitrateVp9Kbps = null
 );

@@ -1,24 +1,113 @@
+using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Infrastructure;
+
 namespace NoMercy.Encoder.Hardware;
 
-/// <summary>
-/// Scaffold for an NVIDIA NVML-backed <see cref="IResourceMonitor"/> that
-/// returns real per-process GPU encoder utilization. This class is intentionally
-/// left as a no-op stub — the P/Invoke bindings or nvidia-smi shell-out
-/// implementation land in a follow-up commit once the interface is stable.
-///
-/// To enable: register <see cref="NvmlGpuSampler"/> instead of
-/// <see cref="ProcessResourceMonitor"/> in the DI container on NVIDIA hosts.
-/// </summary>
 public sealed class NvmlGpuSampler : ProcessResourceMonitor
 {
-    // Inherits the cross-platform CPU/memory implementation from
-    // ProcessResourceMonitor. Only SampleGpu() needs to be overridden
-    // once the NVML P/Invoke layer is wired up.
-    //
-    // Planned override:
-    //   public override IReadOnlyList<GpuProcessSample> SampleGpu()
-    //   {
-    //       // Call nvmlDeviceGetProcessUtilization() for each device,
-    //       // map back to GpuProcessSample records, return.
-    //   }
+    private static readonly TimeSpan MinSampleInterval = TimeSpan.FromSeconds(2);
+
+    private readonly IProcessRunner _processRunner;
+    private readonly ILogger<NvmlGpuSampler> _logger;
+    private readonly Lock _sampleLock = new();
+    private DateTime _lastSampleAt = DateTime.MinValue;
+    private IReadOnlyList<GpuProcessSample> _lastSamples = [];
+
+    public NvmlGpuSampler(IProcessRunner processRunner, ILogger<NvmlGpuSampler> logger)
+        : base(null)
+    {
+        _processRunner = processRunner;
+        _logger = logger;
+    }
+
+    public override IReadOnlyList<GpuProcessSample> SampleGpu()
+    {
+        lock (_sampleLock)
+        {
+            if (DateTime.UtcNow - _lastSampleAt < MinSampleInterval)
+                return _lastSamples;
+        }
+
+        IReadOnlyList<GpuProcessSample> fresh = SampleGpuAsync(CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+
+        lock (_sampleLock)
+        {
+            _lastSamples = fresh;
+            _lastSampleAt = DateTime.UtcNow;
+        }
+
+        return fresh;
+    }
+
+    private async Task<IReadOnlyList<GpuProcessSample>> SampleGpuAsync(
+        CancellationToken cancellationToken
+    )
+    {
+        try
+        {
+            using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(5));
+            using CancellationTokenSource linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken,
+                    timeoutCts.Token
+                );
+
+            ProcessResult result = await _processRunner.RunAsync(
+                "nvidia-smi",
+                ["--query-compute-apps=pid,used_gpu_memory", "--format=csv,noheader,nounits"],
+                workingDirectory: null,
+                cancellationToken: linkedCts.Token
+            );
+
+            if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+                return [];
+
+            return ParseNvidiaSmiOutput(result.StdOut);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogDebug("nvidia-smi timed out — returning empty GPU sample");
+            return [];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "nvidia-smi unavailable or failed — GPU utilization will read 0");
+            return [];
+        }
+    }
+
+    internal static IReadOnlyList<GpuProcessSample> ParseNvidiaSmiOutput(string stdOut)
+    {
+        List<GpuProcessSample> samples = [];
+
+        foreach (string line in stdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string trimmedLine = line.Trim();
+            if (string.IsNullOrEmpty(trimmedLine))
+                continue;
+
+            string[] fields = trimmedLine.Split(',');
+            if (fields.Length < 2)
+                continue;
+
+            if (!int.TryParse(fields[0].Trim(), out int pid))
+                continue;
+
+            if (!long.TryParse(fields[1].Trim(), out long memoryMb))
+                continue;
+
+            samples.Add(
+                new GpuProcessSample(
+                    Pid: pid,
+                    GpuIndex: 0,
+                    EncoderUtilizationPercent: 0,
+                    EncoderMemoryBytes: memoryMb * 1024 * 1024
+                )
+            );
+        }
+
+        return samples;
+    }
 }

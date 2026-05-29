@@ -8,11 +8,10 @@ namespace NoMercy.Encoder.Profiles;
 /// Default implementation of <see cref="ILadderGenerator"/>.
 ///
 /// <para>
-/// The rung table uses H.264 as the single-source bitrate column.
-/// HEVC is always 60 % of H.264 (<c>(int)Math.Round(h264 * 0.6)</c>).
-/// AV1 and VP9 fall back to the H.264 column for now and emit a
-/// <c>analyze.ladder_codec_default</c> decision noting the fallback;
-/// codec-specific tables land in a later phase.
+/// Per-codec efficiency multipliers applied to the H.264 base bitrate:
+///   HEVC  0.60 — well-established; matches Apple HLS spec and encoder guidance.
+///   VP9   0.65 — midpoint of the 0.60–0.70 range from Google/YouTube benchmarks.
+///   AV1   0.50 — AOMedia and Netflix data showing ~50 % savings vs H.264.
 /// </para>
 ///
 /// <para>
@@ -33,7 +32,12 @@ namespace NoMercy.Encoder.Profiles;
 /// </summary>
 public class LadderGenerator : ILadderGenerator
 {
-    // H.264 bitrates in kbps — HEVC column is always Math.Round(h264 * 0.6).
+    // Efficiency multipliers vs H.264 for codec-specific bitrate derivation.
+    private const double HevcMultiplier = 0.60;
+    private const double Vp9Multiplier = 0.65;
+    private const double Av1Multiplier = 0.50;
+
+    // H.264 reference bitrates in kbps.
     // Order: descending by height (widest first) so top-rung logic is natural.
     private static readonly TableRung[] DefaultTable =
     [
@@ -74,20 +78,6 @@ public class LadderGenerator : ILadderGenerator
                     }
                 )
                 .ToArray();
-        }
-
-        // ── Emit AV1/VP9 fallback notice ────────────────────────────────────
-        if (reference.Codec is VideoCodecType.Av1 or VideoCodecType.Vp9)
-        {
-            decisions.Add(
-                new DecisionLog(
-                    Stage: "analyze",
-                    Key: "analyze.ladder_codec_default",
-                    Message: $"Codec {reference.Codec} has no dedicated bitrate table; "
-                        + "using H.264 column as a conservative approximation. "
-                        + "A codec-specific table will be added in a later phase."
-                )
-            );
         }
 
         // ── Complexity notice ────────────────────────────────────────────────
@@ -230,9 +220,13 @@ public class LadderGenerator : ILadderGenerator
     }
 
     private static int PickBitrate(VideoCodecType codec, TableRung rung) =>
-        codec is VideoCodecType.H265
-            ? (int)Math.Round(rung.H264BitrateKbps * 0.6)
-            : rung.H264BitrateKbps;
+        codec switch
+        {
+            VideoCodecType.H265 => (int)Math.Round(rung.H264BitrateKbps * HevcMultiplier),
+            VideoCodecType.Vp9 => (int)Math.Round(rung.H264BitrateKbps * Vp9Multiplier),
+            VideoCodecType.Av1 => (int)Math.Round(rung.H264BitrateKbps * Av1Multiplier),
+            _ => rung.H264BitrateKbps,
+        };
 
     private sealed record TableRung(int Width, int Height, int H264BitrateKbps);
 }

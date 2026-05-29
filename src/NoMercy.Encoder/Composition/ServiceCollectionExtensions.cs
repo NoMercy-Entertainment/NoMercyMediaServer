@@ -120,11 +120,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<HardwareCapabilitiesHolder>();
         services.AddSingleton<IHardwareCapabilities, HolderBackedHardwareCapabilities>();
 
-        // IResourceMonitor — cross-platform CPU/memory readings via
-        // System.Diagnostics. GPU utilization stays at 0 until a vendor-
-        // specific plugin replaces this with one that shells out to
-        // nvidia-smi / rocm-smi / intel_gpu_top.
-        services.AddSingleton<IResourceMonitor, ProcessResourceMonitor>();
+        // IResourceMonitor — NvmlGpuSampler extends ProcessResourceMonitor and
+        // adds real per-process GPU encoder utilization via nvidia-smi shell-out.
+        // It degrades gracefully to empty samples when nvidia-smi is absent or
+        // fails (non-NVIDIA hosts, GPU-less servers). All CPU/memory methods are
+        // inherited from ProcessResourceMonitor unchanged.
+        services.AddSingleton<IResourceMonitor, NvmlGpuSampler>();
 
         // NVENC session cap — enforced at dispatch time in EncodingOrchestrator
         // before ffmpeg is spawned. Consumer NVIDIA GPUs cap at 3 concurrent sessions;

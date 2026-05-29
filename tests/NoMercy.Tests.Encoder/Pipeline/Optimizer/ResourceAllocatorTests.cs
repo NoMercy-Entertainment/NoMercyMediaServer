@@ -1,11 +1,14 @@
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline.Optimizer;
+using NoMercy.Resources;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Optimizer;
 
 public class ResourceAllocatorTests
 {
+    private static readonly IResourceMonitor NullMonitor = new NullResourceMonitor();
+
     private static IHardwareCapabilities MakeGpuCaps() =>
         new HardwareCapabilities(
             [
@@ -24,14 +27,7 @@ public class ResourceAllocatorTests
 
     private static List<ExecutionGroup> MakeGroups(int encodeCount, bool requiresGpu)
     {
-        ExecutionNode[] nodes =
-        [
-            new("node_0", OperationType.Decode, [], new()),
-            new("node_1", OperationType.Encode, ["node_0"], new()),
-        ];
-
-        // Build a group with `encodeCount` Encode nodes
-        List<ExecutionNode> allNodes = [nodes[0]];
+        List<ExecutionNode> allNodes = [new("node_0", OperationType.Decode, [], new())];
         for (int i = 0; i < encodeCount; i++)
         {
             allNodes.Add(new($"encode_{i}", OperationType.Encode, ["node_0"], new()));
@@ -58,10 +54,8 @@ public class ResourceAllocatorTests
     [Fact]
     public void CheckMemoryCeiling_WhenUnder75Percent_ReturnsTrue()
     {
-        IHardwareCapabilities hardware = MakeGpuCaps();
-        ResourceAllocator allocator = new(hardware);
+        ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
 
-        // 1 encode stream * 200MB = 200MB peak, available = 8192MB → well under 75%
         List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: true);
 
         bool result = allocator.CheckMemoryCeiling(groups, availableMemoryMb: 8192);
@@ -72,10 +66,8 @@ public class ResourceAllocatorTests
     [Fact]
     public void CheckMemoryCeiling_WhenOver75Percent_ReturnsFalse()
     {
-        IHardwareCapabilities hardware = MakeGpuCaps();
-        ResourceAllocator allocator = new(hardware);
+        ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
 
-        // 100 encode streams * 200MB = 20000MB peak, available = 1024MB → 75% = 768MB → over
         List<ExecutionGroup> groups = MakeGroups(encodeCount: 100, requiresGpu: true);
 
         bool result = allocator.CheckMemoryCeiling(groups, availableMemoryMb: 1024);
@@ -86,10 +78,8 @@ public class ResourceAllocatorTests
     [Fact]
     public void CheckMemoryCeiling_ExactlyAt75Percent_ReturnsFalse()
     {
-        IHardwareCapabilities hardware = MakeGpuCaps();
-        ResourceAllocator allocator = new(hardware);
+        ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
 
-        // 1 encode * 200MB = 200MB. Available = 267MB → 75% = 200MB. 200 < 200 is false → returns false
         List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: true);
 
         bool result = allocator.CheckMemoryCeiling(groups, availableMemoryMb: 267);
@@ -100,8 +90,7 @@ public class ResourceAllocatorTests
     [Fact]
     public void CheckMemoryCeiling_ZeroEncodeNodes_ReturnsTrue()
     {
-        IHardwareCapabilities hardware = CpuOnly;
-        ResourceAllocator allocator = new(hardware);
+        ResourceAllocator allocator = new(CpuOnly, NullMonitor);
 
         List<ExecutionGroup> groups =
         [
@@ -124,8 +113,7 @@ public class ResourceAllocatorTests
     [Fact]
     public void AllocateResources_DoesNotThrowForGpuGroups()
     {
-        IHardwareCapabilities hardware = MakeGpuCaps();
-        ResourceAllocator allocator = new(hardware);
+        ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
         List<ExecutionGroup> groups = MakeGroups(encodeCount: 2, requiresGpu: true);
 
         Action act = () => allocator.AllocateResources(groups);
@@ -136,8 +124,7 @@ public class ResourceAllocatorTests
     [Fact]
     public void AllocateResources_DoesNotThrowForCpuGroups()
     {
-        IHardwareCapabilities hardware = CpuOnly;
-        ResourceAllocator allocator = new(hardware);
+        ResourceAllocator allocator = new(CpuOnly, NullMonitor);
         List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: false);
 
         Action act = () => allocator.AllocateResources(groups);
@@ -148,11 +135,118 @@ public class ResourceAllocatorTests
     [Fact]
     public void AllocateResources_DoesNotThrowForEmptyGroupList()
     {
-        IHardwareCapabilities hardware = MakeGpuCaps();
-        ResourceAllocator allocator = new(hardware);
+        ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
 
         Action act = () => allocator.AllocateResources([]);
 
         act.Should().NotThrow();
     }
+
+    // ------------------------------------------------------------------
+    // AllocateResources behavior tests
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void AllocateResources_GpuGroup_AssignsDeviceIdFromHardware()
+    {
+        ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
+        List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: true);
+
+        allocator.AllocateResources(groups);
+
+        groups[0].DeviceId.Should().Be("RTX 4090");
+    }
+
+    [Fact]
+    public void AllocateResources_CpuGroup_WithZeroThreads_SetsSoftwareBudget()
+    {
+        ResourceAllocator allocator = new(CpuOnly, NullMonitor);
+        List<ExecutionGroup> groups =
+        [
+            new(
+                GroupId: "group_0",
+                Nodes: [new("encode_0", OperationType.Encode, [], new())],
+                DeviceId: null,
+                GpuSlotsRequired: 0,
+                CpuThreadsRequired: 0,
+                RequiresGpu: false,
+                Priority: 1
+            ),
+        ];
+
+        allocator.AllocateResources(groups);
+
+        groups[0].CpuThreadsRequired.Should().BeGreaterThan(0);
+        groups[0].CpuThreadsRequired.Should().BeLessThanOrEqualTo(Environment.ProcessorCount);
+    }
+
+    [Fact]
+    public void AllocateResources_CpuGroup_WithExistingThreadCount_DoesNotOverwrite()
+    {
+        ResourceAllocator allocator = new(CpuOnly, NullMonitor);
+        List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: false);
+
+        allocator.AllocateResources(groups);
+
+        groups[0].CpuThreadsRequired.Should().Be(4);
+    }
+
+    [Fact]
+    public void AllocateResources_PicksLeastLoadedGpu_FromSampleData()
+    {
+        IHardwareCapabilities twoGpuHardware = new HardwareCapabilities(
+            [
+                new(GpuVendor.Nvidia, "GPU-0", 8192, 3, [VideoCodecType.H264]),
+                new(GpuVendor.Nvidia, "GPU-1", 8192, 3, [VideoCodecType.H264]),
+            ],
+            CpuCores: 8
+        );
+
+        IResourceMonitor loadedGpu0Monitor = new FixedGpuSampleMonitor([
+            new GpuProcessSample(
+                Pid: 100,
+                GpuIndex: 0,
+                EncoderUtilizationPercent: 80,
+                EncoderMemoryBytes: 0
+            ),
+            new GpuProcessSample(
+                Pid: 101,
+                GpuIndex: 1,
+                EncoderUtilizationPercent: 20,
+                EncoderMemoryBytes: 0
+            ),
+        ]);
+
+        ResourceAllocator allocator = new(twoGpuHardware, loadedGpu0Monitor);
+        List<ExecutionGroup> groups =
+        [
+            new(
+                GroupId: "group_0",
+                Nodes: [new("encode_0", OperationType.Encode, [], new())],
+                DeviceId: null,
+                GpuSlotsRequired: 1,
+                CpuThreadsRequired: 0,
+                RequiresGpu: true,
+                Priority: 1
+            ),
+        ];
+
+        allocator.AllocateResources(groups);
+
+        groups[0].DeviceId.Should().Be("GPU-1");
+    }
+}
+
+internal sealed class FixedGpuSampleMonitor(IReadOnlyList<GpuProcessSample> samples)
+    : IResourceMonitor
+{
+    public double GetCpuUsagePercent() => 0;
+
+    public double GetSystemCpuUsagePercent() => 0;
+
+    public double GetGpuEncodeUtilization(string gpuDeviceKey) => 0;
+
+    public long GetAvailableMemoryMb() => 0;
+
+    public IReadOnlyList<GpuProcessSample> SampleGpu() => samples;
 }

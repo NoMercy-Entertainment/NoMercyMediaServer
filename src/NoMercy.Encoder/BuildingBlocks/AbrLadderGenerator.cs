@@ -145,6 +145,9 @@ public class AbrLadderGenerator : IAbrLadderGenerator
                     : null,
                 RecommendedBitrateAv1Kbps: referenceTier.RecommendedBitrateAv1Kbps is int av1
                     ? (int)Math.Round(av1 * ratio)
+                    : null,
+                RecommendedBitrateVp9Kbps: referenceTier.RecommendedBitrateVp9Kbps is int vp9
+                    ? (int)Math.Round(vp9 * ratio)
                     : null
             );
 
@@ -326,6 +329,7 @@ public class AbrLadderGenerator : IAbrLadderGenerator
                 {
                     VideoCodecType.H265 => tier.RecommendedBitrateHevcKbps,
                     VideoCodecType.Av1 => tier.RecommendedBitrateAv1Kbps,
+                    VideoCodecType.Vp9 => tier.RecommendedBitrateVp9Kbps,
                     _ => tier.RecommendedBitrateH264Kbps,
                 };
 

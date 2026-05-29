@@ -59,6 +59,39 @@ public class LadderTiersTests
     }
 
     [Fact]
+    public void AppleHlsRecommended_VP9_bitrates_are_65_percent_of_H264()
+    {
+        // VP9 ≈ 0.65× H.264 per rung (rounded).
+        LadderTier[] tiers = LadderTiers.AppleHlsRecommended;
+        foreach (LadderTier tier in tiers)
+        {
+            int expected = (int)Math.Round(tier.RecommendedBitrateH264Kbps!.Value * 0.65);
+            tier.RecommendedBitrateVp9Kbps.Should().Be(expected, $"rung {tier.Label}");
+        }
+    }
+
+    [Fact]
+    public void AppleHlsRecommended_VP9_bitrates_are_set()
+    {
+        LadderTiers
+            .AppleHlsRecommended.Select(t => t.RecommendedBitrateVp9Kbps)
+            .Should()
+            .AllSatisfy(b => b.Should().NotBeNull());
+    }
+
+    [Fact]
+    public void AppleHlsRecommended_AV1_below_VP9_below_H264_every_rung()
+    {
+        foreach (LadderTier tier in LadderTiers.AppleHlsRecommended)
+        {
+            tier.RecommendedBitrateAv1Kbps.Should()
+                .BeLessThan(tier.RecommendedBitrateVp9Kbps!.Value);
+            tier.RecommendedBitrateVp9Kbps.Should()
+                .BeLessThan(tier.RecommendedBitrateH264Kbps!.Value);
+        }
+    }
+
+    [Fact]
     public void Standard_has_3_tiers()
     {
         LadderTiers.Standard.Should().HaveCount(3);

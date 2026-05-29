@@ -95,7 +95,7 @@ public class ProcessResourceMonitor : IResourceMonitor
     /// sampler such as <c>NvmlGpuSampler</c>. The unsupported warning is logged
     /// once at startup (rule <c>hardware.gpu_telemetry_unsupported</c>).
     /// </remarks>
-    public IReadOnlyList<GpuProcessSample> SampleGpu()
+    public virtual IReadOnlyList<GpuProcessSample> SampleGpu()
     {
         if (!_gpuWarningLogged)
         {

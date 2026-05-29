@@ -2,30 +2,68 @@ using NoMercy.Encoder.Hardware;
 
 namespace NoMercy.Encoder.Pipeline.Optimizer;
 
-public class ResourceAllocator(IHardwareCapabilities hardware)
+public class ResourceAllocator(IHardwareCapabilities hardware, IResourceMonitor monitor)
 {
     public void AllocateResources(List<ExecutionGroup> groups)
     {
-        foreach (ExecutionGroup group in groups)
+        IReadOnlyList<GpuProcessSample> gpuSamples = hardware.HasGpu ? monitor.SampleGpu() : [];
+        int leastLoadedGpuIndex = FindLeastLoadedGpuIndex(gpuSamples);
+        int softwareThreadBudget = Math.Max(1, Environment.ProcessorCount / 2);
+
+        for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
         {
+            ExecutionGroup group = groups[groupIndex];
+
             if (group.RequiresGpu && hardware.HasGpu)
             {
-                // Assign to least-loaded GPU (for now, first GPU)
-                // Future: round-robin or load-based for multi-GPU
+                string gpuDeviceId =
+                    leastLoadedGpuIndex < hardware.Gpus.Count
+                        ? hardware.Gpus[leastLoadedGpuIndex].Name
+                        : hardware.Gpus[0].Name;
+
+                groups[groupIndex] = group with { DeviceId = gpuDeviceId };
+                continue;
             }
 
-            // CPU thread budget for software encodes
             if (!group.RequiresGpu && group.CpuThreadsRequired == 0)
             {
-                // Assign reasonable thread count
-                // Default: half available cores per software encode group
+                groups[groupIndex] = group with { CpuThreadsRequired = softwareThreadBudget };
             }
         }
     }
 
+    private static int FindLeastLoadedGpuIndex(IReadOnlyList<GpuProcessSample> samples)
+    {
+        if (samples.Count == 0)
+            return 0;
+
+        Dictionary<int, int> utilizationByGpu = [];
+
+        foreach (GpuProcessSample sample in samples)
+        {
+            if (!utilizationByGpu.TryGetValue(sample.GpuIndex, out int current))
+                current = 0;
+
+            utilizationByGpu[sample.GpuIndex] = current + sample.EncoderUtilizationPercent;
+        }
+
+        int leastLoadedIndex = 0;
+        int lowestUtilization = int.MaxValue;
+
+        foreach (KeyValuePair<int, int> entry in utilizationByGpu)
+        {
+            if (entry.Value < lowestUtilization)
+            {
+                lowestUtilization = entry.Value;
+                leastLoadedIndex = entry.Key;
+            }
+        }
+
+        return leastLoadedIndex;
+    }
+
     public bool CheckMemoryCeiling(List<ExecutionGroup> groups, long availableMemoryMb)
     {
-        // Estimate peak memory per group — ~200MB per active encode stream
         long estimatedPeakMb = 0;
         foreach (ExecutionGroup group in groups)
         {
