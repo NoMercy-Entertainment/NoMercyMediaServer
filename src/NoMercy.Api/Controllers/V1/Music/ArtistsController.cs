@@ -10,6 +10,7 @@ using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
@@ -19,6 +20,7 @@ using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -32,16 +34,19 @@ public class ArtistsController : BaseController
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
     private readonly IEventBus _eventBus;
+    private readonly IStorageFactory _storageFactory;
 
     public ArtistsController(
         MusicRepository musicService,
         MediaContext mediaContext,
-        IEventBus eventBus
+        IEventBus eventBus,
+        IStorageFactory storageFactory
     )
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
         _eventBus = eventBus;
+        _storageFactory = storageFactory;
     }
 
     [HttpGet]
@@ -285,6 +290,7 @@ public class ArtistsController : BaseController
 
         Artist? artist = await _mediaContext
             .Artists.Include(artist => artist.LibraryFolder)
+                .ThenInclude((Folder folder) => folder.Driver)
             .FirstOrDefaultAsync(artist => artist.Id == id);
 
         if (artist is null)
@@ -292,7 +298,12 @@ public class ArtistsController : BaseController
 
         string slug = artist.Name.ToSlug();
 
-        string libraryRootFolder = artist.LibraryFolder.Path;
+        IStorage folderStorage = _storageFactory.For(
+            artist.LibraryFolder.Id,
+            artist.LibraryFolder.DriverId,
+            string.Empty
+        );
+        string libraryRootFolder = folderStorage.GetFullPath(artist.LibraryFolder.Path);
         if (string.IsNullOrEmpty(libraryRootFolder))
             return UnprocessableEntityResponse("Artist library folder not found");
 

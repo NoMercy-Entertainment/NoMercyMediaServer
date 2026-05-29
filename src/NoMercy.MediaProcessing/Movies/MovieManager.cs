@@ -49,16 +49,14 @@ public class MovieManager(
                 folderLibrary.Folder.DriverId,
                 string.Empty
             );
-            string folderName = folderStorage.CombinePath(
-                folderLibrary.Folder.Path,
-                baseUrl.Replace("/", "")
-            );
+            string folderRoot = folderStorage.GetFullPath(folderLibrary.Folder.Path);
+            string folderName = folderStorage.CombinePath(folderRoot, baseUrl.Replace("/", ""));
 
             if (!folderStorage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
                     _storageDriver,
-                    folderLibrary.Folder.Path,
+                    folderRoot,
                     baseUrl.Replace("/", "")
                 );
                 if (match != null)

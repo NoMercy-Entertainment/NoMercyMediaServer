@@ -26,10 +26,16 @@ public class FileWatcherEventHandler : IDisposable
     private readonly List<IDisposable> _subscriptions = [];
     private readonly SemaphoreSlim _semaphore = new(2);
     private readonly IStorageDriver _storageDriver;
+    private readonly IStorageFactory _storageFactory;
 
-    public FileWatcherEventHandler(IEventBus eventBus, IStorageDriver storageDriver)
+    public FileWatcherEventHandler(
+        IEventBus eventBus,
+        IStorageDriver storageDriver,
+        IStorageFactory storageFactory
+    )
     {
         _storageDriver = storageDriver;
+        _storageFactory = storageFactory;
         _subscriptions.Add(eventBus.Subscribe<FileCreatedEvent>(OnFileCreated));
         _subscriptions.Add(eventBus.Subscribe<FileDeletedEvent>(OnFileDeleted));
         _subscriptions.Add(eventBus.Subscribe<FileRenamedEvent>(OnFileRenamed));
@@ -268,7 +274,7 @@ public class FileWatcherEventHandler : IDisposable
         jobDispatcher.DispatchJob<ShowImportJob>(show.Id, @event.LibraryId);
     }
 
-    private static void HandleMusicFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
+    private void HandleMusicFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
     {
         Logger.System($"FileWatcher: Music {mediaFolder.Path}: Processing");
 
@@ -284,8 +290,12 @@ public class FileWatcherEventHandler : IDisposable
             return;
 
         FolderLibrary? folderLibrary = library.FolderLibraries.FirstOrDefault(f =>
-            directoryPath.Contains(f.Folder.Path)
-        );
+        {
+            string driverRoot = _storageFactory
+                .For(f.Folder.Id, f.Folder.DriverId, string.Empty)
+                .GetFullPath(f.Folder.Path);
+            return directoryPath.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
+        });
         if (folderLibrary is null)
             return;
 

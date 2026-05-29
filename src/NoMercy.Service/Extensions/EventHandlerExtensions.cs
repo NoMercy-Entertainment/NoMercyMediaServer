@@ -43,7 +43,8 @@ public static class EventHandlerExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
-            return new(eventBus, storageDriver);
+            IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
+            return new(eventBus, storageDriver, storageFactory);
         });
 
         services.AddSingleton<FolderPathEventHandler>(sp =>

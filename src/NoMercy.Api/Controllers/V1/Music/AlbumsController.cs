@@ -9,6 +9,7 @@ using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
@@ -18,6 +19,7 @@ using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -30,16 +32,19 @@ public class AlbumsController : BaseController
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
     private readonly IEventBus _eventBus;
+    private readonly IStorageFactory _storageFactory;
 
     public AlbumsController(
         MusicRepository musicService,
         MediaContext mediaContext,
-        IEventBus eventBus
+        IEventBus eventBus,
+        IStorageFactory storageFactory
     )
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
         _eventBus = eventBus;
+        _storageFactory = storageFactory;
     }
 
     [HttpGet]
@@ -264,6 +269,7 @@ public class AlbumsController : BaseController
 
         Album? album = await _mediaContext
             .Albums.Include(album => album.LibraryFolder)
+                .ThenInclude((Folder folder) => folder.Driver)
             .FirstOrDefaultAsync(album => album.Id == id);
 
         if (album is null)
@@ -271,7 +277,12 @@ public class AlbumsController : BaseController
 
         string slug = album.Name.ToSlug();
 
-        string libraryRootFolder = album.LibraryFolder.Path;
+        IStorage folderStorage = _storageFactory.For(
+            album.LibraryFolder.Id,
+            album.LibraryFolder.DriverId,
+            string.Empty
+        );
+        string libraryRootFolder = folderStorage.GetFullPath(album.LibraryFolder.Path);
         if (string.IsNullOrEmpty(libraryRootFolder))
             return UnprocessableEntityResponse("Album library folder not found");
 

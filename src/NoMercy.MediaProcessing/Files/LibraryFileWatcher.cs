@@ -15,14 +15,18 @@ namespace NoMercy.MediaProcessing.Files;
 public class LibraryFileWatcher
 {
     // ReSharper disable once InconsistentNaming
-    private static readonly Lazy<LibraryFileWatcher> _instance = new(() => new(_driverStore!));
+    private static readonly Lazy<LibraryFileWatcher> _instance = new(() =>
+        new(_driverStore!, _storageFactoryStore!)
+    );
     public static LibraryFileWatcher Instance => _instance.Value;
 
     private static IStorageDriver? _driverStore;
+    private static IStorageFactory? _storageFactoryStore;
 
     private static FolderWatcher? _fs;
     private static FolderWatcher Fs => _fs ??= new(_driverStore!);
     private static IStorageDriver StorageDriver => _driverStore!;
+    private static IStorageFactory StorageFactory => _storageFactoryStore!;
 
     private static readonly Dictionary<string, FileChangeGroup> FileChangeGroups = new();
     private static readonly Lock LockObject = new();
@@ -36,9 +40,10 @@ public class LibraryFileWatcher
 
     private static List<Library> _libraries = [];
 
-    public LibraryFileWatcher(IStorageDriver storageDriver)
+    public LibraryFileWatcher(IStorageDriver storageDriver, IStorageFactory storageFactory)
     {
         _driverStore = storageDriver;
+        _storageFactoryStore = storageFactory;
         Logger.System("Starting FileSystem Watcher", LogEventLevel.Debug);
 
         Fs.OnChanged += _onFileChanged;
@@ -64,7 +69,11 @@ public class LibraryFileWatcher
     public static Action AddLibraryWatcher(Library library)
     {
         List<string> paths = library
-            .FolderLibraries.Select(folderLibrary => folderLibrary.Folder.Path)
+            .FolderLibraries.Select(folderLibrary =>
+                StorageFactory
+                    .For(folderLibrary.Folder.Id, folderLibrary.Folder.DriverId, string.Empty)
+                    .GetFullPath(folderLibrary.Folder.Path)
+            )
             .ToList();
 
         List<Action> disposers = [];
@@ -98,7 +107,13 @@ public class LibraryFileWatcher
     private static Library? GetLibraryByPath(string path)
     {
         return _libraries.FirstOrDefault(library =>
-            library.FolderLibraries.Any(folderLibrary => path.Contains(folderLibrary.Folder.Path))
+            library.FolderLibraries.Any(folderLibrary =>
+            {
+                string driverRoot = StorageFactory
+                    .For(folderLibrary.Folder.Id, folderLibrary.Folder.DriverId, string.Empty)
+                    .GetFullPath(folderLibrary.Folder.Path);
+                return path.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
+            })
         );
     }
 

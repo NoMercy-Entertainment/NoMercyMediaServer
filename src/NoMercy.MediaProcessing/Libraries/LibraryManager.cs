@@ -194,7 +194,8 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(folder.Path, depth);
+        string scanRoot = folderStorage.GetFullPath(folder.Path);
+        ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(scanRoot, depth);
 
         List<MediaFolderExtend> newFolders = rootFolders
             .Where(f => !existingFolders.Contains(f.Name.NormalizeForComparison()))
@@ -242,8 +243,9 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
+        string scanRoot = folderStorage.GetFullPath(folder.Path);
         List<MediaFolderExtend> rootFolders = (
-            await mediaScan.DisableRegexFilter().Process(folder.Path, depth)
+            await mediaScan.DisableRegexFilter().Process(scanRoot, depth)
         )
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();
@@ -290,7 +292,8 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(folder.Path, depth);
+        string scanRoot = folderStorage.GetFullPath(folder.Path);
+        ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(scanRoot, depth);
 
         IEventBus? bus =
             _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
@@ -328,8 +331,9 @@ public class LibraryManager(
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         await using MediaScan mediaScan = new(folderStorage.Driver);
+        string scanRoot = folderStorage.GetFullPath(folder.Path);
         List<MediaFolderExtend> rootFolders = (
-            await mediaScan.DisableRegexFilter().Process(folder.Path, depth)
+            await mediaScan.DisableRegexFilter().Process(scanRoot, depth)
         )
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();

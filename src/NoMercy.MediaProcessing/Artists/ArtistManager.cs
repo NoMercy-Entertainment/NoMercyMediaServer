@@ -12,6 +12,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -21,9 +22,12 @@ namespace NoMercy.MediaProcessing.Artists;
 public class ArtistManager(
     IArtistRepository artistRepository,
     IMusicGenreRepository musicGenreRepository,
-    JobDispatcher jobDispatcher
+    JobDispatcher jobDispatcher,
+    IStorageFactory storageFactory
 ) : BaseManager, IArtistManager
 {
+    private readonly IStorageFactory _storageFactory = storageFactory;
+
     /** this is the store for a Release artist */
     public async Task Store(
         ReleaseArtistCredit artistCredit,
@@ -38,7 +42,7 @@ public class ArtistManager(
             LogEventLevel.Verbose
         );
         string artistFolder = MakeArtistFolder(artistCredit.MusicBrainzArtist.Name);
-        string folder = mediaFolder.Path.Replace(libraryFolder.Path, "");
+        string folder = mediaFolder.Path.Replace(ResolveLibraryRoot(libraryFolder), "");
 
         Artist artist = new()
         {
@@ -174,7 +178,7 @@ public class ArtistManager(
     {
         Logger.MusicBrainz($"Storing Artist: {artistCredit.Name}", LogEventLevel.Verbose);
         string artistFolder = MakeArtistFolder(artistCredit.Name);
-        string folder = mediaFolder.Path.Replace(libraryFolder.Path, "");
+        string folder = mediaFolder.Path.Replace(ResolveLibraryRoot(libraryFolder), "");
 
         CoverArtImageManagerManager.CoverPalette? coverPalette = await GetCoverArtForArtist(
             artistCredit
@@ -313,5 +317,15 @@ public class ArtistManager(
             : artistName[0].ToString().ToUpper();
 
         return $"/{artistFolder}/{artistName}";
+    }
+
+    private string ResolveLibraryRoot(Folder libraryFolder)
+    {
+        IStorage folderStorage = _storageFactory.For(
+            libraryFolder.Id,
+            libraryFolder.DriverId,
+            string.Empty
+        );
+        return folderStorage.GetFullPath(libraryFolder.Path);
     }
 }

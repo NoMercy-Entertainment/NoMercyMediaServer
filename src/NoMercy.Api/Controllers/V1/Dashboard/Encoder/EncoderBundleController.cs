@@ -7,6 +7,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
@@ -17,7 +18,8 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 [Route("api/v{version:apiVersion}/dashboard/encoder")]
 public class EncoderBundleController(
     IBundleGarbageCollector bundleGarbageCollector,
-    IDbContextFactory<MediaContext> contextFactory
+    IDbContextFactory<MediaContext> contextFactory,
+    IStorageFactory storageFactory
 ) : BaseController
 {
     /// <summary>
@@ -41,8 +43,10 @@ public class EncoderBundleController(
         List<BundleOrphan> allOrphans = [];
         foreach (Folder folder in folders)
         {
+            IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+            string libraryRoot = folderStorage.GetFullPath(folder.Path);
             IReadOnlyList<BundleOrphan> orphans = await bundleGarbageCollector.SweepAsync(
-                folder.Path,
+                libraryRoot,
                 ct
             );
             allOrphans.AddRange(orphans);

@@ -24,10 +24,12 @@ public partial class RecordingManager(
     IRecordingRepository recordingRepository,
     IMusicGenreRepository musicGenreRepository,
     IArtistRepository artistRepository,
-    IStorageDriver storageDriver
+    IStorageDriver storageDriver,
+    IStorageFactory storageFactory
 ) : BaseManager, IRecordingManager
 {
     private readonly IStorageDriver _storageDriver = storageDriver;
+    private readonly IStorageFactory _storageFactory = storageFactory;
 
     // public async Task StoreWithoutFiles(MusicBrainzReleaseAppends releaseAppends, Folder libraryFolder)
     // {
@@ -142,7 +144,7 @@ public partial class RecordingManager(
                         ),
 
                     FolderId = libraryFolder.Id,
-                    Folder = path.Replace(libraryFolder.Path, "").Replace("\\", "/"),
+                    Folder = path.Replace(ResolveLibraryRoot(libraryFolder), "").Replace("\\", "/"),
                     HostFolder = path.PathName(),
 
                     Cover = releaseCoverPalette?.Url is not null
@@ -363,6 +365,16 @@ public partial class RecordingManager(
         return fileName.StartsWith(matchNumber) && fileName.Contains(matchString);
     }
 
+    private string ResolveLibraryRoot(Folder libraryFolder)
+    {
+        IStorage folderStorage = _storageFactory.For(
+            libraryFolder.Id,
+            libraryFolder.DriverId,
+            string.Empty
+        );
+        return folderStorage.GetFullPath(libraryFolder.Path);
+    }
+
     [GeneratedRegex("^00:")]
     private static partial Regex HmsRegex();
 
@@ -408,7 +420,7 @@ public partial class RecordingManager(
                     Folder = mediaFile
                         .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
                         ?.Replace("\\" + mediaFile.Name, "")
-                        ?.Replace(libraryFolder.Path, "")
+                        ?.Replace(ResolveLibraryRoot(libraryFolder), "")
                         ?.Replace("\\", "/"),
                     HostFolder = mediaFile
                         .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
@@ -458,7 +470,7 @@ public partial class RecordingManager(
                 ),
 
             FolderId = libraryFolder.Id,
-            Folder = path.Replace(libraryFolder.Path, "").Replace("\\", "/"),
+            Folder = path.Replace(ResolveLibraryRoot(libraryFolder), "").Replace("\\", "/"),
             HostFolder = path.PathName(),
 
             Cover = releaseCoverPalette?.Url is not null

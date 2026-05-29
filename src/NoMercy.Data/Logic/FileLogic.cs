@@ -277,10 +277,12 @@ public partial class FileLogic(
             _ => 1,
         };
 
+        string scanRoot = folderStorage.GetFullPath(folder.Path);
+
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType(Library.Type)
-            .Process(folder.Path, depth);
+            .Process(scanRoot, depth);
 
         await mediaScan.DisposeAsync();
 
@@ -309,11 +311,12 @@ public partial class FileLogic(
                 rootFolder.DriverId,
                 string.Empty
             );
-            string path = folderStorage.CombinePath(rootFolder.Path, folder);
+            string resolvedRoot = folderStorage.GetFullPath(rootFolder.Path);
+            string path = folderStorage.CombinePath(resolvedRoot, folder);
 
             if (!folderStorage.Exists(path))
             {
-                string? match = Str.FindMatchingDirectory(_storageDriver, rootFolder.Path, folder);
+                string? match = Str.FindMatchingDirectory(_storageDriver, resolvedRoot, folder);
                 if (match != null)
                     path = match;
             }

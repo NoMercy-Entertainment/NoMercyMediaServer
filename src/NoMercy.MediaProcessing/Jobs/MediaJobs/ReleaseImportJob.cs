@@ -8,6 +8,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -46,7 +47,13 @@ public class ReleaseImportJob : AbstractMusicFolderJob
             Logger.App("Processing folder: " + InputFolder, LogEventLevel.Verbose);
             Folder baseFolder = albumLibrary
                 .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
-                .First(f => InputFolder.Contains(f.Path));
+                .First(f =>
+                {
+                    string driverRoot = StorageFactory
+                        .For(f.Id, f.DriverId, string.Empty)
+                        .GetFullPath(f.Path);
+                    return InputFolder.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
+                });
 
             jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, InputFolder);
             return;
@@ -60,7 +67,16 @@ public class ReleaseImportJob : AbstractMusicFolderJob
                 Logger.App("Processing folder: " + folder.Path);
                 Folder baseFolder = albumLibrary
                     .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
-                    .First(f => folder.Path.Contains(f.Path));
+                    .First(f =>
+                    {
+                        string driverRoot = StorageFactory
+                            .For(f.Id, f.DriverId, string.Empty)
+                            .GetFullPath(f.Path);
+                        return folder.Path.StartsWith(
+                            driverRoot,
+                            StringComparison.OrdinalIgnoreCase
+                        );
+                    });
 
                 jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, folder.Path);
             }

@@ -216,14 +216,20 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
         MusicGenreRepository musicGenreRepository = new(context);
 
         ArtistRepository artistRepository = new(context);
-        ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
+        ArtistManager artistManager = new(
+            artistRepository,
+            musicGenreRepository,
+            jobDispatcher,
+            StorageFactory
+        );
 
         RecordingRepository recordingRepository = new(context);
         RecordingManager recordingManager = new(
             recordingRepository,
             musicGenreRepository,
             artistRepository,
-            StorageDriver
+            StorageDriver,
+            StorageFactory
         );
 
         await using MediaScan mediaScan = new(StorageDriver);

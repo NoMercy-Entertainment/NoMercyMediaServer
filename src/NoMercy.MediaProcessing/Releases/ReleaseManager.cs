@@ -18,9 +18,12 @@ namespace NoMercy.MediaProcessing.Releases;
 
 public class ReleaseManager(
     IReleaseRepository releaseRepository,
-    IMusicGenreRepository musicGenreRepository
+    IMusicGenreRepository musicGenreRepository,
+    IStorageFactory storageFactory
 ) : BaseManager, IReleaseManager
 {
+    private readonly IStorageFactory _storageFactory = storageFactory;
+
     public async Task<(
         MusicBrainzReleaseAppends? releaseAppends,
         CoverArtImageManagerManager.CoverPalette? coverPalette
@@ -66,7 +69,8 @@ public class ReleaseManager(
         {
             Logger.MusicBrainz($"Storing Release: {releaseAppends.Title}", LogEventLevel.Verbose);
 
-            string folder = mediaFolder.Path.Replace(libraryFolder.Path, "");
+            string libraryRoot = ResolveLibraryRoot(libraryFolder);
+            string folder = mediaFolder.Path.Replace(libraryRoot, "");
 
             Album release = new()
             {
@@ -83,7 +87,7 @@ public class ReleaseManager(
                 FolderId = libraryFolder.Id,
                 HostFolder = folder.PathName(),
 
-                Folder = folder.Replace(libraryFolder.Path, "").Replace("\\", "/"),
+                Folder = folder.Replace("\\", "/"),
 
                 Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
 
@@ -136,8 +140,9 @@ public class ReleaseManager(
         {
             Logger.MusicBrainz($"Storing Release: {releaseAppends.Title}", LogEventLevel.Verbose);
 
+            string libraryRoot = ResolveLibraryRoot(libraryFolder);
             string folder = StoragePathHelpers
-                .GetParent(mediaFile.Path.Replace(libraryFolder.Path, ""))
+                .GetParent(mediaFile.Path.Replace(libraryRoot, ""))
                 .OrEmpty();
 
             Album release = new()
@@ -155,7 +160,7 @@ public class ReleaseManager(
                 FolderId = libraryFolder.Id,
                 HostFolder = folder.PathName(),
 
-                Folder = folder.Replace(libraryFolder.Path, "").Replace("\\", "/"),
+                Folder = folder.Replace("\\", "/"),
 
                 Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
 
@@ -203,5 +208,15 @@ public class ReleaseManager(
         };
 
         await releaseRepository.LinkToReleaseGroup(insert);
+    }
+
+    private string ResolveLibraryRoot(Folder libraryFolder)
+    {
+        IStorage folderStorage = _storageFactory.For(
+            libraryFolder.Id,
+            libraryFolder.DriverId,
+            string.Empty
+        );
+        return folderStorage.GetFullPath(libraryFolder.Path);
     }
 }

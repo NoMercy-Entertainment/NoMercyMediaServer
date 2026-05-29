@@ -27,7 +27,8 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 public class SpecialsController(
     MediaContext mediaContext,
     IDbContextFactory<MediaContext> contextFactory,
-    IStorageDriver storageDriver
+    IStorageDriver storageDriver,
+    IStorageFactory storageFactory
 ) : BaseController
 {
     [HttpGet]
@@ -342,7 +343,7 @@ public class SpecialsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan the special");
 
-        LibraryLogic specialLogic = new(id, mediaContext, storageDriver);
+        LibraryLogic specialLogic = new(id, mediaContext, storageDriver, storageFactory);
 
         if (await specialLogic.Process())
             return Ok(

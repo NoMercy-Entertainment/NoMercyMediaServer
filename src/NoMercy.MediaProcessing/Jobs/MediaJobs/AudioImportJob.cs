@@ -493,17 +493,18 @@ public class AudioImportJob : AbstractMusicFolderJob
         musicGenreManager = new(musicGenreRepository);
 
         ReleaseRepository releaseRepository = new(_mediaContext);
-        releaseManager = new(releaseRepository, musicGenreRepository);
+        releaseManager = new(releaseRepository, musicGenreRepository, StorageFactory);
 
         ArtistRepository artistRepository = new(_mediaContext);
-        artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
+        artistManager = new(artistRepository, musicGenreRepository, jobDispatcher, StorageFactory);
 
         RecordingRepository recordingRepository = new(_mediaContext);
         recordingManager = new(
             recordingRepository,
             musicGenreRepository,
             artistRepository,
-            StorageDriver
+            StorageDriver,
+            StorageFactory
         );
 
         albumLibrary = _mediaContext

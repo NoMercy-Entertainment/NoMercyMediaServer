@@ -154,12 +154,13 @@ public partial class FileManager(
             foreach (FolderLibrary libraryFolder in tv.Library.FolderLibraries)
             {
                 IStorage folderStorage = StorageFor(libraryFolder.Folder);
-                string path = libraryFolder.Folder.Path + tv.Folder;
+                string folderRoot = folderStorage.GetFullPath(libraryFolder.Folder.Path);
+                string path = folderStorage.CombinePath(folderRoot, tv.Folder);
                 if (!folderStorage.Exists(path))
                 {
                     string? match = Str.FindMatchingDirectory(
                         _storageDriver,
-                        libraryFolder.Folder.Path,
+                        folderRoot,
                         tv.Folder.Replace("/", "")
                     );
                     if (match != null)
@@ -179,12 +180,13 @@ public partial class FileManager(
             foreach (FolderLibrary libraryFolder in movie.Library.FolderLibraries)
             {
                 IStorage folderStorage = StorageFor(libraryFolder.Folder);
-                string path = libraryFolder.Folder.Path + movie.Folder;
+                string folderRoot = folderStorage.GetFullPath(libraryFolder.Folder.Path);
+                string path = folderStorage.CombinePath(folderRoot, movie.Folder);
                 if (!folderStorage.Exists(path))
                 {
                     string? match = Str.FindMatchingDirectory(
                         _storageDriver,
-                        libraryFolder.Folder.Path,
+                        folderRoot,
                         movie.Folder.Replace("/", "")
                     );
                     if (match != null)
@@ -211,11 +213,12 @@ public partial class FileManager(
             return;
         }
 
-        string destinationFolder = folder.Path + folderName;
+        IStorage destinationStorage = StorageFor(folder);
+        string destinationRoot = destinationStorage.GetFullPath(folder.Path);
+        string destinationFolder = destinationStorage.CombinePath(destinationRoot, folderName);
 
         Logger.App($"Moving {sourceFolder} to {destinationFolder}");
 
-        IStorage destinationStorage = StorageFor(folder);
         await MoveFolderAsync(sourceFolder, destinationFolder, sourceStorage, destinationStorage);
 
         FolderLibrary? newFolderLibrary = await context
@@ -1025,6 +1028,7 @@ public partial class FileManager(
     {
         // Mount at configured root; MediaScan walks via absolute paths.
         IStorage folderStorage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        string scanRoot = folderStorage.GetFullPath(folder.Path);
         MediaScan mediaScan = new(folderStorage.Driver);
 
         int depth = library.Type switch
@@ -1039,7 +1043,7 @@ public partial class FileManager(
             .DisableRegexFilter()
             .FilterByMediaType(library.Type)
             .FilterByFileName(Filter)
-            .Process(folder.Path, depth);
+            .Process(scanRoot, depth);
 
         await mediaScan.DisposeAsync();
 
@@ -1079,7 +1083,8 @@ public partial class FileManager(
         foreach (Folder rootFolder in rootFolders)
         {
             IStorage folderStorage = StorageFor(rootFolder);
-            string path = folderStorage.CombinePath(rootFolder.Path, folder);
+            string resolvedRoot = folderStorage.GetFullPath(rootFolder.Path);
+            string path = folderStorage.CombinePath(resolvedRoot, folder);
 
             // Treat a transport-level failure from any single backend as
             // "not in this folder" rather than aborting the whole rescan. The
@@ -1091,7 +1096,7 @@ public partial class FileManager(
             {
                 string? match = TryFindMatchingDirectory(
                     folderStorage.Driver,
-                    rootFolder.Path,
+                    resolvedRoot,
                     folder
                 );
                 if (match != null)
