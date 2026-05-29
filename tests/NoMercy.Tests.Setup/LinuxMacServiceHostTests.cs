@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Tests.Setup;

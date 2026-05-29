@@ -3,7 +3,6 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using Mono.Nat;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;

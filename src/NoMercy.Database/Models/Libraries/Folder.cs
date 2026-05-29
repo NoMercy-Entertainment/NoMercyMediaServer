@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database.Infrastructure;
-using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Storage;
 
 // EncodingPresetFolder is referenced via [InverseProperty]

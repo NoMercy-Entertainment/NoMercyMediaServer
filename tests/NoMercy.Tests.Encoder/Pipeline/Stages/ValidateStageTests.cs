@@ -4,13 +4,11 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
-using AudioOutput = NoMercy.Encoder.Profiles.AudioOutput;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
-using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 

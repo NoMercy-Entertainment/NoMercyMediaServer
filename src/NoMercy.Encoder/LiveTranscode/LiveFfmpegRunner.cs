@@ -5,7 +5,6 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
-using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.LiveTranscode;

@@ -40,14 +40,12 @@ using NoMercy.MediaProcessing.People;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
 using NoMercy.MediaProcessing.Subtitles;
-using NoMercy.Networking;
 using NoMercy.Networking.Cast;
 using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Connectivity.Strategies;
 using NoMercy.Networking.Devices;
 using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -63,7 +61,6 @@ using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
 using NoMercy.Setup.Cast;
 using NoMercy.Setup.Server;
-using NoMercy.Setup.Ui;
 using NoMercy.Storage;
 using NoMercyQueue.Extensions;
 using Serilog.Events;
@@ -79,7 +76,6 @@ using MediaProcessingPersonRepository = NoMercy.MediaProcessing.People.PersonRep
 using MediaProcessingSeasonRepository = NoMercy.MediaProcessing.Seasons.SeasonRepository;
 using MediaProcessingShowRepository = NoMercy.MediaProcessing.Shows.ShowRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
-using ResourceMonitor = NoMercy.Helpers.Monitoring.ResourceMonitor;
 
 namespace NoMercy.Service.Configuration;
 

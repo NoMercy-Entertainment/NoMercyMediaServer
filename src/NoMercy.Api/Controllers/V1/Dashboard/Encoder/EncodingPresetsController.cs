@@ -2,18 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models.Media;
-using NoMercy.Encoder.Analysis;
-using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Errors;
-using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
-using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 

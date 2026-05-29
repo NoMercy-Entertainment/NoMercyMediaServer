@@ -1,5 +1,4 @@
 using Moq;
-using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.LiveTranscode;
 
 namespace NoMercy.Tests.Encoder.LiveTranscode;

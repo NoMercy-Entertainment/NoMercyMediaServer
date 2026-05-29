@@ -1,12 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
-using NoMercy.Api.Controllers.V1.Dashboard.Admin;
 using NoMercy.Api.Controllers.V1.Dashboard.Analysis;
-using NoMercy.Api.Controllers.V1.Dashboard.Encoder;
-using NoMercy.Api.Controllers.V1.Dashboard.Filesystem;
-using NoMercy.Api.Controllers.V1.Dashboard.Media;
-using NoMercy.Api.Controllers.V1.Dashboard.Plugins;
 using NoMercy.Api.Controllers.V1.Encoder;
 using Xunit;
 

@@ -2,10 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
-using NoMercy.Setup.Auth;
-using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
-using NoMercy.Setup.Ui;
 
 namespace NoMercy.Tests.Setup;
 

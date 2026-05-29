@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
-using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;

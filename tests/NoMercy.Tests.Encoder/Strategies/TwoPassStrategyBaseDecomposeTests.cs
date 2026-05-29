@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Jobs;

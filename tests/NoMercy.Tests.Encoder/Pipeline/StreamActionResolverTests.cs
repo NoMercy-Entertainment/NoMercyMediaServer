@@ -1,7 +1,6 @@
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using AudioOutput = NoMercy.Encoder.Profiles.AudioOutput;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;

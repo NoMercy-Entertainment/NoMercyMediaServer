@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models.Common;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Storage;

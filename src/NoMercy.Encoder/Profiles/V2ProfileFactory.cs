@@ -1,7 +1,5 @@
-using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
-using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Encoder.Profiles;
 

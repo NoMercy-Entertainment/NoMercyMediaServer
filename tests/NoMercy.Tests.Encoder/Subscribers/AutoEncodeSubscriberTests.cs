@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
-using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;

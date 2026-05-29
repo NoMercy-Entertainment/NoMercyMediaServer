@@ -1,14 +1,11 @@
 using System.Text;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
-using NoMercy.Encoder.Profiles;
-using AudioOutput = NoMercy.Encoder.Profiles.AudioOutput;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
-using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Jobs;
 

@@ -1,4 +1,3 @@
-using NoMercy.Encoder.Analysis;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Sources;

@@ -1,5 +1,4 @@
 using NoMercy.Encoder.Output;
-using NoMercy.Resources;
 
 namespace NoMercy.Encoder.Strategies.Shared;
 

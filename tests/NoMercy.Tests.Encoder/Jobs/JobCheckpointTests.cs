@@ -1,7 +1,5 @@
 using Newtonsoft.Json;
-using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Jobs;
-using NoMercy.Encoder.Profiles;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 

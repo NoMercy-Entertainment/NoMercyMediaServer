@@ -3,7 +3,6 @@ using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
-using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 

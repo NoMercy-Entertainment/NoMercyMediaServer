@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 
 namespace NoMercy.Cli;

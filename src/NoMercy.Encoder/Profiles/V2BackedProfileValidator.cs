@@ -1,5 +1,4 @@
 using NoMercy.Encoder.Errors;
-using NoMercy.Encoder.Profiles;
 using V2ProfileValidator = NoMercy.Encoder.Profiles.ProfileValidator;
 
 namespace NoMercy.Encoder.Profiles;

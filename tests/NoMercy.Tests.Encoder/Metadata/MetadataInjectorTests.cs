@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
 

@@ -6,7 +6,6 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies;
 

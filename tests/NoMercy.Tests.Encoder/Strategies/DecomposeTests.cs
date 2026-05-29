@@ -4,13 +4,11 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Hls;
 using NoMercy.Encoder.Strategies.Mkv;
 using NoMercy.Encoder.Strategies.Mp4;
-using Container = NoMercy.Encoder.Profiles.Container;
 
 namespace NoMercy.Tests.Encoder.Strategies;
 

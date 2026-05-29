@@ -9,7 +9,6 @@ using NoMercy.Encoder.Strategies;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using Container = NoMercy.Encoder.Profiles.Container;
-using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.Tests.Encoder.Orchestration;
 

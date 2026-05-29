@@ -8,7 +8,6 @@ using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Tests.Encoder.Storage;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
-using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using LadderConfig = NoMercy.Encoder.Profiles.LadderConfig;
 using LadderMode = NoMercy.Encoder.Profiles.LadderMode;
 using LadderRung = NoMercy.Encoder.Profiles.LadderRung;

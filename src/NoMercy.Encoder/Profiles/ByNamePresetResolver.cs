@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using NoMercy.Encoder.Profiles;
 
 namespace NoMercy.Encoder.Profiles;
 

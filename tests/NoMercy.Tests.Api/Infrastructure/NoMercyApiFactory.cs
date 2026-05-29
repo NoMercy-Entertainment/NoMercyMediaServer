@@ -26,7 +26,6 @@ using NoMercy.Service;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
-using NoMercy.Setup.Ui;
 using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Api.Infrastructure;

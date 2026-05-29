@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using MovieFileLibrary;
-using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FFProbe;
 using NoMercy.NmSystem.Information;

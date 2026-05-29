@@ -4,9 +4,6 @@ using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.NmSystem.Information;
 using NoMercy.Setup.Auth;
-using NoMercy.Setup.Boot;
-using NoMercy.Setup.Server;
-using NoMercy.Setup.Ui;
 
 namespace NoMercy.Tests.Setup;
 

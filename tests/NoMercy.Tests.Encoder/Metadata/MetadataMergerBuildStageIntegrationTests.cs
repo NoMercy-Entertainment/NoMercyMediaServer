@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;

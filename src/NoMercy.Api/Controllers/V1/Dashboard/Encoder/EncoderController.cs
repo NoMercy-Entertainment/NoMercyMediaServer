@@ -2,15 +2,12 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
-using NoMercy.Encoder.Audio;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;

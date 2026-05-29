@@ -1,10 +1,7 @@
 using System.Reflection;
 using Newtonsoft.Json;
-using NoMercy.Setup.Auth;
-using NoMercy.Setup.Boot;
 using NoMercy.Setup.Dto;
 using NoMercy.Setup.Server;
-using NoMercy.Setup.Ui;
 
 namespace NoMercy.Tests.Setup;
 

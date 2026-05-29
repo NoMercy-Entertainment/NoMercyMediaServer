@@ -13,7 +13,6 @@ using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
 using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
-using VideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 

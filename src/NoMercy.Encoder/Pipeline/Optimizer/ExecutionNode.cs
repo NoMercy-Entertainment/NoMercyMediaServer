@@ -1,5 +1,3 @@
-using NoMercy.Encoder.Hardware;
-
 namespace NoMercy.Encoder.Pipeline.Optimizer;
 
 public record ExecutionNode(

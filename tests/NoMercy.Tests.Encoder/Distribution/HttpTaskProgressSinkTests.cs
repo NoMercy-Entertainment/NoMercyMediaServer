@@ -1,8 +1,6 @@
 using System.Net;
-using System.Net.Http.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Moq.Protected;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Progress;

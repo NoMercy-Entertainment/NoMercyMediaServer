@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 using Avalonia.Threading;
 using NoMercy.Launcher.Models;
 using NoMercy.Launcher.Services;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Logging;

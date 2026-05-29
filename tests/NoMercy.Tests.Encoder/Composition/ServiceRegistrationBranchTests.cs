@@ -10,7 +10,6 @@ using NoMercy.Encoder.Devices;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Notifications;
 using NoMercy.Encoder.Output;
-using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Strategies;
 using NoMercy.Encoder.Subtitles;
 

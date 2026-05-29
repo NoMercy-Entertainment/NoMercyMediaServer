@@ -1,7 +1,6 @@
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using HardwarePreference = NoMercy.Encoder.Profiles.HardwarePreference;
 
 namespace NoMercy.Tests.Encoder.Codecs;

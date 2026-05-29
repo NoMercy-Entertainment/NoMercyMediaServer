@@ -1,8 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NoMercy.Database;
@@ -10,7 +8,6 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Storage;
-using NoMercy.Storage.Factory;
 
 namespace NoMercy.Tests.Encoder.Bundle;
 

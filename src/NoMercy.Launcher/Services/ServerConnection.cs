@@ -1,7 +1,6 @@
 using System.Text;
 using Newtonsoft.Json;
 using NoMercy.Launcher.Models;
-using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 
 namespace NoMercy.Launcher.Services;

@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 
 namespace NoMercy.NmSystem.SystemCalls;

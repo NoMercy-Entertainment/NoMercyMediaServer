@@ -1,4 +1,3 @@
-using System.Text;
 using Newtonsoft.Json;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Bundle;

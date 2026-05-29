@@ -18,7 +18,6 @@ using NoMercy.Helpers.Wallpaper;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Networking.Discovery;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;

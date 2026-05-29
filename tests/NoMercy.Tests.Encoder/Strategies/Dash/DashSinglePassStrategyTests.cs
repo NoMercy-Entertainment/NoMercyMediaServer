@@ -1,5 +1,4 @@
 using Moq;
-using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;

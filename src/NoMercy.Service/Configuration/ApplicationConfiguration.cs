@@ -9,10 +9,8 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
-using NoMercy.Networking;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.Helpers;
@@ -23,7 +21,6 @@ using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
 using NoMercy.Storage;
 using NoMercyQueue.Workers;
-using Serilog.Events;
 
 namespace NoMercy.Service.Configuration;
 

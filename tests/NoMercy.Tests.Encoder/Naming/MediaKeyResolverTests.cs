@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NoMercy.Encoder.Naming;
 
 namespace NoMercy.Tests.Encoder.Naming;

@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Hardware;
-using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Encoder.Storage;
 

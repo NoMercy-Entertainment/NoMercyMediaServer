@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.NmSystem.SystemCalls;
 
