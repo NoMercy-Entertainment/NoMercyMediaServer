@@ -521,8 +521,7 @@ public partial class FileManager(
                 {
                     Width = width,
                     Height = height,
-                    FileName =
-                        "/" + Path.GetRelativePath(hostFolder, playlistPath).Replace("\\", "/"),
+                    FileName = $"/{storage.GetName(dir.Path)}/{storage.GetName(playlistPath)}",
                     FileHash = ComputeFileHash(storage, playlistPath),
                     FileSize = dirSize,
                 }
@@ -573,8 +572,7 @@ public partial class FileManager(
                 {
                     Language = language,
                     Codec = codec,
-                    FileName =
-                        "/" + Path.GetRelativePath(hostFolder, playlistPath).Replace("\\", "/"),
+                    FileName = $"/{storage.GetName(dir.Path)}/{storage.GetName(playlistPath)}",
                     FileHash = ComputeFileHash(storage, playlistPath),
                     FileSize = dirSize,
                 }
