@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using NoMercy.Storage;
 using NoMercy.Storage.Factory;
 using NoMercy.Storage.Remote;
 using NoMercy.Storage.Validation;
@@ -23,11 +24,28 @@ public class StorageFactoryTests
 
     private static StorageFactory Factory(
         Mock<IStorageDriver>? driver = null,
-        IDriverConfigResolver? resolver = null
+        IDriverConfigResolver? resolver = null,
+        ICredentialResolver? credentialResolver = null
     )
     {
         Mock<IStorageDriver> b = driver ?? BackendMock();
-        return new StorageFactory(b.Object, NullLogger<StorageFactory>.Instance, resolver);
+        return new StorageFactory(
+            b.Object,
+            NullLogger<StorageFactory>.Instance,
+            resolver,
+            credentialResolver
+        );
+    }
+
+    // Helper: credential resolver stub that always returns a fixed key pair.
+    private static ICredentialResolver StubCredentials(
+        string accessKey = "test-access-key",
+        string secretKey = "test-secret-key"
+    )
+    {
+        Mock<ICredentialResolver> mock = new();
+        mock.Setup(r => r.Resolve(It.IsAny<string>())).Returns((accessKey, secretKey));
+        return mock.Object;
     }
 
     // Helper: build a resolver stub that maps any Ulid to a (type, configJson) pair.
@@ -195,7 +213,10 @@ public class StorageFactoryTests
     {
         string json =
             $"{{\"bucket\":\"test\",\"region\":\"us-east-1\",\"endpoint\":\"http://localhost:9000\"}}";
-        StorageFactory factory = Factory(resolver: StubResolver(driverType, json));
+        StorageFactory factory = Factory(
+            resolver: StubResolver(driverType, json),
+            credentialResolver: StubCredentials()
+        );
         Ulid id = Ulid.NewUlid();
 
         IStorage storage = factory.For(id, Ulid.NewUlid(), string.Empty);

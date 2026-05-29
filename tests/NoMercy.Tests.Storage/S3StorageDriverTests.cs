@@ -3,6 +3,7 @@ using Amazon.S3.Model;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Logging.Abstractions;
+using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Drivers.S3;
 using NoMercy.Storage.Factory;
@@ -18,12 +19,21 @@ public class S3DriverConfigParsingTests
 {
     private static StorageFactory FactoryWithConfig(string type, string? config)
     {
-        Mock<IDriverConfigResolver> resolver = new();
-        resolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
+        Mock<IDriverConfigResolver> driverResolver = new();
+        driverResolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
+
+        // Provide dummy credentials so BuildS3 does not reject the config for
+        // lacking credentials — these tests verify config parsing, not live S3 access.
+        Mock<ICredentialResolver> credResolver = new();
+        credResolver
+            .Setup(r => r.Resolve(It.IsAny<string>()))
+            .Returns(("test-access-key", "test-secret-key"));
+
         return new StorageFactory(
             new LocalStorageDriver(),
             NullLogger<StorageFactory>.Instance,
-            resolver.Object
+            driverResolver.Object,
+            credResolver.Object
         );
     }
 
@@ -194,8 +204,14 @@ public sealed class MinioFixture : IAsyncLifetime
 
     public S3StorageDriver BuildBackend(string? prefix = null)
     {
-        AmazonS3Client client = BuildClient();
-        return new S3StorageDriver(client, BucketName, prefix);
+        return new S3StorageDriver(
+            bucket: BucketName,
+            region: "us-east-1",
+            prefix: prefix,
+            endpoint: Endpoint,
+            accessKey: AccessKey,
+            secretKey: SecretKey
+        );
     }
 
     private static async Task<bool> DockerAvailableAsync()

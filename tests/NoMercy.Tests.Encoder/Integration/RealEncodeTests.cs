@@ -807,6 +807,472 @@ public class RealEncodeTests : IAsyncLifetime
         deserialized.Thumbnails.IntervalSeconds.Should().Be(10);
     }
 
+    // -------------------------------------------------------------------------
+    // Regression matrix: four content classes from the encoder plan.
+    // Each resolves a fixture file; if absent, the test skips cleanly.
+    // Fixture root: NOMERCY_TEST_FIXTURES_PATH env var, or
+    //   %LOCALAPPDATA%/NoMercy_dev/test-fixtures (Windows) /
+    //   ~/.local/share/NoMercy_dev/test-fixtures (Linux).
+    // -------------------------------------------------------------------------
+
+    private static string? ResolveFixture(string relativeFileName)
+    {
+        string? envRoot = Environment.GetEnvironmentVariable("NOMERCY_TEST_FIXTURES_PATH");
+        if (!string.IsNullOrWhiteSpace(envRoot))
+        {
+            string candidate = Path.Combine(envRoot, relativeFileName);
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        string binaryName = OperatingSystem.IsWindows() ? ".exe" : string.Empty;
+        string? localAppData = Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData
+        );
+        string? home = Environment.GetEnvironmentVariable("HOME");
+
+        foreach (
+            string root in new[]
+            {
+                !string.IsNullOrWhiteSpace(localAppData)
+                    ? Path.Combine(localAppData, "NoMercy_dev", "test-fixtures")
+                    : null,
+                !string.IsNullOrWhiteSpace(localAppData)
+                    ? Path.Combine(localAppData, "NoMercy", "test-fixtures")
+                    : null,
+                !string.IsNullOrWhiteSpace(home)
+                    ? Path.Combine(home, ".local", "share", "NoMercy_dev", "test-fixtures")
+                    : null,
+            }.OfType<string>()
+        )
+        {
+            string candidate = Path.Combine(root, relativeFileName);
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        return null;
+    }
+
+    [SkippableFact]
+    public async Task EncodeAsync_Sd480p_DarkwingDuck_ProducesPlaylistAndSegments()
+    {
+        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
+
+        string? fixture = ResolveFixture("darkwing-duck-sd480p.mkv");
+        Skip.If(
+            fixture is null,
+            "SD 480p fixture (darkwing-duck-sd480p.mkv) not present — "
+                + "set NOMERCY_TEST_FIXTURES_PATH or drop the file under NoMercy_dev/test-fixtures/."
+        );
+
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(10));
+
+        string outputDir = Path.Combine(_testDir, "output-sd480p");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "test-hls-sd480p",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 854,
+                Height: 480,
+                RateControl: RateControlMode.Crf,
+                Crf: 28,
+                BitrateKbps: 800,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "ultrafast",
+                CodecProfile: CodecProfile.Baseline,
+                Level: "3.1",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
+            [
+                new(
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Mp3,
+                    BitrateKbps: 128,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["und", "eng"],
+                    DefaultLanguage: null,
+                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
+                ),
+            ],
+            Subtitles: []
+        )
+        {
+            HardwarePreference = HardwarePreference.ForceSoftware,
+            HlsDerivatives = new HlsDerivatives
+            {
+                GenerateSpriteVtt = false,
+                GenerateThumbnailTrack = false,
+                GenerateMetadataJson = false,
+                GenerateChapters = false,
+                GenerateFontsJson = false,
+            },
+        };
+
+        EncodingRequest request = new(
+            InputPath: fixture!,
+            OutputDirectory: outputDir,
+            Profile: profile
+        );
+
+        TestProgressObserver observer = new();
+        IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
+
+        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"SD 480p encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+
+        string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);
+        string[] segments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+
+        playlists
+            .Should()
+            .NotBeEmpty("SD 480p HLS output should contain at least one .m3u8 playlist");
+        segments.Should().NotBeEmpty("SD 480p HLS output should contain at least one .ts segment");
+
+        // Verify the output directory contains a video folder for the expected resolution
+        string[] videoDirs = Directory.GetDirectories(outputDir, "video_854x480*");
+        videoDirs
+            .Should()
+            .HaveCount(
+                1,
+                $"should have exactly one video_854x480 directory. Found: [{string.Join(", ", Directory.GetDirectories(outputDir).Select(Path.GetFileName))}]"
+            );
+    }
+
+    [SkippableFact]
+    public async Task EncodeAsync_1080p_Anime_NoGameNoLife_ProducesPlaylistAndSegments()
+    {
+        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
+
+        string? fixture = ResolveFixture("no-game-no-life-1080p.mkv");
+        Skip.If(
+            fixture is null,
+            "1080p anime fixture (no-game-no-life-1080p.mkv) not present — "
+                + "set NOMERCY_TEST_FIXTURES_PATH or drop the file under NoMercy_dev/test-fixtures/."
+        );
+
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(15));
+
+        string outputDir = Path.Combine(_testDir, "output-1080p-anime");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "test-hls-1080p-anime",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 20,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "ultrafast",
+                CodecProfile: CodecProfile.High,
+                Level: "4.0",
+                Tune: "animation",
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
+            [
+                new(
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Mp3,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["jpn", "und"],
+                    DefaultLanguage: "jpn",
+                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
+                ),
+            ],
+            Subtitles: []
+        )
+        {
+            HardwarePreference = HardwarePreference.ForceSoftware,
+            HlsDerivatives = new HlsDerivatives
+            {
+                GenerateSpriteVtt = false,
+                GenerateThumbnailTrack = false,
+                GenerateMetadataJson = false,
+                GenerateChapters = false,
+                GenerateFontsJson = false,
+            },
+        };
+
+        EncodingRequest request = new(
+            InputPath: fixture!,
+            OutputDirectory: outputDir,
+            Profile: profile
+        );
+
+        TestProgressObserver observer = new();
+        IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
+
+        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"1080p anime encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+
+        string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);
+        string[] segments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+
+        playlists
+            .Should()
+            .NotBeEmpty("1080p anime HLS output should contain at least one .m3u8 playlist");
+        segments
+            .Should()
+            .NotBeEmpty("1080p anime HLS output should contain at least one .ts segment");
+
+        string[] videoDirs = Directory.GetDirectories(outputDir, "video_1920x1080*");
+        videoDirs
+            .Should()
+            .HaveCount(
+                1,
+                $"should have exactly one video_1920x1080 directory. Found: [{string.Join(", ", Directory.GetDirectories(outputDir).Select(Path.GetFileName))}]"
+            );
+    }
+
+    [SkippableFact]
+    public async Task EncodeAsync_HdrContent_ProducesTonemappedSdrPlaylist()
+    {
+        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
+
+        string? fixture = ResolveFixture("hdr-test-hdr10.mkv");
+        Skip.If(
+            fixture is null,
+            "HDR fixture (hdr-test-hdr10.mkv) not present — "
+                + "set NOMERCY_TEST_FIXTURES_PATH or drop the file under NoMercy_dev/test-fixtures/."
+        );
+
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(15));
+
+        string outputDir = Path.Combine(_testDir, "output-hdr");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "test-hls-hdr-tonemap",
+            Container: Container.HlsTs,
+            Video: new(
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 22,
+                BitrateKbps: 4000,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "ultrafast",
+                CodecProfile: CodecProfile.High,
+                Level: "4.0",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: "yuv420p",
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: true,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+            ),
+            Audio:
+            [
+                new(
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Mp3,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["und", "eng"],
+                    DefaultLanguage: null,
+                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
+                ),
+            ],
+            Subtitles: []
+        )
+        {
+            HardwarePreference = HardwarePreference.ForceSoftware,
+            HlsDerivatives = new HlsDerivatives
+            {
+                GenerateSpriteVtt = false,
+                GenerateThumbnailTrack = false,
+                GenerateMetadataJson = false,
+                GenerateChapters = false,
+                GenerateFontsJson = false,
+            },
+        };
+
+        EncodingRequest request = new(
+            InputPath: fixture!,
+            OutputDirectory: outputDir,
+            Profile: profile
+        );
+
+        TestProgressObserver observer = new();
+        IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
+
+        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"HDR tonemapping encode failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+
+        string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);
+        string[] segments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+
+        playlists.Should().NotBeEmpty("HDR HLS output should contain at least one .m3u8 playlist");
+        segments.Should().NotBeEmpty("HDR HLS output should contain at least one .ts segment");
+
+        // Master playlist must declare SDR range (tonemapping was applied)
+        string? masterPlaylist = playlists.FirstOrDefault(p =>
+            Path.GetFileName(p).Equals("master.m3u8", StringComparison.OrdinalIgnoreCase)
+        );
+        if (masterPlaylist is not null)
+        {
+            string masterContent = await File.ReadAllTextAsync(masterPlaylist, cts.Token);
+            masterContent
+                .Should()
+                .NotContain(
+                    "VIDEO-RANGE=PQ",
+                    "tonemapping to SDR should remove HDR PQ video range from master playlist"
+                );
+        }
+    }
+
+    [SkippableFact]
+    public async Task EncodeAsync_AudioOnly_ProducesAudioHlsPlaylist()
+    {
+        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
+
+        string? fixture = ResolveFixture("audio-only-test.flac");
+        Skip.If(
+            fixture is null,
+            "Audio-only fixture (audio-only-test.flac) not present — "
+                + "set NOMERCY_TEST_FIXTURES_PATH or drop the file under NoMercy_dev/test-fixtures/."
+        );
+
+        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
+
+        string outputDir = Path.Combine(_testDir, "output-audio-only");
+        Directory.CreateDirectory(outputDir);
+
+        EncodingProfile profile = new(
+            Id: Ulid.NewUlid(),
+            Name: "test-hls-audio-only",
+            Container: Container.HlsTs,
+            Video: null,
+            Audio:
+            [
+                new(
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Mp3,
+                    BitrateKbps: 320,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: ["und", "eng"],
+                    DefaultLanguage: null,
+                    Loudness: new LoudnessConfig(LoudnessMode.None),
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
+                ),
+            ],
+            Subtitles: []
+        )
+        {
+            HardwarePreference = HardwarePreference.ForceSoftware,
+            HlsDerivatives = new HlsDerivatives
+            {
+                GenerateSpriteVtt = false,
+                GenerateThumbnailTrack = false,
+                GenerateMetadataJson = false,
+                GenerateChapters = false,
+                GenerateFontsJson = false,
+            },
+        };
+
+        EncodingRequest request = new(
+            InputPath: fixture!,
+            OutputDirectory: outputDir,
+            Profile: profile
+        );
+
+        TestProgressObserver observer = new();
+        IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
+
+        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+
+        result
+            .Success.Should()
+            .BeTrue(
+                $"Audio-only encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+            );
+
+        // Audio-only: must produce audio segment directories and playlists; must NOT produce video dirs
+        string[] allPlaylists = Directory.GetFiles(
+            outputDir,
+            "*.m3u8",
+            SearchOption.AllDirectories
+        );
+        string[] audioSegments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+
+        allPlaylists
+            .Should()
+            .NotBeEmpty("audio-only output should contain at least one .m3u8 playlist");
+        audioSegments
+            .Should()
+            .NotBeEmpty("audio-only output should contain at least one .ts segment");
+
+        string[] videoDirs = Directory.GetDirectories(outputDir, "video_*");
+        videoDirs.Should().BeEmpty("audio-only encode should not produce any video_ directories");
+
+        string[] audioDirs = Directory.GetDirectories(outputDir, "audio_*");
+        audioDirs
+            .Should()
+            .NotBeEmpty("audio-only encode should produce at least one audio_ directory");
+    }
+
     private class TestProgressObserver : IProgressObserver
     {
         public List<string> StagesStarted { get; } = [];
