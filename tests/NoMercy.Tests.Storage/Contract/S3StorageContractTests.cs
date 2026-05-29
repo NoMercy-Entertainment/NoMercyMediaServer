@@ -230,15 +230,12 @@ public sealed class S3StorageContractTests(S3ContractFixture fixture) : IStorage
     // S3-specific overrides — document known driver divergences
     // -----------------------------------------------------------------------
 
-    // S3 / RemoteStorage does not apply StoragePathGuard, so the base class
-    // "acceptable = threw || !result" contract is used for these tests.
-    // The driver treats absolute paths as relative keys (strips leading slash),
-    // so ExistsAsync("/abs/path") returns false rather than throwing.
-    // This is documented as a known divergence; the base assertion accepts it.
+    // Absolute path rejection: RemoteStorage.V() calls StructuralValidate
+    // which throws StoragePathNotAllowedException for leading-slash, drive-letter,
+    // and UNC paths before the S3 driver is reached.
 
-    // S3 does not enforce null-byte rejection at the driver level. The raw SDK
-    // will reject the key with an AmazonS3Exception (InvalidArgument), which
-    // bubbles as an exception — satisfying the base contract's "throws".
+    // Null-byte rejection: StructuralValidate throws StoragePathNotAllowedException
+    // before the SDK is called, satisfying the base contract's "throws" assertion.
 
     // double-slash normalisation: S3 preserves the double-slash in the key.
     // "foo//bar.bin" != "foo/bar.bin" in S3 key space.

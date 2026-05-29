@@ -24,13 +24,9 @@ namespace NoMercy.Tests.Storage.Contract;
 ///     "recent" timestamp. The "last-modified is recent" contract test is skipped.
 ///     Fix target: FaultyLibNfs.Stat64 should set MtimeSec to DateTimeOffset.UtcNow.ToUnixTimeSeconds().
 ///
-///   NFSC-3 — RemoteStorage has no StoragePathGuard.
-///     RemoteStorage passes paths directly to NfsStorageDriver.ToNfsPath() which
-///     prepends "/" and normalizes, but does NOT reject null bytes, dotdot traversal,
-///     or absolute paths. Rejection tests are overridden to match the actual NFS behavior
-///     (dotdot is collapsed by GetFullPath, null byte is passed through, absolute paths
-///     are normalized to NFS-relative). These are security gaps for RemoteStorage that
-///     the architect should address by adding guard layer to RemoteStorage.
+///   NFSC-3 — CLOSED. RemoteStorage.V() now calls StoragePathGuard.StructuralValidate
+///     which rejects null bytes, ".." traversal, device paths, and OS-absolute /
+///     backend-absolute paths before the driver sees them.
 ///
 ///   NFSC-4 — Empty-string root existence.
 ///     RemoteStorage.ExistsAsync("") calls NfsStorageDriver.FileExists("") and
@@ -95,8 +91,8 @@ public sealed class NfsStorageContractTests : IStorageContractTests
     // NFSC-1, NFSC-2, NFSC-3 (originally documented gaps) — all closed:
     //   * FaultyLibNfs.ReadDir now walks the in-memory _files+_dirs map.
     //   * FaultyLibNfs.Stat64 returns a recorded mtime per path.
-    //   * RemoteStorage.V() runs StoragePathGuard.StructuralValidate at the
-    //     IStorage boundary, so null-byte and ".." paths throw uniformly.
+    //   * RemoteStorage.V() runs StoragePathGuard.StructuralValidate which
+    //     rejects null bytes, ".." traversal, and absolute paths uniformly.
     // The corresponding base-class assertions now apply directly — no
     // overrides needed.
     // -----------------------------------------------------------------------

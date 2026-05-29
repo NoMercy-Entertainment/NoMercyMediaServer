@@ -22,18 +22,17 @@ public sealed class RemoteStorage : IStorage
     public IStorageDriver Driver => _driver;
 
     /// <summary>
-    /// Path Contract Rules 2 + 5 enforcement at the IStorage boundary —
-    /// normalises null to empty string (Rule 3 — empty = root) and rejects
-    /// null bytes / .. traversal / device paths structurally before the
-    /// driver sees them. Drivers handle their own scope-prefixing, but every
-    /// remote driver was previously trusting RemoteStorage to keep the input
-    /// safe.
+    /// Path Contract Rules 1/4 + 5 enforcement at the IStorage boundary.
+    /// Normalises null to empty string (Rule 3 — empty = scope root) and
+    /// rejects null bytes, ".." traversal, device paths, and OS-absolute or
+    /// backend-absolute paths before the driver sees them.
     /// </summary>
     private static string V(string? path)
     {
-        if (path is null)
+        if (path is null || path.Length == 0)
             return string.Empty;
         StoragePathGuard.StructuralValidate(path);
+        StoragePathGuard.RejectAbsolutePath(path);
         return path;
     }
 

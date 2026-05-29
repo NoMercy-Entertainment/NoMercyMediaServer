@@ -580,6 +580,22 @@ public static class ServiceConfiguration
             opts.SpeedIndexCachePath = AppFiles.SpeedIndexCachePath;
         });
 
+        // Transcode-scoped IStorage — paths are relative to AppFiles.TranscodePath.
+        // HomeController uses this so it can pass scope-relative paths (Rule 1 of
+        // the IStorage path contract) instead of Path.Combine(TranscodePath, ...).
+        services.AddKeyedSingleton<IStorage>(
+            "transcode",
+            (sp, _) =>
+            {
+                IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
+                NoMercy.Storage.Validation.StoragePathGuard guard = new(
+                    [AppFiles.TranscodePath],
+                    driver
+                );
+                return new NoMercy.Storage.Drivers.Local.LocalStorage(driver, guard);
+            }
+        );
+
         // Concrete activity probe for the deferred hardware benchmark —
         // Encoder's default is a no-op (always idle) so it stays decoupled
         // from QueueRunner/SessionManager. AddSingleton after AddNoMercyEncoder

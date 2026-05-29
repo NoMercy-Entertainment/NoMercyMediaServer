@@ -322,4 +322,32 @@ public class StoragePathGuardTests
             .Throw<StoragePathNotAllowedException>()
             .Where(e => e.Reason.StartsWith("path is not under any allowed root"));
     }
+
+    // ── Absolute-path rejection (RejectAbsolutePath) ─────────────────────────
+
+    [Theory]
+    [InlineData("/mnt/media/x.mkv", "Unix-rooted leading slash")]
+    [InlineData("/abs/path/escape", "Unix-rooted single slash")]
+    [InlineData(@"C:\Media\x.mkv", "Windows drive + backslash")]
+    [InlineData("C:/Media/x.mkv", "Windows drive + forward slash")]
+    [InlineData(@"\\server\share\file", "UNC double backslash")]
+    [InlineData(@"\rooted-backslash", "Windows backslash root")]
+    public void RejectAbsolutePath_rejects_absolute_path_forms(string path, string form)
+    {
+        Action act = () => StoragePathGuard.RejectAbsolutePath(path);
+
+        act.Should()
+            .Throw<StoragePathNotAllowedException>($"RejectAbsolutePath must reject form: {form}")
+            .Where(e => e.Reason == "absolute paths are not allowed as scope-relative keys");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("movies/avatar/avatar.mkv")]
+    [InlineData("Black Butler (2008)/Season 05/ep.m3u8")]
+    public void RejectAbsolutePath_accepts_valid_scope_relative_paths(string path)
+    {
+        Action act = () => StoragePathGuard.RejectAbsolutePath(path);
+        act.Should().NotThrow("scope-relative and empty paths must pass RejectAbsolutePath");
+    }
 }

@@ -314,18 +314,13 @@ public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
         }
     }
 
-    // Absolute path rejection — RemoteStorage / WebDavStorageDriver does not
-    // apply StoragePathGuard. An absolute path "/abs/path" is treated as a
-    // URL path, which returns 404 → ExistsAsync returns false. The base contract
-    // accepts "returned false" as a valid outcome.
+    // Absolute path rejection — RemoteStorage.V() calls StructuralValidate
+    // which throws StoragePathNotAllowedException for leading-slash, drive-letter,
+    // and UNC paths before the WebDAV driver builds a URL.
 
-    // Null-byte in path — WebDavStorageDriver will build a URL containing \0
-    // which the HttpClient rejects with an InvalidOperationException. The base
-    // contract accepts any Exception here.
+    // Null-byte in path — StructuralValidate throws StoragePathNotAllowedException
+    // before the driver is reached, satisfying the base contract's "throws" assertion.
 
-    // ".." traversal — the WebDAV server normalises ".." in URL paths server-side.
-    // The driver does not pre-validate. Result: ExistsAsync returns false (no throw).
-    // The base contract accepts "returned false" as an acceptable outcome.
-    // NOTE: if the contract is tightened to require a throw, driver-side
-    // StoragePathGuard integration will be needed.
+    // ".." traversal — StructuralValidate throws StoragePathNotAllowedException
+    // before the driver builds any URL.
 }

@@ -35,23 +35,20 @@ public sealed class StoragePathGuard
 
     /// <summary>
     /// Structural-only validation: rejects null bytes, ".." traversal, and
-    /// Windows device paths. Does NOT canonicalize and does NOT enforce the
-    /// under-root rule. Used by RemoteStorage where the storage scope is a
-    /// URL/key prefix rather than an OS-rooted path, and where canonicalisation
-    /// against a local filesystem is meaningless. Empty/null is accepted —
-    /// callers translate that to "scope root" before calling, but a path
-    /// that's still empty after resolution gets through here as a no-op.
+    /// Windows device paths. Does NOT canonicalize, does NOT enforce the
+    /// under-root rule, and does NOT reject OS-absolute paths — that check
+    /// is the caller's responsibility when operating in a remote-driver
+    /// context (see <see cref="RejectAbsolutePath"/>).
+    /// Empty/null is accepted — drivers treat "" as the scope root (Rule 3).
     /// </summary>
     public static void StructuralValidate(string? requestedPath)
     {
-        if (requestedPath is null)
+        if (requestedPath is null || requestedPath.Length == 0)
             return;
 
         if (requestedPath.Contains('\0'))
             throw new StoragePathNotAllowedException(requestedPath, "null byte in path");
 
-        // ".." traversal — anywhere in the path. Keeps us safe even when a
-        // remote driver doesn't canonicalize.
         if (
             requestedPath == ".."
             || requestedPath.StartsWith("../", StringComparison.Ordinal)
@@ -71,6 +68,35 @@ public sealed class StoragePathGuard
             )
         )
             throw new StoragePathNotAllowedException(requestedPath, "device paths are not allowed");
+    }
+
+    /// <summary>
+    /// Rejects any path that is rooted in OS or backend-absolute terms.
+    /// These forms are never valid scope-relative keys for remote drivers:
+    ///   - leading '/' or '\'  (Unix root, UNC share, or Windows backslash root)
+    ///   - Windows drive prefix  X:
+    /// Must be called by remote-driver entry points (e.g. RemoteStorage.V())
+    /// in addition to <see cref="StructuralValidate"/>. Not called from
+    /// <see cref="Validate"/> because LocalStorage passes OS-absolute paths
+    /// through the structural check before the under-root allowlist check.
+    /// </summary>
+    public static void RejectAbsolutePath(string path)
+    {
+        if (path.Length == 0)
+            return;
+
+        char first = path[0];
+        if (first == '/' || first == '\\')
+            throw new StoragePathNotAllowedException(
+                path,
+                "absolute paths are not allowed as scope-relative keys"
+            );
+
+        if (path.Length >= 2 && path[1] == ':' && char.IsLetter(path[0]))
+            throw new StoragePathNotAllowedException(
+                path,
+                "absolute paths are not allowed as scope-relative keys"
+            );
     }
 
     /// <summary>

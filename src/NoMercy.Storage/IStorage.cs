@@ -40,10 +40,10 @@ namespace NoMercy.Storage;
 /// S3 prepends bucket prefix, WebDAV prepends the base URL — all internal. Consumers never
 /// see these prefixes.</para>
 ///
-/// <para><strong>Important</strong>: <see cref="Remote.RemoteStorage"/> currently does NOT
-/// pass paths through <see cref="Validation.StoragePathGuard"/>. Rules 4 and 5 are therefore
-/// only enforced for <see cref="Drivers.Local.LocalStorage"/> today. This is a known gap —
-/// see the enforcement notes in <c>.claude/specs/2026-05-04-istorage-path-contract.md</c>.</para>
+/// <para><strong>Important</strong>: <see cref="Remote.RemoteStorage"/> enforces Rules 4 and 5
+/// via <see cref="Validation.StoragePathGuard.StructuralValidate"/> at every entry point.
+/// The full under-root check (Rule 1) is not applicable to remote drivers because their
+/// scope anchor is a URL/key prefix managed by the driver itself rather than an OS path.</para>
 /// </remarks>
 public interface IStorage
 {
