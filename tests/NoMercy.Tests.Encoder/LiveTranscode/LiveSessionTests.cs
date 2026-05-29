@@ -151,6 +151,70 @@ public class LiveSessionTests
         session.State.Should().Be(LiveSessionState.Seeking);
     }
 
+    [Fact]
+    public async Task SeekAsync_InvokesBufferResetCallback()
+    {
+        LiveSession session = new("sess-001", MakeQuality());
+        bool resetCalled = false;
+        session.AttachBufferResetCallback(() => resetCalled = true);
+
+        await session.SeekAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+
+        resetCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ChangeQualityAsync_InvokesBufferResetCallback()
+    {
+        LiveSession session = new("sess-001", MakeQuality());
+        bool resetCalled = false;
+        session.AttachBufferResetCallback(() => resetCalled = true);
+
+        LiveQuality newQuality = new(
+            Id: "720p",
+            Label: "720p",
+            Width: 1280,
+            Height: 720,
+            Codec: NoMercy.Encoder.Codecs.VideoCodecType.H264,
+            BitrateKbps: 4000,
+            Encoder: "libx264",
+            IsHardwareAccelerated: false,
+            ExpectedSpeed: 1.5,
+            CanRealtime: true
+        );
+
+        await session.ChangeQualityAsync("720p", newQuality, CancellationToken.None);
+
+        resetCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SeekAsync_RuntimeBuffer_IsClearedOnSeek()
+    {
+        LiveSession session = new("sess-001", MakeQuality());
+        LiveRuntimeSession runtime = new(session, TimeSpan.FromSeconds(6));
+        session.AttachBufferResetCallback(() => runtime.ResetBuffer());
+
+        // Buffer a few segments before the seek.
+        Segment seg0 = new(0, TimeSpan.Zero, TimeSpan.FromSeconds(6), "/tmp/seg0.ts", 100);
+        Segment seg1 = new(
+            1,
+            TimeSpan.FromSeconds(6),
+            TimeSpan.FromSeconds(6),
+            "/tmp/seg1.ts",
+            100
+        );
+        runtime.BufferSegment(seg0);
+        runtime.BufferSegment(seg1);
+        runtime.HighestSegmentIndex.Should().Be(1);
+
+        // Seek — the callback must wipe the buffer.
+        await session.SeekAsync(TimeSpan.FromSeconds(60), CancellationToken.None);
+
+        runtime.SnapshotSegments().Should().BeEmpty();
+        runtime.HighestSegmentIndex.Should().Be(-1);
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Dispose
     // ──────────────────────────────────────────────────────────────────────────

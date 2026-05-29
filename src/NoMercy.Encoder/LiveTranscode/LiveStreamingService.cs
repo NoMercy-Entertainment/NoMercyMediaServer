@@ -32,6 +32,7 @@ public class LiveStreamingService(ILogger<LiveStreamingService> logger, IStorage
             );
         }
 
+        session.AttachBufferResetCallback(() => runtime.ResetBuffer());
         runtime.DrainerTask = Task.Run(() => DrainAsync(runtime));
         logger.LogDebug("Registered live session {SessionId}", session.SessionId);
     }

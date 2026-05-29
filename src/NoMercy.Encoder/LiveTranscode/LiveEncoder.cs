@@ -30,14 +30,15 @@ public class LiveEncoder(
         LiveSession session = new(sessionId, quality);
         session.SetState(LiveSessionState.Starting);
 
-        sessionManager.RegisterSession(session);
-
         // Flip to Transcoding eagerly so API consumers see the session as live
         // the moment StartAsync returns. The runner kicks in async — it will
         // downgrade to Error if FFmpeg fails to start.
         session.SetState(LiveSessionState.Transcoding);
 
-        string outputDirectory = Path.Combine(options.ResolvedLiveTranscodeCachePath, sessionId);
+        string outputDirectory = Path.Combine(
+            options.ResolvedLiveTranscodeCachePath,
+            $"lts-{sessionId}"
+        );
 
         streamingService.Register(
             session,

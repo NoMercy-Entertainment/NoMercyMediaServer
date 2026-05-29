@@ -134,7 +134,7 @@ public sealed class LocalStorage : IStorage
             long size = isDir ? 0L : _driver.GetFileSize(entry);
             DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             yield return new StorageEntry(
-                entry.Replace('\\', '/'),
+                ToScopeRelative(entry),
                 isDir,
                 size,
                 new DateTimeOffset(utc, TimeSpan.Zero)
@@ -275,7 +275,7 @@ public sealed class LocalStorage : IStorage
             DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             entries.Add(
                 new StorageEntry(
-                    entry.Replace('\\', '/'),
+                    ToScopeRelative(entry),
                     isDir,
                     size,
                     new DateTimeOffset(utc, TimeSpan.Zero)
@@ -290,6 +290,8 @@ public sealed class LocalStorage : IStorage
         string safe = ValidateScoped(path);
         return new LocalPathLease(safe);
     }
+
+    string IStorage.GetFullPath(string path) => ValidateScoped(path);
 
     private void EnsureParentDirectory(string path)
     {
@@ -333,6 +335,35 @@ public sealed class LocalStorage : IStorage
     /// under-root guard check.
     /// </summary>
     private string ValidateScoped(string path) => _guard.Validate(ResolveAgainstScopedRoot(path));
+
+    /// <summary>
+    /// Strips the configured scoped root from an OS-absolute path returned
+    /// by the driver's enumerate call, normalizes separators to forward
+    /// slashes, and removes any leading slash. The result is scope-relative
+    /// and suitable for passing back into any IStorage method (Rule 1 + 6).
+    /// When no root is configured the path is only separator-normalized.
+    /// </summary>
+    private string ToScopeRelative(string absolutePath)
+    {
+        string normalized = absolutePath.Replace('\\', '/');
+
+        if (!_guard.Enforced || _guard.AllowedRoots.Count == 0)
+            return normalized;
+
+        string root = _guard.AllowedRoots[0].Replace('\\', '/').TrimEnd('/');
+
+        StringComparison comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        if (normalized.StartsWith(root + '/', comparison))
+            return normalized[(root.Length + 1)..];
+
+        if (string.Equals(normalized, root, comparison))
+            return string.Empty;
+
+        return normalized.TrimStart('/');
+    }
 
     public async Task<string> ReadAllTextAsync(string path, CancellationToken ct)
     {

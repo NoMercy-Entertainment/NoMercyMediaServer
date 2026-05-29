@@ -133,4 +133,22 @@ public class LiveTranscodeOrphanSweeperTests : IDisposable
         Func<Task> act = () => sweeper.StartAsync(CancellationToken.None);
         await act.Should().NotThrowAsync();
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Bug 1 — sweeper glob matches the lts-{ulid} format LiveEncoder creates
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task StartAsync_DeletesDirectoryNamedLtsFollowedByUlid()
+    {
+        Directory.CreateDirectory(_cacheRoot);
+        string sessionId = Ulid.NewUlid().ToString();
+        string sessionDir = Path.Combine(_cacheRoot, $"lts-{sessionId}");
+        Directory.CreateDirectory(sessionDir);
+
+        LiveTranscodeOrphanSweeper sweeper = BuildSweeper();
+        await sweeper.StartAsync(CancellationToken.None);
+
+        Directory.Exists(sessionDir).Should().BeFalse();
+    }
 }

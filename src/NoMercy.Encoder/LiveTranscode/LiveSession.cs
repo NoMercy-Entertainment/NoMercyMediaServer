@@ -24,6 +24,9 @@ public class LiveSession : ILiveSession
     // Injected by LiveEncoder after construction via AttachRunnerFactory.
     private Func<TimeSpan, CancellationToken, Task>? _runnerFactory;
 
+    // Injected by LiveStreamingService via AttachBufferResetCallback.
+    private Action? _bufferResetCallback;
+
     /// <summary>
     /// Fires when the CURRENT runner should terminate. Replaced on each seek.
     /// The outer session lifetime is tracked via <see cref="_sessionCts"/>.
@@ -49,6 +52,11 @@ public class LiveSession : ILiveSession
     public void AttachRunnerFactory(Func<TimeSpan, CancellationToken, Task> factory)
     {
         _runnerFactory = factory;
+    }
+
+    public void AttachBufferResetCallback(Action callback)
+    {
+        _bufferResetCallback = callback;
     }
 
     // Called by the encoder to push completed segments into the channel
@@ -96,6 +104,8 @@ public class LiveSession : ILiveSession
 
             // Create a new CTS for the replacement runner, linked to session lifetime
             _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
+
+            _bufferResetCallback?.Invoke();
 
             // Spawn new runner if a factory is wired up
             if (_runnerFactory is not null)
@@ -145,6 +155,8 @@ public class LiveSession : ILiveSession
 
             // Create a new CTS for the replacement runner, linked to session lifetime
             _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
+
+            _bufferResetCallback?.Invoke();
 
             // Spawn new runner if a factory is wired up
             if (_runnerFactory is not null)

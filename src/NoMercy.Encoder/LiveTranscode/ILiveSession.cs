@@ -33,4 +33,11 @@ public interface ILiveSession : IAsyncDisposable
     /// after the session is created.
     /// </summary>
     void AttachRunnerFactory(Func<TimeSpan, CancellationToken, Task> factory);
+
+    /// <summary>
+    /// Registers a callback invoked at the start of every seek and quality
+    /// change so the runtime buffer can be purged before the new runner fires.
+    /// Called once by <see cref="LiveStreamingService"/> after registration.
+    /// </summary>
+    void AttachBufferResetCallback(Action callback);
 }

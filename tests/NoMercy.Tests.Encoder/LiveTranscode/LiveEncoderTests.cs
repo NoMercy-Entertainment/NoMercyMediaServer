@@ -284,16 +284,15 @@ public class LiveEncoderTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task StartAsync_SessionIsRegisteredInSessionManager()
+    public async Task StartAsync_DoesNotRegisterSessionInSessionManager()
     {
         SessionManager sessionManager = new(new() { MaxConcurrentSessions = 10 });
         LiveEncoder encoder = BuildEncoder(sessionManager: sessionManager);
         LiveEncodeRequest request = MakeRequest();
 
-        ILiveSession session = await encoder.StartAsync(request, CancellationToken.None);
+        await encoder.StartAsync(request, CancellationToken.None);
 
-        sessionManager.ActiveSessionCount.Should().Be(1);
-        sessionManager.ActiveSessions.Should().Contain(s => s.SessionId == session.SessionId);
+        sessionManager.ActiveSessionCount.Should().Be(0);
     }
 
     [Fact]
@@ -307,6 +306,26 @@ public class LiveEncoderTests
         first.SessionId.Should().NotBe(second.SessionId);
     }
 
+    [Fact]
+    public async Task StartAsync_ControllerRegistersExactlyOnce_WhenControllerCallsRegister()
+    {
+        SessionManager sessionManager = new(new() { MaxConcurrentSessions = 10 });
+        LiveEncoder encoder = BuildEncoder(sessionManager: sessionManager);
+        LiveEncodeRequest request = MakeRequest();
+
+        ILiveSession session = await encoder.StartAsync(request, CancellationToken.None);
+
+        // Encoder must NOT have registered — count stays 0.
+        sessionManager.ActiveSessionCount.Should().Be(0);
+
+        // Controller registers once with userId.
+        sessionManager.RegisterSession(session, userId: "user-abc");
+
+        // Now exactly one registration exists.
+        sessionManager.ActiveSessionCount.Should().Be(1);
+        sessionManager.ActiveSessions.Should().ContainSingle(s => s.SessionId == session.SessionId);
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Session limit enforcement
     // ──────────────────────────────────────────────────────────────────────────
@@ -317,8 +336,9 @@ public class LiveEncoderTests
         SessionManager sessionManager = new(new() { MaxConcurrentSessions = 1 });
         LiveEncoder encoder = BuildEncoder(sessionManager: sessionManager);
 
-        // Fill the limit
-        await encoder.StartAsync(MakeRequest(), CancellationToken.None);
+        // Simulate the controller having registered a session against the cap.
+        LiveSession existing = new("existing-session", MakeQuality());
+        sessionManager.RegisterSession(existing, userId: "user-1");
 
         Func<Task> act = () => encoder.StartAsync(MakeRequest(), CancellationToken.None);
 

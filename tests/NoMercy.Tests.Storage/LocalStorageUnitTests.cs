@@ -187,39 +187,68 @@ public class LocalStorageUnitTests
     [Fact]
     public async Task ListAsync_yields_entries_with_correct_metadata()
     {
-        (LocalStorage storage, Mock<IStorageDriver> driver) = Build();
-        string root = Path.Combine(Path.GetTempPath(), "nm-listing");
-        string fileA = Path.Combine(root, "a.txt");
-        string subDir = Path.Combine(root, "sub");
+        Mock<IStorageDriver> driver = new(MockBehavior.Loose);
+        string root = Path.Combine(Path.GetTempPath(), $"nm-listing-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            string fileA = Path.Combine(root, "a.txt");
+            string subDir = Path.Combine(root, "sub");
 
-        driver
-            .Setup(b =>
-                b.EnumerateFileSystemEntries(
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    It.IsAny<SearchOption>()
+            driver
+                .Setup(b => b.GetFullPath(It.IsAny<string>()))
+                .Returns<string>(p => Path.GetFullPath(p));
+            driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
+            driver
+                .Setup(b =>
+                    b.EnumerateFileSystemEntries(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<SearchOption>()
+                    )
+                )
+                .Returns([fileA, subDir]);
+            driver.Setup(b => b.DirectoryExists(fileA)).Returns(false);
+            driver.Setup(b => b.DirectoryExists(subDir)).Returns(true);
+            driver.Setup(b => b.DirectoryExists(root)).Returns(true);
+            driver.Setup(b => b.GetFileSize(fileA)).Returns(99);
+            driver.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(DateTime.UtcNow);
+
+            StoragePathGuard guard = new([root], driver.Object);
+            LocalStorage storage = new(driver.Object, guard);
+
+            List<StorageEntry> result = [];
+            await foreach (
+                StorageEntry e in storage.ListAsync(
+                    "",
+                    "*",
+                    recursive: false,
+                    CancellationToken.None
                 )
             )
-            .Returns([fileA, subDir]);
-        driver.Setup(b => b.DirectoryExists(fileA)).Returns(false);
-        driver.Setup(b => b.DirectoryExists(subDir)).Returns(true);
-        driver.Setup(b => b.GetFileSize(fileA)).Returns(99);
-        driver.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(DateTime.UtcNow);
+                result.Add(e);
 
-        List<StorageEntry> result = [];
-        await foreach (
-            StorageEntry e in storage.ListAsync(root, "*", recursive: false, CancellationToken.None)
-        )
-            result.Add(e);
-
-        result.Should().HaveCount(2);
-        // LocalStorage emits forward-slash per the IStorage Rule 2 contract;
-        // the driver feeds it OS-native paths but the facade normalizes.
-        result[0].Path.Should().Be(fileA.Replace('\\', '/'));
-        result[0].IsDirectory.Should().BeFalse();
-        result[0].SizeBytes.Should().Be(99);
-        result[1].IsDirectory.Should().BeTrue();
-        result[1].SizeBytes.Should().Be(0);
+            result.Should().HaveCount(2);
+            result[0]
+                .Path.Should()
+                .Be("a.txt", "List must return scope-relative paths, not OS-absolute");
+            result[0]
+                .Path.Should()
+                .NotContain(":\\", "no Windows drive letter in scope-relative path");
+            result[0].IsDirectory.Should().BeFalse();
+            result[0].SizeBytes.Should().Be(99);
+            result[1].Path.Should().Be("sub");
+            result[1].IsDirectory.Should().BeTrue();
+            result[1].SizeBytes.Should().Be(0);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(root, recursive: true);
+            }
+            catch { }
+        }
     }
 
     [Fact]
@@ -282,5 +311,72 @@ public class LocalStorageUnitTests
 
         await act.Should().ThrowAsync<StoragePathNotAllowedException>();
         driver.Verify(b => b.OpenRead(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void GetFullPath_scope_relative_returns_os_absolute_under_root()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"nm-gfp-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            Mock<IStorageDriver> driver = new(MockBehavior.Loose);
+            driver
+                .Setup(b => b.GetFullPath(It.IsAny<string>()))
+                .Returns<string>(p => Path.GetFullPath(p));
+            driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
+
+            StoragePathGuard guard = new([root], driver.Object);
+            IStorage storage = new LocalStorage(driver.Object, guard);
+
+            string result = storage.GetFullPath("movies/avatar/avatar.mkv");
+
+            Path.IsPathRooted(result)
+                .Should()
+                .BeTrue("GetFullPath must return an OS-absolute path");
+            result
+                .ToLowerInvariant()
+                .Should()
+                .StartWith(root.ToLowerInvariant(), "result must be under the root");
+            result.Should().Contain("avatar.mkv");
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(root, recursive: true);
+            }
+            catch { }
+        }
+    }
+
+    [Fact]
+    public void GetFullPath_dotdot_traversal_throws_StoragePathNotAllowedException()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"nm-gfp-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            Mock<IStorageDriver> driver = new(MockBehavior.Loose);
+            driver
+                .Setup(b => b.GetFullPath(It.IsAny<string>()))
+                .Returns<string>(p => Path.GetFullPath(p));
+            driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
+
+            StoragePathGuard guard = new([root], driver.Object);
+            IStorage storage = new LocalStorage(driver.Object, guard);
+
+            Action act = () => storage.GetFullPath("../escape/secret.txt");
+
+            act.Should().Throw<StoragePathNotAllowedException>(".. traversal must be rejected");
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(root, recursive: true);
+            }
+            catch { }
+        }
     }
 }

@@ -87,6 +87,12 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
 
     internal void MarkComplete() => Interlocked.Exchange(ref _isComplete, 1);
 
+    internal void ResetBuffer()
+    {
+        _segments.Clear();
+        Volatile.Write(ref _highestIndex, -1);
+    }
+
     public async ValueTask DisposeAsync()
     {
         try

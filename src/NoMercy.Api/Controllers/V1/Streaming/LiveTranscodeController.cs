@@ -158,9 +158,6 @@ public class LiveTranscodeController(
             return ServiceUnavailableResponse(ex.Message);
         }
 
-        // LiveEncoder.StartAsync already registers the session with the
-        // session manager + streaming service. We just re-tag it with the
-        // user id so the per-user session cap works.
         sessionManager.RegisterSession(session, userId.ToString());
 
         string playlistUrl = $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";

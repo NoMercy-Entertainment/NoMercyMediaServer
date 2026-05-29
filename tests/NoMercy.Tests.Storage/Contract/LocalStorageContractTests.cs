@@ -122,4 +122,158 @@ public sealed class LocalStorageContractTests : IStorageContractTests
             await DisposeStorage();
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Rule 6 contract: StorageEntry.Path from List* is scope-relative
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task List_entries_are_scope_relative_and_round_trip_into_Exists()
+    {
+        IStorage storage = CreateStorage();
+        try
+        {
+            await SeedFile("movies/avatar/avatar.mkv", [0x01, 0x02]);
+            await SeedDirectory("movies/avatar");
+
+            List<StorageEntry> entries = [];
+            await foreach (
+                StorageEntry e in storage.ListAsync(
+                    "movies/avatar",
+                    "*",
+                    recursive: true,
+                    CancellationToken.None
+                )
+            )
+                entries.Add(e);
+
+            entries.Should().NotBeEmpty();
+
+            foreach (StorageEntry entry in entries)
+            {
+                entry
+                    .Path.Should()
+                    .NotContain(":\\", "StorageEntry.Path must not contain a Windows drive letter");
+                entry
+                    .Path.Should()
+                    .NotStartWith("/", "StorageEntry.Path must not start with a leading slash");
+                entry
+                    .Path.ToLowerInvariant()
+                    .Should()
+                    .NotContain(
+                        _root.ToLowerInvariant(),
+                        "StorageEntry.Path must not contain the OS root prefix"
+                    );
+
+                bool roundTrip = await storage.ExistsAsync(entry.Path, CancellationToken.None);
+                roundTrip
+                    .Should()
+                    .BeTrue(
+                        $"StorageEntry.Path '{entry.Path}' returned from List must be passable back into Exists"
+                    );
+            }
+        }
+        finally
+        {
+            await DisposeStorage();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task List_sync_entries_are_scope_relative_and_round_trip_into_Exists()
+    {
+        IStorage storage = CreateStorage();
+        try
+        {
+            await SeedFile("shows/breaking-bad/s01e01.mkv", [0x03, 0x04]);
+
+            IReadOnlyList<StorageEntry> entries = storage.List(
+                "shows/breaking-bad",
+                "*",
+                recursive: false
+            );
+
+            entries.Should().NotBeEmpty();
+
+            foreach (StorageEntry entry in entries)
+            {
+                entry
+                    .Path.Should()
+                    .NotContain(":\\", "StorageEntry.Path must not contain a Windows drive letter");
+                entry
+                    .Path.Should()
+                    .NotStartWith("/", "StorageEntry.Path must not start with a leading slash");
+                entry
+                    .Path.ToLowerInvariant()
+                    .Should()
+                    .NotContain(
+                        _root.ToLowerInvariant(),
+                        "StorageEntry.Path must not contain the OS root prefix"
+                    );
+
+                bool roundTrip = await storage.ExistsAsync(entry.Path, CancellationToken.None);
+                roundTrip
+                    .Should()
+                    .BeTrue(
+                        $"StorageEntry.Path '{entry.Path}' returned from List (sync) must be passable back into Exists"
+                    );
+            }
+        }
+        finally
+        {
+            await DisposeStorage();
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // GetFullPath contract
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void GetFullPath_scope_relative_returns_os_absolute_under_root()
+    {
+        IStorage storage = CreateStorage();
+        try
+        {
+            string result = storage.GetFullPath("movies/avatar/avatar.mkv");
+
+            Path.IsPathRooted(result)
+                .Should()
+                .BeTrue("GetFullPath must return an OS-absolute path");
+            result
+                .ToLowerInvariant()
+                .Should()
+                .StartWith(_root.ToLowerInvariant(), "result must be under the configured root");
+        }
+        finally
+        {
+            _storage = null;
+            if (!string.IsNullOrEmpty(_root) && Directory.Exists(_root))
+                Directory.Delete(_root, recursive: true);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void GetFullPath_dotdot_traversal_throws()
+    {
+        IStorage storage = CreateStorage();
+        try
+        {
+            Action act = () => storage.GetFullPath("../escape/secret.txt");
+            act.Should()
+                .Throw<StoragePathNotAllowedException>(
+                    ".. traversal must be rejected by GetFullPath"
+                );
+        }
+        finally
+        {
+            _storage = null;
+            if (!string.IsNullOrEmpty(_root) && Directory.Exists(_root))
+                Directory.Delete(_root, recursive: true);
+        }
+    }
 }
