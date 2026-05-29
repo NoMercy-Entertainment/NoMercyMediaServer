@@ -179,20 +179,46 @@ public class LiveSession : ILiveSession
 
     public void Suspend()
     {
-        Interlocked.CompareExchange(
+        int previous = Interlocked.CompareExchange(
             ref _state,
             (int)LiveSessionState.Buffered,
             (int)LiveSessionState.Transcoding
         );
+
+        if (previous != (int)LiveSessionState.Transcoding)
+            return;
+
+        try
+        {
+            _runnerCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Already disposed; nothing to cancel
+        }
     }
 
     public void Resume()
     {
-        Interlocked.CompareExchange(
+        int previous = Interlocked.CompareExchange(
             ref _state,
             (int)LiveSessionState.Transcoding,
             (int)LiveSessionState.Buffered
         );
+
+        if (previous != (int)LiveSessionState.Buffered)
+            return;
+
+        _runnerCts = CancellationTokenSource.CreateLinkedTokenSource(_sessionCts.Token);
+
+        if (_runnerFactory is not null)
+        {
+            TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
+            _ = Task.Run(
+                () => _runnerFactory(resumePosition, _runnerCts.Token),
+                CancellationToken.None
+            );
+        }
     }
 
     public void ReportPlaybackPosition(TimeSpan position) =>

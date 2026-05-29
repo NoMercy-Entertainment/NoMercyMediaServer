@@ -337,6 +337,9 @@ public static class ServiceCollectionExtensions
         // Every 30 s: evict sessions with no playlist/segment hit in the last N minutes.
         services.AddHostedService<LiveSessionIdleReaper>();
 
+        // Every 5 s: suspend over-buffered encoders, resume drained ones, drop quality when buffer is low.
+        services.AddHostedService<BufferAdaptiveService>();
+
         // Distribution — LocalWorkerDispatcher is the default; remote workers
         // land as a follow-up behind a feature flag. Plugins can register a
         // replacement IWorkerDispatcher to change behavior project-wide.

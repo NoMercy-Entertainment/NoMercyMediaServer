@@ -31,6 +31,7 @@ public class LiveTranscodeController(
     ISessionManager sessionManager,
     IMediaAnalyzer mediaAnalyzer,
     ILiveQualitySelector qualitySelector,
+    IPlaybackDecisionEngine decisionEngine,
     SpeedIndex speedIndex,
     IResourceBudget budget,
     IDbContextFactory<MediaContext> contextFactory,
@@ -135,6 +136,38 @@ public class LiveTranscodeController(
                 deviceCaps.MaxAudioChannels,
                 deviceCaps.RamTier
             );
+
+        PlaybackDecision playbackDecision;
+        try
+        {
+            playbackDecision = decisionEngine.Decide(mediaInfo, clientCaps);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "PlaybackDecisionEngine.Decide threw; falling back to transcode");
+            playbackDecision = new(PlaybackAction.TranscodeVideo, "Decision engine error", null);
+        }
+
+        if (playbackDecision.Action == PlaybackAction.DirectPlay)
+        {
+            string directUrl = $"/{resolved.File.HostFolder}/{resolved.File.Filename}";
+
+            logger.LogInformation("Direct-play for {VideoFileId}: {Url}", videoFileId, directUrl);
+
+            return Ok(
+                new StartLiveSessionResponse(
+                    SessionId: string.Empty,
+                    PlaylistUrl: string.Empty,
+                    QualityId: string.Empty,
+                    QualityLabel: string.Empty
+                )
+                {
+                    Mode = "direct",
+                    DirectStreamUrl = directUrl,
+                    DirectPlayReason = "File is compatible with client capabilities",
+                }
+            );
+        }
 
         LiveEncodeRequest liveRequest = new(
             InputPath: resolved.InputPath,
