@@ -423,6 +423,11 @@ public static class DatabaseSeeder
                 $"{contextName}: Applying {pendingMigrations.Count} migration(s): {string.Join(", ", pendingMigrations)}",
                 LogEventLevel.Verbose
             );
+
+            string? dbPath = context.Database.GetDbConnection().DataSource;
+            if (!string.IsNullOrEmpty(dbPath))
+                DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrations.Count);
+
             try
             {
                 context.Database.Migrate();
