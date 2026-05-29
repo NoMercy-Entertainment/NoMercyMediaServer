@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.LiveTranscode.Protocol;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.LiveTranscode;
@@ -11,8 +12,11 @@ namespace NoMercy.Encoder.LiveTranscode;
 /// segment stream into an indexed buffer so the HTTP layer can serve any
 /// requested segment id without re-enumerating the source channel.
 /// </summary>
-public class LiveStreamingService(ILogger<LiveStreamingService> logger, IStorage storage)
-    : ILiveStreamingService
+public class LiveStreamingService(
+    ILogger<LiveStreamingService> logger,
+    IStorage storage,
+    ILiveSessionTransport? transport = null
+) : ILiveStreamingService
 {
     private readonly ConcurrentDictionary<string, LiveRuntimeSession> _runtimes = new();
 
@@ -136,6 +140,7 @@ public class LiveStreamingService(ILogger<LiveStreamingService> logger, IStorage
             )
             {
                 runtime.BufferSegment(segment);
+                await PushSegmentReadyAsync(runtime, segment).ConfigureAwait(false);
             }
 
             runtime.MarkComplete();
@@ -157,6 +162,39 @@ public class LiveStreamingService(ILogger<LiveStreamingService> logger, IStorage
                 runtime.Session.SessionId
             );
             runtime.MarkComplete();
+        }
+    }
+
+    private async Task PushSegmentReadyAsync(LiveRuntimeSession runtime, Segment segment)
+    {
+        if (transport is null)
+            return;
+
+        string sessionId = runtime.Session.SessionId;
+        string relativeUrl =
+            $"/api/v1/streaming/live/sessions/{sessionId}/segment/{segment.Index}.ts";
+
+        SegmentReadyMessage message = new(
+            Index: segment.Index,
+            StartTimeSeconds: segment.StartTime.TotalSeconds,
+            DurationSeconds: segment.Duration.TotalSeconds,
+            RelativeUrl: relativeUrl,
+            SizeBytes: segment.SizeBytes
+        );
+
+        try
+        {
+            await transport
+                .SendToClientAsync(sessionId, message, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Transport push failed for SegmentReady on session {SessionId}",
+                sessionId
+            );
         }
     }
 }

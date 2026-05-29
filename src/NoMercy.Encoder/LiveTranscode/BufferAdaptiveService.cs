@@ -18,7 +18,8 @@ public class BufferAdaptiveService(
     BufferManager bufferManager,
     SpeedIndex speedIndex,
     IResourceBudget resourceBudget,
-    ILogger<BufferAdaptiveService> logger
+    ILogger<BufferAdaptiveService> logger,
+    ILiveSessionTransport? transport = null
 ) : BackgroundService
 {
     private static readonly TimeSpan EvalInterval = TimeSpan.FromSeconds(5);
@@ -108,6 +109,8 @@ public class BufferAdaptiveService(
                 case BufferAction.None:
                     break;
             }
+
+            await PushTranscodeStateAsync(session, ct).ConfigureAwait(false);
         }
     }
 
@@ -159,5 +162,57 @@ public class BufferAdaptiveService(
         );
 
         await session.ChangeQualityAsync(target.Id, target, ct).ConfigureAwait(false);
+        await PushQualityChangedAsync(session, target, reason, ct).ConfigureAwait(false);
+    }
+
+    private async Task PushQualityChangedAsync(
+        ILiveSession session,
+        LiveQuality newQuality,
+        QualityChangeReason reason,
+        CancellationToken ct
+    )
+    {
+        if (transport is null)
+            return;
+
+        QualityChangedMessage message = new(NewQuality: newQuality, Reason: reason);
+
+        try
+        {
+            await transport.SendToClientAsync(session.SessionId, message, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Transport push failed for QualityChanged on session {SessionId}",
+                session.SessionId
+            );
+        }
+    }
+
+    private async Task PushTranscodeStateAsync(ILiveSession session, CancellationToken ct)
+    {
+        if (transport is null)
+            return;
+
+        TranscodeStateMessage message = new(
+            Speed: session.CurrentSpeed,
+            BufferAheadSeconds: session.BufferAhead.TotalSeconds,
+            State: session.State
+        );
+
+        try
+        {
+            await transport.SendToClientAsync(session.SessionId, message, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Transport push failed for TranscodeState on session {SessionId}",
+                session.SessionId
+            );
+        }
     }
 }

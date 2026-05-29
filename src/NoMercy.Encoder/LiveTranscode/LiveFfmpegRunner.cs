@@ -2,9 +2,11 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Encoder.LiveTranscode.Protocol;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.LiveTranscode;
@@ -16,7 +18,8 @@ public class LiveFfmpegRunner(
     IStorage storage,
     INvencSessionCap nvencSessionCap,
     IHardwareCapabilities hardware,
-    IResourceBudget resourceBudget
+    IResourceBudget resourceBudget,
+    ILiveSessionTransport? transport = null
 ) : ILiveFfmpegRunner
 {
     private const string PlaylistFileName = "index.m3u8";
@@ -94,6 +97,11 @@ public class LiveFfmpegRunner(
                     Truncate(result.StdErr, 1000)
                 );
                 session.SetState(LiveSessionState.Error);
+                await PushTranscodeErrorAsync(
+                        session.SessionId,
+                        $"FFmpeg exited with code {result.ExitCode}"
+                    )
+                    .ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException)
@@ -107,6 +115,7 @@ public class LiveFfmpegRunner(
         {
             logger.LogError(ex, "Live FFmpeg threw for session {SessionId}", session.SessionId);
             session.SetState(LiveSessionState.Error);
+            await PushTranscodeErrorAsync(session.SessionId, ex.Message).ConfigureAwait(false);
         }
         finally
         {
@@ -396,4 +405,31 @@ public class LiveFfmpegRunner(
 
     private static string Truncate(string value, int max) =>
         value.Length > max ? value[..max] : value;
+
+    private async Task PushTranscodeErrorAsync(string sessionId, string message)
+    {
+        if (transport is null)
+            return;
+
+        TranscodeErrorMessage errorMessage = new(
+            Kind: EncodingErrorKind.ProcessCrashed,
+            Message: message,
+            Recoverable: false
+        );
+
+        try
+        {
+            await transport
+                .SendToClientAsync(sessionId, errorMessage, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Transport push failed for TranscodeError on session {SessionId}",
+                sessionId
+            );
+        }
+    }
 }

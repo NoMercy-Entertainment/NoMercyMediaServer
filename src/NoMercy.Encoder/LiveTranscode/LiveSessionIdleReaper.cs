@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.LiveTranscode.Protocol;
 
 namespace NoMercy.Encoder.LiveTranscode;
 
@@ -13,7 +14,8 @@ public class LiveSessionIdleReaper(
     ILiveStreamingService streamingService,
     ISessionManager sessionManager,
     LiveSessionLimits limits,
-    ILogger<LiveSessionIdleReaper> logger
+    ILogger<LiveSessionIdleReaper> logger,
+    ILiveSessionTransport? transport = null
 ) : BackgroundService
 {
     private static readonly TimeSpan SweepInterval = TimeSpan.FromSeconds(30);
@@ -77,6 +79,8 @@ public class LiveSessionIdleReaper(
 
             try
             {
+                await PushSessionEndedAsync(sessionId, SessionEndReason.ClientDisconnected)
+                    .ConfigureAwait(false);
                 await streamingService.RemoveAsync(sessionId).ConfigureAwait(false);
                 sessionManager.RemoveSession(sessionId);
             }
@@ -88,6 +92,29 @@ public class LiveSessionIdleReaper(
                     sessionId
                 );
             }
+        }
+    }
+
+    private async Task PushSessionEndedAsync(string sessionId, SessionEndReason reason)
+    {
+        if (transport is null)
+            return;
+
+        SessionEndedMessage message = new(Reason: reason);
+
+        try
+        {
+            await transport
+                .SendToClientAsync(sessionId, message, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Transport push failed for SessionEnded on session {SessionId}",
+                sessionId
+            );
         }
     }
 }

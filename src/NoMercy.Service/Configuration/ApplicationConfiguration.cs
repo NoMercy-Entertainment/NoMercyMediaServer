@@ -293,6 +293,16 @@ public static class ApplicationConfiguration
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
+
+            endpoints.MapHub<LiveTranscodeHub>(
+                "/liveTranscodeHub",
+                options =>
+                {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.CloseOnAuthenticationExpiration = true;
+                }
+            );
         });
     }
 

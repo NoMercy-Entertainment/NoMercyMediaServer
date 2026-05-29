@@ -12,6 +12,7 @@ using NoMercy.Encoder.Devices;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.LiveTranscode;
+using NoMercy.Encoder.LiveTranscode.Protocol;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Resources;
 using NoMercy.Storage;
@@ -39,7 +40,8 @@ public class LiveTranscodeController(
     IStorage storage,
     IDeviceCapabilityRegistry capabilityRegistry,
     IDeviceAwareVariantSelector variantSelector,
-    ILogger<LiveTranscodeController> logger
+    ILogger<LiveTranscodeController> logger,
+    ILiveSessionTransport? transport = null
 ) : BaseController
 {
     [HttpGet("sessions")]
@@ -315,6 +317,16 @@ public class LiveTranscodeController(
 
         runtime.TouchLastAccess();
 
+        await PushIfTransportAsync(
+                sessionId,
+                new QualityChangedMessage(
+                    NewQuality: newQuality,
+                    Reason: QualityChangeReason.UserRequested
+                ),
+                ct
+            )
+            .ConfigureAwait(false);
+
         return Ok(new ChangeQualityResponse(newQuality.Id, newQuality.Label));
     }
 
@@ -337,6 +349,17 @@ public class LiveTranscodeController(
 
         runtime.TouchLastAccess();
 
+        int firstSegmentIndex = runtime.HighestSegmentIndex + 1;
+        await PushIfTransportAsync(
+                sessionId,
+                new SeekCompletedMessage(
+                    NewPositionSeconds: clampedSeconds,
+                    FirstSegmentIndex: firstSegmentIndex
+                ),
+                ct
+            )
+            .ConfigureAwait(false);
+
         return Ok(new SeekResponse(clampedSeconds));
     }
 
@@ -346,9 +369,36 @@ public class LiveTranscodeController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to stream media");
 
+        await PushIfTransportAsync(
+                sessionId,
+                new SessionEndedMessage(Reason: SessionEndReason.ClientDisconnected),
+                HttpContext.RequestAborted
+            )
+            .ConfigureAwait(false);
+
         await streamingService.RemoveAsync(sessionId);
         sessionManager.RemoveSession(sessionId);
         return NoContent();
+    }
+
+    private async Task PushIfTransportAsync(string sessionId, object message, CancellationToken ct)
+    {
+        if (transport is null)
+            return;
+
+        try
+        {
+            await transport.SendToClientAsync(sessionId, message, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Transport push failed for {Event} on session {SessionId}",
+                message.GetType().Name,
+                sessionId
+            );
+        }
     }
 
     private static ClientCapabilities ToClientCapabilities(ClientCapabilitiesDto dto)

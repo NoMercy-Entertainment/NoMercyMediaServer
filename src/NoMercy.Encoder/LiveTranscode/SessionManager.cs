@@ -41,4 +41,10 @@ public class SessionManager(LiveSessionLimits limits) : ISessionManager
         _sessions.TryRemove(sessionId, out _);
         _sessionUserMap.TryRemove(sessionId, out _);
     }
+
+    public string? GetOwnerUserId(string sessionId)
+    {
+        _sessionUserMap.TryGetValue(sessionId, out string? userId);
+        return userId;
+    }
 }

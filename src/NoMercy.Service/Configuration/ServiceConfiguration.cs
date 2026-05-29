@@ -612,6 +612,7 @@ public static class ServiceConfiguration
 
         services.AddVideoHubServices();
         services.AddMusicHubServices();
+        services.AddLiveTranscodeHubServices();
         services.AddSingleton<IActivityHubBroadcaster, ActivityHubBroadcaster>();
         services.AddSingleton<IActivityLogger, ActivityLogger>();
         services.AddSingleton<DatabaseActivity.IActivityLogger>(sp =>

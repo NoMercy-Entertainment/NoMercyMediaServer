@@ -312,6 +312,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDeviceAwareVariantSelector, DeviceAwareVariantSelector>();
 
         // Live Transcoding
+        // NoOp transport is the default — the Api layer registers SignalRLiveSessionTransport
+        // as the real implementation. TryAdd ensures it never overwrites the Api registration.
+        services.TryAddSingleton<ILiveSessionTransport, NoOpLiveSessionTransport>();
+
         services.AddSingleton<IPlaybackDecisionEngine, PlaybackDecisionEngine>();
         services.AddSingleton<LiveSessionLimits>();
         services.AddSingleton<ISessionManager>(sp => new SessionManager(
