@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
@@ -5,6 +6,7 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Hls;
+using NoMercy.Tests.Encoder.Storage;
 using Container = NoMercy.Encoder.Profiles.Container;
 
 namespace NoMercy.Tests.Encoder.Strategies.Hls;
@@ -14,7 +16,7 @@ public class HlsSinglePassStrategyTests
     [Fact]
     public void Format_IsHls()
     {
-        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>());
+        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
 
         Assert.Equal(OutputFormat.Hls, strategy.Format);
     }
@@ -22,7 +24,7 @@ public class HlsSinglePassStrategyTests
     [Fact]
     public void EncodeMode_IsSinglePass()
     {
-        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>());
+        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
 
         Assert.Equal(EncodeMode.SinglePass, strategy.EncodeMode);
     }
@@ -49,7 +51,7 @@ public class HlsSinglePassStrategyTests
                 )
             );
 
-        HlsSinglePassStrategy strategy = new(encoder.Object);
+        HlsSinglePassStrategy strategy = new(encoder.Object, NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
 
         EncodingRequest request = new(
             InputPath: "/media/test.mkv",
@@ -95,7 +97,7 @@ public class HlsSinglePassStrategyTests
     {
         // Cost units gate dispatcher concurrency — wrong banding = wrong
         // bundle sizing under load. Pin the mapping.
-        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>());
+        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
         OutputPlan plan = new(
             Format: OutputFormat.Hls,
             VideoOutputs: [Video(width: width, height: width * 9 / 16)],
@@ -115,7 +117,7 @@ public class HlsSinglePassStrategyTests
     {
         // SDR tonemap pass piles extra CPU work on top of decode/encode —
         // cost bumps by one to reflect that.
-        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>());
+        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
         OutputPlan plan = new(
             Format: OutputFormat.Hls,
             VideoOutputs: [Video(width: 1920, height: 1080, convertHdrToSdr: true)],
@@ -137,7 +139,7 @@ public class HlsSinglePassStrategyTests
     {
         // VideoWidth + VideoEncoderName drive bundle-cap resolution at
         // dispatch — must NOT be lost in decomposition.
-        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>());
+        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
         OutputPlan plan = new(
             Format: OutputFormat.Hls,
             VideoOutputs: [Video(width: 1920, height: 1080, encoderName: "hevc_nvenc")],
@@ -159,7 +161,7 @@ public class HlsSinglePassStrategyTests
     {
         // Dashboard sorts on label — pinning the format catches reflow bugs
         // where channels or language ordering drifts.
-        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>());
+        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
         OutputPlan plan = new(
             Format: OutputFormat.Hls,
             VideoOutputs: [],
@@ -190,7 +192,7 @@ public class HlsSinglePassStrategyTests
     public void Decompose_AudioTaskNoLanguage_LabelUsesUnd()
     {
         // No language → "und" (undetermined) per ISO 639-2.
-        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>());
+        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
         OutputPlan plan = new(
             Format: OutputFormat.Hls,
             VideoOutputs: [],
@@ -220,7 +222,7 @@ public class HlsSinglePassStrategyTests
     [Fact]
     public void Decompose_ThumbnailsPresent_AddsOneTask()
     {
-        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>());
+        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
         OutputPlan plan = new(
             Format: OutputFormat.Hls,
             VideoOutputs: [Video()],
@@ -243,7 +245,7 @@ public class HlsSinglePassStrategyTests
     {
         // Empty plan → fall back to a single "whole" task so the strategy
         // contract (always at least one task) holds.
-        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>());
+        HlsSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
         OutputPlan plan = new(
             Format: OutputFormat.Hls,
             VideoOutputs: [],

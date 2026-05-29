@@ -85,7 +85,14 @@ public record EncodingOptions(
     /// FinalizeStage runs would race those shared outputs and corrupt
     /// them, so per-task encodes leave FinalizeStage to this flag.
     /// </summary>
-    bool FinalizeOnly = false
+    bool FinalizeOnly = false,
+    /// <summary>
+    /// When non-null, BuildStage applies an input seek (<c>-ss</c>) to the
+    /// primary input at the keyframe immediately before this position. Used
+    /// by the resume path to restart the encode from near the last-known
+    /// good position rather than from the beginning.
+    /// </summary>
+    long? ResumeFromMs = null
 );
 
 public enum Priority

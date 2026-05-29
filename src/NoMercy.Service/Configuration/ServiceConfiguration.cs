@@ -601,6 +601,7 @@ public static class ServiceConfiguration
         // from QueueRunner/SessionManager. AddSingleton after AddNoMercyEncoder
         // overrides the TryAddSingleton the encoder registered.
         services.AddSingleton<IEncoderActivityProbe, EncoderActivityProbe>();
+        services.AddTransient<IOrphanCheckpointLookup, EncoderOrphanCheckpointLookup>();
 
         services.AddHostedService<EncodingNotificationSubscriber>();
         services.AddHostedService<AutoEncodeSubscriber>();

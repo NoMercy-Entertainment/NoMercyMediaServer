@@ -50,6 +50,12 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement
     /// <inheritdoc/>
     public ResourceRequirement? ResourceRequirement => Task?.Resources;
 
+    /// <summary>
+    /// Destination output directory for this encode task. Set at dispatch time
+    /// so orphan-recovery can locate the crash checkpoint without a DB round-trip.
+    /// </summary>
+    public string? OutputDirectory { get; set; }
+
     public override async Task Handle()
     {
         await using MediaContext context = new();

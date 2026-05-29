@@ -330,7 +330,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                 Label: $"pass2 variant {outputIndex}"
             );
 
-            EncodeTaskJob childJob = BuildChildJob(pass2Task, state.PresetId);
+            EncodeTaskJob childJob = BuildChildJob(
+                pass2Task,
+                state.PresetId,
+                state.OutputDirectory
+            );
             dispatcher.DispatchChild(
                 childJob,
                 onQueue: childJob.QueueName,
@@ -359,7 +363,11 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                 Label: otherTaskId
             );
 
-            EncodeTaskJob childJob = BuildChildJob(otherTask, state.PresetId);
+            EncodeTaskJob childJob = BuildChildJob(
+                otherTask,
+                state.PresetId,
+                state.OutputDirectory
+            );
             dispatcher.DispatchChild(
                 childJob,
                 onQueue: childJob.QueueName,
@@ -439,7 +447,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                 Logger.Encoder(
                     $"[VideoEncodeJob] Bundle {state.CurrentBundleIndex + 1}/{bundles.Length} complete. Dispatching bundle {nextIndex + 1}/{bundles.Length}."
                 );
-                DispatchSingleBundle(bundles[nextIndex], state.PresetId, state.GroupTag);
+                DispatchSingleBundle(
+                    bundles[nextIndex],
+                    state.PresetId,
+                    state.GroupTag,
+                    state.OutputDirectory
+                );
                 ReEnqueueSelf(
                     state with
                     {
@@ -494,10 +507,15 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize }, TimeSpan.Zero);
     }
 
-    private void DispatchSingleBundle(DecomposedTask bundle, Ulid presetId, string groupTag)
+    private void DispatchSingleBundle(
+        DecomposedTask bundle,
+        Ulid presetId,
+        string groupTag,
+        string? outputDirectory = null
+    )
     {
         DecomposedTask stamped = bundle with { ParentJobId = _selfJobId };
-        EncodeTaskJob bundleJob = BuildChildJob(stamped, presetId);
+        EncodeTaskJob bundleJob = BuildChildJob(stamped, presetId, outputDirectory);
         GetDispatcher()
             .DispatchChild(
                 bundleJob,
@@ -703,7 +721,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             foreach (DecomposedTask task in pass1Tasks)
             {
                 DecomposedTask stamped = task with { ParentJobId = parentJobId };
-                EncodeTaskJob childJob = BuildChildJob(stamped, presetId);
+                EncodeTaskJob childJob = BuildChildJob(stamped, presetId, fileMetadata.Path);
                 dispatcher.DispatchChild(
                     childJob,
                     onQueue: childJob.QueueName,
@@ -726,7 +744,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                     Pass2DispatchedAt: null,
                     Pass1StatsPath: null,
                     PresetId: presetId,
-                    ExpectedFinalCount: tasks.Count(task => task.Kind != EncodeTaskKind.Pass1)
+                    ExpectedFinalCount: tasks.Count(task => task.Kind != EncodeTaskKind.Pass1),
+                    OutputDirectory: fileMetadata.Path
                 )
             );
         }
@@ -746,7 +765,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                 return;
             }
 
-            EncodeTaskJob firstBundleJob = BuildChildJob(bundles[0], presetId);
+            EncodeTaskJob firstBundleJob = BuildChildJob(bundles[0], presetId, fileMetadata.Path);
             dispatcher.DispatchChild(
                 firstBundleJob,
                 onQueue: firstBundleJob.QueueName,
@@ -770,7 +789,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                     PresetId: presetId,
                     ExpectedFinalCount: tasks.Length,
                     Bundles: bundles,
-                    CurrentBundleIndex: 0
+                    CurrentBundleIndex: 0,
+                    OutputDirectory: fileMetadata.Path
                 )
             );
         }
@@ -861,7 +881,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         // phase transitions emit their own descriptive lines.
     }
 
-    private EncodeTaskJob BuildChildJob(DecomposedTask task, Ulid presetId)
+    private EncodeTaskJob BuildChildJob(DecomposedTask task, Ulid presetId) =>
+        BuildChildJob(task, presetId, outputDirectory: null);
+
+    private EncodeTaskJob BuildChildJob(DecomposedTask task, Ulid presetId, string? outputDirectory)
     {
         return new()
         {
@@ -872,6 +895,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             SourceDriverId = SourceDriverId,
             PresetId = presetId,
             Task = task,
+            OutputDirectory = outputDirectory,
         };
     }
 

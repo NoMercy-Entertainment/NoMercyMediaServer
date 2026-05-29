@@ -194,7 +194,27 @@ public abstract class TwoPassStrategyBase(
 
         try
         {
-            return await EncodeInternalAsync(request, effectiveStorage, progress, ct);
+            EncodingResult result = await EncodeInternalAsync(
+                request,
+                effectiveStorage,
+                progress,
+                ct
+            );
+
+            if (!result.Success)
+            {
+                // Non-cancel failure (ffmpeg exited non-zero). Sweep any partial
+                // destination output so the directory is not left in a half-written
+                // state. The crash checkpoint written by ExecuteStage is intentionally
+                // left intact so the orphan-recovery path can re-queue with resume.
+                DeletePartialOutput(
+                    request.OutputDirectory,
+                    effectiveStorage,
+                    preserveCheckpoint: true
+                );
+            }
+
+            return result;
         }
         catch (OperationCanceledException)
         {
@@ -202,7 +222,11 @@ public abstract class TwoPassStrategyBase(
             // resume point. Also remove any partial output the encode wrote.
             // Both operations are best-effort: log and continue on error.
             await DeleteCheckpointOnCancelAsync(request.OutputDirectory);
-            DeletePartialOutput(request.OutputDirectory, effectiveStorage);
+            DeletePartialOutput(
+                request.OutputDirectory,
+                effectiveStorage,
+                preserveCheckpoint: false
+            );
             throw;
         }
     }
@@ -298,7 +322,7 @@ public abstract class TwoPassStrategyBase(
         }
     }
 
-    private void DeletePartialOutput(string outputDirectory, IStorage stor)
+    private void DeletePartialOutput(string outputDirectory, IStorage stor, bool preserveCheckpoint)
     {
         try
         {
@@ -308,6 +332,11 @@ public abstract class TwoPassStrategyBase(
             foreach (
                 StorageEntry entry in stor.List(outputDirectory, "*", recursive: true)
                     .Where(e => !e.IsDirectory)
+                    .Where(e =>
+                        !preserveCheckpoint
+                        || !Path.GetFileName(e.Path)
+                            .Equals(".checkpoint.json", StringComparison.OrdinalIgnoreCase)
+                    )
             )
             {
                 try

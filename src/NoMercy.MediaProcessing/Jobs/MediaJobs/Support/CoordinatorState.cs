@@ -56,7 +56,14 @@ public sealed record CoordinatorState(
     /// re-enqueues itself faster than children complete). -1 means "no value
     /// logged yet" so the first poll always emits.
     /// </summary>
-    int LastLoggedDoneCount = -1
+    int LastLoggedDoneCount = -1,
+    /// <summary>
+    /// Storage-relative output directory for this encode run. Captured at
+    /// initial dispatch so coordinator wake-ups can populate child job
+    /// payloads without a DB round-trip, enabling orphan-recovery to locate
+    /// crash checkpoints by output directory.
+    /// </summary>
+    string? OutputDirectory = null
 );
 
 /// <summary>

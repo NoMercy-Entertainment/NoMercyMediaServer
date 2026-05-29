@@ -9,16 +9,13 @@ namespace NoMercy.Queue.MediaServer;
 /// <summary>
 /// Phase 4.14 — startup orphan-job recovery. On boot, scans the queue for
 /// jobs left in "running" state (<c>ReservedAt != null</c>) by a previous
-/// shutdown that are older than the cutoff window. Each orphan that has
-/// already been retried at least once is moved to <c>FailedJobs</c> with
-/// <c>job.interrupted_no_checkpoint</c> so the user gets a clear failure
-/// instead of an endless retry loop. First-time orphans (Attempts == 0)
-/// are left for <c>QueueRunner.ResetAllReservedJobs</c> to retry once
-/// cleanly.
+/// shutdown that are older than the cutoff window.
 ///
-/// Future enhancement: scan checkpoint files by JobId to distinguish
-/// "resumable" orphans from truly-broken ones, regardless of attempt
-/// count.
+/// Checkpoint-aware triage (Phase 4.14b): encoder-queue orphans that have a
+/// crash checkpoint are re-queued with Attempts=0 so the resume path gets a
+/// chance to pick up from the last-known keyframe position. Orphans with no
+/// checkpoint follow the original logic: Attempts&gt;0 → FailedJobs; first
+/// attempt → reset for one retry.
 /// </summary>
 public class OrphanJobRecoveryHostedService(
     IServiceScopeFactory scopeFactory,
@@ -27,6 +24,7 @@ public class OrphanJobRecoveryHostedService(
 {
     private static readonly TimeSpan OrphanCutoff = TimeSpan.FromSeconds(30);
     private const string InterruptedReason = "job.interrupted_no_checkpoint";
+    private static readonly string[] EncoderQueues = ["encoder", "encoder-gpu", "encoder-cpu"];
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -34,6 +32,8 @@ public class OrphanJobRecoveryHostedService(
         {
             using IServiceScope scope = scopeFactory.CreateScope();
             IQueueContext context = scope.ServiceProvider.GetRequiredService<IQueueContext>();
+            IOrphanCheckpointLookup? checkpointLookup =
+                scope.ServiceProvider.GetService<IOrphanCheckpointLookup>();
 
             DateTime cutoff = DateTime.UtcNow.Subtract(OrphanCutoff);
             IReadOnlyList<QueueJobModel> orphans = context.GetReservedJobsOlderThan(cutoff);
@@ -46,8 +46,29 @@ public class OrphanJobRecoveryHostedService(
 
             int failed = 0;
             int requeued = 0;
+            int resumable = 0;
+
             foreach (QueueJobModel orphan in orphans)
             {
+                bool isEncoderJob = EncoderQueues.Contains(orphan.Queue);
+
+                if (isEncoderJob && checkpointLookup is not null)
+                {
+                    bool hasCheckpoint = checkpointLookup
+                        .HasCheckpointAsync(orphan.Payload, cancellationToken)
+                        .GetAwaiter()
+                        .GetResult();
+
+                    if (hasCheckpoint)
+                    {
+                        orphan.Attempts = 0;
+                        orphan.ReservedAt = null;
+                        context.UpdateJob(orphan);
+                        resumable++;
+                        continue;
+                    }
+                }
+
                 if (orphan.Attempts > 0)
                 {
                     context.AddFailedJob(
@@ -73,11 +94,12 @@ public class OrphanJobRecoveryHostedService(
             context.SaveChanges();
 
             logger.LogInformation(
-                "Orphan recovery: scanned {Total} orphan job(s); {Failed} moved to FailedJobs ({Reason}); {Requeued} left for retry",
+                "Orphan recovery: scanned {Total} orphan job(s); {Failed} moved to FailedJobs ({Reason}); {Requeued} left for retry; {Resumable} re-queued for checkpoint resume",
                 orphans.Count,
                 failed,
                 InterruptedReason,
-                requeued
+                requeued,
+                resumable
             );
         }
         catch (Exception ex)

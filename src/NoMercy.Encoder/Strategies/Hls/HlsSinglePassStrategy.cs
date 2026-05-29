@@ -1,10 +1,11 @@
+using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Shared;
+using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Strategies.Hls;
 
@@ -27,18 +28,15 @@ namespace NoMercy.Encoder.Strategies.Hls;
 /// and writes per-stream outcome rows. The decomposition layer stays
 /// per-stream so the bundler has the granularity it needs.</para>
 /// </summary>
-public class HlsSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
+public class HlsSinglePassStrategy(
+    IEncoder encoder,
+    ILogger<HlsSinglePassStrategy> logger,
+    IStorage storage
+) : SinglePassStrategyBase(encoder, logger, storage)
 {
-    public OutputFormat Format => OutputFormat.Hls;
-    public EncodeMode EncodeMode => EncodeMode.SinglePass;
+    public override OutputFormat Format => OutputFormat.Hls;
 
-    public Task<EncodingResult> EncodeAsync(
-        EncodingRequest request,
-        IProgressObserver? progress,
-        CancellationToken ct
-    ) => encoder.EncodeAsync(request, progress, ct);
-
-    public DecomposedTask[] Decompose(OutputPlan plan, string groupTag)
+    public override DecomposedTask[] Decompose(OutputPlan plan, string groupTag)
     {
         List<DecomposedTask> tasks = [];
 

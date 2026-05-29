@@ -1,10 +1,11 @@
+using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Strategies.Shared;
+using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Strategies.Dash;
 
@@ -17,18 +18,15 @@ namespace NoMercy.Encoder.Strategies.Dash;
 /// <see cref="Decompose"/> splits like HLS single-pass: one Video task per
 /// representation, one Audio per group, one Subtitle per track.
 /// </summary>
-public class DashSinglePassStrategy(IEncoder encoder) : IEncodingStrategy
+public class DashSinglePassStrategy(
+    IEncoder encoder,
+    ILogger<DashSinglePassStrategy> logger,
+    IStorage storage
+) : SinglePassStrategyBase(encoder, logger, storage)
 {
-    public OutputFormat Format => OutputFormat.Dash;
-    public EncodeMode EncodeMode => EncodeMode.SinglePass;
+    public override OutputFormat Format => OutputFormat.Dash;
 
-    public Task<EncodingResult> EncodeAsync(
-        EncodingRequest request,
-        IProgressObserver? progress,
-        CancellationToken ct
-    ) => encoder.EncodeAsync(request, progress, ct);
-
-    public DecomposedTask[] Decompose(OutputPlan plan, string groupTag)
+    public override DecomposedTask[] Decompose(OutputPlan plan, string groupTag)
     {
         List<DecomposedTask> tasks = [];
 

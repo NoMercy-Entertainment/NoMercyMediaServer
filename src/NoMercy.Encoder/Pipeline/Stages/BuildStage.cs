@@ -26,7 +26,8 @@ public record BuildInput(
     EncodingPass Pass = EncodingPass.Single,
     string? StatsFilePath = null,
     int Pass1VariantIndex = 0,
-    DecomposedTask? TaskFilter = null
+    DecomposedTask? TaskFilter = null,
+    long? ResumeFromMs = null
 );
 
 public class BuildStage(
@@ -237,7 +238,11 @@ public class BuildStage(
             }
 
             FfmpegCommandBuilder builder = new();
-            builder.AddInput(new(input.InputPath, Duration: input.DurationLimit));
+
+            TimeSpan? resumeSeek = ResolveResumeSeek(input.ResumeFromMs);
+            builder.AddInput(
+                new(input.InputPath, SeekTo: resumeSeek, Duration: input.DurationLimit)
+            );
 
             // Exact-match acquired subtitles: inject each as an additional -i input
             // so the main command can copy the subtitle stream to the output directory.
@@ -1217,6 +1222,22 @@ public class BuildStage(
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Converts a crash-checkpoint progress position into an input seek
+    /// TimeSpan, backing off by a fixed keyframe window to ensure ffmpeg
+    /// can land on a clean keyframe rather than a mid-GOP position.
+    /// Returns null when ResumeFromMs is null or zero (no seek required).
+    /// </summary>
+    internal static TimeSpan? ResolveResumeSeek(long? resumeFromMs)
+    {
+        if (resumeFromMs is null or <= 0)
+            return null;
+
+        const long keyframeBackoffMs = 4000;
+        long seekMs = Math.Max(0, resumeFromMs.Value - keyframeBackoffMs);
+        return TimeSpan.FromMilliseconds(seekMs);
     }
 
     /// <summary>

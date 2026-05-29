@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
@@ -6,6 +7,7 @@ using NoMercy.Encoder.Strategies;
 using NoMercy.Encoder.Strategies.Dash;
 using NoMercy.Encoder.Strategies.Mkv;
 using NoMercy.Encoder.Strategies.Mp4;
+using NoMercy.Tests.Encoder.Storage;
 using Container = NoMercy.Encoder.Profiles.Container;
 
 namespace NoMercy.Tests.Encoder.Strategies;
@@ -45,8 +47,8 @@ public class FormatStrategiesTests
         return new()
         {
             { new MkvStrategy(encoder), OutputFormat.Mkv, EncodeMode.SinglePass },
-            { new Mp4SinglePassStrategy(encoder), OutputFormat.Mp4, EncodeMode.SinglePass },
-            { new DashSinglePassStrategy(encoder), OutputFormat.Dash, EncodeMode.SinglePass },
+            { new Mp4SinglePassStrategy(encoder, NullLogger<Mp4SinglePassStrategy>.Instance, TestStorageFactory.CreateLocal()), OutputFormat.Mp4, EncodeMode.SinglePass },
+            { new DashSinglePassStrategy(encoder, NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal()), OutputFormat.Dash, EncodeMode.SinglePass },
         };
     }
 
@@ -56,8 +58,8 @@ public class FormatStrategiesTests
         return new()
         {
             new MkvStrategy(encoder),
-            new Mp4SinglePassStrategy(encoder),
-            new DashSinglePassStrategy(encoder),
+            new Mp4SinglePassStrategy(encoder, NullLogger<Mp4SinglePassStrategy>.Instance, TestStorageFactory.CreateLocal()),
+            new DashSinglePassStrategy(encoder, NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal()),
         };
     }
 

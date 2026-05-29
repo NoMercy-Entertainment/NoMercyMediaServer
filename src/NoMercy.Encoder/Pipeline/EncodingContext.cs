@@ -43,7 +43,9 @@ public record EncodingContext(
     /// and the encode is copy-mode, BuildStage runs MetadataMerger before
     /// passing the result to MetadataInjector.
     /// </summary>
-    IReadOnlyList<TrackMetadata>? DbTracks = null
+    IReadOnlyList<TrackMetadata>? DbTracks = null,
+    string? OutputDirectory = null,
+    string? InputPath = null
 )
 {
     /// <summary>

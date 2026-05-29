@@ -10,6 +10,7 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
 using NoMercy.Encoder.Output;
+using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
 using NoMercy.Encoder.PostProcess;
@@ -82,7 +83,7 @@ public class EncoderTests
             NullLogger<BuildStage>.Instance,
             TestStorageFactory.CreateLocal()
         );
-        ExecuteStage executeStage = new(_ffmpegExecutor.Object, NullLogger<ExecuteStage>.Instance);
+        ExecuteStage executeStage = new(_ffmpegExecutor.Object, new Mock<ICheckpointStore>().Object, NullLogger<ExecuteStage>.Instance);
         FinalizeStage finalizeStage = new(
             new ChapterWriter(TestStorageFactory.CreateLocal()),
             new FontExtractor(TestStorageFactory.CreateLocal()),

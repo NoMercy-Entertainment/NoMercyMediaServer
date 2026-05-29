@@ -34,6 +34,8 @@ public class Encoder(
             // When caller only sets SourceStorage, treat destination as the same.
             // Explicit DestinationStorage wins when source ≠ destination folders.
             DestinationStorage = request.DestinationStorage ?? request.SourceStorage,
+            OutputDirectory = request.OutputDirectory,
+            InputPath = request.InputPath,
         };
         Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -123,7 +125,8 @@ public class Encoder(
                 Pass: request.Options?.Pass ?? EncodingPass.Single,
                 StatsFilePath: request.Options?.StatsFilePath,
                 Pass1VariantIndex: request.Options?.Pass1VariantIndex ?? 0,
-                TaskFilter: request.Options?.TaskFilter
+                TaskFilter: request.Options?.TaskFilter,
+                ResumeFromMs: request.Options?.ResumeFromMs
             );
             StageResult buildResult = await buildStage.ExecuteAsync(buildInput, context, ct);
             if (buildResult is StageFailure buildFailure)
