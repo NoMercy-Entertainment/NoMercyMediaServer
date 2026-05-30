@@ -248,11 +248,12 @@ public sealed class StorageFactory : IStorageFactory
 
         NfsDriverConfig nfsConfig = NfsDriverConfig.Parse(driverConfigJson, folderId);
 
-        // Append the folder sub-path to the NFS export path when non-empty.
+        // Record the folder sub-path as SubPath so the mount stays at the
+        // export root. Baking subPath into Export caused libnfs to try mounting
+        // a non-existent export (e.g. /mnt/vault/Media/Anime instead of /mnt/vault/Media).
         if (!string.IsNullOrEmpty(subPath))
         {
-            string combinedExport = JoinRoot(nfsConfig.Export, subPath, "nfs");
-            nfsConfig = nfsConfig with { Export = combinedExport };
+            nfsConfig = nfsConfig with { SubPath = subPath.Replace('\\', '/').Trim('/') };
         }
 
         NfsStorageDriver nfsDriver = new(nfsConfig, _logger);

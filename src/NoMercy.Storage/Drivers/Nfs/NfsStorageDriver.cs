@@ -1215,10 +1215,31 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         {
             normalized = normalized[export.Length..];
             if (normalized.Length == 0)
-                return "/";
-            if (!normalized.StartsWith('/'))
+                normalized = "/";
+            else if (!normalized.StartsWith('/'))
                 normalized = "/" + normalized;
         }
+
+        // Prepend the folder sub-path so per-request relative paths land
+        // under the correct directory within the mounted export. The mount
+        // is always at the export root; SubPath scopes this driver instance
+        // to a specific subdirectory of that export.
+        string subPath = _config.SubPath.Trim('/');
+        if (!string.IsNullOrEmpty(subPath))
+        {
+            string subPathPrefix = "/" + subPath;
+            if (
+                !normalized.StartsWith(subPathPrefix + "/", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(normalized, subPathPrefix, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                normalized = subPathPrefix + normalized;
+            }
+        }
+
+        // Collapse any double-slashes introduced by the prepend step.
+        while (normalized.Contains("//"))
+            normalized = normalized.Replace("//", "/");
 
         return normalized;
     }

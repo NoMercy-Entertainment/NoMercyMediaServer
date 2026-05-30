@@ -13,7 +13,8 @@ public sealed record NfsDriverConfig(
     int? Uid,
     int? Gid,
     int Port,
-    int? MountPort
+    int? MountPort,
+    string SubPath = ""
 )
 {
     private static readonly JsonSerializerOptions ParseOptions = new()
