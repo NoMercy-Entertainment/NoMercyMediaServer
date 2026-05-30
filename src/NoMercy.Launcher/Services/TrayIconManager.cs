@@ -419,6 +419,6 @@ public class TrayIconManager
 
     private static void OpenUrl(string url)
     {
-        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        using Process? proc = Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 }

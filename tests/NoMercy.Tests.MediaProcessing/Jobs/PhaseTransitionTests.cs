@@ -108,7 +108,7 @@ public partial class PhaseTransitionTests
 
         methodStart.Should().BeGreaterThan(0, "HandleWaitChildrenAsync must exist");
 
-        string window = ExtractMethodWindow(source, methodStart);
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 6000);
 
         window
             .Should()

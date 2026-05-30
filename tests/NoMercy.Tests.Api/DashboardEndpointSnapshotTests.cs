@@ -205,15 +205,19 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         );
 
         JsonDocument json = JsonDocument.Parse(body);
+        // The endpoint wraps results in { data: [...] } — not a bare array.
+        AssertJsonHasProperty(json.RootElement, "data");
         Assert.True(
-            json.RootElement.ValueKind == JsonValueKind.Array,
-            "Expected array response for encoder profiles"
+            json.RootElement.GetProperty("data").ValueKind == JsonValueKind.Array,
+            "Expected data property to be an array of encoder profiles"
         );
     }
 
     [Fact]
-    public async Task Encoder_Create_ReturnsStatusResponse()
+    public async Task Encoder_Create_Returns410Gone()
     {
+        // POST /api/v1/dashboard/encoderprofiles was removed in the V2 migration.
+        // The replacement is POST /api/v1/encoder/profiles/{parentId}/clone.
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/dashboard/encoderprofiles",
             JsonBody(new { })
@@ -221,12 +225,12 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.Gone,
+            $"Expected 410 Gone, got {(int)response.StatusCode}: {body}"
         );
 
         JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "status");
+        AssertJsonHasProperty(json.RootElement, "error");
     }
 
     [Fact]

@@ -60,6 +60,7 @@ public class SensitiveDataLoggingTests
             "..",
             "src",
             "NoMercy.Database",
+            "Contexts",
             "MediaContext.cs"
         );
 

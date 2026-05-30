@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Tests.Repositories.Infrastructure;
@@ -71,7 +72,23 @@ public class MusicSearchDbFilterTests : IDisposable
         };
         context.Libraries.Add(library);
 
-        Folder folder = new() { Id = SeedConstants.MovieFolderId, Path = "/media/music" };
+        Driver systemLocalDriver = new()
+        {
+            Id = Driver.SystemLocalDriverId,
+            Name = "Local Filesystem",
+            Type = "local",
+            Config = """{"rootPath":"/"}""",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        context.Drivers.Add(systemLocalDriver);
+
+        Folder folder = new()
+        {
+            Id = SeedConstants.MovieFolderId,
+            Path = "/media/music",
+            DriverId = Driver.SystemLocalDriverId,
+        };
         context.Folders.Add(folder);
 
         // Add all entities in one batch to avoid tracking conflicts

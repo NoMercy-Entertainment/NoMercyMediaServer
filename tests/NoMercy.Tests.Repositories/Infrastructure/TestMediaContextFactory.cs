@@ -5,6 +5,7 @@ using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Extensions;
@@ -176,7 +177,23 @@ public static class TestMediaContextFactory
         context.LibraryUser.Add(new(SeedConstants.MovieLibraryId, SeedConstants.UserId));
         context.LibraryUser.Add(new(SeedConstants.TvLibraryId, SeedConstants.UserId));
 
-        Folder movieFolder = new() { Id = SeedConstants.MovieFolderId, Path = "/media/movies" };
+        Driver systemLocalDriver = new()
+        {
+            Id = Driver.SystemLocalDriverId,
+            Name = "Local Filesystem",
+            Type = "local",
+            Config = """{"rootPath":"/"}""",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        context.Drivers.Add(systemLocalDriver);
+
+        Folder movieFolder = new()
+        {
+            Id = SeedConstants.MovieFolderId,
+            Path = "/media/movies",
+            DriverId = Driver.SystemLocalDriverId,
+        };
         context.Folders.Add(movieFolder);
         context.FolderLibrary.Add(new(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
 

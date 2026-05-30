@@ -4,6 +4,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Tests.Repositories.Infrastructure;
 
@@ -169,7 +170,25 @@ public class ForUserExtensionTests
                 Order = 3,
             }
         );
-        context.Folders.Add(new() { Id = musicFolderId, Path = "/media/music" });
+        context.Drivers.Add(
+            new Driver
+            {
+                Id = Driver.SystemLocalDriverId,
+                Name = "Local Filesystem",
+                Type = "local",
+                Config = """{"rootPath":"/"}""",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+            }
+        );
+        context.Folders.Add(
+            new Folder
+            {
+                Id = musicFolderId,
+                Path = "/media/music",
+                DriverId = Driver.SystemLocalDriverId,
+            }
+        );
         context.Users.Add(
             new()
             {

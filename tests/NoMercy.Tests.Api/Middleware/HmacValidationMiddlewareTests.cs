@@ -227,16 +227,18 @@ public class HmacValidationMiddlewareTests
     }
 
     // -------------------------------------------------------------------------
-    // Tests: no signing key configured → pass through
+    // Tests: no signing key configured → 503 (misconfigured, not silent pass-through)
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task NoSigningKeyConfigured_ProtectedRoute_PassesThrough()
+    public async Task NoSigningKeyConfigured_ProtectedRoute_Returns503()
     {
-        // When distributed encoding is not configured, HMAC validation is
-        // a no-op — other auth layers still apply but we don't block with 401.
+        // When no signing key is configured, the middleware rejects protected
+        // routes with 503 rather than passing through silently — a missing key
+        // means distributed encoding is misconfigured, and passing through would
+        // bypass HMAC authentication entirely.
         HttpClient client = BuildClient(configuredSecret: null);
         HttpResponseMessage response = await client.GetAsync("/api/v1/distribution/workers");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 }

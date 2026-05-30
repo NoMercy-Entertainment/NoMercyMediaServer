@@ -37,6 +37,21 @@ public partial class HttpResponseDisposalAuditTests
                     continue;
 
                 string relative = Path.GetRelativePath(srcDir, file);
+
+                // Allow: ownership explicitly transferred to HttpResponseStream within a few lines
+                // (the wrapper disposes both the response and its content stream on close)
+                bool transferredToWrapper = false;
+                for (int look = i + 1; look < Math.Min(i + 6, lines.Length); look++)
+                {
+                    if (lines[look].Contains("new HttpResponseStream(", StringComparison.Ordinal))
+                    {
+                        transferredToWrapper = true;
+                        break;
+                    }
+                }
+                if (transferredToWrapper)
+                    continue;
+
                 violations.Add($"{relative}:{i + 1} — {trimmed}");
             }
         }

@@ -2,6 +2,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
 using NoMercy.Tests.Repositories.Infrastructure;
 
@@ -51,7 +52,23 @@ public class MusicRepositoryTests : IDisposable
         };
         context.Libraries.Add(musicLibrary);
 
-        Folder musicFolder = new() { Id = SeedConstants.MusicFolderId, Path = "/media/music" };
+        Driver systemLocalDriver = new()
+        {
+            Id = Driver.SystemLocalDriverId,
+            Name = "Local Filesystem",
+            Type = "local",
+            Config = """{"rootPath":"/"}""",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        context.Drivers.Add(systemLocalDriver);
+
+        Folder musicFolder = new()
+        {
+            Id = SeedConstants.MusicFolderId,
+            Path = "/media/music",
+            DriverId = Driver.SystemLocalDriverId,
+        };
         context.Folders.Add(musicFolder);
 
         MusicGenre genre = new() { Id = Guid.NewGuid(), Name = "Rock" };

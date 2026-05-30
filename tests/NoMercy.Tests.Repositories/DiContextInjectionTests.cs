@@ -4,6 +4,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Tests.Repositories.Infrastructure;
@@ -74,7 +75,23 @@ public class DiContextInjectionTests : IDisposable
         context.Libraries.Add(musicLibrary);
         context.LibraryUser.Add(new(SeedConstants.MovieLibraryId, SeedConstants.UserId));
 
-        Folder musicFolder = new() { Id = SeedConstants.MovieFolderId, Path = "/media/music" };
+        Driver systemLocalDriver = new()
+        {
+            Id = Driver.SystemLocalDriverId,
+            Name = "Local Filesystem",
+            Type = "local",
+            Config = """{"rootPath":"/"}""",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        context.Drivers.Add(systemLocalDriver);
+
+        Folder musicFolder = new()
+        {
+            Id = SeedConstants.MovieFolderId,
+            Path = "/media/music",
+            DriverId = Driver.SystemLocalDriverId,
+        };
         context.Folders.Add(musicFolder);
         context.FolderLibrary.Add(new(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
 
@@ -102,6 +119,7 @@ public class DiContextInjectionTests : IDisposable
             HostFolder = "/media/music/Test Artist/Test Album",
             LibraryId = SeedConstants.MovieLibraryId,
             FolderId = SeedConstants.MovieFolderId,
+            LibraryFolder = null!,
         };
         context.Albums.Add(album);
 

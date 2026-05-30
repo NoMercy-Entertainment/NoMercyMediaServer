@@ -36,8 +36,12 @@ public partial class ImageDisposalAuditTests
                 if (trimmed.Contains("return ") || trimmed.Contains("return\t"))
                     continue;
 
-                // Allow: lines with 'using' keyword
+                // Allow: lines with 'using' keyword on this line or the preceding line
+                // (handles multi-line 'using Image<T> img =\n    await Image.LoadAsync(...)')
                 if (trimmed.Contains("using "))
+                    continue;
+
+                if (i > 0 && lines[i - 1].Trim().Contains("using "))
                     continue;
 
                 string relative = Path.GetRelativePath(srcDir, file);

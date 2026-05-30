@@ -72,26 +72,19 @@ public class QueueWorker(
     {
         if (phaseTracker is not null)
         {
-            NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] awaiting boot stages [{BootStage.All}]",
-                Serilog.Events.LogEventLevel.Information
-            );
             await phaseTracker.WhenReachedAsync(BootStage.All, stopToken).ConfigureAwait(false);
             NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] all boot stages complete, entering poll loop",
-                Serilog.Events.LogEventLevel.Information
+                $"[QueueWorker {name}] all boot stages complete, entering poll loop"
             );
         }
         else if (readinessGate is not null)
         {
             NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] awaiting readiness gate",
-                Serilog.Events.LogEventLevel.Information
+                $"[QueueWorker {name}] awaiting readiness gate"
             );
             await readinessGate.WaitForReadyAsync(stopToken).ConfigureAwait(false);
             NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] gate resolved, entering poll loop",
-                Serilog.Events.LogEventLevel.Information
+                $"[QueueWorker {name}] gate resolved, entering poll loop"
             );
         }
 
