@@ -22,7 +22,9 @@ public class HlsVariantAnalyzer(IStorage storage) : IHlsVariantAnalyzer
         if (!storage.Exists(playlistPath))
             return new(0, 0);
 
-        string playlistDir = Path.GetDirectoryName(playlistPath) ?? ".";
+        string normalized = playlistPath.Replace('\\', '/');
+        int lastSlash = normalized.LastIndexOf('/');
+        string playlistDir = lastSlash > 0 ? playlistPath[..lastSlash] : string.Empty;
         string[] lines = Encoding.UTF8.GetString(storage.Read(playlistPath)).Split('\n');
 
         long totalBytes = 0;
@@ -50,7 +52,9 @@ public class HlsVariantAnalyzer(IStorage storage) : IHlsVariantAnalyzer
             if (segmentFile.StartsWith('#'))
                 continue;
 
-            string segmentPath = Path.Combine(playlistDir, segmentFile);
+            string segmentPath = string.IsNullOrEmpty(playlistDir)
+                ? segmentFile
+                : storage.CombinePath(playlistDir, segmentFile);
             if (!storage.Exists(segmentPath))
                 continue;
 

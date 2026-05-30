@@ -13,7 +13,7 @@ public class KestrelLimitsTests
 
     public KestrelLimitsTests()
     {
-        string sourceFile = FindSourceFile("src/NoMercy.Networking/Certificate.cs");
+        string sourceFile = FindSourceFile("src/NoMercy.Networking/Certificate/Certificate.cs");
         _source = File.ReadAllText(sourceFile);
     }
 
