@@ -47,16 +47,6 @@ public class TransportTests
         await act.Should().NotThrowAsync();
     }
 
-    [Fact]
-    public async Task NoOpTransport_ServeSegmentAsync_ReturnsNullStream()
-    {
-        NoOpLiveSessionTransport transport = new();
-
-        Stream result = await transport.ServeSegmentAsync("s1", 0, CancellationToken.None);
-
-        result.Should().BeSameAs(Stream.Null);
-    }
-
     // ──────────────────────────────────────────────────────────────────────────
     // SegmentReady — fired when the drain loop buffers a segment
     // ──────────────────────────────────────────────────────────────────────────
@@ -347,10 +337,4 @@ public sealed class CapturingTransport : ILiveSessionTransport
         _sent.Add(message);
         return Task.CompletedTask;
     }
-
-    public Task<Stream> ServeSegmentAsync(
-        string sessionId,
-        int segmentIndex,
-        CancellationToken ct
-    ) => Task.FromResult(Stream.Null);
 }

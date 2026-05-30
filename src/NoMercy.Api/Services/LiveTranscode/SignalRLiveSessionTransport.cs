@@ -2,14 +2,11 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using NoMercy.Api.Hubs;
 using NoMercy.Encoder.LiveTranscode;
-using NoMercy.Storage;
 
 namespace NoMercy.Api.Services.LiveTranscode;
 
 public sealed class SignalRLiveSessionTransport(
     IHubContext<LiveTranscodeHub> hubContext,
-    ILiveStreamingService streamingService,
-    IStorage storage,
     ILogger<SignalRLiveSessionTransport> logger
 ) : ILiveSessionTransport
 {
@@ -34,20 +31,5 @@ public sealed class SignalRLiveSessionTransport(
                 sessionId
             );
         }
-    }
-
-    public Task<Stream> ServeSegmentAsync(string sessionId, int segmentIndex, CancellationToken ct)
-    {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return Task.FromResult(Stream.Null);
-
-        if (!runtime.TryGetSegment(segmentIndex, out Segment segment))
-            return Task.FromResult(Stream.Null);
-
-        if (!storage.Exists(segment.FilePath))
-            return Task.FromResult(Stream.Null);
-
-        Stream stream = storage.OpenRead(segment.FilePath);
-        return Task.FromResult(stream);
     }
 }
