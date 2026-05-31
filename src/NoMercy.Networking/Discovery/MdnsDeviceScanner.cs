@@ -1,9 +1,10 @@
-using System.Linq;
 using Makaretu.Dns;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
+using NoMercy.Database.Models.Users;
 using NoMercy.Networking.Devices;
+using Message = Makaretu.Dns.Message;
 
 namespace NoMercy.Networking.Discovery;
 
@@ -21,7 +22,8 @@ public sealed class MdnsDeviceScanner : IDisposable
     public MdnsDeviceScanner(
         IDbContextFactory<MediaContext> contextFactory,
         ILogger<MdnsDeviceScanner> logger,
-        IDeviceListChangeNotifier? changeNotifier = null)
+        IDeviceListChangeNotifier? changeNotifier = null
+    )
     {
         _contextFactory = contextFactory;
         _logger = logger;
@@ -61,7 +63,7 @@ public sealed class MdnsDeviceScanner : IDisposable
                 return;
 
             await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-            Database.Models.Users.Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
+            Device? device = await ctx.Devices.FirstOrDefaultAsync(d =>
                 d.Fingerprint == fingerprint
             );
 
@@ -71,7 +73,9 @@ public sealed class MdnsDeviceScanner : IDisposable
             DateTime now = DateTime.UtcNow;
             bool ipChanged = device.LanIp != ip;
             bool portChanged = device.LanPort != port;
-            bool stale = device.MdnsSeenAt is null || now - device.MdnsSeenAt.Value > TimeSpan.FromMinutes(5);
+            bool stale =
+                device.MdnsSeenAt is null
+                || now - device.MdnsSeenAt.Value > TimeSpan.FromMinutes(5);
 
             if (!ipChanged && !portChanged && !stale)
                 return;

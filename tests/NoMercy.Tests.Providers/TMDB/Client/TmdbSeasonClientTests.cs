@@ -12,10 +12,6 @@ public class TmdbSeasonClientTests : TmdbTestBase
     private const int InvalidTvShowId = 999999999;
     private const int InvalidSeasonNumber = 999;
 
-    public TmdbSeasonClientTests()
-    {
-    }
-
     #region Constructor Tests
 
     [Fact]
@@ -110,7 +106,8 @@ public class TmdbSeasonClientTests : TmdbTestBase
         Func<Task> act = async () => await client.Details();
 
         // Assert
-        await act.Should().NotThrowAsync("because invalid season numbers should be handled gracefully");
+        await act.Should()
+            .NotThrowAsync("because invalid season numbers should be handled gracefully");
     }
 
     [Fact]
@@ -261,7 +258,8 @@ public class TmdbSeasonClientTests : TmdbTestBase
         Func<Task> act = async () => await client.Credits();
 
         // Assert
-        await act.Should().NotThrowAsync("because invalid season numbers should be handled gracefully");
+        await act.Should()
+            .NotThrowAsync("because invalid season numbers should be handled gracefully");
     }
 
     #endregion
@@ -336,7 +334,8 @@ public class TmdbSeasonClientTests : TmdbTestBase
         Func<Task> act = async () => await client.Images();
 
         // Assert
-        await act.Should().NotThrowAsync("because invalid season numbers should be handled gracefully");
+        await act.Should()
+            .NotThrowAsync("because invalid season numbers should be handled gracefully");
     }
 
     #endregion
@@ -415,7 +414,8 @@ public class TmdbSeasonClientTests : TmdbTestBase
         Func<Task> act = async () => await client.Videos();
 
         // Assert
-        await act.Should().NotThrowAsync("because invalid season numbers should be handled gracefully");
+        await act.Should()
+            .NotThrowAsync("because invalid season numbers should be handled gracefully");
     }
 
     #endregion
@@ -464,7 +464,11 @@ public class TmdbSeasonClientTests : TmdbTestBase
         TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
 
         // Act
-        TmdbSeasonChanges? result = await client.Changes("2024-01-01", "2024-06-30", priority: true);
+        TmdbSeasonChanges? result = await client.Changes(
+            "2024-01-01",
+            "2024-06-30",
+            priority: true
+        );
 
         // Assert - Changes endpoint may return null even for valid requests due to TMDB API limitations
         if (result != null)
@@ -488,7 +492,8 @@ public class TmdbSeasonClientTests : TmdbTestBase
         Func<Task> act = async () => await client.Details();
 
         // Assert
-        await act.Should().NotThrowAsync("because invalid TV show IDs should be handled gracefully");
+        await act.Should()
+            .NotThrowAsync("because invalid TV show IDs should be handled gracefully");
     }
 
     [Fact]
@@ -502,7 +507,8 @@ public class TmdbSeasonClientTests : TmdbTestBase
         Func<Task> act = async () => await client.Credits();
 
         // Assert
-        await act.Should().NotThrowAsync("because invalid TV show IDs should be handled gracefully");
+        await act.Should()
+            .NotThrowAsync("because invalid TV show IDs should be handled gracefully");
     }
 
     #endregion

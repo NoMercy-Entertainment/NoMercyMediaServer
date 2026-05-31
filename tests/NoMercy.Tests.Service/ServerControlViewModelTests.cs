@@ -11,8 +11,7 @@ public class ServerControlViewModelTests
     [InlineData("starting", "Starting")]
     [InlineData("Disconnected", "Disconnected")]
     [InlineData("unknown", "unknown")]
-    public void FormatStatusDisplay_ReturnsExpectedLabel(
-        string input, string expected)
+    public void FormatStatusDisplay_ReturnsExpectedLabel(string input, string expected)
     {
         string result = ServerControlViewModel.FormatStatusDisplay(input);
         Assert.Equal(expected, result);
@@ -25,8 +24,7 @@ public class ServerControlViewModelTests
     [InlineData("Starting", "#EAB308")]
     [InlineData("Disconnected", "#EF4444")]
     [InlineData("unknown", "#EF4444")]
-    public void GetStatusColor_ReturnsExpectedColor(
-        string input, string expected)
+    public void GetStatusColor_ReturnsExpectedColor(string input, string expected)
     {
         string result = ServerControlViewModel.GetStatusColor(input);
         Assert.Equal(expected, result);

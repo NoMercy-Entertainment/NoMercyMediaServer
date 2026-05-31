@@ -24,7 +24,7 @@ on:
         value: ${{ jobs.build_executables.outputs.artifact-names }}
     secrets:
       PAT:
-        description: 'Unified org PAT for cross-repo access (private app-web checkout, packages dispatch)'
+        description: 'PAT for accessing the private NoMercyApp repo'
         required: true
 
 jobs:

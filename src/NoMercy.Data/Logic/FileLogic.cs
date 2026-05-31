@@ -7,20 +7,26 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Logic;
 
-public partial class FileLogic(int id, Library library, MediaContext mediaContext)
-    : IDisposable,
-        IAsyncDisposable
+public partial class FileLogic(
+    int id,
+    Library library,
+    MediaContext mediaContext,
+    IStorageFactory storageFactory,
+    IStorageDriver storageDriver
+) : IDisposable, IAsyncDisposable
 {
     private readonly MediaContext _mediaContext = mediaContext;
+    private readonly IStorageFactory _storageFactory = storageFactory;
+    private readonly IStorageDriver _storageDriver = storageDriver;
 
     private int Id { get; set; } = id;
     private Library Library { get; set; } = library;
@@ -38,7 +44,7 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
         foreach (Folder folder in Folders)
         {
-            ConcurrentBag<MediaFolderExtend> files = await GetFiles(folder.Path);
+            ConcurrentBag<MediaFolderExtend> files = await GetFiles(folder);
 
             if (!files.IsEmpty)
                 Files.AddRange(files);
@@ -135,19 +141,23 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
         List<Subtitle> subtitles = [];
 
-        string fileName = Path.DirectorySeparatorChar + Path.GetFileName(item.Path);
-        string hostFolder = item.Path.Replace(fileName, "");
+        string itemPath = item.Path.Replace('\\', '/');
+        string fileName = "/" + StoragePathHelpers.GetName(itemPath);
+        string hostFolder = itemPath.Replace(fileName, "");
+        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
+        int showIdx = string.IsNullOrEmpty(showName)
+            ? -1
+            : itemPath.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
         string baseFolder =
-            Path.DirectorySeparatorChar
-            + (Movie?.Folder ?? Show?.Folder).OrEmpty().Replace("/", "")
-            + item.Path.Replace(folder.Path, "").Replace(fileName, "");
+            showIdx >= 0 ? ("/" + itemPath[showIdx..]).Replace(fileName, "") : hostFolder;
 
-        string subtitleFolder = Path.Combine(hostFolder, "subtitles");
+        string subtitleFolder = hostFolder.TrimEnd('/') + "/subtitles";
 
-        if (Directory.Exists(subtitleFolder))
+        IStorage storage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        if (await storage.ExistsAsync(subtitleFolder, CancellationToken.None))
         {
-            string[] subtitleFiles = Directory.GetFiles(subtitleFolder);
-            foreach (string subtitleFile in subtitleFiles)
+            IReadOnlyList<StorageEntry> subtitleEntries = storage.List(subtitleFolder, "*", false);
+            foreach (string subtitleFile in subtitleEntries.Select(e => e.Path))
             {
                 Regex regex = SubtitleFileTagsRegex();
                 Match match = regex.Match(subtitleFile);
@@ -253,9 +263,11 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
         }
     }
 
-    private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(string path)
+    private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Folder folder)
     {
-        MediaScan mediaScan = new();
+        // Resolve the per-folder driver so NFS/SMB folders use the right backend.
+        IStorage folderStorage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        MediaScan mediaScan = new(folderStorage.Driver);
 
         int depth = Library.Type switch
         {
@@ -265,10 +277,12 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
             _ => 1,
         };
 
+        string scanRoot = folderStorage.GetFullPath(folder.Path);
+
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType(Library.Type)
-            .Process(path, depth);
+            .Process(scanRoot, depth);
 
         await mediaScan.DisposeAsync();
 
@@ -292,17 +306,30 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
         foreach (Folder rootFolder in rootFolders)
         {
-            string path = Path.Combine(rootFolder.Path, folder);
+            IStorage folderStorage = _storageFactory.For(
+                rootFolder.Id,
+                rootFolder.DriverId,
+                string.Empty
+            );
+            string resolvedRoot = folderStorage.GetFullPath(rootFolder.Path);
+            string path = folderStorage.CombinePath(resolvedRoot, folder);
 
-            if (!Directory.Exists(path))
+            if (!folderStorage.Exists(path))
             {
-                string? match = Str.FindMatchingDirectory(rootFolder.Path, folder);
+                string? match = Str.FindMatchingDirectory(_storageDriver, resolvedRoot, folder);
                 if (match != null)
                     path = match;
             }
 
-            if (Directory.Exists(path))
-                Folders.Add(new() { Path = path, Id = rootFolder.Id });
+            if (folderStorage.Exists(path))
+                Folders.Add(
+                    new()
+                    {
+                        Path = path,
+                        Id = rootFolder.Id,
+                        DriverId = rootFolder.DriverId,
+                    }
+                );
         }
     }
 

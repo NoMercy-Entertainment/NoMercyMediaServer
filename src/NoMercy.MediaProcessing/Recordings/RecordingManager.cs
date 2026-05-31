@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
@@ -8,11 +8,11 @@ using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.MusicGenres;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -23,9 +23,14 @@ namespace NoMercy.MediaProcessing.Recordings;
 public partial class RecordingManager(
     IRecordingRepository recordingRepository,
     IMusicGenreRepository musicGenreRepository,
-    IArtistRepository artistRepository
+    IArtistRepository artistRepository,
+    IStorageDriver storageDriver,
+    IStorageFactory storageFactory
 ) : BaseManager, IRecordingManager
 {
+    private readonly IStorageDriver _storageDriver = storageDriver;
+    private readonly IStorageFactory _storageFactory = storageFactory;
+
     // public async Task StoreWithoutFiles(MusicBrainzReleaseAppends releaseAppends, Folder libraryFolder)
     // {
     //     foreach (MusicBrainzMedia media in releaseAppends.Media)
@@ -71,7 +76,7 @@ public partial class RecordingManager(
             LogEventLevel.Verbose
         );
 
-        MediaScan mediaScan = new();
+        MediaScan mediaScan = new(_storageDriver);
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType("music")
@@ -91,7 +96,7 @@ public partial class RecordingManager(
                 );
                 if (mediaFile is null)
                     continue;
-                using TagLib.File tagFile = TagLib.File.Create(file.Path);
+                TagFile? tagFile = file.TagFile;
                 if (tagFile == null || mediaFile.FFprobe == null)
                 {
                     Logger.MusicBrainz($"File not found: {file.Name}", LogEventLevel.Error);
@@ -104,10 +109,10 @@ public partial class RecordingManager(
                 );
 
                 string path =
-                    mediaFile.Parsed?.FilePath.Replace(
-                        Path.DirectorySeparatorChar + mediaFile.Name,
-                        ""
-                    ) ?? string.Empty;
+                    mediaFile
+                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                        ?.Replace("\\" + mediaFile.Name, "")
+                    ?? string.Empty;
 
                 Track insert = new()
                 {
@@ -119,24 +124,27 @@ public partial class RecordingManager(
                     DiscNumber = musicBrainzMedia.Position,
                     TrackNumber = musicBrainzTrack.Position,
 
-                    Filename = "/" + Path.GetFileName(mediaFile.Path),
+                    Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path),
                     Quality = (int)
                         Math.Floor(
                             (
-                                mediaFile.FFprobe?.Format.BitRate
-                                ?? tagFile.Properties.AudioBitrate * 1000
+                                (double?)mediaFile.FFprobe?.Format.BitRate
+                                ?? (double?)(tagFile!.Properties?.AudioBitrate * 1000)
+                                ?? 0.0
                             ) / 1000.0
                         ),
                     Duration = HmsRegex()
                         .Replace(
-                            (mediaFile.FFprobe?.Duration ?? tagFile.Properties.Duration).ToString(
-                                "hh\\:mm\\:ss"
-                            ),
+                            (
+                                mediaFile.FFprobe?.Duration
+                                ?? tagFile!.Properties?.Duration
+                                ?? TimeSpan.Zero
+                            ).ToString("hh\\:mm\\:ss"),
                             ""
                         ),
 
                     FolderId = libraryFolder.Id,
-                    Folder = path.Replace(libraryFolder.Path, "").Replace("\\", "/"),
+                    Folder = path.Replace(ResolveLibraryRoot(libraryFolder), "").Replace("\\", "/"),
                     HostFolder = path.PathName(),
 
                     Cover = releaseCoverPalette?.Url is not null
@@ -357,6 +365,16 @@ public partial class RecordingManager(
         return fileName.StartsWith(matchNumber) && fileName.Contains(matchString);
     }
 
+    private string ResolveLibraryRoot(Folder libraryFolder)
+    {
+        IStorage folderStorage = _storageFactory.For(
+            libraryFolder.Id,
+            libraryFolder.DriverId,
+            string.Empty
+        );
+        return folderStorage.GetFullPath(libraryFolder.Path);
+    }
+
     [GeneratedRegex("^00:")]
     private static partial Regex HmsRegex();
 
@@ -400,12 +418,14 @@ public partial class RecordingManager(
 
                     FolderId = libraryFolder.Id,
                     Folder = mediaFile
-                        .Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
-                        .Replace(libraryFolder.Path, "")
-                        .Replace("\\", "/"),
+                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                        ?.Replace("\\" + mediaFile.Name, "")
+                        ?.Replace(ResolveLibraryRoot(libraryFolder), "")
+                        ?.Replace("\\", "/"),
                     HostFolder = mediaFile
-                        .Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
-                        .PathName()!,
+                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                        ?.Replace("\\" + mediaFile.Name, "")
+                        ?.PathName()!,
 
                     LibraryId = libraryFolder.FolderLibraries.FirstOrDefault()!.LibraryId,
                 };
@@ -419,7 +439,9 @@ public partial class RecordingManager(
         }
 
         string path =
-            mediaFile.Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
+            mediaFile
+                .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                ?.Replace("\\" + mediaFile.Name, "")
             ?? string.Empty;
 
         Track insert = new()
@@ -430,7 +452,7 @@ public partial class RecordingManager(
             DiscNumber = mediaFile.Parsed?.DiscNumber ?? 0,
             TrackNumber = mediaFile.Parsed?.TrackNumber ?? 0,
 
-            Filename = "/" + Path.GetFileName(mediaFile.Path),
+            Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path),
             Quality = (int)
                 Math.Floor(
                     (
@@ -448,7 +470,7 @@ public partial class RecordingManager(
                 ),
 
             FolderId = libraryFolder.Id,
-            Folder = path.Replace(libraryFolder.Path, "").Replace("\\", "/"),
+            Folder = path.Replace(ResolveLibraryRoot(libraryFolder), "").Replace("\\", "/"),
             HostFolder = path.PathName(),
 
             Cover = releaseCoverPalette?.Url is not null

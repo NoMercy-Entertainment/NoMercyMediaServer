@@ -1,0 +1,43 @@
+namespace NoMercy.Encoder.Analysis;
+
+public record VideoStreamInfo(
+    int Index,
+    string Codec,
+    int Width,
+    int Height,
+    double FrameRate,
+    int BitDepth,
+    string PixelFormat,
+    string? ColorPrimaries,
+    string? ColorTransfer,
+    string? ColorSpace,
+    bool IsDefault,
+    long BitRateKbps,
+    double? AverageFrameRate = null,
+    double? RealFrameRate = null,
+    int Rotation = 0
+)
+{
+    private static readonly HashSet<string> HdrTransfers = ["smpte2084", "arib-std-b67"];
+
+    public bool IsHdr =>
+        ColorTransfer is not null
+        && HdrTransfers.Contains(ColorTransfer)
+        && ColorPrimaries is "bt2020";
+
+    // 1% spread between real and average frame-rate is the standard VFR
+    // threshold ffmpeg / handbrake use. AnalyzeStage's decision-log emitter
+    // and ProfileRuleValidator's SourceVariableFrameRate rule both consume
+    // this property — keeping them in sync means a stream that triggers the
+    // validation warning also surfaces in the decision log, and vice versa.
+    public bool IsVariableFrameRate
+    {
+        get
+        {
+            if (!AverageFrameRate.HasValue || !RealFrameRate.HasValue)
+                return false;
+            double diff = Math.Abs(RealFrameRate.Value - AverageFrameRate.Value);
+            return diff / Math.Max(RealFrameRate.Value, 1.0) > 0.01;
+        }
+    }
+}

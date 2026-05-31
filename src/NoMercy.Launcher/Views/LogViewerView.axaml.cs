@@ -1,4 +1,4 @@
-using System.Collections.Specialized;
+using System.Collections;
 using System.Text;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -53,7 +53,7 @@ public partial class LogViewerView : UserControl
 
         if (e.Key == Key.C && e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
-            System.Collections.IList? selectedItems = LogList.SelectedItems;
+            IList? selectedItems = LogList.SelectedItems;
 
             if (selectedItems is null || selectedItems.Count == 0)
                 return;
@@ -76,10 +76,7 @@ public partial class LogViewerView : UserControl
 
                 if (topLevel?.Clipboard is not null)
                 {
-                    await topLevel.Clipboard.SetValueAsync(
-                        Avalonia.Input.DataFormat.Text,
-                        sb.ToString()
-                    );
+                    await topLevel.Clipboard.SetValueAsync(DataFormat.Text, sb.ToString());
                     e.Handled = true;
                 }
             }

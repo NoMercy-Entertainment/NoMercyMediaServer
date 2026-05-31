@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Helpers.Monitoring;
@@ -43,10 +44,10 @@ public class ResourceMonitor
         Logger.App("Resource Monitor started");
     }
 
-    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    [SupportedOSPlatform("windows")]
     private static IResourceProvider CreateWindowsProvider() => new WindowsResourceProvider();
 
-    [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+    [SupportedOSPlatform("linux")]
     private static IResourceProvider CreateLinuxProvider() => new LinuxResourceProvider();
 
     public static void Stop()

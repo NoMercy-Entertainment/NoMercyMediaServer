@@ -1,15 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercyQueue.Core.Interfaces;
 using NoMercy.Queue.MediaServer;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Tests.Queue.TestHelpers;
 
 public class TestQueueContext : QueueContext
 {
-    public TestQueueContext(DbContextOptions<QueueContext> options) : base(options)
-    {
-    }
+    public TestQueueContext(DbContextOptions<QueueContext> options)
+        : base(options) { }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
@@ -34,7 +33,9 @@ public static class TestQueueContextFactory
         return context;
     }
 
-    public static (QueueContext context, IQueueContext adapter) CreateInMemoryContextWithAdapter(string databaseName = "TestDatabase")
+    public static (QueueContext context, IQueueContext adapter) CreateInMemoryContextWithAdapter(
+        string databaseName = "TestDatabase"
+    )
     {
         QueueContext context = CreateInMemoryContext(databaseName);
         EfQueueContextAdapter adapter = new(context);

@@ -34,10 +34,12 @@
     <PackageReference Include="System.Management" />
     <PackageReference Include="DnsClient" />
     <PackageReference Include="TagLibSharp" />
+    <PackageReference Include="Ulid" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
+    <ProjectReference Include="..\NoMercy.Storage\NoMercy.Storage.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -10,6 +10,14 @@ public record MovieOrEpisode
     [JsonProperty("title")]
     public string Title { get; set; } = string.Empty;
 
+    /// <summary>
+    /// English show name for episodes — server-side only, not emitted in the
+    /// API response (the API surfaces this baked into MovieFile.Title via the
+    /// filelist's '<show> SxxExx <episode title>' label).
+    /// </summary>
+    [JsonIgnore]
+    public string? ShowName { get; set; }
+
     [JsonProperty("duration")]
     public TimeSpan? Duration { get; set; }
 

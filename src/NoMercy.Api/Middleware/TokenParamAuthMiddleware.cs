@@ -59,39 +59,35 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
             );
             return;
         }
-        else
+
+        if (!Guid.TryParse(claim, out Guid userId) || userId == Guid.Empty)
         {
-            Guid userId = Guid.Parse(claim);
+            Logger.Http("Unauthorized request, guid malformed or empty: " + url);
+            await WriteProblemAsync(
+                context,
+                statusCode: (int)HttpStatusCode.Forbidden,
+                type: "https://nomercy.tv/problems/invalid-token",
+                title: "Invalid token",
+                detail: "The token subject (sub) is not a valid GUID. The token may be malformed.",
+                authError: "INVALID_TOKEN"
+            );
+            return;
+        }
 
-            if (userId == Guid.Empty)
-            {
-                Logger.Http("Unauthorized request, guid empty: " + url);
-                await WriteProblemAsync(
-                    context,
-                    statusCode: (int)HttpStatusCode.Forbidden,
-                    type: "https://nomercy.tv/problems/invalid-token",
-                    title: "Invalid token",
-                    detail: "The token subject (sub) resolved to an empty GUID. The token may be malformed.",
-                    authError: "INVALID_TOKEN"
-                );
-                return;
-            }
+        User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
-            User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
-
-            if (user is null)
-            {
-                Logger.Http("Unauthorized request, user not found: " + url);
-                await WriteProblemAsync(
-                    context,
-                    statusCode: (int)HttpStatusCode.Forbidden,
-                    type: "https://nomercy.tv/problems/user-not-found",
-                    title: "User not found",
-                    detail: "The authenticated user is not registered on this server. Ask the server owner to add your account.",
-                    authError: "USER_NOT_FOUND"
-                );
-                return;
-            }
+        if (user is null)
+        {
+            Logger.Http("Unauthorized request, user not found: " + url);
+            await WriteProblemAsync(
+                context,
+                statusCode: (int)HttpStatusCode.Forbidden,
+                type: "https://nomercy.tv/problems/user-not-found",
+                title: "User not found",
+                detail: "The authenticated user is not registered on this server. Ask the server owner to add your account.",
+                authError: "USER_NOT_FOUND"
+            );
+            return;
         }
 
         await next(context);

@@ -1,3 +1,4 @@
+using System.Reflection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
@@ -89,7 +90,7 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
                 Manage = false,
             }
         );
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         await ClaimsPrincipleExtensions.RefreshUsersAsync(_context);
 
@@ -143,9 +144,9 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
     [Fact]
     public void NoStaticMediaContext_FieldDoesNotExist()
     {
-        System.Reflection.FieldInfo? field = typeof(ClaimsPrincipleExtensions).GetField(
+        FieldInfo? field = typeof(ClaimsPrincipleExtensions).GetField(
             "MediaContext",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+            BindingFlags.NonPublic | BindingFlags.Static
         );
 
         Assert.Null(field);

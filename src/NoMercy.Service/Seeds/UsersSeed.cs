@@ -2,18 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Users;
-using NoMercy.NmSystem;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Service.Seeds.Dto;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;
 
 public static class UsersSeed
 {
-    public static async Task Init(this MediaContext dbContext)
+    public static async Task Init(this MediaContext dbContext, IStorage storage)
     {
         try
         {
@@ -56,6 +57,10 @@ public static class UsersSeed
             Logger.Setup($"Found {serverUsers.Length} users", LogEventLevel.Verbose);
 
             User[] users = serverUsers
+                // Skip rows whose UserId can't be parsed — a single bad row
+                // from the upstream API used to abort the whole seed via
+                // FormatException, leaving the server with no users at all.
+                .Where(serverUser => Guid.TryParse(serverUser.UserId, out _))
                 .Select(serverUser => new User
                 {
                     Id = Guid.Parse(serverUser.UserId),
@@ -89,11 +94,13 @@ public static class UsersSeed
                 )
                 .RunAsync();
 
-            if (!File.Exists(AppFiles.LibrariesSeedFile))
+            if (!storage.Exists(AppFiles.LibrariesSeedFile))
                 return;
 
             Library[] libraries =
-                File.ReadAllTextAsync(AppFiles.LibrariesSeedFile).Result.FromJson<Library[]>()
+                storage
+                    .ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
+                    .Result.FromJson<Library[]>()
                 ?? [];
 
             List<LibraryUser> libraryUsers = [];

@@ -21,7 +21,7 @@ public class DomainEventTests
         {
             FilePath = "/media/movies/test.mkv",
             LibraryId = libraryId,
-            DetectedType = "movie"
+            DetectedType = "movie",
         };
 
         evt.Source.Should().Be("MediaScanner");
@@ -38,7 +38,7 @@ public class DomainEventTests
         MediaDiscoveredEvent evt = new()
         {
             FilePath = "/media/test.mkv",
-            LibraryId = Ulid.NewUlid()
+            LibraryId = Ulid.NewUlid(),
         };
 
         evt.DetectedType.Should().BeNull();
@@ -53,7 +53,7 @@ public class DomainEventTests
             MediaId = 12345,
             MediaType = "movie",
             Title = "Test Movie",
-            LibraryId = libraryId
+            LibraryId = libraryId,
         };
 
         evt.Source.Should().Be("MediaProcessor");
@@ -72,7 +72,7 @@ public class DomainEventTests
             MediaId = 99,
             MediaType = "tv",
             Title = "Test Show",
-            LibraryId = libraryId
+            LibraryId = libraryId,
         };
 
         evt.Source.Should().Be("MediaProcessor");
@@ -90,7 +90,7 @@ public class DomainEventTests
             JobId = 42,
             InputPath = "/input/video.mkv",
             OutputPath = "/output/video/",
-            ProfileName = "HLS-1080p"
+            ProfileName = "HLS-1080p",
         };
 
         evt.Source.Should().Be("Encoder");
@@ -108,7 +108,7 @@ public class DomainEventTests
             JobId = 42,
             Percentage = 55.5,
             Elapsed = TimeSpan.FromMinutes(10),
-            Estimated = TimeSpan.FromMinutes(8)
+            Estimated = TimeSpan.FromMinutes(8),
         };
 
         evt.Source.Should().Be("Encoder");
@@ -125,7 +125,7 @@ public class DomainEventTests
         {
             JobId = 1,
             Percentage = 0.0,
-            Elapsed = TimeSpan.Zero
+            Elapsed = TimeSpan.Zero,
         };
 
         evt.Estimated.Should().BeNull();
@@ -138,7 +138,7 @@ public class DomainEventTests
         {
             JobId = 42,
             OutputPath = "/output/video/playlist.m3u8",
-            Duration = TimeSpan.FromMinutes(18)
+            Duration = TimeSpan.FromMinutes(18),
         };
 
         evt.Source.Should().Be("Encoder");
@@ -155,7 +155,7 @@ public class DomainEventTests
             JobId = 42,
             InputPath = "/input/corrupt.mkv",
             ErrorMessage = "FFmpeg exited with code 1",
-            ExceptionType = "InvalidOperationException"
+            ExceptionType = "InvalidOperationException",
         };
 
         evt.Source.Should().Be("Encoder");
@@ -172,7 +172,7 @@ public class DomainEventTests
         {
             JobId = 1,
             InputPath = "/input/test.mkv",
-            ErrorMessage = "Unknown error"
+            ErrorMessage = "Unknown error",
         };
 
         evt.ExceptionType.Should().BeNull();
@@ -186,7 +186,7 @@ public class DomainEventTests
         {
             UserId = userId,
             Email = "user@example.com",
-            DisplayName = "Test User"
+            DisplayName = "Test User",
         };
 
         evt.Source.Should().Be("Auth");
@@ -199,11 +199,7 @@ public class DomainEventTests
     public void UserDisconnectedEvent_SetsAllProperties()
     {
         Guid userId = Guid.NewGuid();
-        UserDisconnectedEvent evt = new()
-        {
-            UserId = userId,
-            ConnectionId = "abc-123-def"
-        };
+        UserDisconnectedEvent evt = new() { UserId = userId, ConnectionId = "abc-123-def" };
 
         evt.Source.Should().Be("SignalR");
         evt.UserId.Should().Be(userId);
@@ -219,7 +215,7 @@ public class DomainEventTests
             UserId = userId,
             MediaId = 500,
             MediaType = "movie",
-            DeviceId = "device-001"
+            DeviceId = "device-001",
         };
 
         evt.Source.Should().Be("Playback");
@@ -236,7 +232,7 @@ public class DomainEventTests
         {
             UserId = Guid.NewGuid(),
             MediaId = 1,
-            MediaType = "tv"
+            MediaType = "tv",
         };
 
         evt.DeviceId.Should().BeNull();
@@ -251,7 +247,7 @@ public class DomainEventTests
             UserId = userId,
             MediaId = 500,
             Position = TimeSpan.FromMinutes(45),
-            Duration = TimeSpan.FromMinutes(120)
+            Duration = TimeSpan.FromMinutes(120),
         };
 
         evt.Source.Should().Be("Playback");
@@ -269,7 +265,7 @@ public class DomainEventTests
         {
             UserId = userId,
             MediaId = 500,
-            MediaType = "movie"
+            MediaType = "movie",
         };
 
         evt.Source.Should().Be("Playback");
@@ -282,11 +278,7 @@ public class DomainEventTests
     public void LibraryScanStartedEvent_SetsAllProperties()
     {
         Ulid libraryId = Ulid.NewUlid();
-        LibraryScanStartedEvent evt = new()
-        {
-            LibraryId = libraryId,
-            LibraryName = "Movies"
-        };
+        LibraryScanStartedEvent evt = new() { LibraryId = libraryId, LibraryName = "Movies" };
 
         evt.Source.Should().Be("LibraryScanner");
         evt.LibraryId.Should().Be(libraryId);
@@ -302,7 +294,7 @@ public class DomainEventTests
             LibraryId = libraryId,
             LibraryName = "Movies",
             ItemsFound = 150,
-            Duration = TimeSpan.FromSeconds(30)
+            Duration = TimeSpan.FromSeconds(30),
         };
 
         evt.Source.Should().Be("LibraryScanner");
@@ -319,7 +311,7 @@ public class DomainEventTests
         {
             PluginId = "my-plugin",
             PluginName = "My Plugin",
-            Version = "1.0.0"
+            Version = "1.0.0",
         };
 
         evt.Source.Should().Be("PluginManager");
@@ -336,7 +328,7 @@ public class DomainEventTests
             PluginId = "bad-plugin",
             PluginName = "Bad Plugin",
             ErrorMessage = "Failed to initialize",
-            ExceptionType = "NullReferenceException"
+            ExceptionType = "NullReferenceException",
         };
 
         evt.Source.Should().Be("PluginManager");
@@ -353,7 +345,7 @@ public class DomainEventTests
         {
             PluginId = "x",
             PluginName = "X",
-            ErrorMessage = "error"
+            ErrorMessage = "error",
         };
 
         evt.ExceptionType.Should().BeNull();
@@ -367,7 +359,7 @@ public class DomainEventTests
         {
             Section = "Encoding",
             Key = "DefaultProfile",
-            ChangedByUserId = userId
+            ChangedByUserId = userId,
         };
 
         evt.Source.Should().Be("Configuration");
@@ -379,11 +371,7 @@ public class DomainEventTests
     [Fact]
     public void ConfigurationChangedEvent_ChangedByUserIdIsOptional()
     {
-        ConfigurationChangedEvent evt = new()
-        {
-            Section = "System",
-            Key = "Port"
-        };
+        ConfigurationChangedEvent evt = new() { Section = "System", Key = "Port" };
 
         evt.ChangedByUserId.Should().BeNull();
     }
@@ -394,22 +382,92 @@ public class DomainEventTests
         IEvent[] events =
         [
             new MediaDiscoveredEvent { FilePath = "/test", LibraryId = Ulid.NewUlid() },
-            new MediaAddedEvent { MediaId = 1, MediaType = "movie", Title = "T", LibraryId = Ulid.NewUlid() },
-            new MediaRemovedEvent { MediaId = 1, MediaType = "movie", Title = "T", LibraryId = Ulid.NewUlid() },
-            new EncodingStartedEvent { JobId = 1, InputPath = "/i", OutputPath = "/o", ProfileName = "p" },
-            new EncodingProgressEvent { JobId = 1, Percentage = 0, Elapsed = TimeSpan.Zero },
-            new EncodingCompletedEvent { JobId = 1, OutputPath = "/o", Duration = TimeSpan.Zero },
-            new EncodingFailedEvent { JobId = 1, InputPath = "/i", ErrorMessage = "e" },
-            new UserAuthenticatedEvent { UserId = Guid.NewGuid(), Email = "a@b.c", DisplayName = "A" },
+            new MediaAddedEvent
+            {
+                MediaId = 1,
+                MediaType = "movie",
+                Title = "T",
+                LibraryId = Ulid.NewUlid(),
+            },
+            new MediaRemovedEvent
+            {
+                MediaId = 1,
+                MediaType = "movie",
+                Title = "T",
+                LibraryId = Ulid.NewUlid(),
+            },
+            new EncodingStartedEvent
+            {
+                JobId = 1,
+                InputPath = "/i",
+                OutputPath = "/o",
+                ProfileName = "p",
+            },
+            new EncodingProgressEvent
+            {
+                JobId = 1,
+                Percentage = 0,
+                Elapsed = TimeSpan.Zero,
+            },
+            new EncodingCompletedEvent
+            {
+                JobId = 1,
+                OutputPath = "/o",
+                Duration = TimeSpan.Zero,
+            },
+            new EncodingFailedEvent
+            {
+                JobId = 1,
+                InputPath = "/i",
+                ErrorMessage = "e",
+            },
+            new UserAuthenticatedEvent
+            {
+                UserId = Guid.NewGuid(),
+                Email = "a@b.c",
+                DisplayName = "A",
+            },
             new UserDisconnectedEvent { UserId = Guid.NewGuid(), ConnectionId = "c" },
-            new PlaybackStartedEvent { UserId = Guid.NewGuid(), MediaId = 1, MediaType = "movie" },
-            new PlaybackProgressEvent { UserId = Guid.NewGuid(), MediaId = 1, Position = TimeSpan.Zero, Duration = TimeSpan.Zero },
-            new PlaybackCompletedEvent { UserId = Guid.NewGuid(), MediaId = 1, MediaType = "movie" },
+            new PlaybackStartedEvent
+            {
+                UserId = Guid.NewGuid(),
+                MediaId = 1,
+                MediaType = "movie",
+            },
+            new PlaybackProgressEvent
+            {
+                UserId = Guid.NewGuid(),
+                MediaId = 1,
+                Position = TimeSpan.Zero,
+                Duration = TimeSpan.Zero,
+            },
+            new PlaybackCompletedEvent
+            {
+                UserId = Guid.NewGuid(),
+                MediaId = 1,
+                MediaType = "movie",
+            },
             new LibraryScanStartedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "L" },
-            new LibraryScanCompletedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "L", ItemsFound = 0, Duration = TimeSpan.Zero },
-            new PluginLoadedEvent { PluginId = "p", PluginName = "P", Version = "1.0" },
-            new PluginErrorEvent { PluginId = "p", PluginName = "P", ErrorMessage = "e" },
-            new ConfigurationChangedEvent { Section = "s", Key = "k" }
+            new LibraryScanCompletedEvent
+            {
+                LibraryId = Ulid.NewUlid(),
+                LibraryName = "L",
+                ItemsFound = 0,
+                Duration = TimeSpan.Zero,
+            },
+            new PluginLoadedEvent
+            {
+                PluginId = "p",
+                PluginName = "P",
+                Version = "1.0",
+            },
+            new PluginErrorEvent
+            {
+                PluginId = "p",
+                PluginName = "P",
+                ErrorMessage = "e",
+            },
+            new ConfigurationChangedEvent { Section = "s", Key = "k" },
         ];
 
         foreach (IEvent evt in events)
@@ -426,15 +484,65 @@ public class DomainEventTests
         InMemoryEventBus bus = new();
         List<IEvent> received = [];
 
-        bus.Subscribe<MediaDiscoveredEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
-        bus.Subscribe<MediaAddedEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
-        bus.Subscribe<EncodingStartedEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
-        bus.Subscribe<LibraryScanCompletedEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
+        bus.Subscribe<MediaDiscoveredEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
+        bus.Subscribe<MediaAddedEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
+        bus.Subscribe<EncodingStartedEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
+        bus.Subscribe<LibraryScanCompletedEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
-        await bus.PublishAsync(new MediaDiscoveredEvent { FilePath = "/test", LibraryId = Ulid.NewUlid() });
-        await bus.PublishAsync(new MediaAddedEvent { MediaId = 1, MediaType = "movie", Title = "T", LibraryId = Ulid.NewUlid() });
-        await bus.PublishAsync(new EncodingStartedEvent { JobId = 1, InputPath = "/i", OutputPath = "/o", ProfileName = "p" });
-        await bus.PublishAsync(new LibraryScanCompletedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "L", ItemsFound = 5, Duration = TimeSpan.FromSeconds(1) });
+        await bus.PublishAsync(
+            new MediaDiscoveredEvent { FilePath = "/test", LibraryId = Ulid.NewUlid() }
+        );
+        await bus.PublishAsync(
+            new MediaAddedEvent
+            {
+                MediaId = 1,
+                MediaType = "movie",
+                Title = "T",
+                LibraryId = Ulid.NewUlid(),
+            }
+        );
+        await bus.PublishAsync(
+            new EncodingStartedEvent
+            {
+                JobId = 1,
+                InputPath = "/i",
+                OutputPath = "/o",
+                ProfileName = "p",
+            }
+        );
+        await bus.PublishAsync(
+            new LibraryScanCompletedEvent
+            {
+                LibraryId = Ulid.NewUlid(),
+                LibraryName = "L",
+                ItemsFound = 5,
+                Duration = TimeSpan.FromSeconds(1),
+            }
+        );
 
         received.Should().HaveCount(4);
         received[0].Should().BeOfType<MediaDiscoveredEvent>();

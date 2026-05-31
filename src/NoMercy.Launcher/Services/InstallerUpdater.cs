@@ -1,9 +1,6 @@
 using System.Diagnostics;
-using System.IO;
-using System.Net.Http;
 using System.Reflection;
 using System.Security.Cryptography;
-using Newtonsoft.Json;
 using NoMercy.Launcher.Models;
 
 namespace NoMercy.Launcher.Services;
@@ -62,6 +59,14 @@ public class InstallerUpdater(ServerConnection serverConnection)
         );
 
         return Task.FromResult(!isInBinaries);
+    }
+
+    /// <summary>
+    /// GET /manage/activity — returns stream and encode counts from the running server.
+    /// </summary>
+    public async Task<ActivityInfo?> GetActivityAsync(CancellationToken ct = default)
+    {
+        return await serverConnection.GetAsync<ActivityInfo>("/manage/activity", ct);
     }
 
     /// <summary>

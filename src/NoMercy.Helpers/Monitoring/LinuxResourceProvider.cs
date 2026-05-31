@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Helpers.Monitoring;
 
@@ -88,7 +87,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
             CpuSnapshot? prev = _previousSnapshots.FirstOrDefault(s => s.Label == curr.Label);
             double util = prev is null ? 0 : Math.Round(CalculatePercent(prev, curr), 1);
 
-            resource.Cpu.Core.Add(new Core { Index = coreIndex, Utilization = util });
+            resource.Cpu.Core.Add(new() { Index = coreIndex, Utilization = util });
             if (util > max)
                 max = util;
             coreIndex++;
@@ -123,7 +122,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
                     continue;
 
                 snapshots.Add(
-                    new CpuSnapshot(
+                    new(
                         Label: parts[0],
                         User: ParseLong(parts, 1),
                         Nice: ParseLong(parts, 2),
@@ -203,11 +202,11 @@ internal sealed class LinuxResourceProvider : IResourceProvider
         try
         {
             using Process proc = new();
-            proc.StartInfo = new ProcessStartInfo
+            proc.StartInfo = new()
             {
                 FileName = "nvidia-smi",
                 Arguments =
-                    "--query-gpu=index,utilization.gpu,utilization.memory,utilization.encoder,utilization.decoder,power.draw"
+                    "--query-gpu=index,utilization.gpu,utilization.memory,utilization.encoder,utilization.decoder,power.draw,name"
                     + " --format=csv,noheader,nounits",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -225,15 +224,16 @@ internal sealed class LinuxResourceProvider : IResourceProvider
             foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
                 string[] parts = line.Split(',', StringSplitOptions.TrimEntries);
-                if (parts.Length < 6)
+                if (parts.Length < 7)
                     continue;
                 if (!int.TryParse(parts[0], out int index))
                     continue;
 
                 string key = $"gpu/{index}";
-                resource._gpu[key] = new Gpu
+                resource._gpu[key] = new()
                 {
                     Identifier = key,
+                    Name = parts[6],
                     Core = ParseDouble(parts[1]),
                     Memory = ParseDouble(parts[2]),
                     Encode = ParseDouble(parts[3]),
@@ -274,9 +274,11 @@ internal sealed class LinuxResourceProvider : IResourceProvider
                     continue;
 
                 string key = $"gpu/{index}";
-                resource._gpu[key] = new Gpu
+                string amdName = ReadAmdGpuName(cardPath, index);
+                resource._gpu[key] = new()
                 {
                     Identifier = key,
+                    Name = amdName,
                     Core = utilization,
                     D3D = utilization,
                 };
@@ -287,6 +289,27 @@ internal sealed class LinuxResourceProvider : IResourceProvider
         {
             // sysfs not available or no AMD GPU
         }
+    }
+
+    // AMD GPU name from /sys/class/drm/cardN/device/product_name, with fallback.
+    private static string ReadAmdGpuName(string cardPath, int fallbackIndex)
+    {
+        try
+        {
+            string namePath = Path.Combine(cardPath, "device", "product_name");
+            if (File.Exists(namePath))
+            {
+                string name = File.ReadAllText(namePath).Trim();
+                if (!string.IsNullOrWhiteSpace(name))
+                    return name;
+            }
+        }
+        catch
+        {
+            // sysfs read failed — fall through to fallback
+        }
+
+        return $"GPU {fallbackIndex}";
     }
 
     private static double ParseDouble(string s) =>

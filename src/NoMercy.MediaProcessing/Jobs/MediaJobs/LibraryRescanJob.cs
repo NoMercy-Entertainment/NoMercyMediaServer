@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------------------------------------------------
+﻿// ---------------------------------------------------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -24,8 +24,15 @@ public class LibraryRescanJob : AbstractMediaJob
 
         IEventBus? eventBus = EventBusProvider.IsConfigured ? EventBusProvider.Current : null;
 
-        LibraryRepository libraryRepository = new(context);
-        LibraryManager libraryManager = new(libraryRepository, jobDispatcher, context, eventBus);
+        LibraryRepository libraryRepository = new(context, StorageDriver);
+        LibraryManager libraryManager = new(
+            libraryRepository,
+            jobDispatcher,
+            context,
+            StorageDriver,
+            StorageFactory,
+            eventBus
+        );
 
         await libraryManager.ProcessLibrary(LibraryId);
     }

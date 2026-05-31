@@ -1,4 +1,4 @@
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
 
 namespace NoMercy.Tests.Setup;
 

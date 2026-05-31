@@ -27,7 +27,7 @@ public class TmdbMovieClientTests : TmdbTestBase
     public void Constructor_WithZeroId_SetsIdToZero()
     {
         // Arrange & Act
-        using TmdbMovieClient client = new(0);
+        using TmdbMovieClient client = new();
 
         // Assert
         client.Id.Should().Be(0);
@@ -106,7 +106,7 @@ public class TmdbMovieClientTests : TmdbTestBase
         result!.Id.Should().Be(1771); // Mock data provider returns ID 1771, not 155
         result.Title.Should().NotBeNullOrEmpty();
         result.OriginalTitle.Should().NotBeNullOrEmpty();
-        
+
         // Verify that appended data is included
         result.Credits.Should().NotBeNull();
         result.ExternalIds.Should().NotBeNull();
@@ -294,7 +294,10 @@ public class TmdbMovieClientTests : TmdbTestBase
     [InlineData("", "2023-12-31")]
     [InlineData("2023-01-01", "")]
     [InlineData("", "")]
-    public async Task Changes_WithEmptyDateParameters_HandlesGracefully(string startDate, string endDate)
+    public async Task Changes_WithEmptyDateParameters_HandlesGracefully(
+        string startDate,
+        string endDate
+    )
     {
         // Arrange
         using TmdbMovieClient client = CreateMockMovieClient();
@@ -331,7 +334,7 @@ public class TmdbMovieClientTests : TmdbTestBase
         details.Should().NotBeNull();
         credits.Should().NotBeNull();
         externalIds.Should().NotBeNull();
-        
+
         details!.Id.Should().Be(ValidMovieId);
         credits!.Id.Should().Be(ValidMovieId);
         externalIds!.Id.Should().Be(ValidMovieId);
@@ -356,7 +359,7 @@ public class TmdbMovieClientTests : TmdbTestBase
         details.Should().NotBeNull();
         credits.Should().NotBeNull();
         externalIds.Should().NotBeNull();
-        
+
         details!.Id.Should().Be(ValidMovieId);
         credits!.Id.Should().Be(ValidMovieId);
         externalIds!.Id.Should().Be(ValidMovieId);

@@ -47,4 +47,68 @@ public static class Culture
 
         return tag;
     }
+
+    private static readonly Dictionary<string, string> EnglishNameByCode = BuildEnglishNameMap();
+
+    private static Dictionary<string, string> BuildEnglishNameMap()
+    {
+        Dictionary<string, string> map = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (CultureInfo c in CultureInfo.GetCultures(CultureTypes.NeutralCultures))
+        {
+            string iso2 = c.TwoLetterISOLanguageName;
+            string iso3 = c.ThreeLetterISOLanguageName;
+            string name = StripRegion(c.EnglishName);
+
+            if (iso2.Length == 2)
+                map.TryAdd(iso2, name);
+            if (iso3.Length == 3)
+                map.TryAdd(iso3, name);
+        }
+
+        // Map the legacy/bibliographic codes to the same English name as the
+        // ISO 639-3 form (deu→ger, fra→fre, nld→dut etc).
+        foreach (KeyValuePair<string, string> entry in LegacyIsoMap)
+        {
+            if (map.TryGetValue(entry.Key, out string? name))
+                map.TryAdd(entry.Value, name);
+        }
+
+        // Fixed display labels for codes the runtime doesn't carry.
+        map.TryAdd("und", "Unknown");
+        map.TryAdd("mul", "Multiple Languages");
+        map.TryAdd("zxx", "No Language");
+
+        return map;
+    }
+
+    /// <summary>
+    /// Returns the English display name for an ISO 639 language code (2 or 3
+    /// letter). Falls back to the original code uppercased when no match
+    /// exists — never throws, never returns null.
+    /// </summary>
+    public static string EnglishLanguageName(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return "Unknown";
+
+        return EnglishNameByCode.TryGetValue(code, out string? name)
+            ? name
+            : code.ToUpperInvariant();
+    }
+
+    private static string StripRegion(string englishName)
+    {
+        // CultureInfo.EnglishName is "Dutch (Netherlands)" / "English (United States)"
+        // for neutral cultures the parenthesis is absent, but defensive trim
+        // covers both shapes.
+        int paren = englishName.IndexOf(' ', StringComparison.Ordinal);
+        if (paren < 0)
+            return englishName;
+
+        if (englishName[paren..].StartsWith(" (", StringComparison.Ordinal))
+            return englishName[..paren];
+
+        return englishName;
+    }
 }

@@ -256,7 +256,7 @@ public class TvShowRepository(MediaContext context)
         if (show == null)
             return;
 
-        bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+        bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
         // Require Japanese origin to avoid false positives on western co-productions
         if (
@@ -282,17 +282,17 @@ public class TvShowRepository(MediaContext context)
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        // SQLite schema uses DeleteBehavior.Restrict globally.
-        // Temporarily disable FK enforcement so the show and all its dependents
-        // (episodes, video files, user data, seasons, library links) are removed atomically.
+        // SQLite schema uses DeleteBehavior.Restrict globally — the modelBuilder
+        // cascade rules only affect EF's tracked-entity cascades, not bulk
+        // ExecuteDeleteAsync. Without disabling FK enforcement the delete
+        // throws on the first dependent row (seasons, episodes, video files,
+        // userdata, etc.) and the controller returns 500. Mirrors the same
+        // workaround applied in MovieRepository / CollectionRepository.
         //
-        // PRAGMA foreign_keys is a *per-connection* setting in SQLite. EF Core's
+        // PRAGMA foreign_keys is per-connection in SQLite. EF Core's
         // ExecuteSqlRawAsync and ExecuteDeleteAsync each open and close a pooled
-        // connection by default — so a PRAGMA on one call lands on connection A
-        // while the DELETE runs on connection B that still has FK enforcement on,
-        // and the delete fails with "FOREIGN KEY constraint failed". Pin a
-        // single connection across all three statements so the PRAGMA actually
-        // applies to the DELETE that follows it.
+        // connection by default — PRAGMA OFF on connection A doesn't apply to
+        // the DELETE on connection B. Pin one connection across all three calls.
         bool ownsConnection =
             context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
 

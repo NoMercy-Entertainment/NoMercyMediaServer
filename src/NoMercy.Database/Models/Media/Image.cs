@@ -114,9 +114,4 @@ public class Image : ColorPaletteTimeStamps
     [JsonProperty("collection_id")]
     public int? CollectionId { get; set; }
     public virtual Collection? Collection { get; set; }
-
-    public Image()
-    {
-        //
-    }
 }

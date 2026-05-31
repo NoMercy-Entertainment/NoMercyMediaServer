@@ -1,6 +1,4 @@
-using System.Collections.Concurrent;
-using NoMercy.Setup;
-using Xunit;
+using NoMercy.Setup.Boot;
 
 namespace NoMercy.Tests.Setup;
 

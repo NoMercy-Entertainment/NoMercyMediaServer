@@ -1,4 +1,5 @@
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 using Stowage;
 
@@ -8,6 +9,12 @@ public class FolderWatcher : IDisposable
 {
     private static readonly List<IDisposable> Watchers = [];
     private static volatile FolderWatcher? _instance;
+    private readonly IStorageDriver _storageDriver;
+
+    public FolderWatcher(IStorageDriver storageDriver)
+    {
+        _storageDriver = storageDriver;
+    }
 
     public event Action<FileWatcherEventArgs>? OnChanged;
     public event Action<FileWatcherEventArgs>? OnCreated;
@@ -26,7 +33,7 @@ public class FolderWatcher : IDisposable
         List<Action> disposers = [];
         disposers.AddRange(
             from folder in foldersToWatch
-            where Directory.Exists(folder)
+            where _storageDriver.DirectoryExists(folder)
             select CreateWatcher(folder)
         );
 
@@ -78,15 +85,15 @@ public class FolderWatcher : IDisposable
         }
 
         StowageWatcher stowageWatcher = new(storage);
-        stowageWatcher.Changed += (e) =>
+        stowageWatcher.Changed += e =>
         {
             _onFileChanged(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
         };
-        stowageWatcher.Created += (e) =>
+        stowageWatcher.Created += e =>
         {
             _onFileCreated(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
         };
-        stowageWatcher.Deleted += (e) =>
+        stowageWatcher.Deleted += e =>
         {
             _onFileDeleted(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
         };
@@ -152,7 +159,7 @@ public class FolderWatcher : IDisposable
     {
         if (_instance is null)
             return;
-        string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
+        string current = e.FullPath + DateTime.UtcNow.ToString("HHmmssddMMyyyy");
 
         if (e.ChangeType != WatcherChangeTypes.Changed || _instance._prevChanged == current)
             return;
@@ -169,7 +176,7 @@ public class FolderWatcher : IDisposable
     {
         if (_instance is null)
             return;
-        string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
+        string current = e.FullPath + DateTime.UtcNow.ToString("HHmmssddMMyyyy");
 
         if (e.ChangeType != WatcherChangeTypes.Created || _instance._prevCreated == current)
             return;
@@ -186,7 +193,7 @@ public class FolderWatcher : IDisposable
     {
         if (_instance is null)
             return;
-        string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
+        string current = e.FullPath + DateTime.UtcNow.ToString("HHmmssddMMyyyy");
 
         if (e.ChangeType != WatcherChangeTypes.Deleted || _instance._prevDeleted == current)
             return;
@@ -203,7 +210,7 @@ public class FolderWatcher : IDisposable
     {
         if (_instance is null)
             return;
-        string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
+        string current = e.FullPath + DateTime.UtcNow.ToString("HHmmssddMMyyyy");
 
         if (e.ChangeType != WatcherChangeTypes.Renamed || _instance._prevRenamed == current)
             return;
@@ -219,9 +226,10 @@ public class FolderWatcher : IDisposable
         FileWatcherEventArgs fileWatcherEventArgs = new(
             sender as FileSystemWatcher,
             new(WatcherChangeTypes.All, "", "")
-        );
-
-        fileWatcherEventArgs.ErrorEventArgs = e;
+        )
+        {
+            ErrorEventArgs = e,
+        };
 
         _instance?.OnError?.Invoke(fileWatcherEventArgs);
 

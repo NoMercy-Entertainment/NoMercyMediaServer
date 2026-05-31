@@ -13,6 +13,12 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
 
     private static readonly object _writeLock = new();
 
+    /// <summary>
+    /// Signalled once per <see cref="Enqueue"/> call so idle workers wake
+    /// immediately instead of waiting out a fixed poll interval.
+    /// </summary>
+    internal readonly SemaphoreSlim WorkAvailable = new(0);
+
     public void ResetAllReservedJobs()
     {
         lock (_writeLock)
@@ -31,6 +37,8 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
 
             context.AddJob(queueJob);
         }
+
+        WorkAvailable.Release();
     }
 
     public QueueJobModel? Dequeue()
@@ -57,6 +65,28 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
 
                 if (job == null)
                     return job;
+
+                // Child jobs whose coordinator has already failed should not
+                // run — they would produce orphaned output. Move them directly
+                // to FailedJobs with a synthetic exception so the dashboard
+                // shows "failed-by-parent" rather than silently dropping them.
+                if (job.ParentJobId.HasValue && context.IsParentFailed(job.ParentJobId.Value))
+                {
+                    FailedJobModel skipped = new()
+                    {
+                        Uuid = Guid.NewGuid(),
+                        Connection = "default",
+                        Queue = job.Queue,
+                        Payload = job.Payload,
+                        Exception =
+                            $"{{\"Message\":\"Skipped: parent job {job.ParentJobId} failed\"}}",
+                        FailedAt = DateTime.UtcNow,
+                    };
+                    context.AddFailedJob(skipped);
+                    context.RemoveJob(job);
+                    context.SaveChanges();
+                    return null;
+                }
 
                 job.ReservedAt = DateTime.UtcNow;
                 job.Attempts++;
@@ -129,6 +159,49 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                 logger?.LogError("{Message}", e.Message);
             }
         }
+    }
+
+    /// <summary>
+    /// Returns a reserved job to the available pool without executing it.
+    /// Used by resource-gate logic: when the budget is saturated the worker
+    /// releases the reservation and bumps <paramref name="availableAfter"/>
+    /// so the job is not immediately picked up again.
+    /// </summary>
+    /// <remarks>
+    /// Do NOT signal <see cref="WorkAvailable"/> here. The job is deferred by
+    /// <paramref name="availableAfter"/> — there is no new work for OTHER
+    /// workers to wake up for, and the calling worker is about to sleep its
+    /// own retry interval. Releasing the semaphore woke every worker on the
+    /// shared queue runner, which then burnt through the rest of the queue's
+    /// deferred jobs in a tight loop (per-job DB query + JSON deserialize +
+    /// budget probe) before any of them landed under the headroom threshold.
+    /// </remarks>
+    public void ReleaseReservation(QueueJobModel job, TimeSpan availableAfter)
+    {
+        lock (_writeLock)
+        {
+            job.ReservedAt = null;
+            job.AvailableAt = DateTime.UtcNow + availableAfter;
+            job.Attempts = (byte)Math.Max(0, job.Attempts - 1);
+            context.UpdateJob(job);
+            context.SaveChanges();
+        }
+    }
+
+    /// <summary>
+    /// Replaces the serialized payload of a coordinator job in place and
+    /// resets its reservation so it re-enters the queue after
+    /// <paramref name="availableAfter"/>. The job's existing ID and queue
+    /// slot are preserved — no deduplication check fires.
+    /// </summary>
+    public void UpdateJobPayload(int jobId, string newPayload, TimeSpan availableAfter)
+    {
+        lock (_writeLock)
+        {
+            context.UpdateJobPayload(jobId, newPayload, DateTime.UtcNow + availableAfter);
+        }
+
+        WorkAvailable.Release();
     }
 
     public void DeleteJob(QueueJobModel queueJob, int attempt = 0)

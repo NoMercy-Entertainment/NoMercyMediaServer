@@ -140,9 +140,7 @@ public record TrackRowData
         Id = track.Id.ToString();
         Name = track.Name;
         string? colorPaletteStr = track.AlbumColorPalette ?? track.ArtistColorPalette;
-        ColorPalette = !string.IsNullOrEmpty(colorPaletteStr)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(colorPaletteStr)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(colorPaletteStr);
         string? cover = track.AlbumCover ?? track.ArtistCover;
         Cover = cover is not null ? $"/images/music{cover}" : null;
         Path = $"/{track.FolderId}{track.Folder}{track.Filename}";

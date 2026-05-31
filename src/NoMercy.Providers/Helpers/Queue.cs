@@ -1,3 +1,4 @@
+using System.Net;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -5,6 +6,12 @@ namespace NoMercy.Providers.Helpers;
 
 public class Queue(QueueOptions options)
 {
+    // Two separate queues: priority drains first. Inside each, FIFO via
+    // insertion-ordered Dictionary. Without this split, priority=true was
+    // a no-op — Execute() walked keys in insertion order regardless of
+    // the randomized uniqueId, so user-facing TMDB calls sat behind
+    // background metadata fills.
+    private readonly Dictionary<string, Func<Task>> _priorityTasks = [];
     private readonly Dictionary<string, Func<Task>> _tasks = [];
 
     private int _lastRan = Environment.TickCount;
@@ -72,36 +79,43 @@ public class Queue(QueueOptions options)
     {
         lock (_tasks)
         {
-            List<string> keys = _tasks.Keys.ToList();
-
-            foreach (string key in keys)
-            {
-                if (_currentlyHandled >= Options.Concurrent)
-                    break;
-
-                if (!_tasks.TryGetValue(key, out Func<Task>? value))
-                    continue;
-
-                _currentlyHandled++;
-                _tasks.Remove(key);
-
-                try
-                {
-                    Task result = value.Invoke();
-                    Resolve?.Invoke(this, new() { Result = result });
-                }
-                catch (Exception ex)
-                {
-                    Reject?.Invoke(this, new() { Error = ex });
-                }
-                finally
-                {
-                    Finish();
-                }
-            }
+            // Priority queue drains first, then the normal queue. Inside each,
+            // insertion order = FIFO.
+            DrainQueue(_priorityTasks);
+            DrainQueue(_tasks);
         }
 
         return Task.CompletedTask;
+    }
+
+    private void DrainQueue(Dictionary<string, Func<Task>> queue)
+    {
+        List<string> keys = queue.Keys.ToList();
+        foreach (string key in keys)
+        {
+            if (_currentlyHandled >= Options.Concurrent)
+                return;
+
+            if (!queue.TryGetValue(key, out Func<Task>? value))
+                continue;
+
+            _currentlyHandled++;
+            queue.Remove(key);
+
+            try
+            {
+                Task result = value.Invoke();
+                Resolve?.Invoke(this, new() { Result = result });
+            }
+            catch (Exception ex)
+            {
+                Reject?.Invoke(this, new() { Error = ex });
+            }
+            finally
+            {
+                Finish();
+            }
+        }
     }
 
     private Task Dequeue()
@@ -121,17 +135,16 @@ public class Queue(QueueOptions options)
 
         TaskCompletionSource<T> tcs = new();
 
-        string? uniqueId = Ulid.NewUlid().ToString();
-
-        if (priority is true)
-            uniqueId = _r.Next(0, int.MaxValue).ToString();
+        bool isPriority = priority is true;
+        string uniqueId = Ulid.NewUlid().ToString();
 
         lock (_tasks)
         {
-            while (_tasks.ContainsKey(uniqueId))
+            Dictionary<string, Func<Task>> bucket = isPriority ? _priorityTasks : _tasks;
+            while (bucket.ContainsKey(uniqueId))
                 uniqueId = Ulid.NewUlid().ToString();
 
-            _tasks.Add(
+            bucket.Add(
                 uniqueId,
                 async () =>
                 {
@@ -147,14 +160,18 @@ public class Queue(QueueOptions options)
                                 tcs.SetResult(result);
                                 return;
                             }
-                            catch (Exception ex)
+                            catch (HttpRequestException ex)
                                 when (attempt < maxRetries
-                                    && (ex.Message.Contains("502") || ex.Message.Contains("503"))
+                                    && ex.StatusCode
+                                        is HttpStatusCode.BadGateway
+                                            or HttpStatusCode.ServiceUnavailable
+                                            or HttpStatusCode.GatewayTimeout
+                                            or HttpStatusCode.TooManyRequests
                                 )
                             {
                                 int delay = (int)Math.Pow(2, attempt + 1) * 1000;
                                 Logger.App(
-                                    $"Rate limited ({url}), retrying in {delay / 1000}s (attempt {attempt + 1}/{maxRetries})",
+                                    $"Rate limited {ex.StatusCode} ({url}), retrying in {delay / 1000}s (attempt {attempt + 1}/{maxRetries})",
                                     LogEventLevel.Debug
                                 );
                                 await Task.Delay(delay);
@@ -163,11 +180,7 @@ public class Queue(QueueOptions options)
                             {
                                 Reject?.Invoke(this, new() { Error = ex });
                                 tcs.SetException(ex);
-                                if (
-                                    ex.Message.Contains("404")
-                                    || ex.Message.Contains("502")
-                                    || ex.Message.Contains("503")
-                                )
+                                if (IsExpectedTransport(ex))
                                     return;
                                 Logger.App($"Url failed: {url} {ex.Message}", LogEventLevel.Debug);
                                 return;
@@ -179,6 +192,7 @@ public class Queue(QueueOptions options)
                         Semaphore.Release();
                         lock (_tasks)
                         {
+                            _priorityTasks.Remove(uniqueId);
                             _tasks.Remove(uniqueId);
                         }
                     }
@@ -196,6 +210,7 @@ public class Queue(QueueOptions options)
     {
         lock (_tasks)
         {
+            _priorityTasks.Clear();
             _tasks.Clear();
         }
     }
@@ -206,7 +221,7 @@ public class Queue(QueueOptions options)
         {
             lock (_tasks)
             {
-                return _tasks.Count;
+                return _priorityTasks.Count + _tasks.Count;
             }
         }
     }
@@ -214,4 +229,17 @@ public class Queue(QueueOptions options)
     private bool IsEmpty => Size == 0;
 
     private bool ShouldRun => !IsEmpty && _state != State.Stopped;
+
+    private static bool IsExpectedTransport(Exception ex)
+    {
+        return ex
+            is HttpRequestException
+            {
+                StatusCode: HttpStatusCode.NotFound
+                    or HttpStatusCode.BadGateway
+                    or HttpStatusCode.ServiceUnavailable
+                    or HttpStatusCode.GatewayTimeout
+                    or HttpStatusCode.TooManyRequests,
+            };
+    }
 }

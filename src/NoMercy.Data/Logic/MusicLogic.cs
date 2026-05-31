@@ -8,15 +8,16 @@ using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.FFProbe;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.AcoustId.Client;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Storage;
 using NoMercyQueue;
 using Serilog.Events;
 
@@ -25,6 +26,7 @@ namespace NoMercy.Data.Logic;
 public partial class MusicLogic : IAsyncDisposable
 {
     private readonly MediaContext _mediaContext;
+    private readonly IStorageFactory _storageFactory;
     private AcoustIdFingerprint? FingerPrint { get; set; }
     private ConcurrentBag<MediaFile>? Files { get; set; }
     private MediaFolderExtend ListPath { get; set; }
@@ -35,9 +37,15 @@ public partial class MusicLogic : IAsyncDisposable
     private Library Library { get; set; }
     private Folder? Folder { get; set; }
 
-    public MusicLogic(Library library, MediaFolderExtend listPath, MediaContext mediaContext)
+    public MusicLogic(
+        Library library,
+        MediaFolderExtend listPath,
+        MediaContext mediaContext,
+        IStorageFactory storageFactory
+    )
     {
         _mediaContext = mediaContext;
+        _storageFactory = storageFactory;
         Library = library;
         ListPath = listPath;
 
@@ -48,13 +56,20 @@ public partial class MusicLogic : IAsyncDisposable
         AlbumName = match.Groups["album"].Success ? match.Groups["album"].Value : string.Empty;
         Year = match.Groups["year"].Success ? Convert.ToInt32(match.Groups["year"].Value) : 1970;
 
-        string libraryFolder =
-            (match.Groups["library_folder"].Success ? match.Groups["library_folder"].Value : null)
-            ?? string.Empty;
-
+        // Post-migration: Folder.Path = "" (sub-path inside driver root). Match
+        // by resolving each folder's driver root and comparing against the scan path.
         Folder = Library
             .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
-            .FirstOrDefault(folder => folder.Path == libraryFolder);
+            .FirstOrDefault(folder =>
+            {
+                IStorage folderStorage = _storageFactory.For(
+                    folder.Id,
+                    folder.DriverId,
+                    string.Empty
+                );
+                string driverRoot = folderStorage.GetFullPath(folder.Path);
+                return listPath.Path.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
+            });
 
         Logger.App("Files", LogEventLevel.Verbose);
         Logger.App(Files ?? [], LogEventLevel.Verbose);
@@ -410,7 +425,9 @@ public partial class MusicLogic : IAsyncDisposable
             return musicBrainzRelease;
 
         string folder =
-            mediaFile.Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
+            mediaFile
+                .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                ?.Replace("\\" + mediaFile.Name, "")
             ?? string.Empty;
 
         Album insert = new()
@@ -429,7 +446,7 @@ public partial class MusicLogic : IAsyncDisposable
 
             LibraryId = Library.Id,
             FolderId = Folder!.Id,
-            Folder = folder.Replace(Folder.Path, "").Replace("\\", "/"),
+            Folder = folder.Replace(ResolveLibraryRoot(), "").Replace("\\", "/"),
             HostFolder = folder.PathName(),
         };
 
@@ -508,11 +525,7 @@ public partial class MusicLogic : IAsyncDisposable
             TitleSort = musicBrainzArtist.SortName,
 
             Folder = artistFolder,
-            HostFolder = Path.Join(
-                    Library.FolderLibraries.FirstOrDefault()?.Folder.Path,
-                    artistFolder
-                )
-                .PathName(),
+            HostFolder = Path.Join(ResolveLibraryRoot(), artistFolder).PathName(),
             LibraryId = Library.Id,
             FolderId = Folder!.Id,
         };
@@ -604,15 +617,17 @@ public partial class MusicLogic : IAsyncDisposable
             Logger.App($"File Match: {file}", LogEventLevel.Verbose);
             FfProbeData ffProbeData = await FfProbe.CreateAsync(file);
             string folder =
-                mediaFile.Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
+                mediaFile
+                    .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
+                    ?.Replace("\\" + mediaFile.Name, "")
                 ?? string.Empty;
 
-            insert.Filename = "/" + Path.GetFileName(file);
+            insert.Filename = "/" + StoragePathHelpers.GetName(file);
             insert.Quality = (int)Math.Floor(ffProbeData.Format.BitRate / 1000.0);
             insert.Duration = HmsRegex().Replace(ffProbeData.Duration.ToString("hh\\:mm\\:ss"), "");
 
             insert.FolderId = Folder!.Id;
-            insert.Folder = folder.Replace(Folder.Path, "").Replace("\\", "/");
+            insert.Folder = folder.Replace(ResolveLibraryRoot(), "").Replace("\\", "/");
             insert.HostFolder = folder.PathName();
         }
 
@@ -1020,6 +1035,14 @@ public partial class MusicLogic : IAsyncDisposable
     public ValueTask DisposeAsync()
     {
         return ValueTask.CompletedTask;
+    }
+
+    private string ResolveLibraryRoot()
+    {
+        if (Folder is null)
+            return string.Empty;
+        IStorage folderStorage = _storageFactory.For(Folder.Id, Folder.DriverId, string.Empty);
+        return folderStorage.GetFullPath(Folder.Path);
     }
 
     [GeneratedRegex(

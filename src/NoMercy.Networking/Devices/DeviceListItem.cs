@@ -19,15 +19,18 @@ public sealed record DeviceListItem
     [JsonProperty("online")]
     public bool Online { get; init; }
 
-    [JsonProperty("foreground")]
-    public bool Foreground { get; init; }
-
-    [JsonProperty("screen_on")]
-    public bool ScreenOn { get; init; }
-
     [JsonProperty("lan_ip")]
     public string? LanIp { get; init; }
 
     [JsonProperty("last_seen_at")]
     public DateTime? LastSeenAt { get; init; }
+
+    // TV-side device-bus client reports app foreground + screen-on state.
+    // Phone-side picker uses both flags to skip the Cast SDK CEC wake when
+    // the panel is already on with our app on screen.
+    [JsonProperty("foreground")]
+    public bool Foreground { get; init; }
+
+    [JsonProperty("screen_on")]
+    public bool ScreenOn { get; init; }
 }

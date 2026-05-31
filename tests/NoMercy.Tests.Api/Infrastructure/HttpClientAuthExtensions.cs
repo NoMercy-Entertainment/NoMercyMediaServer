@@ -12,8 +12,7 @@ public static class HttpClientAuthExtensions
     {
         client.DefaultRequestHeaders.Remove(TestAuthDefaults.TestAuthHeader);
         client.DefaultRequestHeaders.Add(TestAuthDefaults.TestAuthHeader, TestAuthDefaults.Deny);
-        client.DefaultRequestHeaders.CacheControl =
-            new() { NoCache = true };
+        client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
         return client;
     }
 }

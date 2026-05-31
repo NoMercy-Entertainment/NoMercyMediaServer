@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using NoMercy.Cli.Models;
-using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Extensions;
 using Pastel;
 
@@ -44,7 +44,7 @@ internal static partial class LogsCommand
         command.Options.Add(typeOption);
 
         command.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 int tail = parseResult.GetValue(tailOption);
@@ -63,7 +63,7 @@ internal static partial class LogsCommand
 
                 if (logs is null)
                 {
-                    Console.Error.WriteLine("Could not connect to server.");
+                    await Console.Error.WriteLineAsync("Could not connect to server.");
                     return 1;
                 }
 
@@ -78,11 +78,11 @@ internal static partial class LogsCommand
                 try
                 {
                     using HttpResponseMessage response = await ipc.GetStreamAsync(
-                        $"/manage/logs/stream?backfill=0",
+                        "/manage/logs/stream?backfill=0",
                         ct
                     );
 
-                    using Stream stream = await response.Content.ReadAsStreamAsync(ct);
+                    await using Stream stream = await response.Content.ReadAsStreamAsync(ct);
                     using StreamReader reader = new(stream);
 
                     while (!ct.IsCancellationRequested)
@@ -94,9 +94,18 @@ internal static partial class LogsCommand
                             continue;
 
                         string json = line[6..];
-                        LogEntryResponse? entry = JsonConvert.DeserializeObject<LogEntryResponse>(
-                            json
-                        );
+                        LogEntryResponse? entry;
+                        try
+                        {
+                            entry = JsonConvert.DeserializeObject<LogEntryResponse>(json);
+                        }
+                        catch (JsonException)
+                        {
+                            // Truncated SSE line during a server restart — skip
+                            // and wait for the next clean event instead of
+                            // killing the whole `nomercy logs` session.
+                            continue;
+                        }
                         if (entry is null)
                             continue;
 
@@ -137,7 +146,7 @@ internal static partial class LogsCommand
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"Stream disconnected: {ex.Message}");
+                    await Console.Error.WriteLineAsync($"Stream disconnected: {ex.Message}");
                     return 1;
                 }
 

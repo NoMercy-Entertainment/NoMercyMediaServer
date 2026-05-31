@@ -18,7 +18,8 @@ public class CoverArtCoverArtClientTests
     {
         MethodInfo? method = typeof(CoverArtCoverArtClient).GetMethod(
             "Download",
-            BindingFlags.Public | BindingFlags.Static);
+            BindingFlags.Public | BindingFlags.Static
+        );
 
         Assert.NotNull(method);
         return method;
@@ -26,8 +27,7 @@ public class CoverArtCoverArtClientTests
 
     private static Type GetStateMachineType(MethodInfo method)
     {
-        AsyncStateMachineAttribute? attr = method
-            .GetCustomAttribute<AsyncStateMachineAttribute>();
+        AsyncStateMachineAttribute? attr = method.GetCustomAttribute<AsyncStateMachineAttribute>();
 
         Assert.NotNull(attr);
         return attr.StateMachineType;
@@ -40,8 +40,7 @@ public class CoverArtCoverArtClientTests
 
         Assert.True(method.IsStatic, "Download should be a static method");
 
-        AsyncStateMachineAttribute? attr = method
-            .GetCustomAttribute<AsyncStateMachineAttribute>();
+        AsyncStateMachineAttribute? attr = method.GetCustomAttribute<AsyncStateMachineAttribute>();
         Assert.NotNull(attr);
     }
 
@@ -77,7 +76,8 @@ public class CoverArtCoverArtClientTests
 
         MethodInfo moveNext = stateMachineType.GetMethod(
             "MoveNext",
-            BindingFlags.NonPublic | BindingFlags.Instance)!;
+            BindingFlags.NonPublic | BindingFlags.Instance
+        )!;
 
         Assert.NotNull(moveNext);
 
@@ -107,9 +107,11 @@ public class CoverArtCoverArtClientTests
             }
         }
 
-        Assert.False(callsReadAsStream,
-            "PROV-H12 regression: Download should NOT call ReadAsStreamAsync. " +
-            "Content must be read once as byte[] to avoid stream-consumed-then-reused bug.");
+        Assert.False(
+            callsReadAsStream,
+            "PROV-H12 regression: Download should NOT call ReadAsStreamAsync. "
+                + "Content must be read once as byte[] to avoid stream-consumed-then-reused bug."
+        );
     }
 
     [Fact]
@@ -120,7 +122,8 @@ public class CoverArtCoverArtClientTests
 
         MethodInfo moveNext = stateMachineType.GetMethod(
             "MoveNext",
-            BindingFlags.NonPublic | BindingFlags.Instance)!;
+            BindingFlags.NonPublic | BindingFlags.Instance
+        )!;
 
         Assert.NotNull(moveNext);
 
@@ -150,8 +153,10 @@ public class CoverArtCoverArtClientTests
             }
         }
 
-        Assert.True(callsReadAsByteArray,
-            "PROV-H12: Download must call ReadAsByteArrayAsync to buffer the content once.");
+        Assert.True(
+            callsReadAsByteArray,
+            "PROV-H12: Download must call ReadAsByteArrayAsync to buffer the content once."
+        );
     }
 
     [Fact]
@@ -162,7 +167,8 @@ public class CoverArtCoverArtClientTests
 
         MethodInfo moveNext = stateMachineType.GetMethod(
             "MoveNext",
-            BindingFlags.NonPublic | BindingFlags.Instance)!;
+            BindingFlags.NonPublic | BindingFlags.Instance
+        )!;
 
         byte[] ilBytes = moveNext.GetMethodBody()!.GetILAsByteArray()!;
         Module module = stateMachineType.Module;
@@ -198,7 +204,8 @@ public class CoverArtCoverArtClientTests
 
         MethodInfo moveNext = stateMachineType.GetMethod(
             "MoveNext",
-            BindingFlags.NonPublic | BindingFlags.Instance)!;
+            BindingFlags.NonPublic | BindingFlags.Instance
+        )!;
 
         byte[] ilBytes = moveNext.GetMethodBody()!.GetILAsByteArray()!;
         Module module = stateMachineType.Module;
@@ -213,9 +220,12 @@ public class CoverArtCoverArtClientTests
                 try
                 {
                     MethodBase? calledMethod = module.ResolveMethod(token);
-                    if (calledMethod?.Name is "ReadAsByteArrayAsync"
-                        or "ReadAsStreamAsync"
-                        or "ReadAsStringAsync")
+                    if (
+                        calledMethod?.Name
+                        is "ReadAsByteArrayAsync"
+                            or "ReadAsStreamAsync"
+                            or "ReadAsStringAsync"
+                    )
                     {
                         contentReadCalls++;
                     }
@@ -238,7 +248,8 @@ public class CoverArtCoverArtClientTests
 
         MethodInfo moveNext = stateMachineType.GetMethod(
             "MoveNext",
-            BindingFlags.NonPublic | BindingFlags.Instance)!;
+            BindingFlags.NonPublic | BindingFlags.Instance
+        )!;
 
         byte[] ilBytes = moveNext.GetMethodBody()!.GetILAsByteArray()!;
         Module module = stateMachineType.Module;
@@ -256,8 +267,10 @@ public class CoverArtCoverArtClientTests
                     if (calledMethod?.Name == "Load" && calledMethod.GetParameters().Length > 0)
                     {
                         ParameterInfo firstParam = calledMethod.GetParameters()[0];
-                        if (firstParam.ParameterType == typeof(byte[]) ||
-                            firstParam.ParameterType == typeof(ReadOnlySpan<byte>))
+                        if (
+                            firstParam.ParameterType == typeof(byte[])
+                            || firstParam.ParameterType == typeof(ReadOnlySpan<byte>)
+                        )
                         {
                             hasImageLoadWithByteArray = true;
                         }
@@ -270,8 +283,10 @@ public class CoverArtCoverArtClientTests
             }
         }
 
-        Assert.True(hasImageLoadWithByteArray,
-            "PROV-H12: Image.Load should use the byte[] overload, not Stream, " +
-            "to avoid consuming a stream that might be reused.");
+        Assert.True(
+            hasImageLoadWithByteArray,
+            "PROV-H12: Image.Load should use the byte[] overload, not Stream, "
+                + "to avoid consuming a stream that might be reused."
+        );
     }
 }

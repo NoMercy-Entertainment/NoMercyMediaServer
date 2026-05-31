@@ -1,9 +1,9 @@
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -22,7 +22,7 @@ public class JobQueueTests : IDisposable
 
     public void Dispose()
     {
-        (_adapter as IDisposable)?.Dispose();
+        _adapter?.Dispose();
         _context.Dispose();
     }
 
@@ -35,7 +35,7 @@ public class JobQueueTests : IDisposable
             Queue = "test",
             Payload = "test payload",
             AvailableAt = DateTime.UtcNow,
-            Priority = 1
+            Priority = 1,
         };
 
         // Act
@@ -58,13 +58,13 @@ public class JobQueueTests : IDisposable
         {
             Queue = "test",
             Payload = payload,
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
         QueueJobModel job2 = new()
         {
             Queue = "test",
             Payload = payload,
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
 
         // Act
@@ -84,13 +84,13 @@ public class JobQueueTests : IDisposable
         {
             Queue = "test",
             Payload = "payload1",
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
         QueueJobModel job2 = new()
         {
             Queue = "test",
             Payload = "payload2",
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
 
         _jobQueue.Enqueue(job1);
@@ -127,7 +127,7 @@ public class JobQueueTests : IDisposable
             Payload = "test payload",
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -162,7 +162,7 @@ public class JobQueueTests : IDisposable
             Payload = "test payload",
             AvailableAt = DateTime.UtcNow,
             ReservedAt = DateTime.UtcNow, // Already reserved
-            Attempts = 1
+            Attempts = 1,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -184,7 +184,7 @@ public class JobQueueTests : IDisposable
             Queue = "test-queue",
             Payload = "test payload",
             AvailableAt = DateTime.UtcNow,
-            Attempts = 3 // Exceeds max attempts
+            Attempts = 3, // Exceeds max attempts
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -206,7 +206,7 @@ public class JobQueueTests : IDisposable
             Payload = "low priority",
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         QueueJob highPriorityJob = new()
         {
@@ -214,7 +214,7 @@ public class JobQueueTests : IDisposable
             Payload = "high priority",
             AvailableAt = DateTime.UtcNow,
             Priority = 5,
-            Attempts = 0
+            Attempts = 0,
         };
 
         _context.QueueJobs.AddRange(lowPriorityJob, highPriorityJob);
@@ -239,7 +239,7 @@ public class JobQueueTests : IDisposable
             Payload = "test payload",
             AvailableAt = DateTime.UtcNow,
             ReservedAt = DateTime.UtcNow,
-            Attempts = 1
+            Attempts = 1,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -253,7 +253,7 @@ public class JobQueueTests : IDisposable
             Payload = job.Payload,
             AvailableAt = job.AvailableAt,
             ReservedAt = job.ReservedAt,
-            Attempts = job.Attempts
+            Attempts = job.Attempts,
         };
 
         // Act
@@ -280,7 +280,7 @@ public class JobQueueTests : IDisposable
             Payload = "test payload",
             AvailableAt = DateTime.UtcNow,
             ReservedAt = DateTime.UtcNow,
-            Attempts = 2 // Equals max attempts
+            Attempts = 2, // Equals max attempts
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -294,7 +294,7 @@ public class JobQueueTests : IDisposable
             Payload = job.Payload,
             AvailableAt = job.AvailableAt,
             ReservedAt = job.ReservedAt,
-            Attempts = job.Attempts
+            Attempts = job.Attempts,
         };
 
         // Act
@@ -319,7 +319,7 @@ public class JobQueueTests : IDisposable
         {
             Queue = "test-queue",
             Payload = "test payload",
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -329,7 +329,7 @@ public class JobQueueTests : IDisposable
             Id = job.Id,
             Queue = job.Queue,
             Payload = job.Payload,
-            AvailableAt = job.AvailableAt
+            AvailableAt = job.AvailableAt,
         };
 
         // Act
@@ -351,7 +351,7 @@ public class JobQueueTests : IDisposable
             Queue = "test-queue",
             Payload = "test payload",
             Exception = "Test exception",
-            FailedAt = DateTime.UtcNow
+            FailedAt = DateTime.UtcNow,
         };
         _context.FailedJobs.Add(failedJob);
         _context.SaveChanges();
@@ -398,7 +398,7 @@ public class JobQueueTests : IDisposable
             Queue = "queue1",
             Payload = "payload1",
             Exception = "Exception1",
-            FailedAt = DateTime.UtcNow
+            FailedAt = DateTime.UtcNow,
         };
         FailedJob failedJob2 = new()
         {
@@ -407,7 +407,7 @@ public class JobQueueTests : IDisposable
             Queue = "queue2",
             Payload = "payload2",
             Exception = "Exception2",
-            FailedAt = DateTime.UtcNow
+            FailedAt = DateTime.UtcNow,
         };
 
         _context.FailedJobs.AddRange(failedJob1, failedJob2);
@@ -439,7 +439,7 @@ public class JobQueueTests : IDisposable
             Queue = "queue1",
             Payload = "payload1",
             Exception = "Exception1",
-            FailedAt = DateTime.UtcNow
+            FailedAt = DateTime.UtcNow,
         };
         FailedJob failedJob2 = new()
         {
@@ -448,7 +448,7 @@ public class JobQueueTests : IDisposable
             Queue = "queue2",
             Payload = "payload2",
             Exception = "Exception2",
-            FailedAt = DateTime.UtcNow
+            FailedAt = DateTime.UtcNow,
         };
 
         _context.FailedJobs.AddRange(failedJob1, failedJob2);

@@ -2,9 +2,13 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Storage;
+using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -13,7 +17,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractMusicEncoderJob : IShouldQueue
+public abstract class AbstractMusicEncoderJob : IShouldQueue, IJobStorageInjector
 {
     public Ulid LibraryId { get; set; }
     public Guid Id { get; set; }
@@ -28,10 +32,22 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue
 
     public string InputFile { get; set; } = string.Empty;
 
+    [JsonIgnore]
+    public IStorageFactory StorageFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    public IStorageDriver StorageDriver { get; set; } = null!;
+
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
     public abstract Task Handle();
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
+        StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
+    }
 
     public void Dispose() { }
 }

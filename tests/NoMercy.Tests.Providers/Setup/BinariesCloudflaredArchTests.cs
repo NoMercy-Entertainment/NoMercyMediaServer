@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 using RegexMatch = System.Text.RegularExpressions.Match;
 
 namespace NoMercy.Tests.Providers.Setup;
@@ -16,12 +16,12 @@ public class BinariesCloudflaredArchTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "Binaries.cs");
+            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "Server", "Binaries.cs");
             if (File.Exists(candidate))
                 return candidate;
             dir = Path.GetDirectoryName(dir)!;
         }
-        throw new FileNotFoundException("Could not find src/NoMercy.Setup/Binaries.cs");
+        throw new FileNotFoundException("Could not find src/NoMercy.Setup/Server/Binaries.cs");
     }
 
     private static string GetSourceCode() => File.ReadAllText(SourcePath);
@@ -29,7 +29,7 @@ public class BinariesCloudflaredArchTests
     private static string ExtractDownloadCloudflaredMethod(string source)
     {
         int start = source.IndexOf(
-            "private static async Task DownloadCloudflared()",
+            "private async Task DownloadCloudflared()",
             StringComparison.Ordinal
         );
         Assert.True(start >= 0, "Could not find DownloadCloudflared method in source");
@@ -55,7 +55,7 @@ public class BinariesCloudflaredArchTests
     {
         MethodInfo? method = typeof(Binaries).GetMethod(
             "DownloadCloudflared",
-            BindingFlags.NonPublic | BindingFlags.Static
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
         Assert.NotNull(method);
         Assert.NotNull(method.GetCustomAttribute<AsyncStateMachineAttribute>());

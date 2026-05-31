@@ -9,7 +9,7 @@ internal static class RestartCommand
         Command command = new("restart") { Description = "Restart the server" };
 
         command.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);

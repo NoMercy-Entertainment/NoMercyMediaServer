@@ -1,11 +1,17 @@
+﻿using System.Data;
+using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
+using NoMercy.Encoder.Bundle;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using NoMercyQueue.Workers;
 using Serilog.Events;
 
@@ -19,7 +25,7 @@ public static class DatabaseSeeder
     /// Phase 1: Create database schema (migrations + EnsureCreated).
     /// Does NOT require authentication — safe to call before auth.
     /// </summary>
-    public static async Task InitSchema()
+    public static async Task InitSchema(IStorage storage)
     {
         Logger.Setup("Initializing database schemas...");
 
@@ -29,7 +35,7 @@ public static class DatabaseSeeder
         await EnsureDatabaseCreated(appDbContext);
 
         // Migrate Configuration data from media.db to app.db (one-time on update)
-        await MigrateConfigurationData(appDbContext);
+        await MigrateConfigurationData(appDbContext, storage);
         await appDbContext.DisposeAsync();
 
         // 2. MediaContext — content and metadata
@@ -46,7 +52,7 @@ public static class DatabaseSeeder
         Logger.Setup("Database schemas initialized");
     }
 
-    private static async Task MigrateConfigurationData(AppDbContext appContext)
+    private static async Task MigrateConfigurationData(AppDbContext appContext, IStorage storage)
     {
         // Only migrate if app.db has no Configuration rows AND media.db exists with rows
         bool appHasData = await appContext.Configuration.AnyAsync();
@@ -54,16 +60,16 @@ public static class DatabaseSeeder
             return;
 
         string mediaDbPath = AppFiles.MediaDatabase;
-        if (!File.Exists(mediaDbPath))
+        if (!storage.Exists(mediaDbPath))
             return;
 
         try
         {
             // Check if media.db has a Configuration table with rows
-            using SqliteConnection checkConn = new($"Data Source={mediaDbPath}");
+            await using SqliteConnection checkConn = new($"Data Source={mediaDbPath}");
             await checkConn.OpenAsync();
 
-            using SqliteCommand checkCmd = checkConn.CreateCommand();
+            await using SqliteCommand checkCmd = checkConn.CreateCommand();
             checkCmd.CommandText =
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Configuration'";
             long tableExists = (long)(await checkCmd.ExecuteScalarAsync() ?? 0L);
@@ -74,7 +80,7 @@ public static class DatabaseSeeder
                 return;
             }
 
-            using SqliteCommand countCmd = checkConn.CreateCommand();
+            await using SqliteCommand countCmd = checkConn.CreateCommand();
             countCmd.CommandText = "SELECT COUNT(*) FROM Configuration";
             long rowCount = (long)(await countCmd.ExecuteScalarAsync() ?? 0L);
 
@@ -85,20 +91,20 @@ public static class DatabaseSeeder
 
             // Copy rows using ATTACH DATABASE on the app.db connection
             string appDbPath = AppFiles.AppDatabase;
-            using SqliteConnection appConn = new($"Data Source={appDbPath}");
+            await using SqliteConnection appConn = new($"Data Source={appDbPath}");
             await appConn.OpenAsync();
 
-            using SqliteCommand attachCmd = appConn.CreateCommand();
+            await using SqliteCommand attachCmd = appConn.CreateCommand();
             attachCmd.CommandText = $"ATTACH DATABASE '{mediaDbPath}' AS source";
             await attachCmd.ExecuteNonQueryAsync();
 
-            using SqliteCommand copyCmd = appConn.CreateCommand();
+            await using SqliteCommand copyCmd = appConn.CreateCommand();
             copyCmd.CommandText =
                 "INSERT OR IGNORE INTO Configuration (Key, Value, ModifiedBy, CreatedAt, UpdatedAt) "
                 + "SELECT Key, Value, ModifiedBy, CreatedAt, UpdatedAt FROM source.Configuration";
             int copied = await copyCmd.ExecuteNonQueryAsync();
 
-            using SqliteCommand detachCmd = appConn.CreateCommand();
+            await using SqliteCommand detachCmd = appConn.CreateCommand();
             detachCmd.CommandText = "DETACH DATABASE source";
             await detachCmd.ExecuteNonQueryAsync();
 
@@ -120,16 +126,21 @@ public static class DatabaseSeeder
     /// No network or auth required — safe to call right after InitSchema().
     /// Each seed is individually guarded so one failure doesn't block the rest.
     /// </summary>
-    public static async Task SeedOfflineData()
+    public static async Task SeedOfflineData(IStorage storage, IStorageDriver storageDriver)
     {
         AppDbContext appDbContext = new();
         MediaContext mediaDbContext = new();
 
         Func<Task>[] offlineSeeds =
         [
-            () => ConfigSeed.Init(appDbContext),
-            () => LibrariesSeed.Init(mediaDbContext),
-            () => EncoderProfilesSeed.Init(mediaDbContext),
+            () => appDbContext.Init(),
+            () => SeedSystemLocalDriver(mediaDbContext),
+            () => V1DriverBridgeSeed.RunAsync(mediaDbContext),
+            () => LibrariesSeed.Init(mediaDbContext, storage, storageDriver),
+            () => EncodingPresetsSeed.Init(mediaDbContext, storage),
+            () => EncodingPresetsSeed.SeedExamplesAsync(mediaDbContext),
+            () => EncodingPresetsSeed.BackfillV1ToV2Async(mediaDbContext),
+            () => LoadDiskOverlaysAsync(mediaDbContext),
         ];
 
         foreach (Func<Task> seed in offlineSeeds)
@@ -149,11 +160,11 @@ public static class DatabaseSeeder
     /// Seed provider data (TMDB genres, languages, certifications, etc.).
     /// Requires API keys (no auth). Called early in startup before any import jobs.
     /// </summary>
-    public static async Task Run()
+    public static async Task Run(IStorage storage, IStorageDriver storageDriver)
     {
         MediaContext mediaDbContext = new();
 
-        await SeedOfflineData();
+        await SeedOfflineData(storage, storageDriver);
 
         Func<Task>[] seeds =
         [
@@ -177,20 +188,134 @@ public static class DatabaseSeeder
         }
     }
 
+    public static async Task LoadDiskOverlaysAsync(MediaContext context)
+    {
+        string overlayDir = Path.Combine(AppFiles.DataPath, "profiles");
+        Directory.CreateDirectory(overlayDir);
+
+        Encoder.Profiles.DiskOverlayLoader.LoadResult overlay =
+            Encoder.Profiles.DiskOverlayLoader.Load(overlayDir);
+
+        foreach (string error in overlay.Errors)
+            Logger.Setup($"Disk overlay load error: {error}", LogEventLevel.Warning);
+
+        foreach (Encoder.Profiles.DiskOverlayLoader.LoadedPreset entry in overlay.Loaded)
+        {
+            Encoder.Profiles.EncodingProfile p = entry.Profile;
+            Database.Models.Media.EncodingPreset? existing =
+                await context.EncodingPresets.FirstOrDefaultAsync(x => x.Id == p.Id);
+
+            if (existing is null)
+            {
+                context.EncodingPresets.Add(
+                    new()
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Description = entry.Description,
+                        ProfileJson = Newtonsoft.Json.JsonConvert.SerializeObject(p),
+                        ParentPresetId = entry.ParentPresetId,
+                        IsBuiltIn = false,
+                        Source = $"disk:{Path.GetFileName(entry.SourcePath)}",
+                    }
+                );
+            }
+            else if (existing.IsBuiltIn)
+            {
+                Logger.Setup(
+                    $"Disk overlay '{entry.SourcePath}' has Ulid {p.Id} that collides with a built-in preset '{existing.Name}'. "
+                        + "Built-ins are immutable; disk overlay rejected. Use a different Ulid to coexist.",
+                    LogEventLevel.Warning
+                );
+            }
+            else
+            {
+                existing.Name = p.Name;
+                existing.Description = entry.Description ?? existing.Description;
+                existing.ProfileJson = Newtonsoft.Json.JsonConvert.SerializeObject(p);
+                existing.ParentPresetId = entry.ParentPresetId;
+                existing.Source = $"disk:{Path.GetFileName(entry.SourcePath)}";
+            }
+        }
+
+        await context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Ensures the built-in system local driver row exists. Idempotent — skips
+    /// if the row is already present. The driver uses an empty rootPath so
+    /// StorageFactory builds each folder's guard from the folder's own subPath,
+    /// giving per-folder path isolation without a separate driver per folder.
+    /// </summary>
+    public static async Task SeedSystemLocalDriver(MediaContext mediaContext)
+    {
+        bool exists = await mediaContext.Drivers.AnyAsync(d => d.Id == Driver.SystemLocalDriverId);
+        if (exists)
+            return;
+
+        Driver systemLocalDriver = new()
+        {
+            Id = Driver.SystemLocalDriverId,
+            Name = "Local",
+            Type = "local",
+            Config = "{\"rootPath\":\"\"}",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+
+        mediaContext.Drivers.Add(systemLocalDriver);
+        await mediaContext.SaveChangesAsync();
+
+        Logger.Setup("Seeded system local driver", LogEventLevel.Verbose);
+    }
+
+    /// <summary>
+    /// Runs the bundle-slug rename pass after DI is available. Must be called
+    /// after <see cref="Run"/> so the <see cref="IStorageFactory"/> singleton
+    /// is fully configured with driver config resolvers.
+    /// </summary>
+    public static async Task RunBundleSlugRenamePassAsync(IStorageFactory storageFactory)
+    {
+        if (BuiltinPresetRenames.SlugRenames.Count == 0)
+            return;
+
+        try
+        {
+            MediaContext context = new();
+            BundleSlugRenamer renamer = new(
+                BuiltinPresetRenames.SlugRenames,
+                storageFactory,
+                context
+            );
+            await renamer.RunAsync();
+            Logger.Setup("Bundle slug rename pass complete", LogEventLevel.Verbose);
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup($"Bundle slug rename pass failed: {ex.Message}", LogEventLevel.Warning);
+        }
+    }
+
     /// <summary>
     /// Seed auth-dependent data (users, library assignment, claims).
     /// Called after auth completes via BootOrchestrator.
     /// </summary>
-    public static async Task SeedAuthData()
+    public static async Task SeedAuthData(IStorage storage)
     {
         MediaContext mediaDbContext = new();
 
         Func<Task>[] seeds =
         [
-            () => UsersSeed.Init(mediaDbContext),
+            () => UsersSeed.Init(mediaDbContext, storage),
             () => AssignOwnerToUnassignedLibraries(mediaDbContext),
             () => ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext),
         ];
+
+        if (ShouldSeedMarvel)
+        {
+            Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
+            thread.Start();
+        }
 
         foreach (Func<Task> seed in seeds)
         {
@@ -202,12 +327,6 @@ public static class DatabaseSeeder
             {
                 Logger.Setup($"Auth seed failed: {ex.Message}", LogEventLevel.Warning);
             }
-        }
-
-        if (ShouldSeedMarvel)
-        {
-            Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
-            thread.Start();
         }
     }
 
@@ -233,7 +352,7 @@ public static class DatabaseSeeder
 
             foreach (Library library in unassigned)
             {
-                mediaContext.LibraryUser.Add(new LibraryUser(library.Id, owner.Id));
+                mediaContext.LibraryUser.Add(new(library.Id, owner.Id));
             }
 
             await mediaContext.SaveChangesAsync();
@@ -254,16 +373,16 @@ public static class DatabaseSeeder
 
         // Check if migration history table exists to determine DB state.
         // Do NOT run PRAGMA commands first — they create an empty .db file
-        // which causes CanConnect() to return true on a fresh install.
+        // which causes CanConnect() to return true on a fresh installation.
         // NOTE: Must use raw ADO.NET here — ExecuteSqlRaw returns rows-affected (-1 for SELECT),
         // not the query result, so it can't be used to read a scalar value.
         bool migrationTableExists = false;
         try
         {
-            System.Data.Common.DbConnection connection = context.Database.GetDbConnection();
-            if (connection.State != System.Data.ConnectionState.Open)
+            DbConnection connection = context.Database.GetDbConnection();
+            if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using System.Data.Common.DbCommand command = connection.CreateCommand();
+            using DbCommand command = connection.CreateCommand();
             command.CommandText =
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory'";
             migrationTableExists = Convert.ToInt64(command.ExecuteScalar()) > 0;
@@ -274,52 +393,62 @@ public static class DatabaseSeeder
         }
 
         List<string> availableMigrations = context.Database.GetMigrations().ToList();
-        List<string> appliedMigrations = migrationTableExists
-            ? context.Database.GetAppliedMigrations().ToList()
-            : [];
 
-        if (migrationTableExists && appliedMigrations.Count == availableMigrations.Count)
+        // Self-heal: if the migration-history table says a migration has been
+        // applied but its physical tables are missing, EF's GetPendingMigrations()
+        // returns empty and we skip Migrate(). That's how a half-applied
+        // schema gets stuck. Scan the applied list for migrations whose
+        // expected tables don't exist and unstamp them so the next
+        // GetPendingMigrations() reports them as pending.
+        if (migrationTableExists)
+        {
+            UnstampMigrationsMissingTables(context, contextName);
+        }
+
+        // Use pending list as the source of truth — count equality was too
+        // weak (same count by coincidence silently skipped new migrations).
+        List<string> pendingMigrations = migrationTableExists
+            ? context.Database.GetPendingMigrations().ToList()
+            : availableMigrations;
+
+        if (pendingMigrations.Count == 0)
         {
             Logger.Setup(
-                $"{contextName}: Database is up to date. No migrations needed.",
+                $"{contextName}: Database is up to date ({availableMigrations.Count} migrations applied).",
                 LogEventLevel.Verbose
             );
         }
         else
         {
-            List<string> pendingMigrations = context.Database.GetPendingMigrations().ToList();
+            Logger.Setup(
+                $"{contextName}: Applying {pendingMigrations.Count} migration(s): {string.Join(", ", pendingMigrations)}",
+                LogEventLevel.Verbose
+            );
 
-            if (pendingMigrations.Count > 0)
+            string? dbPath = context.Database.GetDbConnection().DataSource;
+            if (!string.IsNullOrEmpty(dbPath))
+                DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrations.Count);
+
+            try
             {
+                context.Database.Migrate();
                 Logger.Setup(
-                    $"{contextName}: Applying {pendingMigrations.Count} migration(s)...",
+                    $"{contextName}: Migrations applied successfully.",
                     LogEventLevel.Verbose
                 );
-                try
-                {
-                    context.Database.Migrate();
-                    Logger.Setup(
-                        $"{contextName}: Migrations applied successfully.",
-                        LogEventLevel.Verbose
-                    );
-                }
-                catch (Exception ex) when (ex.Message.Contains("already exists"))
-                {
-                    Logger.Setup(
-                        $"{contextName}: Tables already exist. Syncing migration history...",
-                        LogEventLevel.Verbose
-                    );
-                    SyncMigrationHistory(
-                        context,
-                        migrationTableExists,
-                        pendingMigrations,
-                        availableMigrations
-                    );
-                }
             }
-            else
+            catch (Exception ex) when (ex.Message.Contains("already exists"))
             {
-                Logger.Setup($"{contextName}: No pending migrations found.", LogEventLevel.Verbose);
+                Logger.Setup(
+                    $"{contextName}: Tables already exist. Syncing migration history...",
+                    LogEventLevel.Verbose
+                );
+                SyncMigrationHistory(
+                    context,
+                    migrationTableExists,
+                    pendingMigrations,
+                    availableMigrations
+                );
             }
         }
 
@@ -328,6 +457,124 @@ public static class DatabaseSeeder
         context.Database.ExecuteSqlRaw("PRAGMA encoding = 'UTF-8'");
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Detects migrations that are marked as applied in __EFMigrationsHistory
+    /// but whose <c>CREATE TABLE</c> statements never actually ran — the
+    /// physical table is missing. Unstamps those rows so the next
+    /// <c>Migrate()</c> call sees them as pending and applies them.
+    ///
+    /// How this state happens: a prior SyncMigrationHistory call (triggered
+    /// by an "already exists" catch on an unrelated migration) can mark
+    /// every pending migration as applied even though only one of them
+    /// actually ran. Future runs then short-circuit because history says
+    /// "all applied."
+    /// </summary>
+    private static void UnstampMigrationsMissingTables(DbContext context, string contextName)
+    {
+        IReadOnlyDictionary<string, string> migrationTables = GetExpectedTablesPerMigration(
+            context
+        );
+        if (migrationTables.Count == 0)
+            return;
+
+        HashSet<string> existingTables = GetExistingTables(context);
+        List<string> appliedMigrations = context.Database.GetAppliedMigrations().ToList();
+
+        List<string> toUnstamp = [];
+        foreach (string migrationId in appliedMigrations)
+        {
+            if (!migrationTables.TryGetValue(migrationId, out string? expectedTable))
+                continue;
+            if (string.IsNullOrEmpty(expectedTable))
+                continue;
+            if (existingTables.Contains(expectedTable))
+                continue;
+
+            toUnstamp.Add(migrationId);
+        }
+
+        if (toUnstamp.Count == 0)
+            return;
+
+        Logger.Setup(
+            $"{contextName}: Detected {toUnstamp.Count} stamped-but-missing migration(s), "
+                + $"unstamping so they re-apply: {string.Join(", ", toUnstamp)}",
+            LogEventLevel.Warning
+        );
+
+        foreach (string migrationId in toUnstamp)
+        {
+            try
+            {
+                context.Database.ExecuteSqlRaw(
+                    "DELETE FROM __EFMigrationsHistory WHERE MigrationId = {0}",
+                    migrationId
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup(
+                    $"{contextName}: Could not unstamp {migrationId}: {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+        }
+    }
+
+    /// <summary>
+    /// Walks the model snapshot to produce a map of <c>migrationId → primary
+    /// table name</c>. We only need the table name a migration creates;
+    /// if multiple tables land in one migration we track the first one
+    /// (usually enough to detect the "stamped but not run" state).
+    /// </summary>
+    private static IReadOnlyDictionary<string, string> GetExpectedTablesPerMigration(
+        DbContext context
+    )
+    {
+        Dictionary<string, string> result = new()
+        {
+            // We can't reliably ask EF for the Up/Down operations per migration
+            // without reflection on generated types. Instead, keep a small curated
+            // lookup for migrations whose primary table is the failure surface —
+            // this list grows as new tables are added. The fallback is "unknown
+            // migration" which we treat as safe (don't unstamp).
+            ["20260416210105_AddEncodingHistoryTable"] = "EncodingHistory",
+            ["20260417010426_AddEncodingPresetTable"] = "EncodingPresets",
+            ["20260417011900_AddContentSegmentTable"] = "ContentSegments",
+        };
+
+        // Context-type filtering: only return entries whose migration name
+        // appears in the context's migration set.
+        HashSet<string> known = context.Database.GetMigrations().ToHashSet();
+        return result
+            .Where(kv => known.Contains(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+    }
+
+    private static HashSet<string> GetExistingTables(DbContext context)
+    {
+        HashSet<string> tables = new(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            DbConnection connection = context.Database.GetDbConnection();
+            if (connection.State != ConnectionState.Open)
+                connection.Open();
+
+            using DbCommand command = connection.CreateCommand();
+            command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table'";
+            using DbDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+                tables.Add(reader.GetString(0));
+        }
+        catch
+        {
+            // Best-effort — on failure we just skip the self-heal step.
+        }
+
+        return tables;
     }
 
     private static void SyncMigrationHistory(

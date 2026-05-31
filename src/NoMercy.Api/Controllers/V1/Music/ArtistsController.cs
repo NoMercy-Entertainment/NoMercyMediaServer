@@ -10,6 +10,7 @@ using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
@@ -19,6 +20,7 @@ using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -32,16 +34,19 @@ public class ArtistsController : BaseController
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
     private readonly IEventBus _eventBus;
+    private readonly IStorageFactory _storageFactory;
 
     public ArtistsController(
         MusicRepository musicService,
         MediaContext mediaContext,
-        IEventBus eventBus
+        IEventBus eventBus,
+        IStorageFactory storageFactory
     )
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
         _eventBus = eventBus;
+        _storageFactory = storageFactory;
     }
 
     [HttpGet]
@@ -232,18 +237,25 @@ public class ArtistsController : BaseController
 
         if (request.Cover is not null)
         {
+            Match coverMatch = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)");
+            if (!coverMatch.Success)
+                return BadRequestResponse("Cover must be a data:image/...;base64,... payload");
+
+            byte[] binData;
+            try
+            {
+                binData = Convert.FromBase64String(coverMatch.Groups["data"].Value);
+            }
+            catch (FormatException)
+            {
+                return BadRequestResponse("Cover payload is not valid base64");
+            }
+
             cover = $"/{slug}.jpg";
             string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
 
             await using (FileStream stream = new(filePath, FileMode.Create))
-            {
-                string base64Data = Regex
-                    .Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)")
-                    .Groups["data"]
-                    .Value;
-                byte[] binData = Convert.FromBase64String(base64Data);
                 await stream.WriteAsync(binData);
-            }
 
             colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
         }
@@ -278,6 +290,7 @@ public class ArtistsController : BaseController
 
         Artist? artist = await _mediaContext
             .Artists.Include(artist => artist.LibraryFolder)
+                .ThenInclude((Folder folder) => folder.Driver)
             .FirstOrDefaultAsync(artist => artist.Id == id);
 
         if (artist is null)
@@ -285,7 +298,12 @@ public class ArtistsController : BaseController
 
         string slug = artist.Name.ToSlug();
 
-        string libraryRootFolder = artist.LibraryFolder.Path;
+        IStorage folderStorage = _storageFactory.For(
+            artist.LibraryFolder.Id,
+            artist.LibraryFolder.DriverId,
+            string.Empty
+        );
+        string libraryRootFolder = folderStorage.GetFullPath(artist.LibraryFolder.Path);
         if (string.IsNullOrEmpty(libraryRootFolder))
             return UnprocessableEntityResponse("Artist library folder not found");
 

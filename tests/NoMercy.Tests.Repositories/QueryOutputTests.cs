@@ -373,7 +373,7 @@ public class QueryOutputTests : IDisposable
         HomeRepository repository = new();
         _interceptor.Clear();
 
-        await repository.GetHomeGenresAsync(_context, SeedConstants.UserId, "en", 10, 0);
+        await repository.GetHomeGenresAsync(_context, SeedConstants.UserId, "en", 10);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -407,7 +407,14 @@ public class QueryOutputTests : IDisposable
         LibraryRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetLibraryByIdAsync(SeedConstants.MovieLibraryId, SeedConstants.UserId, "en", "US", 10, 0);
+        await repository.GetLibraryByIdAsync(
+            SeedConstants.MovieLibraryId,
+            SeedConstants.UserId,
+            "en",
+            "US",
+            10,
+            0
+        );
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -422,7 +429,13 @@ public class QueryOutputTests : IDisposable
         LibraryRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetLibraryMovieCardsAsync(SeedConstants.UserId, SeedConstants.MovieLibraryId, "US", 10, 0);
+        await repository.GetLibraryMovieCardsAsync(
+            SeedConstants.UserId,
+            SeedConstants.MovieLibraryId,
+            "US",
+            10,
+            0
+        );
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -439,7 +452,13 @@ public class QueryOutputTests : IDisposable
         LibraryRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetLibraryTvCardsAsync(SeedConstants.UserId, SeedConstants.TvLibraryId, "US", 10, 0);
+        await repository.GetLibraryTvCardsAsync(
+            SeedConstants.UserId,
+            SeedConstants.TvLibraryId,
+            "US",
+            10,
+            0
+        );
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -457,7 +476,14 @@ public class QueryOutputTests : IDisposable
         _interceptor.Clear();
 
         await repository.GetPaginatedLibraryMovies(
-            SeedConstants.UserId, SeedConstants.MovieLibraryId, "F", "en", "US", 10, 0);
+            SeedConstants.UserId,
+            SeedConstants.MovieLibraryId,
+            "F",
+            "en",
+            "US",
+            10,
+            0
+        );
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -474,7 +500,14 @@ public class QueryOutputTests : IDisposable
         _interceptor.Clear();
 
         await repository.GetPaginatedLibraryShows(
-            SeedConstants.UserId, SeedConstants.TvLibraryId, "B", "en", "US", 10, 0);
+            SeedConstants.UserId,
+            SeedConstants.TvLibraryId,
+            "B",
+            "en",
+            "US",
+            10,
+            0
+        );
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -609,7 +642,7 @@ public class QueryOutputTests : IDisposable
         CollectionRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetCollectionItems(SeedConstants.UserId, "en", "US", 10, 0);
+        await repository.GetCollectionItems(SeedConstants.UserId, "en", "US", 10);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -648,8 +681,10 @@ public class QueryOutputTests : IDisposable
         Assert.Contains("Collections", sql);
         Assert.Contains("LibraryUser", sql);
         // CollectionMovie and VideoFiles may appear in split queries
-        Assert.True(_interceptor.CapturedSql.Count >= 1,
-            "Expected at least one query for collection playlist");
+        Assert.True(
+            _interceptor.CapturedSql.Count >= 1,
+            "Expected at least one query for collection playlist"
+        );
     }
 
     #endregion
@@ -691,7 +726,7 @@ public class QueryOutputTests : IDisposable
         SpecialRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetSpecialItems(SeedConstants.UserId, "en", "US", 10, 0);
+        await repository.GetSpecialItems(SeedConstants.UserId, "en", "US", 10);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -954,7 +989,7 @@ public class QueryOutputTests : IDisposable
         HomeRepository repository = new();
         _interceptor.Clear();
 
-        await repository.GetHomeGenresAsync(_context, SeedConstants.UserId, "en", 10, 0);
+        await repository.GetHomeGenresAsync(_context, SeedConstants.UserId, "en", 10);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);

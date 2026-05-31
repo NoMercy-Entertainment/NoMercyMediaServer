@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
@@ -18,6 +19,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -31,11 +33,17 @@ public class HomeController : BaseController
 {
     private readonly HomeService _homeService;
     private readonly IDbContextFactory<MediaContext> _contextFactory;
+    private readonly IStorage _transcodeStorage;
 
-    public HomeController(HomeService homeService, IDbContextFactory<MediaContext> contextFactory)
+    public HomeController(
+        HomeService homeService,
+        IDbContextFactory<MediaContext> contextFactory,
+        [FromKeyedServices("transcode")] IStorage transcodeStorage
+    )
     {
         _homeService = homeService;
         _contextFactory = contextFactory;
+        _transcodeStorage = transcodeStorage;
     }
 
     [HttpGet]
@@ -74,7 +82,7 @@ public class HomeController : BaseController
             return Ok(response);
 
         LibraryRepository libraryRepository = new(await _contextFactory.CreateDbContextAsync(ct));
-        List<Library> libraries = await libraryRepository.GetLibraries(userId);
+        List<Library> libraries = await libraryRepository.GetLibrariesLite(userId, ct);
 
         // Fetch all library data in parallel - each task needs its own MediaContext for thread safety
         Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = libraries
@@ -225,12 +233,11 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
-        string folder = Path.Combine(AppFiles.TranscodePath, trailerId);
-        string jsonFile = Path.Combine(folder, "info.json");
+        string infoJsonPath = _transcodeStorage.CombinePath(trailerId, "info.json");
 
-        if (System.IO.File.Exists(jsonFile))
+        if (await _transcodeStorage.ExistsAsync(infoJsonPath, ct))
         {
-            string text = await System.IO.File.ReadAllTextAsync(jsonFile, ct);
+            string text = await _transcodeStorage.ReadAllTextAsync(infoJsonPath, ct);
             TrailerInfo? trailerInfo = text.FromJson<TrailerInfo>();
             if (trailerInfo is not null)
             {
@@ -250,10 +257,10 @@ public class HomeController : BaseController
             return NotFoundResponse("Trailer not found");
         }
 
-        if (!Directory.Exists(folder))
-            Directory.CreateDirectory(folder);
+        if (!await _transcodeStorage.ExistsAsync(trailerId, ct))
+            await _transcodeStorage.CreateDirectoryAsync(trailerId, ct);
 
-        await System.IO.File.WriteAllTextAsync(jsonFile, result.StandardOutput, ct);
+        await _transcodeStorage.WriteAllTextAsync(infoJsonPath, result.StandardOutput, ct);
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Trailer found" });
     }
@@ -271,11 +278,11 @@ public class HomeController : BaseController
 
         string language = Language();
 
-        string folder = Path.Combine(AppFiles.TranscodePath, trailerId);
-        if (!Directory.Exists(folder))
-            Directory.CreateDirectory(folder);
+        if (!await _transcodeStorage.ExistsAsync(trailerId, ct))
+            await _transcodeStorage.CreateDirectoryAsync(trailerId, ct);
 
-        string text = await System.IO.File.ReadAllTextAsync(Path.Combine(folder, "info.json"), ct);
+        string infoJsonPath = _transcodeStorage.CombinePath(trailerId, "info.json");
+        string text = await _transcodeStorage.ReadAllTextAsync(infoJsonPath, ct);
         TrailerInfo? trailerInfo = text.FromJson<TrailerInfo>();
 
         if (trailerInfo is null)
@@ -284,7 +291,8 @@ public class HomeController : BaseController
             return NotFoundResponse("Trailer not found");
         }
 
-        if (System.IO.File.Exists(Path.Combine(folder, "video_00002.ts")))
+        string firstSegmentPath = _transcodeStorage.CombinePath(trailerId, "video_00002.ts");
+        if (await _transcodeStorage.ExistsAsync(firstSegmentPath, ct))
         {
             return Ok(
                 new VideoPlaylistResponseDto
@@ -320,59 +328,70 @@ public class HomeController : BaseController
             );
         }
 
-        _ = Task.Run(() =>
-        {
-            try
+        string trailerWorkDir = Path.Combine(AppFiles.TranscodePath, trailerId);
+
+        _ = Task.Run(
+            () =>
             {
-                StringBuilder sb = new();
-
-                sb.Append(AppFiles.YtdlpPath);
-                sb.Append(
-                    " -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" "
-                );
-
-                if (!string.IsNullOrEmpty(language))
-                    sb.Append($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
-
-                sb.Append(trailerId);
-
-                sb.Append(" -o - ");
-                sb.Append(
-                    $" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast "
-                );
-                sb.Append(
-                    "-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 "
-                );
-
-                if (Software.IsWindows)
+                try
                 {
-                    Logger.Encoder($"cmd -c \"{sb}\"", LogEventLevel.Debug);
-                    Shell.ExecSync("cmd", $"/c \"{sb}\"", new() { WorkingDirectory = folder });
+                    StringBuilder sb = new();
+
+                    sb.Append(AppFiles.YtdlpPath);
+                    sb.Append(
+                        " -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" "
+                    );
+
+                    if (!string.IsNullOrEmpty(language))
+                        sb.Append(
+                            $" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs "
+                        );
+
+                    sb.Append(trailerId);
+
+                    sb.Append(" -o - ");
+                    sb.Append(
+                        $" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast "
+                    );
+                    sb.Append(
+                        "-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 "
+                    );
+
+                    if (Software.IsWindows)
+                    {
+                        Logger.Encoder($"cmd -c \"{sb}\"", LogEventLevel.Debug);
+                        Shell.ExecSync(
+                            "cmd",
+                            $"/c \"{sb}\"",
+                            new() { WorkingDirectory = trailerWorkDir }
+                        );
+                    }
+                    else
+                    {
+                        Logger.Encoder($"/bin/bash -c \"{sb}\"", LogEventLevel.Debug);
+                        Shell.ExecSync(
+                            "/bin/bash",
+                            $"-c \"{sb}\"",
+                            new() { WorkingDirectory = trailerWorkDir }
+                        );
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Logger.Encoder($"/bin/bash -c \"{sb}\"", LogEventLevel.Debug);
-                    Shell.ExecSync(
-                        "/bin/bash",
-                        $"-c \"{sb}\"",
-                        new() { WorkingDirectory = folder }
+                    Logger.Encoder(
+                        $"Trailer download failed for {trailerId}: {ex.Message}",
+                        LogEventLevel.Error
                     );
                 }
-            }
-            catch (Exception ex)
-            {
-                Logger.Encoder(
-                    $"Trailer download failed for {trailerId}: {ex.Message}",
-                    LogEventLevel.Error
-                );
-            }
-        });
+            },
+            ct
+        );
 
         using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(
             HttpContext.RequestAborted
         );
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
-        while (!System.IO.File.Exists(Path.Combine(folder, "video_00002.ts")))
+        while (!await _transcodeStorage.ExistsAsync(firstSegmentPath, ct))
         {
             await Task.Delay(1000, timeoutCts.Token);
         }
@@ -422,20 +441,20 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
-        string folder = Path.Combine(AppFiles.TranscodePath, trailerId);
-
-        if (!Directory.Exists(folder))
+        if (!await _transcodeStorage.ExistsAsync(trailerId, ct))
             return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Trailer removed" });
+
+        string trailerAbsPath = Path.Combine(AppFiles.TranscodePath, trailerId);
 
         try
         {
-            Directory.Delete(folder, recursive: true);
-            Logger.Encoder($"Trailer folder deleted: {folder}");
+            await _transcodeStorage.DeleteDirectoryAsync(trailerId, recursive: true, ct: ct);
+            Logger.Encoder($"Trailer folder deleted: {trailerAbsPath}");
         }
         catch (Exception ex)
         {
             Logger.Encoder(
-                $"Failed to delete trailer folder {folder}: {ex.Message}",
+                $"Failed to delete trailer folder {trailerAbsPath}: {ex.Message}",
                 LogEventLevel.Error
             );
             return InternalServerErrorResponse("Failed to remove trailer");

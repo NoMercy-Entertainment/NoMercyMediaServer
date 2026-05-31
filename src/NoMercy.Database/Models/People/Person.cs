@@ -97,9 +97,4 @@ public class Person : ColorPaletteTimeStamps
                 : JsonConvert.DeserializeObject<TmdbPersonExternalIds>(_externalIds);
         set => _externalIds = JsonConvert.SerializeObject(value);
     }
-
-    public Person()
-    {
-        //
-    }
 }

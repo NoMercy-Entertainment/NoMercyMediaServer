@@ -30,7 +30,13 @@ public class HubErrorLoggingFilter : IHubFilter
             return await next(invocationContext);
         }
 
-        Guid userId = Guid.Parse(guid);
+        if (!Guid.TryParse(guid, out Guid userId))
+        {
+            Logger.Socket(
+                $"[{hubName}] Malformed user GUID claim '{guid}' on connection {connectionId}"
+            );
+            return await next(invocationContext);
+        }
         User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user == null)
@@ -41,44 +47,12 @@ public class HubErrorLoggingFilter : IHubFilter
 
         try
         {
-            // Log the method invocation for debugging
-            // Logger.Socket($"{user.Name}: [{hubName}] Invoking method '{methodName}' from connection {connectionId}");
-
-            if (invocationContext.HubMethodArguments.Count > 0)
-            {
-                string args = string.Join(
-                    ", ",
-                    invocationContext.HubMethodArguments.Select(
-                        (arg, index) =>
-                        {
-                            if (arg == null)
-                                return $"arg{index}: null";
-
-                            string argType = arg.GetType().Name;
-                            string? argValue = arg.ToString();
-
-                            // Truncate long string values for cleaner logs
-                            if (argValue != null && argValue.Length > 100)
-                                argValue = argValue.Substring(0, 100) + "...";
-
-                            return $"arg{index} ({argType}): {argValue}";
-                        }
-                    )
-                );
-
-                Logger.Socket($"{user.Name}: [{hubName}.{methodName}] Arguments: {args}");
-            }
-
             // Execute the hub method with SQLite retry protection.
             // FlexLabs.Upsert (used in VideoHub.SetTime etc.) calls ExecuteSqlRawAsync
             // which bypasses the EF Core execution strategy's retry pipeline.
-            object? result = await SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(async () =>
+            return await SqliteRetryingExecutionStrategy.ExecuteWithRetryAsync(async () =>
                 await next(invocationContext)
             );
-
-            // Logger.Socket($"{user.Name}: [{hubName}.{methodName}] Successfully executed");
-
-            return result;
         }
         catch (HubException hubEx)
         {

@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -149,7 +149,7 @@ public class QueueCoreTests
             Attempts = 2,
             ReservedAt = now,
             AvailableAt = now,
-            CreatedAt = now
+            CreatedAt = now,
         };
 
         Assert.Equal(42, job.Id);
@@ -173,7 +173,7 @@ public class QueueCoreTests
         {
             Queue = "default",
             Payload = "test",
-            Exception = "error"
+            Exception = "error",
         };
 
         Assert.Equal(0, job.Id);
@@ -196,7 +196,7 @@ public class QueueCoreTests
             Queue = "encoder",
             Payload = "{\"data\":1}",
             Exception = "NullReferenceException",
-            FailedAt = now
+            FailedAt = now,
         };
 
         Assert.Equal(99, job.Id);
@@ -240,7 +240,7 @@ public class QueueCoreTests
             LastRun = now.AddHours(-1),
             NextRun = now.AddHours(23),
             CreatedAt = now,
-            UpdatedAt = now
+            UpdatedAt = now,
         };
 
         Assert.Equal(1, cron.Id);
@@ -278,8 +278,8 @@ public class QueueCoreTests
             {
                 ["import"] = 2,
                 ["extras"] = 6,
-                ["encoder"] = 4
-            }
+                ["encoder"] = 4,
+            },
         };
 
         Assert.Equal(5, config.MaxAttempts);
@@ -313,9 +313,9 @@ public class QueueCoreTests
             {
                 ["queue"] = 2,
                 ["data"] = 5,
-                ["encoder"] = 3
+                ["encoder"] = 3,
             },
-            MaxAttempts = 5
+            MaxAttempts = 5,
         };
 
         QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
@@ -372,13 +372,7 @@ public class QueueCoreTests
     {
         // QDC-08: Verify SetWorkerCount persists via IConfigurationStore
         TestQueueContext context = new();
-        QueueConfiguration config = new()
-        {
-            WorkerCounts = new()
-            {
-                ["import"] = 1
-            }
-        };
+        QueueConfiguration config = new() { WorkerCounts = new() { ["import"] = 1 } };
         TestConfigStore store = new();
 
         QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
@@ -449,7 +443,7 @@ public class QueueCoreTests
             Uuid = Guid.NewGuid(),
             Queue = "test",
             Payload = "failed-payload",
-            Exception = "test error"
+            Exception = "test error",
         };
         context.AddFailedJob(failed);
         context.SaveChanges();
@@ -474,7 +468,7 @@ public class QueueCoreTests
             Name = "test-cron",
             CronExpression = "0 * * * *",
             JobType = "TestJob",
-            IsEnabled = true
+            IsEnabled = true,
         };
         context.AddCronJob(cron);
         context.SaveChanges();
@@ -491,7 +485,7 @@ public class QueueCoreTests
     // Test implementations
     // =========================================================================
 
-    private sealed class TestJob : NoMercyQueue.Core.Interfaces.IShouldQueue
+    private sealed class TestJob : IShouldQueue
     {
         public string QueueName => "test-queue";
         public int Priority => 5;
@@ -519,8 +513,9 @@ public class QueueCoreTests
 
     private sealed class TestSerializer : IJobSerializer
     {
-        public string Serialize(object job) => System.Text.Json.JsonSerializer.Serialize(job);
-        public T Deserialize<T>(string data) => System.Text.Json.JsonSerializer.Deserialize<T>(data)!;
+        public string Serialize(object job) => JsonSerializer.Serialize(job);
+
+        public T Deserialize<T>(string data) => JsonSerializer.Deserialize<T>(data)!;
     }
 
     private sealed class SerializableData
@@ -534,12 +529,15 @@ public class QueueCoreTests
         private readonly Dictionary<string, string> _store = new();
 
         public string? GetValue(string key) => _store.GetValueOrDefault(key);
+
         public void SetValue(string key, string value) => _store[key] = value;
+
         public Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
         {
             _store[key] = value;
             return Task.CompletedTask;
         }
+
         public bool HasKey(string key) => _store.ContainsKey(key);
     }
 
@@ -552,31 +550,83 @@ public class QueueCoreTests
         private int _nextFailedId = 1;
         private int _nextCronId = 1;
 
-        public void AddJob(QueueJobModel job) { job.Id = _nextJobId++; _jobs.Add(job); }
-        public void RemoveJob(QueueJobModel job) => _jobs.Remove(job);
-        public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId)
-            => _jobs.FirstOrDefault(j => j.Queue == queueName && j.ReservedAt == null && j.Attempts <= maxAttempts && currentJobId == null);
-        public QueueJobModel? FindJob(int id) => _jobs.FirstOrDefault(j => j.Id == id);
-        public bool JobExists(string payload) => _jobs.Any(j => j.Payload == payload);
-        public void UpdateJob(QueueJobModel job) { }
-        public void ResetAllReservedJobs()
+        public void AddJob(QueueJobModel job)
         {
-            foreach (QueueJobModel job in _jobs) job.ReservedAt = null;
+            job.Id = _nextJobId++;
+            _jobs.Add(job);
         }
 
-        public void AddFailedJob(FailedJobModel failedJob) { failedJob.Id = _nextFailedId++; _failedJobs.Add(failedJob); }
-        public void RemoveFailedJob(FailedJobModel failedJob) => _failedJobs.Remove(failedJob);
-        public FailedJobModel? FindFailedJob(int id) => _failedJobs.FirstOrDefault(j => j.Id == id);
-        public IReadOnlyList<FailedJobModel> GetFailedJobs(long? failedJobId = null)
-            => (failedJobId.HasValue ? _failedJobs.Where(j => j.Id == failedJobId.Value) : _failedJobs).ToList().AsReadOnly();
+        public void RemoveJob(QueueJobModel job) => _jobs.Remove(job);
 
-        public IReadOnlyList<CronJobModel> GetEnabledCronJobs() => _cronJobs.Where(c => c.IsEnabled).ToList().AsReadOnly();
-        public CronJobModel? FindCronJobByName(string name) => _cronJobs.FirstOrDefault(c => c.Name == name);
-        public void AddCronJob(CronJobModel cronJob) { cronJob.Id = _nextCronId++; _cronJobs.Add(cronJob); }
+        public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId) =>
+            _jobs.FirstOrDefault(j =>
+                j.Queue == queueName
+                && j.ReservedAt == null
+                && j.Attempts <= maxAttempts
+                && currentJobId == null
+            );
+
+        public QueueJobModel? FindJob(int id) => _jobs.FirstOrDefault(j => j.Id == id);
+
+        public bool JobExists(string payload) => _jobs.Any(j => j.Payload == payload);
+
+        public void UpdateJob(QueueJobModel job) { }
+
+        public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
+        {
+            QueueJobModel? job = _jobs.FirstOrDefault(j => j.Id == jobId);
+            if (job is null)
+                return;
+            job.Payload = newPayload;
+            job.AvailableAt = availableAt;
+            job.ReservedAt = null;
+        }
+
+        public void ResetAllReservedJobs()
+        {
+            foreach (QueueJobModel job in _jobs)
+                job.ReservedAt = null;
+        }
+
+        public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) =>
+            _jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
+
+        public void AddFailedJob(FailedJobModel failedJob)
+        {
+            failedJob.Id = _nextFailedId++;
+            _failedJobs.Add(failedJob);
+        }
+
+        public void RemoveFailedJob(FailedJobModel failedJob) => _failedJobs.Remove(failedJob);
+
+        public FailedJobModel? FindFailedJob(int id) => _failedJobs.FirstOrDefault(j => j.Id == id);
+
+        public IReadOnlyList<FailedJobModel> GetFailedJobs(long? failedJobId = null) =>
+            (failedJobId.HasValue ? _failedJobs.Where(j => j.Id == failedJobId.Value) : _failedJobs)
+                .ToList()
+                .AsReadOnly();
+
+        public IReadOnlyList<CronJobModel> GetEnabledCronJobs() =>
+            _cronJobs.Where(c => c.IsEnabled).ToList().AsReadOnly();
+
+        public CronJobModel? FindCronJobByName(string name) =>
+            _cronJobs.FirstOrDefault(c => c.Name == name);
+
+        public void AddCronJob(CronJobModel cronJob)
+        {
+            cronJob.Id = _nextCronId++;
+            _cronJobs.Add(cronJob);
+        }
+
         public void UpdateCronJob(CronJobModel cronJob) { }
+
         public void RemoveCronJob(CronJobModel cronJob) => _cronJobs.Remove(cronJob);
 
+        public bool IsParentFailed(int parentJobId) =>
+            _failedJobs.Any(f => f.Payload.Contains($"\"Id\":{parentJobId}"));
+
         public void SaveChanges() { }
+
         public void Dispose() { }
     }
 }

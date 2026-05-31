@@ -31,6 +31,6 @@ public class MusicBrainzReleaseGroupClient : MusicBrainzBaseClient
     )
     {
         Dictionary<string, string> queryParams = new() { ["query"] = query, ["fmt"] = "json" };
-        return Get<MusicBrainzReleaseAppends>($"release-group", queryParams, priority);
+        return Get<MusicBrainzReleaseAppends>("release-group", queryParams, priority);
     }
 }

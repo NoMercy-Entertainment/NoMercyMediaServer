@@ -1,10 +1,15 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
+using System.Net;
+using System.Net.Sockets;
 using Microsoft.Data.Sqlite;
-using NoMercy.Networking;
+using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
-using NoMercy.Setup;
+using NoMercy.NmSystem.Information;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Boot;
 using NoMercy.Setup.Dto;
-using Xunit;
+using NoMercy.Setup.Server;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;
 
@@ -112,7 +117,7 @@ public class DegradedModeStartupTests
     {
         // GetInternalIp now uses NetworkInterface enumeration first,
         // which works without network connectivity
-        NetworkDiscovery discovery = new();
+        NetworkDiscovery discovery = new(new LocalStorageDriver());
         string ip = discovery.InternalIp;
 
         Assert.False(
@@ -124,13 +129,13 @@ public class DegradedModeStartupTests
     [Fact]
     public void GetInternalIp_ReturnsValidIpFormat()
     {
-        NetworkDiscovery discovery = new();
+        NetworkDiscovery discovery = new(new LocalStorageDriver());
         string ip = discovery.InternalIp;
 
         // Should be a valid IPv4 address
-        bool isValid = System.Net.IPAddress.TryParse(ip, out System.Net.IPAddress? parsed);
+        bool isValid = IPAddress.TryParse(ip, out IPAddress? parsed);
         Assert.True(isValid, $"GetInternalIp returned '{ip}' which is not a valid IP address");
-        Assert.Equal(System.Net.Sockets.AddressFamily.InterNetwork, parsed!.AddressFamily);
+        Assert.Equal(AddressFamily.InterNetwork, parsed!.AddressFamily);
     }
 }
 
@@ -269,7 +274,7 @@ public class CloudflareFallbackTests
     {
         // ExternalIp property should return "0.0.0.0" when no IP has been discovered,
         // not throw an exception
-        NetworkDiscovery discovery = new();
+        NetworkDiscovery discovery = new(new LocalStorageDriver());
         string ip = discovery.ExternalIp;
         Assert.NotNull(ip);
     }
@@ -337,7 +342,7 @@ public class CloudflareFallbackTests
         // api.nomercy.tv (Cloudflare) is down, it should not throw
         try
         {
-            NetworkDiscovery discovery = new();
+            NetworkDiscovery discovery = new(new LocalStorageDriver());
             await discovery.DiscoverExternalIpAsync();
         }
         catch (Exception ex)
@@ -354,15 +359,12 @@ public class CloudflareFallbackTests
         // Verify the external IP caching mechanism works:
         // Set an IP → verify it persists → verify it can be read back
         string testIp = "203.0.113.42";
-        string cacheFile = Path.Combine(
-            NmSystem.Information.AppFiles.ConfigPath,
-            "external_ip.cache"
-        );
+        string cacheFile = Path.Combine(AppFiles.ConfigPath, "external_ip.cache");
 
         try
         {
             // Ensure config directory exists
-            string configDir = NmSystem.Information.AppFiles.ConfigPath;
+            string configDir = AppFiles.ConfigPath;
             if (!Directory.Exists(configDir))
                 Directory.CreateDirectory(configDir);
 
@@ -384,10 +386,7 @@ public class CloudflareFallbackTests
     [Fact]
     public void ExternalIpCache_ReturnsNull_WhenFileDoesNotExist()
     {
-        string cacheFile = Path.Combine(
-            NmSystem.Information.AppFiles.ConfigPath,
-            "external_ip.cache"
-        );
+        string cacheFile = Path.Combine(AppFiles.ConfigPath, "external_ip.cache");
 
         // Ensure no cache file
         if (File.Exists(cacheFile))

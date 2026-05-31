@@ -19,8 +19,9 @@ public class MemoryCacheConfigurationTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public void MemoryCache_HasSizeLimit_Configured()
     {
-        IOptions<MemoryCacheOptions> options =
-            _factory.Services.GetRequiredService<IOptions<MemoryCacheOptions>>();
+        IOptions<MemoryCacheOptions> options = _factory.Services.GetRequiredService<
+            IOptions<MemoryCacheOptions>
+        >();
 
         Assert.NotNull(options.Value.SizeLimit);
         Assert.Equal(1024, options.Value.SizeLimit);
@@ -29,8 +30,9 @@ public class MemoryCacheConfigurationTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public void MemoryCache_HasCompactionPercentage_Configured()
     {
-        IOptions<MemoryCacheOptions> options =
-            _factory.Services.GetRequiredService<IOptions<MemoryCacheOptions>>();
+        IOptions<MemoryCacheOptions> options = _factory.Services.GetRequiredService<
+            IOptions<MemoryCacheOptions>
+        >();
 
         Assert.Equal(0.25, options.Value.CompactionPercentage);
     }

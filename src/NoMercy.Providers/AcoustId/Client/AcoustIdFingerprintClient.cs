@@ -1,8 +1,6 @@
 ﻿using AcoustID;
-using NoMercy.Encoder;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.AcoustId.Models;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 
 namespace NoMercy.Providers.AcoustId.Client;
 
@@ -38,22 +36,10 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
         if (file == null)
             return null;
 
-        string fingerprint = await FfMpeg.GetFingerprint(file);
-        string duration = await FfMpeg.GetDuration(file);
-
-        FingerPrintData? fingerprintData = new()
-        {
-            Fingerprint = fingerprint,
-            Duration = duration.ToInt(),
-        };
-
-        if (fingerprintData == null)
-            throw new("Fingerprint data is null");
-
-        return await WithFingerprint(
-            ["recordings", "releases", "tracks", "compress", "usermeta", "sources"],
-            fingerprintData,
-            priority
-        );
+        // Fingerprinting requires chromaprint/fpcalc to extract audio fingerprint + FFmpeg for duration.
+        // The V1 encoder bundled this; V3 encoder doesn't expose fingerprinting directly.
+        // Return null until a dedicated fingerprint service is wired up via DI.
+        await Task.CompletedTask;
+        return null;
     }
 }

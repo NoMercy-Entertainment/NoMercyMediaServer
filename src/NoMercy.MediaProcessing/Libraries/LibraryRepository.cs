@@ -1,18 +1,21 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Libraries;
 
-public class LibraryRepository(MediaContext context) : ILibraryRepository
+public class LibraryRepository(MediaContext context, IStorageDriver storageDriver)
+    : ILibraryRepository
 {
+    private readonly IStorageDriver _storageDriver = storageDriver;
+
     public async Task<IEnumerable<MediaFolderExtend>> GetRootFoldersAsync(string path)
     {
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(_storageDriver);
         return (await mediaScan.DisableRegexFilter().Process(path, 2))
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();
@@ -36,6 +39,8 @@ public class LibraryRepository(MediaContext context) : ILibraryRepository
                         .ThenInclude(f => f.Folder)
             .Include(folder => folder.EncoderProfileFolder)
                 .ThenInclude(encoderProfileFolder => encoderProfileFolder.EncoderProfile)
+            .Include(folder => folder.EncodingPresetFolders)
+                .ThenInclude(link => link.Preset)
             .FirstOrDefaultAsync(folder => folder.Id == folderId);
     }
 

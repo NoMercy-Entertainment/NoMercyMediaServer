@@ -2,6 +2,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
+using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -11,6 +12,19 @@ namespace NoMercy.Providers.NoMercy.Client;
 
 public abstract class NoMercyImageClient : TmdbBaseClient
 {
+    private static IStorage? _storage;
+
+    public static void Initialize(IStorage storage)
+    {
+        _storage = storage;
+    }
+
+    private static IStorage Storage =>
+        _storage
+        ?? throw new InvalidOperationException(
+            "NoMercyImageClient has not been initialized. Call NoMercyImageClient.Initialize() at startup."
+        );
+
     public static Task<Image<Rgba32>?> Download(string? path, bool? download = true)
     {
         return GetQueue().Enqueue(Task, $"original{path}", true);
@@ -24,12 +38,12 @@ public abstract class NoMercyImageClient : TmdbBaseClient
             {
                 string folder = Path.Join(AppFiles.ImagesPath, "original");
 
-                if (!Directory.Exists(folder))
-                    Directory.CreateDirectory(folder);
+                IStorage storage = Storage;
+                await storage.CreateDirectoryAsync(folder, CancellationToken.None);
 
                 string filePath = Path.Combine(folder, path.Replace("/", "").Replace("\\", ""));
 
-                if (File.Exists(filePath))
+                if (await storage.ExistsAsync(filePath, CancellationToken.None))
                     return Image.Load<Rgba32>(filePath);
 
                 HttpClient httpClient = HttpClientProvider.CreateClient(
@@ -44,8 +58,11 @@ public abstract class NoMercyImageClient : TmdbBaseClient
 
                 byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 
-                if (download is not false && !File.Exists(filePath))
-                    await File.WriteAllBytesAsync(filePath, bytes);
+                if (
+                    download is not false
+                    && !await storage.ExistsAsync(filePath, CancellationToken.None)
+                )
+                    await storage.WriteAsync(filePath, bytes, CancellationToken.None);
 
                 return Image.Load<Rgba32>(bytes);
             }

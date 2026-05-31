@@ -1,4 +1,5 @@
 using System.Net.Mime;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.NmSystem.SystemCalls;
@@ -21,19 +22,31 @@ public class GlobalExceptionHandlerMiddleware
         {
             await _next(context);
         }
-        catch (Exception) when (context.RequestAborted.IsCancellationRequested)
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
-            // Client disconnected — Kestrel surfaces this as either
-            // OperationCanceledException (mid-write to the response body) or
-            // IOException "client reset the request stream" (mid-read of the
-            // request body). Fired on every seek, source switch, passive
-            // teardown, and any rapid POST cancel. No client to write to, not
-            // an error condition. Swallow silently.
+            Logger.App(
+                $"[{context.TraceIdentifier}] Request cancelled by client: {context.Request.Path}",
+                LogEventLevel.Debug
+            );
+        }
+        catch (Exception ex) when (IsClientDisconnect(ex, context))
+        {
+            Logger.App(
+                $"[{context.TraceIdentifier}] Client disconnected mid-request: {context.Request.Path} ({ex.GetType().Name}: {ex.Message})",
+                LogEventLevel.Debug
+            );
         }
         catch (Exception ex)
         {
             string traceId = context.TraceIdentifier;
             Logger.App($"[{traceId}] Unhandled exception: {ex}", LogEventLevel.Error);
+
+            // Headers already flushed (e.g. mid-stream of a media response) —
+            // there's nothing more we can do without throwing again from
+            // inside the catch and corrupting the response. Just log and
+            // let Kestrel close the connection.
+            if (context.Response.HasStarted)
+                return;
 
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             context.Response.ContentType = MediaTypeNames.Application.Json;
@@ -50,5 +63,25 @@ public class GlobalExceptionHandlerMiddleware
 
             await context.Response.WriteAsJsonAsync(problem);
         }
+    }
+
+    private static bool IsClientDisconnect(Exception ex, HttpContext context)
+    {
+        if (context.RequestAborted.IsCancellationRequested)
+            return true;
+
+        return ex switch
+        {
+            BadHttpRequestException => true,
+            ConnectionResetException => true,
+            IOException io
+                when io.Message.Contains("client reset", StringComparison.OrdinalIgnoreCase)
+                    || io.Message.Contains(
+                        "connection was forcibly closed",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    || io.InnerException is ConnectionResetException => true,
+            _ => false,
+        };
     }
 }

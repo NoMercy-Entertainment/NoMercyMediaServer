@@ -16,10 +16,7 @@ public class EventAuditTests
     {
         EventAuditLog auditLog = new();
 
-        LibraryRefreshEvent evt = new()
-        {
-            QueryKey = ["music", "album", Guid.NewGuid()]
-        };
+        LibraryRefreshEvent evt = new() { QueryKey = ["music", "album", Guid.NewGuid()] };
 
         auditLog.Record(evt, "LibraryRefreshEvent");
 
@@ -38,10 +35,7 @@ public class EventAuditTests
     {
         EventAuditLog auditLog = new(new() { Enabled = false });
 
-        auditLog.Record(new LibraryRefreshEvent
-        {
-            QueryKey = ["test"]
-        }, "LibraryRefreshEvent");
+        auditLog.Record(new LibraryRefreshEvent { QueryKey = ["test"] }, "LibraryRefreshEvent");
 
         auditLog.Count.Should().Be(0);
         auditLog.GetEntries().Should().BeEmpty();
@@ -50,25 +44,28 @@ public class EventAuditTests
     [Fact]
     public void AuditLog_ExcludedEventTypesAreSkipped()
     {
-        EventAuditLog auditLog = new(new()
-        {
-            ExcludedEventTypes = ["EncodingProgressEvent"]
-        });
+        EventAuditLog auditLog = new(new() { ExcludedEventTypes = ["EncodingProgressEvent"] });
 
-        auditLog.Record(new EncodingProgressEvent
-        {
-            JobId = 1,
-            Percentage = 50,
-            Elapsed = TimeSpan.FromMinutes(1)
-        }, "EncodingProgressEvent");
+        auditLog.Record(
+            new EncodingProgressEvent
+            {
+                JobId = 1,
+                Percentage = 50,
+                Elapsed = TimeSpan.FromMinutes(1),
+            },
+            "EncodingProgressEvent"
+        );
 
-        auditLog.Record(new EncodingStartedEvent
-        {
-            JobId = 1,
-            InputPath = "/test.mkv",
-            OutputPath = "/out/",
-            ProfileName = "x264"
-        }, "EncodingStartedEvent");
+        auditLog.Record(
+            new EncodingStartedEvent
+            {
+                JobId = 1,
+                InputPath = "/test.mkv",
+                OutputPath = "/out/",
+                ProfileName = "x264",
+            },
+            "EncodingStartedEvent"
+        );
 
         auditLog.Count.Should().Be(1);
         auditLog.GetEntries()[0].EventType.Should().Be("EncodingStartedEvent");
@@ -77,18 +74,14 @@ public class EventAuditTests
     [Fact]
     public void AuditLog_CompactsWhenMaxEntriesExceeded()
     {
-        EventAuditLog auditLog = new(new()
-        {
-            MaxEntries = 10,
-            CompactionPercentage = 0.5
-        });
+        EventAuditLog auditLog = new(new() { MaxEntries = 10, CompactionPercentage = 0.5 });
 
         for (int i = 0; i < 15; i++)
         {
-            auditLog.Record(new LibraryRefreshEvent
-            {
-                QueryKey = ["test", i.ToString()]
-            }, "LibraryRefreshEvent");
+            auditLog.Record(
+                new LibraryRefreshEvent { QueryKey = ["test", i.ToString()] },
+                "LibraryRefreshEvent"
+            );
         }
 
         // After compaction (50% of 10 = 5 removed from oldest), count should be <= MaxEntries
@@ -103,10 +96,7 @@ public class EventAuditTests
 
         for (int i = 0; i < 5; i++)
         {
-            auditLog.Record(new LibraryRefreshEvent
-            {
-                QueryKey = ["test"]
-            }, "LibraryRefreshEvent");
+            auditLog.Record(new LibraryRefreshEvent { QueryKey = ["test"] }, "LibraryRefreshEvent");
         }
 
         auditLog.Count.Should().Be(5);
@@ -120,28 +110,30 @@ public class EventAuditTests
     {
         EventAuditLog auditLog = new();
 
-        auditLog.Record(new LibraryRefreshEvent
-        {
-            QueryKey = ["music"]
-        }, "LibraryRefreshEvent");
+        auditLog.Record(new LibraryRefreshEvent { QueryKey = ["music"] }, "LibraryRefreshEvent");
 
-        auditLog.Record(new EncodingStartedEvent
-        {
-            JobId = 1,
-            InputPath = "/test.mkv",
-            OutputPath = "/out/",
-            ProfileName = "x264"
-        }, "EncodingStartedEvent");
+        auditLog.Record(
+            new EncodingStartedEvent
+            {
+                JobId = 1,
+                InputPath = "/test.mkv",
+                OutputPath = "/out/",
+                ProfileName = "x264",
+            },
+            "EncodingStartedEvent"
+        );
 
-        auditLog.Record(new LibraryRefreshEvent
-        {
-            QueryKey = ["libraries"]
-        }, "LibraryRefreshEvent");
+        auditLog.Record(
+            new LibraryRefreshEvent { QueryKey = ["libraries"] },
+            "LibraryRefreshEvent"
+        );
 
         IReadOnlyList<EventAuditEntry> refreshEntries = auditLog.GetEntries("LibraryRefreshEvent");
         refreshEntries.Should().HaveCount(2);
 
-        IReadOnlyList<EventAuditEntry> encodingEntries = auditLog.GetEntries("EncodingStartedEvent");
+        IReadOnlyList<EventAuditEntry> encodingEntries = auditLog.GetEntries(
+            "EncodingStartedEvent"
+        );
         encodingEntries.Should().HaveCount(1);
     }
 
@@ -151,10 +143,7 @@ public class EventAuditTests
         EventAuditLog auditLog = new();
         DateTime before = DateTime.UtcNow.AddSeconds(-1);
 
-        auditLog.Record(new LibraryRefreshEvent
-        {
-            QueryKey = ["test"]
-        }, "LibraryRefreshEvent");
+        auditLog.Record(new LibraryRefreshEvent { QueryKey = ["test"] }, "LibraryRefreshEvent");
 
         DateTime after = DateTime.UtcNow.AddSeconds(1);
 
@@ -163,7 +152,8 @@ public class EventAuditTests
 
         IReadOnlyList<EventAuditEntry> emptyEntries = auditLog.GetEntries(
             DateTime.UtcNow.AddDays(-2),
-            DateTime.UtcNow.AddDays(-1));
+            DateTime.UtcNow.AddDays(-1)
+        );
         emptyEntries.Should().BeEmpty();
     }
 
@@ -175,16 +165,17 @@ public class EventAuditTests
         AuditingEventBusDecorator decorator = new(innerBus, auditLog);
 
         List<IEvent> received = [];
-        decorator.Subscribe<LibraryRefreshEvent>((evt, _) =>
-        {
-            received.Add(evt);
-            return Task.CompletedTask;
-        });
+        decorator.Subscribe<LibraryRefreshEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
-        await decorator.PublishAsync(new LibraryRefreshEvent
-        {
-            QueryKey = ["music", "album", Guid.NewGuid()]
-        });
+        await decorator.PublishAsync(
+            new LibraryRefreshEvent { QueryKey = ["music", "album", Guid.NewGuid()] }
+        );
 
         auditLog.Count.Should().Be(1);
         received.Should().HaveCount(1);
@@ -198,30 +189,36 @@ public class EventAuditTests
         AuditingEventBusDecorator decorator = new(innerBus, auditLog);
 
         bool handlerCalled = false;
-        IDisposable sub = decorator.Subscribe<PlaybackStartedEvent>((_, _) =>
-        {
-            handlerCalled = true;
-            return Task.CompletedTask;
-        });
+        IDisposable sub = decorator.Subscribe<PlaybackStartedEvent>(
+            (_, _) =>
+            {
+                handlerCalled = true;
+                return Task.CompletedTask;
+            }
+        );
 
-        await decorator.PublishAsync(new PlaybackStartedEvent
-        {
-            UserId = Guid.NewGuid(),
-            MediaId = 1,
-            MediaType = "movie"
-        });
+        await decorator.PublishAsync(
+            new PlaybackStartedEvent
+            {
+                UserId = Guid.NewGuid(),
+                MediaId = 1,
+                MediaType = "movie",
+            }
+        );
 
         handlerCalled.Should().BeTrue();
 
         sub.Dispose();
         handlerCalled = false;
 
-        await decorator.PublishAsync(new PlaybackStartedEvent
-        {
-            UserId = Guid.NewGuid(),
-            MediaId = 2,
-            MediaType = "tv"
-        });
+        await decorator.PublishAsync(
+            new PlaybackStartedEvent
+            {
+                UserId = Guid.NewGuid(),
+                MediaId = 2,
+                MediaType = "tv",
+            }
+        );
 
         handlerCalled.Should().BeFalse();
     }
@@ -231,18 +228,24 @@ public class EventAuditTests
     {
         EventAuditLog auditLog = new(new() { MaxEntries = 50_000 });
 
-        Task[] tasks = Enumerable.Range(0, 100).Select(i =>
-            Task.Run(() =>
-            {
-                for (int j = 0; j < 100; j++)
+        Task[] tasks = Enumerable
+            .Range(0, 100)
+            .Select(i =>
+                Task.Run(() =>
                 {
-                    auditLog.Record(new LibraryRefreshEvent
+                    for (int j = 0; j < 100; j++)
                     {
-                        QueryKey = ["test", i.ToString(), j.ToString()]
-                    }, "LibraryRefreshEvent");
-                }
-            })
-        ).ToArray();
+                        auditLog.Record(
+                            new LibraryRefreshEvent
+                            {
+                                QueryKey = ["test", i.ToString(), j.ToString()],
+                            },
+                            "LibraryRefreshEvent"
+                        );
+                    }
+                })
+            )
+            .ToArray();
 
         await Task.WhenAll(tasks);
 
@@ -259,7 +262,7 @@ public class EventAuditTests
             MediaId = 42,
             MediaType = "movie",
             Title = "Test Movie",
-            LibraryId = Ulid.NewUlid()
+            LibraryId = Ulid.NewUlid(),
         };
 
         auditLog.Record(evt, "MediaAddedEvent");
@@ -292,18 +295,22 @@ public class EventAuditTests
         AuditingEventBusDecorator auditBus = new(loggingBus, auditLog);
 
         bool handlerCalled = false;
-        auditBus.Subscribe<EncodingCompletedEvent>((_, _) =>
-        {
-            handlerCalled = true;
-            return Task.CompletedTask;
-        });
+        auditBus.Subscribe<EncodingCompletedEvent>(
+            (_, _) =>
+            {
+                handlerCalled = true;
+                return Task.CompletedTask;
+            }
+        );
 
-        await auditBus.PublishAsync(new EncodingCompletedEvent
-        {
-            JobId = 1,
-            OutputPath = "/out/playlist.m3u8",
-            Duration = TimeSpan.FromMinutes(5)
-        });
+        await auditBus.PublishAsync(
+            new EncodingCompletedEvent
+            {
+                JobId = 1,
+                OutputPath = "/out/playlist.m3u8",
+                Duration = TimeSpan.FromMinutes(5),
+            }
+        );
 
         // Audit recorded
         auditLog.Count.Should().Be(1);

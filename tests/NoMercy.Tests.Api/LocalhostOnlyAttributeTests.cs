@@ -1,9 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Routing;
 using NoMercy.Api.Middleware;
 using Xunit;
 
@@ -62,13 +60,9 @@ public class LocalhostOnlyAttributeTests
 
     private static AuthorizationFilterContext CreateContext(IPAddress? remoteIp)
     {
-        DefaultHttpContext httpContext = new();
-        httpContext.Connection.RemoteIpAddress = remoteIp;
+        DefaultHttpContext httpContext = new() { Connection = { RemoteIpAddress = remoteIp } };
 
-        ActionContext actionContext = new(
-            httpContext,
-            new(),
-            new());
+        ActionContext actionContext = new(httpContext, new(), new());
 
         return new(actionContext, []);
     }

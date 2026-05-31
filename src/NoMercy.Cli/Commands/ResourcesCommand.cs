@@ -10,7 +10,7 @@ internal static class ResourcesCommand
         Command command = new("resources") { Description = "Show server resource usage" };
 
         command.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
@@ -21,7 +21,7 @@ internal static class ResourcesCommand
 
                 if (resources is null)
                 {
-                    Console.Error.WriteLine("Could not retrieve resource information.");
+                    await Console.Error.WriteLineAsync("Could not retrieve resource information.");
                     return 1;
                 }
 

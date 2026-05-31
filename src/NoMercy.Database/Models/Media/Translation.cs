@@ -101,6 +101,4 @@ public class Translation : Timestamps
     [JsonProperty("genre_id")]
     public int? GenreId { get; set; }
     public Genre? Genre { get; set; }
-
-    public Translation() { }
 }

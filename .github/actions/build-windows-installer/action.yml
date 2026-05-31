@@ -41,11 +41,10 @@ runs:
           $Headers['Authorization'] = "Bearer $env:GH_API_TOKEN"
         }
         $Release = Invoke-RestMethod -Uri "https://api.github.com/repos/jrsoftware/issrc/releases/latest" -Headers $Headers -UseBasicParsing
-        # Inno Setup naming: legacy `innosetup-6.4.0.exe`, current `innosetup-7.0.0-beta-x64.exe` (arch suffix added in 7.x)
-        $Asset = $Release.assets | Where-Object { $_.name -match '^innosetup-[\d.]+(-(?:alpha|beta|rc)\d*)?(-x64)?\.exe$' } | Select-Object -First 1
+        $Asset = $Release.assets | Where-Object { $_.name -match '^innosetup-\d+\.\d+\.\d+\.exe$' } | Select-Object -First 1
 
         if (-not $Asset) {
-          Write-Error "Could not find Inno Setup installer in latest release ($($Release.tag_name)). Assets: $($Release.assets.name -join ', ')"
+          Write-Error "Could not find Inno Setup installer in latest release"
           exit 1
         }
 

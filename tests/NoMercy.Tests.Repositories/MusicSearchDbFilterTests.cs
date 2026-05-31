@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Tests.Repositories.Infrastructure;
@@ -20,8 +20,10 @@ public class MusicSearchDbFilterTests : IDisposable
     {
         _keepAliveConnection = new($"DataSource={_dbName};Mode=Memory;Cache=Shared");
         _keepAliveConnection.Open();
-        _keepAliveConnection.CreateFunction("normalize_search", (string? input) =>
-            input?.NormalizeSearch() ?? string.Empty);
+        _keepAliveConnection.CreateFunction(
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch() ?? string.Empty
+        );
 
         using MediaContext seedContext = CreateContext();
         seedContext.Database.EnsureCreated();
@@ -32,11 +34,16 @@ public class MusicSearchDbFilterTests : IDisposable
     {
         SqliteConnection connection = new($"DataSource={_dbName};Mode=Memory;Cache=Shared");
         connection.Open();
-        connection.CreateFunction("normalize_search", (string? input) =>
-            input?.NormalizeSearch() ?? string.Empty);
+        connection.CreateFunction(
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch() ?? string.Empty
+        );
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .UseSqlite(
+                connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            )
             .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
 
@@ -52,7 +59,7 @@ public class MusicSearchDbFilterTests : IDisposable
             Name = "Test User",
             Owner = true,
             Allowed = true,
-            Manage = true
+            Manage = true,
         };
         context.Users.Add(user);
 
@@ -61,127 +68,161 @@ public class MusicSearchDbFilterTests : IDisposable
             Id = SeedConstants.MovieLibraryId,
             Title = "Music",
             Type = "music",
-            Order = 1
+            Order = 1,
         };
         context.Libraries.Add(library);
+
+        Driver systemLocalDriver = new()
+        {
+            Id = Driver.SystemLocalDriverId,
+            Name = "Local Filesystem",
+            Type = "local",
+            Config = """{"rootPath":"/"}""",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        context.Drivers.Add(systemLocalDriver);
 
         Folder folder = new()
         {
             Id = SeedConstants.MovieFolderId,
-            Path = "/media/music"
+            Path = "/media/music",
+            DriverId = Driver.SystemLocalDriverId,
         };
         context.Folders.Add(folder);
 
         // Add all entities in one batch to avoid tracking conflicts
         // (the `= new()` defaults on navigation properties are resolved when parent is in same batch)
-        context.Artists.Add(new()
-        {
-            Id = Guid.Parse("a0000001-0000-0000-0000-000000000001"),
-            Name = "Beyoncé",
-            TitleSort = "beyonce",
-            Cover = "/test.jpg",
-            HostFolder = "/media/music/Beyonce",
-            LibraryId = SeedConstants.MovieLibraryId,
-            FolderId = SeedConstants.MovieFolderId
-        });
-        context.Artists.Add(new()
-        {
-            Id = Guid.Parse("a0000001-0000-0000-0000-000000000002"),
-            Name = "Mötley Crüe",
-            TitleSort = "motley crue",
-            Cover = "/test.jpg",
-            HostFolder = "/media/music/Motley Crue",
-            LibraryId = SeedConstants.MovieLibraryId,
-            FolderId = SeedConstants.MovieFolderId
-        });
-        context.Artists.Add(new()
-        {
-            Id = Guid.Parse("a0000001-0000-0000-0000-000000000003"),
-            Name = "AC/DC",
-            TitleSort = "acdc",
-            Cover = "/test.jpg",
-            HostFolder = "/media/music/ACDC",
-            LibraryId = SeedConstants.MovieLibraryId,
-            FolderId = SeedConstants.MovieFolderId
-        });
-        context.Artists.Add(new()
-        {
-            Id = Guid.Parse("a0000001-0000-0000-0000-000000000004"),
-            Name = "Twenty—One Pilots",
-            TitleSort = "twenty one pilots",
-            Cover = "/test.jpg",
-            HostFolder = "/media/music/Twenty One Pilots",
-            LibraryId = SeedConstants.MovieLibraryId,
-            FolderId = SeedConstants.MovieFolderId
-        });
-        context.Artists.Add(new()
-        {
-            Id = Guid.Parse("a0000001-0000-0000-0000-000000000005"),
-            Name = "The Rolling Stones",
-            TitleSort = "rolling stones",
-            Cover = "/test.jpg",
-            HostFolder = "/media/music/The Rolling Stones",
-            LibraryId = SeedConstants.MovieLibraryId,
-            FolderId = SeedConstants.MovieFolderId
-        });
+        context.Artists.Add(
+            new()
+            {
+                Id = Guid.Parse("a0000001-0000-0000-0000-000000000001"),
+                Name = "Beyoncé",
+                TitleSort = "beyonce",
+                Cover = "/test.jpg",
+                HostFolder = "/media/music/Beyonce",
+                LibraryId = SeedConstants.MovieLibraryId,
+                FolderId = SeedConstants.MovieFolderId,
+            }
+        );
+        context.Artists.Add(
+            new()
+            {
+                Id = Guid.Parse("a0000001-0000-0000-0000-000000000002"),
+                Name = "Mötley Crüe",
+                TitleSort = "motley crue",
+                Cover = "/test.jpg",
+                HostFolder = "/media/music/Motley Crue",
+                LibraryId = SeedConstants.MovieLibraryId,
+                FolderId = SeedConstants.MovieFolderId,
+            }
+        );
+        context.Artists.Add(
+            new()
+            {
+                Id = Guid.Parse("a0000001-0000-0000-0000-000000000003"),
+                Name = "AC/DC",
+                TitleSort = "acdc",
+                Cover = "/test.jpg",
+                HostFolder = "/media/music/ACDC",
+                LibraryId = SeedConstants.MovieLibraryId,
+                FolderId = SeedConstants.MovieFolderId,
+            }
+        );
+        context.Artists.Add(
+            new()
+            {
+                Id = Guid.Parse("a0000001-0000-0000-0000-000000000004"),
+                Name = "Twenty—One Pilots",
+                TitleSort = "twenty one pilots",
+                Cover = "/test.jpg",
+                HostFolder = "/media/music/Twenty One Pilots",
+                LibraryId = SeedConstants.MovieLibraryId,
+                FolderId = SeedConstants.MovieFolderId,
+            }
+        );
+        context.Artists.Add(
+            new()
+            {
+                Id = Guid.Parse("a0000001-0000-0000-0000-000000000005"),
+                Name = "The Rolling Stones",
+                TitleSort = "rolling stones",
+                Cover = "/test.jpg",
+                HostFolder = "/media/music/The Rolling Stones",
+                LibraryId = SeedConstants.MovieLibraryId,
+                FolderId = SeedConstants.MovieFolderId,
+            }
+        );
 
-        context.Albums.Add(new()
-        {
-            Id = Guid.Parse("b0000001-0000-0000-0000-000000000001"),
-            Name = "Résumé",
-            Cover = "/test.jpg",
-            HostFolder = "/media/music/Resume",
-            Library = library,
-            LibraryFolder = folder
-        });
-        context.Albums.Add(new()
-        {
-            Id = Guid.Parse("b0000001-0000-0000-0000-000000000002"),
-            Name = "Greatest Hits",
-            Cover = "/test.jpg",
-            HostFolder = "/media/music/Greatest Hits",
-            Library = library,
-            LibraryFolder = folder
-        });
+        context.Albums.Add(
+            new()
+            {
+                Id = Guid.Parse("b0000001-0000-0000-0000-000000000001"),
+                Name = "Résumé",
+                Cover = "/test.jpg",
+                HostFolder = "/media/music/Resume",
+                Library = library,
+                LibraryFolder = folder,
+            }
+        );
+        context.Albums.Add(
+            new()
+            {
+                Id = Guid.Parse("b0000001-0000-0000-0000-000000000002"),
+                Name = "Greatest Hits",
+                Cover = "/test.jpg",
+                HostFolder = "/media/music/Greatest Hits",
+                Library = library,
+                LibraryFolder = folder,
+            }
+        );
 
         context.SaveChanges();
 
         // Second batch: Tracks and Playlists (after Library/Folder are committed)
-        context.Tracks.Add(new()
-        {
-            Id = Guid.Parse("c0000001-0000-0000-0000-000000000001"),
-            Name = "Déjà Vu",
-            Filename = "deja_vu.mp3",
-            Duration = "3:45",
-            Quality = 320,
-            Folder = "/media/music/Deja Vu",
-            HostFolder = "/media/music/Deja Vu",
-            FolderId = SeedConstants.MovieFolderId
-        });
-        context.Tracks.Add(new()
-        {
-            Id = Guid.Parse("c0000001-0000-0000-0000-000000000002"),
-            Name = "Rock You Like a Hurricane",
-            Filename = "rock_you.mp3",
-            Duration = "4:10",
-            Quality = 320,
-            Folder = "/media/music/Rock",
-            HostFolder = "/media/music/Rock",
-            FolderId = SeedConstants.MovieFolderId
-        });
+        context.Tracks.Add(
+            new()
+            {
+                Id = Guid.Parse("c0000001-0000-0000-0000-000000000001"),
+                Name = "Déjà Vu",
+                Filename = "deja_vu.mp3",
+                Duration = "3:45",
+                Quality = 320,
+                Folder = "/media/music/Deja Vu",
+                HostFolder = "/media/music/Deja Vu",
+                FolderId = SeedConstants.MovieFolderId,
+            }
+        );
+        context.Tracks.Add(
+            new()
+            {
+                Id = Guid.Parse("c0000001-0000-0000-0000-000000000002"),
+                Name = "Rock You Like a Hurricane",
+                Filename = "rock_you.mp3",
+                Duration = "4:10",
+                Quality = 320,
+                Folder = "/media/music/Rock",
+                HostFolder = "/media/music/Rock",
+                FolderId = SeedConstants.MovieFolderId,
+            }
+        );
 
-        context.Playlists.Add(new()
-        {
-            Id = Guid.Parse("d0000001-0000-0000-0000-000000000001"),
-            Name = "Café Vibes",
-            UserId = SeedConstants.UserId
-        });
-        context.Playlists.Add(new()
-        {
-            Id = Guid.Parse("d0000001-0000-0000-0000-000000000002"),
-            Name = "Road Trip",
-            UserId = SeedConstants.UserId
-        });
+        context.Playlists.Add(
+            new()
+            {
+                Id = Guid.Parse("d0000001-0000-0000-0000-000000000001"),
+                Name = "Café Vibes",
+                UserId = SeedConstants.UserId,
+            }
+        );
+        context.Playlists.Add(
+            new()
+            {
+                Id = Guid.Parse("d0000001-0000-0000-0000-000000000002"),
+                Name = "Road Trip",
+                UserId = SeedConstants.UserId,
+            }
+        );
 
         context.SaveChanges();
     }
@@ -189,7 +230,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_AccentedQuery_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "beyonce" should find "Beyoncé" via accent normalization
@@ -201,7 +242,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_UmlautQuery_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "motley crue" should find "Mötley Crüe"
@@ -213,7 +254,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_EmDashNormalized_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "twenty-one" should find "Twenty—One Pilots" (em dash normalized to hyphen)
@@ -225,7 +266,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_CaseInsensitive_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "rolling stones" should find "The Rolling Stones"
@@ -237,7 +278,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_NoMatch_ReturnsEmpty()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         List<Guid> ids = await repository.SearchArtistIdsAsync("nonexistent artist");
@@ -247,7 +288,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchAlbumIdsAsync_AccentedAlbum_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "resume" should find "Résumé"
@@ -259,7 +300,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchTrackIdsAsync_AccentedTrack_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "deja vu" should find "Déjà Vu"
@@ -271,7 +312,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchPlaylistIdsAsync_AccentedPlaylist_FindsMatch()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "cafe" should find "Café Vibes"
@@ -287,17 +328,22 @@ public class MusicSearchDbFilterTests : IDisposable
         string dbName = Guid.NewGuid().ToString();
         SqliteConnection connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         connection.Open();
-        connection.CreateFunction("normalize_search", (string? input) =>
-            input?.NormalizeSearch() ?? string.Empty);
+        connection.CreateFunction(
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch() ?? string.Empty
+        );
 
         SqlCaptureInterceptor interceptor = new();
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .UseSqlite(
+                connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            )
             .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
             .Options;
 
-        using TestMediaContext context = new(options);
-        context.Database.EnsureCreated();
+        await using TestMediaContext context = new(options);
+        await context.Database.EnsureCreatedAsync();
 
         MusicRepository repository = new(context, null!);
         interceptor.Clear();
@@ -313,7 +359,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_PartialMatch_FindsMultiple()
     {
-        using MediaContext context = CreateContext();
+        await using MediaContext context = CreateContext();
         MusicRepository repository = new(context, null!);
 
         // "e" should match multiple artists (Beyoncé, Mötley Crüe, Twenty—One Pilots, The Rolling Stones)

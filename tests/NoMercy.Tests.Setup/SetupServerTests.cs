@@ -1,7 +1,8 @@
 using System.Net;
+using System.Net.Sockets;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 
 namespace NoMercy.Tests.Setup;
 
@@ -29,7 +30,7 @@ public class SetupServerTests : IAsyncLifetime
 
     private static int GetAvailablePort()
     {
-        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
@@ -274,7 +275,7 @@ public class SetupServerTests : IAsyncLifetime
             HttpCompletionOption.ResponseHeadersRead
         );
 
-        using Stream stream = await response.Content.ReadAsStreamAsync();
+        await using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
@@ -299,7 +300,7 @@ public class SetupServerTests : IAsyncLifetime
             HttpCompletionOption.ResponseHeadersRead
         );
 
-        using Stream stream = await response.Content.ReadAsStreamAsync();
+        await using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
@@ -341,7 +342,7 @@ public class SetupServerTests : IAsyncLifetime
             HttpCompletionOption.ResponseHeadersRead
         );
 
-        using Stream stream = await response.Content.ReadAsStreamAsync();
+        await using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
@@ -622,7 +623,7 @@ public class SetupServerPkceTests : IAsyncLifetime
 
     private static int GetAvailablePort()
     {
-        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
@@ -703,9 +704,10 @@ public class SetupServerRedirectUriTests
         // BuildRedirectUri now always uses localhost with the port from the request
         // so the redirect URI is predictable regardless of the incoming Host header.
         // This is required for PKCE security — the code_verifier is only on the server.
-        DefaultHttpContext context = new();
-        context.Request.Scheme = "http";
-        context.Request.Host = new("192.168.1.100", 7626);
+        DefaultHttpContext context = new()
+        {
+            Request = { Scheme = "http", Host = new("192.168.1.100", 7626) },
+        };
 
         string result = SetupServer.BuildRedirectUri(context.Request);
 
@@ -715,9 +717,10 @@ public class SetupServerRedirectUriTests
     [Fact]
     public void BuildRedirectUri_HandlesLocalhostWithPort()
     {
-        DefaultHttpContext context = new();
-        context.Request.Scheme = "http";
-        context.Request.Host = new("localhost", 8080);
+        DefaultHttpContext context = new()
+        {
+            Request = { Scheme = "http", Host = new("localhost", 8080) },
+        };
 
         string result = SetupServer.BuildRedirectUri(context.Request);
 
@@ -728,9 +731,10 @@ public class SetupServerRedirectUriTests
     public void BuildRedirectUri_HandlesHostWithoutPort()
     {
         // When no port is present on the Host header, the default setup port is used.
-        DefaultHttpContext context = new();
-        context.Request.Scheme = "https";
-        context.Request.Host = new("example.com");
+        DefaultHttpContext context = new()
+        {
+            Request = { Scheme = "https", Host = new("example.com") },
+        };
 
         string result = SetupServer.BuildRedirectUri(context.Request);
 

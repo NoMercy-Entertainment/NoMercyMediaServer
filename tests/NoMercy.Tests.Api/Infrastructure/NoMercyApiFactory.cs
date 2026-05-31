@@ -1,5 +1,6 @@
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -16,13 +17,17 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Service;
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Boot;
+using NoMercy.Setup.Server;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Api.Infrastructure;
 
@@ -58,8 +63,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
     protected override IWebHostBuilder? CreateWebHostBuilder()
     {
-        return Microsoft
-            .AspNetCore.WebHost.CreateDefaultBuilder([])
+        return WebHost
+            .CreateDefaultBuilder([])
             .UseContentRoot(AppContext.BaseDirectory)
             .ConfigureLogging(logging => logging.ClearProviders())
             .UseStartup<Startup>()
@@ -103,20 +108,14 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         ServiceCollection tokenServices = new();
         tokenServices
             .AddDataProtection()
-            .PersistKeysToFileSystem(new DirectoryInfo(AppFiles.DataProtectionKeysDir))
+            .PersistKeysToFileSystem(new(AppFiles.DataProtectionKeysDir))
             .SetApplicationName("NoMercyMediaServer");
         ServiceProvider tokenProvider = tokenServices.BuildServiceProvider();
         TokenStore.Initialize(tokenProvider);
 
         // Create app.db for AppDbContext (Configuration table, SecureValue columns).
-        string appDbPath = Path.Combine(AppFiles.DataPath, "app.db");
-        foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
-        {
-            string file = appDbPath + suffix;
-            if (File.Exists(file))
-                File.Delete(file);
-        }
-
+        // Use EnsureCreated rather than delete+recreate — parallel test assembly runs
+        // share the same NoMercy_test path and file deletion races cause lock errors.
         using AppDbContext appContext = new();
         appContext.Database.EnsureCreated();
 
@@ -155,7 +154,17 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         {
             string file = queueDbPath + suffix;
             if (File.Exists(file))
-                File.Delete(file);
+            {
+                try
+                {
+                    File.Delete(file);
+                }
+                catch (IOException)
+                {
+                    // Another parallel test process may hold the file; EnsureCreated will
+                    // use the existing DB, which is acceptable for queue (read-only in tests).
+                }
+            }
         }
 
         using QueueContext queueContext = new();
@@ -184,7 +193,23 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         };
         context.Libraries.AddRange(movieLibrary, tvLibrary);
 
-        Folder movieFolder = new() { Id = MovieFolderId, Path = "/media/movies" };
+        Driver systemLocalDriver = new()
+        {
+            Id = Driver.SystemLocalDriverId,
+            Name = "Local Filesystem",
+            Type = "local",
+            Config = """{"rootPath":"/"}""",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        context.Drivers.Add(systemLocalDriver);
+
+        Folder movieFolder = new()
+        {
+            Id = MovieFolderId,
+            Path = "/media/movies",
+            DriverId = Driver.SystemLocalDriverId,
+        };
         context.Folders.Add(movieFolder);
 
         Genre actionGenre = new() { Id = 28, Name = "Action" };
@@ -362,7 +387,12 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         };
         context.Libraries.Add(musicLibrary);
 
-        Folder musicFolder = new() { Id = MusicFolderId, Path = "/media/music" };
+        Folder musicFolder = new()
+        {
+            Id = MusicFolderId,
+            Path = "/media/music",
+            DriverId = Driver.SystemLocalDriverId,
+        };
         context.Folders.Add(musicFolder);
 
         context.SaveChanges();
@@ -397,6 +427,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             HostFolder = "/media/music/Test Artist/Test Album",
             LibraryId = MusicLibraryId,
             FolderId = MusicFolderId,
+            LibraryFolder = null!,
         };
         context.Albums.Add(album1);
 
@@ -502,7 +533,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         AppDbContext testAppContext = new();
         testAppContext.Database.EnsureCreated();
 
-        AuthManager testAuthManager = new(testAppContext);
+        AuthManager testAuthManager = new(testAppContext, new LocalStorageDriver());
         services.AddSingleton(testAuthManager);
         services.AddSingleton(new SetupEndpoints(completedState, testAuthManager));
         services.AddSingleton(new BootOrchestrator(completedState, testAuthManager));
@@ -569,5 +600,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
+
+        public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>(Array.Empty<PluginLoadResult>());
     }
 }

@@ -1,10 +1,14 @@
-using System.Drawing;
+﻿using System.Drawing;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Dto;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Lifecycle;
 using NoMercy.NmSystem.LogEnrichers;
+using NoMercy.NmSystem.Logging;
 using NoMercy.NmSystem.NewtonSoftConverters;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -132,7 +136,21 @@ public static class Logger
             .WriteTo.File(
                 new CompactJsonFormatter(),
                 filePath,
-                rollingInterval: RollingInterval.Day
+                rollingInterval: RollingInterval.Day,
+                // Without shared:true the Serilog file sink takes an exclusive
+                // FileShare.Read lock. Two processes pointing at the same log
+                // file (Rider-launched server + leftover background process,
+                // or a midnight rollover collision) deadlock on each other,
+                // and any other tooling that wants to write the same path
+                // (e.g. the CLI for crash-time fallback logging) gets locked
+                // out. shared mode coordinates appends through a global named
+                // mutex.
+                shared: true,
+                // Serilog batches writes with no flush guarantee on crash.
+                // 2 s is short enough that a SIGSEGV / power loss only loses
+                // a couple seconds of trailing logs, long enough to keep IO
+                // overhead invisible.
+                flushToDiskInterval: TimeSpan.FromSeconds(2)
             );
     }
 
@@ -259,7 +277,7 @@ public static class Logger
             {
                 Type = logType,
                 Color = colorHex,
-                Message = message?.ToString().OrEmpty(),
+                Message = message?.ToString() ?? string.Empty,
                 LogLevel = logLevel,
                 Time = DateTime.UtcNow,
                 ThreadId = Environment.CurrentManagedThreadId,
@@ -334,16 +352,19 @@ public static class Logger
         where T : class => Log("ripper", message, level);
 
     public static void Http<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("http", message, level);
+        where T : class =>
+        Log("http", message, BootLog.IsBootInProgress ? LogEventLevel.Debug : level);
 
     public static void Ping<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("ping", message, level);
+        where T : class =>
+        Log("ping", message, BootLog.IsBootInProgress ? LogEventLevel.Debug : level);
 
     public static void Request<T>(T message, LogEventLevel level = LogEventLevel.Debug)
         where T : class => Log("request", message, level);
 
     public static void Socket<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("socket", message, level);
+        where T : class =>
+        Log("socket", message, BootLog.IsBootInProgress ? LogEventLevel.Debug : level);
 
     public static void AcoustId<T>(T message, LogEventLevel level = LogEventLevel.Information)
         where T : class => Log("acoustid", message, level);
@@ -417,7 +438,14 @@ public static class Logger
     )
     {
         string logDirectoryPath = AppFiles.LogPath;
-        List<LogEntry> logs = await LogReader.GetLogsAsync(logDirectoryPath, filter: filter);
+        // LOCAL-ONLY: Logger is a static class in NmSystem; no reference to NoMercy.Providers.
+        IStorageDriver driver = new LocalStorageDriver();
+        IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+        List<LogEntry> logs = await LogReader.GetLogsAsync(
+            storage,
+            logDirectoryPath,
+            filter: filter
+        );
 
         return logs.OrderByDescending(entry => entry.Time)
             .Take(limit)

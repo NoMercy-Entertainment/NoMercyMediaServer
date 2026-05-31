@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="NoMercy.Tests.Events" />
+    <InternalsVisibleTo Include="NoMercy.Tests.Api" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,8 +36,10 @@
   <ItemGroup>
     <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
     <ProjectReference Include="..\NoMercy.Data\NoMercy.Data.csproj" />
+    <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj" />
     <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
     <ProjectReference Include="..\NoMercy.MediaSources\NoMercy.MediaSources.csproj" />
+    <ProjectReference Include="..\NoMercy.OpticalMedia\NoMercy.OpticalMedia.csproj" />
     <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj" />
     <ProjectReference Include="..\NoMercy.Plugins.Abstractions\NoMercy.Plugins.Abstractions.csproj" />
     <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
@@ -44,6 +47,7 @@
     <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
     <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj" />
     <ProjectReference Include="..\NoMercy.Queue.MediaServer\NoMercy.Queue.MediaServer.csproj" />
+    <ProjectReference Include="..\NoMercy.Storage\NoMercy.Storage.csproj" />
   </ItemGroup>
 
   <ItemGroup>

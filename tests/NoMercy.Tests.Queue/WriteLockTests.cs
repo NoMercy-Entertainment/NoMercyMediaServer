@@ -1,11 +1,10 @@
 using System.Reflection;
 using NoMercy.Database;
-using NoMercy.Database.Models.Queue;
-using NoMercyQueue;
 using NoMercy.Queue.MediaServer;
+using NoMercy.Tests.Queue.TestHelpers;
+using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -32,8 +31,10 @@ public class WriteLockTests : IDisposable
     public void WriteLock_IsNotDbContextInstance()
     {
         // Use reflection to verify the lock object is a dedicated object, not the Context
-        FieldInfo? writeLockField = typeof(JobQueue)
-            .GetField("_writeLock", BindingFlags.NonPublic | BindingFlags.Static);
+        FieldInfo? writeLockField = typeof(JobQueue).GetField(
+            "_writeLock",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
 
         Assert.NotNull(writeLockField);
 
@@ -52,8 +53,10 @@ public class WriteLockTests : IDisposable
         IQueueContext adapter2 = new EfQueueContextAdapter(context2);
         JobQueue jobQueue2 = new(adapter2);
 
-        FieldInfo? writeLockField = typeof(JobQueue)
-            .GetField("_writeLock", BindingFlags.NonPublic | BindingFlags.Static);
+        FieldInfo? writeLockField = typeof(JobQueue).GetField(
+            "_writeLock",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
 
         Assert.NotNull(writeLockField);
 
@@ -82,13 +85,15 @@ public class WriteLockTests : IDisposable
             {
                 try
                 {
-                    _jobQueue.Enqueue(new()
-                    {
-                        Queue = "concurrent-test",
-                        Payload = $"payload-{index}",
-                        AvailableAt = DateTime.UtcNow,
-                        Priority = 1
-                    });
+                    _jobQueue.Enqueue(
+                        new()
+                        {
+                            Queue = "concurrent-test",
+                            Payload = $"payload-{index}",
+                            AvailableAt = DateTime.UtcNow,
+                            Priority = 1,
+                        }
+                    );
                 }
                 catch (Exception ex)
                 {
@@ -120,13 +125,15 @@ public class WriteLockTests : IDisposable
         // Seed some jobs first
         for (int i = 0; i < 10; i++)
         {
-            _context.QueueJobs.Add(new()
-            {
-                Queue = "integrity-test",
-                Payload = $"seed-{i}",
-                AvailableAt = DateTime.UtcNow,
-                Priority = 1
-            });
+            _context.QueueJobs.Add(
+                new()
+                {
+                    Queue = "integrity-test",
+                    Payload = $"seed-{i}",
+                    AvailableAt = DateTime.UtcNow,
+                    Priority = 1,
+                }
+            );
         }
         _context.SaveChanges();
 
@@ -143,19 +150,27 @@ public class WriteLockTests : IDisposable
             {
                 try
                 {
-                    _jobQueue.Enqueue(new()
-                    {
-                        Queue = "integrity-test",
-                        Payload = $"new-{index}",
-                        AvailableAt = DateTime.UtcNow,
-                        Priority = 1
-                    });
+                    _jobQueue.Enqueue(
+                        new()
+                        {
+                            Queue = "integrity-test",
+                            Payload = $"new-{index}",
+                            AvailableAt = DateTime.UtcNow,
+                            Priority = 1,
+                        }
+                    );
                 }
                 catch (Exception ex)
                 {
-                    lock (errors) { errors.Add(ex); }
+                    lock (errors)
+                    {
+                        errors.Add(ex);
+                    }
                 }
-                finally { countdown.Signal(); }
+                finally
+                {
+                    countdown.Signal();
+                }
             });
         }
 
@@ -168,13 +183,22 @@ public class WriteLockTests : IDisposable
                 try
                 {
                     QueueJobModel? job = _jobQueue.Dequeue();
-                    lock (dequeued) { dequeued.Add(job); }
+                    lock (dequeued)
+                    {
+                        dequeued.Add(job);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    lock (errors) { errors.Add(ex); }
+                    lock (errors)
+                    {
+                        errors.Add(ex);
+                    }
                 }
-                finally { countdown.Signal(); }
+                finally
+                {
+                    countdown.Signal();
+                }
             });
         }
 

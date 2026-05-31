@@ -1,497 +1,190 @@
-using System.Text;
-using NoMercy.Encoder.Core;
-using NoMercy.Encoder.Format.Audio;
-using NoMercy.Encoder.Format.Container;
-using NoMercy.Encoder.Format.Image;
-using NoMercy.Encoder.Format.Rules;
-using NoMercy.Encoder.Format.Subtitle;
-using NoMercy.Encoder.Format.Video;
-using NoMercy.NmSystem;
-using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
+using System.Globalization;
 
 namespace NoMercy.Encoder.Commands;
 
-public class FFmpegCommandBuilder
+public class FfmpegCommandBuilder
 {
-    private readonly BaseContainer _container;
-    private readonly FfProbeData _FfProbeData;
-    private readonly List<GpuAccelerator> _accelerators;
-    private readonly bool _priority;
+    private GlobalOptions _globalOptions = new();
+    private readonly List<InputOptions> _inputs = [];
+    private string? _filterComplex;
+    private readonly List<OutputOptions> _outputs = [];
 
-    public FFmpegCommandBuilder(
-        BaseContainer container,
-        FfProbeData ffProbeData,
-        List<GpuAccelerator> accelerators,
-        bool priority = false
-    )
+    public FfmpegCommandBuilder WithGlobalOptions(GlobalOptions options)
     {
-        _container = container;
-        _FfProbeData = ffProbeData;
-        _accelerators = accelerators;
-        _priority = priority;
-
-        // Apply container-specific flags (adds -f, HLS options, etc.)
-        _container.ApplyFlags();
+        _globalOptions = options;
+        return this;
     }
 
-    public string BuildCommand()
+    public FfmpegCommandBuilder AddInput(InputOptions input)
     {
-        StringBuilder command = new();
-
-        // Build command sections in order
-        AppendGlobalOptions(command);
-        AppendInputOptions(command);
-        AppendComplexFilters(command);
-        AppendVideoOutputs(command);
-        AppendAudioOutputs(command);
-        AppendSubtitleOutputs(command);
-        AppendImageOutputs(command);
-
-        return command.ToString();
+        _inputs.Add(input);
+        return this;
     }
 
-    private void AppendGlobalOptions(StringBuilder command)
+    public FfmpegCommandBuilder WithFilterComplex(string filterGraph)
     {
-        command.Append(" -hide_banner ");
-
-        if (_container.IsVideo)
-        {
-            command.Append(" -probesize 4092M -analyzeduration 9999M");
-
-            int threadCount = Environment.ProcessorCount;
-            if (_priority)
-                command.Append($" -threads {Math.Floor(threadCount * 2.0)} ");
-            else
-                command.Append(" -threads 0 ");
-
-            foreach (GpuAccelerator accelerator in _accelerators)
-                command.Append(" " + accelerator.FfmpegArgs + " ");
-        }
-
-        command.Append(" -progress - ");
+        _filterComplex = filterGraph;
+        return this;
     }
 
-    private void AppendInputOptions(StringBuilder command)
+    public FfmpegCommandBuilder AddOutput(OutputOptions output)
     {
-        command.Append($" -y -i \"{_container.InputFile}\" ");
-
-        if (_container.IsVideo && _accelerators.Count > 0)
-            command.Append(" -gpu any ");
-
-        command.Append(" -map_metadata -1 ");
+        _outputs.Add(output);
+        return this;
     }
 
-    private void AppendComplexFilters(StringBuilder command)
+    public FfmpegCommand Build(string ffmpegPath, string? workingDirectory = null)
     {
-        StringBuilder complexString = BuildComplexFilterString();
+        List<string> args = [];
 
-        if (complexString.Length > 0)
+        // Global options
+        if (_globalOptions.Overwrite)
+            args.Add("-y");
+        if (_globalOptions.HideBanner)
+            args.Add("-hide_banner");
+        if (_globalOptions.ProgressPipe)
         {
-            command.Append(" -filter_complex \"");
-            command.Append(complexString.Replace(";;", ";") + "\"");
+            args.Add("-progress");
+            args.Add("pipe:1");
         }
-    }
-
-    private void ApplyScaleOverrides(BaseVideo stream)
-    {
-        // Scale Override #1: Resolve the -2 sentinel and any zero height.
-        //
-        // ScaleValue may contain "width:-2" when the caller used SetScale(int).
-        // The Scale getter resolves -2 to pixels when a crop is set (AspectRatioValue
-        // > 0), but ScaleValue is never updated — it stays "width:-2" — so the
-        // FFmpeg filter_complex string would contain "scale=854:-2" instead of real
-        // pixel values.
-        //
-        // We always write the resolved Scale back through the property setter here
-        // so that ScaleValue is in sync before BuildVideoFilter reads it.
-        int resolvedH = stream.Scale.H; // may be -2 (no crop) or a computed value
-        if (resolvedH <= 0)
+        if (_globalOptions.Threads.HasValue)
         {
-            // -2 was not resolvable via crop ratio — fall back to source dimensions.
-            int sourceWidth = _FfProbeData.PrimaryVideoStream!.Width;
-            int sourceHeight = _FfProbeData.PrimaryVideoStream.Height;
-            double aspectRatio = sourceWidth > 0 ? (double)sourceHeight / sourceWidth : 1.0;
-            int targetWidth = stream.Scale.W > 0 ? stream.Scale.W : sourceWidth;
-            stream.Scale = new() { W = targetWidth, H = (int)(targetWidth * aspectRatio) };
+            args.Add("-threads");
+            args.Add(_globalOptions.Threads.Value.ToString());
         }
-        else
+        if (_globalOptions.ProbeSizeBytes.HasValue)
         {
-            // Even when height was resolved by the getter (e.g. from crop ratio),
-            // ScaleValue still holds the original "width:-2" string.
-            // Write the resolved dimensions back so ScaleValue matches.
-            stream.Scale = new() { W = stream.Scale.W, H = resolvedH };
+            args.Add("-probesize");
+            args.Add(_globalOptions.ProbeSizeBytes.Value.ToString());
+        }
+        if (_globalOptions.AnalyzeDurationUs.HasValue)
+        {
+            args.Add("-analyzeduration");
+            args.Add(_globalOptions.AnalyzeDurationUs.Value.ToString());
         }
 
-        // Scale Override #2: Prevent upscaling
-        if (
-            stream.Scale.W > stream.VideoStream!.Width
-            || stream.Scale.H > stream.VideoStream.Height
-        )
-            stream.Scale = new() { W = stream.VideoStream.Width, H = stream.VideoStream.Height };
-    }
-
-    private StringBuilder BuildComplexFilterString()
-    {
-        StringBuilder complexString = new();
-        bool isHdr = false;
-
-        // Video filters
-        foreach (BaseVideo stream in _container.VideoStreams)
+        // Inputs
+        foreach (InputOptions input in _inputs)
         {
-            // Apply scale overrides (simplified approach)
-            ApplyScaleOverrides(stream);
-
-            if (ShouldSkipHdrProfile(stream))
-                continue;
-
-            int index = _container.VideoStreams.IndexOf(stream);
-            string videoFilter = BuildVideoFilter(stream, index, ref isHdr);
-            complexString.Append(videoFilter);
-
-            if (index != _container.VideoStreams.Count - 1 && complexString.Length > 0)
-                complexString.Append(';');
-        }
-
-        // Audio filters
-        if (_container.AudioStreams.Count > 0 && complexString.Length > 0)
-            complexString.Append(';');
-
-        foreach (BaseAudio stream in _container.AudioStreams)
-        {
-            int index = _container.AudioStreams.IndexOf(stream);
-            complexString.Append($"[a:{stream.Index}]volume=3[a{index}_hls_0]");
-
-            if (index != _container.AudioStreams.Count - 1 && complexString.Length > 0)
-                complexString.Append(';');
-        }
-
-        // Image filters
-        if (_container.ImageStreams.Count > 0 && complexString.Length > 0)
-            complexString.Append(';');
-
-        foreach (BaseImage stream in _container.ImageStreams)
-        {
-            int index = _container.ImageStreams.IndexOf(stream);
-            string imageFilter = BuildImageFilter(stream, index, isHdr);
-            complexString.Append(imageFilter);
-
-            if (index != _container.ImageStreams.Count - 1 && complexString.Length > 0)
-                complexString.Append(';');
-        }
-
-        return complexString;
-    }
-
-    private string BuildVideoFilter(BaseVideo stream, int index, ref bool isHdr)
-    {
-        if (stream is { ConvertToSdr: true, IsHdr: true })
-        {
-            isHdr = stream.IsHdr;
-            return $"[v:0]crop={stream.CropValue},scale={stream.ScaleValue},setsar=1:1,zscale=tin=smpte2084:min=bt2020nc:pin=bt2020:rin=tv:t=smpte2084:m=bt2020nc:p=bt2020:r=tv,zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format={stream.PixelFormat}[v{index}_hls_0]";
-        }
-
-        return $"[v:0]crop={stream.CropValue},scale={stream.ScaleValue},setsar=1:1,format={stream.PixelFormat}[v{index}_hls_0]";
-    }
-
-    private string BuildImageFilter(BaseImage stream, int index, bool isHdr)
-    {
-        if (isHdr)
-        {
-            return $"[v:0]crop={stream.CropValue},scale={stream.ScaleValue},zscale=tin=smpte2084:min=bt2020nc:pin=bt2020:rin=tv:t=smpte2084:m=bt2020nc:p=bt2020:r=tv,zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,fps=1/{stream.FrameRate}[i{index}_hls_0]";
-        }
-
-        return $"[v:0]crop={stream.CropValue},scale={stream.ScaleValue},fps=1/{stream.FrameRate}[i{index}_hls_0]";
-    }
-
-    private void AppendVideoOutputs(StringBuilder command)
-    {
-        foreach (BaseVideo stream in _container.VideoStreams)
-        {
-            // Apply final scale adjustments
-            ApplyFinalScaleAdjustments(stream);
-
-            if (ShouldSkipHdrProfile(stream))
-                continue;
-
-            Dictionary<string, dynamic> commandDictionary = new();
-            int index = _container.VideoStreams.IndexOf(stream);
-
-            stream.AddToDictionary(commandDictionary, index);
-            AddContainerParameters(commandDictionary);
-            AddHlsParameters(commandDictionary, stream.HlsPlaylistFilename, true);
-
-            // Auto-bump H.264/H.265 level if the output resolution exceeds the configured level
-            ValidateAndFixLevel(commandDictionary, stream);
-
-            command.Append(BuildParameterString(commandDictionary));
-            stream.CreateFolder();
-        }
-    }
-
-    /// <summary>
-    /// Apply final scale adjustments (the remaining scale override points).
-    /// IMPORTANT: always assign to stream.Scale (the property setter), never mutate
-    /// stream.Scale.W/H directly — the getter returns a new ScaleArea each call so
-    /// direct field writes are lost and ScaleValue (the backing string passed to
-    /// FFmpeg) is never updated.
-    /// </summary>
-    private void ApplyFinalScaleAdjustments(BaseVideo stream)
-    {
-        // Scale Override #3: Another upscaling check
-        if (
-            stream.Scale.W > stream.VideoStream!.Width
-            || stream.Scale.H > stream.VideoStream.Height
-        )
-        {
-            stream.Scale = new() { W = stream.VideoStream.Width, H = stream.VideoStream.Height };
-        }
-
-        // Scale Override #4: Downscaling threshold check
-        if (
-            stream.Scale.W < stream.VideoStream.Width * 0.95
-            && stream.Scale.H < stream.VideoStream.Height * 0.95
-        )
-        {
-            stream.Scale = new() { W = stream.VideoStream.Width, H = stream.VideoStream.Height };
-        }
-    }
-
-    private void AppendAudioOutputs(StringBuilder command)
-    {
-        foreach (BaseAudio stream in _container.AudioStreams)
-        {
-            Dictionary<string, dynamic> commandDictionary = new();
-            int index = _container.AudioStreams.IndexOf(stream);
-
-            stream.AddToDictionary(commandDictionary, index);
-            AddContainerParameters(commandDictionary);
-            // Don't add container parameters to audio streams - they're not needed
-            AddHlsParameters(commandDictionary, stream.HlsPlaylistFilename, true);
-
-            // Build the base stream parameters (map, codec, HLS params, etc.)
-            command.Append(BuildParameterString(commandDictionary));
-
-            // Add metadata AFTER the stream parameters
-            if (_container.IsAudio)
+            if (input.HwAccelDevice is not null)
             {
-                AddAudioMetadata(command, stream);
+                args.Add("-hwaccel");
+                args.Add(input.HwAccelDevice);
             }
-            else
+            if (input.HwAccelOutputFormat is not null)
             {
-                AddStreamMetadata(command, stream, index);
+                args.Add("-hwaccel_output_format");
+                args.Add(input.HwAccelOutputFormat);
             }
-
-            stream.CreateFolder();
+            if (input.SeekTo.HasValue)
+            {
+                args.Add("-ss");
+                args.Add(
+                    input.SeekTo.Value.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture)
+                );
+            }
+            if (input.Duration.HasValue)
+            {
+                args.Add("-t");
+                args.Add(
+                    input.Duration.Value.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture)
+                );
+            }
+            args.Add("-i");
+            args.Add(input.FilePath);
         }
-    }
 
-    private void AppendSubtitleOutputs(StringBuilder command)
-    {
-        foreach (BaseSubtitle stream in _container.SubtitleStreams)
+        // Filter complex
+        if (_filterComplex is not null)
         {
-            Dictionary<string, dynamic> commandDictionary = new();
-            // sourceIndex = stream.Index (which source stream to map)
-            // outputIndex = 0 (each subtitle is a separate output file with 1 stream)
-            stream.AddToDictionary(commandDictionary, stream.Index, outputIndex: 0);
-
-            commandDictionary[""] = $"\"./{stream.HlsPlaylistFilename}.{stream.Extension}\"";
-
-            command.Append(BuildParameterString(commandDictionary));
-            stream.CreateFolder();
+            args.Add("-filter_complex");
+            args.Add(_filterComplex);
         }
-    }
 
-    private void AppendImageOutputs(StringBuilder command)
-    {
-        foreach (BaseImage stream in _container.ImageStreams)
+        // Outputs
+        foreach (OutputOptions output in _outputs)
         {
-            Dictionary<string, dynamic> commandDictionary = new();
-            int index = _container.ImageStreams.IndexOf(stream);
-
-            stream.AddToDictionary(commandDictionary, index);
-
-            if (_container.ContainerDto.Name == VideoContainers.Hls)
-                commandDictionary[""] = $"\"./{stream.Filename}/{stream.Filename}-%04d.jpg\"";
-
-            command.Append(BuildParameterString(commandDictionary));
-            stream.CreateFolder();
+            foreach (string map in output.MapStreams ?? [])
+            {
+                args.Add("-map");
+                args.Add(map);
+            }
+            if (output.VideoCodec is not null)
+            {
+                args.Add("-c:v");
+                args.Add(output.VideoCodec);
+            }
+            if (output.AudioCodec is not null)
+            {
+                args.Add("-c:a");
+                args.Add(output.AudioCodec);
+            }
+            if (output.SubtitleCodec is not null)
+            {
+                args.Add("-c:s");
+                args.Add(output.SubtitleCodec);
+            }
+            if (output.Preset is not null)
+            {
+                args.Add("-preset");
+                args.Add(output.Preset);
+            }
+            if (output.Profile is not null)
+            {
+                args.Add("-profile:v");
+                args.Add(output.Profile);
+            }
+            if (output.Level is not null)
+            {
+                args.Add("-level");
+                args.Add(output.Level);
+            }
+            if (output.PixelFormat is not null)
+            {
+                args.Add("-pix_fmt");
+                args.Add(output.PixelFormat);
+            }
+            if (output.Crf.HasValue)
+            {
+                args.Add("-crf");
+                args.Add(output.Crf.Value.ToString());
+            }
+            if (output.VideoBitrateKbps.HasValue)
+            {
+                args.Add("-b:v");
+                args.Add($"{output.VideoBitrateKbps.Value}k");
+            }
+            if (output.AudioBitrateKbps.HasValue)
+            {
+                args.Add("-b:a");
+                args.Add($"{output.AudioBitrateKbps.Value}k");
+            }
+            if (output.AudioChannels is not null)
+            {
+                args.Add("-ac");
+                args.Add(output.AudioChannels);
+            }
+            if (output.AudioSampleRate.HasValue)
+            {
+                args.Add("-ar");
+                args.Add(output.AudioSampleRate.Value.ToString());
+            }
+            if (output.KeyframeInterval.HasValue)
+            {
+                args.Add("-g");
+                args.Add(output.KeyframeInterval.Value.ToString());
+            }
+            if (output.ExtraFlags is not null)
+            {
+                foreach (KeyValuePair<string, string> flag in output.ExtraFlags)
+                {
+                    args.Add(flag.Key);
+                    args.Add(flag.Value);
+                }
+            }
+            args.Add(output.FilePath);
         }
+
+        return new(ffmpegPath, args.ToArray(), workingDirectory);
     }
-
-    #region Helper Methods
-
-    private bool ShouldSkipHdrProfile(BaseVideo stream)
-    {
-        // Skip profiles that request 10-bit pixel formats (HDR) when the source is not HDR.
-        // This prevents generating HDR outputs from SDR sources. Detection is based on
-        // pixel-format naming (contains "10") which matches our pixel format constants.
-        if (string.IsNullOrEmpty(stream.PixelFormat))
-            return false;
-
-        // Substring "10" was matching unrelated pixel formats like yuv410p (4:1:0 chroma, not HDR)
-        // and would match any future format containing the digit. Explicit set is the safe check.
-        bool profileRequests10Bit = HighBitDepthPixelFormats.Contains(stream.PixelFormat);
-
-        // If the profile requests 10-bit (HDR) but the input stream is not HDR, skip it.
-        if (profileRequests10Bit && !stream.IsHdr)
-            return true;
-
-        return false;
-    }
-
-    private static readonly HashSet<string> HighBitDepthPixelFormats = new(
-        StringComparer.OrdinalIgnoreCase
-    )
-    {
-        "yuv420p10le",
-        "yuv420p10be",
-        "yuv422p10le",
-        "yuv422p10be",
-        "yuv444p10le",
-        "yuv444p10be",
-        "p010le",
-        "p010be",
-        "p210le",
-        "p210be",
-        "p410le",
-        "p410be",
-        "yuv420p12le",
-        "yuv420p12be",
-    };
-
-    private void AddContainerParameters(Dictionary<string, dynamic> commandDictionary)
-    {
-        foreach (KeyValuePair<string, dynamic> parameter in _container._extraParameters)
-            commandDictionary[parameter.Key] = parameter.Value;
-    }
-
-    private void AddHlsParameters(
-        Dictionary<string, dynamic> commandDictionary,
-        string playlistFilename,
-        bool isVideo
-    )
-    {
-        if (_container.ContainerDto.Name == VideoContainers.Hls)
-        {
-            commandDictionary["-hls_segment_filename"] = $"\"./{playlistFilename}_%05d.ts\"";
-            commandDictionary[""] = $"\"./{playlistFilename}.m3u8\"";
-        }
-        else if (!isVideo)
-        {
-            commandDictionary[""] = $"\"./{playlistFilename}.{_container.Extension}\"";
-        }
-    }
-
-    private void AddAudioMetadata(StringBuilder command, BaseAudio stream)
-    {
-        command.Append(" -map 0:v:0? ");
-
-        if (stream._id3Tags.Count > 0)
-        {
-            command.Append(" -id3v2_version 3 -write_id3v1 1 ");
-            foreach (string extraTag in stream._id3Tags)
-                command.Append($" -metadata {extraTag} ");
-
-            command.Append(" -metadata:s:v title=\"Album cover\"");
-            command.Append(" -metadata:s:v comment=\"Cover (front)\"");
-        }
-    }
-
-    private void AddStreamMetadata(StringBuilder command, BaseAudio stream, int index)
-    {
-        if (!IsoLanguageMapper.IsoToLanguage.TryGetValue(stream.Language, out string? language))
-            throw new($"Language {stream.Language} is not supported");
-
-        command.Append(
-            $" -metadata:s:a:{index} title=\"{language} {stream.AudioChannels}-{stream.AudioCodec.SimpleValue}\" "
-        );
-        command.Append($" -metadata:s:a:{index} language=\"{stream.Language}\" ");
-    }
-
-    private string BuildParameterString(Dictionary<string, dynamic> parameters)
-    {
-        return parameters.Aggregate("", (acc, pair) => $"{acc} {pair.Key} {pair.Value}");
-    }
-
-    // H.264 levels ordered by capability, with max macroblocks per frame (MaxFS)
-    private static readonly (string level, int maxMacroblocks)[] H264Levels =
-    [
-        ("1.0", 99),
-        ("1.1", 396),
-        ("1.2", 396),
-        ("1.3", 396),
-        ("2.0", 396),
-        ("2.1", 792),
-        ("2.2", 1620),
-        ("3.0", 1620),
-        ("3.1", 3600),
-        ("3.2", 5120),
-        ("4.0", 8192),
-        ("4.1", 8192),
-        ("4.2", 8704),
-        ("5.0", 22080),
-        ("5.1", 36864),
-        ("5.2", 36864),
-        ("6.0", 139264),
-        ("6.1", 139264),
-        ("6.2", 139264),
-    ];
-
-    /// <summary>
-    /// Validates the configured H.264 level against the actual output resolution.
-    /// If the resolution exceeds the configured level's macroblock limit, bumps to the minimum valid level.
-    /// This handles cases where crop detection changes the aspect ratio, producing non-standard resolutions.
-    /// </summary>
-    private static void ValidateAndFixLevel(
-        Dictionary<string, dynamic> commandDictionary,
-        BaseVideo stream
-    )
-    {
-        if (!commandDictionary.TryGetValue("-level:v", out dynamic? levelValue))
-            return;
-
-        // Strip surrounding quotes — values from AddCustomArgument may be stored as "4.0" (with quotes)
-        string configuredLevel = ((string?)(levelValue?.ToString()) ?? string.Empty).Trim('"');
-        if (string.IsNullOrEmpty(configuredLevel) || configuredLevel == "auto")
-            return;
-
-        // Only validate for H.264 codecs
-        string codec = stream.VideoCodec.Value.ToLower();
-        if (
-            codec
-            is not ("libx264" or "h264_nvenc" or "h264_qsv" or "h264_amf" or "h264_videotoolbox")
-        )
-            return;
-
-        int width = stream.Scale.W;
-        int height = stream.Scale.H;
-        if (width <= 0 || height <= 0)
-            return;
-
-        int macroblocks = ((width + 15) / 16) * ((height + 15) / 16);
-
-        int configuredIndex = Array.FindIndex(H264Levels, l => l.level == configuredLevel);
-        if (configuredIndex < 0)
-            return; // unknown level format, don't touch
-
-        if (H264Levels[configuredIndex].maxMacroblocks >= macroblocks)
-            return; // level is sufficient
-
-        // Find the minimum level that supports this resolution
-        int minIndex = Array.FindIndex(H264Levels, l => l.maxMacroblocks >= macroblocks);
-        if (minIndex < 0)
-            return; // exceeds all known levels
-
-        string newLevel = H264Levels[minIndex].level;
-        // Preserve the original quoting style
-        bool wasQuoted = (levelValue?.ToString()).OrEmpty().StartsWith('"');
-        commandDictionary["-level:v"] = wasQuoted ? $"\"{newLevel}\"" : newLevel;
-
-        Logger.Encoder(
-            $"Auto-bumped H.264 level from {configuredLevel} to {newLevel} for {width}x{height} ({macroblocks} macroblocks, max {H264Levels[configuredIndex].maxMacroblocks} at level {configuredLevel})"
-        );
-    }
-
-    #endregion
 }

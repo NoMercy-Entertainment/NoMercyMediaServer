@@ -4,6 +4,7 @@ using InfiniFrame;
 using InfiniFrame.Js.MessageHandlers;
 using InfiniFrame.WebServer;
 using NoMercy.App.EmbeddedStaticAssets;
+using NoMercy.Setup.Auth;
 
 namespace NoMercy.App;
 
@@ -117,7 +118,7 @@ internal class Program
                         return;
                     }
 
-                    bool ok = await NoMercy.Setup.AuthManager.TryCompletePkceFromCallbackAsync(
+                    bool ok = await AuthManager.TryCompletePkceFromCallbackAsync(
                         code,
                         state,
                         redirectUri
@@ -156,8 +157,7 @@ internal class Program
                     "<script>window.addEventListener('load',function(){setTimeout(function(){window.dispatchEvent(new Event('resize'))},100)})</script>"
                 );
             },
-            typeof(Program).Assembly,
-            "wwwroot"
+            typeof(Program).Assembly
         );
 
         application.Run();

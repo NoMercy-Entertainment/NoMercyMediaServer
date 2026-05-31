@@ -4,8 +4,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Information;
 
@@ -404,10 +402,16 @@ public class HomeRepository
             )
             .Include(genre => genre.Translations.Where(t => t.Iso6391 == language))
             .Include(genre =>
-                genre.GenreMovies.Where(gm => gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId) && gm.Movie.VideoFiles.Any())
+                genre.GenreMovies.Where(gm =>
+                    gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)
+                    && gm.Movie.VideoFiles.Any()
+                )
             )
             .Include(genre =>
-                genre.GenreTvShows.Where(gt => gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId) && gt.Tv.Episodes.Any(e => e.VideoFiles.Any()))
+                genre.GenreTvShows.Where(gt =>
+                    gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)
+                    && gt.Tv.Episodes.Any(e => e.VideoFiles.Any())
+                )
             )
             .OrderBy(genre => genre.Name)
             .Skip(page * take)
@@ -420,15 +424,9 @@ public class HomeRepository
             {
                 Id = genre.Id,
                 Name = genre.Name,
-                TranslatedName = genre.Translations
-                    .FirstOrDefault()
-                    ?.Name,
-                MovieIds = genre.GenreMovies
-                    .Select(gm => gm.MovieId)
-                    .ToList(),
-                TvIds = genre.GenreTvShows
-                    .Select(gt => gt.TvId)
-                    .ToList(),
+                TranslatedName = genre.Translations.FirstOrDefault()?.Name,
+                MovieIds = genre.GenreMovies.Select(gm => gm.MovieId).ToList(),
+                TvIds = genre.GenreTvShows.Select(gt => gt.TvId).ToList(),
             })
             .ToList();
     }

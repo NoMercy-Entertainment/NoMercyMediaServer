@@ -10,15 +10,24 @@ public class TmdbBaseClientTests : TmdbTestBase
 {
     private class TestableBaseClient : TmdbBaseClient
     {
-        public TestableBaseClient() : base() { }
-        public TestableBaseClient(int id, string language = "en-US") : base(id, language) { }
+        public TestableBaseClient() { }
 
-        public new Task<T?> Get<T>(string url, Dictionary<string, string?>? query = null, bool? priority = false, bool skipCache = false) where T : class
+        public TestableBaseClient(int id, string language = "en-US")
+            : base(id, language) { }
+
+        public new Task<T?> Get<T>(
+            string url,
+            Dictionary<string, string?>? query = null,
+            bool? priority = false,
+            bool skipCache = false
+        )
+            where T : class
         {
             return base.Get<T>(url, query, priority, skipCache);
         }
 
-        public new Task<List<T>?> Paginated<T>(string url, int limit) where T : class
+        public new Task<List<T>?> Paginated<T>(string url, int limit)
+            where T : class
         {
             return base.Paginated<T>(url, limit);
         }
@@ -137,7 +146,7 @@ public class TmdbBaseClientTests : TmdbTestBase
         const string lang2 = "fr-FR";
 
         // Act
-        using TestableBaseClient client1 = new(id1, lang1);
+        using TestableBaseClient client1 = new(id1);
         using TestableBaseClient client2 = new(id2, lang2);
 
         // Assert

@@ -1,0 +1,119 @@
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
+using NoMercy.Database.Models.Media;
+
+namespace NoMercy.Data.Repositories;
+
+/// <summary>
+/// Repository for the shareable preset library. Presets are separate from
+/// the runtime <c>EncoderProfile</c> table — applying a preset materializes
+/// its resolved profile into a fresh EncoderProfile row, which is what the
+/// encoder actually consumes. That decoupling means deleting or renaming a
+/// preset never breaks an in-flight encode job.
+/// </summary>
+public class EncodingPresetRepository(MediaContext context)
+{
+    public Task<List<EncodingPreset>> ListAsync(
+        int pageSize = 100,
+        int pageIndex = 0,
+        string? tagFilter = null
+    )
+    {
+        if (pageSize <= 0)
+            pageSize = 100;
+        if (pageIndex < 0)
+            pageIndex = 0;
+
+        IQueryable<EncodingPreset> query = context.EncodingPresets.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(tagFilter))
+        {
+            // Tags are stored as a comma-separated string (see model). Matching
+            // on substring is fine for now — the tag list is small and the
+            // column isn't indexed anyway. If the preset library grows past
+            // a few hundred entries we'd normalize into a join table.
+            string normalized = tagFilter.Trim().ToLower();
+            query = query.Where(p => p.Tags != null && p.Tags.ToLower().Contains(normalized));
+        }
+
+        return query
+            .OrderBy(p => p.IsBuiltIn ? 0 : 1)
+            .ThenBy(p => p.Name)
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<string>> GetAllTagsAsync()
+    {
+        List<string?> rows = await context
+            .EncodingPresets.AsNoTracking()
+            .Where(p => p.Tags != null && p.Tags != "")
+            .Select(p => p.Tags)
+            .ToListAsync();
+
+        HashSet<string> tags = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string? row in rows)
+        {
+            if (string.IsNullOrWhiteSpace(row))
+                continue;
+
+            foreach (string tag in row.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                tags.Add(tag.Trim());
+        }
+
+        return tags.OrderBy(t => t).ToList();
+    }
+
+    public Task<EncodingPreset?> GetByIdAsync(Ulid id) =>
+        context.EncodingPresets.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+
+    public Task<EncodingPreset?> GetByNameAsync(string name) =>
+        context.EncodingPresets.AsNoTracking().FirstOrDefaultAsync(p => p.Name == name);
+
+    public async Task<EncodingPreset> CreateAsync(EncodingPreset preset)
+    {
+        preset.CreatedAt = DateTime.UtcNow;
+        preset.UpdatedAt = preset.CreatedAt;
+        context.EncodingPresets.Add(preset);
+        await context.SaveChangesAsync();
+        return preset;
+    }
+
+    public async Task<EncodingPreset?> UpdateAsync(Ulid id, Action<EncodingPreset> apply)
+    {
+        EncodingPreset? existing = await context.EncodingPresets.FirstOrDefaultAsync(p =>
+            p.Id == id
+        );
+        if (existing is null)
+            return null;
+
+        if (existing.IsBuiltIn)
+            throw new InvalidOperationException(
+                "Built-in presets cannot be modified in place — clone and edit instead."
+            );
+
+        apply(existing);
+        existing.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        return existing;
+    }
+
+    public async Task<bool> DeleteAsync(Ulid id)
+    {
+        EncodingPreset? existing = await context.EncodingPresets.FirstOrDefaultAsync(p =>
+            p.Id == id
+        );
+        if (existing is null)
+            return false;
+
+        if (existing.IsBuiltIn)
+            throw new InvalidOperationException("Built-in presets cannot be deleted.");
+
+        context.EncodingPresets.Remove(existing);
+        await context.SaveChangesAsync();
+        return true;
+    }
+
+    public Task<int> GetTotalCountAsync() => context.EncodingPresets.CountAsync();
+}

@@ -1,6 +1,6 @@
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -15,7 +15,7 @@ public class SerializationHelperTests
         {
             Message = "Test message",
             HasExecuted = false,
-            ShouldFail = false
+            ShouldFail = false,
         };
 
         // Act
@@ -36,7 +36,7 @@ public class SerializationHelperTests
         {
             Message = "Original message",
             HasExecuted = true,
-            ShouldFail = false
+            ShouldFail = false,
         };
         string serialized = SerializationHelper.Serialize(originalJob);
 
@@ -54,11 +54,7 @@ public class SerializationHelperTests
     public void Serialize_Deserialize_ComplexJob_MaintainsIntegrity()
     {
         // Arrange
-        AnotherTestJob originalJob = new()
-        {
-            Value = 42,
-            HasExecuted = true
-        };
+        AnotherTestJob originalJob = new() { Value = 42, HasExecuted = true };
 
         // Act
         string serialized = SerializationHelper.Serialize(originalJob);
@@ -74,11 +70,7 @@ public class SerializationHelperTests
     public void Deserialize_AsObject_ReturnsCorrectType()
     {
         // Arrange
-        TestJob originalJob = new()
-        {
-            Message = "Type test",
-            HasExecuted = false
-        };
+        TestJob originalJob = new() { Message = "Type test", HasExecuted = false };
         string serialized = SerializationHelper.Serialize(originalJob);
 
         // Act
@@ -98,7 +90,7 @@ public class SerializationHelperTests
         TestJob testJob = new()
         {
             Message = null!, // Testing null handling
-            HasExecuted = false
+            HasExecuted = false,
         };
 
         // Act
@@ -117,29 +109,21 @@ public class SerializationHelperTests
     public void Serialize_CamelCaseNaming_UsesCorrectFormat()
     {
         // Arrange
-        TestJob testJob = new()
-        {
-            Message = "CamelCase test",
-            HasExecuted = true
-        };
+        TestJob testJob = new() { Message = "CamelCase test", HasExecuted = true };
 
         // Act
         string serialized = SerializationHelper.Serialize(testJob);
 
         // Assert
         Assert.Contains("hasExecuted", serialized); // Should be camelCase
-        Assert.Contains("message", serialized);     // Should be camelCase
+        Assert.Contains("message", serialized); // Should be camelCase
     }
 
     [Fact]
     public void Deserialize_IShouldQueueJob_CanBeCastToInterface()
     {
         // Arrange — serialize a valid job implementing IShouldQueue
-        TestJob originalJob = new()
-        {
-            Message = "IShouldQueue cast test",
-            HasExecuted = false
-        };
+        TestJob originalJob = new() { Message = "IShouldQueue cast test", HasExecuted = false };
         string serialized = SerializationHelper.Serialize(originalJob);
 
         // Act — deserialize as object (same as QueueWorker does)
@@ -162,18 +146,17 @@ public class SerializationHelperTests
         object deserialized = SerializationHelper.Deserialize<object>(serialized);
 
         // Assert — the safety gate: deserialized object is NOT an IShouldQueue
-        Assert.False(deserialized is IShouldQueue, "Non-IShouldQueue type must not pass the interface check");
+        Assert.False(
+            deserialized is IShouldQueue,
+            "Non-IShouldQueue type must not pass the interface check"
+        );
     }
 
     [Fact]
     public async Task Deserialize_IShouldQueueJob_ExecutesSuccessfully()
     {
         // Arrange — round-trip a job through serialize/deserialize
-        TestJob originalJob = new()
-        {
-            Message = "Execute after deserialize",
-            HasExecuted = false
-        };
+        TestJob originalJob = new() { Message = "Execute after deserialize", HasExecuted = false };
         string serialized = SerializationHelper.Serialize(originalJob);
 
         // Act — deserialize and execute via the IShouldQueue interface

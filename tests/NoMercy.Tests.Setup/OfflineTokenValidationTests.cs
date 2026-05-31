@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.NmSystem.Information;
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
 
 namespace NoMercy.Tests.Setup;
 
@@ -277,7 +277,7 @@ public class OfflineTokenValidationIntegrationTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "AuthManager.cs");
+            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "Auth", "AuthManager.cs");
             if (File.Exists(candidate))
             {
                 string source = File.ReadAllText(candidate);
@@ -286,7 +286,7 @@ public class OfflineTokenValidationIntegrationTests
             }
             dir = Path.GetDirectoryName(dir)!;
         }
-        Assert.Fail("Could not find src/NoMercy.Setup/AuthManager.cs");
+        Assert.Fail("Could not find src/NoMercy.Setup/Auth/AuthManager.cs");
     }
 
     [Fact]
@@ -297,7 +297,7 @@ public class OfflineTokenValidationIntegrationTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "AuthManager.cs");
+            string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "Auth", "AuthManager.cs");
             if (File.Exists(candidate))
             {
                 string source = File.ReadAllText(candidate);
@@ -306,7 +306,7 @@ public class OfflineTokenValidationIntegrationTests
             }
             dir = Path.GetDirectoryName(dir)!;
         }
-        Assert.Fail("Could not find src/NoMercy.Setup/AuthManager.cs");
+        Assert.Fail("Could not find src/NoMercy.Setup/Auth/AuthManager.cs");
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Globalization;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Extensions;
 
@@ -83,8 +84,8 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         else if (
             double.TryParse(
                 raw,
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
                 out double floatValue
             )
         )

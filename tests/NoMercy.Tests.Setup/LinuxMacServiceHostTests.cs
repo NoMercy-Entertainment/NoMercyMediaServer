@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using NoMercy.NmSystem;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Tests.Setup;
 
@@ -15,7 +15,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_ContainsRequiredSections()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
@@ -27,7 +28,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_HasNotifyServiceType()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
@@ -38,7 +40,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_PassesServiceFlag()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
@@ -48,7 +51,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_HasNetworkDependency()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
@@ -59,7 +63,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_HasRestartPolicy()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
@@ -70,7 +75,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_HasJournalLogging()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
@@ -82,7 +88,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_TargetsUserDefault()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
@@ -93,7 +100,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_ContainsExecutablePath()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
         string exePath = AutoStartupManager.GetExecutablePath();
@@ -104,7 +112,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_HasWorkingDirectory()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
@@ -114,7 +123,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_HasDescription()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
@@ -124,7 +134,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GetSystemdUnitPath_PointsToUserServiceDir()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         string path = AutoStartupManager.GetSystemdUnitPath();
 
@@ -134,7 +145,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GetSystemdUnitPath_RespectsXdgConfigHome()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         string? original = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
         try
@@ -155,7 +167,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_PathMatchesGetSystemdUnitPath()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string _, string generatedPath) = AutoStartupManager.GenerateSystemdUnit();
         string directPath = AutoStartupManager.GetSystemdUnitPath();
@@ -166,7 +179,8 @@ public class LinuxServiceHostTests
     [Fact]
     public void GenerateSystemdUnit_HasDotnetRootEnvironment()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 

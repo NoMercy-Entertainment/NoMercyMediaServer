@@ -30,7 +30,7 @@ public record ContainerProps : IContainerProps
     [JsonProperty("items")]
     public IEnumerable<ComponentEnvelope> Items { get; set; } = [];
 
-    [JsonProperty("contextMenuItems", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("context_menu_items", NullValueHandling = NullValueHandling.Ignore)]
     public IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
 
     [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]

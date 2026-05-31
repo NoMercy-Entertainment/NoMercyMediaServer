@@ -49,16 +49,11 @@ public class Season : ColorPaletteTimeStamps
     public ICollection<Crew> Crew { get; set; } = [];
 
     [JsonProperty("medias")]
-    public ICollection<Models.Media.Media> Medias { get; set; } = [];
+    public ICollection<Media.Media> Medias { get; set; } = [];
 
     [JsonProperty("images")]
     public ICollection<Image> Images { get; set; } = [];
 
     [JsonProperty("translations")]
     public ICollection<Translation> Translations { get; set; } = [];
-
-    public Season()
-    {
-        //
-    }
 }

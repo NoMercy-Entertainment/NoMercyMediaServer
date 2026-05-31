@@ -1,9 +1,6 @@
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.Tests.Repositories.Infrastructure;
 
@@ -25,7 +22,11 @@ public class HomeRepositoryTests : IDisposable
     public async Task GetHomeMovies_ReturnsMoviesById()
     {
         List<HomeMovieCardDto> movies = await _repository.GetHomeMovies(
-            _context, [129, 680], "en", "US");
+            _context,
+            [129, 680],
+            "en",
+            "US"
+        );
 
         Assert.Equal(2, movies.Count);
         Assert.Contains(movies, m => m.Id == 129);
@@ -36,7 +37,11 @@ public class HomeRepositoryTests : IDisposable
     public async Task GetHomeMovies_ReturnsEmpty_WhenIdsNotFound()
     {
         List<HomeMovieCardDto> movies = await _repository.GetHomeMovies(
-            _context, [999999], "en", "US");
+            _context,
+            [999999],
+            "en",
+            "US"
+        );
 
         Assert.Empty(movies);
     }
@@ -44,8 +49,7 @@ public class HomeRepositoryTests : IDisposable
     [Fact]
     public async Task GetHomeTvs_ReturnsTvShowsById()
     {
-        List<HomeTvCardDto> shows = await _repository.GetHomeTvs(
-            _context, [1399], "en", "US");
+        List<HomeTvCardDto> shows = await _repository.GetHomeTvs(_context, [1399], "en", "US");
 
         Assert.Single(shows);
         Assert.Equal(1399, shows[0].Id);
@@ -79,7 +83,9 @@ public class HomeRepositoryTests : IDisposable
     public async Task GetLibrariesAsync_ReturnsLibrariesForUser()
     {
         List<Library> libraries = await _repository.GetLibrariesAsync(
-            _context, SeedConstants.UserId);
+            _context,
+            SeedConstants.UserId
+        );
 
         Assert.Equal(2, libraries.Count);
     }
@@ -88,7 +94,9 @@ public class HomeRepositoryTests : IDisposable
     public async Task GetLibrariesAsync_ReturnsEmpty_WhenUserHasNoAccess()
     {
         List<Library> libraries = await _repository.GetLibrariesAsync(
-            _context, SeedConstants.OtherUserId);
+            _context,
+            SeedConstants.OtherUserId
+        );
 
         Assert.Empty(libraries);
     }
@@ -97,7 +105,11 @@ public class HomeRepositoryTests : IDisposable
     public async Task GetHomeGenresAsync_ReturnsGenresForUser()
     {
         List<GenreHomeDto> genres = await _repository.GetHomeGenresAsync(
-            _context, SeedConstants.UserId, "en", 10, 0);
+            _context,
+            SeedConstants.UserId,
+            "en",
+            10
+        );
 
         Assert.Equal(2, genres.Count);
         Assert.Contains(genres, g => g.Name == "Action");
@@ -108,7 +120,11 @@ public class HomeRepositoryTests : IDisposable
     public async Task GetHomeGenresAsync_RespectsPageAndTake()
     {
         List<GenreHomeDto> genres = await _repository.GetHomeGenresAsync(
-            _context, SeedConstants.UserId, "en", 1, 0);
+            _context,
+            SeedConstants.UserId,
+            "en",
+            1
+        );
 
         Assert.Single(genres);
     }
@@ -119,7 +135,11 @@ public class HomeRepositoryTests : IDisposable
         // Seed has 3 UserData rows: 2 for movie 129 (duplicate), 1 for tv 1399
         // DistinctBy on { MovieId, CollectionId, TvId, SpecialId } should yield 2 unique entries
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            _context, SeedConstants.UserId, "en", "US");
+            _context,
+            SeedConstants.UserId,
+            "en",
+            "US"
+        );
 
         Assert.Equal(2, result.Count);
         Assert.Contains(result, ud => ud.MovieId == 129);
@@ -131,7 +151,11 @@ public class HomeRepositoryTests : IDisposable
     {
         // The most recent entry for movie 129 has LastPlayedDate 2026-02-01
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            _context, SeedConstants.UserId, "en", "US");
+            _context,
+            SeedConstants.UserId,
+            "en",
+            "US"
+        );
 
         UserData? movieEntry = result.FirstOrDefault(ud => ud.MovieId == 129);
         Assert.NotNull(movieEntry);
@@ -142,7 +166,11 @@ public class HomeRepositoryTests : IDisposable
     public async Task GetContinueWatchingAsync_IncludesVideoFile()
     {
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            _context, SeedConstants.UserId, "en", "US");
+            _context,
+            SeedConstants.UserId,
+            "en",
+            "US"
+        );
 
         Assert.All(result, ud => Assert.NotNull(ud.VideoFile));
     }
@@ -151,7 +179,11 @@ public class HomeRepositoryTests : IDisposable
     public async Task GetContinueWatchingAsync_IncludesMovieData()
     {
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            _context, SeedConstants.UserId, "en", "US");
+            _context,
+            SeedConstants.UserId,
+            "en",
+            "US"
+        );
 
         UserData? movieEntry = result.FirstOrDefault(ud => ud.MovieId == 129);
         Assert.NotNull(movieEntry);
@@ -163,7 +195,11 @@ public class HomeRepositoryTests : IDisposable
     public async Task GetContinueWatchingAsync_ReturnsEmpty_WhenNoUserData()
     {
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
-            _context, SeedConstants.OtherUserId, "en", "US");
+            _context,
+            SeedConstants.OtherUserId,
+            "en",
+            "US"
+        );
 
         Assert.Empty(result);
     }

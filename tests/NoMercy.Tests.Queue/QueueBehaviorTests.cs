@@ -1,9 +1,9 @@
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -43,10 +43,12 @@ public class QueueBehaviorTests : IDisposable
         QueueJob job = new()
         {
             Queue = "retry-test",
-            Payload = SerializationHelper.Serialize(new TestJob { Message = "retry me", ShouldFail = true }),
+            Payload = SerializationHelper.Serialize(
+                new TestJob { Message = "retry me", ShouldFail = true }
+            ),
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -83,10 +85,10 @@ public class QueueBehaviorTests : IDisposable
             Queue = "retry-loop",
             Payload = SerializationHelper.Serialize(testJob),
             AvailableAt = DateTime.UtcNow,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         // Attempt 1: reserve, execute (fail), fail-job
         QueueJobModel? attempt1 = _jobQueue.ReserveJob("retry-loop", null);
@@ -94,7 +96,8 @@ public class QueueBehaviorTests : IDisposable
         Assert.Equal(1, attempt1.Attempts);
         try
         {
-            NoMercyQueue.Core.Interfaces.IShouldQueue exec1 = (NoMercyQueue.Core.Interfaces.IShouldQueue)SerializationHelper.Deserialize<object>(attempt1.Payload);
+            IShouldQueue exec1 = (IShouldQueue)
+                SerializationHelper.Deserialize<object>(attempt1.Payload);
             await exec1.Handle();
         }
         catch (Exception ex)
@@ -110,7 +113,8 @@ public class QueueBehaviorTests : IDisposable
         Assert.Equal(2, attempt2.Attempts);
         try
         {
-            NoMercyQueue.Core.Interfaces.IShouldQueue exec2 = (NoMercyQueue.Core.Interfaces.IShouldQueue)SerializationHelper.Deserialize<object>(attempt2.Payload);
+            IShouldQueue exec2 = (IShouldQueue)
+                SerializationHelper.Deserialize<object>(attempt2.Payload);
             await exec2.Handle();
         }
         catch (Exception ex)
@@ -150,7 +154,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "boundary payload",
             AvailableAt = DateTime.UtcNow,
             ReservedAt = DateTime.UtcNow,
-            Attempts = 2
+            Attempts = 2,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -163,7 +167,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "boundary payload",
             AvailableAt = job.AvailableAt,
             ReservedAt = job.ReservedAt,
-            Attempts = 2
+            Attempts = 2,
         };
         jobQueue.FailJob(jobModel, new InvalidOperationException("at boundary"));
 
@@ -186,7 +190,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "under boundary payload",
             AvailableAt = DateTime.UtcNow,
             ReservedAt = DateTime.UtcNow,
-            Attempts = 1
+            Attempts = 1,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -199,7 +203,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "under boundary payload",
             AvailableAt = job.AvailableAt,
             ReservedAt = job.ReservedAt,
-            Attempts = 1
+            Attempts = 1,
         };
         jobQueue.FailJob(jobModel, new InvalidOperationException("under boundary"));
 
@@ -222,7 +226,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "above boundary payload",
             AvailableAt = DateTime.UtcNow,
             ReservedAt = DateTime.UtcNow,
-            Attempts = 5
+            Attempts = 5,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -235,7 +239,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "above boundary payload",
             AvailableAt = job.AvailableAt,
             ReservedAt = job.ReservedAt,
-            Attempts = 5
+            Attempts = 5,
         };
         jobQueue.FailJob(jobModel, new InvalidOperationException("above boundary"));
 
@@ -257,10 +261,10 @@ public class QueueBehaviorTests : IDisposable
             Queue = "lifecycle",
             Payload = SerializationHelper.Serialize(testJob),
             AvailableAt = DateTime.UtcNow,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         // Attempt 1: reserve (Attempts → 1), fail
         QueueJobModel? a1 = jobQueue.ReserveJob("lifecycle", null);
@@ -312,7 +316,7 @@ public class QueueBehaviorTests : IDisposable
             Queue = "alpha",
             Payload = "alpha payload",
             AvailableAt = DateTime.UtcNow,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -339,7 +343,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "alpha payload",
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         QueueJob betaJob = new()
         {
@@ -347,7 +351,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "beta payload",
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.AddRange(alphaJob, betaJob);
         _context.SaveChanges();
@@ -378,7 +382,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "guard payload",
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -405,7 +409,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "guard payload null",
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -431,7 +435,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "exception payload",
             AvailableAt = DateTime.UtcNow,
             ReservedAt = DateTime.UtcNow,
-            Attempts = 1
+            Attempts = 1,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -447,7 +451,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "exception payload",
             AvailableAt = job.AvailableAt,
             ReservedAt = job.ReservedAt,
-            Attempts = 1
+            Attempts = 1,
         };
         jobQueue.FailJob(jobModel, outerEx);
 
@@ -470,7 +474,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "outer exception payload",
             AvailableAt = DateTime.UtcNow,
             ReservedAt = DateTime.UtcNow,
-            Attempts = 1
+            Attempts = 1,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -485,7 +489,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "outer exception payload",
             AvailableAt = job.AvailableAt,
             ReservedAt = job.ReservedAt,
-            Attempts = 1
+            Attempts = 1,
         };
         jobQueue.FailJob(jobModel, exception);
 
@@ -508,7 +512,7 @@ public class QueueBehaviorTests : IDisposable
             Queue = "reset-test",
             Payload = "reset payload",
             Exception = "some error",
-            FailedAt = DateTime.UtcNow
+            FailedAt = DateTime.UtcNow,
         };
         _context.FailedJobs.Add(failedJob);
         _context.SaveChanges();
@@ -536,7 +540,7 @@ public class QueueBehaviorTests : IDisposable
             Queue = "specific-queue-name",
             Payload = "queue preservation payload",
             Exception = "err",
-            FailedAt = DateTime.UtcNow
+            FailedAt = DateTime.UtcNow,
         };
         _context.FailedJobs.Add(failedJob);
         _context.SaveChanges();
@@ -560,13 +564,13 @@ public class QueueBehaviorTests : IDisposable
         {
             Queue = "same-queue",
             Payload = SerializationHelper.Serialize(new TestJob { Message = "job-A" }),
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
         QueueJobModel job2 = new()
         {
             Queue = "same-queue",
             Payload = SerializationHelper.Serialize(new TestJob { Message = "job-B" }),
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
 
         // Act
@@ -589,13 +593,13 @@ public class QueueBehaviorTests : IDisposable
         {
             Queue = "queue-1",
             Payload = payload,
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
         QueueJobModel job2 = new()
         {
             Queue = "queue-2",
             Payload = payload,
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
 
         // Act
@@ -618,7 +622,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "single job payload",
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -644,7 +648,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "payload-1",
             AvailableAt = DateTime.UtcNow,
             Priority = 2,
-            Attempts = 0
+            Attempts = 0,
         };
         QueueJob job2 = new()
         {
@@ -652,7 +656,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "payload-2",
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.AddRange(job1, job2);
         _context.SaveChanges();
@@ -680,7 +684,7 @@ public class QueueBehaviorTests : IDisposable
             Queue = "dequeue-test",
             Payload = "dequeue payload",
             AvailableAt = DateTime.UtcNow,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -705,7 +709,7 @@ public class QueueBehaviorTests : IDisposable
         {
             Queue = "delete-test",
             Payload = "delete payload",
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -716,7 +720,7 @@ public class QueueBehaviorTests : IDisposable
             Id = job.Id,
             Queue = "delete-test",
             Payload = "delete payload",
-            AvailableAt = job.AvailableAt
+            AvailableAt = job.AvailableAt,
         };
 
         // Act — delete once
@@ -743,10 +747,10 @@ public class QueueBehaviorTests : IDisposable
             Payload = SerializationHelper.Serialize(original),
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
-            Attempts = 0
+            Attempts = 0,
         };
         _context.QueueJobs.Add(job);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         // Act — reserve and deserialize
         QueueJobModel? reserved = _jobQueue.ReserveJob("serde-test", null);
@@ -773,15 +777,17 @@ public class QueueBehaviorTests : IDisposable
         // Arrange
         for (int i = 0; i < 5; i++)
         {
-            _context.FailedJobs.Add(new()
-            {
-                Uuid = Guid.NewGuid(),
-                Connection = "default",
-                Queue = $"queue-{i}",
-                Payload = $"payload-{i}",
-                Exception = $"error-{i}",
-                FailedAt = DateTime.UtcNow
-            });
+            _context.FailedJobs.Add(
+                new()
+                {
+                    Uuid = Guid.NewGuid(),
+                    Connection = "default",
+                    Queue = $"queue-{i}",
+                    Payload = $"payload-{i}",
+                    Exception = $"error-{i}",
+                    FailedAt = DateTime.UtcNow,
+                }
+            );
         }
         _context.SaveChanges();
         Assert.Equal(5, _context.FailedJobs.Count());
@@ -813,7 +819,7 @@ public class QueueBehaviorTests : IDisposable
             Queue = "keep",
             Payload = "keep-payload",
             Exception = "keep-error",
-            FailedAt = DateTime.UtcNow
+            FailedAt = DateTime.UtcNow,
         };
         FailedJob retry = new()
         {
@@ -822,7 +828,7 @@ public class QueueBehaviorTests : IDisposable
             Queue = "retry",
             Payload = "retry-payload",
             Exception = "retry-error",
-            FailedAt = DateTime.UtcNow
+            FailedAt = DateTime.UtcNow,
         };
         _context.FailedJobs.AddRange(keep, retry);
         _context.SaveChanges();
@@ -846,14 +852,16 @@ public class QueueBehaviorTests : IDisposable
         int[] priorities = [3, 1, 5, 2, 4];
         foreach (int p in priorities)
         {
-            _context.QueueJobs.Add(new()
-            {
-                Queue = "priority-order",
-                Payload = $"priority-{p}",
-                AvailableAt = DateTime.UtcNow,
-                Priority = p,
-                Attempts = 0
-            });
+            _context.QueueJobs.Add(
+                new()
+                {
+                    Queue = "priority-order",
+                    Payload = $"priority-{p}",
+                    AvailableAt = DateTime.UtcNow,
+                    Priority = p,
+                    Attempts = 0,
+                }
+            );
         }
         _context.SaveChanges();
 
@@ -882,7 +890,7 @@ public class QueueBehaviorTests : IDisposable
         {
             Queue = "reenqueue",
             Payload = payload,
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
         _jobQueue.Enqueue(job);
         Assert.Equal(1, _context.QueueJobs.Count());
@@ -896,7 +904,7 @@ public class QueueBehaviorTests : IDisposable
         {
             Queue = "reenqueue",
             Payload = payload,
-            AvailableAt = DateTime.UtcNow
+            AvailableAt = DateTime.UtcNow,
         };
         _jobQueue.Enqueue(job2);
 
@@ -916,7 +924,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "clear test",
             AvailableAt = DateTime.UtcNow,
             ReservedAt = DateTime.UtcNow,
-            Attempts = 1
+            Attempts = 1,
         };
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
@@ -929,7 +937,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "clear test",
             AvailableAt = job.AvailableAt,
             ReservedAt = job.ReservedAt,
-            Attempts = 1
+            Attempts = 1,
         };
         _jobQueue.FailJob(jobModel, new("test"));
 

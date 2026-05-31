@@ -15,9 +15,4 @@ public class CertificationMovie
     [JsonProperty("movie_id")]
     public int MovieId { get; set; }
     public Movie Movie { get; set; } = null!;
-
-    public CertificationMovie()
-    {
-        //
-    }
 }

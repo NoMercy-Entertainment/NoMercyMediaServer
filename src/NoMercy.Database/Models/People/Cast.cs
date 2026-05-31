@@ -50,9 +50,4 @@ public class Cast
     [JsonProperty("role_id")]
     public int? RoleId { get; set; }
     public Role Role { get; set; } = null!;
-
-    public Cast()
-    {
-        //
-    }
 }

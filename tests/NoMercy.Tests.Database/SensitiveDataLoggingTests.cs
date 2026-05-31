@@ -22,8 +22,7 @@ public class SensitiveDataLoggingTests
         if (isDev)
             options.EnableSensitiveDataLogging();
 
-        CoreOptionsExtension? coreExtension = options.Options
-            .FindExtension<CoreOptionsExtension>();
+        CoreOptionsExtension? coreExtension = options.Options.FindExtension<CoreOptionsExtension>();
 
         return coreExtension?.IsSensitiveDataLoggingEnabled ?? false;
     }
@@ -33,8 +32,10 @@ public class SensitiveDataLoggingTests
     {
         bool isSensitiveLogging = BuildOptionsAndCheckSensitiveLogging(isDev: false);
 
-        Assert.False(isSensitiveLogging,
-            "EnableSensitiveDataLogging must not be active in production mode");
+        Assert.False(
+            isSensitiveLogging,
+            "EnableSensitiveDataLogging must not be active in production mode"
+        );
     }
 
     [Fact]
@@ -42,8 +43,7 @@ public class SensitiveDataLoggingTests
     {
         bool isSensitiveLogging = BuildOptionsAndCheckSensitiveLogging(isDev: true);
 
-        Assert.True(isSensitiveLogging,
-            "EnableSensitiveDataLogging must be active in dev mode");
+        Assert.True(isSensitiveLogging, "EnableSensitiveDataLogging must be active in dev mode");
     }
 
     [Fact]
@@ -52,8 +52,17 @@ public class SensitiveDataLoggingTests
         // Verify the source code contains the Config.IsDev guard around EnableSensitiveDataLogging.
         // This catches regressions where someone removes the conditional.
         string sourceFile = Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", "..", "..",
-            "src", "NoMercy.Database", "MediaContext.cs");
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+            "src",
+            "NoMercy.Database",
+            "Contexts",
+            "MediaContext.cs"
+        );
 
         string source = File.ReadAllText(sourceFile);
 

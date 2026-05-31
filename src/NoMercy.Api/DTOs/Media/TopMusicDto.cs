@@ -73,9 +73,7 @@ public record TopMusicDto
     {
         Id = item.Id;
         Name = item.Name;
-        ColorPalette = !string.IsNullOrEmpty(item.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(item.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(item.ColorPalette);
         Type = item.Type;
         Link = item.Type switch
         {

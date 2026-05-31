@@ -1,4 +1,5 @@
 using System.Management;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -39,7 +40,7 @@ public static class Cpu
     {
         List<string> vendors = [];
 
-        string output = SystemCalls.Shell.ExecCommand("lscpu");
+        string output = Shell.ExecCommand("lscpu");
         string modelName = "Unknown";
         int sockets = 1;
 
@@ -61,7 +62,7 @@ public static class Cpu
     {
         List<string> vendors = [];
 
-        string output = SystemCalls.Shell.ExecCommand("sysctl -n machdep.cpu.brand_string");
+        string output = Shell.ExecCommand("sysctl -n machdep.cpu.brand_string");
         vendors.Add(output.Trim());
 
         return vendors;
@@ -102,7 +103,7 @@ public static class Cpu
     {
         List<string> cpus = [];
 
-        string output = SystemCalls.Shell.ExecCommand("lscpu");
+        string output = Shell.ExecCommand("lscpu");
         string modelName = "Unknown";
         int sockets = 1;
 
@@ -124,7 +125,7 @@ public static class Cpu
     {
         List<string> cpus = [];
 
-        string output = SystemCalls.Shell.ExecCommand("sysctl -n machdep.cpu.brand_string");
+        string output = Shell.ExecCommand("sysctl -n machdep.cpu.brand_string");
         cpus.Add(output.Trim());
 
         return cpus;

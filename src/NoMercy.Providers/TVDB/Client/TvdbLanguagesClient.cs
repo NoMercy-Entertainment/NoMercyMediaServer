@@ -1,11 +1,11 @@
-using NoMercy.Providers.TVDB.Models;
+using NoMercy.Providers.TVDB.Models.Languages;
 
 namespace NoMercy.Providers.TVDB.Client;
 
 public class TvdbLanguagesClient : TvdbBaseClient
 {
-    public Task<TvdbLanguagesResponse?> Languages()
+    public Task<TvdbLanguagesResponse?> Languages(bool? priority = false)
     {
-        return Get<TvdbLanguagesResponse>("languages");
+        return Get<TvdbLanguagesResponse>("languages", priority: priority);
     }
 }

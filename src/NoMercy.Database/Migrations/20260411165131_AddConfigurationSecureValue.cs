@@ -1,6 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿#nullable disable
 
-#nullable disable
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace NoMercy.Database.Migrations
 {
@@ -15,15 +15,14 @@ namespace NoMercy.Database.Migrations
                 table: "Configuration",
                 type: "TEXT",
                 maxLength: 256,
-                nullable: true);
+                nullable: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "SecureValue",
-                table: "Configuration");
+            migrationBuilder.DropColumn(name: "SecureValue", table: "Configuration");
         }
     }
 }

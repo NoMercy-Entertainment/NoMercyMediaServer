@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Database;
-using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Playback;
@@ -50,7 +49,7 @@ public class MusicPlaybackService
 
     private SemaphoreSlim GetStateLock(Guid userId)
     {
-        return _stateLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+        return _stateLocks.GetOrAdd(userId, _ => new(1, 1));
     }
 
     internal void StartPlaybackTimer(User user)

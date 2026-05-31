@@ -1,13 +1,16 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Avalonia.Threading;
 using NoMercy.Launcher.Models;
 using NoMercy.Launcher.Services;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Logging;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Launcher.ViewModels;
 
@@ -162,13 +165,16 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         try
         {
             string logPath = AppFiles.LogPath;
-            if (!Directory.Exists(logPath))
+            // LOCAL-ONLY: Launcher is a separate GUI process; NoMercy.Service DI is not available here.
+            IStorageDriver driver = new LocalStorageDriver();
+            IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+            if (!driver.DirectoryExists(logPath))
             {
                 StatusText = "No log directory found";
                 return;
             }
 
-            List<LogEntry> diskLogs = await LogReader.GetLogsAsync(logPath);
+            List<LogEntry> diskLogs = await LogReader.GetLogsAsync(storage, logPath);
             diskLogs = diskLogs
                 .OrderByDescending(e => e.Time)
                 .Take(_tailCount)

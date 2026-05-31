@@ -18,7 +18,8 @@ public static class TmdbMovieMockData
             Id = 155,
             Title = "The Dark Knight",
             OriginalTitle = "The Dark Knight",
-            Overview = "Batman raises the stakes in his war on crime. With the help of Lt. Jim Gordon and District Attorney Harvey Dent, Batman sets out to dismantle the remaining criminal organizations that plague the streets. The partnership proves to be effective, but they soon find themselves prey to a reign of chaos unleashed by a rising criminal mastermind known to the terrified citizens of Gotham as the Joker.",
+            Overview =
+                "Batman raises the stakes in his war on crime. With the help of Lt. Jim Gordon and District Attorney Harvey Dent, Batman sets out to dismantle the remaining criminal organizations that plague the streets. The partnership proves to be effective, but they soon find themselves prey to a reign of chaos unleashed by a rising criminal mastermind known to the terrified citizens of Gotham as the Joker.",
             Adult = false,
             BackdropPath = "/qhQnY2fUcQqOomvJWgUHDrjNPzO.jpg",
             PosterPath = "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
@@ -34,7 +35,7 @@ public static class TmdbMovieMockData
             VoteCount = 32000,
             Video = false,
             ImdbId = "tt0468569",
-            Homepage = new("http://www.42entertainment.com/work/whysoserious")
+            Homepage = new("http://www.42entertainment.com/work/whysoserious"),
         };
     }
 
@@ -51,7 +52,7 @@ public static class TmdbMovieMockData
             Adult = false,
             Status = "Released",
             ReleaseDate = DateTime.Parse("2024-01-01"),
-            OriginalLanguage = "en"
+            OriginalLanguage = "en",
         };
     }
 
@@ -76,7 +77,7 @@ public static class TmdbMovieMockData
                     KnownForDepartment = "Acting",
                     OriginalName = "Christian Bale",
                     Popularity = 42.45f,
-                    ProfilePath = "/qCpZn2e3dimwbryLnqxZuI88PTi.jpg"
+                    ProfilePath = "/qCpZn2e3dimwbryLnqxZuI88PTi.jpg",
                 },
                 new()
                 {
@@ -89,8 +90,8 @@ public static class TmdbMovieMockData
                     KnownForDepartment = "Acting",
                     OriginalName = "Heath Ledger",
                     Popularity = 38.12f,
-                    ProfilePath = "/5Y9HnYYa9jF4NunY9lSgJGjSe8E.jpg"
-                }
+                    ProfilePath = "/5Y9HnYYa9jF4NunY9lSgJGjSe8E.jpg",
+                },
             ],
             Crew =
             [
@@ -105,9 +106,9 @@ public static class TmdbMovieMockData
                     KnownForDepartment = "Directing",
                     OriginalName = "Christopher Nolan",
                     Popularity = 15.67f,
-                    ProfilePath = "/xuAIuYSmsUzKlUMBFGVZaWsY3DZ.jpg"
-                }
-            ]
+                    ProfilePath = "/xuAIuYSmsUzKlUMBFGVZaWsY3DZ.jpg",
+                },
+            ],
         };
     }
 
@@ -122,7 +123,7 @@ public static class TmdbMovieMockData
             ImdbId = "tt0468569",
             FacebookId = "TheDarkKnight",
             InstagramId = "thedarkknight",
-            TwitterId = "thedarkknight"
+            TwitterId = "thedarkknight",
         };
     }
 
@@ -152,7 +153,7 @@ public static class TmdbMovieMockData
             Popularity = id * 0.1,
             VoteAverage = Math.Min(10.0, id * 0.01 + 5.0),
             VoteCount = id * 10,
-            Runtime = 90 + (id % 60)
+            Runtime = 90 + (id % 60),
         };
     }
 
@@ -185,7 +186,7 @@ public static class TmdbMovieMockData
             ImdbId = movie.ImdbId,
             Homepage = movie.Homepage,
             Credits = GetSampleMovieCredits(),
-            ExternalIds = GetSampleMovieExternalIds()
+            ExternalIds = GetSampleMovieExternalIds(),
         };
     }
 }

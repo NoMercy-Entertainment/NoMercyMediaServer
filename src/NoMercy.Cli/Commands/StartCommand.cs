@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Diagnostics;
 using System.Reflection;
+using NoMercy.Cli.Models;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Cli.Commands;
@@ -18,7 +19,7 @@ internal static class StartCommand
         command.Options.Add(devOption);
 
         command.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 bool dev = parseResult.GetValue(devOption);
@@ -33,7 +34,7 @@ internal static class StartCommand
 
                 if (startInfo is null)
                 {
-                    Console.Error.WriteLine("Could not find server executable.");
+                    await Console.Error.WriteLineAsync("Could not find server executable.");
                     return 1;
                 }
 
@@ -48,12 +49,12 @@ internal static class StartCommand
                         return 0;
                     }
 
-                    Console.Error.WriteLine("Failed to start server.");
+                    await Console.Error.WriteLineAsync("Failed to start server.");
                     return 1;
                 }
                 catch (Exception e)
                 {
-                    Console.Error.WriteLine($"Failed to start server: {e.Message}");
+                    await Console.Error.WriteLineAsync($"Failed to start server: {e.Message}");
                     return 1;
                 }
             }
@@ -67,10 +68,7 @@ internal static class StartCommand
         try
         {
             using CliClient client = new(pipe);
-            Models.StatusResponse? status = await client.GetAsync<Models.StatusResponse>(
-                "/manage/status",
-                ct
-            );
+            StatusResponse? status = await client.GetAsync<StatusResponse>("/manage/status", ct);
             return status is not null;
         }
         catch

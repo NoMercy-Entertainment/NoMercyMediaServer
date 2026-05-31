@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
+﻿using System.Net;
+using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 using Serilog.Events;
 
 namespace NoMercy.Providers.Tadb.Client;
@@ -28,9 +29,9 @@ public class TadbBaseClient : IDisposable
         Id = id;
     }
 
-    private static Helpers.Queue? _queue;
+    private static Queue? _queue;
 
-    private static Helpers.Queue GetQueue()
+    private static Queue GetQueue()
     {
         return _queue ??= new(
             new()
@@ -69,14 +70,19 @@ public class TadbBaseClient : IDisposable
 
         Logger.AudioDb(_baseUrl + newUrl, LogEventLevel.Verbose);
 
-        string response = await GetQueue()
-            .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+        try
+        {
+            string response = await GetQueue()
+                .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
-        await CacheController.Write(newUrl, response);
-
-        T? data = response.FromJson<T>();
-
-        return data;
+            await CacheController.Write(newUrl, response);
+            return response.FromJson<T>();
+        }
+        catch (HttpRequestException ex)
+            when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
+        {
+            return null;
+        }
     }
 
     public void Dispose()

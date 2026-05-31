@@ -15,8 +15,9 @@ public class WindowsServiceHostTests
     [Fact]
     public void StartupOptions_RunAsService_ParsedFromArgs()
     {
-        ParserResult<StartupOptions> result = Parser.Default
-            .ParseArguments<StartupOptions>(["--service"]);
+        ParserResult<StartupOptions> result = Parser.Default.ParseArguments<StartupOptions>([
+            "--service",
+        ]);
 
         StartupOptions? parsed = null;
         result.WithParsed(o => parsed = o);
@@ -28,8 +29,7 @@ public class WindowsServiceHostTests
     [Fact]
     public void StartupOptions_RunAsService_FalseWhenNotProvided()
     {
-        ParserResult<StartupOptions> result = Parser.Default
-            .ParseArguments<StartupOptions>([]);
+        ParserResult<StartupOptions> result = Parser.Default.ParseArguments<StartupOptions>([]);
 
         StartupOptions? parsed = null;
         result.WithParsed(o => parsed = o);
@@ -41,8 +41,10 @@ public class WindowsServiceHostTests
     [Fact]
     public void StartupOptions_RunAsService_CoexistsWithOtherFlags()
     {
-        ParserResult<StartupOptions> result = Parser.Default
-            .ParseArguments<StartupOptions>(["--service", "--dev"]);
+        ParserResult<StartupOptions> result = Parser.Default.ParseArguments<StartupOptions>([
+            "--service",
+            "--dev",
+        ]);
 
         StartupOptions? parsed = null;
         result.WithParsed(o => parsed = o);

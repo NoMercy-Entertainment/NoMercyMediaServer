@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------------------------------------------------
+﻿// ---------------------------------------------------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ public class ShowImportJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         ShowRepository showRepository = new(context);
-        ShowManager showManager = new(showRepository, jobDispatcher);
+        ShowManager showManager = new(showRepository, jobDispatcher, StorageFactory, StorageDriver);
 
         SeasonRepository seasonRepository = new(context);
         SeasonManager seasonManager = new(seasonRepository, jobDispatcher);
@@ -63,7 +63,7 @@ public class ShowImportJob : AbstractMediaJob
                 {
                     MediaId = Id,
                     MediaType = "tvshow",
-                    Title = show.Name ?? $"Show {Id}",
+                    Title = show.Name,
                     LibraryId = LibraryId,
                 }
             );

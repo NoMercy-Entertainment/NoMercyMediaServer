@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -7,20 +7,26 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Service.Seeds.Dto;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;
 
 public static class LibrariesSeed
 {
-    public static async Task Init(this MediaContext dbContext)
+    public static async Task Init(
+        this MediaContext dbContext,
+        IStorage storage,
+        IStorageDriver storageDriver
+    )
     {
-        if (!File.Exists(AppFiles.LibrariesSeedFile))
+        if (!storage.Exists(AppFiles.LibrariesSeedFile))
             return;
         Logger.Setup("Adding Libraries", LogEventLevel.Verbose);
 
         List<LibrarySeedDto> librarySeed =
-            File.ReadAllTextAsync(AppFiles.LibrariesSeedFile)
+            storage
+                .ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
                 .Result.FromJson<List<LibrarySeedDto>>()
             ?? [];
 
@@ -72,12 +78,15 @@ public static class LibrariesSeed
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
-        if (!File.Exists(AppFiles.FolderRootsSeedFile))
+        if (!storage.Exists(AppFiles.FolderRootsSeedFile))
             return;
         Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
 
         Folder[] folders =
-            File.ReadAllTextAsync(AppFiles.FolderRootsSeedFile).Result.FromJson<Folder[]>() ?? [];
+            storage
+                .ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
+                .Result.FromJson<Folder[]>()
+            ?? [];
 
         try
         {
@@ -93,16 +102,14 @@ public static class LibrariesSeed
         }
 
         // Register seeded folders with the middleware so they can serve files
-        // over HTTP. Filtering by Directory.Exists silently dropped folders
-        // that lived on transiently-unmounted shares (NAS / SMB / NFS) at
-        // boot time — they then 404'd until the next process restart with
-        // no log entry to point at the cause. Always register; log + skip
-        // anything PhysicalFileProvider can't open.
+        // over HTTP. Per-request resolution through IStorageFactory. Wrap each
+        // registration so a single bad row doesn't silently drop folders or
+        // crash boot.
         foreach (Folder folder in folders)
         {
             try
             {
-                DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
             }
             catch (Exception ex)
                 when (ex

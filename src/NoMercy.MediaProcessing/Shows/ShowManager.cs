@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -14,14 +14,21 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Shows;
 
-public class ShowManager(IShowRepository showRepository, JobDispatcher jobDispatcher)
-    : BaseManager,
-        IShowManager
+public class ShowManager(
+    IShowRepository showRepository,
+    JobDispatcher jobDispatcher,
+    IStorageFactory storageFactory,
+    IStorageDriver storageDriver
+) : BaseManager, IShowManager
 {
+    private readonly IStorageFactory _storageFactory = storageFactory;
+    private readonly IStorageDriver _storageDriver = storageDriver;
+
     public async Task<TmdbTvShowAppends?> AddShowAsync(
         int id,
         Library library,
@@ -37,29 +44,35 @@ public class ShowManager(IShowRepository showRepository, JobDispatcher jobDispat
             return null;
 
         string baseUrl = BaseUrl(showAppends.Name, showAppends.FirstAirDate);
-        string mediaType = showRepository.GetMediaType(showAppends);
+        string mediaType = await showRepository.GetMediaTypeAsync(showAppends);
 
         DateTime folderCreatedAt = DateTime.UtcNow;
 
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
         {
-            string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
+            IStorage folderStorage = _storageFactory.For(
+                folderLibrary.Folder.Id,
+                folderLibrary.Folder.DriverId,
+                string.Empty
+            );
+            string folderRoot = folderStorage.GetFullPath(folderLibrary.Folder.Path);
+            string folderName = folderStorage.CombinePath(folderRoot, baseUrl.Replace("/", ""));
 
-            if (!Directory.Exists(folderName))
+            if (!folderStorage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
-                    folderLibrary.Folder.Path,
+                    _storageDriver,
+                    folderRoot,
                     baseUrl.Replace("/", "")
                 );
                 if (match != null)
                     folderName = match;
             }
 
-            if (!Directory.Exists(folderName))
+            if (!folderStorage.Exists(folderName))
                 continue;
 
-            DirectoryInfo folderInfo = new(folderName);
-            folderCreatedAt = folderInfo.CreationTimeUtc;
+            folderCreatedAt = folderStorage.Driver.GetCreationTimeUtc(folderName);
 
             if (folderCreatedAt != DateTime.UtcNow)
                 break;
@@ -118,7 +131,12 @@ public class ShowManager(IShowRepository showRepository, JobDispatcher jobDispat
             LogEventLevel.Debug
         );
 
-        ShowManager showManager = new(showRepository, jobDispatcher);
+        ShowManager showManager = new(
+            showRepository,
+            jobDispatcher,
+            _storageFactory,
+            _storageDriver
+        );
         await showManager.StoreGenres(showAppends);
         await showManager.StoreContentRatings(showAppends);
         await showManager.StoreTranslations(showAppends);

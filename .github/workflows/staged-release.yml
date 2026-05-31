@@ -33,9 +33,17 @@ jobs:
 
       - name: Get version from csproj
         id: version
-        uses: kzrnm/get-net-sdk-project-versions-action@v2
-        with:
-          proj-path: ./src/NoMercy.Service/NoMercy.Service.csproj
+        shell: bash
+        run: |
+          # Read <Version> through MSBuild so Directory.Build.props inheritance is honored.
+          VERSION=$(dotnet msbuild ./src/NoMercy.Service/NoMercy.Service.csproj \
+            -getProperty:Version -nologo -v:quiet | tr -d '[:space:]')
+          if [ -z "$VERSION" ]; then
+            echo "::error::Version property is empty — check Directory.Build.props"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION"
 
       - name: Compute tag
         id: tag

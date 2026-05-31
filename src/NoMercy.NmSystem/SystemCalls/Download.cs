@@ -1,5 +1,6 @@
 using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem.SystemCalls;
@@ -13,7 +14,12 @@ public static class Download
         HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
     }
 
-    public static async Task<string> DownloadFile(string name, Uri url, string? outputPath = null)
+    public static async Task<string> DownloadFile(
+        IStorage storage,
+        string name,
+        Uri url,
+        string? outputPath = null
+    )
     {
         Logger.System($"Downloading {name}", LogEventLevel.Verbose);
 
@@ -29,8 +35,8 @@ public static class Download
         }
 
         string? directory = Path.GetDirectoryName(filePath);
-        if (directory is not null && !Directory.Exists(directory))
-            Directory.CreateDirectory(directory);
+        if (directory is not null && !storage.Exists(directory))
+            storage.CreateDirectory(directory);
 
         using HttpResponseMessage result = await HttpClient.GetAsync(
             url,
@@ -41,29 +47,19 @@ public static class Download
         long? expectedLength = result.Content.Headers.ContentLength;
 
         await using (Stream contentStream = await result.Content.ReadAsStreamAsync())
-        await using (
-            FileStream fileStream = new(
-                filePath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None,
-                81920,
-                true
-            )
-        )
+        await using (Stream fileStream = storage.OpenWrite(filePath, overwrite: true))
         {
             await contentStream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
         }
 
-        // Verify the file was written successfully
-        if (!File.Exists(filePath))
+        if (!storage.Exists(filePath))
             throw new IOException($"Download of {name} completed but file not found at {filePath}");
 
-        long actualLength = new FileInfo(filePath).Length;
+        long actualLength = storage.SizeOrZero(filePath);
         if (actualLength == 0)
         {
-            File.Delete(filePath);
+            storage.Delete(filePath);
             throw new IOException($"Download of {name} produced an empty file at {filePath}");
         }
 
@@ -83,17 +79,17 @@ public static class Download
         return filePath;
     }
 
-    public static Task DeleteSourceDownload(string filePath)
+    public static Task DeleteSourceDownload(IStorage storage, string filePath)
     {
         try
         {
-            if (!File.Exists(filePath))
+            if (!storage.Exists(filePath))
                 return Task.CompletedTask;
 
             if (Locking.IsFileLocked(filePath))
                 Locking.CloseApplicationLockingFile(filePath);
 
-            File.Delete(filePath);
+            storage.Delete(filePath);
 
             Logger.System($"Deleted source download {filePath}", LogEventLevel.Verbose);
         }

@@ -201,12 +201,12 @@ public class HomeService
                 libraries.Count == 0
                     ? Component
                         .EmptyState(
-                            new EmptyStateData
+                            new()
                             {
                                 Title = "No libraries yet",
                                 Message = "Create your first library to get started.",
                                 Icon = "library",
-                                Action = new EmptyStateActionData
+                                Action = new()
                                 {
                                     Label = "Add library",
                                     Route = "/dashboard/libraries",
@@ -216,7 +216,7 @@ public class HomeService
                         .Build()
                     : Component
                         .EmptyState(
-                            new EmptyStateData
+                            new()
                             {
                                 Title = "Scanning your libraries",
                                 Message =
@@ -396,11 +396,10 @@ public class HomeService
         bool hasContinueWatching = continueWatching.Count > 0;
         string? continueId = hasContinueWatching ? "continue" : null;
 
-        string? lastCarouselId = genreCarousels.Count > 0
-            ? $"genre_{genreCarousels[^1].Id}"
-            : libraryCarousels.Count > 0
-                ? $"library_{libraryCarousels[^1].Id}"
-                : null;
+        string? lastCarouselId =
+            genreCarousels.Count > 0 ? $"genre_{genreCarousels[^1].Id}"
+            : libraryCarousels.Count > 0 ? $"library_{libraryCarousels[^1].Id}"
+            : null;
 
         string? afterContinueId =
             libraryCarousels.Count > 0 ? $"library_{libraryCarousels[0].Id}" : null;
@@ -457,9 +456,7 @@ public class HomeService
                         : continueId
                     : $"genre_{genreCarousels[i - 1].Id}";
             string? nextId =
-                i == genreCarousels.Count - 1
-                    ? continueId
-                    : $"genre_{genreCarousels[i + 1].Id}";
+                i == genreCarousels.Count - 1 ? continueId : $"genre_{genreCarousels[i + 1].Id}";
 
             components.Add(
                 Component
@@ -509,14 +506,17 @@ public class HomeService
                     .WithContextMenu([
                         new()
                         {
-                            Title = "Remove from watchlist".Localize(),
+                            Id = "remove_continue_watching",
+                            Title = "Remove from continue watching".Localize(),
                             Icon = "mooooom-trash",
                             Method = "DELETE",
+                            Destructive = true,
                             Confirm =
                                 "Are you sure you want to remove this from continue watching?".Localize(),
                             Args = new()
                             {
-                                { "url", new Uri("/userdata/continue", UriKind.Relative) },
+                                { "url", "/userData/continue" },
+                                { "replaceKey", "home" },
                             },
                         },
                     ])

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
+using System.Net;
+using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.AcoustId.Models;
@@ -9,8 +10,10 @@ namespace NoMercy.Providers.AcoustId.Client;
 
 public class AcoustIdBaseClient : IDisposable
 {
-    private readonly Uri _baseUrl = new("https://api.acoustid.org/v2/");
+    private const int MaxRetries = 10;
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
 
+    private readonly Uri _baseUrl = new("https://api.acoustid.org/v2/");
     private readonly HttpClient _client;
 
     protected AcoustIdBaseClient()
@@ -26,9 +29,9 @@ public class AcoustIdBaseClient : IDisposable
         Id = id;
     }
 
-    private static Helpers.Queue? _queue;
+    private static Queue? _queue;
 
-    private static Helpers.Queue GetQueue()
+    private static Queue GetQueue()
     {
         return _queue ??= new(
             new()
@@ -51,59 +54,50 @@ public class AcoustIdBaseClient : IDisposable
         where T : AcoustIdFingerprint
     {
         query ??= new();
-
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (CacheController.Read(newUrl, out T? result))
-            if (
-                result?.Results.Length > 0
-                && result.Results.Any(fpResult =>
-                    fpResult.Recordings is not null
-                    && fpResult.Recordings.Any(recording => recording?.Title != null)
-                )
-            )
-                return result as T;
+        if (CacheController.Read(newUrl, out T? cached) && HasRecordings(cached))
+            return cached;
 
         Logger.AcoustId(newUrl, LogEventLevel.Verbose);
 
-        T? data;
-
-        string? response;
-
         try
         {
-            response = await GetQueue()
+            string response = await GetQueue()
                 .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
-
             await CacheController.Write(newUrl, response);
 
-            data = response.FromJson<T>();
-
-            if (
-                data?.Results.Length > 0
-                && data.Results.Any(fpResult =>
-                    fpResult.Recordings is not null
-                    && fpResult.Recordings.Any(recording => recording?.Title != null)
-                )
-            )
-                return data as T;
+            T? data = response.FromJson<T>();
+            return HasRecordings(data) ? data : null;
         }
-        catch (Exception e)
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            if (e.Message.Contains("503"))
-            {
-                Task.Delay(5000).Wait();
-                return await Get<T>(url, query, priority, retry + 1);
-            }
-
-            if (retry == 10)
-                throw;
-
-            Task.Delay(5000).Wait();
+            return null;
+        }
+        catch (HttpRequestException ex) when (retry < MaxRetries)
+        {
+            Logger.AcoustId(
+                $"AcoustId {ex.StatusCode} retry {retry + 1}/{MaxRetries} for {newUrl}",
+                LogEventLevel.Debug
+            );
+            await Task.Delay(RetryDelay);
             return await Get<T>(url, query, priority, retry + 1);
         }
+        catch (TaskCanceledException) when (retry < MaxRetries)
+        {
+            await Task.Delay(RetryDelay);
+            return await Get<T>(url, query, priority, retry + 1);
+        }
+    }
 
-        return data ?? throw new($"Failed to parse {response}");
+    private static bool HasRecordings<T>(T? data)
+        where T : AcoustIdFingerprint
+    {
+        return data?.Results.Length > 0
+            && data.Results.Any(fpResult =>
+                fpResult.Recordings is not null
+                && fpResult.Recordings.Any(recording => recording?.Title != null)
+            );
     }
 
     public void Dispose()

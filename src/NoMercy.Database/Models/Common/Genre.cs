@@ -20,9 +20,4 @@ public class Genre
 
     [JsonProperty("translations")]
     public ICollection<Translation> Translations { get; set; } = [];
-
-    public Genre()
-    {
-        //
-    }
 }

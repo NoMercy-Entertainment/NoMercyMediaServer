@@ -117,9 +117,6 @@ public class SearchController : BaseController
         List<Playlist> playlists = await playlistsTask;
         List<Track> songs = await songsTask;
 
-        if (artists.Count == 0 && albums.Count == 0 && playlists.Count == 0 && songs.Count == 0)
-            return NotFoundResponse("No results found");
-
         if (albums.Count > 0)
             foreach (Album album in albums)
                 if (album.AlbumTrack.Count > 0)
@@ -328,9 +325,6 @@ public class SearchController : BaseController
         List<Playlist> playlists = await playlistsTask;
         List<Track> songs = await songsTask;
 
-        if (artists.Count == 0 && albums.Count == 0 && playlists.Count == 0 && songs.Count == 0)
-            return NotFoundResponse("No results found");
-
         if (albums.Count > 0)
             foreach (Album album in albums)
                 if (album.AlbumTrack.Count > 0)
@@ -431,9 +425,8 @@ public class SearchController : BaseController
         List<Movie> movies = await moviesTask;
 
         List<CardData> cardItems = tvs.Concat<dynamic>(movies)
-            .Cast<dynamic>()
             .OrderBy(item => item is Tv tv ? tv.Title : ((Movie)item).Title)
-            .Select(item => new CardData(item as dynamic, country))
+            .Select(item => new CardData(item, country))
             .ToList();
 
         ComponentEnvelope response = Component

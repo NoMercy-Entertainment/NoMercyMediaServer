@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NoMercy.Resources;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 using NoMercyQueue.Workers;
@@ -28,6 +30,9 @@ public class QueueRunner
     public readonly JobDispatcher Dispatcher;
     private readonly IConfigurationStore? _configurationStore;
     private readonly ILogger<QueueRunner> _logger;
+    private readonly IServiceScopeFactory? _scopeFactory;
+    private readonly NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? _phaseTracker;
+    private readonly IResourceBudget? _resourceBudget;
 
     /// <summary>
     /// Static accessor for non-DI code paths (jobs, logic classes).
@@ -35,14 +40,27 @@ public class QueueRunner
     /// </summary>
     public static QueueRunner? Current { get; private set; }
 
+    /// <summary>
+    /// Exposes the underlying <see cref="JobQueue"/> for coordinator jobs that
+    /// need to enqueue continuation work without going through the dispatcher's
+    /// deduplication path.
+    /// </summary>
+    public JobQueue Queue => _jobQueue;
+
     public QueueRunner(
         IQueueContext queueContext,
         QueueConfiguration configuration,
         ILoggerFactory loggerFactory,
-        IConfigurationStore? configurationStore = null
+        IConfigurationStore? configurationStore = null,
+        IServiceScopeFactory? scopeFactory = null,
+        NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker = null,
+        IResourceBudget? resourceBudget = null
     )
     {
         _configurationStore = configurationStore;
+        _scopeFactory = scopeFactory;
+        _phaseTracker = phaseTracker;
+        _resourceBudget = resourceBudget;
         _logger = loggerFactory.CreateLogger<QueueRunner>();
         _jobQueue = new(
             queueContext,
@@ -56,6 +74,11 @@ public class QueueRunner
         {
             _workers[entry.Key] = (entry.Value, [], new(), false);
         }
+
+        _logger.LogInformation(
+            "QueueRunner constructed with WorkerCounts: {Counts}",
+            string.Join(", ", configuration.WorkerCounts.Select(kvp => $"{kvp.Key}={kvp.Value}"))
+        );
 
         Current = this;
     }
@@ -73,6 +96,7 @@ public class QueueRunner
         _jobQueue.ResetAllReservedJobs();
 
         int workerCount = 0;
+        Dictionary<string, int> spawnedPerQueue = new();
         foreach (
             KeyValuePair<
                 string,
@@ -84,13 +108,44 @@ public class QueueRunner
                 )
             > keyValuePair in _workers
         )
-            for (int i = 0; i < keyValuePair.Value.count; i++)
+        {
+            int target = keyValuePair.Value.count;
+            for (int i = 0; i < target; i++)
             {
                 SpawnWorkerThread(keyValuePair.Key);
                 workerCount++;
             }
+            spawnedPerQueue[keyValuePair.Key] = target;
+        }
 
-        _logger.LogDebug("Queue workers initialized: {WorkerCount} workers spawned", workerCount);
+        _logger.LogInformation(
+            "Queue workers spawned per queue: {Counts} (total {Total})",
+            string.Join(", ", spawnedPerQueue.Select(kvp => $"{kvp.Key}={kvp.Value}")),
+            workerCount
+        );
+
+        // Restore any queues that were persisted as paused before the last shutdown.
+        if (_configurationStore is not null)
+        {
+            List<string> queueNames;
+            lock (_workersLock)
+            {
+                queueNames = [.. _workers.Keys];
+            }
+
+            foreach (string queueName in queueNames)
+            {
+                string key = $"queue.{queueName}.paused";
+                if (_configurationStore.HasKey(key) && _configurationStore.GetValue(key) == "true")
+                {
+                    await Stop(queueName);
+                    _logger.LogInformation(
+                        "Queue '{Name}' restored as paused from configuration store",
+                        queueName
+                    );
+                }
+            }
+        }
 
         // Signal that queue workers are ready, allowing cron jobs to start execution
         CronWorker.SignalQueueWorkersReady();
@@ -128,7 +183,18 @@ public class QueueRunner
 
     private void SpawnWorker(string name)
     {
-        QueueWorker queueWorkerInstance = new(_jobQueue, name, this);
+        IResourceBudget? budget = ResourceAwareQueues.IsResourceAware(name)
+            ? _resourceBudget
+            : null;
+
+        QueueWorker queueWorkerInstance = new(
+            _jobQueue,
+            name,
+            this,
+            scopeFactory: _scopeFactory,
+            phaseTracker: _phaseTracker,
+            resourceBudget: budget
+        );
 
         queueWorkerInstance.WorkCompleted += QueueWorkerCompleted(name, queueWorkerInstance);
 
@@ -224,6 +290,55 @@ public class QueueRunner
             Restart(key);
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Stop workers for <paramref name="name"/> and persist the paused state so
+    /// it survives a server restart. Use this for user-initiated pauses.
+    /// </summary>
+    public async Task Pause(string name)
+    {
+        await Stop(name);
+
+        if (_configurationStore is not null)
+            await _configurationStore.SetValueAsync($"queue.{name}.paused", "true");
+
+        _logger.LogInformation("Queue '{Name}' paused and state persisted", name);
+    }
+
+    /// <summary>
+    /// Restart workers for <paramref name="name"/> and clear the persisted paused state.
+    /// Use this for user-initiated resumes.
+    /// </summary>
+    public async Task Resume(string name)
+    {
+        await Start(name);
+
+        if (_configurationStore is not null)
+            await _configurationStore.SetValueAsync($"queue.{name}.paused", "false");
+
+        _logger.LogInformation("Queue '{Name}' resumed and state persisted", name);
+    }
+
+    /// <summary>
+    /// Persisted paused state for <paramref name="name"/>. Reads from the
+    /// configuration store rather than tracking it in-memory so the
+    /// dashboard sees the same value that was used to restore the queue at
+    /// boot time (otherwise a server restart while paused leaves the UI
+    /// showing "running" while the worker is actually stopped).
+    /// </summary>
+    public bool IsPaused(string name)
+    {
+        if (_configurationStore is null)
+            return false;
+
+        string key = $"queue.{name}.paused";
+        return _configurationStore.HasKey(key)
+            && string.Equals(
+                _configurationStore.GetValue(key),
+                "true",
+                StringComparison.OrdinalIgnoreCase
+            );
     }
 
     #endregion
@@ -367,5 +482,43 @@ public class QueueRunner
     public IReadOnlyDictionary<string, Thread> GetActiveWorkerThreads()
     {
         return _activeWorkerThreads;
+    }
+
+    /// <summary>
+    /// Counts worker instances that are *currently processing a job*
+    /// (i.e. <see cref="QueueWorker.IsProcessingJob"/> is true) under
+    /// queue names matched by <paramref name="namePredicate"/>.
+    ///
+    /// <para>This is what callers asking "is the queue busy?" actually
+    /// want — <see cref="GetActiveWorkerThreads"/> reports every spawned
+    /// thread for its lifetime, including workers blocked on
+    /// <c>queue.ReserveJob</c> waiting for the next item, which over-
+    /// counts dramatically.</para>
+    /// </summary>
+    public int CountWorkersProcessingJob(Func<string, bool> namePredicate)
+    {
+        int count = 0;
+        lock (_workersLock)
+        {
+            foreach (
+                KeyValuePair<
+                    string,
+                    (
+                        int count,
+                        List<QueueWorker> workerInstances,
+                        CancellationTokenSource _,
+                        bool isUpdating
+                    )
+                > entry in _workers
+            )
+            {
+                if (!namePredicate(entry.Key))
+                    continue;
+                foreach (QueueWorker worker in entry.Value.workerInstances)
+                    if (worker.IsProcessingJob)
+                        count++;
+            }
+        }
+        return count;
     }
 }

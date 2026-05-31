@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------------------------------------------------
+﻿// ---------------------------------------------------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -29,11 +29,16 @@ public class MovieImportJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        FileRepository fileRepository = new(context);
-        FileManager fileManager = new(fileRepository);
+        FileRepository fileRepository = new(context, StorageDriver);
+        FileManager fileManager = new(fileRepository, StorageFactory, StorageDriver);
 
         MovieRepository movieRepository = new(context);
-        MovieManager movieManager = new(movieRepository, jobDispatcher);
+        MovieManager movieManager = new(
+            movieRepository,
+            jobDispatcher,
+            StorageFactory,
+            StorageDriver
+        );
 
         Library? movieLibrary = await context
             .Libraries.Where(f => f.Id == LibraryId)

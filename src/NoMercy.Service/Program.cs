@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
@@ -9,12 +9,21 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using NoMercy.Networking;
+using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Pipeline;
+using NoMercy.Networking.Certificate;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Plugins.Abstractions;
 using NoMercy.Service.Configuration;
 using NoMercy.Service.Seeds;
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Boot;
+using NoMercy.Setup.Server;
+using NoMercy.Setup.Ui;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 using NoMercyQueue;
 
 namespace NoMercy.Service;
@@ -49,6 +58,17 @@ public static class Program
         {
             Exception exception = (Exception)eventArgs.ExceptionObject;
             Logger.App("UnhandledException " + exception);
+        };
+
+        // Tasks that lose their last exception observer (fire-and-forget
+        // patterns, GC'd before await) raise here. Marking them observed
+        // keeps them from escalating to UnhandledException. async-void
+        // chains aren't covered by this — those are handled defensively
+        // at the source (see ChromeCast.NeutralizeTimer).
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Logger.App("UnobservedTaskException " + e.Exception);
+            e.SetObserved();
         };
 
         Console.CancelKeyPress += (_, e) =>
@@ -128,15 +148,28 @@ public static class Program
         stopWatch.Start();
 
         // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
-        await Setup.Start.InitEssential();
+        await NoMercy.Setup.Boot.Start.InitEssential();
+
+        // Route storage-facade temp + transcode writes inside the NoMercy data
+        // directory instead of the OS temp folder. StoragePaths defaults to
+        // Path.GetTempPath(); the orchestrator + remote storage stage files
+        // there. Encoder gets its own 'cache/encoder' subdir so transcodes
+        // don't share scratch space with the rest of the lease churn.
+        NoMercy.Storage.StoragePaths.TempRoot = AppFiles.TempPath;
+        NoMercy.Storage.StoragePaths.TranscodeRoot = AppFiles.EncoderCachePath;
+
+        // Pre-DI storage pair — used for seed calls that run before the DI
+        // container is built. Same pattern as Start.cs Binaries task.
+        IStorageDriver preBootBackend = new LocalStorageDriver();
+        IStorage preBootStorage = new LocalStorage(preBootBackend, new([], preBootBackend));
 
         // Create database schema before anything else can query it.
         // This does NOT require auth — only migrations + EnsureCreated.
-        await DatabaseSeeder.InitSchema();
+        await DatabaseSeeder.InitSchema(preBootStorage);
 
         // Seed offline data (config, languages, encoder profiles, etc.)
         // immediately so the UI has data before auth completes.
-        await DatabaseSeeder.SeedOfflineData();
+        await DatabaseSeeder.SeedOfflineData(preBootStorage, preBootBackend);
 
         // Proactively resolve port conflicts before building the host.
         // This avoids the costly build→fail→kill→rebuild cycle and prevents
@@ -152,13 +185,32 @@ public static class Program
 
         WebApplication app = CreateWebApplication(options, forceHttp: !hasCert);
 
+        // Hand the phase tracker to the static accessor so boot helpers in
+        // NoMercy.Setup (Start.cs, Binaries.cs) can advance stages without DI
+        // plumbing. Phase 1 (essentials) already completed pre-DI — mark it now.
+        NoMercy.NmSystem.Lifecycle.ServerPhaseTracker.RegisterCurrent(
+            app.Services.GetRequiredService<NoMercy.NmSystem.Lifecycle.IServerPhaseTracker>()
+        );
+        NoMercy.NmSystem.Lifecycle.ServerPhaseTracker.Current!.MarkComplete(
+            NoMercy.NmSystem.Lifecycle.BootStage.Essential
+        );
+
+        // From this point on, use the DI-registered storage singletons.
+        IStorage diStorage = app.Services.GetRequiredService<IStorage>();
+        IStorageDriver dIStorageDriver = app.Services.GetRequiredService<IStorageDriver>();
+
         // API keys are available without auth, so seed TMDB/MusicBrainz data
         // (genres, languages, etc.) now — before any import jobs can run.
         // Must run AFTER CreateWebApplication so HttpClientProvider is bound
         // to the real IHttpClientFactory (otherwise seed HTTP calls fall back
         // to a bare HttpClient with no registered headers, and MusicBrainz
         // returns 403 for anonymous UAs).
-        await DatabaseSeeder.Run();
+        await DatabaseSeeder.Run(diStorage, dIStorageDriver);
+
+        // Rename on-disk bundle directories when a built-in preset slug changed.
+        await DatabaseSeeder.RunBundleSlugRenamePassAsync(
+            app.Services.GetRequiredService<IStorageFactory>()
+        );
 
         // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).
         // It returns true when interactive auth is required (setup mode).
@@ -168,13 +220,46 @@ public static class Program
             _applicationShutdownCts.Token
         );
 
+        // The initial forceHttp decision used cert presence as a proxy for "auth done".
+        // It's wrong when a cert exists but tokens are missing/unreadable (DataProtection
+        // key rotation, manual wipe, schema migration) — Kestrel binds HTTPS-only but the
+        // setup browser URL is plain HTTP, so the browser gets ERR_EMPTY_RESPONSE. Rebuild
+        // the host as HTTP-only so the setup flow can run; RunWithHttpsRestart will then
+        // restart with HTTPS once the user re-authenticates.
+        if (needsSetupMode && hasCert)
+        {
+            Logger.App(
+                "Setup required but host is HTTPS-bound — rebuilding as HTTP-only for setup flow"
+            );
+            await app.DisposeAsync();
+            app = CreateWebApplication(options, forceHttp: true);
+            diStorage = app.Services.GetRequiredService<IStorage>();
+            dIStorageDriver = app.Services.GetRequiredService<IStorageDriver>();
+            orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
+        }
+
+        // Load SSL cert from database now that TokenStore is initialized by BootOrchestrator
+        Certificate.LoadFromDb();
+
         // Auth completed — seed auth-dependent data (users, library assignment, claims)
         if (!needsSetupMode)
-            await DatabaseSeeder.SeedAuthData();
+            await DatabaseSeeder.SeedAuthData(diStorage);
 
-        // Force QueueRunner singleton creation so QueueRunner.Current is set
-        // before background tasks try to call Initialize().
-        app.Services.GetRequiredService<QueueRunner>();
+        // Force QueueRunner singleton creation and initialize workers immediately —
+        // don't wait for InitRemaining() which can be blocked by rate-limited HTTP calls.
+        QueueRunner queueRunner = app.Services.GetRequiredService<QueueRunner>();
+        await queueRunner.Initialize();
+
+        // Scan and load plugins from the plugins directory. Missing directory is safe —
+        // returns empty list and logs INFO. One plugin's failure never blocks others.
+        IPluginManager pluginManager = app.Services.GetRequiredService<IPluginManager>();
+        IReadOnlyList<PluginLoadResult> loadedPlugins = await pluginManager.LoadAllAsync(
+            _applicationShutdownCts.Token
+        );
+        foreach (PluginLoadResult pluginResult in loadedPlugins)
+            Logger.Setup(
+                $"Plugin loaded: {pluginResult.Name} {pluginResult.Version} ({pluginResult.PluginId})"
+            );
 
         RegisterLifetimeEvents(app, stopWatch);
 
@@ -183,8 +268,7 @@ public static class Program
         // post-startup concerns belong here.
         _ = Task.Run(async () =>
         {
-            NoMercy.Networking.Discovery.INetworkDiscovery? networkDiscovery =
-                app.Services.GetService<NoMercy.Networking.Discovery.INetworkDiscovery>();
+            INetworkDiscovery? networkDiscovery = app.Services.GetService<INetworkDiscovery>();
             if (networkDiscovery is not null)
             {
                 Logger.App($"Internal Address: {networkDiscovery.InternalAddress}");
@@ -957,6 +1041,10 @@ public static class Program
 
         WebApplication app = builder.Build();
 
+        // Wire static EncoderProvider so queue jobs can resolve IEncoder without DI
+        EncoderProvider.Configure(() => app.Services.GetRequiredService<IEncoder>());
+        EncoderProvider.ConfigureServiceResolver(type => app.Services.GetService(type));
+
         // Configure middleware from Startup.Configure
         IApiVersionDescriptionProvider provider =
             app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
@@ -965,4 +1053,3 @@ public static class Program
         return app;
     }
 }
-

@@ -18,6 +18,7 @@ public class DriveMonitorEventHandler : IDisposable
     internal async Task OnDriveStateChanged(DriveStateChangedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll("DriveState", "ripperHub", @event.DriveStateData);
+        await _clientMessenger.SendToAll("DriveState", "drivesHub", @event.DriveStateData);
     }
 
     public void Dispose()

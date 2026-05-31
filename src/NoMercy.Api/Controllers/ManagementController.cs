@@ -1,5 +1,4 @@
-using System.IO;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,16 +8,17 @@ using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Management;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
+using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.Networking.Discovery;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
-using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
+using NoMercy.Storage;
 using NoMercyQueue;
+using Serilog.Events;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 
 namespace NoMercy.Api.Controllers;
@@ -30,13 +30,15 @@ namespace NoMercy.Api.Controllers;
 [Tags("Management")]
 public class ManagementController(
     IHostApplicationLifetime appLifetime,
-    MediaContext mediaContext,
     AppDbContext appContext,
     QueueRunner queueRunner,
     IPluginManager pluginManager,
     AppProcessManager appProcessManager,
     SetupState setupState,
-    INetworkDiscovery networkDiscovery
+    INetworkDiscovery networkDiscovery,
+    ISessionManager sessionManager,
+    IStorageDriver storageDriver,
+    IStorage storage
 ) : BaseController
 {
     [HttpGet("status")]
@@ -175,6 +177,31 @@ public class ManagementController(
         }
     }
 
+    [HttpGet("activity")]
+    [ProducesResponseType(typeof(ManagementActivityDto), StatusCodes.Status200OK)]
+    public IActionResult GetActivity()
+    {
+        int activeStreams = sessionManager.ActiveSessionCount;
+
+        IReadOnlyDictionary<string, Thread> activeThreads = queueRunner.GetActiveWorkerThreads();
+        int activeEncodes = activeThreads.Count(t =>
+            t.Key.StartsWith("encoder", StringComparison.OrdinalIgnoreCase)
+        );
+
+        // All encode jobs in V3 are split/resumable, so killing mid-encode is safe.
+        // Streams are never "safe to interrupt" — stopping one ends playback for that user.
+        bool canInterruptSafely = activeStreams == 0;
+
+        return Ok(
+            new ManagementActivityDto
+            {
+                ActiveStreams = activeStreams,
+                ActiveEncodes = activeEncodes,
+                CanInterruptSafely = canInterruptSafely,
+            }
+        );
+    }
+
     [HttpPost("stop")]
     public IActionResult Stop()
     {
@@ -198,7 +225,7 @@ public class ManagementController(
         {
             string tempPath = AppFiles.ServerTempExePath;
 
-            if (System.IO.File.Exists(tempPath))
+            if (storageDriver.FileExists(tempPath))
             {
                 Logger.Setup("Update already staged, skipping download.");
                 return Ok(
@@ -211,7 +238,7 @@ public class ManagementController(
                 );
             }
 
-            string? onDiskVersion = Software.GetFileVersion(AppFiles.ServerExePath);
+            string? onDiskVersion = Software.GetFileVersion(storageDriver, AppFiles.ServerExePath);
             string runningVersion = Software.GetReleaseVersion();
             if (
                 onDiskVersion is not null
@@ -233,7 +260,10 @@ public class ManagementController(
             }
 
             Logger.Setup("Downloading server update on demand...");
-            ServerUpdateResult result = await Binaries.DownloadServerUpdate();
+            ServerUpdateResult result = await new Binaries(
+                storageDriver,
+                storage
+            ).DownloadServerUpdate();
 
             switch (result)
             {
@@ -266,18 +296,18 @@ public class ManagementController(
                     );
 
                 case ServerUpdateResult.Downloaded:
-                    if (!System.IO.File.Exists(tempPath))
+                    if (!storageDriver.FileExists(tempPath))
                     {
                         Logger.Setup(
                             $"Server update staged file missing at {tempPath} after successful download",
-                            Serilog.Events.LogEventLevel.Error
+                            LogEventLevel.Error
                         );
                         return InternalServerErrorResponse(
                             "Download completed but staged file not found. This may be caused by antivirus software quarantining the file."
                         );
                     }
 
-                    long fileSize = new System.IO.FileInfo(tempPath).Length;
+                    long fileSize = storageDriver.GetFileSize(tempPath);
                     Logger.Setup($"Server update staged at {tempPath} ({fileSize} bytes)");
                     return Ok(
                         new
@@ -295,10 +325,7 @@ public class ManagementController(
         }
         catch (Exception e)
         {
-            Logger.Setup(
-                $"Failed to download update: {e.Message}",
-                Serilog.Events.LogEventLevel.Error
-            );
+            Logger.Setup($"Failed to download update: {e.Message}", LogEventLevel.Error);
             return InternalServerErrorResponse("Failed to download update");
         }
     }

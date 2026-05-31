@@ -73,9 +73,7 @@ public record ArtistsResponseItemDto
 
     public ArtistsResponseItemDto(ArtistCardDto artist)
     {
-        ColorPalette = !string.IsNullOrEmpty(artist.ColorPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(artist.ColorPalette)
-            : null;
+        ColorPalette = IColorPalettes.FromJsonOrNull(artist.ColorPalette);
         Cover = artist.Cover ?? artist.ThumbImagePath;
         Cover = !string.IsNullOrEmpty(Cover)
             ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()

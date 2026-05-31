@@ -1,4 +1,6 @@
 using Newtonsoft.Json;
+using NoMercy.Providers.TMDB.Models.Episode;
+using NoMercy.Providers.TMDB.Models.Season;
 
 namespace NoMercy.Providers.TMDB.Models.Credits;
 
@@ -17,8 +19,8 @@ public class TmdbMedia
     public string Character { get; set; } = string.Empty;
 
     [JsonProperty("episodes")]
-    public Episode.TmdbEpisode[] Episodes { get; set; } = [];
+    public TmdbEpisode[] Episodes { get; set; } = [];
 
     [JsonProperty("seasons")]
-    public Season.TmdbSeason[] Seasons { get; set; } = [];
+    public TmdbSeason[] Seasons { get; set; } = [];
 }

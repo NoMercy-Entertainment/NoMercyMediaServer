@@ -4,37 +4,36 @@ using NoMercy.Providers.TVDB.Client;
 namespace NoMercy.Tests.Providers.TVDB.Client;
 
 /// <summary>
-/// PROV-CRIT-03: Tests verifying that TvdbBaseClient.GetToken no longer uses
+/// PROV-CRIT-03: Tests verifying that TvdbBaseClient.LoginAsync does not use
 /// .Result on SendAsync (which mixes sync blocking with async and can deadlock).
-/// The fix replaces:
-///   await client.SendAsync(msg).Result.Content.ReadAsStringAsync()
-/// with:
-///   var resp = await client.SendAsync(msg);
-///   await resp.Content.ReadAsStringAsync();
+/// The original bug was in a method called GetToken that has since been renamed to
+/// LoginAsync and refactored — these tests guard the same safety contract on the
+/// current implementation.
 /// </summary>
 [Trait("Category", "Unit")]
 public class TvdbBaseClientTests
 {
     [Fact]
-    public void GetToken_StateMachine_DoesNotCallTaskResult()
+    public void LoginAsync_StateMachine_DoesNotCallTaskResult()
     {
-        // Async methods compile into state machine classes (e.g., <GetToken>d__N).
+        // Async methods compile into state machine classes (e.g., <LoginAsync>d__N).
         // If .Result was used on a Task, the state machine IL would contain a call
         // or callvirt to Task<T>.get_Result. We scan the state machine type's
         // MoveNext method IL to verify no such call exists.
 
         Type clientType = typeof(TvdbBaseClient);
 
-        // Find the compiler-generated state machine for GetToken
+        // Find the compiler-generated state machine for LoginAsync
         Type? stateMachineType = clientType
             .GetNestedTypes(BindingFlags.NonPublic)
-            .FirstOrDefault(t => t.Name.Contains("GetToken"));
+            .FirstOrDefault(t => t.Name.Contains("LoginAsync"));
 
         Assert.NotNull(stateMachineType);
 
         MethodInfo? moveNext = stateMachineType.GetMethod(
             "MoveNext",
-            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+        );
 
         Assert.NotNull(moveNext);
 
@@ -55,18 +54,22 @@ public class TvdbBaseClientTests
         for (int i = 0; i < ilBytes.Length - 4; i++)
         {
             // call = 0x28, callvirt = 0x6F — both are 5-byte instructions (opcode + 4-byte token)
-            if (ilBytes[i] != 0x28 && ilBytes[i] != 0x6F) continue;
+            if (ilBytes[i] != 0x28 && ilBytes[i] != 0x6F)
+                continue;
 
             int token = BitConverter.ToInt32(ilBytes, i + 1);
             try
             {
                 MethodBase? method = module.ResolveMethod(token);
-                if (method is null) continue;
+                if (method is null)
+                    continue;
 
-                if (method.Name == "get_Result" &&
-                    method.DeclaringType is not null &&
-                    method.DeclaringType.FullName is not null &&
-                    method.DeclaringType.FullName.Contains("Task"))
+                if (
+                    method.Name == "get_Result"
+                    && method.DeclaringType is not null
+                    && method.DeclaringType.FullName is not null
+                    && method.DeclaringType.FullName.Contains("Task")
+                )
                 {
                     foundGetResult = true;
                     break;
@@ -78,49 +81,56 @@ public class TvdbBaseClientTests
             }
         }
 
-        Assert.False(foundGetResult,
-            "PROV-CRIT-03 regression: TvdbBaseClient.GetToken still calls .Result on a Task. " +
-            "Use 'await' instead of '.Result' to avoid deadlocks.");
+        Assert.False(
+            foundGetResult,
+            "PROV-CRIT-03 regression: TvdbBaseClient.LoginAsync still calls .Result on a Task. "
+                + "Use 'await' instead of '.Result' to avoid deadlocks."
+        );
     }
 
     [Fact]
-    public void GetToken_IsAsync_ReturnsTask()
+    public void LoginAsync_IsAsync_ReturnsTask()
     {
-        // Verify GetToken is declared as an async method (returns Task<T>)
-        MethodInfo? getTokenMethod = typeof(TvdbBaseClient).GetMethod(
-            "GetToken",
-            BindingFlags.NonPublic | BindingFlags.Instance);
+        // Verify LoginAsync is declared as an async method (returns Task<T>)
+        MethodInfo? loginMethod = typeof(TvdbBaseClient).GetMethod(
+            "LoginAsync",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
 
-        Assert.NotNull(getTokenMethod);
+        Assert.NotNull(loginMethod);
 
         // Async methods return Task or Task<T>
-        Type returnType = getTokenMethod.ReturnType;
+        Type returnType = loginMethod.ReturnType;
         Assert.True(
-            returnType == typeof(Task) ||
-            (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>)),
-            "GetToken should be async and return a Task or Task<T>");
+            returnType == typeof(Task)
+                || (
+                    returnType.IsGenericType
+                    && returnType.GetGenericTypeDefinition() == typeof(Task<>)
+                ),
+            "LoginAsync should be async and return a Task or Task<T>"
+        );
     }
 
     [Fact]
-    public void GetToken_StateMachine_HasMultipleAwaiterGetResult()
+    public void LoginAsync_StateMachine_HasMultipleAwaiterGetResult()
     {
-        // With the fix, GetToken should have TWO awaiter GetResult calls:
-        // 1. await client.SendAsync(httpRequestMessage) — awaits Task<HttpResponseMessage>
-        // 2. await httpResponse.Content.ReadAsStringAsync() — awaits Task<string>
-        // Before the fix, there was only one await (ReadAsStringAsync), because
-        // SendAsync was resolved via .Result (synchronous blocking).
+        // With the correct implementation, LoginAsync should have at least TWO await points:
+        // 1. await loginClient.SendAsync(request) — awaits Task<HttpResponseMessage>
+        // 2. await response.Content.ReadAsStringAsync() — awaits Task<string>
+        // Both must be proper awaits, not .Result blocking calls.
 
         Type clientType = typeof(TvdbBaseClient);
 
         Type? stateMachineType = clientType
             .GetNestedTypes(BindingFlags.NonPublic)
-            .FirstOrDefault(t => t.Name.Contains("GetToken"));
+            .FirstOrDefault(t => t.Name.Contains("LoginAsync"));
 
         Assert.NotNull(stateMachineType);
 
         MethodInfo? moveNext = stateMachineType.GetMethod(
             "MoveNext",
-            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+        );
 
         Assert.NotNull(moveNext);
 
@@ -136,18 +146,22 @@ public class TvdbBaseClientTests
 
         for (int i = 0; i < ilBytes.Length - 4; i++)
         {
-            if (ilBytes[i] != 0x28 && ilBytes[i] != 0x6F) continue;
+            if (ilBytes[i] != 0x28 && ilBytes[i] != 0x6F)
+                continue;
 
             int token = BitConverter.ToInt32(ilBytes, i + 1);
             try
             {
                 MethodBase? method = module.ResolveMethod(token);
-                if (method is null) continue;
+                if (method is null)
+                    continue;
 
-                if (method.Name == "GetResult" &&
-                    method.DeclaringType is not null &&
-                    method.DeclaringType.FullName is not null &&
-                    method.DeclaringType.FullName.Contains("TaskAwaiter"))
+                if (
+                    method.Name == "GetResult"
+                    && method.DeclaringType is not null
+                    && method.DeclaringType.FullName is not null
+                    && method.DeclaringType.FullName.Contains("TaskAwaiter")
+                )
                 {
                     awaiterGetResultCount++;
                 }
@@ -158,10 +172,12 @@ public class TvdbBaseClientTests
             }
         }
 
-        // The fixed code should have at least 2 await points:
+        // The correct implementation has at least 2 await points:
         // await SendAsync + await ReadAsStringAsync
-        Assert.True(awaiterGetResultCount >= 2,
-            $"Expected at least 2 await points (SendAsync + ReadAsStringAsync) in GetToken, " +
-            $"but found {awaiterGetResultCount}. The .Result blocking call may still be present.");
+        Assert.True(
+            awaiterGetResultCount >= 2,
+            $"Expected at least 2 await points (SendAsync + ReadAsStringAsync) in LoginAsync, "
+                + $"but found {awaiterGetResultCount}. The .Result blocking call may still be present."
+        );
     }
 }

@@ -6,7 +6,7 @@ using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Users;
-using NoMercy.Networking;
+using NoMercy.Networking.Http;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -125,15 +125,17 @@ public class VideoPlaybackCommandHandler(
 
     private async Task HandleSeek(User user, VideoPlayerState state, object? data)
     {
-        int seekTime = int.Parse(data?.ToString() ?? "0") * 1000;
-        state.Time = seekTime;
+        if (!int.TryParse(data?.ToString() ?? "0", out int seconds))
+            return;
+        state.Time = seconds * 1000;
         await videoPlaybackService.StoreWatchProgression(state, user);
     }
 
     private async Task HandleForward(User user, VideoPlayerState state, object? data)
     {
-        int seekTime = int.Parse(data?.ToString() ?? "10") * 1000;
-        state.Time += seekTime;
+        if (!int.TryParse(data?.ToString() ?? "10", out int seconds))
+            return;
+        state.Time += seconds * 1000;
         await videoPlaybackService.StoreWatchProgression(state, user);
     }
 
@@ -145,8 +147,9 @@ public class VideoPlaybackCommandHandler(
             return;
         }
 
-        int seekTime = int.Parse(data?.ToString() ?? "10") * 1000;
-        state.Time -= seekTime;
+        if (!int.TryParse(data?.ToString() ?? "10", out int seconds))
+            return;
+        state.Time -= seconds * 1000;
         await videoPlaybackService.StoreWatchProgression(state, user);
     }
 
@@ -202,7 +205,8 @@ public class VideoPlaybackCommandHandler(
         if (data is null || state.CurrentItem is null)
             return Task.CompletedTask;
 
-        int itemId = int.Parse(data.ToString().OrEmpty());
+        if (!int.TryParse(data.ToString().OrEmpty(), out int itemId))
+            return Task.CompletedTask;
         VideoPlaylistResponseDto? item = state.Playlist.ElementAtOrDefault(itemId);
 
         if (item is null)
@@ -274,7 +278,9 @@ public class VideoPlaybackCommandHandler(
         if (data is null || state.CurrentItem is null)
             return;
 
-        int volume = int.Parse(data.ToString().OrEmpty());
+        if (!int.TryParse(data.ToString().OrEmpty(), out int volume))
+            return;
+        volume = Math.Clamp(volume, 0, 100);
 
         state.VolumePercentage = volume;
         state.Muted = false;
@@ -341,7 +347,8 @@ public class VideoPlaybackCommandHandler(
         if (data is null || state.CurrentItem is null)
             return;
 
-        int index = int.Parse(data.ToString().OrEmpty());
+        if (!int.TryParse(data.ToString().OrEmpty(), out int index))
+            return;
 
         if (index < 0)
         {
@@ -409,7 +416,8 @@ public class VideoPlaybackCommandHandler(
         if (data is null)
             return;
 
-        int index = int.Parse(data.ToString().OrEmpty());
+        if (!int.TryParse(data.ToString().OrEmpty(), out int index))
+            return;
 
         if (index < 0)
         {
@@ -489,7 +497,8 @@ public class VideoPlaybackCommandHandler(
         if (data is null)
             return;
 
-        int index = int.Parse(data.ToString().OrEmpty());
+        if (!int.TryParse(data.ToString().OrEmpty(), out int index))
+            return;
 
         if (index < 0)
         {

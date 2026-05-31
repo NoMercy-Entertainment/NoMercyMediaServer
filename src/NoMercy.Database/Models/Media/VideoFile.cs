@@ -1,11 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Database.Infrastructure;
 
 namespace NoMercy.Database.Models.Media;
 
 [PrimaryKey(nameof(Id))]
-[Index(nameof(Filename), IsUnique = true)]
+[Index(nameof(Filename), nameof(HostFolder), IsUnique = true)]
 [Index(nameof(EpisodeId))]
 [Index(nameof(MovieId))]
 [Index(nameof(Folder))]
@@ -22,14 +23,32 @@ public class VideoFile : VideoTracks
     [JsonProperty("duration")]
     public string? Duration { get; set; }
 
+    private string _filename = string.Empty;
+
     [JsonProperty("filename")]
-    public string Filename { get; set; } = string.Empty;
+    public string Filename
+    {
+        get => _filename;
+        set => _filename = PathNormalizer.Normalize(value);
+    }
+
+    private string? _folder;
 
     [JsonProperty("folder")]
-    public string? Folder { get; set; }
+    public string? Folder
+    {
+        get => _folder;
+        set => _folder = PathNormalizer.NormalizeNullable(value);
+    }
+
+    private string _hostFolder = string.Empty;
 
     [JsonProperty("host_folder")]
-    public string HostFolder { get; set; } = string.Empty;
+    public string HostFolder
+    {
+        get => _hostFolder;
+        set => _hostFolder = PathNormalizer.Normalize(value);
+    }
 
     [JsonProperty("languages")]
     public string Languages { get; set; } = string.Empty;

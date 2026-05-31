@@ -2,6 +2,10 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
+using NoMercy.Storage;
+using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -10,19 +14,39 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractEncoderJob : IShouldQueue
+public abstract class AbstractEncoderJob : IShouldQueue, IJobStorageInjector
 {
     public string Id { get; set; } = string.Empty;
     public Ulid FolderId { get; set; }
 
     public Ulid LibraryId { get; set; }
 
+    [JsonIgnore]
+    public IStorageFactory StorageFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    public IStorageDriver StorageDriver { get; set; } = null!;
+
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
     public string InputFile { get; set; } = string.Empty;
 
+    /// <summary>
+    /// When the source file lives on a remote driver (NFS / SMB / S3),
+    /// this holds the driver's <see cref="Ulid"/> so <see cref="Handle"/>
+    /// can acquire a local lease via the correct backend.
+    /// Null means "use the destination folder's driver" (same-driver encode).
+    /// </summary>
+    public Ulid? SourceDriverId { get; set; }
+
     public abstract Task Handle();
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
+        StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
+    }
 
     public void Dispose() { }
 }

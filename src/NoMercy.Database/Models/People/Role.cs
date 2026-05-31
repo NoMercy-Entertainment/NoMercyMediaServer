@@ -30,11 +30,6 @@ public class Role
     public int? GuestStarId { get; set; }
     public GuestStar? GuestStar { get; set; }
 
-    public Role()
-    {
-        //
-    }
-
     // public Role(TmdbAggregatedCreditRole role)
     // {
     //     Character = role.Character;

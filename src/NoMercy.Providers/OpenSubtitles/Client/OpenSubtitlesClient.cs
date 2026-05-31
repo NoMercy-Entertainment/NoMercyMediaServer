@@ -33,6 +33,64 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
         return this;
     }
 
+    /// <summary>
+    /// Searches by OpenSubtitles moviehash + file size. Returns matching subtitle results.
+    /// </summary>
+    public async Task<SubtitleSearchResponse?> SearchSubtitlesByHash(
+        string movieHash,
+        long fileSize,
+        string language
+    )
+    {
+        SubtitleSearch searchRequest = new()
+        {
+            MethodCall = new()
+            {
+                MethodName = "SearchSubtitles",
+                Params = new()
+                {
+                    Param =
+                    [
+                        new() { Value = new() { String = AccessToken! } },
+                        new()
+                        {
+                            Value = new()
+                            {
+                                Array = new()
+                                {
+                                    Data = new()
+                                    {
+                                        Value = new()
+                                        {
+                                            Struct = new()
+                                            {
+                                                Member =
+                                                [
+                                                    new(
+                                                        "sublanguageid",
+                                                        new() { String = language }
+                                                    ),
+                                                    new("moviehash", new() { String = movieHash }),
+                                                    new(
+                                                        "moviebytesize",
+                                                        new() { String = fileSize.ToString() }
+                                                    ),
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            },
+        };
+
+        return await Post<SubtitleSearch, SubtitleSearchResponse>("", searchRequest);
+    }
+
+    // TODO(subtitle-acquisition): TrustedUploadersOnly — client-side filter on SubFromTrusted field
     public async Task<SubtitleSearchResponse?> SearchSubtitles(string query, string language)
     {
         SubtitleSearch searchResponse = new()

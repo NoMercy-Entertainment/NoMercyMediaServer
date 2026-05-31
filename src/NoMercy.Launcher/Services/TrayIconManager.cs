@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
@@ -72,8 +73,7 @@ public class TrayIconManager
         _startServerItem = new("Start Server");
         _startServerItem.Click += OnStartServer;
 
-        _stopServerItem = new("Stop Server");
-        _stopServerItem.IsEnabled = false;
+        _stopServerItem = new("Stop Server") { IsEnabled = false };
         _stopServerItem.Click += OnStopServer;
 
         NativeMenuItemSeparator separator3 = new();
@@ -295,8 +295,10 @@ public class TrayIconManager
                 return;
             }
 
-            MainViewModel viewModel = new(_serverConnection, _processLauncher);
-            viewModel.SelectedTabIndex = selectedTab;
+            MainViewModel viewModel = new(_serverConnection, _processLauncher)
+            {
+                SelectedTabIndex = selectedTab,
+            };
             _mainWindow = new(viewModel);
             _mainWindow.Closed += (_, _) => _mainWindow = null;
             _mainWindow.Show();
@@ -322,10 +324,17 @@ public class TrayIconManager
 
     private async void OnOpenApp(object? sender, EventArgs e)
     {
-        if (_serverConnection.IsConnected)
-            await _serverConnection.PostAsync("/manage/app/start");
-        else
-            await _processLauncher.LaunchAppAsync();
+        try
+        {
+            if (_serverConnection.IsConnected)
+                await _serverConnection.PostAsync("/manage/app/start");
+            else
+                await _processLauncher.LaunchAppAsync();
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error($"Tray OnOpenApp failed: {ex.Message}", ex);
+        }
     }
 
     private void OnOpenDashboard(object? sender, EventArgs e)
@@ -348,13 +357,27 @@ public class TrayIconManager
 
     private async void OnStartServer(object? sender, EventArgs e)
     {
-        string extraArgs = LauncherSettings.Load().StartupArguments;
-        await _processLauncher.StartServerAsync(extraArgs);
+        try
+        {
+            string extraArgs = LauncherSettings.Load().StartupArguments;
+            await _processLauncher.StartServerAsync(extraArgs);
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error($"Tray OnStartServer failed: {ex.Message}", ex);
+        }
     }
 
     private async void OnStopServer(object? sender, EventArgs e)
     {
-        await _serverConnection.PostAsync("/manage/stop");
+        try
+        {
+            await _serverConnection.PostAsync("/manage/stop");
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error($"Tray OnStopServer failed: {ex.Message}", ex);
+        }
     }
 
     private void OnToggleShowOnStartup(object? sender, EventArgs e)
@@ -396,8 +419,6 @@ public class TrayIconManager
 
     private static void OpenUrl(string url)
     {
-        System.Diagnostics.Process.Start(
-            new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }
-        );
+        using Process? proc = Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 }

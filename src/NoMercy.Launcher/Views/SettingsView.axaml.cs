@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using NoMercy.Launcher.Services;
 using NoMercy.Launcher.ViewModels;
 
 namespace NoMercy.Launcher.Views;
@@ -15,7 +16,14 @@ public partial class SettingsView : UserControl
 
     private async void OnSaveConfigClick(object? sender, RoutedEventArgs e)
     {
-        if (ViewModel is not null)
-            await ViewModel.SaveConfigAsync();
+        try
+        {
+            if (ViewModel is not null)
+                await ViewModel.SaveConfigAsync();
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error($"SettingsView.OnSaveConfigClick failed: {ex.Message}", ex);
+        }
     }
 }

@@ -107,3 +107,4 @@ tests/
 - GitHub release assets use these names: `nomercy-windows-x64.exe`, `nomercy-linux-x64`, `nomercy_VERSION_amd64.deb`, etc. Don't change asset naming without updating `infra/nomercy-packages` and `apps/nomercy-tv` download URLs.
 - Run `dotnet csharpier format` on all changed .cs files before every commit.
 - Run `dotnet test` before committing changes.
+- **Filesystem I/O goes through the storage facade.** New code must inject `IStorage` (path-validated, used for library/encoder/media paths) or `IStorageBackend` (raw FS, no allowlist — for dashboard/picker/drive-list code that browses outside library roots). Never use `System.IO.Directory.*` or `System.IO.File.*` directly in new code. `DriveInfo.GetDrives()` and `Environment.GetFolderPath()` are fine for drive enumeration / home-dir resolution — those aren't covered by the facade. The facade is the seam that lets remote drivers (SMB / NFS / S3 / R2) land without touching consumers.

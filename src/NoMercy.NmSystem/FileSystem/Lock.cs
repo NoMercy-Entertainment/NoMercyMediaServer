@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -53,7 +54,7 @@ public static class Locking
 
                 break;
             }
-            catch (System.ComponentModel.Win32Exception)
+            catch (Win32Exception)
             {
                 // Ignore the error if the process is not accessible
             }

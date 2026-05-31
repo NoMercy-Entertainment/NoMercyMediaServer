@@ -32,11 +32,39 @@ public class AccessLogMiddleware
         "/transcode",
         "/manage",
         "/health",
+        // SignalR hubs — base path AND /negotiate handshake AND polling
+        // fallbacks all share the prefix; exact-match misses /negotiate.
+        "/videoHub",
+        "/musicHub",
+        "/ripperHub",
+        "/dashboardHub",
+        "/castHub",
     ];
 
-    private readonly string[] _ignoreExact = ["/", "/api/v1/dashboard/logs"];
+    private readonly string[] _ignoreExact =
+    [
+        "/",
+        "/api/v1/dashboard/logs",
+        "/api/v1/dashboard/devices",
+        "/api/v1/dashboard/activity",
+        // Dashboard overview poll targets — fire every few seconds.
+        "/api/v1/dashboard/server",
+        "/api/v1/dashboard/server/info",
+        "/api/v1/dashboard/server/storage",
+        "/api/v1/dashboard/system",
+        "/api/v1/dashboard/optical/drives",
+        "/api/v1/dashboard/tasks/queue",
+        "/api/v1/dashboard/tasks/runners",
+        "/api/v1/dashboard/hardware",
+        "/api/v1/dashboard/hardware/benchmark",
+        // Setup wizard poll targets — fire on every page load.
+        "/api/v1/setup/server-info",
+        "/api/v1/setup/permissions",
+        "/api/v1/setup/libraries",
+        "/api/v1/setup/screensaver",
+    ];
 
-    private readonly string[] _ignoreIfAuthenticated = ["/videoHub", "/musicHub"];
+    private readonly string[] _ignoreIfAuthenticated = [];
 
     private readonly string[] _ignoreIfGuest = ["/status"];
 
@@ -88,8 +116,7 @@ public class AccessLogMiddleware
             return;
         }
 
-        Guid userId = Guid.Parse(guid);
-        if (userId == Guid.Empty)
+        if (!Guid.TryParse(guid, out Guid userId) || userId == Guid.Empty)
         {
             if (ignoreIfGuest)
             {
@@ -97,13 +124,15 @@ public class AccessLogMiddleware
                 return;
             }
 
-            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (Empty GUID)");
+            Logger.Http(
+                $"Unknown: {context.Connection.RemoteIpAddress}: {path} (Malformed or empty GUID)"
+            );
             await WriteProblemAsync(
                 context,
                 statusCode: 401,
                 type: "https://nomercy.tv/problems/invalid-token",
                 title: "Invalid token",
-                detail: "The token subject (sub) resolved to an empty GUID. The token may be malformed.",
+                detail: "The token subject (sub) is not a valid GUID. The token may be malformed.",
                 authError: "INVALID_TOKEN"
             );
             return;

@@ -39,4 +39,32 @@ public class JobDispatcher : IJobDispatcher
             _logger.LogError("{Message}", e.Message);
         }
     }
+
+    public void DispatchChild(
+        IShouldQueue job,
+        string onQueue,
+        int priority,
+        int parentJobId,
+        string groupTag
+    )
+    {
+        QueueJobModel jobData = new()
+        {
+            Queue = onQueue,
+            Payload = SerializationHelper.Serialize(job),
+            AvailableAt = DateTime.UtcNow,
+            Priority = priority,
+            ParentJobId = parentJobId,
+            GroupTag = groupTag,
+        };
+
+        try
+        {
+            _queue.Enqueue(jobData);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("{Message}", e.Message);
+        }
+    }
 }

@@ -1,9 +1,12 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -14,7 +17,10 @@ public class PluginRepositoryTests : IDisposable
 
     public PluginRepositoryTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), "nomercy-repo-tests-" + Guid.NewGuid().ToString("N"));
+        _tempDir = Path.Combine(
+            Path.GetTempPath(),
+            "nomercy-repo-tests-" + Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(_tempDir);
     }
 
@@ -27,40 +33,43 @@ public class PluginRepositoryTests : IDisposable
                 Directory.Delete(_tempDir, recursive: true);
             }
         }
-        catch (IOException)
-        {
-        }
+        catch (IOException) { }
     }
 
-    private static PluginRepositoryManifest CreateTestManifest(string name = "test-repo", int pluginCount = 2)
+    private static PluginRepositoryManifest CreateTestManifest(
+        string name = "test-repo",
+        int pluginCount = 2
+    )
     {
         List<PluginRepositoryEntry> plugins = [];
         for (int i = 0; i < pluginCount; i++)
         {
-            plugins.Add(new()
-            {
-                Id = Guid.NewGuid(),
-                Name = $"Plugin{i}",
-                Description = $"Test plugin {i}",
-                Author = "Test Author",
-                Versions =
-                [
-                    new()
-                    {
-                        Version = "1.0.0",
-                        DownloadUrl = $"https://example.com/plugin{i}-1.0.0.zip",
-                        TargetAbi = "9.0.0",
-                        Changelog = "Initial release"
-                    }
-                ]
-            });
+            plugins.Add(
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = $"Plugin{i}",
+                    Description = $"Test plugin {i}",
+                    Author = "Test Author",
+                    Versions =
+                    [
+                        new()
+                        {
+                            Version = "1.0.0",
+                            DownloadUrl = $"https://example.com/plugin{i}-1.0.0.zip",
+                            TargetAbi = "9.0.0",
+                            Changelog = "Initial release",
+                        },
+                    ],
+                }
+            );
         }
 
         return new()
         {
             Name = name,
             Url = "https://example.com/repo",
-            Plugins = plugins
+            Plugins = plugins,
         };
     }
 
@@ -77,10 +86,18 @@ public class PluginRepositoryTests : IDisposable
         return new(handler);
     }
 
+    private PluginRepository MakeRepo(HttpClient? client = null)
+    {
+        IStorageDriver driver = TestStorageHelper.CreateBackend();
+        IStorage storage = new LocalStorage(driver, new StoragePathGuard([_tempDir], driver));
+        return new(client ?? new HttpClient(), NullLogger.Instance, _tempDir, storage);
+    }
+
     [Fact]
     public void Constructor_NullHttpClient_ThrowsArgumentNullException()
     {
-        Action act = () => new PluginRepository(null!, NullLogger.Instance, _tempDir);
+        IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
+        Action act = () => new PluginRepository(null!, NullLogger.Instance, _tempDir, storage);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -88,7 +105,8 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        Action act = () => new PluginRepository(new(), null!, _tempDir);
+        IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
+        Action act = () => new PluginRepository(new(), null!, _tempDir, storage);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -96,7 +114,8 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void Constructor_NullPath_ThrowsArgumentException()
     {
-        Action act = () => new PluginRepository(new(), NullLogger.Instance, null!);
+        IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
+        Action act = () => new PluginRepository(new(), NullLogger.Instance, null!, storage);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -106,7 +125,7 @@ public class PluginRepositoryTests : IDisposable
     {
         string configDir = Path.Combine(_tempDir, "configurations");
 
-        _ = new PluginRepository(new(), NullLogger.Instance, _tempDir);
+        _ = MakeRepo();
 
         Directory.Exists(configDir).Should().BeTrue();
     }
@@ -114,7 +133,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void GetRepositories_Empty_ReturnsEmptyList()
     {
-        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo();
 
         IReadOnlyList<PluginRepositoryInfo> repos = repo.GetRepositories();
 
@@ -126,7 +145,7 @@ public class PluginRepositoryTests : IDisposable
     {
         PluginRepositoryManifest manifest = CreateTestManifest();
         HttpClient client = CreateMockHttpClient(manifest);
-        PluginRepository repo = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo(client);
 
         await repo.AddRepositoryAsync("test", "https://example.com/repo.json");
 
@@ -142,19 +161,18 @@ public class PluginRepositoryTests : IDisposable
     {
         PluginRepositoryManifest manifest = CreateTestManifest();
         HttpClient client = CreateMockHttpClient(manifest);
-        PluginRepository repo = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo(client);
 
         await repo.AddRepositoryAsync("test", "https://example.com/repo1.json");
         Func<Task> act = () => repo.AddRepositoryAsync("test", "https://example.com/repo2.json");
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*already exists*");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*already exists*");
     }
 
     [Fact]
     public async Task AddRepositoryAsync_NullName_ThrowsArgumentException()
     {
-        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo();
 
         Func<Task> act = () => repo.AddRepositoryAsync(null!, "https://example.com");
 
@@ -164,7 +182,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public async Task AddRepositoryAsync_NullUrl_ThrowsArgumentException()
     {
-        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo();
 
         Func<Task> act = () => repo.AddRepositoryAsync("test", null!);
 
@@ -176,14 +194,14 @@ public class PluginRepositoryTests : IDisposable
     {
         PluginRepositoryManifest manifest = CreateTestManifest();
         HttpClient client = CreateMockHttpClient(manifest);
-        PluginRepository repo = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo(client);
 
         await repo.AddRepositoryAsync("persisted", "https://example.com/repo.json");
 
         string repoFile = Path.Combine(_tempDir, "configurations", "repositories.json");
         File.Exists(repoFile).Should().BeTrue();
 
-        string json = File.ReadAllText(repoFile);
+        string json = await File.ReadAllTextAsync(repoFile);
         json.Should().Contain("persisted");
     }
 
@@ -192,7 +210,7 @@ public class PluginRepositoryTests : IDisposable
     {
         PluginRepositoryManifest manifest = CreateTestManifest(pluginCount: 3);
         HttpClient client = CreateMockHttpClient(manifest);
-        PluginRepository repo = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo(client);
 
         await repo.AddRepositoryAsync("test", "https://example.com/repo.json");
 
@@ -205,7 +223,7 @@ public class PluginRepositoryTests : IDisposable
     {
         PluginRepositoryManifest manifest = CreateTestManifest();
         HttpClient client = CreateMockHttpClient(manifest);
-        PluginRepository repo = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo(client);
 
         await repo.AddRepositoryAsync("test", "https://example.com/repo.json");
         await repo.RemoveRepositoryAsync("test");
@@ -216,12 +234,11 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public async Task RemoveRepositoryAsync_NotFound_ThrowsInvalidOperation()
     {
-        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo();
 
         Func<Task> act = () => repo.RemoveRepositoryAsync("nonexistent");
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*not found*");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not found*");
     }
 
     [Fact]
@@ -229,7 +246,7 @@ public class PluginRepositoryTests : IDisposable
     {
         PluginRepositoryManifest manifest = CreateTestManifest(pluginCount: 2);
         HttpClient client = CreateMockHttpClient(manifest);
-        PluginRepository repo = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo(client);
 
         await repo.AddRepositoryAsync("repo1", "https://example.com/repo1.json");
         await repo.RefreshAsync();
@@ -242,17 +259,24 @@ public class PluginRepositoryTests : IDisposable
     public async Task RefreshAsync_FailingRepo_DoesNotThrow()
     {
         HttpClient client = CreateFailingHttpClient();
-        PluginRepository repo = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo(client);
 
         // Manually add a repo without fetching (simulate pre-existing config)
         string configDir = Path.Combine(_tempDir, "configurations");
-        string repoConfig = JsonSerializer.Serialize(new List<PluginRepositoryInfo>
-        {
-            new() { Name = "broken", Url = "https://broken.example.com/repo.json", Enabled = true }
-        });
-        File.WriteAllText(Path.Combine(configDir, "repositories.json"), repoConfig);
+        string repoConfig = JsonSerializer.Serialize(
+            new List<PluginRepositoryInfo>
+            {
+                new()
+                {
+                    Name = "broken",
+                    Url = "https://broken.example.com/repo.json",
+                    Enabled = true,
+                },
+            }
+        );
+        await File.WriteAllTextAsync(Path.Combine(configDir, "repositories.json"), repoConfig);
 
-        PluginRepository repo2 = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo2 = MakeRepo(client);
         Func<Task> act = () => repo2.RefreshAsync();
 
         await act.Should().NotThrowAsync();
@@ -261,7 +285,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void GetAvailablePlugins_NoRefresh_ReturnsEmpty()
     {
-        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo();
 
         IReadOnlyList<PluginRepositoryEntry> plugins = repo.GetAvailablePlugins();
 
@@ -274,7 +298,7 @@ public class PluginRepositoryTests : IDisposable
         PluginRepositoryManifest manifest = CreateTestManifest(pluginCount: 1);
         Guid pluginId = manifest.Plugins[0].Id;
         HttpClient client = CreateMockHttpClient(manifest);
-        PluginRepository repo = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo(client);
 
         await repo.AddRepositoryAsync("test", "https://example.com/repo.json");
 
@@ -287,7 +311,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void FindPlugin_UnknownId_ReturnsNull()
     {
-        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo();
 
         PluginRepositoryEntry? found = repo.FindPlugin(Guid.NewGuid());
 
@@ -300,7 +324,7 @@ public class PluginRepositoryTests : IDisposable
         PluginRepositoryManifest manifest = CreateTestManifest(pluginCount: 1);
         Guid pluginId = manifest.Plugins[0].Id;
         HttpClient client = CreateMockHttpClient(manifest);
-        PluginRepository repo = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo(client);
 
         await repo.AddRepositoryAsync("test", "https://example.com/repo.json");
 
@@ -314,7 +338,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void FindVersion_UnknownPlugin_ReturnsNull()
     {
-        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo();
 
         PluginVersionEntry? found = repo.FindVersion(Guid.NewGuid(), "1.0.0");
 
@@ -327,7 +351,7 @@ public class PluginRepositoryTests : IDisposable
         PluginRepositoryManifest manifest = CreateTestManifest(pluginCount: 1);
         Guid pluginId = manifest.Plugins[0].Id;
         HttpClient client = CreateMockHttpClient(manifest);
-        PluginRepository repo = new(client, NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo(client);
 
         await repo.AddRepositoryAsync("test", "https://example.com/repo.json");
 
@@ -339,7 +363,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void FindVersion_NullVersion_ThrowsArgumentException()
     {
-        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo();
 
         Action act = () => repo.FindVersion(Guid.NewGuid(), null!);
 
@@ -350,32 +374,34 @@ public class PluginRepositoryTests : IDisposable
     public void PluginRepositoryManifest_CanDeserialize()
     {
         string json = """
-        {
-            "name": "Official Plugins",
-            "url": "https://plugins.nomercy.tv/manifest.json",
-            "plugins": [
-                {
-                    "id": "12345678-1234-1234-1234-123456789012",
-                    "name": "Scrobbler",
-                    "description": "Last.fm scrobbling",
-                    "author": "NoMercy",
-                    "versions": [
-                        {
-                            "version": "1.0.0",
-                            "targetAbi": "9.0.0",
-                            "downloadUrl": "https://plugins.nomercy.tv/scrobbler-1.0.0.zip",
-                            "checksum": "abc123",
-                            "changelog": "Initial release",
-                            "timestamp": "2026-01-01T00:00:00Z"
-                        }
-                    ]
-                }
-            ]
-        }
-        """;
+            {
+                "name": "Official Plugins",
+                "url": "https://plugins.nomercy.tv/manifest.json",
+                "plugins": [
+                    {
+                        "id": "12345678-1234-1234-1234-123456789012",
+                        "name": "Scrobbler",
+                        "description": "Last.fm scrobbling",
+                        "author": "NoMercy",
+                        "versions": [
+                            {
+                                "version": "1.0.0",
+                                "targetAbi": "9.0.0",
+                                "downloadUrl": "https://plugins.nomercy.tv/scrobbler-1.0.0.zip",
+                                "checksum": "abc123",
+                                "changelog": "Initial release",
+                                "timestamp": "2026-01-01T00:00:00Z"
+                            }
+                        ]
+                    }
+                ]
+            }
+            """;
 
-        PluginRepositoryManifest? manifest = JsonSerializer.Deserialize<PluginRepositoryManifest>(json,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        PluginRepositoryManifest? manifest = JsonSerializer.Deserialize<PluginRepositoryManifest>(
+            json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
 
         manifest.Should().NotBeNull();
         manifest!.Name.Should().Be("Official Plugins");
@@ -397,8 +423,13 @@ public class PluginRepositoryTests : IDisposable
             Versions =
             [
                 new() { Version = "1.0.0", DownloadUrl = "https://example.com/v1.zip" },
-                new() { Version = "2.0.0", DownloadUrl = "https://example.com/v2.zip", TargetAbi = "9.0.0" }
-            ]
+                new()
+                {
+                    Version = "2.0.0",
+                    DownloadUrl = "https://example.com/v2.zip",
+                    TargetAbi = "9.0.0",
+                },
+            ],
         };
 
         entry.Versions.Should().HaveCount(2);
@@ -413,25 +444,34 @@ public class PluginRepositoryTests : IDisposable
 
         List<PluginRepositoryInfo> repos =
         [
-            new() { Name = "persisted-repo", Url = "https://example.com/persisted.json", Enabled = true }
+            new()
+            {
+                Name = "persisted-repo",
+                Url = "https://example.com/persisted.json",
+                Enabled = true,
+            },
         ];
         string json = JsonSerializer.Serialize(repos);
         File.WriteAllText(Path.Combine(configDir, "repositories.json"), json);
 
-        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = MakeRepo();
 
         IReadOnlyList<PluginRepositoryInfo> loaded = repo.GetRepositories();
         loaded.Should().ContainSingle();
         loaded[0].Name.Should().Be("persisted-repo");
     }
 
-    private sealed class MockHttpHandler(string responseContent, HttpStatusCode statusCode) : HttpMessageHandler
+    private sealed class MockHttpHandler(string responseContent, HttpStatusCode statusCode)
+        : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
         {
             HttpResponseMessage response = new(statusCode)
             {
-                Content = new StringContent(responseContent)
+                Content = new StringContent(responseContent),
             };
             return Task.FromResult(response);
         }

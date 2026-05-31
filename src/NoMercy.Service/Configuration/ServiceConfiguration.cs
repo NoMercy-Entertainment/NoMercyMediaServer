@@ -1,10 +1,9 @@
-using System.IO;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using I18N.DotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
@@ -12,46 +11,61 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NoMercy.Api.Constraints;
-using NoMercy.Api.Controllers.Socket;
+using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
 using NoMercy.Api.Services;
+using NoMercy.Api.WebSockets;
+using NoMercy.Data.Activity;
 using NoMercy.Data.Repositories;
+using NoMercy.Data.Resolvers;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Startup;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
+using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.Helpers.Wallpaper;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Episodes;
+using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.MediaProcessing.People;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
-using NoMercy.MediaSources.OpticalMedia;
-using NoMercy.Networking;
+using NoMercy.MediaProcessing.Subtitles;
+using NoMercy.Networking.Cast;
 using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Connectivity.Strategies;
 using NoMercy.Networking.Devices;
 using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.OpticalMedia.Composition;
 using NoMercy.Plugins;
 using NoMercy.Providers.Helpers;
 using NoMercy.Queue.MediaServer;
 using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
-using NoMercy.Setup;
+using NoMercy.Service.Workers;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Boot;
+using NoMercy.Setup.Cast;
+using NoMercy.Setup.Server;
+using NoMercy.Storage;
 using NoMercyQueue.Extensions;
+using Serilog.Events;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
+using DatabaseActivity = NoMercy.Database.Activity;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MediaProcessingCollectionRepository = NoMercy.MediaProcessing.Collections.CollectionRepository;
 using MediaProcessingEpisodeRepository = NoMercy.MediaProcessing.Episodes.EpisodeRepository;
@@ -168,6 +182,15 @@ public static class ServiceConfiguration
         );
 
         services.AddHttpClient(
+            HttpClientNames.OpenSubtitlesDownload,
+            client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.Timeout = defaultTimeout;
+            }
+        );
+
+        services.AddHttpClient(
             HttpClientNames.FanArt,
             client =>
             {
@@ -276,6 +299,7 @@ public static class ServiceConfiguration
     private static void ConfigureCronJobs(IServiceCollection services)
     {
         services.RegisterCronJob<CertificateRenewalCronJob>("certificate-renewal");
+        services.RegisterCronJob<ActivityLogRetentionCronJob>("activity-log-retention");
 
         services.RegisterCronJob<ShowPaletteCronJob>("show-palette-job");
         services.RegisterCronJob<SeasonPaletteCronJob>("season-palette-job");
@@ -294,13 +318,15 @@ public static class ServiceConfiguration
 
         // TODO: Remove after all palettes are regenerated with the new Median Cut algorithm
         services.RegisterCronJob<ReprocessAllPalettesCronJob>("reprocess-all-palettes-job");
+
+        services.RegisterCronJob<DeviceDropRuleCronJob>("device-drop-rule-job");
     }
 
     private static void ConfigureCoreServices(IServiceCollection services)
     {
         services
             .AddDataProtection()
-            .PersistKeysToFileSystem(new DirectoryInfo(AppFiles.DataProtectionKeysDir))
+            .PersistKeysToFileSystem(new(AppFiles.DataProtectionKeysDir))
             .SetApplicationName("NoMercyMediaServer");
 
         // Setup state and services — singletons shared between middleware and setup flow
@@ -314,10 +340,23 @@ public static class ServiceConfiguration
             IServiceScope authScope = scopeFactory.CreateScope();
             AppDbContext authDbContext =
                 authScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            return new AuthManager(authDbContext);
+            IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
+            return new(authDbContext, storageDriver);
         });
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
+        services.AddSingleton<CastSessionTokenService>();
+        // Route every container to the same tracker. The Service rebuilds its host
+        // on the HTTPS restart and on port-conflict retry; a per-container singleton
+        // would mean queue workers in the live host wait on a tracker that the static
+        // MarkComplete callers (BootOrchestrator, Setup.Start) never reached.
+        services.AddSingleton<NoMercy.NmSystem.Lifecycle.IServerPhaseTracker>(sp =>
+            NoMercy.NmSystem.Lifecycle.ServerPhaseTracker.Shared(
+                sp.GetService<Microsoft.Extensions.Logging.ILogger<NoMercy.NmSystem.Lifecycle.ServerPhaseTracker>>()
+            )
+        );
+
+        services.AddScoped<NoMercy.Encoder.Profiles.BuiltinPresetSeeder>();
 
         // Add Memory Cache with size limit to prevent unbounded growth
         services.AddMemoryCache(options =>
@@ -331,7 +370,15 @@ public static class ServiceConfiguration
         InMemoryEventBus innerBus = new();
         LoggingEventBusDecorator loggingBus = new(
             innerBus,
-            message => Logger.App(message, Serilog.Events.LogEventLevel.Verbose)
+            message => Logger.App(message, LogEventLevel.Verbose),
+            // High-frequency progress events would otherwise spam the verbose
+            // log every ~500ms during an encode without adding signal.
+            excludedEventTypes:
+            [
+                "EncoderProgressBroadcastEvent",
+                "EncodingProgressEvent",
+                "PlaybackProgressEvent",
+            ]
         );
         EventAuditLog auditLog = new(
             new()
@@ -354,7 +401,8 @@ public static class ServiceConfiguration
         // Network discovery (replaces static Networking.Networking IP/address members)
         services.AddSingleton<INetworkDiscovery>(sp =>
         {
-            NetworkDiscovery discovery = new();
+            IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
+            NetworkDiscovery discovery = new(storageDriver);
             if (!string.IsNullOrEmpty(StartupOptions.OverrideInternalIp))
                 discovery.InternalIp = StartupOptions.OverrideInternalIp;
             if (!string.IsNullOrEmpty(StartupOptions.OverrideExternalIp))
@@ -398,11 +446,23 @@ public static class ServiceConfiguration
 
         services.AddSingleton<StorageMonitor>();
         services.AddSingleton<ChromeCast>();
-        services.AddSingleton<DriveMonitor>();
+
+        // Optical-disc detection + scanning + ripping (NoMercy.OpticalMedia)
+        services.AddNoMercyOpticalMedia();
+        services.AddHostedService<DriveMonitorWorker>();
+
         services.AddWallpaperService();
 
         // Add DbContexts
-        services.AddDbContext<AppDbContext>(options =>
+        services.AddDbContext<AppDbContext>(
+            options => options.UseSqlite($"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;"),
+            optionsLifetime: ServiceLifetime.Singleton
+        );
+
+        // DbDriverFingerprintStore is a singleton — it needs the factory form so
+        // each save/load gets a fresh disposable AppDbContext rather than sharing
+        // a singleton-scoped tracker.
+        services.AddDbContextFactory<AppDbContext>(options =>
             options.UseSqlite($"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;")
         );
 
@@ -411,20 +471,10 @@ public static class ServiceConfiguration
             optionsAction.UseSqlite($"Data Source={AppFiles.QueueDatabase}; Pooling=True;");
         });
 
-        services.AddDbContext<MediaContext>(optionsAction =>
-        {
-            optionsAction.UseSqlite(
-                $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True;",
-                o =>
-                {
-                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-                    o.ExecutionStrategy(deps => new SqliteRetryingExecutionStrategy(deps));
-                }
-            );
-            optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
-        });
-
-        services.AddDbContextFactory<MediaContext>(
+        // optionsLifetime: Singleton so the Singleton IDbContextFactory below
+        // can consume DbContextOptions without lifetime-validation errors.
+        // The DbContext itself stays Scoped (default) for per-request use.
+        services.AddDbContext<MediaContext>(
             optionsAction =>
             {
                 optionsAction.UseSqlite(
@@ -437,17 +487,39 @@ public static class ServiceConfiguration
                 );
                 optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
             },
-            ServiceLifetime.Scoped
+            optionsLifetime: ServiceLifetime.Singleton
         );
+
+        // Factory itself is Singleton (default for AddDbContextFactory) so
+        // singleton consumers (MdnsDeviceScanner, DeviceBusRegistry,
+        // ActivityLogger) can inject it. Options registered above as Singleton
+        // so this resolves cleanly. CreateDbContextAsync() returns fresh
+        // disposable contexts per call.
+        services.AddDbContextFactory<MediaContext>(optionsAction =>
+        {
+            optionsAction.UseSqlite(
+                $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True;",
+                o =>
+                {
+                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    o.ExecutionStrategy(deps => new SqliteRetryingExecutionStrategy(deps));
+                }
+            );
+            optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
+        });
 
         // Add Repositories
         services.AddScoped<HomeRepository>();
         services.AddScoped<MusicRepository>();
         services.AddScoped<EncoderRepository>();
+        services.AddScoped<EncodingHistoryRepository>();
+        services.AddScoped<EncodingPresetRepository>();
+        services.AddScoped<ContentSegmentRepository>();
         services.AddScoped<LibraryRepository>();
         services.AddScoped<MediaProcessingLibraryRepository>();
         services.AddScoped<DeviceRepository>();
         services.AddScoped<FolderRepository>();
+        services.AddScoped<DriverRepository>();
         services.AddScoped<MediaProcessingFileRepository>();
         services.AddScoped<IFileRepository, MediaProcessingFileRepository>();
         services.AddScoped<FilesystemRepository>();
@@ -485,13 +557,75 @@ public static class ServiceConfiguration
         services.AddScoped<SetupService>();
 
         services.AddMediaServerQueue();
-        services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();
+        services.AddSingleton<JobDispatcher>();
+
+        // Storage driver resolvers — registered before AddNoMercyEncoder so
+        // the TryAdd inside AddNoMercyStorage picks them up via GetService<>.
+        services.AddSingleton<IDriverConfigResolver>(sp => new DriverConfigResolver(
+            sp.GetRequiredService<IDbContextFactory<MediaContext>>()
+        ));
+        services.AddSingleton<ICredentialResolver, CredentialResolver>();
+
+        services.AddNoMercyEncoder(opts =>
+        {
+            opts.FfmpegPathOverride = AppFiles.FfmpegPath;
+            opts.FfprobePathOverride = AppFiles.FfProbePath;
+            opts.TesseractModelsDirectory = AppFiles.TesseractModelsFolder;
+            opts.WhisperModelPath = AppFiles.WhisperModelPath;
+            // Without this the JsonSpeedIndexStore silently no-ops on Save
+            // ("No SpeedIndexCachePath configured — skipping save"), and every
+            // reboot triggers a fresh ~20 min hardware benchmark calibration.
+            // Pointing at AppFiles.SpeedIndexCachePath persists results so
+            // NeedsRecalibration() can honour its 30-day grace window.
+            opts.SpeedIndexCachePath = AppFiles.SpeedIndexCachePath;
+        });
+
+        // Transcode-scoped IStorage — paths are relative to AppFiles.TranscodePath.
+        // HomeController uses this so it can pass scope-relative paths (Rule 1 of
+        // the IStorage path contract) instead of Path.Combine(TranscodePath, ...).
+        services.AddKeyedSingleton<IStorage>(
+            "transcode",
+            (sp, _) =>
+            {
+                IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
+                NoMercy.Storage.Validation.StoragePathGuard guard = new(
+                    [AppFiles.TranscodePath],
+                    driver
+                );
+                return new NoMercy.Storage.Drivers.Local.LocalStorage(driver, guard);
+            }
+        );
+
+        // Concrete activity probe for the deferred hardware benchmark —
+        // Encoder's default is a no-op (always idle) so it stays decoupled
+        // from QueueRunner/SessionManager. AddSingleton after AddNoMercyEncoder
+        // overrides the TryAddSingleton the encoder registered.
+        services.AddSingleton<IEncoderActivityProbe, EncoderActivityProbe>();
+        services.AddTransient<IOrphanCheckpointLookup, EncoderOrphanCheckpointLookup>();
+
+        services.AddHostedService<EncodingNotificationSubscriber>();
+        services.AddHostedService<AutoEncodeSubscriber>();
+        services.AddHostedService<IntroDetectionSubscriber>();
 
         services.AddPluginSystem(AppFiles.PluginsPath);
+        services.RegisterPluginServicesFromManifests(AppFiles.PluginsPath);
 
         services.AddVideoHubServices();
         services.AddMusicHubServices();
+        services.AddLiveTranscodeHubServices();
+        services.AddSingleton<IActivityHubBroadcaster, ActivityHubBroadcaster>();
+        services.AddSingleton<IActivityLogger, ActivityLogger>();
+        services.AddSingleton<DatabaseActivity.IActivityLogger>(sp =>
+            sp.GetRequiredService<IActivityLogger>()
+        );
         services.AddSignalREventHandlers();
+
+        // Subtitle acquisition — OpenSubtitlesProvider lives in MediaProcessing so
+        // it can reference both NoMercy.Encoder (interface) and NoMercy.Providers (XML-RPC).
+        services.AddSingleton<
+            NoMercy.Encoder.Subtitles.IOpenSubtitlesProvider,
+            OpenSubtitlesProvider
+        >();
 
         services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.AddScoped<ILocalizer, Localizer>();
@@ -587,6 +721,13 @@ public static class ServiceConfiguration
 
                         return Task.CompletedTask;
                     },
+                    // OnTokenValidated fires on EVERY authenticated request (every API call,
+                    // every SignalR frame), not on actual login. Logging "auth.login" here
+                    // produced one row per request and flooded the activity log with
+                    // duplicates and FK-failing Ulid.Empty deviceIds. Real login events live
+                    // at Keycloak; the server has no notion of "login" via JWT validation.
+                    // If we ever want session timeline data, log "session_start" from
+                    // ConnectionHub.OnConnectedAsync (one row per actual hub connection).
                     OnAuthenticationFailed = context =>
                     {
                         HttpRequest req = context.Request;
@@ -641,8 +782,7 @@ public static class ServiceConfiguration
 
                             if (!string.IsNullOrEmpty(raw))
                             {
-                                var handler =
-                                    new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                                var handler = new JwtSecurityTokenHandler();
                                 var jwt = handler.ReadJwtToken(raw);
                                 TimeSpan expired = DateTime.UtcNow - jwt.ValidTo;
                                 tokenAge =
@@ -667,8 +807,13 @@ public static class ServiceConfiguration
 
                         Logger.Auth(
                             $"{reason} — {client} → {hub} from {remoteIp}",
-                            Serilog.Events.LogEventLevel.Warning
+                            LogEventLevel.Warning
                         );
+
+                        // Activity log write removed — OnAuthenticationFailed fires for every
+                        // expired-token request (effectively continuously for any idle client),
+                        // not just real login failures. Real failures live at Keycloak. Diagnostic
+                        // log above is enough for server-side visibility.
                         return Task.CompletedTask;
                     },
                 };
@@ -801,5 +946,14 @@ public static class ServiceConfiguration
                 }
             );
         });
+    }
+
+    private static Ulid? TryGetDeviceId(HttpContext httpContext)
+    {
+        string? raw = httpContext.Request.Query["client_id"].FirstOrDefault();
+        if (string.IsNullOrEmpty(raw))
+            return null;
+
+        return Ulid.TryParse(raw, out Ulid id) ? id : null;
     }
 }

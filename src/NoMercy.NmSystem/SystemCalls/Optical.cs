@@ -1,6 +1,8 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.NmSystem.SystemCalls;
 
@@ -263,15 +265,18 @@ public static class Optical
 
     public static OpticalDiscType GetDiscType(string drivePath)
     {
-        if (!Directory.Exists(drivePath))
+        // LOCAL-ONLY: Optical is a static class in NmSystem; no reference to NoMercy.Providers.
+        IStorageDriver driver = new LocalStorageDriver();
+
+        if (!driver.DirectoryExists(drivePath))
             return OpticalDiscType.None;
 
         // Check for Blu-ray
-        if (Directory.Exists(Path.Combine(drivePath, "BDMV")))
+        if (driver.DirectoryExists(Path.Combine(drivePath, "BDMV")))
             return OpticalDiscType.BluRay;
 
         // Check for DVD
-        if (Directory.Exists(Path.Combine(drivePath, "VIDEO_TS")))
+        if (driver.DirectoryExists(Path.Combine(drivePath, "VIDEO_TS")))
             return OpticalDiscType.Dvd;
 
         // Check for CD (Audio CD or Data CD)

@@ -2,17 +2,24 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Jobs;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.Storage;
 using NoMercyQueue;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Logic;
 
-public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAsyncDisposable
+public class LibraryLogic(
+    Ulid id,
+    MediaContext mediaContext,
+    IStorageDriver storageDriver,
+    IStorageFactory storageFactory
+) : IDisposable, IAsyncDisposable
 {
     private readonly MediaContext _mediaContext = mediaContext;
+    private readonly IStorageDriver _storageDriver = storageDriver;
+    private readonly IStorageFactory _storageFactory = storageFactory;
     private Library Library { get; set; } = new();
 
     public Ulid Id { get; set; } = id;
@@ -20,7 +27,7 @@ public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAs
     private int Depth { get; set; }
 
     public List<dynamic> Titles { get; } = [];
-    private List<string> Paths { get; } = [];
+    private List<Folder> FolderList { get; } = [];
 
     public async Task<bool> Process()
     {
@@ -35,7 +42,7 @@ public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAs
 
         Library = library;
 
-        Paths.AddRange(Library.FolderLibraries.Select(folderLibrary => folderLibrary.Folder.Path));
+        FolderList.AddRange(Library.FolderLibraries.Select(folderLibrary => folderLibrary.Folder));
 
         GetDepth();
 
@@ -62,29 +69,32 @@ public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAs
 
     private async Task ScanFolder()
     {
-        foreach (string path in Paths)
+        foreach (Folder folder in FolderList)
             switch (Library?.Type)
             {
                 case "music":
-                    await ScanAudioFolder(path);
+                    await ScanAudioFolder(folder);
                     break;
             }
 
         Logger.App("Scanning done");
     }
 
-    private async Task ScanAudioFolder(string path)
+    private async Task ScanAudioFolder(Folder folder)
     {
-        await using MediaScan mediaScan = new();
+        IStorage folderStorage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        string scanRoot = folderStorage.GetFullPath(folder.Path);
+
+        await using MediaScan mediaScan = new(folderStorage.Driver);
         IEnumerable<MediaFolderExtend> rootFolders = (
-            await mediaScan.DisableRegexFilter().Process(path, 2)
+            await mediaScan.DisableRegexFilter().Process(scanRoot, 2)
         )
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();
 
         foreach (MediaFolderExtend rootFolder in rootFolders)
         {
-            if (rootFolder.Path == path)
+            if (rootFolder.Path == scanRoot)
                 return;
 
             Titles.Add(rootFolder.Path);

@@ -330,9 +330,9 @@ public class ShowRepository(MediaContext context) : IShowRepository
             .RunAsync();
     }
 
-    public string GetMediaType(TmdbTvShowAppends show)
+    public async Task<string> GetMediaTypeAsync(TmdbTvShowAppends show)
     {
-        bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+        bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
         // Kitsu alone isn't enough — require Japanese origin country from TMDB to avoid
         // false positives on western shows that have Kitsu entries (e.g. co-productions).

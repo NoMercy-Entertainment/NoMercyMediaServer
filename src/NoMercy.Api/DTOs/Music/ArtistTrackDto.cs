@@ -81,8 +81,11 @@ public record ArtistTrackDto
         Disc = artistTrack.Track.DiscNumber;
         Track = artistTrack.Track.TrackNumber;
         Duration = artistTrack.Track.Duration;
-        AlbumId = artistTrack.Track.AlbumTrack.First().AlbumId;
-        AlbumName = artistTrack.Track.AlbumTrack.First().Album.Name;
+        // AlbumTrack can be empty for orphaned tracks (rip in progress, missing
+        // metadata). Fall back to Empty / blank rather than NRE — the dashboard
+        // already tolerates blank album metadata for these rows.
+        AlbumId = artistTrack.Track.AlbumTrack.FirstOrDefault()?.AlbumId ?? Guid.Empty;
+        AlbumName = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty;
         Favorite = artistTrack.Track.TrackUser.Count != 0;
         Quality = artistTrack.Track.Quality;
         Lyrics = artistTrack.Track.Lyrics;
@@ -120,7 +123,7 @@ public record ArtistTrackDto
         Duration = track.Duration;
         Favorite = track.TrackUser.Count != 0;
         Quality = track.Quality;
-        AlbumName = track.AlbumTrack.First().Album.Name;
+        AlbumName = track.AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty;
         Link = new($"/music/tracks/{track.Id}", UriKind.Relative);
 
         Album = track

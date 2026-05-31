@@ -13,6 +13,12 @@ public class FolderDto
     [JsonProperty("path")]
     public string Path { get; set; } = string.Empty;
 
+    [JsonProperty("driver_id")]
+    public Ulid DriverId { get; set; }
+
+    [JsonProperty("driver_name")]
+    public string DriverName { get; set; } = string.Empty;
+
     [JsonProperty("encoder_profiles")]
     public EncoderProfileDto[] EncoderProfiles { get; set; } = [];
 
@@ -22,6 +28,8 @@ public class FolderDto
     {
         Id = folder.Id;
         Path = folder.Path;
+        DriverId = folder.DriverId;
+        DriverName = folder.Driver?.Name ?? string.Empty;
         EncoderProfiles = folder
             .EncoderProfileFolder.Where(f => f.EncoderProfile is not null)
             .Select(f => new EncoderProfileDto

@@ -10,7 +10,7 @@ internal static class QueueCommand
         Command statusCmd = new("status") { Description = "Show queue statistics" };
 
         statusCmd.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
@@ -21,7 +21,7 @@ internal static class QueueCommand
 
                 if (queue is null)
                 {
-                    Console.Error.WriteLine("Could not connect to server.");
+                    await Console.Error.WriteLineAsync("Could not connect to server.");
                     return 1;
                 }
 

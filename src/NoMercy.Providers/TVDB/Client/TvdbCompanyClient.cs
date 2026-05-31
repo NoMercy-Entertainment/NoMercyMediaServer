@@ -1,21 +1,26 @@
-using NoMercy.Providers.TVDB.Models;
+using NoMercy.Providers.TVDB.Models.Companies;
+using NoMercy.Providers.TVDB.Models.Shared;
 
 namespace NoMercy.Providers.TVDB.Client;
 
-public class TvdbCompanyClient(int id) : TvdbBaseClient(id)
+public class TvdbCompanyClient : TvdbBaseClient
 {
-    public Task<TvdbCompaniesResponse?> Companies()
+    public TvdbCompanyClient(int id = 0, string language = "eng")
+        : base(id, language) { }
+
+    public Task<TvdbPaginatedResponse<TvdbCompany>?> All(int page = 0, bool? priority = false)
     {
-        return Get<TvdbCompaniesResponse>("companies");
+        Dictionary<string, string?> query = new() { ["page"] = page.ToString() };
+        return Get<TvdbPaginatedResponse<TvdbCompany>>("companies", query, priority);
     }
 
-    public Task<TvdbCompanyResponse?> Details()
+    public Task<TvdbCompanyResponse?> Details(bool? priority = false)
     {
-        return Get<TvdbCompanyResponse>("companies/" + Id);
+        return Get<TvdbCompanyResponse>("companies/" + Id, priority: priority);
     }
 
-    public Task<TvdbCompanyTypesResponse?> Types()
+    public Task<TvdbCompanyTypesResponse?> Types(bool? priority = false)
     {
-        return Get<TvdbCompanyTypesResponse>("companies/types");
+        return Get<TvdbCompanyTypesResponse>("companies/types", priority: priority);
     }
 }

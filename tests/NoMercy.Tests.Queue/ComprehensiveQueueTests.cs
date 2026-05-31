@@ -1,12 +1,12 @@
-using Microsoft.Extensions.Logging;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 using NoMercyQueue.Sqlite;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 using IShouldQueue = NoMercyQueue.Core.Interfaces.IShouldQueue;
 
@@ -55,7 +55,7 @@ public class ComprehensiveQueueTests
                 Payload = "{\"type\":\"adapter-test\"}",
                 Queue = "test",
                 Priority = 1,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
 
             _adapter.AddJob(job);
@@ -71,7 +71,7 @@ public class ComprehensiveQueueTests
                 Payload = "{\"type\":\"persist-test\"}",
                 Queue = "test",
                 Priority = 5,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
 
             _adapter.AddJob(job);
@@ -91,7 +91,7 @@ public class ComprehensiveQueueTests
                 Payload = "{\"type\":\"find-adapter\"}",
                 Queue = "q1",
                 Priority = 3,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             _adapter.AddJob(job);
 
@@ -118,7 +118,7 @@ public class ComprehensiveQueueTests
             {
                 Payload = "{\"type\":\"remove-adapter\"}",
                 Queue = "test",
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             _adapter.AddJob(job);
             int id = job.Id;
@@ -137,7 +137,7 @@ public class ComprehensiveQueueTests
             {
                 Payload = "{\"type\":\"detached\"}",
                 Queue = "test",
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             _context.QueueJobs.Add(entity);
             _context.SaveChanges();
@@ -148,7 +148,7 @@ public class ComprehensiveQueueTests
             {
                 Id = entity.Id,
                 Payload = "{\"type\":\"detached\"}",
-                Queue = "test"
+                Queue = "test",
             };
             _adapter.RemoveJob(model);
 
@@ -158,12 +158,14 @@ public class ComprehensiveQueueTests
         [Fact]
         public void JobExists_ReturnsTrueForExistingPayload()
         {
-            _adapter.AddJob(new()
-            {
-                Payload = "{\"exists\":true}",
-                Queue = "test",
-                AvailableAt = DateTime.UtcNow
-            });
+            _adapter.AddJob(
+                new()
+                {
+                    Payload = "{\"exists\":true}",
+                    Queue = "test",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
 
             Assert.True(_adapter.JobExists("{\"exists\":true}"));
         }
@@ -182,7 +184,7 @@ public class ComprehensiveQueueTests
                 Payload = "{\"update\":true}",
                 Queue = "test",
                 Priority = 1,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             _adapter.AddJob(job);
 
@@ -205,7 +207,7 @@ public class ComprehensiveQueueTests
             {
                 Id = 9999,
                 Payload = "nope",
-                Queue = "test"
+                Queue = "test",
             };
 
             Exception? ex = Record.Exception(() => _adapter.UpdateJob(job));
@@ -215,20 +217,24 @@ public class ComprehensiveQueueTests
         [Fact]
         public void GetNextJob_ReturnsHighestPriorityUnreservedJob()
         {
-            _adapter.AddJob(new()
-            {
-                Payload = "{\"p\":1}",
-                Queue = "w",
-                Priority = 1,
-                AvailableAt = DateTime.UtcNow
-            });
-            _adapter.AddJob(new()
-            {
-                Payload = "{\"p\":10}",
-                Queue = "w",
-                Priority = 10,
-                AvailableAt = DateTime.UtcNow
-            });
+            _adapter.AddJob(
+                new()
+                {
+                    Payload = "{\"p\":1}",
+                    Queue = "w",
+                    Priority = 1,
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
+            _adapter.AddJob(
+                new()
+                {
+                    Payload = "{\"p\":10}",
+                    Queue = "w",
+                    Priority = 10,
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
 
             QueueJobModel? next = _adapter.GetNextJob("w", 3, null);
 
@@ -245,7 +251,7 @@ public class ComprehensiveQueueTests
                 Queue = "w",
                 Priority = 10,
                 ReservedAt = DateTime.UtcNow,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             _adapter.AddJob(reserved);
 
@@ -254,7 +260,7 @@ public class ComprehensiveQueueTests
                 Payload = "{\"unreserved\":true}",
                 Queue = "w",
                 Priority = 1,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             _adapter.AddJob(unreserved);
 
@@ -267,12 +273,14 @@ public class ComprehensiveQueueTests
         [Fact]
         public void GetNextJob_EmptyQueueName_ReturnsAnyJob()
         {
-            _adapter.AddJob(new()
-            {
-                Payload = "{\"any\":true}",
-                Queue = "specific-queue",
-                AvailableAt = DateTime.UtcNow
-            });
+            _adapter.AddJob(
+                new()
+                {
+                    Payload = "{\"any\":true}",
+                    Queue = "specific-queue",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
 
             QueueJobModel? next = _adapter.GetNextJob("", 3, null);
             Assert.NotNull(next);
@@ -288,13 +296,15 @@ public class ComprehensiveQueueTests
         [Fact]
         public void GetNextJob_WithCurrentJobId_ReturnsNull()
         {
-            _adapter.AddJob(new()
-            {
-                Payload = "{\"guard\":true}",
-                Queue = "w",
-                Priority = 1,
-                AvailableAt = DateTime.UtcNow
-            });
+            _adapter.AddJob(
+                new()
+                {
+                    Payload = "{\"guard\":true}",
+                    Queue = "w",
+                    Priority = 1,
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
 
             QueueJobModel? next = _adapter.GetNextJob("w", 3, 42L);
             Assert.Null(next);
@@ -308,7 +318,7 @@ public class ComprehensiveQueueTests
                 Payload = "{\"reset\":true}",
                 Queue = "test",
                 ReservedAt = DateTime.UtcNow,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             _adapter.AddJob(job);
 
@@ -330,7 +340,7 @@ public class ComprehensiveQueueTests
                 Queue = "test",
                 Payload = "{\"failed\":true}",
                 Exception = "boom",
-                FailedAt = DateTime.UtcNow
+                FailedAt = DateTime.UtcNow,
             };
 
             _adapter.AddFailedJob(failedJob);
@@ -349,7 +359,7 @@ public class ComprehensiveQueueTests
                 Uuid = Guid.NewGuid(),
                 Queue = "test",
                 Payload = "{\"find-failed\":true}",
-                Exception = "err"
+                Exception = "err",
             };
             _adapter.AddFailedJob(failedJob);
             _adapter.SaveChanges();
@@ -376,7 +386,7 @@ public class ComprehensiveQueueTests
                 Uuid = Guid.NewGuid(),
                 Queue = "test",
                 Payload = "{\"remove-failed\":true}",
-                Exception = "err"
+                Exception = "err",
             };
             _adapter.AddFailedJob(failedJob);
             _adapter.SaveChanges();
@@ -396,7 +406,7 @@ public class ComprehensiveQueueTests
                 Id = 9999,
                 Queue = "test",
                 Payload = "nope",
-                Exception = "err"
+                Exception = "err",
             };
 
             Exception? ex = Record.Exception(() =>
@@ -410,20 +420,24 @@ public class ComprehensiveQueueTests
         [Fact]
         public void GetFailedJobs_FilterById()
         {
-            _adapter.AddFailedJob(new()
-            {
-                Uuid = Guid.NewGuid(),
-                Queue = "q1",
-                Payload = "{\"a\":1}",
-                Exception = "e1"
-            });
-            _adapter.AddFailedJob(new()
-            {
-                Uuid = Guid.NewGuid(),
-                Queue = "q2",
-                Payload = "{\"a\":2}",
-                Exception = "e2"
-            });
+            _adapter.AddFailedJob(
+                new()
+                {
+                    Uuid = Guid.NewGuid(),
+                    Queue = "q1",
+                    Payload = "{\"a\":1}",
+                    Exception = "e1",
+                }
+            );
+            _adapter.AddFailedJob(
+                new()
+                {
+                    Uuid = Guid.NewGuid(),
+                    Queue = "q2",
+                    Payload = "{\"a\":2}",
+                    Exception = "e2",
+                }
+            );
             _adapter.SaveChanges();
 
             IReadOnlyList<FailedJobModel> all = _adapter.GetFailedJobs();
@@ -444,7 +458,7 @@ public class ComprehensiveQueueTests
                 Name = "adapter-cron",
                 CronExpression = "0 * * * *",
                 JobType = "TestJob",
-                IsEnabled = true
+                IsEnabled = true,
             };
 
             _adapter.AddCronJob(cronJob);
@@ -464,20 +478,24 @@ public class ComprehensiveQueueTests
         [Fact]
         public void GetEnabledCronJobs_FiltersDisabled()
         {
-            _adapter.AddCronJob(new()
-            {
-                Name = "enabled-adapter",
-                CronExpression = "0 * * * *",
-                JobType = "A",
-                IsEnabled = true
-            });
-            _adapter.AddCronJob(new()
-            {
-                Name = "disabled-adapter",
-                CronExpression = "0 * * * *",
-                JobType = "B",
-                IsEnabled = false
-            });
+            _adapter.AddCronJob(
+                new()
+                {
+                    Name = "enabled-adapter",
+                    CronExpression = "0 * * * *",
+                    JobType = "A",
+                    IsEnabled = true,
+                }
+            );
+            _adapter.AddCronJob(
+                new()
+                {
+                    Name = "disabled-adapter",
+                    CronExpression = "0 * * * *",
+                    JobType = "B",
+                    IsEnabled = false,
+                }
+            );
 
             IReadOnlyList<CronJobModel> enabled = _adapter.GetEnabledCronJobs();
             Assert.Single(enabled);
@@ -487,13 +505,15 @@ public class ComprehensiveQueueTests
         [Fact]
         public void UpdateCronJob_ModifiesProperties()
         {
-            _adapter.AddCronJob(new()
-            {
-                Name = "update-adapter-cron",
-                CronExpression = "0 * * * *",
-                JobType = "TestJob",
-                IsEnabled = true
-            });
+            _adapter.AddCronJob(
+                new()
+                {
+                    Name = "update-adapter-cron",
+                    CronExpression = "0 * * * *",
+                    JobType = "TestJob",
+                    IsEnabled = true,
+                }
+            );
 
             CronJobModel? found = _adapter.FindCronJobByName("update-adapter-cron");
             Assert.NotNull(found);
@@ -513,12 +533,14 @@ public class ComprehensiveQueueTests
         [Fact]
         public void RemoveCronJob_DeletesFromContext()
         {
-            _adapter.AddCronJob(new()
-            {
-                Name = "remove-adapter-cron",
-                CronExpression = "0 * * * *",
-                JobType = "TestJob"
-            });
+            _adapter.AddCronJob(
+                new()
+                {
+                    Name = "remove-adapter-cron",
+                    CronExpression = "0 * * * *",
+                    JobType = "TestJob",
+                }
+            );
 
             CronJobModel? found = _adapter.FindCronJobByName("remove-adapter-cron");
             Assert.NotNull(found);
@@ -536,7 +558,7 @@ public class ComprehensiveQueueTests
                 Id = 9999,
                 Name = "nope",
                 CronExpression = "0 * * * *",
-                JobType = "X"
+                JobType = "X",
             };
 
             Exception? ex = Record.Exception(() => _adapter.RemoveCronJob(model));
@@ -546,12 +568,14 @@ public class ComprehensiveQueueTests
         [Fact]
         public void SaveChanges_ClearsChangeTracker()
         {
-            _adapter.AddJob(new()
-            {
-                Payload = "{\"tracker\":true}",
-                Queue = "test",
-                AvailableAt = DateTime.UtcNow
-            });
+            _adapter.AddJob(
+                new()
+                {
+                    Payload = "{\"tracker\":true}",
+                    Queue = "test",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
 
             // After SaveAndClear, change tracker should be empty
             Assert.False(_context.ChangeTracker.HasChanges());
@@ -584,6 +608,7 @@ public class ComprehensiveQueueTests
             _sqliteContext.Dispose();
             _efAdapter.Dispose();
             _efDbContext.Dispose();
+            SqliteConnection.ClearAllPools();
             if (File.Exists(_sqliteDbPath))
                 File.Delete(_sqliteDbPath);
         }
@@ -596,14 +621,14 @@ public class ComprehensiveQueueTests
                 Payload = "{\"parity\":\"job\"}",
                 Queue = "test-queue",
                 Priority = 7,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             QueueJobModel efJob = new()
             {
                 Payload = "{\"parity\":\"job\"}",
                 Queue = "test-queue",
                 Priority = 7,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
 
             _sqliteContext.AddJob(sqliteJob);
@@ -624,11 +649,28 @@ public class ComprehensiveQueueTests
         {
             string payload = "{\"parity\":\"exists\"}";
 
-            _sqliteContext.AddJob(new() { Payload = payload, Queue = "t", AvailableAt = DateTime.UtcNow });
-            _efAdapter.AddJob(new() { Payload = payload, Queue = "t", AvailableAt = DateTime.UtcNow });
+            _sqliteContext.AddJob(
+                new()
+                {
+                    Payload = payload,
+                    Queue = "t",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
+            _efAdapter.AddJob(
+                new()
+                {
+                    Payload = payload,
+                    Queue = "t",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
 
             Assert.Equal(_sqliteContext.JobExists(payload), _efAdapter.JobExists(payload));
-            Assert.Equal(_sqliteContext.JobExists("{\"nope\":true}"), _efAdapter.JobExists("{\"nope\":true}"));
+            Assert.Equal(
+                _sqliteContext.JobExists("{\"nope\":true}"),
+                _efAdapter.JobExists("{\"nope\":true}")
+            );
         }
 
         [Fact]
@@ -637,20 +679,24 @@ public class ComprehensiveQueueTests
             // Add same jobs to both
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
-                ctx.AddJob(new()
-                {
-                    Payload = "{\"p\":1}",
-                    Queue = "parity",
-                    Priority = 1,
-                    AvailableAt = DateTime.UtcNow
-                });
-                ctx.AddJob(new()
-                {
-                    Payload = "{\"p\":10}",
-                    Queue = "parity",
-                    Priority = 10,
-                    AvailableAt = DateTime.UtcNow
-                });
+                ctx.AddJob(
+                    new()
+                    {
+                        Payload = "{\"p\":1}",
+                        Queue = "parity",
+                        Priority = 1,
+                        AvailableAt = DateTime.UtcNow,
+                    }
+                );
+                ctx.AddJob(
+                    new()
+                    {
+                        Payload = "{\"p\":10}",
+                        Queue = "parity",
+                        Priority = 10,
+                        AvailableAt = DateTime.UtcNow,
+                    }
+                );
             }
 
             QueueJobModel? sqliteNext = _sqliteContext.GetNextJob("parity", 3, null);
@@ -667,13 +713,15 @@ public class ComprehensiveQueueTests
         {
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
-                ctx.AddJob(new()
-                {
-                    Payload = "{\"guard\":true}",
-                    Queue = "parity",
-                    Priority = 1,
-                    AvailableAt = DateTime.UtcNow
-                });
+                ctx.AddJob(
+                    new()
+                    {
+                        Payload = "{\"guard\":true}",
+                        Queue = "parity",
+                        Priority = 1,
+                        AvailableAt = DateTime.UtcNow,
+                    }
+                );
             }
 
             QueueJobModel? sqliteNext = _sqliteContext.GetNextJob("parity", 3, 42L);
@@ -688,13 +736,15 @@ public class ComprehensiveQueueTests
         {
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
-                ctx.AddJob(new()
-                {
-                    Payload = "{\"reserved\":true}",
-                    Queue = "parity",
-                    ReservedAt = DateTime.UtcNow,
-                    AvailableAt = DateTime.UtcNow
-                });
+                ctx.AddJob(
+                    new()
+                    {
+                        Payload = "{\"reserved\":true}",
+                        Queue = "parity",
+                        ReservedAt = DateTime.UtcNow,
+                        AvailableAt = DateTime.UtcNow,
+                    }
+                );
                 ctx.ResetAllReservedJobs();
             }
 
@@ -716,18 +766,20 @@ public class ComprehensiveQueueTests
                 Name = "parity-cron",
                 CronExpression = "0 2 * * *",
                 JobType = "TestJob",
-                IsEnabled = true
+                IsEnabled = true,
             };
 
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
-                ctx.AddCronJob(new()
-                {
-                    Name = cronTemplate.Name,
-                    CronExpression = cronTemplate.CronExpression,
-                    JobType = cronTemplate.JobType,
-                    IsEnabled = cronTemplate.IsEnabled
-                });
+                ctx.AddCronJob(
+                    new()
+                    {
+                        Name = cronTemplate.Name,
+                        CronExpression = cronTemplate.CronExpression,
+                        JobType = cronTemplate.JobType,
+                        IsEnabled = cronTemplate.IsEnabled,
+                    }
+                );
             }
 
             CronJobModel? sqliteFound = _sqliteContext.FindCronJobByName("parity-cron");
@@ -747,13 +799,15 @@ public class ComprehensiveQueueTests
 
             foreach (IQueueContext ctx in new[] { _sqliteContext, _efAdapter })
             {
-                ctx.AddFailedJob(new()
-                {
-                    Uuid = uuid,
-                    Queue = "parity-fail",
-                    Payload = "{\"fail\":true}",
-                    Exception = "test error"
-                });
+                ctx.AddFailedJob(
+                    new()
+                    {
+                        Uuid = uuid,
+                        Queue = "parity-fail",
+                        Payload = "{\"fail\":true}",
+                        Exception = "test error",
+                    }
+                );
                 ctx.SaveChanges();
             }
 
@@ -872,7 +926,8 @@ public class ComprehensiveQueueTests
 
                 try
                 {
-                    IShouldQueue exec = (IShouldQueue)SerializationHelper.Deserialize<object>(reserved.Payload);
+                    IShouldQueue exec = (IShouldQueue)
+                        SerializationHelper.Deserialize<object>(reserved.Payload);
                     await exec.Handle();
                     _jobQueue.DeleteJob(reserved);
                 }
@@ -901,13 +956,17 @@ public class ComprehensiveQueueTests
             // Reserve from "critical" queue should get HighPriorityJob
             QueueJobModel? criticalReserved = _jobQueue.ReserveJob("critical", null);
             Assert.NotNull(criticalReserved);
-            object criticalDeserialized = SerializationHelper.Deserialize<object>(criticalReserved.Payload);
+            object criticalDeserialized = SerializationHelper.Deserialize<object>(
+                criticalReserved.Payload
+            );
             Assert.IsType<HighPriorityJob>(criticalDeserialized);
 
             // Reserve from "default" queue should get TestJob
             QueueJobModel? defaultReserved = _jobQueue.ReserveJob("default", null);
             Assert.NotNull(defaultReserved);
-            object defaultDeserialized = SerializationHelper.Deserialize<object>(defaultReserved.Payload);
+            object defaultDeserialized = SerializationHelper.Deserialize<object>(
+                defaultReserved.Payload
+            );
             Assert.IsType<TestJob>(defaultDeserialized);
 
             // Execute both
@@ -935,11 +994,7 @@ public class ComprehensiveQueueTests
             TestQueueContextAdapter adapter = new();
             QueueConfiguration config = new()
             {
-                WorkerCounts = new()
-                {
-                    ["queue"] = 1,
-                    ["data"] = 1
-                }
+                WorkerCounts = new() { ["queue"] = 1, ["data"] = 1 },
             };
 
             QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
@@ -966,11 +1021,7 @@ public class ComprehensiveQueueTests
             TestQueueContextAdapter adapter = new();
             QueueConfiguration config = new()
             {
-                WorkerCounts = new()
-                {
-                    ["queue"] = 3,
-                    ["data"] = 5
-                }
+                WorkerCounts = new() { ["queue"] = 3, ["data"] = 5 },
             };
 
             QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
@@ -982,13 +1033,7 @@ public class ComprehensiveQueueTests
         public async Task SetWorkerCount_KnownQueue_ReturnsTrue()
         {
             TestQueueContextAdapter adapter = new();
-            QueueConfiguration config = new()
-            {
-                WorkerCounts = new()
-                {
-                    ["queue"] = 1
-                }
-            };
+            QueueConfiguration config = new() { WorkerCounts = new() { ["queue"] = 1 } };
 
             QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
             bool result = await runner.SetWorkerCount("queue", 5, Guid.NewGuid());
@@ -1013,13 +1058,7 @@ public class ComprehensiveQueueTests
         {
             TestQueueContextAdapter adapter = new();
             TestConfigStore store = new();
-            QueueConfiguration config = new()
-            {
-                WorkerCounts = new()
-                {
-                    ["encoder"] = 1
-                }
-            };
+            QueueConfiguration config = new() { WorkerCounts = new() { ["encoder"] = 1 } };
 
             QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance, store);
             await runner.SetWorkerCount("encoder", 8, Guid.NewGuid());
@@ -1032,15 +1071,14 @@ public class ComprehensiveQueueTests
         public async Task SetWorkerCount_WithoutConfigStore_StillReturnsTrue()
         {
             TestQueueContextAdapter adapter = new();
-            QueueConfiguration config = new()
-            {
-                WorkerCounts = new()
-                {
-                    ["queue"] = 1
-                }
-            };
+            QueueConfiguration config = new() { WorkerCounts = new() { ["queue"] = 1 } };
 
-            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance, configurationStore: null);
+            QueueRunner runner = new(
+                adapter,
+                config,
+                NullLoggerFactory.Instance,
+                configurationStore: null
+            );
             bool result = await runner.SetWorkerCount("queue", 4, null);
 
             Assert.True(result);
@@ -1083,6 +1121,7 @@ public class ComprehensiveQueueTests
         public void Dispose()
         {
             _context.Dispose();
+            SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath))
                 File.Delete(_dbPath);
         }
@@ -1096,7 +1135,7 @@ public class ComprehensiveQueueTests
                 Payload = SerializationHelper.Serialize(testJob),
                 Queue = "sqlite-test",
                 Priority = 5,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
 
             _jobQueue.Enqueue(job);
@@ -1115,18 +1154,22 @@ public class ComprehensiveQueueTests
         {
             string payload = SerializationHelper.Serialize(new TestJob { Message = "dup sqlite" });
 
-            _jobQueue.Enqueue(new()
-            {
-                Payload = payload,
-                Queue = "dup-test",
-                AvailableAt = DateTime.UtcNow
-            });
-            _jobQueue.Enqueue(new()
-            {
-                Payload = payload,
-                Queue = "dup-test",
-                AvailableAt = DateTime.UtcNow
-            });
+            _jobQueue.Enqueue(
+                new()
+                {
+                    Payload = payload,
+                    Queue = "dup-test",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
+            _jobQueue.Enqueue(
+                new()
+                {
+                    Payload = payload,
+                    Queue = "dup-test",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
 
             // Only one should exist
             Assert.True(_context.JobExists(payload));
@@ -1143,7 +1186,7 @@ public class ComprehensiveQueueTests
             {
                 Payload = "{\"retry\":true}",
                 Queue = "retry-sqlite",
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             _jobQueue.Enqueue(job);
 
@@ -1165,7 +1208,7 @@ public class ComprehensiveQueueTests
             {
                 Payload = "{\"permanent-fail\":true}",
                 Queue = "fail-sqlite",
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             jq.Enqueue(job);
 
@@ -1188,13 +1231,15 @@ public class ComprehensiveQueueTests
         public void RetryFailedJobs_RequeuesFromSqlite()
         {
             // Manually add a failed job
-            _context.AddFailedJob(new()
-            {
-                Uuid = Guid.NewGuid(),
-                Queue = "retry-q",
-                Payload = "{\"retried\":true}",
-                Exception = "was failed"
-            });
+            _context.AddFailedJob(
+                new()
+                {
+                    Uuid = Guid.NewGuid(),
+                    Queue = "retry-q",
+                    Payload = "{\"retried\":true}",
+                    Exception = "was failed",
+                }
+            );
             _context.SaveChanges();
 
             _jobQueue.RetryFailedJobs();
@@ -1209,27 +1254,33 @@ public class ComprehensiveQueueTests
         [Fact]
         public void PriorityOrdering_SqliteProvider()
         {
-            _jobQueue.Enqueue(new()
-            {
-                Payload = "{\"p\":1}",
-                Queue = "pri",
-                Priority = 1,
-                AvailableAt = DateTime.UtcNow
-            });
-            _jobQueue.Enqueue(new()
-            {
-                Payload = "{\"p\":10}",
-                Queue = "pri",
-                Priority = 10,
-                AvailableAt = DateTime.UtcNow
-            });
-            _jobQueue.Enqueue(new()
-            {
-                Payload = "{\"p\":5}",
-                Queue = "pri",
-                Priority = 5,
-                AvailableAt = DateTime.UtcNow
-            });
+            _jobQueue.Enqueue(
+                new()
+                {
+                    Payload = "{\"p\":1}",
+                    Queue = "pri",
+                    Priority = 1,
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
+            _jobQueue.Enqueue(
+                new()
+                {
+                    Payload = "{\"p\":10}",
+                    Queue = "pri",
+                    Priority = 10,
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
+            _jobQueue.Enqueue(
+                new()
+                {
+                    Payload = "{\"p\":5}",
+                    Queue = "pri",
+                    Priority = 5,
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
 
             List<int> priorities = [];
             for (int i = 0; i < 3; i++)
@@ -1344,12 +1395,14 @@ public class ComprehensiveQueueTests
         [Fact]
         public void Dequeue_RemovesJobFromQueue()
         {
-            _jobQueue.Enqueue(new()
-            {
-                Payload = "{\"dequeue\":true}",
-                Queue = "test",
-                AvailableAt = DateTime.UtcNow
-            });
+            _jobQueue.Enqueue(
+                new()
+                {
+                    Payload = "{\"dequeue\":true}",
+                    Queue = "test",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
 
             QueueJobModel? dequeued = _jobQueue.Dequeue();
             Assert.NotNull(dequeued);
@@ -1359,18 +1412,22 @@ public class ComprehensiveQueueTests
         [Fact]
         public void Dequeue_MultipleJobs_ReturnsFirst()
         {
-            _jobQueue.Enqueue(new()
-            {
-                Payload = "{\"first\":true}",
-                Queue = "test",
-                AvailableAt = DateTime.UtcNow
-            });
-            _jobQueue.Enqueue(new()
-            {
-                Payload = "{\"second\":true}",
-                Queue = "test",
-                AvailableAt = DateTime.UtcNow
-            });
+            _jobQueue.Enqueue(
+                new()
+                {
+                    Payload = "{\"first\":true}",
+                    Queue = "test",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
+            _jobQueue.Enqueue(
+                new()
+                {
+                    Payload = "{\"second\":true}",
+                    Queue = "test",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
 
             QueueJobModel? first = _jobQueue.Dequeue();
             Assert.NotNull(first);
@@ -1389,7 +1446,7 @@ public class ComprehensiveQueueTests
                 Payload = "{\"lifecycle\":true}",
                 Queue = "test-q",
                 Priority = 5,
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
 
             _jobQueue.Enqueue(job);
@@ -1407,15 +1464,17 @@ public class ComprehensiveQueueTests
         public void RequeueFailedJob_MovesBackToQueue()
         {
             // Create a failed job
-            _context.FailedJobs.Add(new()
-            {
-                Uuid = Guid.NewGuid(),
-                Connection = "default",
-                Queue = "requeue-test",
-                Payload = "{\"requeue\":true}",
-                Exception = "error",
-                FailedAt = DateTime.UtcNow
-            });
+            _context.FailedJobs.Add(
+                new()
+                {
+                    Uuid = Guid.NewGuid(),
+                    Connection = "default",
+                    Queue = "requeue-test",
+                    Payload = "{\"requeue\":true}",
+                    Exception = "error",
+                    FailedAt = DateTime.UtcNow,
+                }
+            );
             _context.SaveChanges();
 
             FailedJob failedJob = _context.FailedJobs.First();
@@ -1461,7 +1520,10 @@ public class ComprehensiveQueueTests
         {
             TestQueueContextAdapter adapter = new();
             JobQueue queue = new(adapter);
-            IJobDispatcher dispatcher = new JobDispatcher(queue, NullLogger<JobDispatcher>.Instance);
+            IJobDispatcher dispatcher = new JobDispatcher(
+                queue,
+                NullLogger<JobDispatcher>.Instance
+            );
 
             TestJob job = new() { Message = "interface dispatch" };
             dispatcher.Dispatch(job);
@@ -1474,7 +1536,10 @@ public class ComprehensiveQueueTests
         {
             TestQueueContextAdapter adapter = new();
             JobQueue queue = new(adapter);
-            IJobDispatcher dispatcher = new JobDispatcher(queue, NullLogger<JobDispatcher>.Instance);
+            IJobDispatcher dispatcher = new JobDispatcher(
+                queue,
+                NullLogger<JobDispatcher>.Instance
+            );
 
             TestJob job = new() { Message = "explicit dispatch" };
             dispatcher.Dispatch(job, "custom", 50);
@@ -1521,11 +1586,7 @@ public class ComprehensiveQueueTests
             {
                 MaxAttempts = 10,
                 PollingIntervalMs = 250,
-                WorkerCounts = new()
-                {
-                    ["fast"] = 8,
-                    ["slow"] = 2
-                }
+                WorkerCounts = new() { ["fast"] = 8, ["slow"] = 2 },
             };
 
             Assert.Equal(10, config.MaxAttempts);
@@ -1559,12 +1620,15 @@ public class ComprehensiveQueueTests
         private readonly Dictionary<string, string> _store = new();
 
         public string? GetValue(string key) => _store.GetValueOrDefault(key);
+
         public void SetValue(string key, string value) => _store[key] = value;
+
         public Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
         {
             _store[key] = value;
             return Task.CompletedTask;
         }
+
         public bool HasKey(string key) => _store.ContainsKey(key);
     }
 }

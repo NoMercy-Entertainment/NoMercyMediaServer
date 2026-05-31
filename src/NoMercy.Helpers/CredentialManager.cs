@@ -1,13 +1,18 @@
-using System.Security;
+﻿using System.Security;
 using System.Text;
 using NeoSmart.SecureStore;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Helpers;
 
 public static class CredentialManager
 {
+    // LOCAL-ONLY: NoMercy.Helpers cannot reference NoMercy.Providers (circular dependency).
+    private static IStorageDriver _driver => new LocalStorageDriver();
+
     private class SecretSerializer : ISecretSerializer
     {
         public T Deserialize<T>(SecureBuffer serialized)
@@ -26,7 +31,7 @@ public static class CredentialManager
 
     public static UserPass? Credential(string target)
     {
-        if (!File.Exists(AppFiles.SecretsStore))
+        if (!_driver.FileExists(AppFiles.SecretsStore))
             return null;
 
         using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);
@@ -46,7 +51,7 @@ public static class CredentialManager
         string apiKey
     )
     {
-        bool exists = File.Exists(AppFiles.SecretsStore);
+        bool exists = _driver.FileExists(AppFiles.SecretsStore);
 
         using SecretsManager secretsManager = exists
             ? SecretsManager.LoadStore(AppFiles.SecretsStore)
@@ -69,7 +74,7 @@ public static class CredentialManager
 
     public static bool RemoveCredentials(string target)
     {
-        if (!File.Exists(AppFiles.SecretsStore))
+        if (!_driver.FileExists(AppFiles.SecretsStore))
             return false;
 
         using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);

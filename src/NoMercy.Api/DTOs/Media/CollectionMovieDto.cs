@@ -5,6 +5,7 @@ using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Movies;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.Providers.TMDB.Models.Movies;
 
 namespace NoMercy.Api.DTOs.Media;
 
@@ -101,7 +102,7 @@ public record CollectionMovieDto
         VideoId = movie.Video;
     }
 
-    public CollectionMovieDto(Providers.TMDB.Models.Movies.TmdbMovie tmdbMovie)
+    public CollectionMovieDto(TmdbMovie tmdbMovie)
     {
         Id = tmdbMovie.Id;
         Title = tmdbMovie.Title;

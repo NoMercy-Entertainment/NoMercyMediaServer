@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using NoMercy.Launcher.Services;
 using NoMercy.Launcher.ViewModels;
 
 namespace NoMercy.Launcher.Views;
@@ -9,49 +10,73 @@ public partial class ServerControlView : UserControl
     public ServerControlView()
     {
         InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
     }
 
     private ServerControlViewModel? ViewModel => DataContext as ServerControlViewModel;
 
-    private async void OnOpenAppClick(object? sender, RoutedEventArgs e)
+    private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (ViewModel is not null)
-            await ViewModel.LaunchAppAsync();
+        if (ViewModel is null)
+            return;
+
+        ViewModel.ShowActiveSessionDialog = async activity =>
+        {
+            Window? owner = TopLevel.GetTopLevel(this) as Window;
+            if (owner is null)
+                return false;
+
+            return await ActiveSessionDialog.ShowAsync(owner, activity);
+        };
     }
 
-    private async void OnStartClick(object? sender, RoutedEventArgs e)
+    /// <summary>
+    /// Wrap an async-void click handler so an exception from the awaited
+    /// view-model task lands in LauncherLog instead of crashing the
+    /// launcher via the AppDomain unhandled-exception path.
+    /// </summary>
+    private static async void SafeRun(string label, Func<Task> action)
     {
-        if (ViewModel is not null)
-            await ViewModel.StartServerAsync();
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error($"ServerControlView.{label} failed: {ex.Message}", ex);
+        }
     }
 
-    private async void OnStopClick(object? sender, RoutedEventArgs e)
-    {
-        if (ViewModel is not null)
-            await ViewModel.StopServerAsync();
-    }
+    private void OnOpenAppClick(object? sender, RoutedEventArgs e) =>
+        SafeRun(nameof(OnOpenAppClick), () => ViewModel?.LaunchAppAsync() ?? Task.CompletedTask);
 
-    private async void OnRestartClick(object? sender, RoutedEventArgs e)
-    {
-        if (ViewModel is not null)
-            await ViewModel.RestartServerAsync();
-    }
+    private void OnStartClick(object? sender, RoutedEventArgs e) =>
+        SafeRun(nameof(OnStartClick), () => ViewModel?.StartServerAsync() ?? Task.CompletedTask);
 
-    private async void OnRefreshClick(object? sender, RoutedEventArgs e)
-    {
-        if (ViewModel is not null)
-            await ViewModel.RefreshStatusAsync();
-    }
+    private void OnStopClick(object? sender, RoutedEventArgs e) =>
+        SafeRun(nameof(OnStopClick), () => ViewModel?.StopServerAsync() ?? Task.CompletedTask);
 
-    private async void OnApplyUpdate(object? sender, RoutedEventArgs e)
-    {
-        if (ViewModel is not null)
-            await ViewModel.ApplyUpdateAsync();
-    }
+    private void OnRestartClick(object? sender, RoutedEventArgs e) =>
+        SafeRun(
+            nameof(OnRestartClick),
+            () => ViewModel?.RestartServerAsync() ?? Task.CompletedTask
+        );
 
-    private async void OnAutoStartToggle(object? sender, RoutedEventArgs e)
-    {
-        if (ViewModel is not null && sender is CheckBox checkBox)
-            await ViewModel.ToggleAutoStartAsync(checkBox.IsChecked == true);
-    }
+    private void OnRefreshClick(object? sender, RoutedEventArgs e) =>
+        SafeRun(
+            nameof(OnRefreshClick),
+            () => ViewModel?.RefreshStatusAsync() ?? Task.CompletedTask
+        );
+
+    private void OnApplyUpdate(object? sender, RoutedEventArgs e) =>
+        SafeRun(nameof(OnApplyUpdate), () => ViewModel?.ApplyUpdateAsync() ?? Task.CompletedTask);
+
+    private void OnAutoStartToggle(object? sender, RoutedEventArgs e) =>
+        SafeRun(
+            nameof(OnAutoStartToggle),
+            () =>
+                ViewModel is not null && sender is CheckBox checkBox
+                    ? ViewModel.ToggleAutoStartAsync(checkBox.IsChecked == true)
+                    : Task.CompletedTask
+        );
 }

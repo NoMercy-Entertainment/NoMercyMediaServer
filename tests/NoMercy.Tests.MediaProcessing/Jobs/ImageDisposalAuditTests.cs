@@ -26,15 +26,23 @@ public partial class ImageDisposalAuditTests
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                    continue;
 
-                if (!ImageLoadPattern().IsMatch(trimmed)) continue;
+                if (!ImageLoadPattern().IsMatch(trimmed))
+                    continue;
 
                 // Allow: return statements (ownership transferred to caller)
-                if (trimmed.Contains("return ") || trimmed.Contains("return\t")) continue;
+                if (trimmed.Contains("return ") || trimmed.Contains("return\t"))
+                    continue;
 
-                // Allow: lines with 'using' keyword
-                if (trimmed.Contains("using ")) continue;
+                // Allow: lines with 'using' keyword on this line or the preceding line
+                // (handles multi-line 'using Image<T> img =\n    await Image.LoadAsync(...)')
+                if (trimmed.Contains("using "))
+                    continue;
+
+                if (i > 0 && lines[i - 1].Trim().Contains("using "))
+                    continue;
 
                 string relative = Path.GetRelativePath(srcDir, file);
                 violations.Add($"{relative}:{i + 1} — {trimmed}");
@@ -56,8 +64,13 @@ public partial class ImageDisposalAuditTests
         {
             // Skip the Download method definitions themselves
             string fileName = Path.GetFileName(file);
-            if (fileName is "TmdbImageClient.cs" or "FanArtImageClient.cs"
-                or "CoverArtCoverArtClient.cs" or "NoMercyImageClient.cs")
+            if (
+                fileName
+                is "TmdbImageClient.cs"
+                    or "FanArtImageClient.cs"
+                    or "CoverArtCoverArtClient.cs"
+                    or "NoMercyImageClient.cs"
+            )
                 continue;
 
             string content = File.ReadAllText(file);
@@ -66,16 +79,19 @@ public partial class ImageDisposalAuditTests
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                    continue;
 
-                if (!DownloadCallPattern().IsMatch(trimmed)) continue;
+                if (!DownloadCallPattern().IsMatch(trimmed))
+                    continue;
 
                 // Check that the result is disposed: either via 'using' on this or previous line
                 bool hasUsing = trimmed.Contains("using ");
                 if (i > 0)
                 {
                     string prevLine = lines[i - 1].Trim();
-                    if (prevLine.Contains("using ")) hasUsing = true;
+                    if (prevLine.Contains("using "))
+                        hasUsing = true;
                 }
 
                 if (!hasUsing)
@@ -95,13 +111,15 @@ public partial class ImageDisposalAuditTests
         while (dir != null)
         {
             string candidate = Path.Combine(dir, "src");
-            if (Directory.Exists(candidate)) return candidate;
+            if (Directory.Exists(candidate))
+                return candidate;
 
             dir = Directory.GetParent(dir)?.FullName;
         }
 
         string fallback = "/workspaces/NoMercyMediaServer/src";
-        if (Directory.Exists(fallback)) return fallback;
+        if (Directory.Exists(fallback))
+            return fallback;
 
         throw new DirectoryNotFoundException("Could not find src/ directory");
     }
@@ -109,6 +127,8 @@ public partial class ImageDisposalAuditTests
     [GeneratedRegex(@"Image\.Load(?:Async)?[<\(]")]
     private static partial Regex ImageLoadPattern();
 
-    [GeneratedRegex(@"(?:TmdbImageClient|FanArtImageClient|CoverArtCoverArtClient|NoMercyImageClient)\.Download\s*\(")]
+    [GeneratedRegex(
+        @"(?:TmdbImageClient|FanArtImageClient|CoverArtCoverArtClient|NoMercyImageClient)\.Download\s*\("
+    )]
     private static partial Regex DownloadCallPattern();
 }

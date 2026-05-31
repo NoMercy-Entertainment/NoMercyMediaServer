@@ -8,9 +8,7 @@ public class CacheControllerTests : IDisposable
 
     public CacheControllerTests()
     {
-        _testCacheDir = Path.Combine(
-            Path.GetTempPath(),
-            $"CacheControllerTest_{Guid.NewGuid():N}");
+        _testCacheDir = Path.Combine(Path.GetTempPath(), $"CacheControllerTest_{Guid.NewGuid():N}");
 
         Directory.CreateDirectory(_testCacheDir);
     }
@@ -53,7 +51,8 @@ public class CacheControllerTests : IDisposable
 
         Assert.True(
             remainingSize <= 500,
-            $"Remaining cache size {remainingSize} exceeds limit of 500 bytes");
+            $"Remaining cache size {remainingSize} exceeds limit of 500 bytes"
+        );
 
         // The oldest files (file_0, file_1, file_2) should be deleted
         Assert.False(File.Exists(createdFiles[0]), "Oldest file should be deleted");
@@ -95,9 +94,7 @@ public class CacheControllerTests : IDisposable
     [Fact]
     public void PruneCache_HandlesNonExistentDirectory()
     {
-        string nonExistent = Path.Combine(
-            Path.GetTempPath(),
-            $"NonExistent_{Guid.NewGuid():N}");
+        string nonExistent = Path.Combine(Path.GetTempPath(), $"NonExistent_{Guid.NewGuid():N}");
 
         // Act & Assert: should not throw
         CacheController.PruneCache(nonExistent, maxSizeBytes: 500);

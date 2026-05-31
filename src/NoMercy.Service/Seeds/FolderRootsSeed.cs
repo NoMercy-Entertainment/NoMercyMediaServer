@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -6,21 +6,29 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;
 
 public static class FolderRootsSeed
 {
-    public static async Task Init(this MediaContext dbContext)
+    public static async Task Init(
+        this MediaContext dbContext,
+        IStorage storage,
+        IStorageDriver storageDriver
+    )
     {
-        if (!File.Exists(AppFiles.FolderRootsSeedFile))
+        if (!storage.Exists(AppFiles.FolderRootsSeedFile))
             return;
 
         Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
 
         Folder[] folders =
-            File.ReadAllTextAsync(AppFiles.FolderRootsSeedFile).Result.FromJson<Folder[]>() ?? [];
+            storage
+                .ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
+                .Result.FromJson<Folder[]>()
+            ?? [];
 
         try
         {
@@ -36,15 +44,15 @@ public static class FolderRootsSeed
         }
 
         // Register seeded folders with the middleware so they can serve files
-        // over HTTP. Filtering by Directory.Exists silently dropped folders
-        // whose path wasn't reachable yet (e.g. NFS / SMB mounts not ready at
-        // boot), and they 404'd for the rest of the process lifetime with no
-        // log entry to point at the cause.
+        // over HTTP. The middleware resolves the actual backend per-request
+        // via IStorageFactory using DriverId + sub-path. Wrap each registration
+        // so a single bad row (empty path, unreachable mount) doesn't take down
+        // the whole boot path silently.
         foreach (Folder folder in folders)
         {
             try
             {
-                DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
             }
             catch (Exception ex)
                 when (ex

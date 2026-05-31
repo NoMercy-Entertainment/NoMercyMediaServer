@@ -6,7 +6,10 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Shared test environment setup — routes paths to NoMercy_test, cleans before run -->
-    <Compile Include="$(MSBuildThisFileDirectory)TestEnvironmentSetup.cs" Link="TestEnvironmentSetup.cs" />
+    <Compile
+      Include="$(MSBuildThisFileDirectory)TestEnvironmentSetup.cs"
+      Link="TestEnvironmentSetup.cs"
+    />
   </ItemGroup>
   <ItemGroup>
     <!-- TestEnvironmentSetup.cs needs NmSystem for Config.IsTest and AppFiles.AppPath -->

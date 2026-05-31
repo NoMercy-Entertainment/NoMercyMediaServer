@@ -5,11 +5,9 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.FileWatcher;
 using NoMercy.Events.Library;
-using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -18,6 +16,7 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.EventHandlers;
@@ -26,9 +25,17 @@ public class FileWatcherEventHandler : IDisposable
 {
     private readonly List<IDisposable> _subscriptions = [];
     private readonly SemaphoreSlim _semaphore = new(2);
+    private readonly IStorageDriver _storageDriver;
+    private readonly IStorageFactory _storageFactory;
 
-    public FileWatcherEventHandler(IEventBus eventBus)
+    public FileWatcherEventHandler(
+        IEventBus eventBus,
+        IStorageDriver storageDriver,
+        IStorageFactory storageFactory
+    )
     {
+        _storageDriver = storageDriver;
+        _storageFactory = storageFactory;
         _subscriptions.Add(eventBus.Subscribe<FileCreatedEvent>(OnFileCreated));
         _subscriptions.Add(eventBus.Subscribe<FileDeletedEvent>(OnFileDeleted));
         _subscriptions.Add(eventBus.Subscribe<FileRenamedEvent>(OnFileRenamed));
@@ -39,12 +46,9 @@ public class FileWatcherEventHandler : IDisposable
         await _semaphore.WaitAsync(ct);
         try
         {
-            Logger.System(
-                $"FileWatcher: Processing new/changed content in {@event.FolderPath}",
-                LogEventLevel.Information
-            );
+            Logger.System($"FileWatcher: Processing new/changed content in {@event.FolderPath}");
 
-            MediaScan mediaScan = new();
+            MediaScan mediaScan = new(_storageDriver);
             MediaScan scan = mediaScan.EnableFileListing();
 
             if (@event.LibraryType == Config.MusicMediaType)
@@ -94,16 +98,13 @@ public class FileWatcherEventHandler : IDisposable
     {
         try
         {
-            Logger.System(
-                $"FileWatcher: Processing deletion of {@event.FullPath}",
-                LogEventLevel.Information
-            );
+            Logger.System($"FileWatcher: Processing deletion of {@event.FullPath}");
 
             string hostFolder = Path.GetDirectoryName(@event.FullPath).OrEmpty();
             string filename = "/" + Path.GetFileName(@event.FullPath);
 
             await using MediaContext mediaContext = new();
-            FileRepository fileRepository = new(mediaContext);
+            FileRepository fileRepository = new(mediaContext, _storageDriver);
 
             int videoFilesDeleted = await fileRepository.DeleteVideoFilesByHostFolderAsync(
                 hostFolder
@@ -111,8 +112,7 @@ public class FileWatcherEventHandler : IDisposable
             int metadataDeleted = await fileRepository.DeleteMetadataByHostFolderAsync(hostFolder);
 
             Logger.System(
-                $"FileWatcher: Deleted {videoFilesDeleted} video file(s) and {metadataDeleted} metadata record(s) for {hostFolder}",
-                LogEventLevel.Information
+                $"FileWatcher: Deleted {videoFilesDeleted} video file(s) and {metadataDeleted} metadata record(s) for {hostFolder}"
             );
 
             if (videoFilesDeleted > 0 && EventBusProvider.IsConfigured)
@@ -136,8 +136,7 @@ public class FileWatcherEventHandler : IDisposable
         try
         {
             Logger.System(
-                $"FileWatcher: Processing rename from {@event.OldFullPath} to {@event.NewFullPath}",
-                LogEventLevel.Information
+                $"FileWatcher: Processing rename from {@event.OldFullPath} to {@event.NewFullPath}"
             );
 
             string oldHostFolder = Path.GetDirectoryName(@event.OldFullPath).OrEmpty();
@@ -146,7 +145,7 @@ public class FileWatcherEventHandler : IDisposable
             string newFilename = "/" + Path.GetFileName(@event.NewFullPath);
 
             await using MediaContext mediaContext = new();
-            FileRepository fileRepository = new(mediaContext);
+            FileRepository fileRepository = new(mediaContext, _storageDriver);
 
             int updated = await fileRepository.UpdateVideoFilePathsAsync(
                 oldHostFolder,
@@ -158,8 +157,7 @@ public class FileWatcherEventHandler : IDisposable
             if (updated > 0)
             {
                 Logger.System(
-                    $"FileWatcher: Updated {updated} video file path(s) from {oldHostFolder} to {newHostFolder}",
-                    LogEventLevel.Information
+                    $"FileWatcher: Updated {updated} video file path(s) from {oldHostFolder} to {newHostFolder}"
                 );
 
                 if (EventBusProvider.IsConfigured)
@@ -172,7 +170,7 @@ public class FileWatcherEventHandler : IDisposable
             else
             {
                 Logger.System(
-                    $"FileWatcher: No matching records found for rename, treating as new content",
+                    "FileWatcher: No matching records found for rename, treating as new content",
                     LogEventLevel.Debug
                 );
                 await OnFileCreated(
@@ -210,8 +208,7 @@ public class FileWatcherEventHandler : IDisposable
         }
 
         Logger.System(
-            $"FileWatcher: Movie {mediaFolder.Path}: Searching TMDB for '{mediaFolder.Parsed.Title}'",
-            LogEventLevel.Information
+            $"FileWatcher: Movie {mediaFolder.Path}: Searching TMDB for '{mediaFolder.Parsed.Title}'"
         );
 
         using TmdbSearchClient tmdbSearchClient = new();
@@ -231,8 +228,7 @@ public class FileWatcherEventHandler : IDisposable
 
         TmdbMovie movie = response.Results.First();
         Logger.System(
-            $"FileWatcher: Movie '{movie.Title}' found on TMDB (ID: {movie.Id}), dispatching job",
-            LogEventLevel.Information
+            $"FileWatcher: Movie '{movie.Title}' found on TMDB (ID: {movie.Id}), dispatching job"
         );
 
         JobDispatcher jobDispatcher = new();
@@ -251,8 +247,7 @@ public class FileWatcherEventHandler : IDisposable
         }
 
         Logger.System(
-            $"FileWatcher: TV Show {mediaFolder.Path}: Searching TMDB for '{mediaFolder.Parsed.Title}'",
-            LogEventLevel.Information
+            $"FileWatcher: TV Show {mediaFolder.Path}: Searching TMDB for '{mediaFolder.Parsed.Title}'"
         );
 
         using TmdbSearchClient tmdbSearchClient = new();
@@ -272,20 +267,16 @@ public class FileWatcherEventHandler : IDisposable
 
         TmdbTvShow show = response.Results.First();
         Logger.System(
-            $"FileWatcher: TV Show '{show.Name}' found on TMDB (ID: {show.Id}), dispatching job",
-            LogEventLevel.Information
+            $"FileWatcher: TV Show '{show.Name}' found on TMDB (ID: {show.Id}), dispatching job"
         );
 
         JobDispatcher jobDispatcher = new();
         jobDispatcher.DispatchJob<ShowImportJob>(show.Id, @event.LibraryId);
     }
 
-    private static void HandleMusicFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
+    private void HandleMusicFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
     {
-        Logger.System(
-            $"FileWatcher: Music {mediaFolder.Path}: Processing",
-            LogEventLevel.Information
-        );
+        Logger.System($"FileWatcher: Music {mediaFolder.Path}: Processing");
 
         string directoryPath = Path.GetFullPath(mediaFolder.Path);
 
@@ -299,8 +290,12 @@ public class FileWatcherEventHandler : IDisposable
             return;
 
         FolderLibrary? folderLibrary = library.FolderLibraries.FirstOrDefault(f =>
-            directoryPath.Contains(f.Folder.Path)
-        );
+        {
+            string driverRoot = _storageFactory
+                .For(f.Folder.Id, f.Folder.DriverId, string.Empty)
+                .GetFullPath(f.Folder.Path);
+            return directoryPath.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
+        });
         if (folderLibrary is null)
             return;
 
@@ -319,5 +314,6 @@ public class FileWatcherEventHandler : IDisposable
             subscription.Dispose();
         }
         _subscriptions.Clear();
+        _semaphore.Dispose();
     }
 }

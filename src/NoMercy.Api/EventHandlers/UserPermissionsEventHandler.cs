@@ -18,7 +18,10 @@ public class UserPermissionsEventHandler : IDisposable
         );
     }
 
-    internal async Task OnUserPermissionsChanged(UserPermissionsChangedEvent @event, CancellationToken ct)
+    internal async Task OnUserPermissionsChanged(
+        UserPermissionsChangedEvent @event,
+        CancellationToken ct
+    )
     {
         await _clientMessenger.SendToAll(
             "RefreshPermissions",

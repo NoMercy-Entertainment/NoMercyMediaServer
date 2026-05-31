@@ -74,11 +74,13 @@ public class LoggingEventBusDecoratorTests
         LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg));
 
         List<TestEvent> received = [];
-        decorator.Subscribe<TestEvent>((evt, _) =>
-        {
-            received.Add(evt);
-            return Task.CompletedTask;
-        });
+        decorator.Subscribe<TestEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         TestEvent testEvent = new() { Data = "test-data" };
         await decorator.PublishAsync(testEvent);
@@ -108,31 +110,36 @@ public class LoggingEventBusDecoratorTests
         List<string> logMessages = [];
         LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg));
 
-        await decorator.PublishAsync(new PlaybackStartedEvent
-        {
-            UserId = Guid.NewGuid(),
-            MediaId = 1,
-            MediaType = "movie"
-        });
+        await decorator.PublishAsync(
+            new PlaybackStartedEvent
+            {
+                UserId = Guid.NewGuid(),
+                MediaId = 1,
+                MediaType = "movie",
+            }
+        );
 
-        await decorator.PublishAsync(new EncodingStartedEvent
-        {
-            JobId = 1,
-            InputPath = "/a.mkv",
-            OutputPath = "/out/",
-            ProfileName = "x264"
-        });
+        await decorator.PublishAsync(
+            new EncodingStartedEvent
+            {
+                JobId = 1,
+                InputPath = "/a.mkv",
+                OutputPath = "/out/",
+                ProfileName = "x264",
+            }
+        );
 
-        await decorator.PublishAsync(new LibraryScanStartedEvent
-        {
-            LibraryId = Ulid.NewUlid(),
-            LibraryName = "Movies"
-        });
+        await decorator.PublishAsync(
+            new LibraryScanStartedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "Movies" }
+        );
 
         logMessages.Should().HaveCount(3);
         logMessages[0].Should().Contain("PlaybackStartedEvent").And.Contain("Source=Playback");
         logMessages[1].Should().Contain("EncodingStartedEvent").And.Contain("Source=Encoder");
-        logMessages[2].Should().Contain("LibraryScanStartedEvent").And.Contain("Source=LibraryScanner");
+        logMessages[2]
+            .Should()
+            .Contain("LibraryScanStartedEvent")
+            .And.Contain("Source=LibraryScanner");
     }
 
     [Fact]
@@ -142,11 +149,13 @@ public class LoggingEventBusDecoratorTests
         LoggingEventBusDecorator decorator = new(inner, _ => { });
 
         List<TestEvent> received = [];
-        IDisposable subscription = decorator.Subscribe<TestEvent>((evt, _) =>
-        {
-            received.Add(evt);
-            return Task.CompletedTask;
-        });
+        IDisposable subscription = decorator.Subscribe<TestEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         await decorator.PublishAsync(new TestEvent { Data = "before" });
         received.Should().ContainSingle();
@@ -193,11 +202,13 @@ public class LoggingEventBusDecoratorTests
         List<string> order = [];
         LoggingEventBusDecorator decorator = new(inner, _ => order.Add("logged"));
 
-        decorator.Subscribe<TestEvent>((_, _) =>
-        {
-            order.Add("handled");
-            return Task.CompletedTask;
-        });
+        decorator.Subscribe<TestEvent>(
+            (_, _) =>
+            {
+                order.Add("handled");
+                return Task.CompletedTask;
+            }
+        );
 
         await decorator.PublishAsync(new TestEvent());
 
@@ -211,11 +222,13 @@ public class LoggingEventBusDecoratorTests
         LoggingEventBusDecorator decorator = new(inner, _ => { });
         CancellationTokenSource cts = new();
 
-        decorator.Subscribe<TestEvent>((_, _) =>
-        {
-            cts.Cancel();
-            return Task.CompletedTask;
-        });
+        decorator.Subscribe<TestEvent>(
+            (_, _) =>
+            {
+                cts.Cancel();
+                return Task.CompletedTask;
+            }
+        );
 
         decorator.Subscribe<TestEvent>((_, _) => Task.CompletedTask);
 
@@ -234,17 +247,87 @@ public class LoggingEventBusDecoratorTests
         Guid userId = Guid.NewGuid();
         Ulid libraryId = Ulid.NewUlid();
 
-        await decorator.PublishAsync(new PlaybackStartedEvent { UserId = userId, MediaId = 1, MediaType = "movie" });
-        await decorator.PublishAsync(new PlaybackProgressEvent { UserId = userId, MediaId = 1, Position = TimeSpan.Zero, Duration = TimeSpan.Zero });
-        await decorator.PublishAsync(new PlaybackCompletedEvent { UserId = userId, MediaId = 1, MediaType = "movie" });
-        await decorator.PublishAsync(new EncodingStartedEvent { JobId = 1, InputPath = "/a", OutputPath = "/b", ProfileName = "x264" });
+        await decorator.PublishAsync(
+            new PlaybackStartedEvent
+            {
+                UserId = userId,
+                MediaId = 1,
+                MediaType = "movie",
+            }
+        );
+        await decorator.PublishAsync(
+            new PlaybackProgressEvent
+            {
+                UserId = userId,
+                MediaId = 1,
+                Position = TimeSpan.Zero,
+                Duration = TimeSpan.Zero,
+            }
+        );
+        await decorator.PublishAsync(
+            new PlaybackCompletedEvent
+            {
+                UserId = userId,
+                MediaId = 1,
+                MediaType = "movie",
+            }
+        );
+        await decorator.PublishAsync(
+            new EncodingStartedEvent
+            {
+                JobId = 1,
+                InputPath = "/a",
+                OutputPath = "/b",
+                ProfileName = "x264",
+            }
+        );
         await decorator.PublishAsync(new EncodingProgressEvent { JobId = 1, Percentage = 50 });
-        await decorator.PublishAsync(new EncodingCompletedEvent { JobId = 1, OutputPath = "/b", Duration = TimeSpan.Zero });
-        await decorator.PublishAsync(new EncodingFailedEvent { JobId = 1, InputPath = "/a", ErrorMessage = "err" });
-        await decorator.PublishAsync(new LibraryScanStartedEvent { LibraryId = libraryId, LibraryName = "Movies" });
-        await decorator.PublishAsync(new LibraryScanCompletedEvent { LibraryId = libraryId, LibraryName = "Movies", ItemsFound = 0, Duration = TimeSpan.Zero });
-        await decorator.PublishAsync(new MediaAddedEvent { MediaId = 1, MediaType = "movie", Title = "T", LibraryId = libraryId });
-        await decorator.PublishAsync(new MediaRemovedEvent { MediaId = 1, MediaType = "movie", Title = "T", LibraryId = libraryId });
+        await decorator.PublishAsync(
+            new EncodingCompletedEvent
+            {
+                JobId = 1,
+                OutputPath = "/b",
+                Duration = TimeSpan.Zero,
+            }
+        );
+        await decorator.PublishAsync(
+            new EncodingFailedEvent
+            {
+                JobId = 1,
+                InputPath = "/a",
+                ErrorMessage = "err",
+            }
+        );
+        await decorator.PublishAsync(
+            new LibraryScanStartedEvent { LibraryId = libraryId, LibraryName = "Movies" }
+        );
+        await decorator.PublishAsync(
+            new LibraryScanCompletedEvent
+            {
+                LibraryId = libraryId,
+                LibraryName = "Movies",
+                ItemsFound = 0,
+                Duration = TimeSpan.Zero,
+            }
+        );
+        await decorator.PublishAsync(
+            new MediaAddedEvent
+            {
+                MediaId = 1,
+                MediaType = "movie",
+                Title = "T",
+                LibraryId = libraryId,
+            }
+        );
+        await decorator.PublishAsync(
+            new MediaRemovedEvent
+            {
+                MediaId = 1,
+                MediaType = "movie",
+                Title = "T",
+                LibraryId = libraryId,
+            }
+        );
 
         logMessages.Should().HaveCount(11);
         logMessages.Should().OnlyContain(m => m.StartsWith("[Event]"));

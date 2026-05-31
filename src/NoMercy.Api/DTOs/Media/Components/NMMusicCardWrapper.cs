@@ -29,7 +29,7 @@ public record NMMusicCardWrapper
     [JsonProperty("data")]
     public MusicCardData Data { get; set; } = null!;
 
-    [JsonProperty("contextMenuItems")]
+    [JsonProperty("context_menu_items")]
     public IEnumerable<ContextMenuItem> ContextMenuItems { get; set; } = [];
 
     [JsonProperty("url")]

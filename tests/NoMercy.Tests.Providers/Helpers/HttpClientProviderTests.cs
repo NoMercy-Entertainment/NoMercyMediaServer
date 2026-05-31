@@ -11,19 +11,28 @@ public class HttpClientProviderTests : IDisposable
     public HttpClientProviderTests()
     {
         ServiceCollection services = new();
-        services.AddHttpClient(HttpClientNames.Tmdb, client =>
-        {
-            client.BaseAddress = new("https://api.themoviedb.org/3/");
-            client.DefaultRequestHeaders.Add("User-Agent", "test-agent");
-        });
-        services.AddHttpClient(HttpClientNames.MusicBrainz, client =>
-        {
-            client.BaseAddress = new("https://musicbrainz.org/ws/2/");
-        });
-        services.AddHttpClient(HttpClientNames.FanArt, client =>
-        {
-            client.BaseAddress = new("http://webservice.fanart.tv/v3/");
-        });
+        services.AddHttpClient(
+            HttpClientNames.Tmdb,
+            client =>
+            {
+                client.BaseAddress = new("https://api.themoviedb.org/3/");
+                client.DefaultRequestHeaders.Add("User-Agent", "test-agent");
+            }
+        );
+        services.AddHttpClient(
+            HttpClientNames.MusicBrainz,
+            client =>
+            {
+                client.BaseAddress = new("https://musicbrainz.org/ws/2/");
+            }
+        );
+        services.AddHttpClient(
+            HttpClientNames.FanArt,
+            client =>
+            {
+                client.BaseAddress = new("http://webservice.fanart.tv/v3/");
+            }
+        );
         services.AddHttpClient(HttpClientNames.General);
 
         _serviceProvider = services.BuildServiceProvider();
@@ -108,7 +117,7 @@ public class HttpClientProviderTests : IDisposable
             HttpClientNames.Tadb,
             HttpClientNames.NoMercyImage,
             HttpClientNames.KitsuIo,
-            HttpClientNames.General
+            HttpClientNames.General,
         ];
 
         names.Should().OnlyHaveUniqueItems();
@@ -135,7 +144,7 @@ public class HttpClientProviderTests : IDisposable
             HttpClientNames.Tadb,
             HttpClientNames.NoMercyImage,
             HttpClientNames.KitsuIo,
-            HttpClientNames.General
+            HttpClientNames.General,
         ];
 
         foreach (string name in names)
@@ -166,12 +175,14 @@ public class HttpClientProviderTests : IDisposable
 
         for (int i = 0; i < 50; i++)
         {
-            tasks.Add(Task.Run(() =>
-            {
-                HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.FanArt);
-                client.Should().NotBeNull();
-                client.BaseAddress.Should().Be(new Uri("http://webservice.fanart.tv/v3/"));
-            }));
+            tasks.Add(
+                Task.Run(() =>
+                {
+                    HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.FanArt);
+                    client.Should().NotBeNull();
+                    client.BaseAddress.Should().Be(new Uri("http://webservice.fanart.tv/v3/"));
+                })
+            );
         }
 
         Action action = () => Task.WaitAll(tasks.ToArray());

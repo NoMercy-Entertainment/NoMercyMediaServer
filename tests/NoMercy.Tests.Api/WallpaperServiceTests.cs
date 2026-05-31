@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Wallpaper;
@@ -20,8 +21,9 @@ public class WallpaperInterfaceTests
     {
         NullWallpaperService service = new();
 
-        Exception? ex = Record.Exception(
-            () => service.Set("/path/image.jpg", WallpaperStyle.Fill, "#FF0000"));
+        Exception? ex = Record.Exception(() =>
+            service.Set("/path/image.jpg", WallpaperStyle.Fill, "#FF0000")
+        );
 
         Assert.Null(ex);
     }
@@ -31,8 +33,9 @@ public class WallpaperInterfaceTests
     {
         NullWallpaperService service = new();
 
-        Exception? ex = Record.Exception(
-            () => service.SetSilent("/path/image.jpg", WallpaperStyle.Stretch, "#00FF00"));
+        Exception? ex = Record.Exception(() =>
+            service.SetSilent("/path/image.jpg", WallpaperStyle.Stretch, "#00FF00")
+        );
 
         Assert.Null(ex);
     }
@@ -87,8 +90,7 @@ public class LinuxWallpaperStyleMappingTests
     [InlineData(WallpaperStyle.Tile, "wallpaper")]
     [InlineData(WallpaperStyle.Center, "centered")]
     [InlineData(WallpaperStyle.Span, "spanned")]
-    public void MapStyleToGnome_ReturnsCorrectMapping(
-        WallpaperStyle input, string expected)
+    public void MapStyleToGnome_ReturnsCorrectMapping(WallpaperStyle input, string expected)
     {
         string result = LinuxWallpaperService.MapStyleToGnome(input);
         Assert.Equal(expected, result);
@@ -123,7 +125,8 @@ public class LinuxDesktopDetectionTests
     [InlineData("MATE", LinuxWallpaperService.DesktopEnvironment.Fallback)]
     public void DetectDesktopEnvironment_ReturnsExpected(
         string envValue,
-        LinuxWallpaperService.DesktopEnvironment expected)
+        LinuxWallpaperService.DesktopEnvironment expected
+    )
     {
         string? original = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP");
         try
@@ -143,12 +146,12 @@ public class LinuxDesktopDetectionTests
 public class WindowsHexToColorTests
 {
     [Theory]
-    [InlineData("#FF0000", 0x000000FF)]  // Red: R=255, G=0, B=0 → 0x00_00_00_FF
-    [InlineData("#00FF00", 0x0000FF00)]  // Green: R=0, G=255, B=0 → 0x00_00_FF_00
-    [InlineData("#0000FF", 0x00FF0000)]  // Blue: R=0, G=0, B=255 → 0x00_FF_00_00
-    [InlineData("#FFFFFF", 0x00FFFFFF)]  // White
-    [InlineData("#000000", 0x00000000)]  // Black
-    [InlineData("FF8040", 0x004080FF)]   // Without #
+    [InlineData("#FF0000", 0x000000FF)] // Red: R=255, G=0, B=0 → 0x00_00_00_FF
+    [InlineData("#00FF00", 0x0000FF00)] // Green: R=0, G=255, B=0 → 0x00_00_FF_00
+    [InlineData("#0000FF", 0x00FF0000)] // Blue: R=0, G=0, B=255 → 0x00_FF_00_00
+    [InlineData("#FFFFFF", 0x00FFFFFF)] // White
+    [InlineData("#000000", 0x00000000)] // Black
+    [InlineData("FF8040", 0x004080FF)] // Without #
     public void HexToWin32Color_ConvertsCorrectly(string hex, int expected)
     {
         int result = WindowsWallpaperService.HexToWin32Color(hex);
@@ -166,7 +169,8 @@ public class WallpaperDiRegistrationTests
         services.AddWallpaperService();
 
         ServiceProvider provider = services.BuildServiceProvider();
-        IWallpaperService? service = provider.GetService(typeof(IWallpaperService)) as IWallpaperService;
+        IWallpaperService? service =
+            provider.GetService(typeof(IWallpaperService)) as IWallpaperService;
 
         Assert.NotNull(service);
     }
@@ -174,8 +178,7 @@ public class WallpaperDiRegistrationTests
     [Fact]
     public void AddWallpaperService_OnLinuxWithoutDisplay_RegistersNullService()
     {
-        if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
-                System.Runtime.InteropServices.OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             return; // Skip on non-Linux
         }
@@ -190,10 +193,9 @@ public class WallpaperDiRegistrationTests
             ServiceCollection services = new();
             services.AddWallpaperService();
 
-            ServiceProvider provider =
-                services.BuildServiceProvider();
-            IWallpaperService service = (IWallpaperService)provider
-                .GetService(typeof(IWallpaperService))!;
+            ServiceProvider provider = services.BuildServiceProvider();
+            IWallpaperService service = (IWallpaperService)
+                provider.GetService(typeof(IWallpaperService))!;
 
             Assert.IsType<NullWallpaperService>(service);
             Assert.False(service.IsSupported);

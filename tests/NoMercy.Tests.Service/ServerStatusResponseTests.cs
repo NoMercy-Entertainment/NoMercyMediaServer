@@ -10,21 +10,20 @@ public class ServerStatusResponseTests
     public void Deserialize_FullResponse_MapsAllProperties()
     {
         string json = """
-        {
-            "status": "running",
-            "server_name": "TestServer",
-            "version": "1.2.3",
-            "platform": "Linux",
-            "architecture": "X64",
-            "os": "Linux 6.1",
-            "uptime_seconds": 3600,
-            "start_time": "2026-01-01T00:00:00Z",
-            "is_dev": true
-        }
-        """;
+            {
+                "status": "running",
+                "server_name": "TestServer",
+                "version": "1.2.3",
+                "platform": "Linux",
+                "architecture": "X64",
+                "os": "Linux 6.1",
+                "uptime_seconds": 3600,
+                "start_time": "2026-01-01T00:00:00Z",
+                "is_dev": true
+            }
+            """;
 
-        ServerStatusResponse? result =
-            JsonConvert.DeserializeObject<ServerStatusResponse>(json);
+        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(json);
 
         Assert.NotNull(result);
         Assert.Equal("running", result.Status);
@@ -42,8 +41,7 @@ public class ServerStatusResponseTests
     {
         string json = """{ "status": "running" }""";
 
-        ServerStatusResponse? result =
-            JsonConvert.DeserializeObject<ServerStatusResponse>(json);
+        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(json);
 
         Assert.NotNull(result);
         Assert.Equal("running", result.Status);
@@ -61,8 +59,7 @@ public class ServerStatusResponseTests
     {
         string json = """{ "status": "starting", "version": "0.9.0" }""";
 
-        ServerStatusResponse? result =
-            JsonConvert.DeserializeObject<ServerStatusResponse>(json);
+        ServerStatusResponse? result = JsonConvert.DeserializeObject<ServerStatusResponse>(json);
 
         Assert.NotNull(result);
         Assert.Equal("starting", result.Status);

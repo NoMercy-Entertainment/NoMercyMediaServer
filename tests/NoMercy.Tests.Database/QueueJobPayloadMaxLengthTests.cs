@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Media;
@@ -52,8 +53,10 @@ public class QueueJobPayloadMaxLengthTests
             .GetCustomAttribute<MaxLengthAttribute>();
 
         Assert.NotNull(queueAttr);
-        Assert.True(queueAttr.Length > 256,
-            $"QueueJob.Payload MaxLength ({queueAttr.Length}) must exceed the 256-char convention");
+        Assert.True(
+            queueAttr.Length > 256,
+            $"QueueJob.Payload MaxLength ({queueAttr.Length}) must exceed the 256-char convention"
+        );
     }
 
     [Theory]
@@ -92,12 +95,10 @@ public class QueueJobPayloadMaxLengthTests
         using QueueContext context = new(optionsBuilder.Options);
         context.Database.EnsureCreated();
 
-        Microsoft.EntityFrameworkCore.Metadata.IEntityType? entityType =
-            context.Model.FindEntityType(typeof(QueueJob));
+        IEntityType? entityType = context.Model.FindEntityType(typeof(QueueJob));
         Assert.NotNull(entityType);
 
-        Microsoft.EntityFrameworkCore.Metadata.IProperty? payloadProp =
-            entityType.FindProperty("Payload");
+        IProperty? payloadProp = entityType.FindProperty("Payload");
         Assert.NotNull(payloadProp);
         Assert.Equal(4096, payloadProp.GetMaxLength());
     }
@@ -110,12 +111,10 @@ public class QueueJobPayloadMaxLengthTests
         using QueueContext context = new(optionsBuilder.Options);
         context.Database.EnsureCreated();
 
-        Microsoft.EntityFrameworkCore.Metadata.IEntityType? entityType =
-            context.Model.FindEntityType(typeof(QueueJob));
+        IEntityType? entityType = context.Model.FindEntityType(typeof(QueueJob));
         Assert.NotNull(entityType);
 
-        Microsoft.EntityFrameworkCore.Metadata.IProperty? queueProp =
-            entityType.FindProperty("Queue");
+        IProperty? queueProp = entityType.FindProperty("Queue");
         Assert.NotNull(queueProp);
         Assert.Equal(256, queueProp.GetMaxLength());
     }

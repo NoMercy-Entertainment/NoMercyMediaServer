@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Database.Models.Users;
 
 namespace NoMercy.Api.DTOs.Dashboard;
 
@@ -6,6 +7,9 @@ public record ServerActivityDto
 {
     [JsonProperty("id")]
     public int Id { get; set; }
+
+    [JsonProperty("category")]
+    public ActivityCategory Category { get; set; }
 
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
@@ -24,6 +28,18 @@ public record ServerActivityDto
 
     [JsonProperty("device_id")]
     public Ulid DeviceId { get; set; }
+
+    [JsonProperty("media_id")]
+    public Ulid? MediaId { get; set; }
+
+    [JsonProperty("success")]
+    public bool Success { get; set; }
+
+    [JsonProperty("error_code")]
+    public string? ErrorCode { get; set; }
+
+    [JsonProperty("metadata")]
+    public string? Metadata { get; set; }
 
     [JsonProperty("device")]
     public string Device { get; set; } = string.Empty;

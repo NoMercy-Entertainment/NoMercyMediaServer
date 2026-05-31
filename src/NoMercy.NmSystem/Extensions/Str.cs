@@ -1,9 +1,10 @@
-using System.Diagnostics.Contracts;
+﻿using System.Diagnostics.Contracts;
 using System.Drawing;
 using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using NoMercy.Storage;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.NmSystem.Extensions;
@@ -174,7 +175,14 @@ public static partial class Str
     {
         if (string.IsNullOrEmpty(value))
             return 0;
-        return (int)Math.Round(double.Parse(value, CultureInfo.InvariantCulture));
+        return double.TryParse(
+            value,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out double d
+        )
+            ? (int)Math.Round(d)
+            : 0;
     }
 
     public static int ToInt(this double value)
@@ -191,7 +199,14 @@ public static partial class Str
     {
         if (string.IsNullOrEmpty(value))
             return 0;
-        return double.Parse(value, CultureInfo.InvariantCulture);
+        return double.TryParse(
+            value,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out double d
+        )
+            ? d
+            : 0;
     }
 
     public static double ToDouble(this int value)
@@ -203,14 +218,16 @@ public static partial class Str
     {
         if (string.IsNullOrEmpty(value))
             return 0;
-        return long.Parse(value, CultureInfo.InvariantCulture);
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long l)
+            ? l
+            : 0;
     }
 
     public static bool ToBoolean(this string value)
     {
         if (string.IsNullOrEmpty(value))
             return false;
-        return bool.Parse(value);
+        return bool.TryParse(value, out bool b) && b;
     }
 
     public static string Spacer(string text, int padding, bool begin = false)
@@ -248,9 +265,16 @@ public static partial class Str
         return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
     }
 
-    public static Guid ToGuid(this string id)
+    /// <summary>
+    /// Parses a Guid string. Returns <see cref="Guid.Empty"/> when the input
+    /// cannot be parsed so call sites that previously crashed on a malformed
+    /// id surface as a 'no match' instead. Callers that need strict
+    /// validation should use <see cref="Guid.TryParse(string?, out Guid)"/>
+    /// directly.
+    /// </summary>
+    public static Guid ToGuid(this string? id)
     {
-        return Guid.Parse(id);
+        return Guid.TryParse(id, out Guid parsed) ? parsed : Guid.Empty;
     }
 
     public static string ToUtf8(this string value)
@@ -309,7 +333,7 @@ public static partial class Str
 
     public static string EscapeQuotes(this string str)
     {
-        return Regex.Replace(str, "\"", $"'");
+        return Regex.Replace(str, "\"", "'");
     }
 
     private static string _parseTitleSort(string? value = null, DateTime? date = null)
@@ -331,7 +355,7 @@ public static partial class Str
         value = Regex.Replace(value, @"\.+", " ");
 
         // Sanitize file name to remove unwanted characters
-        value = CleanFileName(value);
+        value = value.CleanFileName();
 
         return value.ToLower().Trim();
     }
@@ -440,15 +464,27 @@ public static partial class Str
         return Regex.Replace(name, @"[^a-zA-Z0-9]", "").ToLowerInvariant();
     }
 
-    public static string? FindMatchingDirectory(string rootPath, string expectedFolderName)
+    public static string? FindMatchingDirectory(
+        IStorageDriver driver,
+        string rootPath,
+        string expectedFolderName
+    )
     {
-        if (!Directory.Exists(rootPath))
+        if (!driver.DirectoryExists(rootPath))
             return null;
 
         string normalizedExpected = expectedFolderName.NormalizeForComparison();
 
-        foreach (string dir in Directory.EnumerateDirectories(rootPath))
+        foreach (
+            string dir in driver.EnumerateFileSystemEntries(
+                rootPath,
+                "*",
+                SearchOption.TopDirectoryOnly
+            )
+        )
         {
+            if (!driver.DirectoryExists(dir))
+                continue;
             string dirName = Path.GetFileName(dir).OrEmpty();
             if (dirName.NormalizeForComparison() == normalizedExpected)
                 return dir;
@@ -531,7 +567,7 @@ public static partial class Str
         return (int)Math.Round(hms);
     }
 
-    public static int ToMilliSeconds(this string hms)
+    public static int ToMilliSeconds(this string? hms)
     {
         return hms.ToSeconds() * 1000;
     }

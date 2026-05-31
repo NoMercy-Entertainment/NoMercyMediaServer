@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using NoMercy.Networking.Http;
 
 namespace NoMercy.Networking.Messaging;
 

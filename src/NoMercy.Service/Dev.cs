@@ -1,13 +1,10 @@
-using System.Globalization;
+﻿using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.EntityFrameworkCore;
-using NoMercy.Database;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.TvShows;
-using NoMercy.Encoder.Core;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using VideoFile = NoMercy.Database.Models.Media.VideoFile;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Service;
 
@@ -28,85 +25,92 @@ public static class Dev
         //     }
         // }
 
-        await using MediaContext context = new();
+        // await using MediaContext context = new();
 
-        List<Tv> shows = await context
-            .Tvs
-            // .Where(tv => tv.Library.Type == "tv")
-            .Include(tv => tv.Episodes)
-                .ThenInclude(episode => episode.VideoFiles)
-                    .ThenInclude(videoFile => videoFile.Metadata)
-            // .Where(tv => tv.Id == 218613)
-            .ToListAsync();
+        // List<Tv> shows = await context
+        //     .Tvs
+        //     // .Where(tv => tv.Library.Type == "tv")
+        //     .Include(tv => tv.Episodes)
+        //         .ThenInclude(episode => episode.VideoFiles)
+        //             .ThenInclude(videoFile => videoFile.Metadata)
+        //     // .Where(tv => tv.Id == 218613)
+        //     .ToListAsync();
 
-        foreach (Tv show in shows)
-        foreach (Episode episode in show.Episodes)
-        {
-            foreach (VideoFile videoFile in episode.VideoFiles)
-            {
-                if (videoFile.Metadata == null)
-                    continue;
+        // foreach (Tv show in shows)
+        // foreach (Episode episode in show.Episodes)
+        // {
+        //     foreach (VideoFile videoFile in episode.VideoFiles)
+        //     {
+        //         if (videoFile.Metadata == null)
+        //             continue;
 
-                string hostFolder = videoFile.Metadata.HostFolder;
-                if (string.IsNullOrEmpty(hostFolder))
-                    continue;
+        //         string hostFolder = videoFile.Metadata.HostFolder;
+        //         if (string.IsNullOrEmpty(hostFolder))
+        //             continue;
 
-                // Logger.App($"Processing Episode: {episode.Title} (S{episode.SeasonNumber}E{episode.EpisodeNumber})");
-                // Logger.App($"Host Folder: {hostFolder}");
+        // Logger.App($"Processing Episode: {episode.Title} (S{episode.SeasonNumber}E{episode.EpisodeNumber})");
+        // Logger.App($"Host Folder: {hostFolder}");
 
-                // DiagnoseMasterFolder(hostFolder);
+        // DiagnoseMasterFolder(hostFolder);
 
-                // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
-            }
-        }
+        // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
+        //     }
+        // }
 
-        List<Movie> movies = await context
-            .Movies.Where(tv => tv.Library.Type == Config.MovieMediaType)
-            .Include(episode => episode.VideoFiles)
-                .ThenInclude(videoFile => videoFile.Metadata)
-            // .Where(tv => tv.Id == 60808)
-            .ToListAsync();
+        // List<Movie> movies = await context
+        //     .Movies.Where(tv => tv.Library.Type == Config.MovieMediaType)
+        //     .Include(episode => episode.VideoFiles)
+        //         .ThenInclude(videoFile => videoFile.Metadata)
+        //     // .Where(tv => tv.Id == 60808)
+        //     .ToListAsync();
 
-        foreach (Movie movie in movies)
-        {
-            foreach (VideoFile videoFile in movie.VideoFiles)
-            {
-                if (videoFile.Metadata == null)
-                    continue;
+        // foreach (Movie movie in movies)
+        // {
+        //     foreach (VideoFile videoFile in movie.VideoFiles)
+        //     {
+        //         if (videoFile.Metadata == null)
+        //             continue;
 
-                string hostFolder = videoFile.Metadata.HostFolder;
-                if (string.IsNullOrEmpty(hostFolder))
-                    continue;
+        //         string hostFolder = videoFile.Metadata.HostFolder;
+        //         if (string.IsNullOrEmpty(hostFolder))
+        //             continue;
 
-                // Logger.App($"Processing Movie: {movie.Title}");
-                // Logger.App($"Host Folder: {hostFolder}");
+        // Logger.App($"Processing Movie: {movie.Title}");
+        // Logger.App($"Host Folder: {hostFolder}");
 
-                //DiagnoseMasterFolder(hostFolder);
+        //DiagnoseMasterFolder(hostFolder);
 
-                // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
-            }
-        }
+        // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
+        //     }
+        // }
 
         await Task.CompletedTask;
     }
 
+    private static IStorage CreateStorage()
+    {
+        IStorageDriver driver = new LocalStorageDriver();
+        return new LocalStorage(driver, new StoragePathGuard([], driver));
+    }
+
     private static Task DeleteEmptyPlaylists(string episodeFolder)
     {
-        if (!Directory.Exists(episodeFolder))
+        IStorage storage = CreateStorage();
+
+        if (!storage.Exists(episodeFolder))
             return Task.CompletedTask;
 
-        IEnumerable<string> m3U8Files = Directory.GetFiles(
-            episodeFolder,
-            "*.m3u8",
-            SearchOption.TopDirectoryOnly
-        );
+        IEnumerable<StorageEntry> entries = storage.List(episodeFolder, "*.m3u8", false);
+        IEnumerable<string> m3U8Files = entries.Select(e => e.Path);
 
         foreach (string playlistPath in m3U8Files)
         {
             string[] lines;
             try
             {
-                lines = File.ReadAllLines(playlistPath);
+                lines = storage
+                    .ReadAllTextAsync(playlistPath, CancellationToken.None)
+                    .Result.Split(["\r\n", "\n"], StringSplitOptions.None);
             }
             catch
             {
@@ -120,7 +124,7 @@ public static class Dev
             {
                 try
                 {
-                    File.Delete(playlistPath);
+                    storage.Delete(playlistPath);
                     Logger.App($"Deleted empty playlist: {playlistPath}");
                 }
                 catch (Exception ex)
@@ -136,17 +140,21 @@ public static class Dev
     private static Dictionary<string, long> CalculateBitratesFromMaster(string episodeFolder)
     {
         Dictionary<string, long> results = new(StringComparer.OrdinalIgnoreCase);
+        IStorage storage = CreateStorage();
 
-        if (!Directory.Exists(episodeFolder))
+        if (!storage.Exists(episodeFolder))
             return results;
 
-        IEnumerable<string> m3U8Files = Directory
-            .GetFiles(episodeFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
+        IEnumerable<string> m3U8Files = storage
+            .List(episodeFolder, "*.m3u8", false)
+            .Select(e => e.Path)
             .Where(f =>
             {
                 try
                 {
-                    return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF");
+                    return storage
+                        .ReadAllTextAsync(f, CancellationToken.None)
+                        .Result.Contains("#EXT-X-STREAM-INF");
                 }
                 catch
                 {
@@ -160,7 +168,9 @@ public static class Dev
             string[] lines;
             try
             {
-                lines = File.ReadAllLines(masterPath);
+                lines = storage
+                    .ReadAllTextAsync(masterPath, CancellationToken.None)
+                    .Result.Split(["\r\n", "\n"], StringSplitOptions.None);
             }
             catch
             {
@@ -196,7 +206,7 @@ public static class Dev
                     continue;
 
                 string variantPath = Path.GetFullPath(Path.Combine(masterDir, variantUri));
-                if (!File.Exists(variantPath))
+                if (!storage.Exists(variantPath))
                     continue;
 
                 long totalBytes = 0L;
@@ -206,7 +216,9 @@ public static class Dev
                 string[] vlines;
                 try
                 {
-                    vlines = File.ReadAllLines(variantPath);
+                    vlines = storage
+                        .ReadAllTextAsync(variantPath, CancellationToken.None)
+                        .Result.Split(["\r\n", "\n"], StringSplitOptions.None);
                 }
                 catch
                 {
@@ -243,13 +255,13 @@ public static class Dev
                         continue;
 
                     string segPath = Path.GetFullPath(Path.Combine(variantDir, segRef));
-                    if (!File.Exists(segPath))
+                    if (!storage.Exists(segPath))
                         continue;
 
                     try
                     {
-                        FileInfo fi = new(segPath);
-                        totalBytes = checked(totalBytes + fi.Length);
+                        long segSize = storage.Size(segPath);
+                        totalBytes = checked(totalBytes + segSize);
                     }
                     catch (OverflowException)
                     {
@@ -288,8 +300,10 @@ public static class Dev
     // Diagnostic helper you can call locally to print a short report for an episode folder
     private static void DiagnoseMasterFolder(string hostFolder)
     {
+        IStorage storage = CreateStorage();
+
         Logger.App($"Diagnosing folder: {hostFolder}");
-        if (!Directory.Exists(hostFolder))
+        if (!storage.Exists(hostFolder))
         {
             Logger.App("Folder does not exist");
             return;
@@ -311,13 +325,16 @@ public static class Dev
         try
         {
             // Instead of writing a diagnostic JSON file, update the master playlists in-place
-            IEnumerable<string> masters = Directory
-                .GetFiles(hostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
+            IEnumerable<string> masters = storage
+                .List(hostFolder, "*.m3u8", false)
+                .Select(e => e.Path)
                 .Where(f =>
                 {
                     try
                     {
-                        return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF");
+                        return storage
+                            .ReadAllTextAsync(f, CancellationToken.None)
+                            .Result.Contains("#EXT-X-STREAM-INF");
                     }
                     catch
                     {
@@ -329,8 +346,10 @@ public static class Dev
 
             foreach (string masterPath in masters)
             {
-                string original = File.ReadAllText(masterPath);
-                string[] lines = original.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                string original = storage
+                    .ReadAllTextAsync(masterPath, CancellationToken.None)
+                    .Result;
+                string[] lines = original.Split(["\r\n", "\n"], StringSplitOptions.None);
                 bool changed = false;
 
                 for (int i = 0; i < lines.Length; i++)
@@ -393,7 +412,14 @@ public static class Dev
                 {
                     try
                     {
-                        File.WriteAllText(masterPath, string.Join(Environment.NewLine, lines));
+                        storage
+                            .WriteAllTextAsync(
+                                masterPath,
+                                string.Join(Environment.NewLine, lines),
+                                CancellationToken.None
+                            )
+                            .GetAwaiter()
+                            .GetResult();
                         Logger.App($"Wrote updated master playlist: {masterPath}");
                     }
                     catch (Exception ex)
@@ -413,7 +439,10 @@ public static class Dev
     {
         if (string.IsNullOrEmpty(hostFolder))
             return;
-        if (!Directory.Exists(hostFolder))
+
+        IStorage storage = CreateStorage();
+
+        if (!storage.Exists(hostFolder))
         {
             Logger.App($"Host folder does not exist: {hostFolder}");
             return;
@@ -424,13 +453,16 @@ public static class Dev
         try
         {
             // Find master playlists in the folder (those containing EXT-X-STREAM-INF)
-            List<string> masters = Directory
-                .GetFiles(hostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
+            List<string> masters = storage
+                .List(hostFolder, "*.m3u8", false)
+                .Select(e => e.Path)
                 .Where(f =>
                 {
                     try
                     {
-                        return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF");
+                        return storage
+                            .ReadAllTextAsync(f, CancellationToken.None)
+                            .Result.Contains("#EXT-X-STREAM-INF");
                     }
                     catch
                     {
@@ -445,13 +477,13 @@ public static class Dev
                     hostFolder,
                     "_m3u8_backup_" + DateTime.UtcNow.ToString("yyyyMMddHHmmss")
                 );
-                Directory.CreateDirectory(backupDir);
+                storage.CreateDirectory(backupDir);
                 foreach (string m in masters)
                 {
                     try
                     {
                         string dest = Path.Combine(backupDir, Path.GetFileName(m));
-                        File.Move(m, dest);
+                        storage.Move(m, dest);
                         Logger.App($"Backed up master playlist {m} -> {dest}");
                     }
                     catch (Exception ex)
@@ -461,10 +493,66 @@ public static class Dev
                 }
             }
 
-            // Build new master using the HLS playlist generator
-            await HlsPlaylistGenerator.Build(hostFolder, targetName);
+            // Build master playlist by scanning variant playlists in subdirectories
+            StringBuilder masterBuilder = new();
+            masterBuilder.AppendLine("#EXTM3U");
+
+            // Video variants
+            foreach (
+                string dir in storage
+                    .List(hostFolder, "video_*", false)
+                    .Where(e => e.IsDirectory)
+                    .Select(e => e.Path)
+                    .OrderByDescending(d => d)
+            )
+            {
+                IReadOnlyList<StorageEntry> dirPlaylists = storage.List(dir, "*.m3u8", false);
+                if (dirPlaylists.Count == 0)
+                    continue;
+
+                string dirName = Path.GetFileName(dir);
+                string relativePath = Path.Combine(dirName, Path.GetFileName(dirPlaylists[0].Path))
+                    .Replace("\\", "/");
+
+                // Parse resolution from directory name (video_1920x1080)
+                Match resMatch = Regex.Match(dirName, @"video_(\d+)x(\d+)");
+                if (resMatch.Success)
+                {
+                    string width = resMatch.Groups[1].Value;
+                    string height = resMatch.Groups[2].Value;
+                    masterBuilder.AppendLine(
+                        $"#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION={width}x{height}"
+                    );
+                    masterBuilder.AppendLine(relativePath);
+                }
+            }
+
+            // Audio variants
+            foreach (
+                string dir in storage
+                    .List(hostFolder, "audio_*", false)
+                    .Where(e => e.IsDirectory)
+                    .Select(e => e.Path)
+            )
+            {
+                IReadOnlyList<StorageEntry> dirPlaylists = storage.List(dir, "*.m3u8", false);
+                if (dirPlaylists.Count == 0)
+                    continue;
+
+                string dirName = Path.GetFileName(dir);
+                string relativePath = Path.Combine(dirName, Path.GetFileName(dirPlaylists[0].Path))
+                    .Replace("\\", "/");
+                masterBuilder.AppendLine(
+                    $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",NAME=\"{dirName}\",URI=\"{relativePath}\""
+                );
+            }
 
             string newMaster = Path.Combine(hostFolder, targetName + ".m3u8");
+            await storage.WriteAllTextAsync(
+                newMaster,
+                masterBuilder.ToString(),
+                CancellationToken.None
+            );
             Logger.App($"Recreated master playlist: {newMaster}");
         }
         catch (Exception ex)

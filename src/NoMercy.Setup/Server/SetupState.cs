@@ -1,0 +1,241 @@
+using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
+
+namespace NoMercy.Setup.Server;
+
+public enum SetupPhase
+{
+    Unauthenticated,
+    Authenticating,
+    Authenticated,
+    Registering,
+    Registered,
+    CertificateAcquired,
+    Complete,
+}
+
+public class SetupState
+{
+    private readonly object _lock = new();
+
+    private SetupPhase _currentPhase = SetupPhase.Unauthenticated;
+    private string? _errorMessage;
+    private string _phaseDetail = "";
+    private string? _serverUrl;
+    private TaskCompletionSource _changeSignal = new(
+        TaskCreationOptions.RunContinuationsAsynchronously
+    );
+    private TaskCompletionSource _setupCompletedSignal = new(
+        TaskCreationOptions.RunContinuationsAsynchronously
+    );
+
+    public SetupPhase CurrentPhase
+    {
+        get
+        {
+            lock (_lock)
+                return _currentPhase;
+        }
+    }
+
+    public string? ErrorMessage
+    {
+        get
+        {
+            lock (_lock)
+                return _errorMessage;
+        }
+    }
+
+    public string PhaseDetail
+    {
+        get
+        {
+            lock (_lock)
+                return _phaseDetail;
+        }
+    }
+
+    public string? ServerUrl
+    {
+        get
+        {
+            lock (_lock)
+                return _serverUrl;
+        }
+    }
+
+    public bool IsSetupRequired => CurrentPhase < SetupPhase.Complete;
+
+    public bool IsAuthenticated => CurrentPhase >= SetupPhase.Authenticated;
+
+    public Task WaitForChangeAsync(CancellationToken cancellationToken = default)
+    {
+        TaskCompletionSource signal;
+        lock (_lock)
+        {
+            signal = _changeSignal;
+        }
+
+        return signal.Task.WaitAsync(cancellationToken);
+    }
+
+    public Task WaitForSetupCompleteAsync(CancellationToken cancellationToken = default)
+    {
+        TaskCompletionSource signal;
+        lock (_lock)
+        {
+            if (_currentPhase >= SetupPhase.Complete)
+                return Task.CompletedTask;
+            signal = _setupCompletedSignal;
+        }
+
+        return signal.Task.WaitAsync(cancellationToken);
+    }
+
+    public bool TransitionTo(SetupPhase targetPhase)
+    {
+        lock (_lock)
+        {
+            if (!IsValidTransition(_currentPhase, targetPhase))
+            {
+                Logger.Setup(
+                    $"Invalid setup transition: {_currentPhase} → {targetPhase}",
+                    LogEventLevel.Warning
+                );
+                return false;
+            }
+
+            SetupPhase previousPhase = _currentPhase;
+            _currentPhase = targetPhase;
+            _errorMessage = null;
+            _phaseDetail = targetPhase switch
+            {
+                SetupPhase.Unauthenticated => "Waiting for you to sign in...",
+                SetupPhase.Authenticating => "Verifying your credentials...",
+                SetupPhase.Authenticated => "Signed in successfully",
+                SetupPhase.Registering => "Connecting your server to NoMercy...",
+                SetupPhase.Registered => "Setting up your server address...",
+                SetupPhase.CertificateAcquired => "Connection secured",
+                SetupPhase.Complete => "All done — opening NoMercy...",
+                _ => "",
+            };
+
+            Logger.Setup($"Setup phase: {previousPhase} → {targetPhase}");
+            NotifyChange();
+
+            if (targetPhase == SetupPhase.Complete)
+                _setupCompletedSignal.TrySetResult();
+
+            return true;
+        }
+    }
+
+    public void SetError(string message)
+    {
+        lock (_lock)
+        {
+            _errorMessage = message;
+            Logger.Setup($"Setup error in {_currentPhase}: {message}", LogEventLevel.Error);
+            NotifyChange();
+        }
+    }
+
+    public void ClearError()
+    {
+        lock (_lock)
+        {
+            _errorMessage = null;
+            NotifyChange();
+        }
+    }
+
+    public void SetPhaseDetail(string detail)
+    {
+        lock (_lock)
+        {
+            _phaseDetail = detail;
+            NotifyChange();
+        }
+    }
+
+    public void SetServerUrl(string url)
+    {
+        lock (_lock)
+        {
+            _serverUrl = url;
+            NotifyChange();
+        }
+    }
+
+    public void Reset()
+    {
+        lock (_lock)
+        {
+            _currentPhase = SetupPhase.Unauthenticated;
+            _errorMessage = null;
+            NotifyChange();
+        }
+    }
+
+    private void NotifyChange()
+    {
+        TaskCompletionSource previous = _changeSignal;
+        _changeSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        previous.TrySetResult();
+    }
+
+    internal static bool IsValidTransition(SetupPhase from, SetupPhase to)
+    {
+        return (from, to) switch
+        {
+            // Forward transitions
+            (SetupPhase.Unauthenticated, SetupPhase.Authenticating) => true,
+            (SetupPhase.Authenticating, SetupPhase.Authenticated) => true,
+            (SetupPhase.Authenticated, SetupPhase.Registering) => true,
+            (SetupPhase.Registering, SetupPhase.Registered) => true,
+            (SetupPhase.Registered, SetupPhase.CertificateAcquired) => true,
+            (SetupPhase.CertificateAcquired, SetupPhase.Complete) => true,
+
+            // Error recovery: authenticating can fail back to unauthenticated
+            (SetupPhase.Authenticating, SetupPhase.Unauthenticated) => true,
+            // Registering can fail back to authenticated (retry registration)
+            (SetupPhase.Registering, SetupPhase.Authenticated) => true,
+            // Retry: authenticated can stay at authenticated to re-trigger registration
+            (SetupPhase.Authenticated, SetupPhase.Authenticated) => true,
+            // Certificate failure can go back to registered (retry cert)
+            (SetupPhase.Registered, SetupPhase.Registered) => true,
+
+            _ => false,
+        };
+    }
+
+    public SetupPhase DetermineInitialPhase(bool hasValidToken, bool isRegistered = true)
+    {
+        if (hasValidToken && isRegistered)
+        {
+            lock (_lock)
+            {
+                _currentPhase = SetupPhase.Complete;
+                _setupCompletedSignal.TrySetResult();
+            }
+
+            NotifyChange();
+            return SetupPhase.Complete;
+        }
+
+        if (hasValidToken && !isRegistered)
+        {
+            lock (_lock)
+            {
+                _currentPhase = SetupPhase.Authenticated;
+            }
+
+            NotifyChange();
+            return SetupPhase.Authenticated;
+        }
+
+        // No valid token — stay Unauthenticated (default)
+        return SetupPhase.Unauthenticated;
+    }
+}

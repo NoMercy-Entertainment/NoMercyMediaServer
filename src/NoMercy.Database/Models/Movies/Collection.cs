@@ -53,8 +53,6 @@ public class Collection : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("user_data")]
     public ICollection<UserData> UserData { get; set; } = [];
 
-    public Collection() { }
-
     // public Collection(TmdbCollectionAppends tmdbCollection, Ulid libraryId)
     // {
     //     Id = tmdbCollection.Id;

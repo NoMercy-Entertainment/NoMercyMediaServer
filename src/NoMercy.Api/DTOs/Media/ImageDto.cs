@@ -54,7 +54,7 @@ public record ImageDto
 
     public ImageDto(TmdbImage media)
     {
-        Id = long.Parse(media.FilePath.GetHashCode().ToString().Replace("-", "1").TrimStart('0'));
+        Id = HashToId(media.FilePath);
         Src = media.FilePath;
         Width = media.Width;
         Height = media.Height;
@@ -67,7 +67,7 @@ public record ImageDto
 
     public ImageDto(TmdbProfile image)
     {
-        Id = long.Parse(image.FilePath!.GetHashCode().ToString().Replace("-", "1").TrimStart('0'));
+        Id = HashToId(image.FilePath);
         Src = image.FilePath;
         Width = image.Width;
         Height = image.Height;
@@ -76,5 +76,18 @@ public record ImageDto
         VoteAverage = 0;
         VoteCount = 0;
         ColorPalette = new();
+    }
+
+    /// <summary>
+    /// Stable surrogate id for an image without a TMDB-issued primary key.
+    /// Derives a long from the file path's hash. The original implementation
+    /// chained '.Replace("-", "1").TrimStart(\'0\')' which crashes when the
+    /// hash is exactly 0 (TrimStart returns empty → long.Parse throws). Use
+    /// math instead so 0 stays 0 and negatives flip cleanly.
+    /// </summary>
+    private static long HashToId(string? filePath)
+    {
+        int hash = (filePath ?? string.Empty).GetHashCode();
+        return hash < 0 ? -(long)hash + 1_000_000_000L : hash;
     }
 }

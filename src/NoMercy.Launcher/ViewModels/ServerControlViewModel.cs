@@ -1,7 +1,7 @@
 using System.ComponentModel;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Newtonsoft.Json;
 using NoMercy.Launcher.Models;
 using NoMercy.Launcher.Services;
 using NoMercy.NmSystem.Extensions;
@@ -311,10 +311,17 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     public async Task ToggleAutoStartAsync(bool enabled)
     {
-        await _serverConnection.PostAsync("/manage/autostart", new { enabled }, default);
+        await _serverConnection.PostAsync("/manage/autostart", new { enabled });
 
         await RefreshStatusAsync();
     }
+
+    /// <summary>
+    /// Called by the View to show the "active sessions" dialog.
+    /// Return true → user chose "Interrupt and update now".
+    /// Return false → user chose "Wait — I'll update later".
+    /// </summary>
+    public Func<ActivityInfo, Task<bool>>? ShowActiveSessionDialog { get; set; }
 
     public async Task ApplyUpdateAsync()
     {
@@ -346,9 +353,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
             {
                 try
                 {
-                    result = Newtonsoft.Json.JsonConvert.DeserializeObject<UpdateCheckResult>(
-                        downloadBody
-                    );
+                    result = JsonConvert.DeserializeObject<UpdateCheckResult>(downloadBody);
                 }
                 catch
                 {
@@ -360,6 +365,33 @@ public class ServerControlViewModel : INotifyPropertyChanged
                 result?.UseInstaller == true
                 && RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                 && await _installerUpdater.IsInstallerDeploymentAsync();
+
+            // Check for active streams/encodes before proceeding with either path
+            ActivityInfo? activity = null;
+            try
+            {
+                activity = await _installerUpdater.GetActivityAsync();
+            }
+            catch
+            {
+                // Server may not support /manage/activity (older build) — continue
+            }
+
+            if (activity is not null && (activity.ActiveStreams > 0 || activity.ActiveEncodes > 0))
+            {
+                bool proceed = ShowActiveSessionDialog is not null
+                    ? await ShowActiveSessionDialog(activity)
+                    : false; // no dialog registered → default to Wait
+
+                if (!proceed)
+                {
+                    LauncherLog.Info("User chose to wait — aborting update due to active sessions");
+                    ActionStatus = "Update deferred — active sessions in progress";
+                    return;
+                }
+
+                LauncherLog.Info("User chose to interrupt — proceeding with update");
+            }
 
             if (useInstaller)
             {
@@ -477,7 +509,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
         try
         {
-            dynamic? obj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+            dynamic? obj = JsonConvert.DeserializeObject(json);
             return obj?.message?.ToString();
         }
         catch

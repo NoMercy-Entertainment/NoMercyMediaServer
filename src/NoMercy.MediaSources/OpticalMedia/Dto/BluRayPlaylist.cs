@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using NoMercy.Encoder.Core;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.MediaSources.OpticalMedia.Dto;
@@ -163,7 +162,7 @@ public partial class BluRayPlaylist
                 else if (line.StartsWith("Language"))
                 {
                     currentAudio.Language = value;
-                    currentAudio.Lang = IsoLanguageMapper.GetIsoCode(value);
+                    currentAudio.Lang = MapIsoLanguage(value);
                     playlist.AudioTracks.Add(currentAudio);
                     currentAudio = null;
                 }
@@ -230,6 +229,29 @@ public partial class BluRayPlaylist
             };
 
         return null;
+    }
+
+    private static string MapIsoLanguage(string iso3)
+    {
+        try
+        {
+            CultureInfo culture =
+                CultureInfo
+                    .GetCultures(CultureTypes.AllCultures)
+                    .FirstOrDefault(c =>
+                        c.ThreeLetterISOLanguageName.Equals(
+                            iso3,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                ?? CultureInfo.InvariantCulture;
+
+            return culture.TwoLetterISOLanguageName;
+        }
+        catch
+        {
+            return iso3;
+        }
     }
 
     [GeneratedRegex(@"[\d\s]+")]

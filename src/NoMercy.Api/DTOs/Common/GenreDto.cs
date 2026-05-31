@@ -16,6 +16,7 @@ public record GenreDto
     [JsonProperty("name")]
     public string Name { get; set; }
 
+    [JsonProperty("link")]
     public Uri Link { get; set; }
 
     public GenreDto()

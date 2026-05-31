@@ -5,6 +5,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 
 namespace NoMercy.Providers.Helpers;
 
@@ -12,6 +13,28 @@ public static class CacheController
 {
     private const long MaxCacheSizeBytes = 500_000_000; // 500MB
     private const int MaxLockEntries = 10_000;
+
+    // Prune is O(N) over the entire cache directory (List + sort + sum). Heavy
+    // parallel TMDB fetches (cast/crew with 50-200 people per show) used to
+    // call Prune on every Write, scanning thousands of JSON files thousands of
+    // times under the file-lock-held section. Throttle to at most once a
+    // minute and fire-and-forget so writes return immediately.
+    private static readonly TimeSpan _pruneInterval = TimeSpan.FromMinutes(1);
+    private static long _lastPruneTicksUtc = DateTime.MinValue.Ticks;
+    private static int _pruneInFlight;
+
+    private static IStorage? _storage;
+
+    public static void Initialize(IStorage storage)
+    {
+        _storage = storage;
+    }
+
+    private static IStorage Storage =>
+        _storage
+        ?? throw new InvalidOperationException(
+            "CacheController has not been initialized. Call CacheController.Initialize() at startup."
+        );
 
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileLocks = new();
 
@@ -55,7 +78,7 @@ public static class CacheController
     public static bool Read<T>(string url, out T? value, bool xml = false)
         where T : class?
     {
-        if (Config.IsDev == false)
+        if (!Config.IsDev)
         {
             value = default;
             return false;
@@ -67,16 +90,18 @@ public static class CacheController
 
         try
         {
-            if (File.Exists(fullname) == false)
+            IStorage storage = Storage;
+
+            if (!storage.Exists(fullname))
             {
                 value = default;
                 return false;
             }
 
-            // invalidate cache after 1 day of creation date
-            if (File.GetCreationTime(fullname) < DateTime.Now.SubDays(1))
+            // invalidate cache after 1 day of last write time
+            if (storage.LastModified(fullname) < DateTimeOffset.UtcNow.AddDays(-1))
             {
-                File.Delete(fullname);
+                storage.Delete(fullname);
                 value = default;
                 return false;
             }
@@ -84,7 +109,7 @@ public static class CacheController
             T? data;
             try
             {
-                string d = File.ReadAllText(fullname);
+                string d = Encoding.UTF8.GetString(storage.Read(fullname));
                 data = xml ? d.FromXml<T>() : d.FromJson<T>();
             }
             catch (Exception)
@@ -116,7 +141,7 @@ public static class CacheController
 
     public static async Task Write(string url, string data)
     {
-        if (Config.IsDev == false)
+        if (!Config.IsDev)
             return;
 
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
@@ -128,8 +153,8 @@ public static class CacheController
 
             try
             {
-                await File.WriteAllTextAsync(fullname, data);
-                PruneCache();
+                await Storage.WriteAllTextAsync(fullname, data, CancellationToken.None);
+                MaybeSchedulePrune();
                 return;
             }
             catch (Exception) when (retry < 10) { }
@@ -149,29 +174,72 @@ public static class CacheController
         PruneCache(AppFiles.ApiCachePath, MaxCacheSizeBytes);
     }
 
-    internal static void PruneCache(string cachePath, long maxSizeBytes)
+    private static void MaybeSchedulePrune()
     {
-        DirectoryInfo cacheDir = new(cachePath);
-        if (cacheDir.Exists == false)
+        long now = DateTime.UtcNow.Ticks;
+        long last = Interlocked.Read(ref _lastPruneTicksUtc);
+        if (new TimeSpan(now - last) < _pruneInterval)
             return;
 
-        FileInfo[] files = cacheDir.GetFiles().OrderBy(f => f.CreationTime).ToArray();
+        // Single-flight: only one Prune at a time.
+        if (Interlocked.CompareExchange(ref _pruneInFlight, 1, 0) != 0)
+            return;
 
-        long totalSize = files.Sum(f => f.Length);
+        Interlocked.Exchange(ref _lastPruneTicksUtc, now);
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                PruneCache();
+            }
+            catch
+            {
+                // best-effort — don't let a prune error bubble out of the writer path.
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _pruneInFlight, 0);
+            }
+        });
+    }
 
-        foreach (FileInfo file in files)
+    internal static void PruneCache(string cachePath, long maxSizeBytes)
+    {
+        // Cache lives behind IStorage so remote drivers (S3/R2/SMB/NFS) hit
+        // the same path-validation seam as everything else. Don't reach
+        // through to System.IO.* here — that would silently bypass the
+        // facade if the cache path ever moved off local disk.
+        IStorage storage = Storage;
+        IReadOnlyList<StorageEntry> entries;
+        try
+        {
+            entries = storage.List(cachePath, pattern: null, recursive: false);
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return;
+        }
+
+        StorageEntry[] files = entries
+            .Where(e => !e.IsDirectory)
+            .OrderBy(e => e.LastModified)
+            .ToArray();
+
+        long totalSize = files.Sum(f => f.SizeBytes);
+
+        foreach (StorageEntry file in files)
         {
             if (totalSize <= maxSizeBytes)
                 break;
 
             try
             {
-                totalSize -= file.Length;
-                file.Delete();
+                totalSize -= file.SizeBytes;
+                storage.Delete(file.Path);
             }
             catch (Exception)
             {
-                // File may be locked by another operation
+                // File may be locked or already removed; skip.
             }
         }
     }

@@ -1,9 +1,11 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using DeviceId;
+using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -55,7 +57,7 @@ public static class Software
         }
         else
         {
-            string output = SystemCalls.Shell.ExecCommand("uname -r");
+            string output = Shell.ExecCommand("uname -r");
             return output.Trim();
         }
 
@@ -67,11 +69,11 @@ public static class Software
         return $"{Version!.Major}.{Version.Minor}.{Version.Build}";
     }
 
-    public static string? GetFileVersion(string exePath)
+    public static string? GetFileVersion(IStorageDriver driver, string exePath)
     {
         try
         {
-            if (!File.Exists(exePath))
+            if (!driver.FileExists(exePath))
                 return null;
 
             FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(exePath);
@@ -107,14 +109,16 @@ public static class Software
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            string output = SystemCalls.Shell.ExecCommand("sysctl -n kern.boottime");
-            return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(
-                long.Parse(output.Split(' ').Last())
-            );
+            string output = Shell.ExecCommand("sysctl -n kern.boottime");
+            // Tolerate unexpected sysctl output rather than crashing the
+            // diagnostic call; fall through to DateTime.UtcNow as a sentinel.
+            return long.TryParse(output.Split(' ').Last(), out long bootSec)
+                ? new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(bootSec)
+                : DateTime.UtcNow;
         }
         else
         {
-            string output = SystemCalls.Shell.ExecCommand("uptime -s");
+            string output = Shell.ExecCommand("uptime -s");
             return DateTime.Parse(output.Trim());
         }
 

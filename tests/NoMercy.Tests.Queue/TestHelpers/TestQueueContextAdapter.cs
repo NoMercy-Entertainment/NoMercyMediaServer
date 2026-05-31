@@ -25,8 +25,7 @@ public class TestQueueContextAdapter : IQueueContext
 
     public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId)
     {
-        return Jobs
-            .Where(j => j.ReservedAt == null && j.Attempts <= maxAttempts)
+        return Jobs.Where(j => j.ReservedAt == null && j.Attempts <= maxAttempts)
             .Where(j => currentJobId == null)
             .Where(j => string.IsNullOrEmpty(queueName) || j.Queue == queueName)
             .OrderByDescending(j => j.Priority)
@@ -46,7 +45,18 @@ public class TestQueueContextAdapter : IQueueContext
     public void UpdateJob(QueueJobModel job)
     {
         int index = Jobs.FindIndex(j => j.Id == job.Id);
-        if (index >= 0) Jobs[index] = job;
+        if (index >= 0)
+            Jobs[index] = job;
+    }
+
+    public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
+    {
+        QueueJobModel? job = Jobs.FirstOrDefault(j => j.Id == jobId);
+        if (job is null)
+            return;
+        job.Payload = newPayload;
+        job.AvailableAt = availableAt;
+        job.ReservedAt = null;
     }
 
     public void ResetAllReservedJobs()
@@ -55,6 +65,11 @@ public class TestQueueContextAdapter : IQueueContext
         {
             job.ReservedAt = null;
         }
+    }
+
+    public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc)
+    {
+        return Jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
     }
 
     public void AddFailedJob(FailedJobModel failedJob)
@@ -98,7 +113,8 @@ public class TestQueueContextAdapter : IQueueContext
     public void UpdateCronJob(CronJobModel cronJob)
     {
         int index = CronJobs.FindIndex(c => c.Id == cronJob.Id);
-        if (index >= 0) CronJobs[index] = cronJob;
+        if (index >= 0)
+            CronJobs[index] = cronJob;
     }
 
     public void RemoveCronJob(CronJobModel cronJob)
@@ -106,11 +122,10 @@ public class TestQueueContextAdapter : IQueueContext
         CronJobs.RemoveAll(c => c.Id == cronJob.Id);
     }
 
-    public void SaveChanges()
-    {
-    }
+    public bool IsParentFailed(int parentJobId) =>
+        FailedJobs.Any(f => f.Payload.Contains($"\"Id\":{parentJobId}"));
 
-    public void Dispose()
-    {
-    }
+    public void SaveChanges() { }
+
+    public void Dispose() { }
 }

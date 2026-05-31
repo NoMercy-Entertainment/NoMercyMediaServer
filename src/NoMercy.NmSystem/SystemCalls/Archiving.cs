@@ -1,18 +1,23 @@
 using System.IO.Compression;
 using NoMercy.NmSystem.FileSystem;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem.SystemCalls;
 
 public static class Archiving
 {
-    public static async Task<List<string>> ExtractArchive(string filePath, string destination)
+    public static async Task<List<string>> ExtractArchive(
+        IStorage storage,
+        string filePath,
+        string destination
+    )
     {
         List<string> extractedFiles;
 
         if (filePath.EndsWith(".zip"))
         {
-            extractedFiles = ExtractZipFile(filePath, destination);
+            extractedFiles = ExtractZipFile(storage, filePath, destination);
         }
         else if (
             filePath.EndsWith(".tar.xz")
@@ -20,7 +25,7 @@ public static class Archiving
             || filePath.EndsWith("tgz")
         )
         {
-            extractedFiles = await ExtractTarFile(filePath, destination);
+            extractedFiles = await ExtractTarFile(storage, filePath, destination);
         }
         else
         {
@@ -34,7 +39,11 @@ public static class Archiving
         return extractedFiles;
     }
 
-    private static List<string> ExtractZipFile(string zipFilePath, string extractToDirectory)
+    private static List<string> ExtractZipFile(
+        IStorage storage,
+        string zipFilePath,
+        string extractToDirectory
+    )
     {
         List<string> extractedFiles = [];
 
@@ -47,8 +56,8 @@ public static class Archiving
                 string destinationDir =
                     Path.GetDirectoryName(destinationPath) ?? extractToDirectory;
 
-                if (!Directory.Exists(destinationDir))
-                    Directory.CreateDirectory(destinationDir);
+                if (!storage.Exists(destinationDir))
+                    storage.CreateDirectory(destinationDir);
 
                 if (string.IsNullOrEmpty(entry.Name)) // Skip directories
                     continue;
@@ -71,6 +80,7 @@ public static class Archiving
     }
 
     private static async Task<List<string>> ExtractTarFile(
+        IStorage storage,
         string tarFilePath,
         string extractToDirectory
     )
@@ -87,7 +97,7 @@ public static class Archiving
             foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
                 string destinationPath = Path.Combine(extractToDirectory, line.Trim());
-                if (File.Exists(destinationPath))
+                if (storage.Exists(destinationPath))
                     extractedFiles.Add(destinationPath);
             }
         }

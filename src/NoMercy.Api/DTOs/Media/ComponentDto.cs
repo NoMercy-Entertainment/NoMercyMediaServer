@@ -83,7 +83,7 @@ public record RenderProps<T>
     [JsonProperty("watch")]
     public bool Watch { get; set; }
 
-    [JsonProperty("contextMenuItems")]
+    [JsonProperty("context_menu_items")]
     public Dictionary<string, object>[]? ContextMenuItems { get; set; } = [];
 
     [JsonProperty("url")]

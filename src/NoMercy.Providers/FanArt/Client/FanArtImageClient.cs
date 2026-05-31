@@ -1,7 +1,8 @@
 ﻿using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Models;
 using NoMercy.Providers.Helpers;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
+using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Configuration = AcoustID.Configuration;
@@ -11,6 +12,19 @@ namespace NoMercy.Providers.FanArt.Client;
 
 public class FanArtImageClient : FanArtBaseClient
 {
+    private static IStorage? _storage;
+
+    public static void Initialize(IStorage storage)
+    {
+        _storage = storage;
+    }
+
+    private static IStorage Storage =>
+        _storage
+        ?? throw new InvalidOperationException(
+            "FanArtImageClient has not been initialized. Call FanArtImageClient.Initialize() at startup."
+        );
+
     public FanArtImageClient()
     {
         Configuration.ClientKey = ApiInfo.AcousticIdKey;
@@ -36,7 +50,8 @@ public class FanArtImageClient : FanArtBaseClient
     {
         string filePath = Path.Combine(AppFiles.MusicImagesPath, Path.GetFileName(url.LocalPath));
 
-        if (File.Exists(filePath))
+        IStorage storage = Storage;
+        if (await storage.ExistsAsync(filePath, CancellationToken.None))
             return Image.Load<Rgba32>(filePath);
 
         HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.FanArtImage);
@@ -47,8 +62,8 @@ public class FanArtImageClient : FanArtBaseClient
 
         byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 
-        if (download is not false && !File.Exists(filePath))
-            await File.WriteAllBytesAsync(filePath, bytes);
+        if (download is not false && !await storage.ExistsAsync(filePath, CancellationToken.None))
+            await storage.WriteAsync(filePath, bytes, CancellationToken.None);
 
         return Image.Load<Rgba32>(bytes);
     }

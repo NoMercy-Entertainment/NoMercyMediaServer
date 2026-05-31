@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Database.Infrastructure;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Database.Models.Music;
@@ -74,11 +75,23 @@ public class Track : ColorPaletteTimeStamps
         set => _lyrics = JsonConvert.SerializeObject(value);
     }
 
+    private string? _folder;
+
     [JsonProperty("folder")]
-    public string? Folder { get; set; }
+    public string? Folder
+    {
+        get => _folder;
+        set => _folder = PathNormalizer.NormalizeNullable(value);
+    }
+
+    private string? _hostFolder;
 
     [JsonProperty("host_folder")]
-    public string? HostFolder { get; set; }
+    public string? HostFolder
+    {
+        get => _hostFolder;
+        set => _hostFolder = PathNormalizer.NormalizeNullable(value);
+    }
 
     [JsonProperty("folder_id")]
     public Ulid FolderId { get; set; }
@@ -123,8 +136,10 @@ public class Track : ColorPaletteTimeStamps
         if (AlbumTrack.Count.ToString().Length > 2)
             padding = AlbumTrack.Count.ToString().Length;
 
+        // Track may be orphaned during ingest (no AlbumTrack row yet) — fall
+        // back to an empty album prefix instead of throwing.
         return string.Concat(
-            AlbumTrack.First().Album.Name,
+            AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty,
             ": ",
             DiscNumber.ToString(),
             "-",

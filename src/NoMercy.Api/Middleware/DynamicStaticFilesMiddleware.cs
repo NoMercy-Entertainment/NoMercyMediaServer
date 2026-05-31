@@ -1,17 +1,24 @@
 using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
-using NoMercy.Encoder.Format.Rules;
+using MimeMapping;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 
 namespace NoMercy.Api.Middleware;
 
+/// <summary>
+/// Folder routing handle: maps a folder ULID to the driver instance + sub-path
+/// the file lives under. Resolved per-request through IStorageFactory so NFS,
+/// S3, WebDAV and local backends all stream through the same path.
+/// </summary>
+public readonly record struct FolderRef(Ulid DriverId, string SubPath);
+
 public class DynamicStaticFilesMiddleware(RequestDelegate next)
 {
-    private static readonly ConcurrentDictionary<Ulid, PhysicalFileProvider> Providers = new();
+    private static readonly ConcurrentDictionary<Ulid, FolderRef> Folders = new();
 
     // Define streamable media file extensions
     private static readonly HashSet<string> StreamableExtensions = new(
@@ -38,7 +45,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         ".opus",
     };
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, IStorageFactory storageFactory)
     {
         if (!context.Request.Path.HasValue)
         {
@@ -74,63 +81,163 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
         try
         {
-            if (!Ulid.TryParse(rootPath, out Ulid share))
+            if (!Ulid.TryParse(rootPath, out Ulid folderId))
             {
                 await next(context);
                 return;
             }
 
-            if (!Providers.TryGetValue(share, out PhysicalFileProvider? provider))
+            if (!Folders.TryGetValue(folderId, out FolderRef folderRef))
             {
+                Logger.App(
+                    $"[DynamicStaticFiles] folder {folderId} not registered (request: {context.Request.Path})"
+                );
                 await next(context);
                 return;
             }
 
-            string? relativePath = pathValue?[pathValue.IndexOf('/', 1)..];
-            IFileInfo? file = relativePath != null ? provider.GetFileInfo(relativePath) : null;
+            // Strip the leading "/<folderId>" segment to get the file's
+            // sub-path within the folder. URL-decode + normalise to forward
+            // slashes so storage drivers see a consistent shape.
+            string relativeWithinFolder = pathValue is null
+                ? string.Empty
+                : Uri.UnescapeDataString(pathValue[pathValue.IndexOf('/', 1)..]).TrimStart('/');
 
-            if (file?.PhysicalPath != null)
-                await ServeFile(context, file);
-            else
+            IStorage storage;
+            try
+            {
+                storage = storageFactory.For(
+                    folderId: folderId,
+                    driverId: folderRef.DriverId,
+                    subPath: folderRef.SubPath
+                );
+            }
+            catch (Exception fEx)
+            {
+                Logger.App(
+                    $"[DynamicStaticFiles] factory.For failed for folder {folderId} driver {folderRef.DriverId} subPath '{folderRef.SubPath}': {fEx.Message}"
+                );
                 await next(context);
+                return;
+            }
+
+            bool exists;
+            try
+            {
+                exists = storage.Exists(relativeWithinFolder);
+            }
+            catch (Exception eEx)
+            {
+                Logger.App(
+                    $"[DynamicStaticFiles] storage.Exists threw on '{relativeWithinFolder}' (folder {folderId}, driver {folderRef.DriverId}): {eEx.Message}"
+                );
+                await next(context);
+                return;
+            }
+
+            if (!exists)
+            {
+                Logger.App(
+                    $"[DynamicStaticFiles] not found: folder={folderId} driver={folderRef.DriverId} subPath='{folderRef.SubPath}' relative='{relativeWithinFolder}'"
+                );
+                await next(context);
+                return;
+            }
+
+            Uri? presigned = await storage.TryGetPresignedUrlAsync(
+                relativeWithinFolder,
+                TimeSpan.FromHours(1),
+                context.RequestAborted
+            );
+            if (presigned is not null)
+            {
+                context.Response.StatusCode = 302;
+                context.Response.Headers.Location = presigned.ToString();
+                return;
+            }
+
+            await ServeFile(context, storage, relativeWithinFolder);
         }
-        catch (Exception) when (context.RequestAborted.IsCancellationRequested)
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
-            // Client disconnected mid-stream — surfaces as OperationCanceledException
-            // (mid-write) or IOException "client reset" (mid-read). Happens on every
-            // seek, source switch, passive-device teardown in the player. Swallow so
-            // the global handler doesn't log a wall of stack traces for routine
-            // client cancellations.
+            // Race: file or its containing directory vanished between Exists()
+            // and Size()/OpenRead(). Translate to 404 instead of an opaque 500.
+            Logger.App(
+                $"[DynamicStaticFiles] file vanished mid-serve for '{context.Request.Path}': {ex.Message}",
+                Serilog.Events.LogEventLevel.Warning
+            );
+            if (!context.Response.HasStarted)
+                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+        }
+        catch (Exception ex) when (ex is IOException or HttpRequestException)
+        {
+            // Storage-layer transport failure (NFS hiccup, S3 / WebDAV 5xx, disk
+            // error). 502 reflects "we couldn't reach the backend that holds
+            // this file" — distinct from "the file doesn't exist."
+            Logger.App(
+                $"[DynamicStaticFiles] storage transport failure for '{context.Request.Path}': {ex.Message}",
+                Serilog.Events.LogEventLevel.Warning
+            );
+            if (!context.Response.HasStarted)
+                context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
+        }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Client disconnected mid-stream — no response to send.
         }
         catch (Exception ex)
         {
+            // Anything else escaping ServeFile is treated as a backend fault,
+            // not a server bug — surface as 502 so ExoPlayer / browser fall
+            // through to the next track gracefully instead of crashing on a
+            // 500 with a stack trace body. Logged at Error so genuine bugs
+            // remain visible in the sink.
             Logger.App(
-                $"DynamicStaticFilesMiddleware unhandled exception for path '{context.Request.Path}': {ex}"
+                $"[DynamicStaticFiles] unhandled exception for path '{context.Request.Path}': {ex}",
+                Serilog.Events.LogEventLevel.Error
             );
-            throw;
+            if (!context.Response.HasStarted)
+                context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
         }
     }
 
-    private static async Task ServeFile(HttpContext context, IFileInfo file)
+    private static async Task ServeFile(HttpContext context, IStorage storage, string relativePath)
     {
-        if (file.PhysicalPath is not { } filePhysicalPath)
-            return;
+        long fileLength = storage.Size(relativePath);
 
-        FileInfo fileInfo = new(filePhysicalPath);
-        long fileLength = fileInfo.Length;
+        // Surface storage-reported zero — empty bodies on m3u8 / vtt /
+        // fonts.json requests almost always trace back to either an encoder
+        // that hasn't flushed yet or an NFS metadata cache lying. Logging it
+        // here narrows triage in one step instead of guessing.
+        if (fileLength == 0)
+        {
+            Logger.App(
+                $"[DynamicStaticFiles] storage reports 0 bytes for '{context.Request.Path}' (driver={storage.GetType().Name})",
+                Serilog.Events.LogEventLevel.Warning
+            );
+        }
 
-        context.Response.ContentType = MimeTypes.GetMimeTypeFromFile(file.PhysicalPath);
+        context.Response.ContentType = ResolveContentType(relativePath);
 
-        bool isStreamableMedia = IsStreamableMedia(filePhysicalPath);
+        // Tell ResponseCachingMiddleware not to wrap the body. Without this
+        // header it still allocates the cache stream wrapper around every
+        // FLAC / video chunk we write — pointless overhead since media
+        // responses are too large to ever cache (cap is 64 MB by default).
+        context.Response.Headers.CacheControl = "no-store";
+
+        bool isStreamableMedia = IsStreamableMedia(relativePath);
         bool hasRangeRequest = context.Request.Headers.TryGetValue(
             "Range",
             out StringValues rangeValue
         );
 
-        // Force partial content for streamable media files or when range is requested
+        // Force partial content for streamable media files or when range is requested.
+        // For non-streamable + no range, stream the whole file via the storage facade.
         if (!hasRangeRequest && !isStreamableMedia)
         {
-            await context.Response.SendFileAsync(file.PhysicalPath);
+            context.Response.ContentLength = fileLength;
+            await using Stream wholeStream = storage.OpenRead(relativePath);
+            await wholeStream.CopyToAsync(context.Response.Body);
             return;
         }
 
@@ -149,7 +256,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
         if (hasRangeRequest)
         {
-            string?[] ranges = rangeValue.ToString().Replace("bytes=", "").Split('-').ToArray();
+            string?[] ranges = rangeValue.ToString().Replace("bytes=", "").Split('-');
 
             if (!long.TryParse(ranges[0], out start))
             {
@@ -203,25 +310,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         context.Response.Headers.AcceptRanges = "bytes";
         context.Response.ContentLength = length;
 
-        // FileShare.ReadWrite | FileShare.Delete is critical on Windows.
-        // File.OpenRead defaults to FileShare.Read which blocks ALL concurrent
-        // writes and deletes for the lifetime of this stream. Linux ignores
-        // FileShare so it works there. Since the open-ended Range fix
-        // (d09d9ab4) keeps this stream open for the entire playback (hours
-        // for a long movie via ExoPlayer), any other process touching the
-        // file — encoder output, indexer, antivirus quarantine, library
-        // reorganize, replace-on-merge — was blocked or failed silently on
-        // Windows production servers. Reading shouldn't hold writers hostage.
-        // useAsync=true enables overlapped IO so the per-chunk Reads don't
-        // pin a thread-pool thread for the whole playback.
-        await using FileStream fs = new(
-            file.PhysicalPath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.ReadWrite | FileShare.Delete,
-            bufferSize: 64 * 1024,
-            useAsync: true
-        );
+        await using Stream fs = storage.OpenRead(relativePath);
 
         fs.Seek(start, SeekOrigin.Begin);
         byte[] buffer = new byte[64 * 1024];
@@ -251,13 +340,53 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         return StreamableExtensions.Contains(extension);
     }
 
-    public static void AddPath(Ulid requestPath, string physicalPath)
+    // MimeMapping (the NuGet package) doesn't know about subtitle/font/HLS
+    // formats and defaults them to application/octet-stream — which the
+    // browser refuses to render as text. Override the handful that matter
+    // and fall back to the library for everything else.
+    private static readonly Dictionary<string, string> ContentTypeOverrides = new(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
-        Providers[requestPath] = new(physicalPath);
+        // Subtitles
+        [".ass"] = "text/x-ssa; charset=utf-8",
+        [".ssa"] = "text/x-ssa; charset=utf-8",
+        [".srt"] = "application/x-subrip; charset=utf-8",
+        [".vtt"] = "text/vtt; charset=utf-8",
+        [".sub"] = "text/plain; charset=utf-8",
+        [".idx"] = "text/plain; charset=utf-8",
+        [".sup"] = "application/octet-stream",
+        // HLS
+        [".m3u8"] = "application/vnd.apple.mpegurl",
+        [".m3u"] = "application/vnd.apple.mpegurl",
+        [".ts"] = "video/mp2t",
+        // Fonts (encoder-extracted attachments)
+        [".otf"] = "font/otf",
+        [".ttf"] = "font/ttf",
+        [".woff"] = "font/woff",
+        [".woff2"] = "font/woff2",
+    };
+
+    private static string ResolveContentType(string filePath)
+    {
+        string ext = Path.GetExtension(filePath);
+        if (ContentTypeOverrides.TryGetValue(ext, out string? mapped))
+            return mapped;
+        return MimeUtility.GetMimeMapping(filePath);
     }
 
-    public static void RemovePath(Ulid requestPath)
+    /// <summary>
+    /// Register a folder for dynamic file serving. Pass the folder's ULID
+    /// (becomes the URL root segment), the driver instance it belongs to,
+    /// and its sub-path within that driver's root.
+    /// </summary>
+    public static void AddFolder(Ulid folderId, Ulid driverId, string subPath)
     {
-        Providers.TryRemove(requestPath, out _);
+        Folders[folderId] = new FolderRef(driverId, subPath ?? string.Empty);
+    }
+
+    public static void RemoveFolder(Ulid folderId)
+    {
+        Folders.TryRemove(folderId, out _);
     }
 }

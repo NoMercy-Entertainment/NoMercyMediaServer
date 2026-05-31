@@ -17,7 +17,8 @@ public class WorkerCountRaceConditionTests
         // HIGH-16: Verify a dedicated lock object exists for synchronizing Workers access
         FieldInfo? lockField = typeof(QueueRunner).GetField(
             "_workersLock",
-            BindingFlags.NonPublic | BindingFlags.Instance);
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
 
         Assert.NotNull(lockField);
         Assert.Equal(typeof(object), lockField.FieldType);
@@ -45,7 +46,9 @@ public class WorkerCountRaceConditionTests
         string source = File.ReadAllText(sourceFile);
 
         string methodBody = ExtractMethodBody(
-            source, "WorkCompletedEventHandler QueueWorkerCompleted(");
+            source,
+            "WorkCompletedEventHandler QueueWorkerCompleted("
+        );
 
         Assert.Contains("lock (_workersLock)", methodBody);
         Assert.Contains("workerInstances.Remove(", methodBody);
@@ -124,7 +127,8 @@ public class WorkerCountRaceConditionTests
         int methodStart = source.IndexOf(methodSignature, StringComparison.Ordinal);
         if (methodStart < 0)
             throw new InvalidOperationException(
-                $"Method containing '{methodSignature}' not found in source");
+                $"Method containing '{methodSignature}' not found in source"
+            );
 
         // Find the opening brace of the method
         int braceStart = source.IndexOf('{', methodStart);
@@ -136,10 +140,13 @@ public class WorkerCountRaceConditionTests
         int pos = braceStart;
         while (pos < source.Length)
         {
-            if (source[pos] == '{') depth++;
-            else if (source[pos] == '}') depth--;
+            if (source[pos] == '{')
+                depth++;
+            else if (source[pos] == '}')
+                depth--;
 
-            if (depth == 0) break;
+            if (depth == 0)
+                break;
             pos++;
         }
 
@@ -152,20 +159,21 @@ public class WorkerCountRaceConditionTests
         while (dir != null)
         {
             string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate)) return candidate;
+            if (File.Exists(candidate))
+                return candidate;
 
-            string repoCandidate = Path.Combine(
-                dir, "..", "..", "..", "..", "..", relativePath);
+            string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
             string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved)) return resolved;
+            if (File.Exists(resolved))
+                return resolved;
 
             dir = Directory.GetParent(dir)?.FullName;
         }
 
         string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback)) return fallback;
+        if (File.Exists(fallback))
+            return fallback;
 
-        throw new FileNotFoundException(
-            $"Could not find source file: {relativePath}");
+        throw new FileNotFoundException($"Could not find source file: {relativePath}");
     }
 }

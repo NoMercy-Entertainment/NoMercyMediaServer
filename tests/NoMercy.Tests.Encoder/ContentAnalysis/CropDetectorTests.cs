@@ -1,0 +1,287 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.ContentAnalysis;
+using NoMercy.Encoder.Infrastructure;
+using NoMercy.Tests.Encoder.Storage;
+
+namespace NoMercy.Tests.Encoder.ContentAnalysis;
+
+public class CropDetectorTests
+{
+    private readonly Mock<IProcessRunner> _processRunner = new();
+    private readonly EncoderOptions _options = new() { FfmpegPathOverride = "ffmpeg" };
+
+    [Fact]
+    public async Task Detect_StableCrop_ReturnsWithShouldCropTrue()
+    {
+        string[] stderrLines =
+        [
+            "frame=1 fps=0 q=-0 size=N/A time=00:00:00.00 bitrate=N/A",
+            "[Parsed_cropdetect_0 @ 0x7] x1:0 x2:1919 y1:20 y2:1059 w:1920 h:1040 x:0 y:20 crop=1920:1040:0:20",
+            "[Parsed_cropdetect_0 @ 0x7] x1:0 x2:1919 y1:20 y2:1059 w:1920 h:1040 x:0 y:20 crop=1920:1040:0:20",
+            "[Parsed_cropdetect_0 @ 0x7] x1:0 x2:1919 y1:20 y2:1059 w:1920 h:1040 x:0 y:20 crop=1920:1040:0:20",
+            "[Parsed_cropdetect_0 @ 0x7] x1:0 x2:1919 y1:20 y2:1059 w:1920 h:1040 x:0 y:20 crop=1920:1040:0:20",
+            "[Parsed_cropdetect_0 @ 0x7] x1:0 x2:1919 y1:20 y2:1059 w:1920 h:1040 x:0 y:20 crop=1920:1040:0:20",
+        ];
+
+        SetupStderr(stderrLines, exitCode: 0);
+        CropDetector detector = new(
+            _options,
+            _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
+            NullLogger<CropDetector>.Instance
+        );
+
+        CropResult result = await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+
+        Assert.Equal(1920, result.Width);
+        Assert.Equal(1040, result.Height);
+        Assert.Equal(0, result.X);
+        Assert.Equal(20, result.Y);
+        Assert.True(result.ShouldCrop);
+    }
+
+    [Fact]
+    public async Task Detect_FullFrameCrop_ShouldCropFalse()
+    {
+        string[] stderrLines = Enumerable.Repeat("[cropdetect] crop=1920:1080:0:0", 10).ToArray();
+
+        SetupStderr(stderrLines, exitCode: 0);
+        CropDetector detector = new(
+            _options,
+            _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
+            NullLogger<CropDetector>.Instance
+        );
+
+        CropResult result = await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+
+        Assert.False(result.ShouldCrop);
+    }
+
+    [Fact]
+    public async Task Detect_FewerThanMinObservations_ShouldCropFalse()
+    {
+        string[] stderrLines = Enumerable
+            .Repeat("crop=1920:1040:0:20", 3) // below threshold
+            .ToArray();
+
+        SetupStderr(stderrLines, exitCode: 0);
+        CropDetector detector = new(
+            _options,
+            _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
+            NullLogger<CropDetector>.Instance
+        );
+
+        CropResult result = await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+
+        Assert.False(result.ShouldCrop);
+    }
+
+    [Fact]
+    public async Task Detect_FfmpegNonZeroExit_ReturnsEmptyResult()
+    {
+        SetupStderr(["crop=1920:1040:0:20"], exitCode: 1);
+        CropDetector detector = new(
+            _options,
+            _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
+            NullLogger<CropDetector>.Instance
+        );
+
+        CropResult result = await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+
+        Assert.Equal(0, result.Width);
+        Assert.Equal(0, result.Height);
+        Assert.False(result.ShouldCrop);
+    }
+
+    [Fact]
+    public async Task Detect_PicksMostFrequentCrop()
+    {
+        // 6 x wide-crop, 2 x no-crop → wide wins
+        string[] stderrLines =
+        [
+            "crop=1920:1040:0:20",
+            "crop=1920:1040:0:20",
+            "crop=1920:1040:0:20",
+            "crop=1920:1080:0:0",
+            "crop=1920:1040:0:20",
+            "crop=1920:1040:0:20",
+            "crop=1920:1080:0:0",
+            "crop=1920:1040:0:20",
+        ];
+
+        SetupStderr(stderrLines, exitCode: 0);
+        CropDetector detector = new(
+            _options,
+            _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
+            NullLogger<CropDetector>.Instance
+        );
+
+        CropResult result = await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+
+        Assert.Equal(1040, result.Height);
+        Assert.Equal(20, result.Y);
+        Assert.True(result.ShouldCrop);
+    }
+
+    [Fact]
+    public async Task Detect_UsesSpecCompliantSampleWindow()
+    {
+        // Phase 4.1 spec: -ss 60, -t 180, cropdetect round=4.
+        string[]? capturedArgs = null;
+        _processRunner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<Action<string>?>(),
+                    It.IsAny<Action<string>?>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(
+                (
+                    string _,
+                    string[] args,
+                    Action<string>? _,
+                    Action<string>? _,
+                    string? _,
+                    CancellationToken _
+                ) =>
+                {
+                    capturedArgs = args;
+                    return Task.FromResult(
+                        new ProcessResult(0, string.Empty, string.Empty, TimeSpan.Zero)
+                    );
+                }
+            );
+
+        CropDetector detector = new(
+            _options,
+            _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
+            NullLogger<CropDetector>.Instance
+        );
+
+        await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+
+        Assert.NotNull(capturedArgs);
+        // -ss 60
+        int ssIdx = Array.IndexOf(capturedArgs, "-ss");
+        Assert.True(ssIdx >= 0);
+        Assert.Equal("60", capturedArgs[ssIdx + 1]);
+        // -t 180
+        int tIdx = Array.IndexOf(capturedArgs, "-t");
+        Assert.True(tIdx >= 0);
+        Assert.Equal("180", capturedArgs[tIdx + 1]);
+        // cropdetect round=4
+        Assert.Contains(capturedArgs, a => a.Contains("round=4"));
+    }
+
+    [Fact]
+    public async Task Detect_PopulatesSampleFramesAnalyzed_AndConfidence()
+    {
+        // 6 x wide-crop, 2 x no-crop → confidence = 6/8 = 0.75, frames = 6.
+        string[] stderrLines =
+        [
+            "crop=1920:1040:0:20",
+            "crop=1920:1040:0:20",
+            "crop=1920:1040:0:20",
+            "crop=1920:1080:0:0",
+            "crop=1920:1040:0:20",
+            "crop=1920:1040:0:20",
+            "crop=1920:1080:0:0",
+            "crop=1920:1040:0:20",
+        ];
+
+        SetupStderr(stderrLines, exitCode: 0);
+        CropDetector detector = new(
+            _options,
+            _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
+            NullLogger<CropDetector>.Instance
+        );
+
+        Guid videoFileId = Guid.NewGuid();
+        CropResult result = await detector.DetectAsync(
+            "/tmp/in.mkv",
+            videoFileId,
+            CancellationToken.None
+        );
+
+        Assert.Equal(videoFileId, result.SourceVideoFileId);
+        Assert.Equal(6, result.SampleFramesAnalyzed);
+        Assert.Equal(6.0 / 8.0, result.Confidence, 3);
+        Assert.True(result.ShouldCrop);
+    }
+
+    [Fact]
+    public async Task Detect_BelowMinObservations_StillReportsFramesAndConfidence()
+    {
+        // 3 observations of one crop → below the MinObservations gate but
+        // SampleFramesAnalyzed + Confidence should still be filled in for UI.
+        string[] stderrLines = Enumerable.Repeat("crop=1920:1040:0:20", 3).ToArray();
+
+        SetupStderr(stderrLines, exitCode: 0);
+        CropDetector detector = new(
+            _options,
+            _processRunner.Object,
+            TestStorageFactory.CreateLocal(),
+            NullLogger<CropDetector>.Instance
+        );
+
+        CropResult result = await detector.DetectAsync(
+            "/tmp/in.mkv",
+            sourceVideoFileId: null,
+            CancellationToken.None
+        );
+
+        Assert.False(result.ShouldCrop);
+        Assert.Equal(3, result.SampleFramesAnalyzed);
+        Assert.Equal(1.0, result.Confidence);
+    }
+
+    private void SetupStderr(string[] lines, int exitCode)
+    {
+        _processRunner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<Action<string>?>(),
+                    It.IsAny<Action<string>?>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(
+                (
+                    string _,
+                    string[] _,
+                    Action<string>? onStdOut,
+                    Action<string>? onStdErr,
+                    string? _,
+                    CancellationToken _
+                ) =>
+                {
+                    foreach (string line in lines)
+                        onStdErr?.Invoke(line);
+
+                    return Task.FromResult(
+                        new ProcessResult(
+                            exitCode,
+                            string.Empty,
+                            string.Join('\n', lines),
+                            TimeSpan.FromSeconds(1)
+                        )
+                    );
+                }
+            );
+    }
+}

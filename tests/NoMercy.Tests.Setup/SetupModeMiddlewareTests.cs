@@ -1,11 +1,13 @@
-using Microsoft.AspNetCore.DataProtection;
+﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Server;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;
 
@@ -24,8 +26,8 @@ public class SetupModeMiddlewareTests
         dbContext.Database.OpenConnection();
         dbContext.Database.EnsureCreated();
 
-        AuthManager authManager = new(dbContext);
-        return new SetupEndpoints(state, authManager);
+        AuthManager authManager = new(dbContext, new LocalStorageDriver());
+        return new(state, authManager);
     }
 
     private static SetupModeMiddleware CreateMiddleware(
@@ -40,9 +42,11 @@ public class SetupModeMiddlewareTests
 
     private static DefaultHttpContext CreateContext(string path)
     {
-        DefaultHttpContext context = new();
-        context.Request.Path = path;
-        context.Response.Body = new MemoryStream();
+        DefaultHttpContext context = new()
+        {
+            Request = { Path = path },
+            Response = { Body = new MemoryStream() },
+        };
         return context;
     }
 

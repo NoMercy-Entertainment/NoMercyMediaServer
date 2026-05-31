@@ -1,4 +1,4 @@
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 
 namespace NoMercy.Tests.Setup;
 
@@ -319,7 +319,7 @@ public class SetupStateTests
         using CancellationTokenSource cts = new();
 
         Task waitTask = state.WaitForChangeAsync(cts.Token);
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             waitTask.WaitAsync(TimeSpan.FromSeconds(1))
@@ -369,7 +369,7 @@ public class SetupStateTests
         using CancellationTokenSource cts = new();
 
         Task waitTask = state.WaitForSetupCompleteAsync(cts.Token);
-        cts.Cancel();
+        await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             waitTask.WaitAsync(TimeSpan.FromSeconds(1))

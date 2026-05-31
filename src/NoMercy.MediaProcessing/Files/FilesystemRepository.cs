@@ -1,21 +1,26 @@
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Dto;
+using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Files;
 
 /// <summary>
-/// Filesystem operations for the dashboard folder picker. Walks the raw
-/// filesystem so users can browse outside their library scopes when
-/// configuring new mounts.
+/// Filesystem operations for the dashboard folder picker. Uses
+/// <see cref="IStorageDriver"/> directly (not <see cref="IStorage"/>)
+/// because the picker legitimately browses paths the user hasn't added
+/// to any library yet, so the path-guard allowlist on
+/// <see cref="IStorage"/> doesn't apply here.
 /// </summary>
-public class FilesystemRepository
+public class FilesystemRepository(IStorageDriver driver)
 {
+    private readonly IStorageDriver _driver = driver;
+
     public (string? parent, List<DirectoryTree> entries) List(string folder, bool withEmpty)
     {
         if (string.IsNullOrEmpty(folder))
             return (null, []);
 
-        if (!Directory.Exists(folder))
+        if (!_driver.DirectoryExists(folder))
             return (null, []);
 
         List<DirectoryTree> entries;
@@ -45,7 +50,7 @@ public class FilesystemRepository
             Environment.SpecialFolderOption.DoNotVerify
         );
 
-        if (string.IsNullOrEmpty(home) || !Directory.Exists(home))
+        if (string.IsNullOrEmpty(home) || !_driver.DirectoryExists(home))
             home = "/";
 
         (string? parent, List<DirectoryTree> entries) = List(home, withEmpty);
@@ -78,7 +83,7 @@ public class FilesystemRepository
         return entries;
     }
 
-    private static DirectoryTree? BuildRoot(DriveInfo drive)
+    private DirectoryTree? BuildRoot(DriveInfo drive)
     {
         try
         {
@@ -116,18 +121,18 @@ public class FilesystemRepository
         if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             throw new ArgumentException("name contains invalid characters", nameof(name));
 
-        if (!Directory.Exists(parent))
+        if (!_driver.DirectoryExists(parent))
             throw new DirectoryNotFoundException($"parent does not exist: {parent}");
 
         string fullPath = Path.Combine(parent, name);
-        if (Directory.Exists(fullPath))
+        if (_driver.DirectoryExists(fullPath))
             return fullPath;
 
-        Directory.CreateDirectory(fullPath);
+        _driver.CreateDirectory(fullPath);
         return fullPath;
     }
 
-    private static DirectoryTree Build(string parent, string path, bool withEmpty)
+    private DirectoryTree Build(string parent, string path, bool withEmpty)
     {
         // withEmpty intentionally ignored — populating IsEmpty per entry
         // means an extra TopDirectoryOnly enumeration for every child
@@ -137,24 +142,24 @@ public class FilesystemRepository
         return new(parent, path);
     }
 
-    private static IEnumerable<string> EnumerateChildDirectories(string folder)
+    private IEnumerable<string> EnumerateChildDirectories(string folder)
     {
         foreach (
-            string entry in Directory.EnumerateFileSystemEntries(
+            string entry in _driver.EnumerateFileSystemEntries(
                 folder,
                 "*",
                 SearchOption.TopDirectoryOnly
             )
         )
         {
-            if (!Directory.Exists(entry))
+            if (!_driver.DirectoryExists(entry))
                 continue;
             if (IsBrowsable(entry))
                 yield return entry;
         }
     }
 
-    private static bool IsBrowsable(string path)
+    private bool IsBrowsable(string path)
     {
         string name = Path.GetFileName(path);
         if (string.IsNullOrEmpty(name))
@@ -165,20 +170,9 @@ public class FilesystemRepository
         if (name.StartsWith('.') || name.StartsWith('$'))
             return false;
 
-        return !IsHidden(path);
-    }
-
-    private static bool IsHidden(string path)
-    {
-        try
-        {
-            FileAttributes attrs = File.GetAttributes(path);
-            return (attrs & (FileAttributes.Hidden | FileAttributes.System)) != 0;
-        }
-        catch
-        {
-            return false;
-        }
+        // Windows Hidden / System attributes for everything else
+        // (`System Volume Information`, `Recovery`, `Config.Msi`, ...).
+        return !_driver.IsHidden(path);
     }
 
     private static string? ParentOf(string folder)
@@ -188,8 +182,9 @@ public class FilesystemRepository
 
         try
         {
-            DirectoryInfo info = new(folder);
-            return info.Parent?.FullName;
+            return Path.GetDirectoryName(
+                folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            );
         }
         catch
         {

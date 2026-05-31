@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
 
@@ -9,6 +10,7 @@ public class PluginRepository : IPluginRepository
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
     private readonly string _repositoriesFilePath;
+    private readonly IStorage _storage;
     private readonly List<PluginRepositoryInfo> _repositories = [];
     private readonly List<PluginRepositoryEntry> _availablePlugins = [];
     private readonly object _lock = new();
@@ -21,16 +23,23 @@ public class PluginRepository : IPluginRepository
         WriteIndented = true,
     };
 
-    public PluginRepository(HttpClient httpClient, ILogger logger, string pluginsPath)
+    public PluginRepository(
+        HttpClient httpClient,
+        ILogger logger,
+        string pluginsPath,
+        IStorage storage
+    )
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginsPath);
+        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
 
         string configDir = Path.Combine(pluginsPath, "configurations");
-        if (!Directory.Exists(configDir))
+
+        if (!_storage.Exists(configDir))
         {
-            Directory.CreateDirectory(configDir);
+            _storage.CreateDirectory(configDir);
         }
 
         _repositoriesFilePath = Path.Combine(configDir, "repositories.json");
@@ -199,14 +208,17 @@ public class PluginRepository : IPluginRepository
 
     private void LoadRepositoriesFromDisk()
     {
-        if (!File.Exists(_repositoriesFilePath))
+        if (!_storage.Exists(_repositoriesFilePath))
         {
             return;
         }
 
         try
         {
-            string json = File.ReadAllText(_repositoriesFilePath);
+            string json = _storage
+                .ReadAllTextAsync(_repositoriesFilePath, CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
             List<PluginRepositoryInfo>? repos = JsonSerializer.Deserialize<
                 List<PluginRepositoryInfo>
             >(json, JsonOptions);
@@ -230,7 +242,10 @@ public class PluginRepository : IPluginRepository
         try
         {
             string json = JsonSerializer.Serialize(_repositories, JsonOptions);
-            File.WriteAllText(_repositoriesFilePath, json);
+            _storage
+                .WriteAllTextAsync(_repositoriesFilePath, json, CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
         }
         catch (Exception ex)
         {

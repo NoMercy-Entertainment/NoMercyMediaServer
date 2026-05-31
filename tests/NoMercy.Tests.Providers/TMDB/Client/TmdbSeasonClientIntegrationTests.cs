@@ -68,23 +68,27 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         // Assert
         result.Should().NotBeNull();
         result!.Cast.Should().NotBeEmpty();
-        result.Cast.Should().AllSatisfy(cast =>
-        {
-            cast.Name.Should().NotBeNullOrEmpty();
-            cast.Character.Should().NotBeNullOrEmpty();
-            cast.Id.Should().BeGreaterThan(0);
-        });
-        
+        result
+            .Cast.Should()
+            .AllSatisfy(cast =>
+            {
+                cast.Name.Should().NotBeNullOrEmpty();
+                cast.Character.Should().NotBeNullOrEmpty();
+                cast.Id.Should().BeGreaterThan(0);
+            });
+
         result.Crew.Should().NotBeNull();
         // Crew data might be empty for some seasons, so we validate structure if present
         if (result.Crew.Length != 0)
         {
-            result.Crew.Should().AllSatisfy(crew =>
-            {
-                crew.Name.Should().NotBeNullOrEmpty();
-                crew.Job.Should().NotBeNullOrEmpty();
-                crew.Id.Should().BeGreaterThan(0);
-            });
+            result
+                .Crew.Should()
+                .AllSatisfy(crew =>
+                {
+                    crew.Name.Should().NotBeNullOrEmpty();
+                    crew.Job.Should().NotBeNullOrEmpty();
+                    crew.Id.Should().BeGreaterThan(0);
+                });
         }
     }
 
@@ -100,23 +104,27 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         // Assert
         result.Should().NotBeNull();
         result!.Cast.Should().NotBeEmpty();
-        result.Cast.Should().AllSatisfy(cast =>
-        {
-            cast.Name.Should().NotBeNullOrEmpty();
-            cast.Id.Should().BeGreaterThan(0);
-            cast.Roles.Should().NotBeEmpty();
-        });
-        
+        result
+            .Cast.Should()
+            .AllSatisfy(cast =>
+            {
+                cast.Name.Should().NotBeNullOrEmpty();
+                cast.Id.Should().BeGreaterThan(0);
+                cast.Roles.Should().NotBeEmpty();
+            });
+
         result.Crew.Should().NotBeNull();
         // Crew data might be empty for some seasons, so we validate structure if present
         if (result.Crew.Length != 0)
         {
-            result.Crew.Should().AllSatisfy(crew =>
-            {
-                crew.Name.Should().NotBeNullOrEmpty();
-                crew.Id.Should().BeGreaterThan(0);
-                crew.Jobs.Should().NotBeEmpty();
-            });
+            result
+                .Crew.Should()
+                .AllSatisfy(crew =>
+                {
+                    crew.Name.Should().NotBeNullOrEmpty();
+                    crew.Id.Should().BeGreaterThan(0);
+                    crew.Jobs.Should().NotBeEmpty();
+                });
         }
     }
 
@@ -148,16 +156,18 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Id.Should().BeGreaterThan(0);
         result.Posters.Should().NotBeNull();
-        
+
         if (result.Posters.Length != 0)
         {
-            result.Posters.Should().AllSatisfy(poster =>
-            {
-                poster.FilePath.Should().NotBeNullOrEmpty();
-                poster.Width.Should().BeGreaterThan(0);
-                poster.Height.Should().BeGreaterThan(0);
-                poster.VoteAverage.Should().BeGreaterThanOrEqualTo(0);
-            });
+            result
+                .Posters.Should()
+                .AllSatisfy(poster =>
+                {
+                    poster.FilePath.Should().NotBeNullOrEmpty();
+                    poster.Width.Should().BeGreaterThan(0);
+                    poster.Height.Should().BeGreaterThan(0);
+                    poster.VoteAverage.Should().BeGreaterThanOrEqualTo(0);
+                });
         }
     }
 
@@ -173,17 +183,19 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeNull();
-        
+
         // Videos might be empty for some seasons, so only validate if they exist
         if (result.Results.Length != 0)
         {
-            result.Results.Should().AllSatisfy(video =>
-            {
-                video.Key.Should().NotBeNullOrEmpty();
-                video.Name.Should().NotBeNullOrEmpty();
-                video.Type.Should().NotBeNullOrEmpty();
-                video.Site.Should().NotBeNull();
-            });
+            result
+                .Results.Should()
+                .AllSatisfy(video =>
+                {
+                    video.Key.Should().NotBeNullOrEmpty();
+                    video.Name.Should().NotBeNullOrEmpty();
+                    video.Type.Should().NotBeNullOrEmpty();
+                    video.Site.Should().NotBeNull();
+                });
         }
     }
 
@@ -200,13 +212,15 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Id.Should().BeGreaterThan(0);
         result.Translations.Should().NotBeEmpty();
-        
-        result.Translations.Should().AllSatisfy(translation =>
-        {
-            translation.Iso6391.Should().NotBeNullOrEmpty();
-            translation.Iso31661.Should().NotBeNullOrEmpty();
-            translation.EnglishName.Should().NotBeNullOrEmpty();
-        });
+
+        result
+            .Translations.Should()
+            .AllSatisfy(translation =>
+            {
+                translation.Iso6391.Should().NotBeNullOrEmpty();
+                translation.Iso31661.Should().NotBeNullOrEmpty();
+                translation.EnglishName.Should().NotBeNullOrEmpty();
+            });
     }
 
     [Fact]
@@ -237,10 +251,10 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         // Assert
         season1.Should().NotBeNull();
         season1!.SeasonNumber.Should().Be(1);
-        
+
         season2.Should().NotBeNull();
         season2!.SeasonNumber.Should().Be(2);
-        
+
         season1.Id.Should().NotBe(season2.Id);
     }
 
@@ -284,7 +298,8 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         Func<Task> act = async () => await client.Details();
 
         // Assert
-        await act.Should().NotThrowAsync("because invalid season numbers should be handled gracefully");
+        await act.Should()
+            .NotThrowAsync("because invalid season numbers should be handled gracefully");
     }
 
     [Fact]
@@ -297,7 +312,8 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         Func<Task> act = async () => await client.Details();
 
         // Assert
-        await act.Should().NotThrowAsync("because invalid TV show IDs should be handled gracefully");
+        await act.Should()
+            .NotThrowAsync("because invalid TV show IDs should be handled gracefully");
     }
 
     [Fact]
@@ -323,7 +339,7 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         season1.Should().NotBeNull();
         season2.Should().NotBeNull();
         season3.Should().NotBeNull();
-        
+
         season1!.SeasonNumber.Should().Be(1);
         season2!.SeasonNumber.Should().Be(2);
         season3!.SeasonNumber.Should().Be(3);

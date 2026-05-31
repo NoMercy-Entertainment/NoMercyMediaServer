@@ -1,6 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿#nullable disable
 
-#nullable disable
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace NoMercy.Database.Migrations
 {
@@ -10,45 +10,43 @@ namespace NoMercy.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Albums_Libraries_LibraryId",
-                table: "Albums");
+            migrationBuilder.DropForeignKey(name: "FK_Albums_Libraries_LibraryId", table: "Albums");
 
             migrationBuilder.DropForeignKey(
                 name: "FK_Artists_Libraries_LibraryId",
-                table: "Artists");
+                table: "Artists"
+            );
 
             migrationBuilder.DropForeignKey(
                 name: "FK_Collections_Libraries_LibraryId",
-                table: "Collections");
+                table: "Collections"
+            );
 
             migrationBuilder.DropForeignKey(
                 name: "FK_GenreMovie_Movies_MovieId",
-                table: "GenreMovie");
+                table: "GenreMovie"
+            );
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_Movies_Libraries_LibraryId",
-                table: "Movies");
+            migrationBuilder.DropForeignKey(name: "FK_Movies_Libraries_LibraryId", table: "Movies");
 
             migrationBuilder.DropForeignKey(
                 name: "FK_ReleaseGroups_Libraries_LibraryId",
-                table: "ReleaseGroups");
+                table: "ReleaseGroups"
+            );
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_Tvs_Libraries_LibraryId",
-                table: "Tvs");
+            migrationBuilder.DropForeignKey(name: "FK_Tvs_Libraries_LibraryId", table: "Tvs");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_UserData_Movies_MovieId",
-                table: "UserData");
+            migrationBuilder.DropForeignKey(name: "FK_UserData_Movies_MovieId", table: "UserData");
 
             migrationBuilder.DropForeignKey(
                 name: "FK_UserData_VideoFiles_VideoFileId",
-                table: "UserData");
+                table: "UserData"
+            );
 
             migrationBuilder.DropForeignKey(
                 name: "FK_VideoFiles_Movies_MovieId",
-                table: "VideoFiles");
+                table: "VideoFiles"
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Albums_Libraries_LibraryId",
@@ -56,7 +54,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Artists_Libraries_LibraryId",
@@ -64,7 +63,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Collections_Libraries_LibraryId",
@@ -72,7 +72,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_GenreMovie_Movies_MovieId",
@@ -80,7 +81,8 @@ namespace NoMercy.Database.Migrations
                 column: "MovieId",
                 principalTable: "Movies",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Movies_Libraries_LibraryId",
@@ -88,7 +90,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_ReleaseGroups_Libraries_LibraryId",
@@ -96,7 +99,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Tvs_Libraries_LibraryId",
@@ -104,7 +108,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_UserData_Movies_MovieId",
@@ -112,7 +117,8 @@ namespace NoMercy.Database.Migrations
                 column: "MovieId",
                 principalTable: "Movies",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_UserData_VideoFiles_VideoFileId",
@@ -120,7 +126,8 @@ namespace NoMercy.Database.Migrations
                 column: "VideoFileId",
                 principalTable: "VideoFiles",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_VideoFiles_Movies_MovieId",
@@ -128,51 +135,50 @@ namespace NoMercy.Database.Migrations
                 column: "MovieId",
                 principalTable: "Movies",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Cascade
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Albums_Libraries_LibraryId",
-                table: "Albums");
+            migrationBuilder.DropForeignKey(name: "FK_Albums_Libraries_LibraryId", table: "Albums");
 
             migrationBuilder.DropForeignKey(
                 name: "FK_Artists_Libraries_LibraryId",
-                table: "Artists");
+                table: "Artists"
+            );
 
             migrationBuilder.DropForeignKey(
                 name: "FK_Collections_Libraries_LibraryId",
-                table: "Collections");
+                table: "Collections"
+            );
 
             migrationBuilder.DropForeignKey(
                 name: "FK_GenreMovie_Movies_MovieId",
-                table: "GenreMovie");
+                table: "GenreMovie"
+            );
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_Movies_Libraries_LibraryId",
-                table: "Movies");
+            migrationBuilder.DropForeignKey(name: "FK_Movies_Libraries_LibraryId", table: "Movies");
 
             migrationBuilder.DropForeignKey(
                 name: "FK_ReleaseGroups_Libraries_LibraryId",
-                table: "ReleaseGroups");
+                table: "ReleaseGroups"
+            );
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_Tvs_Libraries_LibraryId",
-                table: "Tvs");
+            migrationBuilder.DropForeignKey(name: "FK_Tvs_Libraries_LibraryId", table: "Tvs");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_UserData_Movies_MovieId",
-                table: "UserData");
+            migrationBuilder.DropForeignKey(name: "FK_UserData_Movies_MovieId", table: "UserData");
 
             migrationBuilder.DropForeignKey(
                 name: "FK_UserData_VideoFiles_VideoFileId",
-                table: "UserData");
+                table: "UserData"
+            );
 
             migrationBuilder.DropForeignKey(
                 name: "FK_VideoFiles_Movies_MovieId",
-                table: "VideoFiles");
+                table: "VideoFiles"
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Albums_Libraries_LibraryId",
@@ -180,7 +186,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                onDelete: ReferentialAction.Restrict
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Artists_Libraries_LibraryId",
@@ -188,7 +195,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                onDelete: ReferentialAction.Restrict
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Collections_Libraries_LibraryId",
@@ -196,7 +204,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                onDelete: ReferentialAction.Restrict
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_GenreMovie_Movies_MovieId",
@@ -204,7 +213,8 @@ namespace NoMercy.Database.Migrations
                 column: "MovieId",
                 principalTable: "Movies",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                onDelete: ReferentialAction.Restrict
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Movies_Libraries_LibraryId",
@@ -212,7 +222,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                onDelete: ReferentialAction.Restrict
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_ReleaseGroups_Libraries_LibraryId",
@@ -220,7 +231,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                onDelete: ReferentialAction.Restrict
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Tvs_Libraries_LibraryId",
@@ -228,7 +240,8 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId",
                 principalTable: "Libraries",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                onDelete: ReferentialAction.Restrict
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_UserData_Movies_MovieId",
@@ -236,7 +249,8 @@ namespace NoMercy.Database.Migrations
                 column: "MovieId",
                 principalTable: "Movies",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                onDelete: ReferentialAction.Restrict
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_UserData_VideoFiles_VideoFileId",
@@ -244,7 +258,8 @@ namespace NoMercy.Database.Migrations
                 column: "VideoFileId",
                 principalTable: "VideoFiles",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                onDelete: ReferentialAction.Restrict
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_VideoFiles_Movies_MovieId",
@@ -252,7 +267,8 @@ namespace NoMercy.Database.Migrations
                 column: "MovieId",
                 principalTable: "Movies",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                onDelete: ReferentialAction.Restrict
+            );
         }
     }
 }

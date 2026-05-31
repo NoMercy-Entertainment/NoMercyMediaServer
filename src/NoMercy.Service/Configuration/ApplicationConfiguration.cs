@@ -1,24 +1,26 @@
-using Asp.Versioning.ApiExplorer;
+﻿using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.FileProviders;
-using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
-using NoMercy.Networking;
+using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.CoverArt.Client;
+using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.Helpers;
+using NoMercy.Providers.NoMercy.Client;
+using NoMercy.Providers.TMDB.Client;
 using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Configuration.Swagger;
 using NoMercy.Service.Extensions;
-using NoMercy.Setup;
+using NoMercy.Storage;
 using NoMercyQueue.Workers;
-using Serilog.Events;
 
 namespace NoMercy.Service.Configuration;
 
@@ -32,6 +34,12 @@ public static class ApplicationConfiguration
         HttpClientProvider.Initialize(
             app.ApplicationServices.GetRequiredService<IHttpClientFactory>()
         );
+        IStorage storage = app.ApplicationServices.GetRequiredService<IStorage>();
+        CacheController.Initialize(storage);
+        TmdbImageClient.Initialize(storage);
+        NoMercyImageClient.Initialize(storage);
+        FanArtImageClient.Initialize(storage);
+        CoverArtCoverArtClient.Initialize(storage);
         app.ApplicationServices.InitializeSignalREventHandlers();
 
         ConfigureLocalization(app);
@@ -48,6 +56,10 @@ public static class ApplicationConfiguration
         CronWorker cronWorker = app.ApplicationServices.GetRequiredService<CronWorker>();
         cronWorker.RegisterJobWithSchedule<CertificateRenewalCronJob>(
             "certificate-renewal",
+            app.ApplicationServices
+        );
+        cronWorker.RegisterJobWithSchedule<ActivityLogRetentionCronJob>(
+            "activity-log-retention",
             app.ApplicationServices
         );
 
@@ -101,6 +113,11 @@ public static class ApplicationConfiguration
             "album-palette-job",
             app.ApplicationServices
         );
+
+        cronWorker.RegisterJobWithSchedule<DeviceDropRuleCronJob>(
+            "device-drop-rule-job",
+            app.ApplicationServices
+        );
     }
 
     private static void ConfigureLocalization(IApplicationBuilder app)
@@ -125,6 +142,7 @@ public static class ApplicationConfiguration
         }
 
         app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+        app.UseMiddleware<EncoderRuntimeExceptionMiddleware>();
 
         if (Certificate.HasValidCertificate())
         {
@@ -171,6 +189,7 @@ public static class ApplicationConfiguration
         app.UseMiddleware<TokenParamAuthMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseMiddleware<HmacValidationMiddleware>();
         app.UseMiddleware<AccessLogMiddleware>();
         app.UseMiddleware<DynamicStaticFilesMiddleware>();
 
@@ -255,8 +274,28 @@ public static class ApplicationConfiguration
                 }
             );
 
+            endpoints.MapHub<DrivesHub>(
+                "/drivesHub",
+                options =>
+                {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.CloseOnAuthenticationExpiration = true;
+                }
+            );
+
             endpoints.MapHub<DeviceHub>(
                 "/deviceHub",
+                options =>
+                {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.CloseOnAuthenticationExpiration = true;
+                }
+            );
+
+            endpoints.MapHub<LiveTranscodeHub>(
+                "/liveTranscodeHub",
                 options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
@@ -294,10 +333,17 @@ public static class ApplicationConfiguration
     {
         try
         {
+            IStorageDriver storageDriver =
+                app.ApplicationServices.GetRequiredService<IStorageDriver>();
             using MediaContext mediaContext = new();
+            // Folders now reference a driver instance + sub-path; the
+            // middleware resolves the actual backend per-request through
+            // IStorageFactory, so we register every folder unconditionally
+            // (DirectoryExists check would require materialising IStorage
+            // here, which we don't have access to in the sync startup path).
             List<Folder> folderLibraries = mediaContext.Folders.ToList();
             foreach (Folder folder in folderLibraries)
-                RegisterFolderSafe(folder);
+                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
 
             // Refresh the cached folder IDs so AccessLogMiddleware allows
             // requests through before the background seeder finishes.
@@ -310,62 +356,10 @@ public static class ApplicationConfiguration
                 .GetAwaiter()
                 .GetResult();
         }
-        catch (Microsoft.Data.Sqlite.SqliteException)
+        catch (SqliteException)
         {
             // Database not yet initialized (fresh install) — folders will be
             // registered when libraries are created after seeding completes.
-        }
-    }
-
-    /// <summary>
-    /// Register a folder with the static-files middleware, surviving any
-    /// "path doesn't exist right now" failure. PhysicalFileProvider's ctor
-    /// throws DirectoryNotFoundException if the path is missing — common on
-    /// servers whose libraries live on NFS / SMB mounts that may not be
-    /// ready at boot. The previous startup code silently skipped those rows
-    /// via Directory.Exists(...), which meant a transiently-unmounted share
-    /// produced 404s for every file inside it for the entire process
-    /// lifetime, with no log entry to point at the cause. Log + continue so
-    /// the operator can see exactly which folders weren't registered and
-    /// why.
-    /// </summary>
-    private static void RegisterFolderSafe(Folder folder)
-    {
-        try
-        {
-            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
-        }
-        catch (DirectoryNotFoundException ex)
-        {
-            Logger.App(
-                $"[FolderRegistration] folder {folder.Id} not registered — path '{folder.Path}' does not exist: {ex.Message}",
-                LogEventLevel.Warning
-            );
-        }
-        catch (IOException ex)
-        {
-            Logger.App(
-                $"[FolderRegistration] folder {folder.Id} not registered — IO error on '{folder.Path}': {ex.Message}",
-                LogEventLevel.Warning
-            );
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            Logger.App(
-                $"[FolderRegistration] folder {folder.Id} not registered — access denied on '{folder.Path}': {ex.Message}",
-                LogEventLevel.Warning
-            );
-        }
-        catch (ArgumentException ex)
-        {
-            // PhysicalFileProvider throws ArgumentException when the path is
-            // null, empty, or not absolute. Test fixtures and partially-set-up
-            // dev databases sometimes contain folder rows with relative or
-            // empty paths; skip them instead of crashing the host.
-            Logger.App(
-                $"[FolderRegistration] folder {folder.Id} not registered — invalid path '{folder.Path}': {ex.Message}",
-                LogEventLevel.Warning
-            );
         }
     }
 }

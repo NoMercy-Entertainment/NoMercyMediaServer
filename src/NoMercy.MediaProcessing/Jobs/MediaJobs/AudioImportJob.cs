@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -11,7 +11,6 @@ using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.MediaProcessing.Recordings;
 using NoMercy.MediaProcessing.ReleaseGroups;
 using NoMercy.MediaProcessing.Releases;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
@@ -494,13 +493,19 @@ public class AudioImportJob : AbstractMusicFolderJob
         musicGenreManager = new(musicGenreRepository);
 
         ReleaseRepository releaseRepository = new(_mediaContext);
-        releaseManager = new(releaseRepository, musicGenreRepository);
+        releaseManager = new(releaseRepository, musicGenreRepository, StorageFactory);
 
         ArtistRepository artistRepository = new(_mediaContext);
-        artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
+        artistManager = new(artistRepository, musicGenreRepository, jobDispatcher, StorageFactory);
 
         RecordingRepository recordingRepository = new(_mediaContext);
-        recordingManager = new(recordingRepository, musicGenreRepository, artistRepository);
+        recordingManager = new(
+            recordingRepository,
+            musicGenreRepository,
+            artistRepository,
+            StorageDriver,
+            StorageFactory
+        );
 
         albumLibrary = _mediaContext
             .Libraries.Where(f => f.Id == LibraryId)
@@ -515,7 +520,7 @@ public class AudioImportJob : AbstractMusicFolderJob
 
     private async IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)> GetAudioFiles()
     {
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(StorageDriver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             .EnableFileListing()

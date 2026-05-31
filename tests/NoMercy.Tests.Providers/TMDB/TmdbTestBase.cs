@@ -1,6 +1,6 @@
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Client.Mocks;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 
 namespace NoMercy.Tests.Providers.TMDB;
 
@@ -15,7 +15,7 @@ public abstract class TmdbTestBase : IDisposable
     protected TmdbTestBase()
     {
         MockDataProvider = new();
-        
+
         // Configure TMDB API token for tests
         SetupTmdbAuthentication();
     }
@@ -29,7 +29,7 @@ public abstract class TmdbTestBase : IDisposable
     /// Creates an invalid movie ID for testing
     /// </summary>
     protected const int InvalidMovieId = 999999;
-    
+
     /// <summary>
     /// Creates a valid TV show ID for testing
     /// </summary>
@@ -39,17 +39,17 @@ public abstract class TmdbTestBase : IDisposable
     /// Creates a valid season number for testing
     /// </summary>
     protected const int ValidSeasonNumber = 1; // Season 1 with complete cast/crew data
-    
+
     /// <summary>
     /// Creates a valid episode number for testing
     /// </summary>
     protected const int ValidEpisodeNumber = 1;
-    
+
     /// <summary>
     /// Creates a valid person ID for testing
     /// </summary>
     protected const int ValidPersonId = 6193; // Leonardo DiCaprio
-    
+
     /// <summary>
     /// Creates a valid collection ID for testing
     /// </summary>
@@ -58,7 +58,8 @@ public abstract class TmdbTestBase : IDisposable
     /// <summary>
     /// TMDB API Token from NoMercy API endpoint
     /// </summary>
-    private const string TmdbApiToken = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJlZDNiZjg2MGFkZWYwNTM3NzgzZTRhYmVlODZkNjVhZiIsInN1YiI6IjViNTE5MWQ3MGUwYTI2MjU5OTAwZmY0MyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.QndOAaK4WKspNYRhVxp0yq1-plwoJR7iBcwQSn0NQJA";
+    private const string TmdbApiToken =
+        "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJlZDNiZjg2MGFkZWYwNTM3NzgzZTRhYmVlODZkNjVhZiIsInN1YiI6IjViNTE5MWQ3MGUwYTI2MjU5OTAwZmY0MyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.QndOAaK4WKspNYRhVxp0yq1-plwoJR7iBcwQSn0NQJA";
 
     /// <summary>
     /// Sets up TMDB authentication for test execution
@@ -75,7 +76,10 @@ public abstract class TmdbTestBase : IDisposable
     /// <param name="movieId">The movie ID to use</param>
     /// <param name="language">The language to use (default: en-US)</param>
     /// <returns>A TmdbMovieClient instance with mocked data</returns>
-    protected TmdbMovieClient CreateMockMovieClient(int movieId = ValidMovieId, string language = "en-US")
+    protected TmdbMovieClient CreateMockMovieClient(
+        int movieId = ValidMovieId,
+        string language = "en-US"
+    )
     {
         return new(movieId, null, MockDataProvider, language);
     }
@@ -87,11 +91,14 @@ public abstract class TmdbTestBase : IDisposable
     /// <param name="movieId">The movie ID to use</param>
     /// <param name="language">The language to use (default: en-US)</param>
     /// <returns>A TmdbMovieClient instance without mocking</returns>
-    protected TmdbMovieClient CreateRealMovieClient(int movieId = ValidMovieId, string language = "en-US")
+    protected TmdbMovieClient CreateRealMovieClient(
+        int movieId = ValidMovieId,
+        string language = "en-US"
+    )
     {
         return new(movieId, null, null, language);
     }
-    
+
     /// <summary>
     /// Creates a TmdbSearchClient for testing
     /// </summary>
@@ -101,7 +108,7 @@ public abstract class TmdbTestBase : IDisposable
         // For now, return a real client - we can add mocking later if needed
         return new();
     }
-    
+
     /// <summary>
     /// Creates a real TmdbSearchClient for integration testing
     /// Note: This will make real API calls
@@ -111,18 +118,21 @@ public abstract class TmdbTestBase : IDisposable
     {
         return new();
     }
-    
+
     /// <summary>
     /// Creates a TmdbTvClient for testing
     /// </summary>
     /// <param name="tvId">The TV show ID to use</param>
     /// <param name="language">The language to use (default: en-US)</param>
     /// <returns>A TmdbTvClient instance</returns>
-    protected static TmdbTvClient CreateMockTvClient(int tvId = ValidTvShowId, string language = "en-US")
+    protected static TmdbTvClient CreateMockTvClient(
+        int tvId = ValidTvShowId,
+        string language = "en-US"
+    )
     {
         return new(tvId, null, language);
     }
-    
+
     /// <summary>
     /// Creates a real TmdbTvClient for integration testing
     /// Note: This will make real API calls
@@ -130,15 +140,19 @@ public abstract class TmdbTestBase : IDisposable
     /// <param name="tvId">The TV show ID to use</param>
     /// <param name="language">The language to use (default: en-US)</param>
     /// <returns>A TmdbTvClient instance</returns>
-    protected static TmdbTvClient CreateRealTvClient(int tvId = ValidTvShowId, string language = "en-US")
+    protected static TmdbTvClient CreateRealTvClient(
+        int tvId = ValidTvShowId,
+        string language = "en-US"
+    )
     {
         return new(tvId, null, language);
     }
 
     public virtual void Dispose()
     {
-        if (Disposed) return;
-        
+        if (Disposed)
+            return;
+
         Disposed = true;
         GC.SuppressFinalize(this);
     }

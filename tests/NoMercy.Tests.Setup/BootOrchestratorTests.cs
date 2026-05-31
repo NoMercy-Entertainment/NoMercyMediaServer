@@ -1,8 +1,11 @@
-using Microsoft.AspNetCore.DataProtection;
+﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Boot;
+using NoMercy.Setup.Server;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;
 
@@ -23,13 +26,13 @@ public class BootOrchestratorTests : IDisposable
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
         optionsBuilder.UseSqlite("Data Source=:memory:");
-        _appContext = new AppDbContext(optionsBuilder.Options);
+        _appContext = new(optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new AuthManager(_appContext);
-        _setupState = new SetupState();
-        _orchestrator = new BootOrchestrator(_setupState, _authManager);
+        _authManager = new(_appContext, new LocalStorageDriver());
+        _setupState = new();
+        _orchestrator = new(_setupState, _authManager);
     }
 
     public void Dispose()

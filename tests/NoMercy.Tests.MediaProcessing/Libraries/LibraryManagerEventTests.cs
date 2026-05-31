@@ -1,12 +1,15 @@
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
-using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Factory;
 
 namespace NoMercy.Tests.MediaProcessing.Libraries;
 
@@ -20,11 +23,16 @@ public class LibraryManagerEventTests : IDisposable
         string dbName = Guid.NewGuid().ToString();
         _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
-        _connection.CreateFunction("normalize_search", (string? input) =>
-            input?.NormalizeSearch() ?? string.Empty);
+        _connection.CreateFunction(
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch() ?? string.Empty
+        );
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(_connection, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .UseSqlite(
+                _connection,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            )
             .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
 
@@ -44,20 +52,26 @@ public class LibraryManagerEventTests : IDisposable
         InMemoryEventBus bus = new();
         List<IEvent> received = [];
 
-        bus.Subscribe<LibraryScanStartedEvent>((e, _) =>
-        {
-            received.Add(e);
-            return Task.CompletedTask;
-        });
-        bus.Subscribe<LibraryScanCompletedEvent>((e, _) =>
-        {
-            received.Add(e);
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<LibraryScanStartedEvent>(
+            (e, _) =>
+            {
+                received.Add(e);
+                return Task.CompletedTask;
+            }
+        );
+        bus.Subscribe<LibraryScanCompletedEvent>(
+            (e, _) =>
+            {
+                received.Add(e);
+                return Task.CompletedTask;
+            }
+        );
 
-        LibraryRepository repo = new(_context);
+        IStorageDriver driver = new LocalStorageDriver();
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
 
         await manager.ProcessLibrary(Ulid.NewUlid());
 
@@ -70,29 +84,37 @@ public class LibraryManagerEventTests : IDisposable
         InMemoryEventBus bus = new();
         List<IEvent> received = [];
 
-        bus.Subscribe<LibraryScanStartedEvent>((e, _) =>
-        {
-            received.Add(e);
-            return Task.CompletedTask;
-        });
-        bus.Subscribe<LibraryScanCompletedEvent>((e, _) =>
-        {
-            received.Add(e);
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<LibraryScanStartedEvent>(
+            (e, _) =>
+            {
+                received.Add(e);
+                return Task.CompletedTask;
+            }
+        );
+        bus.Subscribe<LibraryScanCompletedEvent>(
+            (e, _) =>
+            {
+                received.Add(e);
+                return Task.CompletedTask;
+            }
+        );
 
         Ulid libraryId = Ulid.NewUlid();
-        _context.Libraries.Add(new()
-        {
-            Id = libraryId,
-            Title = "Test Movies",
-            Type = "movie"
-        });
+        _context.Libraries.Add(
+            new()
+            {
+                Id = libraryId,
+                Title = "Test Movies",
+                Type = "movie",
+            }
+        );
         await _context.SaveChangesAsync();
 
-        LibraryRepository repo = new(_context);
+        IStorageDriver driver = new LocalStorageDriver();
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
 
         await manager.ProcessLibrary(libraryId);
 
@@ -113,17 +135,21 @@ public class LibraryManagerEventTests : IDisposable
     public async Task ProcessLibrary_WithoutEventBus_DoesNotThrow()
     {
         Ulid libraryId = Ulid.NewUlid();
-        _context.Libraries.Add(new()
-        {
-            Id = libraryId,
-            Title = "No Events Library",
-            Type = "movie"
-        });
+        _context.Libraries.Add(
+            new()
+            {
+                Id = libraryId,
+                Title = "No Events Library",
+                Type = "movie",
+            }
+        );
         await _context.SaveChangesAsync();
 
-        LibraryRepository repo = new(_context);
+        IStorageDriver driver = new LocalStorageDriver();
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory);
 
         await manager.ProcessLibrary(libraryId);
     }
@@ -134,24 +160,30 @@ public class LibraryManagerEventTests : IDisposable
         InMemoryEventBus bus = new();
         LibraryScanCompletedEvent? completedEvent = null;
 
-        bus.Subscribe<LibraryScanCompletedEvent>((e, _) =>
-        {
-            completedEvent = e;
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<LibraryScanCompletedEvent>(
+            (e, _) =>
+            {
+                completedEvent = e;
+                return Task.CompletedTask;
+            }
+        );
 
         Ulid libraryId = Ulid.NewUlid();
-        _context.Libraries.Add(new()
-        {
-            Id = libraryId,
-            Title = "Duration Test",
-            Type = "tv"
-        });
+        _context.Libraries.Add(
+            new()
+            {
+                Id = libraryId,
+                Title = "Duration Test",
+                Type = "tv",
+            }
+        );
         await _context.SaveChangesAsync();
 
-        LibraryRepository repo = new(_context);
+        IStorageDriver driver = new LocalStorageDriver();
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
 
         await manager.ProcessLibrary(libraryId);
 
@@ -166,24 +198,30 @@ public class LibraryManagerEventTests : IDisposable
         InMemoryEventBus bus = new();
         LibraryScanStartedEvent? startedEvent = null;
 
-        bus.Subscribe<LibraryScanStartedEvent>((e, _) =>
-        {
-            startedEvent = e;
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<LibraryScanStartedEvent>(
+            (e, _) =>
+            {
+                startedEvent = e;
+                return Task.CompletedTask;
+            }
+        );
 
         Ulid libraryId = Ulid.NewUlid();
-        _context.Libraries.Add(new()
-        {
-            Id = libraryId,
-            Title = "Metadata Test",
-            Type = "movie"
-        });
+        _context.Libraries.Add(
+            new()
+            {
+                Id = libraryId,
+                Title = "Metadata Test",
+                Type = "movie",
+            }
+        );
         await _context.SaveChangesAsync();
 
-        LibraryRepository repo = new(_context);
+        IStorageDriver driver = new LocalStorageDriver();
+        StorageFactory storageFactory = new(driver, NullLogger<StorageFactory>.Instance);
+        LibraryRepository repo = new(_context, driver);
         JobDispatcher dispatcher = new();
-        LibraryManager manager = new(repo, dispatcher, _context, bus);
+        LibraryManager manager = new(repo, dispatcher, _context, driver, storageFactory, bus);
 
         await manager.ProcessLibrary(libraryId);
 

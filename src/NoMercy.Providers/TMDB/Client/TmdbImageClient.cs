@@ -1,6 +1,7 @@
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -10,6 +11,19 @@ namespace NoMercy.Providers.TMDB.Client;
 
 public abstract class TmdbImageClient : TmdbBaseClient
 {
+    private static IStorage? _storage;
+
+    public static void Initialize(IStorage storage)
+    {
+        _storage = storage;
+    }
+
+    private static IStorage Storage =>
+        _storage
+        ?? throw new InvalidOperationException(
+            "TmdbImageClient has not been initialized. Call TmdbImageClient.Initialize() at startup."
+        );
+
     public static Task<Image<Rgba32>?>? Download(string? path, bool? download = true)
     {
         try
@@ -43,11 +57,11 @@ public abstract class TmdbImageClient : TmdbBaseClient
                 bool isSvg = path.EndsWith(".svg");
                 string folder = Path.Join(AppFiles.ImagesPath, "original");
 
-                if (!Directory.Exists(folder))
-                    Directory.CreateDirectory(folder);
+                IStorage storage = Storage;
+                await storage.CreateDirectoryAsync(folder, CancellationToken.None);
 
                 string filePath = Path.Join(folder, path.Replace("/", ""));
-                if (File.Exists(filePath))
+                if (await storage.ExistsAsync(filePath, CancellationToken.None))
                     return isSvg ? null : await Image.LoadAsync<Rgba32>(filePath);
 
                 HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.TmdbImage);
@@ -64,10 +78,11 @@ public abstract class TmdbImageClient : TmdbBaseClient
                     return isSvg ? null : Image.Load<Rgba32>(contentStream);
                 }
 
-                if (!File.Exists(filePath))
-                    await File.WriteAllBytesAsync(
+                if (!await storage.ExistsAsync(filePath, CancellationToken.None))
+                    await storage.WriteAsync(
                         filePath,
-                        await response.Content.ReadAsByteArrayAsync()
+                        await response.Content.ReadAsByteArrayAsync(),
+                        CancellationToken.None
                     );
 
                 try

@@ -9,7 +9,7 @@ internal static class StopCommand
         Command command = new("stop") { Description = "Stop the server" };
 
         command.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);

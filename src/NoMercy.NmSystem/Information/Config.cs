@@ -36,7 +36,7 @@ public static class Config
     public static int? StunPublicPort { get; set; }
     public static int StunPort => InternalServerPort + 1;
 
-    private static int? _internalServerPort = null;
+    private static int? _internalServerPort;
 
     public static int InternalServerPort
     {
@@ -44,7 +44,7 @@ public static class Config
         set => _internalServerPort = value;
     }
 
-    private static int? _externalServerPort = null;
+    private static int? _externalServerPort;
 
     public static int ExternalServerPort
     {
@@ -52,7 +52,7 @@ public static class Config
         set => _externalServerPort = value;
     }
 
-    private static string? _managementPipeName = null;
+    private static string? _managementPipeName;
 
     public static string ManagementPipeName
     {
@@ -75,6 +75,29 @@ public static class Config
     public static KeyValuePair<string, int> ImportWorkers { get; set; } = new("import", 2);
     public static KeyValuePair<string, int> ExtrasWorkers { get; set; } = new("extras", 4);
     public static KeyValuePair<string, int> EncoderWorkers { get; set; } = new("encoder", 1);
+
+    // encoder-task is superseded by encoder-gpu + encoder-cpu (Task 2 resource scheduler).
+    // Kept for backward compatibility with any persisted queue-state that still references it.
+    public static KeyValuePair<string, int> EncoderTaskWorkers { get; set; } =
+        new("encoder-task", 0);
+
+    // Worker count is the upper bound on concurrent encodes. The actual cap is
+    // the lower of (a) this number, (b) ResourceBudget's static semaphores
+    // (NVENC session count, CPU thread budget), and (c) the live-headroom gate
+    // (system CPU + GPU encode utilization + free memory) — see
+    // ResourceBudgetOptions. Default to 1 so a fresh install never pegs the
+    // host; users with capable hardware can raise it via SetWorkerCount.
+    public static KeyValuePair<string, int> GpuEncoderWorkers { get; set; } = new("encoder-gpu", 1);
+
+    public static KeyValuePair<string, int> CpuEncoderWorkers { get; set; } = new("encoder-cpu", 1);
+
+    // Live-headroom thresholds consulted by ResourceBudget.TryAcquire before
+    // granting a new encoder lease. Each value left at 0 disables that signal.
+    // Defaults leave room for the user's other work — they don't max the box.
+    public static double EncoderCpuHeadroomPercent { get; set; } = 75.0;
+    public static double EncoderGpuHeadroomPercent { get; set; } = 80.0;
+    public static long EncoderMinFreeMemoryMb { get; set; } = 1024;
+
     public static KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 3);
     public static KeyValuePair<string, int> FileWorkers { get; set; } = new("file", 2);

@@ -68,6 +68,8 @@ public class EfQueueContextAdapter : IQueueContext
                 ReservedAt = job.ReservedAt,
                 AvailableAt = job.AvailableAt,
                 CreatedAt = job.CreatedAt,
+                ParentJobId = job.ParentJobId,
+                GroupTag = job.GroupTag,
             };
             context.QueueJobs.Add(entity);
             context.SaveChanges();
@@ -176,6 +178,27 @@ public class EfQueueContextAdapter : IQueueContext
         }
     }
 
+    public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
+    {
+        QueueContext context = AcquireContext();
+        try
+        {
+            QueueJob? entity = context.QueueJobs.Find(jobId);
+            if (entity == null)
+                return;
+
+            entity.Payload = newPayload;
+            entity.ReservedAt = null;
+            entity.AvailableAt = availableAt;
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
+    }
+
     public void ResetAllReservedJobs()
     {
         QueueContext context = AcquireContext();
@@ -187,6 +210,23 @@ public class EfQueueContextAdapter : IQueueContext
             }
             context.SaveChanges();
             context.ChangeTracker.Clear();
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
+    }
+
+    public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc)
+    {
+        QueueContext context = AcquireContext();
+        try
+        {
+            List<QueueJob> rows = context
+                .QueueJobs.AsNoTracking()
+                .Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc)
+                .ToList();
+            return rows.Select(ToModel).ToList();
         }
         finally
         {
@@ -395,6 +435,22 @@ public class EfQueueContextAdapter : IQueueContext
         // No shared context to dispose when using per-operation contexts
     }
 
+    public bool IsParentFailed(int parentJobId)
+    {
+        QueueContext context = AcquireContext();
+        try
+        {
+            string parentPayloadPrefix = $"\"Id\":{parentJobId},";
+            return context
+                .FailedJobs.AsNoTracking()
+                .Any(f => f.Payload.Contains(parentPayloadPrefix));
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
+    }
+
     private static QueueJobModel ToModel(QueueJob entity)
     {
         return new()
@@ -407,6 +463,8 @@ public class EfQueueContextAdapter : IQueueContext
             ReservedAt = entity.ReservedAt,
             AvailableAt = entity.AvailableAt,
             CreatedAt = entity.CreatedAt,
+            ParentJobId = entity.ParentJobId,
+            GroupTag = entity.GroupTag,
         };
     }
 

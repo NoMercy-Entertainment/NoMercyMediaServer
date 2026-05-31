@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
@@ -333,9 +332,7 @@ public class RecommendationService
                 Overview = c.Overview,
                 Poster = c.Poster,
                 Backdrop = c.Backdrop,
-                ColorPalette = !string.IsNullOrEmpty(c.ColorPalette)
-                    ? JsonConvert.DeserializeObject<IColorPalettes>(c.ColorPalette)
-                    : null,
+                ColorPalette = IColorPalettes.FromJsonOrNull(c.ColorPalette),
                 Type = c.MediaType,
                 Score = ScoreCandidate(c, profile, combinedGenreMap),
                 SourceCount = c.SourceCount,
@@ -440,9 +437,7 @@ public class RecommendationService
         string? rawPalette = isMovie
             ? sourceMoviesTask.Result.ColorPalette
             : sourceTvsTask.Result.ColorPalette;
-        IColorPalettes? colorPalette = !string.IsNullOrEmpty(rawPalette)
-            ? JsonConvert.DeserializeObject<IColorPalettes>(rawPalette)
-            : null;
+        IColorPalettes? colorPalette = IColorPalettes.FromJsonOrNull(rawPalette);
 
         if (isMovie)
         {

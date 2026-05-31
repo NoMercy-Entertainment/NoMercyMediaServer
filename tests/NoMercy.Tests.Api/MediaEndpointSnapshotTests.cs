@@ -22,9 +22,11 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
 
     private static void AssertJsonHasProperty(JsonElement element, string propertyName) =>
-        Assert.True(element.TryGetProperty(propertyName, out _),
-            $"Expected JSON property '{propertyName}' not found. " +
-            $"Properties: [{string.Join(", ", EnumerateProperties(element))}]");
+        Assert.True(
+            element.TryGetProperty(propertyName, out _),
+            $"Expected JSON property '{propertyName}' not found. "
+                + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
+        );
 
     private static IEnumerable<string> EnumerateProperties(JsonElement element)
     {
@@ -47,14 +49,16 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         // Endpoints return either custom StatusResponseDto (status, message)
         // or ASP.NET ProblemDetails (type, title, status, detail)
-        bool hasCustomStatus = root.TryGetProperty("message", out _)
-                               && root.TryGetProperty("status", out _);
-        bool hasProblemDetails = root.TryGetProperty("detail", out _)
-                                 && root.TryGetProperty("status", out _);
+        bool hasCustomStatus =
+            root.TryGetProperty("message", out _) && root.TryGetProperty("status", out _);
+        bool hasProblemDetails =
+            root.TryGetProperty("detail", out _) && root.TryGetProperty("status", out _);
 
-        Assert.True(hasCustomStatus || hasProblemDetails,
-            $"Expected status response shape. " +
-            $"Properties: [{string.Join(", ", EnumerateProperties(root))}]");
+        Assert.True(
+            hasCustomStatus || hasProblemDetails,
+            $"Expected status response shape. "
+                + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
+        );
     }
 
     // =========================================================================
@@ -69,7 +73,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -88,10 +93,12 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
         // In test env without TMDB API key, the fallback TMDB call may throw 500
         Assert.True(
-            response.StatusCode is HttpStatusCode.NotFound
-                or HttpStatusCode.OK
-                or HttpStatusCode.InternalServerError,
-            $"Expected NotFound, OK (TMDB fallback), or 500, got {(int)response.StatusCode}");
+            response.StatusCode
+                is HttpStatusCode.NotFound
+                    or HttpStatusCode.OK
+                    or HttpStatusCode.InternalServerError,
+            $"Expected NotFound, OK (TMDB fallback), or 500, got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]
@@ -103,7 +110,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
         Assert.True(
             response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            $"Expected 401 or 403, got {(int)response.StatusCode}");
+            $"Expected 401 or 403, got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]
@@ -114,7 +122,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "status");
@@ -144,10 +153,12 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         // 500 can occur if VideoPlaylistResponseDto encounters serialization issues
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK
-                or HttpStatusCode.NotFound
-                or HttpStatusCode.InternalServerError,
-            $"Expected OK, NotFound, or 500, got {(int)response.StatusCode}: {body}");
+            response.StatusCode
+                is HttpStatusCode.OK
+                    or HttpStatusCode.NotFound
+                    or HttpStatusCode.InternalServerError,
+            $"Expected OK, NotFound, or 500, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -161,12 +172,14 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/movie/129/like",
-            JsonBody(new { value = true }));
+            JsonBody(new { value = true })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.UnprocessableEntity,
-            $"Expected OK or 422, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or 422, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertStatusResponse(json.RootElement);
@@ -177,12 +190,14 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/movie/129/watch-list",
-            JsonBody(new { add = true }));
+            JsonBody(new { add = true })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.UnprocessableEntity,
-            $"Expected OK or 422, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or 422, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertStatusResponse(json.RootElement);
@@ -211,7 +226,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -231,7 +247,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "status");
@@ -258,10 +275,12 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         // 500 can occur if VideoPlaylistResponseDto encounters serialization issues
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK
-                or HttpStatusCode.NotFound
-                or HttpStatusCode.InternalServerError,
-            $"Expected OK, NotFound, or 500, got {(int)response.StatusCode}: {body}");
+            response.StatusCode
+                is HttpStatusCode.OK
+                    or HttpStatusCode.NotFound
+                    or HttpStatusCode.InternalServerError,
+            $"Expected OK, NotFound, or 500, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -275,12 +294,14 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/tv/1399/like",
-            JsonBody(new { value = true }));
+            JsonBody(new { value = true })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.UnprocessableEntity,
-            $"Expected OK or 422, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or 422, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertStatusResponse(json.RootElement);
@@ -291,12 +312,14 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/tv/1399/watch-list",
-            JsonBody(new { add = true }));
+            JsonBody(new { add = true })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.UnprocessableEntity,
-            $"Expected OK or 422, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or 422, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertStatusResponse(json.RootElement);
@@ -321,7 +344,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -356,15 +380,18 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
         JsonDocument json = JsonDocument.Parse(body);
         Assert.True(
-            json.RootElement.TryGetProperty("data", out _) ||
-            json.RootElement.TryGetProperty("component", out _),
-            $"Expected data or component property: {body}");
+            json.RootElement.TryGetProperty("data", out _)
+                || json.RootElement.TryGetProperty("component", out _),
+            $"Expected data or component property: {body}"
+        );
     }
 
     [Fact]
     public async Task Collections_Available_NonExistent_ReturnsNotFoundShape()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/collection/999999/available");
+        HttpResponseMessage response = await _client.GetAsync(
+            "/api/v1/collection/999999/available"
+        );
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
@@ -386,14 +413,17 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/collection/999999/like",
-            JsonBody(new { value = true }));
+            JsonBody(new { value = true })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK
-                or HttpStatusCode.UnprocessableEntity
-                or HttpStatusCode.BadRequest,
-            $"Expected OK, 422, or 400, got {(int)response.StatusCode}: {body}");
+            response.StatusCode
+                is HttpStatusCode.OK
+                    or HttpStatusCode.UnprocessableEntity
+                    or HttpStatusCode.BadRequest,
+            $"Expected OK, 422, or 400, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertStatusResponse(json.RootElement);
@@ -404,14 +434,17 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/collection/999999/watch-list",
-            JsonBody(new { add = true }));
+            JsonBody(new { add = true })
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK
-                or HttpStatusCode.UnprocessableEntity
-                or HttpStatusCode.BadRequest,
-            $"Expected OK, 422, or 400, got {(int)response.StatusCode}: {body}");
+            response.StatusCode
+                is HttpStatusCode.OK
+                    or HttpStatusCode.UnprocessableEntity
+                    or HttpStatusCode.BadRequest,
+            $"Expected OK, 422, or 400, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertStatusResponse(json.RootElement);
@@ -441,7 +474,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}");
+            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -468,10 +502,12 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         // Known server issue: GenresController lolomo has a cast bug (CA2021)
         // which may cause 500. Test verifies shape when it succeeds.
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK
-                or HttpStatusCode.NotFound
-                or HttpStatusCode.InternalServerError,
-            $"Unexpected status {(int)response.StatusCode}: {body}");
+            response.StatusCode
+                is HttpStatusCode.OK
+                    or HttpStatusCode.NotFound
+                    or HttpStatusCode.InternalServerError,
+            $"Unexpected status {(int)response.StatusCode}: {body}"
+        );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -503,12 +539,14 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Libraries_GetLibrary_ReturnsComponentResponse()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/libraries/{NoMercyApiFactory.MovieLibraryId}");
+            $"/api/v1/libraries/{NoMercyApiFactory.MovieLibraryId}"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -518,12 +556,14 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Libraries_GetLibrary_Lolomo_ReturnsCarousels()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/libraries/{NoMercyApiFactory.MovieLibraryId}?version=lolomo");
+            $"/api/v1/libraries/{NoMercyApiFactory.MovieLibraryId}?version=lolomo"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -533,12 +573,14 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Libraries_GetLibraryByLetter_ReturnsComponentResponse()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/libraries/{NoMercyApiFactory.MovieLibraryId}/letter/F");
+            $"/api/v1/libraries/{NoMercyApiFactory.MovieLibraryId}/letter/F"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -552,7 +594,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -566,7 +609,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -584,7 +628,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -598,14 +643,16 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
         Assert.True(
-            json.RootElement.TryGetProperty("has_more", out _) ||
-            json.RootElement.TryGetProperty("hasMore", out _),
-            "Expected has_more or hasMore property in paginated response");
+            json.RootElement.TryGetProperty("has_more", out _)
+                || json.RootElement.TryGetProperty("hasMore", out _),
+            "Expected has_more or hasMore property in paginated response"
+        );
     }
 
     [Fact]
@@ -616,7 +663,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -630,7 +678,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -648,7 +697,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -658,12 +708,14 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Search_Video_NoResults_ReturnsOkWithEmptyData()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/search/video?query=zzznonexistentzzzxyz");
+            "/api/v1/search/video?query=zzznonexistentzzzxyz"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -673,12 +725,14 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Search_VideoTv_ReturnsComponentResponse()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/search/video/tv?query=breaking");
+            "/api/v1/search/video/tv?query=breaking"
+        );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -688,11 +742,13 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Search_Music_NoResults_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/search/music?query=zzznonexistentzzzxyz");
+            "/api/v1/search/music?query=zzznonexistentzzzxyz"
+        );
 
         Assert.True(
             response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.OK,
-            $"Expected NotFound or OK, got {(int)response.StatusCode}");
+            $"Expected NotFound or OK, got {(int)response.StatusCode}"
+        );
     }
 
     // =========================================================================
@@ -707,7 +763,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -725,7 +782,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -739,7 +797,8 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}");
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
+        );
 
         JsonDocument json = JsonDocument.Parse(body);
         AssertJsonHasProperty(json.RootElement, "data");
@@ -771,9 +830,10 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
         JsonDocument json = JsonDocument.Parse(body);
         Assert.True(
-            json.RootElement.TryGetProperty("data", out _) ||
-            json.RootElement.TryGetProperty("component", out _),
-            $"Expected data or component property: {body}");
+            json.RootElement.TryGetProperty("data", out _)
+                || json.RootElement.TryGetProperty("component", out _),
+            $"Expected data or component property: {body}"
+        );
     }
 
     // =========================================================================
@@ -799,6 +859,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
         Assert.True(
             response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            $"Expected 401/403 for {url}, got {(int)response.StatusCode}");
+            $"Expected 401/403 for {url}, got {(int)response.StatusCode}"
+        );
     }
 }

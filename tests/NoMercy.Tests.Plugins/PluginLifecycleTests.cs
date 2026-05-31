@@ -14,7 +14,7 @@ public class PluginLifecycleTests
             Name = "TestPlugin",
             Description = "Test",
             Version = new(1, 0, 0),
-            Status = status
+            Status = status,
         };
     }
 
@@ -65,8 +65,7 @@ public class PluginLifecycleTests
 
         Action act = () => PluginLifecycle.Transition(info, PluginStatus.Active);
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Deleted*Active*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Deleted*Active*");
     }
 
     [Fact]
@@ -139,8 +138,10 @@ public class PluginLifecycleTests
 
         foreach (PluginStatus status in Enum.GetValues<PluginStatus>())
         {
-            PluginLifecycle.CanTransition(PluginStatus.Deleted, status).Should().BeFalse(
-                $"Deleted should not transition to {status}");
+            PluginLifecycle
+                .CanTransition(PluginStatus.Deleted, status)
+                .Should()
+                .BeFalse($"Deleted should not transition to {status}");
         }
     }
 }

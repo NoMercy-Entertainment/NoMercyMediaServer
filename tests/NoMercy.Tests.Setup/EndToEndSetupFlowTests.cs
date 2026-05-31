@@ -1,4 +1,5 @@
-using System.Net;
+﻿using System.Net;
+using System.Net.Sockets;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
-using NoMercy.Setup;
+using NoMercy.Setup.Auth;
+using NoMercy.Setup.Server;
+using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;
 
@@ -41,7 +44,7 @@ public class EndToEndSetupFlowTests : IAsyncLifetime
 
     private static int GetAvailablePort()
     {
-        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
@@ -214,7 +217,7 @@ public class EndToEndSseFlowTests : IAsyncLifetime
 
     private static int GetAvailablePort()
     {
-        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
@@ -232,7 +235,7 @@ public class EndToEndSseFlowTests : IAsyncLifetime
             HttpCompletionOption.ResponseHeadersRead
         );
 
-        using Stream stream = await response.Content.ReadAsStreamAsync();
+        await using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
@@ -281,7 +284,7 @@ public class EndToEndSseFlowTests : IAsyncLifetime
             HttpCompletionOption.ResponseHeadersRead
         );
 
-        using Stream stream = await response.Content.ReadAsStreamAsync();
+        await using Stream stream = await response.Content.ReadAsStreamAsync();
         using StreamReader reader = new(stream);
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
@@ -391,8 +394,8 @@ public class EndToEndMiddlewareFlowTests
         dbContext.Database.OpenConnection();
         dbContext.Database.EnsureCreated();
 
-        AuthManager authManager = new(dbContext);
-        return new SetupEndpoints(state, authManager);
+        AuthManager authManager = new(dbContext, new LocalStorageDriver());
+        return new(state, authManager);
     }
 
     private static SetupModeMiddleware CreateMiddleware(
@@ -407,9 +410,11 @@ public class EndToEndMiddlewareFlowTests
 
     private static DefaultHttpContext CreateContext(string path)
     {
-        DefaultHttpContext context = new();
-        context.Request.Path = path;
-        context.Response.Body = new MemoryStream();
+        DefaultHttpContext context = new()
+        {
+            Request = { Path = path },
+            Response = { Body = new MemoryStream() },
+        };
         return context;
     }
 
@@ -547,7 +552,7 @@ public class EndToEndErrorRecoveryTests : IAsyncLifetime
 
     private static int GetAvailablePort()
     {
-        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();

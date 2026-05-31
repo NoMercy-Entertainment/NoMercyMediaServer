@@ -1,5 +1,4 @@
 using System.Globalization;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
@@ -8,10 +7,12 @@ using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Information;
+using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using Image = NoMercy.Database.Models.Media.Image;
 
 namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 
@@ -24,6 +25,7 @@ public class ReprocessAllPalettesCronJob : ICronJobExecutor
 {
     private readonly ILogger<ReprocessAllPalettesCronJob> _logger;
     private readonly MediaContext _context;
+    private readonly IStorage _storage;
 
     private const int BatchSize = 100;
     private const int MaxParallelism = 100;
@@ -33,11 +35,13 @@ public class ReprocessAllPalettesCronJob : ICronJobExecutor
 
     public ReprocessAllPalettesCronJob(
         ILogger<ReprocessAllPalettesCronJob> logger,
-        MediaContext context
+        MediaContext context,
+        IStorage storage
     )
     {
         _logger = logger;
         _context = context;
+        _storage = storage;
     }
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
@@ -357,7 +361,7 @@ public class ReprocessAllPalettesCronJob : ICronJobExecutor
 
     private async Task<int> ProcessImages(CancellationToken ct)
     {
-        List<NoMercy.Database.Models.Media.Image> items = _context
+        List<Image> items = _context
             .Images.Where(i => i.Site == "https://image.tmdb.org/t/p/")
             .Where(x => string.IsNullOrEmpty(x._colorPalette) && !x.FilePath.EndsWith(".svg"))
             .Where(e =>
@@ -416,9 +420,10 @@ public class ReprocessAllPalettesCronJob : ICronJobExecutor
                 try
                 {
                     string filePath = AppFiles.MusicImagesPath + item.Cover;
-                    if (File.Exists(filePath))
+                    if (_storage.Exists(filePath))
                     {
-                        using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(filePath);
+                        using Image<Rgba32> image =
+                            await SixLabors.ImageSharp.Image.LoadAsync<Rgba32>(filePath);
                         item._colorPalette = BaseImageManager.GenerateColorPalette([
                             new() { Key = "cover", ImageData = image },
                         ]);

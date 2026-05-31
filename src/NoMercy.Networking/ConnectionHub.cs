@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
 using NoMercy.Database;
+using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 
@@ -16,18 +18,22 @@ public class ConnectionHub : Hub
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IDbContextFactory<MediaContext> _contextFactory;
+    protected IDbContextFactory<MediaContext> ContextFactory => _contextFactory;
     protected readonly ConnectedClients ConnectedClients;
+    protected readonly IActivityLogger ActivityLogger;
     private string Endpoint { get; set; }
 
     protected ConnectionHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
-        ConnectedClients connectedClients
+        ConnectedClients connectedClients,
+        IActivityLogger activityLogger
     )
     {
         _httpContextAccessor = httpContextAccessor;
         _contextFactory = contextFactory;
         ConnectedClients = connectedClients;
+        ActivityLogger = activityLogger;
         Endpoint = _httpContextAccessor.HttpContext?.Request.Path.Value ?? "Unknown";
         // Logger.Socket($"Connected to {Endpoint}");
     }
@@ -75,11 +81,12 @@ public class ConnectionHub : Hub
             if (query.TryGetValue("custom_name", out StringValues customName))
                 client.CustomName = customName.ToString();
 
-            if (query.TryGetValue("client_volume", out StringValues volumePercent))
+            if (
+                query.TryGetValue("client_volume", out StringValues volumePercent)
+                && int.TryParse(volumePercent.ToString(), out int parsedVolume)
+            )
             {
-                string volumeString = volumePercent.ToString();
-                if (!string.IsNullOrEmpty(volumeString))
-                    client.VolumePercent = int.Parse(volumeString);
+                client.VolumePercent = Math.Clamp(parsedVolume, 0, 100);
             }
 
             if (query.TryGetValue("client_name", out StringValues name))
@@ -131,7 +138,18 @@ public class ConnectionHub : Hub
                 .ExecuteUpdateAsync(x => x.SetProperty(d => d.CustomName, client.CustomName));
         }
 
-        Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
+        Device? device = await mediaContext.Devices.FirstOrDefaultAsync(x =>
+            x.DeviceId == client.DeviceId
+        );
+
+        // Align the in-memory client's PK with the persisted Devices.Id. The
+        // Client base class assigns a fresh Ulid at construction; the upsert
+        // matches on the DeviceId fingerprint and preserves the existing PK,
+        // so client.Id and device.Id diverge. Subsequent ActivityLog writes
+        // use device.Id from the in-memory map and FK-fail because the random
+        // Ulid never made it into the Devices table.
+        if (device is not null)
+            client.Id = device.Id;
 
         client.CustomName = device?.CustomName;
         client.VolumePercent = device?.VolumePercent ?? 0;
@@ -144,17 +162,7 @@ public class ConnectionHub : Hub
                 .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, true));
             await mediaContext.SaveChangesAsync();
 
-            await SaveActivityLog(
-                mediaContext,
-                new()
-                {
-                    DeviceId = device.Id,
-                    Time = DateTime.Now,
-                    Type = "Connected to server",
-                    UserId = user.Id,
-                    Category = ActivityCategory.Connection,
-                }
-            );
+            await ActivityLogger.LogConnectionAsync("connection.connected", user.Id, device.Id);
         }
 
         ConnectedClients.Clients.TryAdd(Context.ConnectionId, client);
@@ -169,7 +177,7 @@ public class ConnectionHub : Hub
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
         {
             await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
-            Device? device = mediaContext.Devices.FirstOrDefault(x =>
+            Device? device = await mediaContext.Devices.FirstOrDefaultAsync(x =>
                 x.DeviceId == client.DeviceId
             );
             if (device is not null)
@@ -179,44 +187,16 @@ public class ConnectionHub : Hub
                     .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, false));
                 await mediaContext.SaveChangesAsync();
 
-                await SaveActivityLog(
-                    mediaContext,
-                    new()
-                    {
-                        DeviceId = device.Id,
-                        Time = DateTime.Now,
-                        Type = "Disconnected from server",
-                        UserId = client.Sub,
-                        Category = ActivityCategory.Connection,
-                    }
+                await ActivityLogger.LogConnectionAsync(
+                    "connection.disconnected",
+                    client.Sub,
+                    device.Id
                 );
             }
 
             ConnectedClients.Clients.Remove(Context.ConnectionId, out _);
 
             await Clients.All.SendAsync("ConnectedDevicesState", Devices());
-        }
-    }
-
-    private static async Task SaveActivityLog(
-        MediaContext mediaContext,
-        ActivityLog log,
-        int count = 0
-    )
-    {
-        try
-        {
-            await mediaContext.ActivityLogs.AddAsync(log);
-            await mediaContext.SaveChangesAsync();
-        }
-        catch (Exception)
-        {
-            if (count > 2)
-                return; // 3 times
-
-            count += 1;
-            await Task.Delay(1000);
-            await SaveActivityLog(mediaContext, log, count);
         }
     }
 

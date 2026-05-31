@@ -1,6 +1,9 @@
+﻿using System.ComponentModel;
 using System.Management;
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Storage;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -49,7 +52,7 @@ public class Storage
     {
         List<StorageDevice> devices = [];
 
-        string output = SystemCalls.Shell.ExecCommand("df -k");
+        string output = Shell.ExecCommand("df -k");
         string[] lines = output.Split('\n');
         foreach (string line in lines.Skip(1))
         {
@@ -59,12 +62,21 @@ public class Storage
             if (parts.Length < 6)
                 continue;
 
+            // `df -k` rows for tmpfs/devfs/none can carry hyphens or non-numeric
+            // sentinels in size columns. TryParse so a single oddball line
+            // doesn't crash the whole device enumeration.
+            if (
+                !long.TryParse(parts[1], out long totalKb)
+                || !long.TryParse(parts[3], out long freeKb)
+            )
+                continue;
+
             devices.Add(
                 new()
                 {
                     Name = parts[0],
-                    TotalSpace = long.Parse(parts[1]) * 1024,
-                    FreeSpace = long.Parse(parts[3]) * 1024,
+                    TotalSpace = totalKb * 1024,
+                    FreeSpace = freeKb * 1024,
                 }
             );
         }
@@ -76,33 +88,33 @@ public class Storage
 
     #region Space Information
 
-    public static long GetUsedSpace(string path)
+    public static long GetUsedSpace(IStorageDriver driver, string path)
     {
         long totalSpace = GetTotalSpace(path);
-        long freeSpace = GetFreeSpace(path);
+        long freeSpace = GetFreeSpace(driver, path);
         return totalSpace - freeSpace;
     }
 
-    private static long GetFreeSpace(string path)
+    private static long GetFreeSpace(IStorageDriver driver, string path)
     {
         if (Software.IsWindows)
-            return GetWindowsFreeSpace(path);
+            return GetWindowsFreeSpace(driver, path);
 
         if (Software.IsLinux || Software.IsMac)
-            return GetUnixFreeSpace(path);
+            return GetUnixFreeSpace(driver, path);
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
     }
 
-    private static long GetWindowsFreeSpace(string path)
+    private static long GetWindowsFreeSpace(IStorageDriver driver, string path)
     {
-        if (!Directory.Exists(path))
+        if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
         if (GetDiskFreeSpaceEx(path, out ulong freeBytesAvailable, out _, out _))
             return (long)freeBytesAvailable;
 
-        throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+        throw new Win32Exception(Marshal.GetLastWin32Error());
     }
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -132,15 +144,15 @@ public class Storage
     [DllImport("libc.so.6", EntryPoint = "statvfs", SetLastError = true)]
     private static extern int statvfs(string path, out Statvfs buf);
 
-    private static long GetUnixFreeSpace(string path)
+    private static long GetUnixFreeSpace(IStorageDriver driver, string path)
     {
-        if (!Directory.Exists(path))
+        if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
         if (statvfs(path, out Statvfs stat) == 0)
             return (long)(stat.f_bavail * stat.f_frsize);
 
-        throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+        throw new Win32Exception(Marshal.GetLastWin32Error());
     }
 
     private static long GetTotalSpace(string path)
@@ -149,14 +161,14 @@ public class Storage
         {
             if (GetDiskFreeSpaceEx(path, out _, out ulong totalBytes, out _))
                 return (long)totalBytes;
-            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            throw new Win32Exception(Marshal.GetLastWin32Error());
         }
 
         if (Software.IsLinux || Software.IsMac)
         {
             if (statvfs(path, out Statvfs stat) == 0)
                 return (long)(stat.f_blocks * stat.f_frsize);
-            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            throw new Win32Exception(Marshal.GetLastWin32Error());
         }
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
@@ -166,20 +178,20 @@ public class Storage
 
     #region File System Information
 
-    public static string GetFileSystemType(string path)
+    public static string GetFileSystemType(IStorageDriver driver, string path)
     {
         if (Software.IsWindows)
-            return GetWindowsFileSystemType(path);
+            return GetWindowsFileSystemType(driver, path);
 
         if (Software.IsLinux || Software.IsMac)
-            return GetUnixFileSystemType(path);
+            return GetUnixFileSystemType(driver, path);
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
     }
 
-    private static string GetWindowsFileSystemType(string path)
+    private static string GetWindowsFileSystemType(IStorageDriver driver, string path)
     {
-        if (!Directory.Exists(path))
+        if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
 #pragma warning disable CA1416
@@ -197,12 +209,12 @@ public class Storage
         throw new("File system type not found.");
     }
 
-    private static string GetUnixFileSystemType(string path)
+    private static string GetUnixFileSystemType(IStorageDriver driver, string path)
     {
-        if (!Directory.Exists(path))
+        if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
-        string output = SystemCalls.Shell.ExecCommand($"df -T {path} | awk 'NR==2 {{print $2}}'");
+        string output = Shell.ExecCommand($"df -T {path} | awk 'NR==2 {{print $2}}'");
         return output.Trim();
     }
 
@@ -210,26 +222,45 @@ public class Storage
 
     #region Disk Usage by Directory
 
-    public static Dictionary<string, long> GetDiskUsageByDirectory(string path)
+    public static Dictionary<string, long> GetDiskUsageByDirectory(
+        IStorageDriver driver,
+        string path,
+        CancellationToken ct = default
+    )
     {
-        if (!Directory.Exists(path))
+        if (!driver.DirectoryExists(path))
             throw new ArgumentException($"Path does not exist: {path}");
 
         Dictionary<string, long> directorySizes = new();
-        foreach (string dir in Directory.GetDirectories(path))
+        foreach (
+            string dir in driver
+                .EnumerateFileSystemEntries(path, "*", SearchOption.TopDirectoryOnly)
+                .Where(e => driver.DirectoryExists(e))
+        )
         {
-            long size = GetDirectorySize(dir);
+            ct.ThrowIfCancellationRequested();
+            long size = GetDirectorySize(driver, dir, ct);
             directorySizes.Add(dir, size);
         }
 
         return directorySizes;
     }
 
-    private static long GetDirectorySize(string path)
+    private static long GetDirectorySize(IStorageDriver driver, string path, CancellationToken ct)
     {
         long size = 0;
-        foreach (string file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
-            size += new FileInfo(file).Length;
+        foreach (
+            string entry in driver.EnumerateFileSystemEntries(
+                path,
+                "*",
+                SearchOption.AllDirectories
+            )
+        )
+        {
+            ct.ThrowIfCancellationRequested();
+            if (driver.FileExists(entry))
+                size += driver.GetFileSize(entry);
+        }
 
         return size;
     }

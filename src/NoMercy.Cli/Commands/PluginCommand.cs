@@ -10,7 +10,7 @@ internal static class PluginCommand
         Command listCmd = new("list") { Description = "List installed plugins" };
 
         listCmd.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
@@ -21,7 +21,7 @@ internal static class PluginCommand
 
                 if (plugins is null)
                 {
-                    Console.Error.WriteLine("Could not connect to server.");
+                    await Console.Error.WriteLineAsync("Could not connect to server.");
                     return 1;
                 }
 

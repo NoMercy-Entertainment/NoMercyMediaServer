@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Database.Infrastructure;
 
 namespace NoMercy.Database.Models.Media;
 
@@ -21,14 +22,32 @@ public class Metadata : MetadataTracks
     [JsonProperty("duration")]
     public string Duration { get; set; } = string.Empty;
 
+    private string _filename = string.Empty;
+
     [JsonProperty("filename")]
-    public string Filename { get; set; } = string.Empty;
+    public string Filename
+    {
+        get => _filename;
+        set => _filename = PathNormalizer.Normalize(value);
+    }
+
+    private string _folder = string.Empty;
 
     [JsonProperty("folder")]
-    public string Folder { get; set; } = string.Empty;
+    public string Folder
+    {
+        get => _folder;
+        set => _folder = PathNormalizer.Normalize(value);
+    }
+
+    private string _hostFolder = string.Empty;
 
     [JsonProperty("host_folder")]
-    public string HostFolder { get; set; } = string.Empty;
+    public string HostFolder
+    {
+        get => _hostFolder;
+        set => _hostFolder = PathNormalizer.Normalize(value);
+    }
 
     [JsonProperty("folder_size")]
     public long FolderSize { get; set; }
@@ -254,7 +273,7 @@ public class IHash
     public string FileName { get; set; } = null!;
 
     [JsonProperty("file_hash")]
-    public string? FileHash { get; set; } = null!;
+    public string? FileHash { get; set; }
 
     [JsonProperty("file_size")]
     public long? FileSize { get; set; }

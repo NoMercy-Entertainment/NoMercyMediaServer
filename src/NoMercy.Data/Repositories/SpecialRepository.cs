@@ -382,7 +382,7 @@ public class SpecialRepository(MediaContext context)
                         {
                             MovieId = m.Id,
                             Id = gm.GenreId,
-                            Name = gm.Genre.Name,
+                            gm.Genre.Name,
                         }
                 )
                 .ToListAsync(ct)
@@ -480,8 +480,8 @@ public class SpecialRepository(MediaContext context)
                             PersonColorPalette = c.Person._colorPalette,
                             PersonDeathDay = c.Person.DeathDay,
                             PersonGender = c.Person.Gender,
-                            Character = c.Role.Character,
-                            Order = c.Role.Order,
+                            c.Role.Character,
+                            c.Role.Order,
                         }
                 )
                 .ToListAsync(ct)
@@ -526,8 +526,8 @@ public class SpecialRepository(MediaContext context)
                             PersonColorPalette = c.Person._colorPalette,
                             PersonDeathDay = c.Person.DeathDay,
                             PersonGender = c.Person.Gender,
-                            Task = c.Job.Task,
-                            Order = c.Job.Order,
+                            c.Job.Task,
+                            c.Job.Order,
                         }
                 )
                 .ToListAsync(ct)
@@ -655,7 +655,7 @@ public class SpecialRepository(MediaContext context)
                         {
                             TvId = tv.Id,
                             Id = gt.GenreId,
-                            Name = gt.Genre.Name,
+                            gt.Genre.Name,
                         }
                 )
                 .ToListAsync(ct)
@@ -753,8 +753,8 @@ public class SpecialRepository(MediaContext context)
                             PersonColorPalette = c.Person._colorPalette,
                             PersonDeathDay = c.Person.DeathDay,
                             PersonGender = c.Person.Gender,
-                            Character = c.Role.Character,
-                            Order = c.Role.Order,
+                            c.Role.Character,
+                            c.Role.Order,
                         }
                 )
                 .ToListAsync(ct)
@@ -799,8 +799,8 @@ public class SpecialRepository(MediaContext context)
                             PersonColorPalette = c.Person._colorPalette,
                             PersonDeathDay = c.Person.DeathDay,
                             PersonGender = c.Person.Gender,
-                            Task = c.Job.Task,
-                            Order = c.Job.Order,
+                            c.Job.Task,
+                            c.Job.Order,
                         }
                 )
                 .ToListAsync(ct)

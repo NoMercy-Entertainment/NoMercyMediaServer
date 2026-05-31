@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------------------------------------------------
+﻿// ---------------------------------------------------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -26,7 +26,12 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
         JobDispatcher jobDispatcher = new();
 
         MovieRepository movieRepository = new(context);
-        MovieManager movieManager = new(movieRepository, jobDispatcher);
+        MovieManager movieManager = new(
+            movieRepository,
+            jobDispatcher,
+            StorageFactory,
+            StorageDriver
+        );
 
         CollectionRepository collectionRepository = new(context);
         CollectionManager collectionManager = new(

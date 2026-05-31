@@ -10,7 +10,7 @@ internal static class StatusCommand
         Command command = new("status") { Description = "Show server status" };
 
         command.SetAction(
-            async (ParseResult parseResult, CancellationToken ct) =>
+            async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
@@ -21,7 +21,7 @@ internal static class StatusCommand
 
                 if (status is null)
                 {
-                    Console.Error.WriteLine("Could not connect to server.");
+                    await Console.Error.WriteLineAsync("Could not connect to server.");
                     return 1;
                 }
 
@@ -35,7 +35,7 @@ internal static class StatusCommand
                 Console.WriteLine($"Uptime:       {FormatUptime(uptime)}");
                 Console.WriteLine($"Started:      {status.StartTime:yyyy-MM-dd HH:mm:ss} UTC");
                 if (status.IsDev)
-                    Console.WriteLine($"Mode:         Development");
+                    Console.WriteLine("Mode:         Development");
 
                 return 0;
             }

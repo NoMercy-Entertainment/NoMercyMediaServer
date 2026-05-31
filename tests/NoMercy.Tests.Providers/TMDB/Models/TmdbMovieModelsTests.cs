@@ -72,7 +72,9 @@ public class TmdbMovieModelsTests
 
         // Act
         string json = JsonConvert.SerializeObject(originalCredits);
-        TmdbMovieCredits? deserializedCredits = JsonConvert.DeserializeObject<TmdbMovieCredits>(json);
+        TmdbMovieCredits? deserializedCredits = JsonConvert.DeserializeObject<TmdbMovieCredits>(
+            json
+        );
 
         // Assert
         deserializedCredits.Should().NotBeNull();
@@ -125,7 +127,8 @@ public class TmdbMovieModelsTests
 
         // Act
         string json = JsonConvert.SerializeObject(originalExternalIds);
-        TmdbMovieExternalIds? deserializedExternalIds = JsonConvert.DeserializeObject<TmdbMovieExternalIds>(json);
+        TmdbMovieExternalIds? deserializedExternalIds =
+            JsonConvert.DeserializeObject<TmdbMovieExternalIds>(json);
 
         // Assert
         deserializedExternalIds.Should().NotBeNull();
@@ -144,18 +147,20 @@ public class TmdbMovieModelsTests
 
         // Act
         string json = JsonConvert.SerializeObject(originalAppends);
-        TmdbMovieAppends? deserializedAppends = JsonConvert.DeserializeObject<TmdbMovieAppends>(json);
+        TmdbMovieAppends? deserializedAppends = JsonConvert.DeserializeObject<TmdbMovieAppends>(
+            json
+        );
 
         // Assert
         deserializedAppends.Should().NotBeNull();
         deserializedAppends!.Id.Should().Be(originalAppends.Id);
         deserializedAppends.Title.Should().Be(originalAppends.Title);
         deserializedAppends.OriginalTitle.Should().Be(originalAppends.OriginalTitle);
-        
+
         // Verify nested objects
         deserializedAppends.Credits.Should().NotBeNull();
         deserializedAppends.Credits!.Id.Should().Be(originalAppends.Credits!.Id);
-        
+
         deserializedAppends.ExternalIds.Should().NotBeNull();
         deserializedAppends.ExternalIds!.Id.Should().Be(originalAppends.ExternalIds!.Id);
     }
@@ -184,26 +189,28 @@ public class TmdbMovieModelsTests
     {
         // Arrange
         string movieJson = """
-                           {
-                               "id": 12345,
-                               "title": "Test Movie",
-                               "original_title": "Test Movie",
-                               "adult": false,
-                               "status": "Released",
-                               "release_date": "2024-01-01T00:00:00",
-                               "original_language": "en",
-                               "overview": null,
-                               "tagline": null,
-                               "homepage": null,
-                               "imdb_id": null,
-                               "backdrop_path": null,
-                               "poster_path": null,
-                               "video": null
-                           }
-                           """;
+            {
+                "id": 12345,
+                "title": "Test Movie",
+                "original_title": "Test Movie",
+                "adult": false,
+                "status": "Released",
+                "release_date": "2024-01-01T00:00:00",
+                "original_language": "en",
+                "overview": null,
+                "tagline": null,
+                "homepage": null,
+                "imdb_id": null,
+                "backdrop_path": null,
+                "poster_path": null,
+                "video": null
+            }
+            """;
 
         // Act
-        TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(movieJson);
+        TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(
+            movieJson
+        );
 
         // Assert
         deserializedMovie.Should().NotBeNull();
@@ -223,15 +230,17 @@ public class TmdbMovieModelsTests
     {
         // Arrange
         string creditsJson = """
-                             {
-                                 "id": 12345,
-                                 "cast": [],
-                                 "crew": []
-                             }
-                             """;
+            {
+                "id": 12345,
+                "cast": [],
+                "crew": []
+            }
+            """;
 
         // Act
-        TmdbMovieCredits? deserializedCredits = JsonConvert.DeserializeObject<TmdbMovieCredits>(creditsJson);
+        TmdbMovieCredits? deserializedCredits = JsonConvert.DeserializeObject<TmdbMovieCredits>(
+            creditsJson
+        );
 
         // Assert
         deserializedCredits.Should().NotBeNull();
@@ -248,19 +257,21 @@ public class TmdbMovieModelsTests
     {
         // Arrange
         string movieJson = $$"""
-                             {
-                                 "id": 12345,
-                                 "title": "Test Movie",
-                                 "original_title": "Test Movie",
-                                 "adult": false,
-                                 "status": "Released",
-                                 "release_date": "{{dateString}}T00:00:00",
-                                 "original_language": "en"
-                             }
-                             """;
+            {
+                "id": 12345,
+                "title": "Test Movie",
+                "original_title": "Test Movie",
+                "adult": false,
+                "status": "Released",
+                "release_date": "{{dateString}}T00:00:00",
+                "original_language": "en"
+            }
+            """;
 
         // Act
-        TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(movieJson);
+        TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(
+            movieJson
+        );
 
         // Assert
         deserializedMovie.Should().NotBeNull();

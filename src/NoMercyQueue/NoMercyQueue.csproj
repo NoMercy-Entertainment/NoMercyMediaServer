@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\NoMercyQueue.Core\NoMercyQueue.Core.csproj" />
     <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    <ProjectReference Include="..\NoMercy.Resources\NoMercy.Resources.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,7 +1,6 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿#nullable disable
 
-#nullable disable
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace NoMercy.Database.Migrations
 {
@@ -16,45 +15,52 @@ namespace NoMercy.Database.Migrations
                 table: "Devices",
                 type: "TEXT",
                 maxLength: 256,
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AddColumn<string>(
                 name: "LanIp",
                 table: "Devices",
                 type: "TEXT",
                 maxLength: 256,
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AddColumn<int>(
                 name: "LanPort",
                 table: "Devices",
                 type: "INTEGER",
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "MdnsSeenAt",
                 table: "Devices",
                 type: "TEXT",
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AddColumn<Guid>(
                 name: "OwnerUserId",
                 table: "Devices",
                 type: "TEXT",
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "WsConnectedAt",
                 table: "Devices",
                 type: "TEXT",
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_Devices_OwnerUserId_Fingerprint",
                 table: "Devices",
                 columns: new[] { "OwnerUserId", "Fingerprint" },
                 unique: true,
-                filter: "Fingerprint IS NOT NULL");
+                filter: "Fingerprint IS NOT NULL"
+            );
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Devices_Users_OwnerUserId",
@@ -62,43 +68,31 @@ namespace NoMercy.Database.Migrations
                 column: "OwnerUserId",
                 principalTable: "Users",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.SetNull);
+                onDelete: ReferentialAction.SetNull
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Devices_Users_OwnerUserId",
-                table: "Devices");
+            migrationBuilder.DropForeignKey(name: "FK_Devices_Users_OwnerUserId", table: "Devices");
 
             migrationBuilder.DropIndex(
                 name: "IX_Devices_OwnerUserId_Fingerprint",
-                table: "Devices");
+                table: "Devices"
+            );
 
-            migrationBuilder.DropColumn(
-                name: "Fingerprint",
-                table: "Devices");
+            migrationBuilder.DropColumn(name: "Fingerprint", table: "Devices");
 
-            migrationBuilder.DropColumn(
-                name: "LanIp",
-                table: "Devices");
+            migrationBuilder.DropColumn(name: "LanIp", table: "Devices");
 
-            migrationBuilder.DropColumn(
-                name: "LanPort",
-                table: "Devices");
+            migrationBuilder.DropColumn(name: "LanPort", table: "Devices");
 
-            migrationBuilder.DropColumn(
-                name: "MdnsSeenAt",
-                table: "Devices");
+            migrationBuilder.DropColumn(name: "MdnsSeenAt", table: "Devices");
 
-            migrationBuilder.DropColumn(
-                name: "OwnerUserId",
-                table: "Devices");
+            migrationBuilder.DropColumn(name: "OwnerUserId", table: "Devices");
 
-            migrationBuilder.DropColumn(
-                name: "WsConnectedAt",
-                table: "Devices");
+            migrationBuilder.DropColumn(name: "WsConnectedAt", table: "Devices");
         }
     }
 }

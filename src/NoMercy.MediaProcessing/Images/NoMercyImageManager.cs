@@ -2,7 +2,7 @@ using NoMercy.Providers.NoMercy.Client;
 
 namespace NoMercy.MediaProcessing.Images;
 
-public abstract class NoMercyImageManager() : INoMercyImageManager
+public abstract class NoMercyImageManager : INoMercyImageManager
 {
     public static async Task<string> ColorPalette(string type, string? path, bool? download = true)
     {

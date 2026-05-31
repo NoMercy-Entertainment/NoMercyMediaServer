@@ -1,8 +1,9 @@
-using NoMercy.Api.EventHandlers;
+﻿using NoMercy.Api.EventHandlers;
 using NoMercy.Api.Services.Music;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.Networking.Messaging;
+using NoMercy.Storage;
 
 namespace NoMercy.Service.Extensions;
 
@@ -41,7 +42,9 @@ public static class EventHandlerExtensions
         services.AddSingleton<FileWatcherEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new(eventBus);
+            IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
+            IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
+            return new(eventBus, storageDriver, storageFactory);
         });
 
         services.AddSingleton<FolderPathEventHandler>(sp =>

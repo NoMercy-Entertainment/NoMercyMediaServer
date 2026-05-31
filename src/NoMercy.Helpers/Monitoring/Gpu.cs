@@ -4,6 +4,9 @@ namespace NoMercy.Helpers.Monitoring;
 
 public class Gpu
 {
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
     [JsonProperty("d3d")]
     public double D3D { get; set; }
 

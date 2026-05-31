@@ -38,6 +38,8 @@ public static class AppFiles
     public static string LibrariesSeedFile => Path.Combine(SeedsPath, "libraries.jsonc");
     public static string EncoderProfilesSeedFile =>
         Path.Combine(SeedsPath, "encoderProfiles.jsonc");
+    public static string EncodingPresetsSeedFile =>
+        Path.Combine(SeedsPath, "encodingPresets.jsonc");
 
     // ── Data & Logs ──────────────────────────────────────────────────────
 
@@ -50,9 +52,16 @@ public static class AppFiles
     public static string ApiCachePath => Path.Combine(CachePath, "api");
     public static string TempPath => Path.Combine(CachePath, "temp");
     public static string TranscodePath => Path.Combine(CachePath, "transcode");
+    public static string EncoderCachePath => Path.Combine(CachePath, "encoder");
     public static string ImagesPath => Path.Combine(CachePath, "images");
     public static string MusicImagesPath => Path.Combine(ImagesPath, "music");
     public static string TempImagesPath => Path.Combine(ImagesPath, "temp");
+
+    // Encoder hardware speed-index cache. Stores per-encoder/codec/resolution
+    // FPS measurements so reboots reuse the calibration instead of redoing
+    // 20+ minutes of synthetic encodes on every start.
+    public static string SpeedIndexCachePath =>
+        Path.Combine(CachePath, "encoder", "speed_index.json");
 
     // ── Browser ──────────────────────────────────────────────────────────
 
@@ -94,7 +103,10 @@ public static class AppFiles
     public static string TesseractModelsFolder => Path.Combine(TesseractFolder, "tessdata");
 
     public static string WhisperModel { get; set; } = "ggml-large-v3";
-    public static string WhisperModelPath => Path.Combine(DependenciesPath, WhisperModel + ".bin");
+
+    // The model ships inside the ffmpeg/ subfolder alongside ffmpeg.exe and the
+    // libbluray jars — the build output puts everything ffmpeg-runtime there.
+    public static string WhisperModelPath => Path.Combine(FfmpegFolder, WhisperModel + ".bin");
 
     public static string CloudflareDPath =>
         Path.Combine(DependenciesPath, "cloudflared" + Info.ExecSuffix);
@@ -156,6 +168,7 @@ public static class AppFiles
             BrowserPath,
             CachePath,
             ApiCachePath,
+            EncoderCachePath,
             CertPath,
             ConfigPath,
             SeedsPath,
@@ -189,9 +202,11 @@ public static class AppFiles
             Directory.CreateDirectory(DataProtectionKeysDir);
             if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {
-                DirectoryInfo keysDir = new(DataProtectionKeysDir);
-                keysDir.UnixFileMode =
-                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+                DirectoryInfo keysDir = new(DataProtectionKeysDir)
+                {
+                    UnixFileMode =
+                        UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
+                };
             }
         }
 

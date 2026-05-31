@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using DnsClient;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.NmSystem.Extensions;
 
@@ -11,7 +12,7 @@ public static class HttpClient
 
     public static System.Net.Http.HttpClient WithDns(string? dnsServer = null)
     {
-        string server = dnsServer ?? Information.Config.DnsServer;
+        string server = dnsServer ?? Config.DnsServer;
         SocketsHttpHandler handler = new()
         {
             ConnectCallback = async (context, token) =>

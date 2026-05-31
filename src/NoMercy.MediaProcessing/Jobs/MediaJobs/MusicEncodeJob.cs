@@ -1,26 +1,26 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
-using NoMercy.Encoder;
-using NoMercy.Encoder.Core;
-using NoMercy.Encoder.Format.Audio;
-using NoMercy.Encoder.Format.Container;
+using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Orchestration;
+using NoMercy.Encoder.Pipeline;
+using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.MediaProcessing.Recordings;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Storage;
 using Serilog.Events;
+using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -34,9 +34,8 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
     public override async Task Handle()
     {
         await using MediaContext context = new();
-        await using QueueContext queueContext = new();
 
-        await using LibraryRepository libraryRepository = new(context);
+        await using LibraryRepository libraryRepository = new(context, StorageDriver);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)
@@ -60,6 +59,14 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
 
             try
             {
+                if (profile.AudioProfiles.Length == 0)
+                {
+                    Logger.Encoder(
+                        $"Skipping profile {profile.Name}: no audio profiles configured"
+                    );
+                    continue;
+                }
+
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
@@ -73,41 +80,77 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                     );
                 }
 
-                BaseContainer container = BaseContainer.Create(profile.Container);
-
-                BuildAudioStreams(
-                    profile,
-                    ref container,
-                    FoundTrack,
-                    FolderMetaData.MusicBrainzRelease
+                EncodingProfile encodingProfile = V2ProfileFactory.FromV1(
+                    profile.Id,
+                    profile.Name,
+                    profile.Container ?? "mp3",
+                    [],
+                    profile
+                        .AudioProfiles.Select(a => new V1AudioProfile(
+                            a.Codec,
+                            a.Channels,
+                            a.SampleRate,
+                            a.SegmentName,
+                            a.PlaylistName,
+                            a.AllowedLanguages,
+                            a.CustomArguments,
+                            a.Loudness,
+                            a.Downmix,
+                            a.CustomPanMatrix
+                        ))
+                        .ToArray(),
+                    profile
+                        .SubtitleProfiles.Select(s => new V1SubtitleProfile(
+                            s.Codec,
+                            s.PlaylistName,
+                            s.AllowedLanguages,
+                            s.CustomArguments
+                        ))
+                        .ToArray()
                 );
 
-                VideoAudioFile ffmpeg = await new FfMpeg().OpenAsync(MediaFile.Path);
+                IEncodingOrchestrator orchestrator =
+                    EncoderProvider.ResolveService<IEncodingOrchestrator>()
+                    ?? throw new InvalidOperationException(
+                        "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
+                    );
 
-                ffmpeg.SetBasePath(FolderMetaData.BasePath);
-                ffmpeg.SetTitle(MediaFile.Name);
-                ffmpeg.ToFile(track.CreateTitle());
+                IStorage folderStorage = StorageFactory.For(
+                    folder.Id,
+                    folder.DriverId,
+                    folder.Path
+                );
 
-                ffmpeg.AddContainer(container);
+                EncodingRequest request = new(
+                    InputPath: MediaFile.Path,
+                    OutputDirectory: FolderMetaData.BasePath,
+                    Profile: encodingProfile,
+                    SourceStorage: folderStorage,
+                    DestinationStorage: folderStorage
+                );
 
-                ffmpeg.Prioritize();
+                EventBusProgressObserver progressObserver = new(
+                    track.Id.GetHashCode(),
+                    FoundTrack.Title
+                );
 
-                ffmpeg.Build();
+                EncodingResult encodeResult = await orchestrator.EncodeAsync(
+                    request,
+                    progressObserver
+                );
 
-                string fullCommand = ffmpeg.GetFullCommand();
-
-                ProgressMeta progressMeta = new()
+                if (!encodeResult.Success)
                 {
-                    Id = track.Id,
-                    Title = FoundTrack.Title,
-                    BaseFolder = FolderMetaData.BasePath,
-                    Type = "audio",
-                };
+                    throw new InvalidOperationException(
+                        $"Encoding failed for {MediaFile.Path}: {encodeResult.Error?.Message ?? "unknown error"}"
+                    );
+                }
 
-                Logger.Encoder(fullCommand);
-                await ffmpeg.Run(fullCommand, FolderMetaData.BasePath, progressMeta);
+                Logger.Encoder(
+                    $"Encoded {MediaFile.Path} → {encodeResult.OutputPath} in {encodeResult.Duration.TotalSeconds:F1}s ({encodeResult.Metrics?.EncoderUsed ?? "unknown"})"
+                );
 
-                await AddRecording(container, folder);
+                await AddRecording(folder);
 
                 if (EventBusProvider.IsConfigured)
                 {
@@ -165,7 +208,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
         }
     }
 
-    private async Task AddRecording(BaseContainer container, Folder folder)
+    private async Task AddRecording(Folder folder)
     {
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
@@ -173,26 +216,31 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
         MusicGenreRepository musicGenreRepository = new(context);
 
         ArtistRepository artistRepository = new(context);
-        ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
+        ArtistManager artistManager = new(
+            artistRepository,
+            musicGenreRepository,
+            jobDispatcher,
+            StorageFactory
+        );
 
         RecordingRepository recordingRepository = new(context);
         RecordingManager recordingManager = new(
             recordingRepository,
             musicGenreRepository,
-            artistRepository
+            artistRepository,
+            StorageDriver,
+            StorageFactory
         );
 
-        await using MediaScan mediaScan = new();
+        await using MediaScan mediaScan = new(StorageDriver);
 
+        // V3 encoder writes to BasePath — scan picks up all encoded output in that folder
         MediaFolderExtend mediaFolder = (
             await mediaScan
                 .EnableFileListing()
                 .FilterByMediaType("music")
-                .FilterByFileName(container.FileName)
                 .Process(FolderMetaData.BasePath)
         ).First();
-
-        mediaFolder.Files?.FilterConcurrentBag([container.FileName]);
 
         CoverArtImageManagerManager.CoverPalette? coverPalette =
             await CoverArtImageManagerManager.Add(
@@ -251,78 +299,5 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                 );
             }
         );
-    }
-
-    private static void BuildAudioStreams(
-        EncoderProfile encoderProfile,
-        ref BaseContainer container,
-        MusicBrainzTrack track,
-        MusicBrainzReleaseAppends musicBrainzRelease
-    )
-    {
-        foreach (IAudioProfile profile in encoderProfile.AudioProfiles)
-        {
-            MusicBrainzMedia album = musicBrainzRelease.Media.First(m =>
-                m.Tracks.Any(t => t.Title == track.Title)
-            );
-
-            string albumArtist = string.Join(
-                "/",
-                musicBrainzRelease.ArtistCredit.Select(c => c.Name)
-            );
-            string albumNumber = musicBrainzRelease.Title;
-            string artist = string.Join("/", track.ArtistCredit.Select(c => c.Name));
-            int date =
-                musicBrainzRelease.ReleaseEvents?[0].DateTime.ParseYear()
-                ?? track.Recording.FirstReleaseDate.ParseYear();
-            string disambiguation = track.Recording.Disambiguation;
-            string discNumber = $"{album.Position}/{musicBrainzRelease.Media.Length}";
-            string genre = string.Join(
-                "/",
-                musicBrainzRelease.MusicBrainzReleaseGroup?.Genres?.Select(c => c.Name) ?? []
-            );
-            string title = track.Title;
-            string trackNumber = $"{track.Number}/{album.TrackCount}";
-
-            Guid musicBrainzReleaseId = musicBrainzRelease.Id;
-            Guid musicBrainzRecordingId = track.Id;
-            Guid musicBrainzTrackId = track.Id;
-            Guid musicBrainzArtistId = track.ArtistCredit[0].MusicBrainzArtist.Id;
-            Guid musicBrainzAlbumArtistId = musicBrainzRelease.ArtistCredit[0].MusicBrainzArtist.Id;
-            Guid? musicBrainzReleaseGroupId = musicBrainzRelease.MusicBrainzReleaseGroup?.Id;
-
-            BaseAudio stream = BaseAudio
-                .Create(profile.Codec)
-                .SetAudioChannels(profile.Channels)
-                .SetAllowedLanguages(profile.AllowedLanguages)
-                .SetSampleRate(profile.SampleRate)
-                .SetHlsSegmentFilename(profile.SegmentName)
-                .SetHlsPlaylistFilename(profile.PlaylistName)
-                .AddOpts(profile.Opts)
-                .AddCustomArguments(profile.CustomArguments)
-                .SetLanguage(musicBrainzRelease.MusicBrainzTextRepresentation.Language)
-                .AddId3Tags(
-                    new()
-                    {
-                        { "album", albumNumber },
-                        { "album_artist", albumArtist },
-                        { "artist", artist },
-                        { "date", date.ToString() },
-                        { "disc", discNumber },
-                        { "genre", genre },
-                        { "title", title },
-                        { "track", trackNumber },
-                        { "Disambiguation", disambiguation },
-                        { "MusicBrainzReleaseId", musicBrainzReleaseId },
-                        { "MusicBrainzRecordingId", musicBrainzRecordingId },
-                        { "MusicBrainzTrackId", musicBrainzTrackId },
-                        { "MusicBrainzArtistId", musicBrainzArtistId },
-                        { "MusicBrainzAlbumArtistId", musicBrainzAlbumArtistId },
-                        { "MusicBrainzReleaseGroupId", musicBrainzReleaseGroupId },
-                    }
-                );
-
-            container.AddStream(stream);
-        }
     }
 }

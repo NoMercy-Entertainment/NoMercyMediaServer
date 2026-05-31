@@ -1,4 +1,5 @@
 using System.CommandLine;
+using NoMercy.Cli.Commands;
 using Xunit;
 
 namespace NoMercy.Tests.Cli;
@@ -14,13 +15,13 @@ public class CommandStructureTests
         Option<string?> pipeOption = new("--pipe", "-p");
         _root.Options.Add(pipeOption);
 
-        _root.Subcommands.Add(NoMercy.Cli.Commands.StatusCommand.Create(pipeOption));
-        _root.Subcommands.Add(NoMercy.Cli.Commands.LogsCommand.Create(pipeOption));
-        _root.Subcommands.Add(NoMercy.Cli.Commands.StopCommand.Create(pipeOption));
-        _root.Subcommands.Add(NoMercy.Cli.Commands.RestartCommand.Create(pipeOption));
-        _root.Subcommands.Add(NoMercy.Cli.Commands.ConfigCommand.Create(pipeOption));
-        _root.Subcommands.Add(NoMercy.Cli.Commands.PluginCommand.Create(pipeOption));
-        _root.Subcommands.Add(NoMercy.Cli.Commands.QueueCommand.Create(pipeOption));
+        _root.Subcommands.Add(StatusCommand.Create(pipeOption));
+        _root.Subcommands.Add(LogsCommand.Create(pipeOption));
+        _root.Subcommands.Add(StopCommand.Create(pipeOption));
+        _root.Subcommands.Add(RestartCommand.Create(pipeOption));
+        _root.Subcommands.Add(ConfigCommand.Create(pipeOption));
+        _root.Subcommands.Add(PluginCommand.Create(pipeOption));
+        _root.Subcommands.Add(QueueCommand.Create(pipeOption));
     }
 
     [Fact]

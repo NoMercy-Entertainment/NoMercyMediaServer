@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -13,14 +13,21 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.Shared;
+using NoMercy.Storage;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Movies;
 
-public class MovieManager(IMovieRepository movieRepository, JobDispatcher jobDispatcher)
-    : BaseManager,
-        IMovieManager
+public class MovieManager(
+    IMovieRepository movieRepository,
+    JobDispatcher jobDispatcher,
+    IStorageFactory storageFactory,
+    IStorageDriver storageDriver
+) : BaseManager, IMovieManager
 {
+    private readonly IStorageFactory _storageFactory = storageFactory;
+    private readonly IStorageDriver _storageDriver = storageDriver;
+
     public async Task<TmdbMovieAppends?> Add(int id, Library library)
     {
         Logger.MovieDb($"Movie: {id}: Adding to Library {library.Title}");
@@ -37,23 +44,29 @@ public class MovieManager(IMovieRepository movieRepository, JobDispatcher jobDis
 
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
         {
-            string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
+            IStorage folderStorage = _storageFactory.For(
+                folderLibrary.Folder.Id,
+                folderLibrary.Folder.DriverId,
+                string.Empty
+            );
+            string folderRoot = folderStorage.GetFullPath(folderLibrary.Folder.Path);
+            string folderName = folderStorage.CombinePath(folderRoot, baseUrl.Replace("/", ""));
 
-            if (!Directory.Exists(folderName))
+            if (!folderStorage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
-                    folderLibrary.Folder.Path,
+                    _storageDriver,
+                    folderRoot,
                     baseUrl.Replace("/", "")
                 );
                 if (match != null)
                     folderName = match;
             }
 
-            if (!Directory.Exists(folderName))
+            if (!folderStorage.Exists(folderName))
                 continue;
 
-            DirectoryInfo folderInfo = new(folderName);
-            folderCreatedAt = folderInfo.CreationTimeUtc;
+            folderCreatedAt = folderStorage.Driver.GetCreationTimeUtc(folderName);
 
             if (folderCreatedAt != DateTime.UtcNow)
                 break;

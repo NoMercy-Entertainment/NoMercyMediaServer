@@ -1,9 +1,9 @@
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
+using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
-using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -35,7 +35,7 @@ public class ChangeTrackerBloatTests : IDisposable
             {
                 Queue = "test",
                 Payload = $"payload-{i}",
-                AvailableAt = DateTime.UtcNow
+                AvailableAt = DateTime.UtcNow,
             };
             _jobQueue.Enqueue(job);
 
@@ -51,12 +51,14 @@ public class ChangeTrackerBloatTests : IDisposable
     {
         for (int i = 0; i < 50; i++)
         {
-            _jobQueue.Enqueue(new()
-            {
-                Queue = "test",
-                Payload = $"payload-{i}",
-                AvailableAt = DateTime.UtcNow
-            });
+            _jobQueue.Enqueue(
+                new()
+                {
+                    Queue = "test",
+                    Payload = $"payload-{i}",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
         }
 
         for (int i = 0; i < 50; i++)
@@ -76,12 +78,14 @@ public class ChangeTrackerBloatTests : IDisposable
     {
         for (int i = 0; i < 20; i++)
         {
-            _jobQueue.Enqueue(new()
-            {
-                Queue = "test",
-                Payload = $"payload-{i}",
-                AvailableAt = DateTime.UtcNow
-            });
+            _jobQueue.Enqueue(
+                new()
+                {
+                    Queue = "test",
+                    Payload = $"payload-{i}",
+                    AvailableAt = DateTime.UtcNow,
+                }
+            );
         }
 
         List<QueueJob> jobs = _context.QueueJobs.ToList();
@@ -96,7 +100,7 @@ public class ChangeTrackerBloatTests : IDisposable
                 Attempts = job.Attempts,
                 ReservedAt = job.ReservedAt,
                 AvailableAt = job.AvailableAt,
-                CreatedAt = job.CreatedAt
+                CreatedAt = job.CreatedAt,
             };
             _jobQueue.DeleteJob(model);
 
@@ -112,15 +116,17 @@ public class ChangeTrackerBloatTests : IDisposable
     {
         for (int i = 0; i < 20; i++)
         {
-            _context.FailedJobs.Add(new()
-            {
-                Uuid = Guid.NewGuid(),
-                Connection = "default",
-                Queue = "test",
-                Payload = $"payload-{i}",
-                Exception = "error",
-                FailedAt = DateTime.UtcNow
-            });
+            _context.FailedJobs.Add(
+                new()
+                {
+                    Uuid = Guid.NewGuid(),
+                    Connection = "default",
+                    Queue = "test",
+                    Payload = $"payload-{i}",
+                    Exception = "error",
+                    FailedAt = DateTime.UtcNow,
+                }
+            );
         }
         _context.SaveChanges();
         _context.ChangeTracker.Clear();
@@ -141,14 +147,16 @@ public class ChangeTrackerBloatTests : IDisposable
 
         for (int i = 0; i < 20; i++)
         {
-            _context.QueueJobs.Add(new()
-            {
-                Queue = "test",
-                Payload = $"payload-{i}",
-                AvailableAt = DateTime.UtcNow,
-                ReservedAt = DateTime.UtcNow,
-                Attempts = 1
-            });
+            _context.QueueJobs.Add(
+                new()
+                {
+                    Queue = "test",
+                    Payload = $"payload-{i}",
+                    AvailableAt = DateTime.UtcNow,
+                    ReservedAt = DateTime.UtcNow,
+                    Attempts = 1,
+                }
+            );
         }
         _context.SaveChanges();
         _context.ChangeTracker.Clear();
@@ -165,7 +173,7 @@ public class ChangeTrackerBloatTests : IDisposable
                 Attempts = job.Attempts,
                 ReservedAt = job.ReservedAt,
                 AvailableAt = job.AvailableAt,
-                CreatedAt = job.CreatedAt
+                CreatedAt = job.CreatedAt,
             };
             jobQueue.FailJob(model, new("test error"));
 
@@ -184,12 +192,14 @@ public class ChangeTrackerBloatTests : IDisposable
         {
             for (int i = 0; i < 100; i++)
             {
-                _jobQueue.Enqueue(new()
-                {
-                    Queue = "test",
-                    Payload = $"cycle-{cycle}-payload-{i}",
-                    AvailableAt = DateTime.UtcNow
-                });
+                _jobQueue.Enqueue(
+                    new()
+                    {
+                        Queue = "test",
+                        Payload = $"cycle-{cycle}-payload-{i}",
+                        AvailableAt = DateTime.UtcNow,
+                    }
+                );
             }
 
             for (int i = 0; i < 100; i++)

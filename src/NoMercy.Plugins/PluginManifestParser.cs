@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
 
@@ -29,17 +30,19 @@ public static class PluginManifestParser
 
     public static async Task<PluginManifest> ParseFileAsync(
         string filePath,
+        IStorage storage,
         CancellationToken ct = default
     )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        ArgumentNullException.ThrowIfNull(storage);
 
-        if (!File.Exists(filePath))
+        if (!storage.Exists(filePath))
         {
             throw new FileNotFoundException($"Plugin manifest not found: {filePath}", filePath);
         }
 
-        string json = await File.ReadAllTextAsync(filePath, ct);
+        string json = await storage.ReadAllTextAsync(filePath, ct);
         return Parse(json);
     }
 

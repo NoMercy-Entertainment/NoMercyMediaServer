@@ -72,6 +72,9 @@ public class LibraryRepository(MediaContext context)
             .ForUser(userId)
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
+                    .ThenInclude(f => f.Driver)
+            .Include(library => library.FolderLibraries)
+                .ThenInclude(fl => fl.Folder)
                     .ThenInclude(f => f.EncoderProfileFolder)
                         .ThenInclude(epf => epf.EncoderProfile)
             .Include(library => library.LanguageLibraries)
@@ -80,6 +83,39 @@ public class LibraryRepository(MediaContext context)
             .Include(library => library.LibraryTvs)
             .OrderBy(library => library.Order)
             .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Lightweight library query for endpoints that don't need LibraryMovies/LibraryTvs collections.
+    /// Use this in Mobile/TV/Home endpoints to avoid loading thousands of join entities into memory.
+    /// </summary>
+    public Task<List<Library>> GetLibrariesLite(Guid userId, CancellationToken ct = default)
+    {
+        return context
+            .Libraries.AsNoTracking()
+            .ForUser(userId)
+            .OrderBy(library => library.Order)
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Returns total item count (movies + TV) per library via cheap SQL COUNT.
+    /// Used for pagination mode decisions without loading join entities.
+    /// </summary>
+    public async Task<Dictionary<Ulid, int>> GetLibraryItemCountsAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        return await context
+            .Libraries.AsNoTracking()
+            .ForUser(userId)
+            .Select(library => new
+            {
+                library.Id,
+                Total = library.LibraryMovies.Count + library.LibraryTvs.Count,
+            })
+            .ToDictionaryAsync(x => x.Id, x => x.Total, ct);
     }
 
     /// <summary>
@@ -672,6 +708,7 @@ public class LibraryRepository(MediaContext context)
             .Include(library => library.LanguageLibraries)
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
+                    .ThenInclude(f => f.Driver)
             .Include(library => library.LibraryMovies)
             .Include(library => library.LibraryTvs)
             .FirstOrDefaultAsync(library => library.Id == id);
@@ -683,6 +720,7 @@ public class LibraryRepository(MediaContext context)
             .Libraries.AsNoTracking()
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
+                    .ThenInclude(f => f.Driver)
             .Include(library => library.LibraryMovies)
             .Include(library => library.LibraryTvs)
             .ToListAsync();
@@ -690,7 +728,11 @@ public class LibraryRepository(MediaContext context)
 
     public Task<List<FolderDto>> GetFoldersAsync()
     {
-        return context.Folders.AsNoTracking().Select(f => new FolderDto(f)).ToListAsync();
+        return context
+            .Folders.AsNoTracking()
+            .Include(f => f.Driver)
+            .Select(f => new FolderDto(f))
+            .ToListAsync();
     }
 
     // public Task<Tv?> GetRandomTvShow(Guid userId, string language)

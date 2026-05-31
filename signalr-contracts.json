@@ -11,11 +11,11 @@
       "_endpoint": "/musicHub",
       "serverMethods": {
         "StartPlaybackCommand": {
-          "description": "Start or toggle playback for a playlist item. Handles new playlists, track reorder within an existing playlist, and playlist switches.",
+          "description": "Start or toggle playback for a playlist item. Handles new playlists, track reorder within an existing playlist, and playlist switches. Returns early (no-op) when any argument is null.",
           "parameters": [
-            { "name": "type",    "type": "string", "description": "Playlist type, e.g. 'album', 'artist', 'playlist', 'track'" },
-            { "name": "listId",  "type": "Guid",   "description": "ID of the playlist/album/artist" },
-            { "name": "trackId", "type": "Guid",   "description": "ID of the track to play" }
+            { "name": "type",    "type": "string?", "description": "Playlist type, e.g. 'album', 'artist', 'playlist', 'track'. Null is rejected." },
+            { "name": "listId",  "type": "Guid?",   "description": "ID of the playlist/album/artist. Null is rejected." },
+            { "name": "trackId", "type": "Guid?",   "description": "ID of the track to play. Null is rejected." }
           ],
           "returns": "Task"
         },

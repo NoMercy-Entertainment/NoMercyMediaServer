@@ -26,7 +26,8 @@ public partial class GcCollectAuditTests
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                    continue;
 
                 if (GcCollectPattern().IsMatch(trimmed))
                 {
@@ -55,7 +56,8 @@ public partial class GcCollectAuditTests
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                    continue;
 
                 if (GcWaitForFullGcPattern().IsMatch(trimmed))
                 {
@@ -84,7 +86,8 @@ public partial class GcCollectAuditTests
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*")) continue;
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                    continue;
 
                 if (GcWaitForPendingFinalizersPattern().IsMatch(trimmed))
                 {
@@ -140,13 +143,15 @@ public partial class GcCollectAuditTests
         while (dir != null)
         {
             string candidate = Path.Combine(dir, "src");
-            if (Directory.Exists(candidate)) return candidate;
+            if (Directory.Exists(candidate))
+                return candidate;
 
             dir = Directory.GetParent(dir)?.FullName;
         }
 
         string fallback = "/workspaces/NoMercyMediaServer/src";
-        if (Directory.Exists(fallback)) return fallback;
+        if (Directory.Exists(fallback))
+            return fallback;
 
         throw new DirectoryNotFoundException("Could not find src/ directory");
     }

@@ -32,6 +32,7 @@
   <ItemGroup>
     <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
     <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    <ProjectReference Include="..\NoMercy.Storage\NoMercy.Storage.csproj" />
   </ItemGroup>
 
   <ItemGroup>

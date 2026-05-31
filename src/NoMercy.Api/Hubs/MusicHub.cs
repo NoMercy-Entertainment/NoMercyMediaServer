@@ -3,13 +3,21 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
+using NoMercy.Api.WebSockets;
+using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
+using NoMercy.Networking.Cast;
+using NoMercy.Networking.Discovery;
+using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Cast;
+using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -22,6 +30,9 @@ public class MusicHub : ConnectionHub
     private readonly MusicDeviceManager _musicDeviceManager;
     private readonly MusicPlaylistManager _musicPlaylistManager;
     private readonly MusicPlaybackCommandHandler _commandHandler;
+    private readonly DeviceBusRegistry _busRegistry;
+    private readonly CastSessionTokenService _castTokenService;
+    private readonly INetworkDiscovery? _networkDiscovery;
 
     public MusicHub(
         IHttpContextAccessor httpContextAccessor,
@@ -32,9 +43,13 @@ public class MusicHub : ConnectionHub
         MusicPlayerStateManager musicPlayerStateManager,
         MusicDeviceManager musicDeviceManager,
         MusicPlaylistManager musicPlaylistManager,
-        MusicPlaybackCommandHandler commandHandler
+        MusicPlaybackCommandHandler commandHandler,
+        IActivityLogger activityLogger,
+        DeviceBusRegistry busRegistry,
+        CastSessionTokenService castTokenService,
+        INetworkDiscovery? networkDiscovery = null
     )
-        : base(httpContextAccessor, contextFactory, connectedClients)
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _httpContextAccessor = httpContextAccessor;
         _clientMessenger = clientMessenger;
@@ -43,6 +58,9 @@ public class MusicHub : ConnectionHub
         _musicDeviceManager = musicDeviceManager;
         _musicPlaylistManager = musicPlaylistManager;
         _commandHandler = commandHandler;
+        _busRegistry = busRegistry;
+        _castTokenService = castTokenService;
+        _networkDiscovery = networkDiscovery;
     }
 
     private static readonly ConcurrentDictionary<Guid, Device> CurrentDevice = new();
@@ -50,14 +68,30 @@ public class MusicHub : ConnectionHub
 
     private static SemaphoreSlim GetUserLock(Guid userId)
     {
-        return CommandLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+        return CommandLocks.GetOrAdd(userId, _ => new(1, 1));
     }
 
-    public async Task StartPlaybackCommand(string type, Guid listId, Guid trackId)
+    public async Task StartPlaybackCommand(string? type, Guid? listId, Guid? trackId)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        // Guard: clients occasionally send null for one of these (e.g. an
+        // artist with no tracks → trackId is undefined on the client side
+        // → null on the wire). Without this check the SignalR-generated
+        // invocation thunk NREs while unboxing null into the value-type
+        // parameter, before the method body even runs.
+        if (string.IsNullOrEmpty(type) || listId is null || trackId is null)
+        {
+            Logger.Socket(
+                $"{user.Name}: [MusicHub.StartPlaybackCommand] ignored — null arg "
+                    + $"(type='{type ?? "<null>"}', listId={listId?.ToString() ?? "<null>"}, "
+                    + $"trackId={trackId?.ToString() ?? "<null>"})",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         SemaphoreSlim userLock = GetUserLock(user.Id);
         await userLock.WaitAsync();
@@ -66,16 +100,62 @@ public class MusicHub : ConnectionHub
             string country = GetCountryFromContext();
 
             (PlaylistTrackDto item, List<PlaylistTrackDto> playlist) =
-                await _musicPlaylistManager.GetPlaylist(user.Id, type, listId, trackId, country);
-            await HandlePlaybackState(user, type, listId, item, playlist);
+                await _musicPlaylistManager.GetPlaylist(
+                    user.Id,
+                    type,
+                    listId.Value,
+                    trackId.Value,
+                    country
+                );
+            await HandlePlaybackState(user, type, listId.Value, item, playlist);
         }
         catch (ArgumentException ex)
         {
             Logger.App($"Invalid playlist type: {ex.Message}");
+
+            ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
+            Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
+            try
+            {
+                await ActivityLogger.LogFailureAsync(
+                    "failure.playback_start",
+                    user.Id,
+                    deviceId2,
+                    errorCode: ex.GetType().Name,
+                    message: ex.Message
+                );
+            }
+            catch (Exception logEx)
+            {
+                Logger.Socket(
+                    $"Failed to log failure.playback_start: {logEx.Message}",
+                    LogEventLevel.Warning
+                );
+            }
         }
         catch (Exception ex)
         {
             Logger.App($"Error in StartPlaybackCommand: {ex.Message}");
+
+            ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
+            Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
+            try
+            {
+                await ActivityLogger.LogFailureAsync(
+                    "failure.playback_start",
+                    user.Id,
+                    deviceId2,
+                    errorCode: ex.GetType().Name,
+                    message: ex.Message
+                );
+            }
+            catch (Exception logEx)
+            {
+                Logger.Socket(
+                    $"Failed to log failure.playback_start: {logEx.Message}",
+                    LogEventLevel.Warning
+                );
+            }
         }
         finally
         {
@@ -145,6 +225,26 @@ public class MusicHub : ConnectionHub
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, musicPlayerState);
         await _musicPlaybackService.PublishStartedEventAsync(user.Id, musicPlayerState);
+
+        try
+        {
+            await ActivityLogger.LogPlaybackAsync(
+                "playback.started",
+                user.Id,
+                device.Id,
+                Ulid.Empty,
+                new
+                {
+                    media_type = "audio",
+                    track_id = item.Id,
+                    title = item.Name,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+        }
     }
 
     /// <summary>
@@ -162,62 +262,86 @@ public class MusicHub : ConnectionHub
     }
 
     /// <summary>
-    /// Returns the user's current active device. Tries to preserve an
-    /// existing active across all the places it may have been recorded:
-    ///
-    ///  1. CurrentDevice[user.Id] — set by GetOrPromoteActiveDevice and
-    ///     ChangeDeviceCommand. Cleared in OnDisconnectedAsync, so this
-    ///     can be stale-empty for a moment after a WS blip.
-    ///  2. playerState.DeviceId — set by every state mutation that hits
-    ///     UpdateDeviceInfo / the factory. Survives stop and WS drops
-    ///     (cleared only on full session teardown), so it is the most
-    ///     durable record of "who the active device WAS".
-    ///
-    /// If either points at a Client currently in ConnectedClients, we
-    /// return that Client and refresh CurrentDevice for next time. Only
-    /// when neither source points at a connected device do we promote
-    /// the caller — that is the "first-tap when truly alone" path.
+    /// Returns the user's current active device. If no active device is
+    /// recorded, or the recorded device has disconnected, the caller is
+    /// promoted to active. Otherwise the existing active is preserved —
+    /// passive callers do NOT steal active away from a live target.
     /// </summary>
     private Device GetOrPromoteActiveDevice(User user)
     {
         Device caller = GetCallerDevice(user);
 
-        Device? FindConnectedByDeviceId(string? deviceId)
-        {
-            if (string.IsNullOrEmpty(deviceId))
-                return null;
-            return ConnectedClients.Clients.Values.FirstOrDefault(c =>
-                c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
-            );
-        }
-
-        // Prefer the in-memory CurrentDevice if its DeviceId is still on the bus.
         if (CurrentDevice.TryGetValue(user.Id, out Device? existing) && existing is not null)
         {
-            Device? live = FindConnectedByDeviceId(existing.DeviceId);
-            if (live is not null)
-                return live;
+            bool existingStillConnected = ConnectedClients.Clients.Values.Any(c =>
+                c.DeviceId.Equals(existing.DeviceId, StringComparison.OrdinalIgnoreCase)
+            );
+            if (existingStillConnected)
+                return existing;
         }
 
-        // Fall back to the durable state.DeviceId — survives WS blips that
-        // would otherwise drop CurrentDevice and cause an unintended
-        // promotion of whoever taps next.
-        if (
-            _musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state)
-            && !string.IsNullOrEmpty(state.DeviceId)
-        )
-        {
-            Device? recoveredActive = FindConnectedByDeviceId(state.DeviceId);
-            if (recoveredActive is not null)
-            {
-                CurrentDevice[user.Id] = recoveredActive;
-                return recoveredActive;
-            }
-        }
-
-        // Neither source points at a connected device — caller is alone.
         CurrentDevice[user.Id] = caller;
         return caller;
+    }
+
+    /// <summary>
+    /// MusicHub-flavoured device list: live MusicHub clients plus every TV the
+    /// current user owns from the Devices table, including ones that aren't
+    /// currently on the hub (sleeping panels, powered-off boxes). The web and
+    /// mobile pickers need to render those so the user can wake them; without
+    /// this merge a standby TV silently disappears from the picker until it
+    /// reconnects on its own.
+    /// </summary>
+    private async Task<List<Device>> MusicDevicesAsync()
+    {
+        List<Device> connected = Devices();
+        User? user = Context.User.User();
+        if (user is null)
+            return connected;
+
+        await using MediaContext ctx = await ContextFactory.CreateDbContextAsync();
+        List<Device> registeredTvs = await ctx
+            .Devices.Where(d => d.OwnerUserId == user.Id && d.Type == "tv")
+            .ToListAsync();
+
+        HashSet<string> seenDeviceIds = new(
+            connected.Select(d => d.DeviceId),
+            StringComparer.OrdinalIgnoreCase
+        );
+
+        foreach (Device tv in registeredTvs)
+        {
+            if (seenDeviceIds.Add(tv.DeviceId))
+                connected.Add(tv);
+        }
+
+        // Pre-warm sharpcaster's TLS pool for every owned TV so the first
+        // ChangeDeviceCommand to that TV doesn't pay cold-handshake latency
+        // (which is the leading cause of first-tap LAUNCH races on the wire).
+        // Fire-and-forget; the per-receiver client pool dedupes so repeated
+        // calls are cheap.
+        foreach (Device tv in registeredTvs)
+        {
+            if (string.IsNullOrEmpty(tv.Ip))
+                continue;
+            string ip = tv.Ip;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    string? receiverName = await ChromeCast.FindReceiverNameByIpAsync(ip);
+                    if (!string.IsNullOrEmpty(receiverName))
+                        await ChromeCast.SelectChromecast(receiverName);
+                }
+                catch
+                {
+                    // Best-effort pre-warm; the actual cast will retry the
+                    // discovery + connect path itself if this fails.
+                }
+            });
+        }
+
+        return connected;
     }
 
     private static bool IsSamePlaylist(MusicPlayerState state, string type, Guid listId)
@@ -350,6 +474,30 @@ public class MusicHub : ConnectionHub
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, state);
         await _musicPlaybackService.PublishStartedEventAsync(user.Id, state);
+
+        // Logging only — record who triggered the playlist change without
+        // promoting them to active. The active flag is governed by
+        // UpdateDeviceInfo, which respects an existing active device.
+        Device device = GetCallerDevice(user);
+        try
+        {
+            await ActivityLogger.LogPlaybackAsync(
+                "playback.started",
+                user.Id,
+                device.Id,
+                Ulid.Empty,
+                new
+                {
+                    media_type = "audio",
+                    track_id = item.Id,
+                    title = item.Name,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+        }
     }
 
     private void UpdateDeviceInfo(MusicPlayerState state)
@@ -435,11 +583,20 @@ public class MusicHub : ConnectionHub
         return playerState;
     }
 
-    public async Task PlaybackCommand(string command, object? data = null)
+    public async Task PlaybackCommand(string? command, object? data = null)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (string.IsNullOrEmpty(command))
+        {
+            Logger.Socket(
+                $"{user.Name}: [MusicHub.PlaybackCommand] ignored — command was null/empty",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         SemaphoreSlim userLock = GetUserLock(user.Id);
         await userLock.WaitAsync();
@@ -477,10 +634,13 @@ public class MusicHub : ConnectionHub
         }
     }
 
-    public async Task CurrentTimeCommand(int time)
+    public async Task CurrentTimeCommand(int? time)
     {
         User? user = Context.User.User();
         if (user is null)
+            return;
+
+        if (time is null)
             return;
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
@@ -488,7 +648,7 @@ public class MusicHub : ConnectionHub
             if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
                 return;
 
-            playerState.Time = time * 1000;
+            playerState.Time = time.Value * 1000;
 
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
@@ -508,16 +668,19 @@ public class MusicHub : ConnectionHub
     /// safety margin on top; if <c>CrossfadeCompleteCommand</c> never arrives within that window
     /// the server force-advances anyway.
     /// </param>
-    public Task CrossfadeStartCommand(int fadeDurationMs)
+    public Task CrossfadeStartCommand(int? fadeDurationMs)
     {
         User? user = Context.User.User();
         if (user is null)
             return Task.CompletedTask;
 
+        if (fadeDurationMs is null)
+            return Task.CompletedTask;
+
         if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             return Task.CompletedTask;
 
-        _musicPlaybackService.StartCrossfade(user.Id, client.DeviceId, fadeDurationMs);
+        _musicPlaybackService.StartCrossfade(user.Id, client.DeviceId, fadeDurationMs.Value);
         return Task.CompletedTask;
     }
 
@@ -527,25 +690,43 @@ public class MusicHub : ConnectionHub
     /// zero, and broadcasts the updated state to all connected clients.
     /// </summary>
     /// <param name="newTrackId">The <see cref="Guid"/> of the track that is now playing.</param>
-    public async Task CrossfadeCompleteCommand(Guid newTrackId)
+    public async Task CrossfadeCompleteCommand(Guid? newTrackId)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (newTrackId is null)
+        {
+            Logger.Socket(
+                $"{user.Name}: [MusicHub.CrossfadeCompleteCommand] ignored — newTrackId was null",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             return;
 
-        await _musicPlaybackService.CompleteCrossfade(user, client.DeviceId, newTrackId);
+        await _musicPlaybackService.CompleteCrossfade(user, client.DeviceId, newTrackId.Value);
     }
 
-    public async Task ChangeDeviceCommand(string deviceId)
+    public async Task ChangeDeviceCommand(string? deviceId)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
 
-        List<Device> connectedDevices = Devices();
+        if (string.IsNullOrEmpty(deviceId))
+        {
+            Logger.Socket(
+                $"{user.Name}: [MusicHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
+                LogEventLevel.Warning
+            );
+            return;
+        }
+
+        List<Device> connectedDevices = await MusicDevicesAsync();
 
         await _clientMessenger.SendTo(
             "ConnectedDevicesState",
@@ -554,13 +735,125 @@ public class MusicHub : ConnectionHub
             connectedDevices
         );
 
+        // If the target is a TV that owns the user but isn't currently on
+        // MusicHub, fire wake_for_music over the device-bus so its panel +
+        // app come up. Without this, the web picker can transfer the active
+        // flag to a sleeping TV but the TV never actually plays. Mobile
+        // already drives this through DeviceHub.WakeForMusic; web can't, so
+        // the server has to do it on their behalf.
+        bool targetIsLive = connectedDevices.Any(d =>
+            d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+            && ConnectedClients.Clients.Values.Any(c =>
+                c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+                && c.Endpoint.Contains("musicHub", StringComparison.OrdinalIgnoreCase)
+            )
+        );
+
+        Device? targetTv = connectedDevices.FirstOrDefault(d =>
+            d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
+        );
+
+        if (targetTv is not null)
+        {
+            // Software wake: only when the TV's MusicHub side isn't already live.
+            // If it's live the app is already foregrounded; sending wake_for_music
+            // again would just redundantly bounce the activity stack.
+            if (!targetIsLive && _busRegistry.IsOnline(targetTv.Id))
+            {
+                _ = _busRegistry.SendAsync(
+                    targetTv.Id,
+                    new { type = "wake_for_music", session_id = Guid.NewGuid().ToString() }
+                );
+            }
+
+            // Panel wake (CEC OTP): always fire on every TV-target ChangeDevice,
+            // even when the app is already live on MusicHub. The user re-tapping
+            // the active TV usually means "my screen went off, wake it again" —
+            // cast_shell only fires HDMI-CEC One Touch Play when it receives a
+            // Cast LAUNCH, so we issue one server-side via sharpcaster against
+            // the discovered Chromecast receiver. Best-effort, async — some TV
+            // models / cast_shell builds don't honor third-party LAUNCHes for CEC.
+            // Resolve the receiver via its LAN IP rather than name — the Cast
+            // mDNS name (set in Android TV settings) doesn't match our DB's
+            // custom name (set in NoMercy onboarding). Async because the lookup
+            // may need to refresh mDNS discovery if the cache is stale.
+            //
+            // The LAUNCH payload now carries a LaunchCustomData bundle: APK
+            // ignores its auth fields (already authenticated), Web Receiver
+            // consumes them to bootstrap volatile in-memory auth on TVs that
+            // don't have the APK installed.
+            string targetIp = targetTv.Ip;
+            Ulid targetUlid = targetTv.Id;
+            string serverIdString = Info.DeviceId.ToString();
+            string serverUrl = ResolveServerUrl();
+            string locale = ResolveSenderLocale();
+            CastIntent intent = ResolveMusicIntent(user.Id, deviceId);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    string? receiverName = await ChromeCast.FindReceiverNameByIpAsync(targetIp);
+                    if (string.IsNullOrEmpty(receiverName))
+                    {
+                        Logger.Socket(
+                            $"No Chromecast receiver discovered at {targetIp} — panel won't wake via CEC",
+                            LogEventLevel.Warning
+                        );
+                        return;
+                    }
+
+                    LaunchCustomData? launchData = await _castTokenService.MintAsync(
+                        userId: user.Id,
+                        serverId: serverIdString,
+                        serverUrl: serverUrl,
+                        deviceId: targetUlid,
+                        intent: intent,
+                        clientLocale: locale
+                    );
+
+                    if (launchData is null)
+                    {
+                        Logger.Socket(
+                            $"Cast token mint failed for {targetIp} — falling back to LAUNCH without customData",
+                            LogEventLevel.Warning
+                        );
+                    }
+
+                    // SelectChromecast connects/reuses the pool entry for this
+                    // specific receiver. useAndroidReceiver is true only when
+                    // the APK is reachable on this TV (registered with the bus
+                    // registry); otherwise cast_shell would try the Cast
+                    // Connect path, fail to find the APK, and fall back to Web
+                    // Receiver — that fallback path drops customData and the
+                    // receiver hangs on its splash. Going straight to Web
+                    // Receiver preserves customData.
+                    bool apkOnline = _busRegistry.IsOnline(targetUlid);
+                    await ChromeCast.SelectChromecast(receiverName);
+                    await ChromeCast.LaunchAndroidReceiver(
+                        receiverName,
+                        launchData,
+                        useAndroidReceiver: apkOnline
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Logger.Socket(
+                        $"Server-side Cast launch failed for {targetIp}: {ex.Message}",
+                        LogEventLevel.Warning
+                    );
+                }
+            });
+        }
+
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
             playerState.DeviceId = deviceId;
         }
         else
         {
-            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+            // No live player state — nothing to transfer. The else-branch's previous
+            // `UpdatePlaybackState(user, null)` call would have NRE'd; just return.
             return;
         }
 
@@ -592,24 +885,34 @@ public class MusicHub : ConnectionHub
         };
 
         await _clientMessenger.SendTo("ChangeDevice", "musicHub", user.Id, payload);
+
+        // Broadcast the updated playback state so the new active device receives the
+        // current track + position and starts playing. Without this, TV becomes the
+        // active device flag but stays paused with isPlaying=false.
+        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
     }
 
-    public async Task ChangeVolumeCommand(int volume)
+    public async Task ChangeVolumeCommand(int? volume)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (volume is null)
+            return;
+
+        int clamped = Math.Clamp(volume.Value, 0, 100);
 
         // Diagnostic: log which device/connection sent this command so we can
         // tell phone vs PC vs TV apart when hunting down echo loops.
         string senderDevice = Context.ConnectionId;
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? sender))
             senderDevice = $"{sender.Name}/{sender.DeviceId}/{sender.Browser}";
-        Logger.App($"ChangeVolumeCommand {volume} from {senderDevice}");
+        Logger.App($"ChangeVolumeCommand {clamped} from {senderDevice}");
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            playerState.VolumePercentage = volume;
+            playerState.VolumePercentage = clamped;
             // Fire the broadcast FIRST so clients see the new value with the
             // minimum possible latency. The in-memory state is already
             // authoritative for future broadcasts.
@@ -627,7 +930,7 @@ public class MusicHub : ConnectionHub
         // added 500+ms of wire latency per volume event on SQLite under load.
         if (CurrentDevice.TryGetValue(user.Id, out Device? device))
         {
-            device.VolumePercent = volume;
+            device.VolumePercent = clamped;
             string deviceId = device.DeviceId;
             _ = Task.Run(async () =>
             {
@@ -636,7 +939,7 @@ public class MusicHub : ConnectionHub
                     await using MediaContext mediaContext = new();
                     await mediaContext
                         .Devices.Where(d => d.DeviceId == deviceId)
-                        .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, volume));
+                        .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, clamped));
                 }
                 catch (Exception ex)
                 {
@@ -654,10 +957,21 @@ public class MusicHub : ConnectionHub
         if (user is null)
             return;
 
-        await Task.Delay(500);
+        // Wait briefly so the client's 'ConnectedDevicesState' handler is
+        // registered before the broadcast lands. If the connection drops
+        // during this window, bail out — sending state to a dead connection
+        // just throws inside the messenger.
+        try
+        {
+            await Task.Delay(500, Context.ConnectionAborted);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
         // Send updated device list to all connected devices for this user
-        List<Device> connectedDevices = Devices();
+        List<Device> connectedDevices = await MusicDevicesAsync();
         await _clientMessenger.SendTo(
             "ConnectedDevicesState",
             "musicHub",
@@ -675,7 +989,7 @@ public class MusicHub : ConnectionHub
             await _musicPlaybackService.UpdatePlaybackState(user, new());
         }
 
-        Logger.Socket("Music client connected");
+        Logger.Socket("Music client connected", LogEventLevel.Debug);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -686,6 +1000,9 @@ public class MusicHub : ConnectionHub
 
         bool stopPlayback = false;
         bool wasCurrentDevice = false;
+        Ulid stoppedDeviceId = Ulid.Empty;
+        Guid stoppedTrackId = Guid.Empty;
+        string? stoppedTitle = null;
 
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
@@ -697,13 +1014,16 @@ public class MusicHub : ConnectionHub
 
                     stopPlayback = true;
                     wasCurrentDevice = true;
+                    stoppedDeviceId = client.Id;
+                    stoppedTrackId = state.CurrentItem?.Id ?? Guid.Empty;
+                    stoppedTitle = state.CurrentItem?.Name;
                 }
 
         await base.OnDisconnectedAsync(exception);
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            List<Device> connectedDevices = Devices();
+            List<Device> connectedDevices = await MusicDevicesAsync();
 
             // Send updated device list to all remaining connected devices
             await _clientMessenger.SendTo(
@@ -761,6 +1081,84 @@ public class MusicHub : ConnectionHub
 
         await _musicPlaybackService.UpdatePlaybackState(user, playerState);
 
-        Logger.Socket("Music client disconnected");
+        if (stopPlayback && stoppedDeviceId != Ulid.Empty)
+        {
+            try
+            {
+                await ActivityLogger.LogPlaybackAsync(
+                    "playback.stopped",
+                    user.Id,
+                    stoppedDeviceId,
+                    Ulid.Empty,
+                    new
+                    {
+                        media_type = "audio",
+                        track_id = stoppedTrackId,
+                        title = stoppedTitle,
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.Socket(
+                    $"Failed to log playback.stopped: {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+        }
+
+        Logger.Socket("Music client disconnected", LogEventLevel.Debug);
+    }
+
+    // ── Cast-receiver helpers (Phase 0) ──────────────────────────────────────
+
+    private string ResolveServerUrl()
+    {
+        // Public origin the receiver should use for API + SignalR. NetworkDiscovery
+        // owns the authoritative external URL once Connectivity has resolved a path
+        // (Cloudflare tunnel, port-forward, or STUN). Fall back to ApiBaseUrl in
+        // the rare case Discovery isn't ready yet — receiver will get a working
+        // URL on the next launch once Connectivity stabilizes.
+        string? external = _networkDiscovery?.ExternalAddress;
+        return string.IsNullOrEmpty(external) ? Config.ApiBaseUrl : external;
+    }
+
+    private string ResolveSenderLocale()
+    {
+        // Sender ships its locale via standard Accept-Language. We pick the first
+        // tag and pass it through; receiver uses it to seed i18n on first paint.
+        string? header =
+            _httpContextAccessor.HttpContext?.Request.Headers.AcceptLanguage.ToString();
+        if (string.IsNullOrEmpty(header))
+            return "en-US";
+
+        string first = header.Split(',')[0].Split(';')[0].Trim();
+        return string.IsNullOrEmpty(first) ? "en-US" : first;
+    }
+
+    private CastIntent ResolveMusicIntent(Guid userId, string targetDeviceId)
+    {
+        // If the user has a live music player state when handing off to the TV,
+        // the receiver should resume that exact list. Otherwise idle — receiver
+        // shows the splash and waits for user input or a follow-up command.
+        if (!_musicPlayerStateManager.TryGetValue(userId, out MusicPlayerState? state))
+            return CastIntent.Idle();
+        if (state?.CurrentItem is null || state.CurrentList is null)
+            return CastIntent.Idle();
+
+        // CurrentList is "/music/{type}/{listId}" — split it back out.
+        string path = state.CurrentList.ToString().TrimStart('/');
+        string[] parts = path.Split('/');
+        if (
+            parts.Length < 3
+            || !string.Equals(parts[0], "music", StringComparison.OrdinalIgnoreCase)
+        )
+            return CastIntent.Idle();
+
+        string listType = parts[1];
+        string listId = parts[2];
+        string trackId = state.CurrentItem.Id.ToString();
+        int? resumeAt = state.Time > 0 ? state.Time / 1000 : null;
+        return CastIntent.PlayMusic(listType, listId, trackId, resumeAt);
     }
 }

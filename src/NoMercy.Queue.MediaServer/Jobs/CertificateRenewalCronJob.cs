@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using NoMercy.Networking;
+using NoMercy.Networking.Certificate;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 

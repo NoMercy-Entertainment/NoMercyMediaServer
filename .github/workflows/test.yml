@@ -33,7 +33,7 @@ jobs:
           --verbosity minimal
           --logger trx
           --blame-hang-timeout 5m
-          --filter "Category=Unit|Category=ErrorHandling|Category=Characterization"
+          --filter "(Category=Unit|Category=ErrorHandling|Category=Characterization)&Category!=Integration"
 
   # Optional coverage job - non-blocking, only runs on master or when manually triggered
   coverage:
@@ -76,9 +76,22 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
 
+      - name: Fetch nomercy-ffmpeg fork (real-encode integration tests)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          dest="$HOME/.local/share/NoMercy_dev/binaries/ffmpeg"
+          mkdir -p "$dest"
+          gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber
+          tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-*.tar.gz -C "$dest"
+          chmod +x "$dest/ffmpeg" "$dest/ffprobe"
+          echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
+          echo "Fetched nomercy-ffmpeg $tag -> $dest"
+
       - name: Run integration tests
         run: >
-          dotnet test NoMercy.Server.sln 
+          dotnet test NoMercy.Server.sln
           --configuration Debug
           --no-restore
           --verbosity minimal

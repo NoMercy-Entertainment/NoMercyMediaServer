@@ -10,6 +10,7 @@ public class FolderRepository(MediaContext context)
     {
         return await context
             .Folders.Where(folder => folder.Id == folderId)
+            .Include(folder => folder.Driver)
             .Include(folder => folder.FolderLibraries)
                 .ThenInclude(folderLibrary => folderLibrary.Library)
             .FirstOrDefaultAsync();
@@ -18,6 +19,19 @@ public class FolderRepository(MediaContext context)
     public Task<Folder?> GetFolderByPathAsync(string requestPath)
     {
         return context.Folders.FirstOrDefaultAsync(folder => folder.Path == requestPath);
+    }
+
+    /// <summary>
+    /// Composite (DriverId, Path) lookup — matches the real unique index. Use
+    /// this instead of <see cref="GetFolderByPathAsync"/> whenever the caller
+    /// already knows which driver they want; same sub-path on two different
+    /// drivers is legitimate (e.g. NFS+S3 mirrors).
+    /// </summary>
+    public Task<Folder?> GetFolderByDriverAndPathAsync(Ulid driverId, string requestPath)
+    {
+        return context.Folders.FirstOrDefaultAsync(f =>
+            f.DriverId == driverId && f.Path == requestPath
+        );
     }
 
     public Task<List<Folder>> GetFoldersByLibraryIdAsync(FolderLibraryDto[] folderLibraries)
@@ -52,10 +66,15 @@ public class FolderRepository(MediaContext context)
 
     public Task<int> AddFolderAsync(Folder folder)
     {
+        // Match the real unique index (DriverId, Path). Matching on Path
+        // alone made FlexLabs emit ON CONFLICT (Path), which doesn't hit the
+        // composite unique → the insert proceeded and tripped the actual
+        // UNIQUE on (DriverId, Path), surfacing as a 500 to operators trying
+        // to attach an already-known folder to a different library.
         return context
             .Folders.Upsert(folder)
-            .On(f => new { f.Path })
-            .WhenMatched((fs, fi) => new() { Path = fi.Path })
+            .On(f => new { f.DriverId, f.Path })
+            .WhenMatched((existing, incoming) => new() { Path = incoming.Path })
             .RunAsync();
     }
 
@@ -83,10 +102,23 @@ public class FolderRepository(MediaContext context)
         return context.SaveChangesAsync();
     }
 
-    public Task<int> DeleteFolderAsync(Folder folder)
+    public async Task<int> DeleteFolderAsync(Folder folder)
     {
-        context.Folders.Remove(folder);
-        return context.SaveChangesAsync();
+        // SQLite schema uses DeleteBehavior.Restrict globally. Folder has FK
+        // dependents (FolderLibrary entries, etc.) that aren't on the cascade
+        // list in OnModelCreating, so a straight Remove + SaveChangesAsync
+        // throws on the constraint violation. Mirrors the same workaround
+        // pattern as MovieRepository / CollectionRepository / TvShowRepository.
+        await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+        try
+        {
+            context.Folders.Remove(folder);
+            return await context.SaveChangesAsync();
+        }
+        finally
+        {
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+        }
     }
 
     public async Task<int> SyncFolderLibraryAsync(

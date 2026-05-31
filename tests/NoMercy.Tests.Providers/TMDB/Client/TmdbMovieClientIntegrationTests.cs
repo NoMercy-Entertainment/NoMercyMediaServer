@@ -20,7 +20,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task Details_WithRealApi_ReturnsActualMovieDetails()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbMovieDetails? result = await client.Details();
@@ -40,7 +40,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task WithAllAppends_WithRealApi_ReturnsCompleteData()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbMovieAppends? result = await client.WithAllAppends();
@@ -49,12 +49,12 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Id.Should().Be(WellKnownMovieId);
         result.Title.Should().NotBeNullOrEmpty();
-        
+
         // Verify appended data
         result.Credits.Should().NotBeNull();
         result.Credits!.Cast.Should().NotBeEmpty();
         result.Credits.Crew.Should().NotBeEmpty();
-        
+
         result.ExternalIds.Should().NotBeNull();
         result.ExternalIds!.ImdbId.Should().NotBeNullOrEmpty();
     }
@@ -64,7 +64,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task Credits_WithRealApi_ReturnsActualCredits()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbMovieCredits? result = await client.Credits();
@@ -74,13 +74,13 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
         result!.Id.Should().Be(WellKnownMovieId);
         result.Cast.Should().NotBeEmpty();
         result.Crew.Should().NotBeEmpty();
-        
+
         // Verify cast data structure
         TmdbCast firstCast = result.Cast.First();
         firstCast.Id.Should().BeGreaterThan(0);
         firstCast.Name.Should().NotBeNullOrEmpty();
         firstCast.Character.Should().NotBeNullOrEmpty();
-        
+
         // Verify crew data structure
         TmdbCrew firstCrew = result.Crew.First();
         firstCrew.Id.Should().BeGreaterThan(0);
@@ -94,7 +94,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task ExternalIds_WithRealApi_ReturnsValidExternalIds()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbMovieExternalIds? result = await client.ExternalIds();
@@ -111,7 +111,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task Images_WithRealApi_ReturnsImageData()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbImages? result = await client.Images();
@@ -120,7 +120,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Backdrops.Should().NotBeEmpty();
         result.Posters.Should().NotBeEmpty();
-        
+
         // Verify image data structure
         TmdbImage firstBackdrop = result.Backdrops.First();
         firstBackdrop.FilePath.Should().NotBeNullOrEmpty();
@@ -133,7 +133,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task Keywords_WithRealApi_ReturnsKeywords()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act
         TmdbMovieKeywords? result = await client.Keywords();
@@ -142,7 +142,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Id.Should().Be(WellKnownMovieId);
         result.Results.Should().NotBeEmpty();
-        
+
         // Verify keyword structure
         TmdbKeyword firstKeyword = result.Results.First();
         firstKeyword.Id.Should().BeGreaterThan(0);
@@ -174,7 +174,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task MultipleMovies_WithRealApi_ReturnDifferentData()
     {
         // Arrange
-        using TmdbMovieClient client1 = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client1 = CreateRealMovieClient();
         using TmdbMovieClient client2 = CreateRealMovieClient(AnotherWellKnownMovieId);
 
         // Act
@@ -194,7 +194,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task Changes_WithRealApi_ReturnsChangesData()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
         string startDate = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
         string endDate = DateTime.Now.ToString("yyyy-MM-dd");
 
@@ -218,7 +218,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
 
         // Act & Assert
         TmdbMovieDetails? result = await client.Details();
-        
+
         // Note: ID 999999 actually returns valid movie data from TMDB API
         // "The El-Salomons: Marriage of Convenience" - so it's not truly invalid
         // API behavior may change, so we handle both scenarios
@@ -233,10 +233,13 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
     public async Task RateLimiting_MultipleQuickCalls_HandlesGracefully()
     {
         // Arrange
-        using TmdbMovieClient client = CreateRealMovieClient(WellKnownMovieId);
+        using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act - Make multiple quick calls to test rate limiting
-        Task<TmdbMovieDetails?>[] tasks = Enumerable.Range(0, 5).Select(_ => client.Details()).ToArray();
+        Task<TmdbMovieDetails?>[] tasks = Enumerable
+            .Range(0, 5)
+            .Select(_ => client.Details())
+            .ToArray();
         TmdbMovieDetails?[] results = await Task.WhenAll(tasks);
 
         // Assert

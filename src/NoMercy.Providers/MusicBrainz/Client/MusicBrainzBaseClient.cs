@@ -1,4 +1,5 @@
-﻿using NoMercy.NmSystem.Extensions;
+﻿using System.Net;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -40,9 +41,9 @@ public class MusicBrainzBaseClient : IDisposable
         client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", Config.UserAgent);
     }
 
-    private static Helpers.Queue? _queue;
+    private static Queue? _queue;
 
-    private static Helpers.Queue GetQueue()
+    private static Queue GetQueue()
     {
         return _queue ??= new(
             new()
@@ -73,9 +74,6 @@ public class MusicBrainzBaseClient : IDisposable
 
         Logger.MusicBrainz(_baseUrl + newUrl, LogEventLevel.Verbose);
 
-        T? data;
-
-        string? response;
         try
         {
             using HttpResponseMessage httpResponse = await GetQueue()
@@ -117,24 +115,36 @@ public class MusicBrainzBaseClient : IDisposable
                 httpResponse.EnsureSuccessStatusCode();
             }
 
-            response = await httpResponse.Content.ReadAsStringAsync();
+            string response = await httpResponse.Content.ReadAsStringAsync();
             await CacheController.Write(newUrl, response);
 
-            data = response.FromJson<T>();
+            return response.FromJson<T>();
         }
-        catch (Exception e)
-            when (retry < 10 && (e.Message.Contains("429") || e.Message.Contains("503")))
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+        catch (HttpRequestException ex)
+            when (retry < 10
+                && ex.StatusCode
+                    is HttpStatusCode.TooManyRequests
+                        or HttpStatusCode.ServiceUnavailable
+            )
         {
             int delay = (int)Math.Pow(2, retry + 1) * 1000;
             Logger.App(
-                $"Rate limited ({newUrl}), retrying in {delay / 1000}s (attempt {retry + 1}/10)",
+                $"MusicBrainz {ex.StatusCode} ({newUrl}), retrying in {delay / 1000}s (attempt {retry + 1}/10)",
                 LogEventLevel.Debug
             );
             await Task.Delay(delay);
             return await Get<T>(url, query, priority, retry + 1);
         }
-
-        return data ?? throw new($"Failed to parse {response}");
+        catch (TaskCanceledException) when (retry < 10)
+        {
+            int delay = (int)Math.Pow(2, retry + 1) * 1000;
+            await Task.Delay(delay);
+            return await Get<T>(url, query, priority, retry + 1);
+        }
     }
 
     public void Dispose()

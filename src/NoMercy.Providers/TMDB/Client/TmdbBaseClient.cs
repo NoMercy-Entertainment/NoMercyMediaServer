@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
+﻿using System.Net;
+using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Models.Shared;
-using NoMercy.Setup;
+using NoMercy.Setup.Server;
 using Serilog.Events;
 
 namespace NoMercy.Providers.TMDB.Client;
@@ -36,9 +37,9 @@ public class TmdbBaseClient : IDisposable
         Id = id;
     }
 
-    private static Helpers.Queue? _queue;
+    private static Queue? _queue;
 
-    protected static Helpers.Queue GetQueue()
+    protected static Queue GetQueue()
     {
         return _queue ??= new(
             new()
@@ -116,13 +117,16 @@ public class TmdbBaseClient : IDisposable
             return null;
         }
         catch (HttpRequestException ex)
-            when (ex.Message.Contains("404")
-                || ex.Message.Contains("422")
-                || ex.Message.Contains("400")
+            when (ex.StatusCode
+                    is HttpStatusCode.NotFound
+                        or HttpStatusCode.UnprocessableEntity
+                        or HttpStatusCode.BadRequest
             )
         {
-            // Handle common HTTP errors gracefully - return null for not found, unprocessable entity, or bad request
-            Logger.MovieDb($"HTTP error for {newUrl}: {ex.Message}", LogEventLevel.Debug);
+            // Soft-fail on TMDB "no data" status codes via StatusCode (not
+            // ex.Message.Contains) — message-matching false-positives on URLs
+            // that contain "404" etc. as path segments.
+            Logger.MovieDb($"HTTP {ex.StatusCode} for {newUrl}", LogEventLevel.Debug);
             return null;
         }
     }

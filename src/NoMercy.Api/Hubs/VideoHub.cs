@@ -5,14 +5,21 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Services.Video;
+using NoMercy.Api.WebSockets;
+using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
+using NoMercy.Networking.Cast;
+using NoMercy.Networking.Discovery;
+using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Cast;
+using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -25,6 +32,9 @@ public class VideoHub : ConnectionHub
     private readonly VideoDeviceManager _videoDeviceManager;
     private readonly VideoPlaylistManager _videoPlaylistManager;
     private readonly VideoPlaybackCommandHandler _commandHandler;
+    private readonly CastSessionTokenService _castTokenService;
+    private readonly DeviceBusRegistry _busRegistry;
+    private readonly INetworkDiscovery? _networkDiscovery;
 
     private readonly IDbContextFactory<MediaContext> _contextFactory;
 
@@ -37,9 +47,13 @@ public class VideoHub : ConnectionHub
         VideoPlayerStateManager videoPlayerStateManager,
         VideoDeviceManager videoDeviceManager,
         VideoPlaylistManager videoPlaylistManager,
-        VideoPlaybackCommandHandler commandHandler
+        VideoPlaybackCommandHandler commandHandler,
+        IActivityLogger activityLogger,
+        CastSessionTokenService castTokenService,
+        DeviceBusRegistry busRegistry,
+        INetworkDiscovery? networkDiscovery = null
     )
-        : base(httpContextAccessor, contextFactory, connectedClients)
+        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _httpContextAccessor = httpContextAccessor;
         _clientMessenger = clientMessenger;
@@ -49,6 +63,9 @@ public class VideoHub : ConnectionHub
         _videoDeviceManager = videoDeviceManager;
         _videoPlaylistManager = videoPlaylistManager;
         _commandHandler = commandHandler;
+        _castTokenService = castTokenService;
+        _busRegistry = busRegistry;
+        _networkDiscovery = networkDiscovery;
     }
 
     public async Task SetTime(VideoProgressRequest request)
@@ -68,12 +85,22 @@ public class VideoHub : ConnectionHub
 
         int? movieId = request.PlaylistType == Config.MovieMediaType ? request.TmdbId : null;
         int? tvId = request.PlaylistType == Config.TvMediaType ? request.TmdbId : null;
-        int? collectionId =
-            request.PlaylistType == Config.CollectionMediaType
-                ? int.Parse(request.PlaylistId)
-                : null;
-        Ulid? specialId =
-            request.PlaylistType == Config.SpecialMediaType ? Ulid.Parse(request.PlaylistId) : null;
+
+        int? collectionId = null;
+        if (request.PlaylistType == Config.CollectionMediaType)
+        {
+            if (!int.TryParse(request.PlaylistId, out int parsed))
+                return;
+            collectionId = parsed;
+        }
+
+        Ulid? specialId = null;
+        if (request.PlaylistType == Config.SpecialMediaType)
+        {
+            if (!Ulid.TryParse(request.PlaylistId, out Ulid parsed))
+                return;
+            specialId = parsed;
+        }
 
         if (movieId is not null && !await mediaContext.Movies.AnyAsync(m => m.Id == movieId))
             return;
@@ -156,9 +183,9 @@ public class VideoHub : ConnectionHub
 
     public async Task RemoveWatched(VideoProgressRequest request)
     {
-        Guid userId = Guid.Parse(
-            (Context.User?.FindFirstValue(ClaimTypes.NameIdentifier)).OrEmpty()
-        );
+        string? guid = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(guid, out Guid userId))
+            return;
 
         User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
@@ -184,11 +211,21 @@ public class VideoHub : ConnectionHub
 
     private static readonly ConcurrentDictionary<Guid, Device> CurrentDevice = new();
 
-    public async Task StartPlaybackCommand(string type, dynamic listId, int? itemId)
+    public async Task StartPlaybackCommand(string? type, dynamic? listId, int? itemId)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (string.IsNullOrEmpty(type) || listId is null)
+        {
+            Logger.Socket(
+                $"{user.Name}: [VideoHub.StartPlaybackCommand] ignored — null arg "
+                    + $"(type='{type ?? "<null>"}', listId={(listId is null ? "<null>" : "set")})",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         string language = GetLanguageFromContext();
         string country = GetCountryFromContext();
@@ -215,11 +252,59 @@ public class VideoHub : ConnectionHub
         catch (ArgumentException ex)
         {
             Logger.App($"Invalid playlist type: {ex.Message}");
+
+            User? user2 = Context.User.User();
+            if (user2 is not null)
+            {
+                ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
+                Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
+                try
+                {
+                    await ActivityLogger.LogFailureAsync(
+                        "failure.playback_start",
+                        user2.Id,
+                        deviceId2,
+                        errorCode: ex.GetType().Name,
+                        message: ex.Message
+                    );
+                }
+                catch (Exception logEx)
+                {
+                    Logger.Socket(
+                        $"Failed to log failure.playback_start: {logEx.Message}",
+                        LogEventLevel.Warning
+                    );
+                }
+            }
         }
         catch (Exception ex)
         {
-            Logger.App($"Error in StartPlaybackCommand");
+            Logger.App("Error in StartPlaybackCommand");
             Logger.App(ex);
+
+            User? user2 = Context.User.User();
+            if (user2 is not null)
+            {
+                ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
+                Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
+                try
+                {
+                    await ActivityLogger.LogFailureAsync(
+                        "failure.playback_start",
+                        user2.Id,
+                        deviceId2,
+                        errorCode: ex.GetType().Name,
+                        message: ex.Message
+                    );
+                }
+                catch (Exception logEx)
+                {
+                    Logger.Socket(
+                        $"Failed to log failure.playback_start: {logEx.Message}",
+                        LogEventLevel.Warning
+                    );
+                }
+            }
         }
     }
 
@@ -268,6 +353,21 @@ public class VideoHub : ConnectionHub
         _videoPlaybackService.StartPlaybackTimer(user);
         await _videoPlaybackService.UpdatePlaybackState(user, videoPlayerState);
         await _videoPlaybackService.PublishStartedEventAsync(user.Id, videoPlayerState);
+
+        try
+        {
+            await ActivityLogger.LogPlaybackAsync(
+                "playback.started",
+                user.Id,
+                device.Id,
+                item.VideoId,
+                new { media_type = "video", title = item.Title }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+        }
     }
 
     private Device GetCurrentDevice(User user)
@@ -331,6 +431,22 @@ public class VideoHub : ConnectionHub
         _videoPlaybackService.StartPlaybackTimer(user);
         await _videoPlaybackService.UpdatePlaybackState(user, state);
         await _videoPlaybackService.PublishStartedEventAsync(user.Id, state);
+
+        Device device = GetCurrentDevice(user);
+        try
+        {
+            await ActivityLogger.LogPlaybackAsync(
+                "playback.started",
+                user.Id,
+                device.Id,
+                item.VideoId,
+                new { media_type = "video", title = item.Title }
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+        }
     }
 
     private void UpdateDeviceInfo(VideoPlayerState state)
@@ -383,11 +499,20 @@ public class VideoHub : ConnectionHub
         return playerState;
     }
 
-    public async Task PlaybackCommand(string command, object? data = null)
+    public async Task PlaybackCommand(string? command, object? data = null)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
+
+        if (string.IsNullOrEmpty(command))
+        {
+            Logger.Socket(
+                $"{user.Name}: [VideoHub.PlaybackCommand] ignored — command was null/empty",
+                LogEventLevel.Warning
+            );
+            return;
+        }
 
         if (!_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? state))
         {
@@ -409,13 +534,41 @@ public class VideoHub : ConnectionHub
         await _videoPlaybackService.UpdatePlaybackState(user, state);
     }
 
-    public async Task ChangeDeviceCommand(string deviceId)
+    public async Task ChangeDeviceCommand(string? deviceId)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
 
+        if (string.IsNullOrEmpty(deviceId))
+        {
+            Logger.Socket(
+                $"{user.Name}: [VideoHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
+                LogEventLevel.Warning
+            );
+            return;
+        }
+
+        // Extend connected-device list with owned TVs from the Devices table —
+        // mirrors MusicHub.MusicDevicesAsync. Without this, the picker can't
+        // hand video off to a sleeping TV. Live MusicHub clients are merged
+        // with registered TV devices (online or not).
         List<Device> connectedDevices = Devices();
+        await using (MediaContext ctx = await _contextFactory.CreateDbContextAsync())
+        {
+            List<Device> registeredTvs = await ctx
+                .Devices.Where(d => d.OwnerUserId == user.Id && d.Type == "tv")
+                .ToListAsync();
+
+            HashSet<string> seenDeviceIds = new(
+                connectedDevices.Select(d => d.DeviceId),
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            foreach (Device tv in registeredTvs)
+                if (seenDeviceIds.Add(tv.DeviceId))
+                    connectedDevices.Add(tv);
+        }
 
         await _clientMessenger.SendTo(
             "ConnectedDevicesState",
@@ -423,6 +576,72 @@ public class VideoHub : ConnectionHub
             user.Id,
             connectedDevices
         );
+
+        // TV-target branch: when handing off video to a TV, mint a cast session
+        // bundle and LAUNCH the receiver. Mirrors MusicHub.ChangeDeviceCommand.
+        // Cast Connect routes APK-installed TVs to the native APK and Web-only
+        // TVs to cast.nomercy.tv — both consume customData.
+        Device? targetTv = connectedDevices.FirstOrDefault(d =>
+            d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
+        );
+
+        if (targetTv is not null)
+        {
+            string targetIp = targetTv.Ip;
+            Ulid targetUlid = targetTv.Id;
+            string serverIdString = Info.DeviceId.ToString();
+            string serverUrl = ResolveServerUrl();
+            string locale = ResolveSenderLocale();
+            CastIntent intent = ResolveVideoIntent(user.Id);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    string? receiverName = await ChromeCast.FindReceiverNameByIpAsync(targetIp);
+                    if (string.IsNullOrEmpty(receiverName))
+                    {
+                        Logger.Socket(
+                            $"No Chromecast receiver discovered at {targetIp} — video handoff will not wake panel via CEC",
+                            LogEventLevel.Warning
+                        );
+                        return;
+                    }
+
+                    LaunchCustomData? launchData = await _castTokenService.MintAsync(
+                        userId: user.Id,
+                        serverId: serverIdString,
+                        serverUrl: serverUrl,
+                        deviceId: targetUlid,
+                        intent: intent,
+                        clientLocale: locale
+                    );
+
+                    if (launchData is null)
+                    {
+                        Logger.Socket(
+                            $"Cast token mint failed for video handoff to {targetIp} — falling back to LAUNCH without customData",
+                            LogEventLevel.Warning
+                        );
+                    }
+
+                    bool apkOnline = _busRegistry.IsOnline(targetUlid);
+                    await ChromeCast.SelectChromecast(receiverName);
+                    await ChromeCast.LaunchAndroidReceiver(
+                        receiverName,
+                        launchData,
+                        useAndroidReceiver: apkOnline
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Logger.Socket(
+                        $"Server-side video Cast launch failed for {targetIp}: {ex.Message}",
+                        LogEventLevel.Warning
+                    );
+                }
+            });
+        }
 
         if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
         {
@@ -453,6 +672,46 @@ public class VideoHub : ConnectionHub
         await _clientMessenger.SendTo("ChangeDevice", "videoHub", user.Id, payload);
     }
 
+    // ── Cast-receiver helpers (Phase 0) ──────────────────────────────────────
+
+    private string ResolveServerUrl()
+    {
+        string? external = _networkDiscovery?.ExternalAddress;
+        return string.IsNullOrEmpty(external) ? Config.ApiBaseUrl : external;
+    }
+
+    private string ResolveSenderLocale()
+    {
+        string? header =
+            _httpContextAccessor.HttpContext?.Request.Headers.AcceptLanguage.ToString();
+        if (string.IsNullOrEmpty(header))
+            return "en-US";
+
+        string first = header.Split(',')[0].Split(';')[0].Trim();
+        return string.IsNullOrEmpty(first) ? "en-US" : first;
+    }
+
+    private CastIntent ResolveVideoIntent(Guid userId)
+    {
+        // If the user has a live video player state when handing off to the TV,
+        // resume that exact item. Otherwise idle — receiver shows the splash.
+        if (!_videoPlayerStateManager.TryGetValue(userId, out VideoPlayerState? state))
+            return CastIntent.Idle();
+        if (state?.CurrentItem is null)
+            return CastIntent.Idle();
+
+        // CurrentList is "/{type}/{listId}/watch" — extract type for navigation.
+        string path = state.CurrentList.ToString().TrimStart('/');
+        string[] parts = path.Split('/');
+        if (parts.Length < 2)
+            return CastIntent.Idle();
+
+        string mediaType = parts[0];
+        string mediaId = state.CurrentItem.Id.ToString();
+        int? resumeAt = state.Time > 0 ? state.Time / 1000 : null;
+        return CastIntent.PlayVideo(mediaType, mediaId, resumeAt);
+    }
+
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         User? user = Context.User.User();
@@ -460,6 +719,9 @@ public class VideoHub : ConnectionHub
             return;
 
         bool stopPlayback = false;
+        Ulid stoppedDeviceId = Ulid.Empty;
+        Ulid stoppedMediaId = Ulid.Empty;
+        string? stoppedTitle = null;
 
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? state))
@@ -470,6 +732,9 @@ public class VideoHub : ConnectionHub
                     _videoDeviceManager.RemoveUserDevice(user.Id);
 
                     stopPlayback = true;
+                    stoppedDeviceId = client.Id;
+                    stoppedMediaId = state.CurrentItem?.VideoId ?? Ulid.Empty;
+                    stoppedTitle = state.CurrentItem?.Title;
                 }
 
         await base.OnDisconnectedAsync(exception);
@@ -522,6 +787,27 @@ public class VideoHub : ConnectionHub
 
         await _videoPlaybackService.UpdatePlaybackState(user, playerState);
 
-        Logger.Socket("Video client disconnected");
+        if (stopPlayback && stoppedDeviceId != Ulid.Empty)
+        {
+            try
+            {
+                await ActivityLogger.LogPlaybackAsync(
+                    "playback.stopped",
+                    user.Id,
+                    stoppedDeviceId,
+                    stoppedMediaId,
+                    new { media_type = "video", title = stoppedTitle }
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.Socket(
+                    $"Failed to log playback.stopped: {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+        }
+
+        Logger.Socket("Video client disconnected", LogEventLevel.Debug);
     }
 }
