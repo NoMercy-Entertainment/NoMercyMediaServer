@@ -195,7 +195,7 @@ public class EncodingOrchestrator(
                 {
                     await PublishTempDirAsync(
                         tempDir,
-                        request.OutputDirectory,
+                        request.OutputDirectory ?? string.Empty,
                         destinationStorage,
                         progress,
                         ct
@@ -243,7 +243,7 @@ public class EncodingOrchestrator(
             }
 
             IReadOnlyList<OutputArtifact> artifacts = await BuildArtifactsAsync(
-                request.OutputDirectory,
+                request.OutputDirectory ?? string.Empty,
                 destinationStorage,
                 ct
             );
@@ -251,7 +251,7 @@ public class EncodingOrchestrator(
             // OutputBytes counts everything on disk (segments + sidecars +
             // thumbnails); artifacts are stream-level only. Walk separately.
             long outputBytes = await SumOutputBytesAsync(
-                request.OutputDirectory,
+                request.OutputDirectory ?? string.Empty,
                 destinationStorage,
                 ct
             );

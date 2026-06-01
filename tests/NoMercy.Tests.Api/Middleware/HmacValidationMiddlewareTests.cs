@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NoMercy.Api.Middleware;
 using NoMercy.Encoder.Composition;
@@ -29,26 +30,34 @@ public class HmacValidationMiddlewareTests
     /// </summary>
     private static HttpClient BuildClient(string? configuredSecret)
     {
-        IWebHostBuilder builder = new WebHostBuilder()
-            .ConfigureServices(services =>
+        IHost host = new HostBuilder()
+            .ConfigureWebHost(web =>
             {
-                EncoderOptions opts = new() { DistributedEncodingSigningKey = configuredSecret };
-                services.AddSingleton<IOptions<EncoderOptions>>(
-                    new OptionsWrapper<EncoderOptions>(opts)
-                );
-            })
-            .Configure(app =>
-            {
-                app.UseMiddleware<HmacValidationMiddleware>();
-                app.Run(ctx =>
+                web.UseTestServer();
+                web.ConfigureServices(services =>
                 {
-                    ctx.Response.StatusCode = 200;
-                    return ctx.Response.WriteAsync("ok");
+                    EncoderOptions opts = new()
+                    {
+                        DistributedEncodingSigningKey = configuredSecret,
+                    };
+                    services.AddSingleton<IOptions<EncoderOptions>>(
+                        new OptionsWrapper<EncoderOptions>(opts)
+                    );
                 });
-            });
+                web.Configure(app =>
+                {
+                    app.UseMiddleware<HmacValidationMiddleware>();
+                    app.Run(ctx =>
+                    {
+                        ctx.Response.StatusCode = 200;
+                        return ctx.Response.WriteAsync("ok");
+                    });
+                });
+            })
+            .Build();
 
-        TestServer server = new(builder);
-        return server.CreateClient();
+        host.Start();
+        return host.GetTestClient();
     }
 
     private static (long timestamp, string signature) MakeSignature(

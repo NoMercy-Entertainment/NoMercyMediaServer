@@ -30,7 +30,7 @@ runs:
 
     - name: Set up Node.js
       if: inputs.project == 'App'
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: 20
 
@@ -250,7 +250,7 @@ runs:
 
     - name: Upload Artifacts
       id: upload
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.project }}-executables
         path: ./output/*

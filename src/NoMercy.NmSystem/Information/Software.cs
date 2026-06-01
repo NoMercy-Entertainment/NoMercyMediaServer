@@ -34,7 +34,7 @@ public static class Software
         string? generatedId = new DeviceIdBuilder()
             .OnWindows(windows => windows.AddMotherboardSerialNumber().AddSystemDriveSerialNumber())
             .OnLinux(linux => linux.AddMotherboardSerialNumber().AddSystemDriveSerialNumber())
-            .OnMac(mac => mac.AddSystemDriveSerialNumber().AddPlatformSerialNumber())
+            .OnMac(mac => mac.AddSystemDriveVolumeUUID().AddPlatformSerialNumber())
             .ToString();
 
         byte[] hash = MD5.HashData(Encoding.UTF8.GetBytes(generatedId));

@@ -23,8 +23,11 @@ env:
   IMAGE_NAME: nomercy-entertainment/nomercymediaserver
 
 jobs:
-  # Package the linux-x64 binary (from build_executables) into each GPU variant
-  # Expects the Service-executables artifact to already be uploaded by build_executables
+  # Package the linux-x64 binary (from build_executables) into each GPU variant.
+  # Pushes immutable RC tags only (e.g. 0.1.375-rc, 0.1.375-rc-nvidia).
+  # The floating :latest and :<version> tags are applied by the promote_docker_images
+  # job in ci-cd-pipeline.yml AFTER create_release succeeds, so users never pull
+  # a half-baked image as stable.
   package:
     runs-on: ubuntu-latest
     strategy:
@@ -55,7 +58,7 @@ jobs:
           ref: ${{ inputs.ref }}
 
       - name: Download linux binary
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: Service-executables
           path: ./artifacts
@@ -85,12 +88,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ inputs.version }}${{ matrix.suffix }}
-            type=raw,value=latest${{ matrix.suffix }},enable=${{ inputs.push }}
-            type=raw,value=${{ matrix.variant }},enable=${{ matrix.variant != 'cpu' }}
+            type=raw,value=${{ inputs.version }}-rc${{ matrix.suffix }},enable=${{ inputs.push }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ matrix.dockerfile }}

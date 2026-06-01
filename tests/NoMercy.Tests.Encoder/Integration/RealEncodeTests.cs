@@ -235,7 +235,8 @@ public class RealEncodeTests : IAsyncLifetime
             );
         result.OutputPath.Should().NotBeNullOrWhiteSpace();
         result.Duration.Should().BeGreaterThan(TimeSpan.Zero);
-        result.Metrics.EncoderUsed.Should().NotBeNullOrWhiteSpace();
+        result.Metrics.Should().NotBeNull();
+        result.Metrics!.EncoderUsed.Should().NotBeNullOrWhiteSpace();
 
         // Verify HLS: at least one playlist and at least one segment
         string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);

@@ -142,7 +142,6 @@ public class TmdbBaseClientTests : TmdbTestBase
         // Arrange
         const int id1 = 100;
         const int id2 = 200;
-        const string lang1 = "en-US";
         const string lang2 = "fr-FR";
 
         // Act

@@ -70,6 +70,7 @@ public class AudioHlsStrategyTests
 
         Assert.True(result.Success);
         Assert.Equal("/out/audio.m3u8", result.OutputPath);
+        Assert.NotNull(result.Metrics);
         Assert.Equal("aac", result.Metrics.EncoderUsed);
         encoder.Verify(
             e =>
@@ -126,8 +127,7 @@ public class AudioHlsStrategyTests
         );
 
         Assert.True(result.Success);
-        // The strategy delegates format detection to the planner/output strategy;
-        // the pipeline reports the AAC codec that was used.
+        Assert.NotNull(result.Metrics);
         Assert.Equal("aac", result.Metrics.EncoderUsed);
     }
 }

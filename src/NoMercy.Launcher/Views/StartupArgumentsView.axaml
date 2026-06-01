@@ -67,7 +67,7 @@
                                    FontWeight="SemiBold" />
 
                         <TextBox Text="{Binding StartupArguments}"
-                                 Watermark="e.g. --dev --loglevel Debug --seed"
+                                 PlaceholderText="e.g. --dev --loglevel Debug --seed"
                                  FontFamily="Consolas, Courier New, monospace"
                                  MinHeight="80"
                                  AcceptsReturn="True"

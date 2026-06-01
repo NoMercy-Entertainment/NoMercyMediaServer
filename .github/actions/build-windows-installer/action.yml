@@ -28,30 +28,17 @@ runs:
 
     - name: Install Inno Setup
       shell: pwsh
-      env:
-        GH_API_TOKEN: ${{ github.token }}
       run: |
-        # Authenticated GitHub API call avoids the 60/hr anonymous rate limit
-        # that runner shared-egress IPs routinely exhaust.
-        $Headers = @{
-          'User-Agent' = 'nomercy-media-server-ci'
-          'Accept'     = 'application/vnd.github+json'
-        }
-        if ($env:GH_API_TOKEN) {
-          $Headers['Authorization'] = "Bearer $env:GH_API_TOKEN"
-        }
-        $Release = Invoke-RestMethod -Uri "https://api.github.com/repos/jrsoftware/issrc/releases/latest" -Headers $Headers -UseBasicParsing
-        $Asset = $Release.assets | Where-Object { $_.name -match '^innosetup-\d+\.\d+\.\d+\.exe$' } | Select-Object -First 1
-
-        if (-not $Asset) {
-          Write-Error "Could not find Inno Setup installer in latest release"
-          exit 1
-        }
-
-        $InnoUrl = $Asset.browser_download_url
+        # Pinned to a known-good stable release. "latest" now resolves to a 7.x beta
+        # whose assets are arch-suffixed (innosetup-7.0.1-beta-x64.exe) and no longer
+        # match a plain innosetup-X.Y.Z.exe; pinning keeps the build reproducible.
+        # Bump $InnoTag + $InnoAsset together to update.
+        $InnoTag = 'is-6_7_3'
+        $InnoAsset = 'innosetup-6.7.3.exe'
+        $InnoUrl = "https://github.com/jrsoftware/issrc/releases/download/$InnoTag/$InnoAsset"
         $InstallerPath = "$env:TEMP\innosetup.exe"
 
-        Write-Host "Downloading $($Asset.name) from latest release ($($Release.tag_name))..."
+        Write-Host "Downloading $InnoAsset ($InnoTag)..."
         Invoke-WebRequest -Uri $InnoUrl -OutFile $InstallerPath -UseBasicParsing
 
         Write-Host "Installing Inno Setup..."
@@ -85,7 +72,7 @@ runs:
         Get-ChildItem "./packages/windows/"
 
     - name: Upload Windows installer artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: windows-installer
         path: packages/windows/

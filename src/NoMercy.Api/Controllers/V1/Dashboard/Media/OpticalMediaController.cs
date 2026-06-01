@@ -8,14 +8,12 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.FileWatcher;
 using NoMercy.Helpers.Extensions;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaSources.OpticalMedia.Dto;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.OpticalMedia.Drives;
-using NoMercy.OpticalMedia.Live;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
@@ -34,8 +32,6 @@ public partial class OpticalMediaController(
     IDiscMetadataResolver metadataResolver,
     IDriveMonitor driveMonitor,
     IDiscRipper discRipper,
-    JobDispatcher jobDispatcher,
-    ILiveDiscSession liveDiscSession,
     IStorageFactory storageFactory,
     IStorageDriver localStorageDriver
 ) : BaseController

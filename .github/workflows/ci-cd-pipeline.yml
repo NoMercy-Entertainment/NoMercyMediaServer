@@ -85,3 +85,79 @@ jobs:
     secrets: inherit
     with:
       version: ${{ needs.version_management.outputs.version }}
+
+  # Step 7: Promote Docker images from RC tags to stable floating tags.
+  # Runs ONLY after create_release succeeds so users cannot pull :latest or
+  # :<version> until the GitHub Release (with all file assets) is fully published.
+  # Uses `docker buildx imagetools create` to re-tag the already-pushed RC digest
+  # without rebuilding — the image bytes are identical.
+  #
+  # RC tags pushed by build_docker_images:
+  #   <version>-rc, <version>-rc-nvidia, <version>-rc-intel, <version>-rc-amd
+  #
+  # Stable tags published here (superset of the pre-gating tag set, so no
+  # existing pull reference disappears):
+  #   <version>, latest                        (cpu / default variant)
+  #   <version>-nvidia, nvidia, latest-nvidia  (nvidia variant)
+  #   <version>-intel, intel, latest-intel     (intel variant)
+  #   <version>-amd, amd, latest-amd           (amd variant)
+  promote_docker_images:
+    needs: [version_management, build_docker_images, create_release]
+    if: needs.version_management.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: nomercy-entertainment/nomercymediaserver
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Promote cpu variant
+        run: |
+          BASE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          VERSION="${{ needs.version_management.outputs.version }}"
+          docker buildx imagetools create \
+            --tag "${BASE}:${VERSION}" \
+            --tag "${BASE}:latest" \
+            "${BASE}:${VERSION}-rc"
+
+      - name: Promote nvidia variant
+        run: |
+          BASE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          VERSION="${{ needs.version_management.outputs.version }}"
+          docker buildx imagetools create \
+            --tag "${BASE}:${VERSION}-nvidia" \
+            --tag "${BASE}:nvidia" \
+            --tag "${BASE}:latest-nvidia" \
+            "${BASE}:${VERSION}-rc-nvidia"
+
+      - name: Promote intel variant
+        run: |
+          BASE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          VERSION="${{ needs.version_management.outputs.version }}"
+          docker buildx imagetools create \
+            --tag "${BASE}:${VERSION}-intel" \
+            --tag "${BASE}:intel" \
+            --tag "${BASE}:latest-intel" \
+            "${BASE}:${VERSION}-rc-intel"
+
+      - name: Promote amd variant
+        run: |
+          BASE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          VERSION="${{ needs.version_management.outputs.version }}"
+          docker buildx imagetools create \
+            --tag "${BASE}:${VERSION}-amd" \
+            --tag "${BASE}:amd" \
+            --tag "${BASE}:latest-amd" \
+            "${BASE}:${VERSION}-rc-amd"

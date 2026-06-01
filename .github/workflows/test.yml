@@ -35,10 +35,12 @@ jobs:
           --blame-hang-timeout 5m
           --filter "(Category=Unit|Category=ErrorHandling|Category=Characterization)&Category!=Integration"
 
-  # Optional coverage job - non-blocking, only runs on master or when manually triggered
+  # Full-suite coverage job — runs on master or manual dispatch (the release path).
+  # MUST block: it is the only job that runs uncategorized tests (e.g. the plugin
+  # suite, which carries no Category trait and is excluded from the fast `test`
+  # filter). With continue-on-error a red full suite sailed straight to release.
   coverage:
     runs-on: ubuntu-latest
-    continue-on-error: true
     if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     
     steps:

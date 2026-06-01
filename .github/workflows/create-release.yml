@@ -41,19 +41,19 @@ jobs:
           token: ${{ secrets.PAT }}
 
       - name: Download executable artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: ./artifacts
           pattern: '*-executables'
 
       - name: Download package artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: ./artifacts
           pattern: '*-packages'
 
       - name: Download installer artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: ./artifacts
           pattern: '*-installer'

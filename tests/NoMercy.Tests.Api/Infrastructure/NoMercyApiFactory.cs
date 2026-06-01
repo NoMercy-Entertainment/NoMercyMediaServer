@@ -63,6 +63,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
     protected override IWebHostBuilder? CreateWebHostBuilder()
     {
+#pragma warning disable ASPDEPR008 // WebHost kept until Startup is migrated to minimal-hosting
         return WebHost
             .CreateDefaultBuilder([])
             .UseContentRoot(AppContext.BaseDirectory)
@@ -79,6 +80,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
                 services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
             });
+#pragma warning restore ASPDEPR008
     }
 
     public static readonly Ulid MovieLibraryId = Ulid.NewUlid();

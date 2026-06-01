@@ -45,7 +45,7 @@ public record NMCardWrapper
 
     public NMCardWrapper(CardData cardData)
     {
-        Id = (cardData.Id?.ToString()).OrEmpty();
+        Id = cardData.Id?.ToString() ?? string.Empty;
         Title = cardData.Title;
         Data = cardData;
     }

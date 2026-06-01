@@ -13,6 +13,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
+#pragma warning disable CS0618 // intentionally testing the backwards-compat controller
 /// <summary>
 /// Phase 4.10 — HTTPS enforcement at worker registration. The spec lets
 /// loopback (127.0.0.1, ::1, localhost) register over plain HTTP for local
@@ -134,3 +135,4 @@ public class WorkersController_RegisterHttpsTests
         Assert.IsType<OkObjectResult>(result);
     }
 }
+#pragma warning restore CS0618

@@ -5,7 +5,12 @@ namespace NoMercy.Launcher.Views;
 
 public partial class MainWindow : Window
 {
-    private readonly MainViewModel _viewModel;
+    private readonly MainViewModel? _viewModel;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
 
     public MainWindow(MainViewModel viewModel)
     {
@@ -19,11 +24,12 @@ public partial class MainWindow : Window
 
     private async void OnWindowOpened(object? sender, EventArgs e)
     {
+        if (_viewModel is null)
+            return;
+
         await _viewModel.ServerControlViewModel.RefreshStatusAsync();
         _viewModel.ServerControlViewModel.StartPolling();
 
-        // Settings and startup args are loaded reactively when IsServerRunning becomes true.
-        // Trigger an initial load if the server is already running.
         if (_viewModel.ServerControlViewModel.IsServerRunning)
             await _viewModel.SettingsViewModel.LoadConfigAsync();
 
@@ -37,12 +43,13 @@ public partial class MainWindow : Window
 
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
-        _viewModel.ServerControlViewModel.StopPolling();
-        _viewModel.LogViewerViewModel.StopAutoRefresh();
+        _viewModel?.ServerControlViewModel.StopPolling();
+        _viewModel?.LogViewerViewModel.StopAutoRefresh();
     }
 
     public void SelectTab(int index)
     {
-        _viewModel.SelectedTabIndex = index;
+        if (_viewModel is not null)
+            _viewModel.SelectedTabIndex = index;
     }
 }

@@ -144,8 +144,12 @@ public sealed class StoragePathGuard
         );
     }
 
+    // Allowlist roots are on-disk OS paths; canonicalizing them here is the
+    // local-enforcement boundary, not a storage-contract path (NMS002).
+#pragma warning disable NMS002
     private static string NormalizeRoot(string root) =>
         Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+#pragma warning restore NMS002
 
     private static bool IsUnderRoot(string fullPath, string root, StringComparison cmp)
     {

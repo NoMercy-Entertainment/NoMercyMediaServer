@@ -92,10 +92,10 @@ internal class Program
                     ) == true
                 )
                 {
-                    string code = context.Request.Query["code"];
-                    string state = context.Request.Query["state"];
-                    string error = context.Request.Query["error"];
-                    string errorDescription = context.Request.Query["error_description"];
+                    string? code = context.Request.Query["code"];
+                    string? state = context.Request.Query["state"];
+                    string? error = context.Request.Query["error"];
+                    string? errorDescription = context.Request.Query["error_description"];
                     string redirectUri =
                         $"http://localhost:{context.Request.Host.Port ?? 7625}/sso-callback";
 

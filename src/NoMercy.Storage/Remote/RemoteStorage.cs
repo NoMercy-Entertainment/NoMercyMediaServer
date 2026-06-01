@@ -155,7 +155,9 @@ public sealed class RemoteStorage : IStorage
     public async Task<LocalPathLease> AcquireLocalPathAsync(string path, CancellationToken ct)
     {
         Directory.CreateDirectory(StoragePaths.TempRoot);
+#pragma warning disable NMS001 // local temp file for a materialized remote object — OS-native by design
         string tmp = Path.Combine(StoragePaths.TempRoot, $"nomercy-remote-{Guid.NewGuid():N}");
+#pragma warning restore NMS001
 
         await using Stream src = _driver.OpenReadIsolated(V(path));
         await using FileStream dst = new(
@@ -263,7 +265,9 @@ public sealed class RemoteStorage : IStorage
     public LocalPathLease AcquireLocalPath(string path)
     {
         Directory.CreateDirectory(StoragePaths.TempRoot);
+#pragma warning disable NMS001 // local temp file for a materialized remote object — OS-native by design
         string tmp = Path.Combine(StoragePaths.TempRoot, $"nomercy-remote-{Guid.NewGuid():N}");
+#pragma warning restore NMS001
 
         using Stream src = _driver.OpenReadIsolated(V(path));
         using FileStream dst = new(tmp, FileMode.Create, FileAccess.Write, FileShare.None);

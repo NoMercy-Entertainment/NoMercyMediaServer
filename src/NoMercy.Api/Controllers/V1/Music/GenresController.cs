@@ -138,7 +138,7 @@ public class GenresController : BaseController
         return Ok(ComponentResponse.From(grid));
     }
 
-    private static string BucketLetter(string name)
+    private static string BucketLetter(string? name)
     {
         if (string.IsNullOrEmpty(name))
             return "#";

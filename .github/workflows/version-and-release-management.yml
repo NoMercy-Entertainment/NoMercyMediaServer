@@ -25,7 +25,7 @@ jobs:
 
       - name: Get latest tag
         id: get-tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
+        uses: WyriHaximus/github-action-get-previous-tag@v2
         with:
           fallback: v0.1.201
 

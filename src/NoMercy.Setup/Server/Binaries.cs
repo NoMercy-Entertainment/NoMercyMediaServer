@@ -109,8 +109,17 @@ public class Binaries
             await DownloadYtdlp();
             await DownloadWhisperModels(AppFiles.WhisperModel);
 
-            string currentCulture = CultureInfo.CurrentCulture.EnglishLanguageTag();
-            await DownloadTesseractData(["eng", "jpn", currentCulture]);
+            List<string> tesseractLanguages = ["eng", "jpn"];
+            if (!CultureInfo.CurrentCulture.Equals(CultureInfo.InvariantCulture))
+            {
+                string currentCulture = CultureInfo.CurrentCulture.EnglishLanguageTag();
+                if (
+                    !string.IsNullOrEmpty(currentCulture)
+                    && !tesseractLanguages.Contains(currentCulture)
+                )
+                    tesseractLanguages.Add(currentCulture);
+            }
+            await DownloadTesseractData(tesseractLanguages);
         });
     }
 

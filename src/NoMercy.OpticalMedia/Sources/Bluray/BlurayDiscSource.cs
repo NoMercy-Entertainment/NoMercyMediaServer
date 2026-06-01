@@ -18,7 +18,6 @@ namespace NoMercy.OpticalMedia.Sources.Bluray;
 public sealed partial class BlurayDiscSource(
     EncoderOptions options,
     IProcessRunner processRunner,
-    IDiscScanner scanner,
     ILogger<BlurayDiscSource> logger
 ) : IDiscSource
 {
@@ -166,8 +165,6 @@ public sealed partial class BlurayDiscSource(
         CancellationToken ct
     )
     {
-        // The existing IDiscScanner only knows the main playlist — feed it
-        // a -playlist-scoped URL so its detailed parser sees just that one.
         string url = ToBlurayUrl(drive.Path);
         DiscInfo info = await ScanWithPlaylistAsync(url, titleIndex, ct);
         DiscTitle? single = info.Titles.FirstOrDefault();
@@ -190,11 +187,6 @@ public sealed partial class BlurayDiscSource(
         };
     }
 
-    /// <summary>
-    /// Runs ffprobe with <c>-playlist {N}</c> and the JSON pipeline. Uses
-    /// the existing <see cref="DiscScanner"/> code path so AACS/BD+ error
-    /// classification and JSON parsing stay in one place.
-    /// </summary>
     private async Task<DiscInfo> ScanWithPlaylistAsync(
         string drivePath,
         int playlistIndex,

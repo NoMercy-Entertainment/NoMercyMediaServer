@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Hosting;
 using NoMercy.Api.Middleware;
 using NoMercy.Encoder.Errors;
 using Xunit;
@@ -19,14 +20,20 @@ public class EncoderRuntimeExceptionMiddlewareTests
     /// </summary>
     private static HttpClient BuildClient(RequestDelegate terminal)
     {
-        IWebHostBuilder builder = new WebHostBuilder().Configure(app =>
-        {
-            app.UseMiddleware<EncoderRuntimeExceptionMiddleware>();
-            app.Run(terminal);
-        });
+        IHost host = new HostBuilder()
+            .ConfigureWebHost(web =>
+            {
+                web.UseTestServer();
+                web.Configure(app =>
+                {
+                    app.UseMiddleware<EncoderRuntimeExceptionMiddleware>();
+                    app.Run(terminal);
+                });
+            })
+            .Build();
 
-        TestServer server = new(builder);
-        return server.CreateClient();
+        host.Start();
+        return host.GetTestClient();
     }
 
     [Fact]

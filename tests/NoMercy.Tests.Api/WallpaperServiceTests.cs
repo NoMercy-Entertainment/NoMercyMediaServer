@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Wallpaper;
@@ -81,6 +82,7 @@ public class WallpaperStyleTests
     }
 }
 
+[SupportedOSPlatform("linux")]
 public class LinuxWallpaperStyleMappingTests
 {
     [Theory]
@@ -97,6 +99,7 @@ public class LinuxWallpaperStyleMappingTests
     }
 }
 
+[SupportedOSPlatform("linux")]
 public class LinuxDesktopDetectionTests
 {
     [Fact]
@@ -143,6 +146,7 @@ public class LinuxDesktopDetectionTests
     }
 }
 
+[SupportedOSPlatform("windows")]
 public class WindowsHexToColorTests
 {
     [Theory]

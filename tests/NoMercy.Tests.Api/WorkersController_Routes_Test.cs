@@ -7,6 +7,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
+#pragma warning disable CS0618 // intentionally testing the backwards-compat controller
 /// <summary>
 /// Phase 4.10 — distribution route alignment. Verifies the spec routes are
 /// exposed and the legacy aliases stay in place so older self-hosted workers
@@ -73,3 +74,4 @@ public class WorkersController_Routes_Test
         Assert.Contains("api/v{version:apiVersion}/worker-source", routes);
     }
 }
+#pragma warning restore CS0618

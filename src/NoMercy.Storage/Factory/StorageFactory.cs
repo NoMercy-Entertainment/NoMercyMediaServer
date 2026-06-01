@@ -117,6 +117,9 @@ public sealed class StorageFactory : IStorageFactory
         if (string.IsNullOrEmpty(subPath))
             return root;
 
+        // local/default build on-disk OS paths (the facade's OS boundary);
+        // NMS001 targets consumers, not the driver layer itself.
+#pragma warning disable NMS001
         switch (driverType)
         {
             case "local":
@@ -141,6 +144,7 @@ public sealed class StorageFactory : IStorageFactory
             default:
                 return Path.Combine(root, subPath);
         }
+#pragma warning restore NMS001
     }
 
     private IStorage Build(

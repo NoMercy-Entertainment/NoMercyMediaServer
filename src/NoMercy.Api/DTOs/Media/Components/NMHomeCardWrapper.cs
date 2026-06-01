@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.DTOs.Media.Components;
 
@@ -45,8 +44,8 @@ public record NMHomeCardWrapper
 
     public NMHomeCardWrapper(HomeCardData homeCardData)
     {
-        Id = (homeCardData.Id?.ToString()).OrEmpty();
-        Title = homeCardData.Title.OrEmpty();
+        Id = homeCardData.Id?.ToString() ?? string.Empty;
+        Title = homeCardData.Title ?? string.Empty;
         Data = homeCardData;
     }
 }
