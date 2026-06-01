@@ -252,8 +252,12 @@ jobs:
           sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" Directory.Build.props
           git add -A
 
-          # Create the squash commit with version and changelog
-          git commit -m "release: v$NEW_VERSION" -m "$CHANGELOG"
+          # Create the squash commit with version and changelog.
+          # [skip ci]: this commit is force-synced to dev at the end of this job;
+          # without it the dev push starts a new pipeline run that cancels this
+          # run's promote_docker_images job (cancel-in-progress concurrency),
+          # leaving :latest unpromoted. The sync run was always a no-op anyway.
+          git commit -m "release: v$NEW_VERSION [skip ci]" -m "$CHANGELOG"
 
           # Push to master
           git push origin master

@@ -254,10 +254,19 @@ public class NetworkDiscovery : INetworkDiscovery
         try
         {
             using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
-            socket.Connect("1.1.1.1", 65530);
-            string? ip = (socket.LocalEndPoint as IPEndPoint)?.Address.ToString();
-            if (!string.IsNullOrEmpty(ip) && ip != "127.0.0.1")
-                return ip;
+            socket.Connect("8.8.8.8", 65530);
+            IPAddress? address = (socket.LocalEndPoint as IPEndPoint)?.Address;
+            if (
+                address is not null
+                && !IPAddress.IsLoopback(address)
+                && !address.Equals(IPAddress.Any)
+                && address.AddressFamily == AddressFamily.InterNetwork
+            )
+            {
+                string ip = address.ToString();
+                if (ip != "0.0.0.0")
+                    return ip;
+            }
         }
         catch
         {

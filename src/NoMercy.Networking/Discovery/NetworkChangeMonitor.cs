@@ -71,6 +71,29 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
 
     private static string GetCurrentInternalIp()
     {
+        // UDP socket trick: OS picks the outbound source address — always the real LAN IP.
+        try
+        {
+            using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+            socket.Connect("8.8.8.8", 65530);
+            IPAddress? address = (socket.LocalEndPoint as IPEndPoint)?.Address;
+            if (
+                address is not null
+                && !IPAddress.IsLoopback(address)
+                && !address.Equals(IPAddress.Any)
+                && address.AddressFamily == AddressFamily.InterNetwork
+            )
+            {
+                string socketIp = address.ToString();
+                if (socketIp != "0.0.0.0")
+                    return socketIp;
+            }
+        }
+        catch
+        {
+            // Fall through to NIC enumeration
+        }
+
         try
         {
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
@@ -90,8 +113,14 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                         continue;
                     if (IPAddress.IsLoopback(addr.Address))
                         continue;
+                    if (addr.Address.Equals(IPAddress.Any))
+                        continue;
 
-                    return addr.Address.ToString();
+                    string nicIp = addr.Address.ToString();
+                    if (nicIp == "0.0.0.0")
+                        continue;
+
+                    return nicIp;
                 }
             }
         }
@@ -107,11 +136,17 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     {
         try
         {
+            string rawInternalIp = _networkDiscovery.InternalIp;
+            string safeInternalIp =
+                rawInternalIp == "0.0.0.0" || rawInternalIp == "127.0.0.1"
+                    ? string.Empty
+                    : rawInternalIp;
+
             Dictionary<string, string> serverData = new()
             {
                 { "id", Info.DeviceId.ToString() },
                 { "name", Info.DeviceName },
-                { "internal_ip", _networkDiscovery.InternalIp },
+                { "internal_ip", safeInternalIp },
                 { "internal_ipv6", _networkDiscovery.InternalIpV6.OrEmpty() },
                 { "external_ipv6", _networkDiscovery.ExternalIpV6.OrEmpty() },
                 { "internal_port", Config.InternalServerPort.ToString() },
