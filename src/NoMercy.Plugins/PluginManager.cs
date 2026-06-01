@@ -492,7 +492,38 @@ public class PluginManager : IPluginManager, IDisposable
 
     internal async Task LoadPluginAssemblyAsync(string assemblyPath, CancellationToken ct = default)
     {
-        PluginLoadContext loadContext = new(assemblyPath);
+        PluginLoadContext loadContext;
+        try
+        {
+            // AssemblyDependencyResolver reads the assembly's .deps.json via the
+            // native host. On Linux it throws for a DLL with no/invalid deps
+            // manifest (a stray file, a plugin shipped without its deps);
+            // Windows tolerates it. Constructing outside the try let that escape
+            // and abort discovery of every other plugin — guard it so a bad
+            // assembly is skipped and reported, not fatal.
+            loadContext = new(assemblyPath);
+        }
+        catch (Exception loadContextEx)
+        {
+            _logger.LogWarning(
+                "Failed to initialize plugin load context for {AssemblyPath}: {Error}",
+                assemblyPath,
+                loadContextEx.Message
+            );
+
+            await _eventBus.PublishAsync(
+                new PluginErrorEvent
+                {
+                    PluginId = Guid.Empty.ToString(),
+                    PluginName = Path.GetFileNameWithoutExtension(assemblyPath),
+                    ErrorMessage =
+                        $"Failed to initialize plugin load context: {loadContextEx.Message}",
+                    ExceptionType = loadContextEx.GetType().Name,
+                },
+                ct
+            );
+            return;
+        }
 
         try
         {

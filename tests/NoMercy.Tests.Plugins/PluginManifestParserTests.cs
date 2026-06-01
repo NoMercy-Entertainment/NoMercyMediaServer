@@ -233,8 +233,12 @@ public class PluginManifestParserTests : IDisposable
     public async Task ParseFileAsync_FileNotFound_ThrowsFileNotFoundException()
     {
         IStorage storage = TestStorageHelper.CreateStorage(_tempDir);
-        Func<Task> act = () =>
-            PluginManifestParser.ParseFileAsync("/nonexistent/plugin.json", storage);
+        // Missing file UNDER the scoped root. An out-of-root absolute path is
+        // rejected by the storage guard before the existence check, and a leading
+        // "/" path is absolute on Linux but relative on Windows — so it must stay
+        // inside the allowed root to test the not-found path cross-platform.
+        string missingPath = Path.Combine(_tempDir, "nonexistent", "plugin.json");
+        Func<Task> act = () => PluginManifestParser.ParseFileAsync(missingPath, storage);
 
         await act.Should().ThrowAsync<FileNotFoundException>();
     }
