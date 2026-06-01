@@ -63,13 +63,18 @@ public class PluginBootScanTests : IDisposable
         // copy) — loading it through PluginLoadContext requires clean isolation.
         string testBinDir = Path.GetDirectoryName(typeof(PluginBootScanTests).Assembly.Location)!;
         string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
+        // Mirror the test's own build configuration + TFM so this works under
+        // both Debug (local) and Release (CI coverage) — hardcoding "Debug"
+        // makes every Echo-staging test fail when CI builds Release.
+        string tfm = Path.GetFileName(testBinDir);
+        string configuration = Path.GetFileName(Path.GetDirectoryName(testBinDir)!);
         return Path.Combine(
             repoRoot,
             "tests",
             "NoMercy.Plugin.Samples.Echo",
             "bin",
-            "Debug",
-            "net10.0"
+            configuration,
+            tfm
         );
     }
 
@@ -86,6 +91,13 @@ public class PluginBootScanTests : IDisposable
 
         // Copy DLL and all dependencies that the Echo assembly needs at runtime.
         foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), overwrite: true);
+
+        // Copy the .deps.json — AssemblyDependencyResolver reads it to resolve the
+        // plugin's dependencies. Without it the resolver constructor throws and the
+        // plugin silently fails to load (results come back empty). This mirrors how
+        // a real plugin package ships its DLL alongside its deps manifest.
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
             File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), overwrite: true);
 
         // Copy the plugin manifest.
