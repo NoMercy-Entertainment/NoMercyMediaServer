@@ -39,6 +39,7 @@ public class PluginDiIntegrationTests : IDisposable
         ServiceCollection services = new();
         services.AddSingleton<IEventBus, InMemoryEventBus>();
         services.AddLogging();
+        services.AddSingleton(TestStorageHelper.CreateBackend());
 
         services.AddPluginSystem(_tempPluginsDir);
 
@@ -171,6 +172,7 @@ public class PluginDiIntegrationTests : IDisposable
         InMemoryEventBus bus = new();
         services.AddSingleton<IEventBus>(bus);
         services.AddLogging();
+        services.AddSingleton(TestStorageHelper.CreateBackend());
 
         services.AddPluginSystem(_tempPluginsDir);
 

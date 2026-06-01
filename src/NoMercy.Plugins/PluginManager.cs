@@ -36,6 +36,15 @@ public class PluginManager : IPluginManager, IDisposable
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
     }
 
+    // AssemblyLoadContext and AssemblyDependencyResolver are raw filesystem APIs and need a
+    // real absolute path. IStorage hands back paths relative to the plugins root, so resolve
+    // them against the absolute local root before loading. An already-absolute path is returned
+    // unchanged. Plugin assemblies are always local — they cannot be loaded from a remote driver.
+    private string ToLocalAssemblyPath(string storagePath)
+    {
+        return Path.GetFullPath(Path.Combine(_pluginsPath, storagePath));
+    }
+
     public IReadOnlyList<PluginInfo> GetInstalledPlugins()
     {
         return _loadedPlugins.Values.Select(lp => lp.Info).ToList().AsReadOnly();
@@ -305,11 +314,12 @@ public class PluginManager : IPluginManager, IDisposable
                 return;
             }
 
-            PluginLoadContext loadContext = new(assemblyPath);
+            string absoluteAssemblyPath = ToLocalAssemblyPath(assemblyPath);
+            PluginLoadContext loadContext = new(absoluteAssemblyPath);
 
             try
             {
-                Assembly assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
+                Assembly assembly = loadContext.LoadFromAssemblyPath(absoluteAssemblyPath);
                 List<Type> pluginTypes = assembly
                     .GetTypes()
                     .Where(t =>
@@ -492,6 +502,7 @@ public class PluginManager : IPluginManager, IDisposable
 
     internal async Task LoadPluginAssemblyAsync(string assemblyPath, CancellationToken ct = default)
     {
+        string absoluteAssemblyPath = ToLocalAssemblyPath(assemblyPath);
         PluginLoadContext loadContext;
         try
         {
@@ -501,7 +512,7 @@ public class PluginManager : IPluginManager, IDisposable
             // Windows tolerates it. Constructing outside the try let that escape
             // and abort discovery of every other plugin — guard it so a bad
             // assembly is skipped and reported, not fatal.
-            loadContext = new(assemblyPath);
+            loadContext = new(absoluteAssemblyPath);
         }
         catch (Exception loadContextEx)
         {
@@ -527,7 +538,7 @@ public class PluginManager : IPluginManager, IDisposable
 
         try
         {
-            Assembly assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
+            Assembly assembly = loadContext.LoadFromAssemblyPath(absoluteAssemblyPath);
             List<Type> pluginTypes = assembly
                 .GetTypes()
                 .Where(t =>
