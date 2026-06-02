@@ -36,6 +36,7 @@ using NoMercy.Encoder.Strategies.Mkv;
 using NoMercy.Encoder.Strategies.Mp4;
 using NoMercy.Encoder.Subscribers;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Resources;
 using NoMercy.Storage;
 
@@ -204,8 +205,8 @@ public static class ServiceCollectionExtensions
         // Content intelligence (OCR / Whisper / crop detection)
         services.TryAddSingleton(sp =>
         {
-            HttpClient client = new();
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("NoMercy-MediaServer");
+            System.Net.Http.HttpClient client = new();
+            client.WithNoMercyUserAgent();
             return client;
         });
         services.AddTransient<ITesseractModelManager, TesseractModelManager>();

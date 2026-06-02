@@ -362,7 +362,7 @@ public class SetupEndpoints
             string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
 
             using SystemHttpClient httpClient = new();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+            httpClient.WithNoMercyUserAgent();
 
             using HttpResponseMessage tokenResponse = await httpClient.PostAsync(
                 tokenEndpoint,
@@ -503,7 +503,7 @@ public class SetupEndpoints
             string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
 
             using SystemHttpClient httpClient = new();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+            httpClient.WithNoMercyUserAgent();
 
             using HttpResponseMessage tokenResponse = await httpClient.PostAsync(
                 tokenEndpoint,
@@ -618,7 +618,7 @@ public class SetupEndpoints
             string deviceCodeEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/auth/device";
 
             using SystemHttpClient httpClient = new();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+            httpClient.WithNoMercyUserAgent();
 
             using HttpResponseMessage deviceResponse = await httpClient.PostAsync(
                 deviceCodeEndpoint,
@@ -846,7 +846,7 @@ public class SetupEndpoints
         DateTime expiresAt = DateTime.UtcNow.AddSeconds(deviceData.ExpiresIn);
 
         using SystemHttpClient httpClient = new();
-        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+        httpClient.WithNoMercyUserAgent();
 
         // Clamp the server-supplied interval so a hostile or buggy IDP can't
         // tight-loop us (interval=0) or stall the setup phase (huge value).

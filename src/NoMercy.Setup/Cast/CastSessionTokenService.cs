@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using Newtonsoft.Json;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
@@ -117,7 +118,7 @@ public class CastSessionTokenService(AuthManager authManager)
         try
         {
             using HttpClient httpClient = new();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+            httpClient.WithNoMercyUserAgent();
 
             using HttpResponseMessage response = await httpClient.PostAsync(
                 tokenEndpoint,

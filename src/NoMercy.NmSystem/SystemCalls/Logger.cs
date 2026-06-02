@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Lifecycle;
 using NoMercy.NmSystem.LogEnrichers;
@@ -57,7 +58,7 @@ public static class Logger
             Name = name;
             DisplayName = displayName;
             Color = color;
-            ColorHex = ToHexString(color);
+            ColorHex = color.ToHexString();
             Type = type;
             DefaultLevel = defaultLevel;
         }
@@ -216,8 +217,6 @@ public static class Logger
     }
 
     private static bool ShouldLog(LogEventLevel level) => level >= _maxLogLevel;
-
-    private static string ToHexString(Color color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
 
     public static void SetLogLevel(LogEventLevel level) => _maxLogLevel = level;
 

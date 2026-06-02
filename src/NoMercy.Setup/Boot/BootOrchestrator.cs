@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
@@ -196,7 +197,7 @@ public class BootOrchestrator
         {
             using HttpClient client = new();
             client.Timeout = TimeSpan.FromSeconds(10);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+            client.WithNoMercyUserAgent();
 
             using HttpResponseMessage response = await client.GetAsync(wellKnown);
 

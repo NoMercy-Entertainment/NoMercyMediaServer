@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
@@ -272,7 +273,7 @@ public class AuthManager
             string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
 
             using HttpClient httpClient = new();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+            httpClient.WithNoMercyUserAgent();
 
             using HttpResponseMessage response = await httpClient.PostAsync(
                 tokenEndpoint,
@@ -345,7 +346,7 @@ public class AuthManager
             );
 
             using HttpClient httpClient = new();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+            httpClient.WithNoMercyUserAgent();
 
             using HttpResponseMessage response = await httpClient.PostAsync(
                 tokenEndpoint,

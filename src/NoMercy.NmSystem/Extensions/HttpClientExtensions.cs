@@ -6,9 +6,17 @@ using NoMercy.NmSystem.Information;
 
 namespace NoMercy.NmSystem.Extensions;
 
-public static class HttpClient
+public static class HttpClientExtensions
 {
     private static readonly ConcurrentDictionary<string, LookupClient> DnsClients = new();
+
+    public static System.Net.Http.HttpClient WithNoMercyUserAgent(
+        this System.Net.Http.HttpClient client
+    )
+    {
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+        return client;
+    }
 
     public static System.Net.Http.HttpClient WithDns(string? dnsServer = null)
     {

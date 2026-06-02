@@ -110,9 +110,8 @@ public static partial class Str
 
     public static string? TryGetYear(this string str)
     {
-        if (!MatchYearRegex().Match(str).Success)
-            return null;
-        return MatchYearRegex().Match(str).Value;
+        Match match = MatchYearRegex().Match(str);
+        return match.Success ? match.Value : null;
     }
 
     [GeneratedRegex(@"\[.*?\]")]

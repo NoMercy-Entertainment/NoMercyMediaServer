@@ -805,7 +805,7 @@ public class SetupServer
         string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
 
         using SystemHttpClient httpClient = new();
-        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+        httpClient.WithNoMercyUserAgent();
 
         using HttpResponseMessage response = await httpClient.PostAsync(
             tokenEndpoint,
