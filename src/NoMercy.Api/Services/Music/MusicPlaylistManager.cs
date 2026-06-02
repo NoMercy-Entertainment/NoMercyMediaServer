@@ -8,10 +8,10 @@ namespace NoMercy.Api.Services.Music;
 
 public class MusicPlaylistManager
 {
-    private readonly MusicRepository _musicRepository;
+    private readonly IMusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
 
-    public MusicPlaylistManager(MusicRepository musicService, MediaContext mediaContext)
+    public MusicPlaylistManager(IMusicRepository musicService, MediaContext mediaContext)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;

@@ -14,7 +14,7 @@ using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.Data.Repositories;
 
-public class TvShowRepository(MediaContext context)
+public class TvShowRepository(MediaContext context) : ITvShowRepository
 {
     public async Task<Tv?> GetTvAsync(
         MediaContext mediaContext,

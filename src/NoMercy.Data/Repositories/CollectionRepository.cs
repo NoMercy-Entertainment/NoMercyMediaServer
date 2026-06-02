@@ -27,7 +27,7 @@ public class CollectionListDto
     public string? CertificationCountry { get; set; }
 }
 
-public class CollectionRepository(MediaContext context)
+public class CollectionRepository(MediaContext context) : ICollectionRepository
 {
     public async Task<List<Collection>> GetCollectionsAsync(
         Guid userId,

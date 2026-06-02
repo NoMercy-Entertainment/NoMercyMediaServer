@@ -21,7 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/devices", Order = 10)]
 public class DevicesController(
-    DeviceRepository deviceRepository,
+    IDeviceRepository deviceRepository,
     DeviceBusRegistry busRegistry,
     ConnectedClients connectedClients
 ) : BaseController

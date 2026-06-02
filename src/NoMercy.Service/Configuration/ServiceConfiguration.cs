@@ -66,6 +66,7 @@ using NoMercyQueue.Extensions;
 using Serilog.Events;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using DatabaseActivity = NoMercy.Database.Activity;
+using DataIMovieRepository = NoMercy.Data.Repositories.IMovieRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MediaProcessingCollectionRepository = NoMercy.MediaProcessing.Collections.CollectionRepository;
 using MediaProcessingEpisodeRepository = NoMercy.MediaProcessing.Episodes.EpisodeRepository;
@@ -526,11 +527,17 @@ public static class ServiceConfiguration
         services.AddScoped<LanguageRepository>();
         services.AddScoped<CollectionRepository>();
         services.AddScoped<MediaProcessingCollectionRepository>();
-        services.AddScoped<ICollectionRepository, MediaProcessingCollectionRepository>();
+        services.AddScoped<
+            NoMercy.MediaProcessing.Collections.ICollectionRepository,
+            MediaProcessingCollectionRepository
+        >();
         services.AddScoped<GenreRepository>();
         services.AddScoped<MovieRepository>();
         services.AddScoped<MediaProcessingMovieRepository>();
-        services.AddScoped<IMovieRepository, MediaProcessingMovieRepository>();
+        services.AddScoped<
+            NoMercy.MediaProcessing.Movies.IMovieRepository,
+            MediaProcessingMovieRepository
+        >();
         services.AddScoped<TvShowRepository>();
         services.AddScoped<MediaProcessingShowRepository>();
         services.AddScoped<IShowRepository, MediaProcessingShowRepository>();
@@ -543,6 +550,71 @@ public static class ServiceConfiguration
         services.AddScoped<SpecialRepository>();
         services.AddScoped<RecommendationRepository>();
         services.AddScoped<NoMercy.Data.Repositories.PeopleRepository>();
+
+        // Read-side interface registrations (Data.Repositories)
+        services.AddScoped<NoMercy.Data.Repositories.ICollectionRepository, CollectionRepository>();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IContentSegmentRepository,
+            NoMercy.Data.Repositories.ContentSegmentRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IDeviceRepository,
+            NoMercy.Data.Repositories.DeviceRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IDriverRepository,
+            NoMercy.Data.Repositories.DriverRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IEncoderRepository,
+            NoMercy.Data.Repositories.EncoderRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IEncodingHistoryRepository,
+            NoMercy.Data.Repositories.EncodingHistoryRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IEncodingPresetRepository,
+            NoMercy.Data.Repositories.EncodingPresetRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IFolderRepository,
+            NoMercy.Data.Repositories.FolderRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IGenreRepository,
+            NoMercy.Data.Repositories.GenreRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IHomeRepository,
+            NoMercy.Data.Repositories.HomeRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.ILanguageRepository,
+            NoMercy.Data.Repositories.LanguageRepository
+        >();
+        services.AddScoped<NoMercy.Data.Repositories.ILibraryRepository, LibraryRepository>();
+        services.AddScoped<DataIMovieRepository, MovieRepository>();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IMusicRepository,
+            NoMercy.Data.Repositories.MusicRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IPeopleRepository,
+            NoMercy.Data.Repositories.PeopleRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IRecommendationRepository,
+            NoMercy.Data.Repositories.RecommendationRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.ISpecialRepository,
+            NoMercy.Data.Repositories.SpecialRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.ITvShowRepository,
+            NoMercy.Data.Repositories.TvShowRepository
+        >();
 
         // Add Managers
         // services.AddScoped<EncoderManager>();

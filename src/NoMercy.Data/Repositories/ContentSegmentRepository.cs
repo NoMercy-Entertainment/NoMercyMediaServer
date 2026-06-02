@@ -10,7 +10,7 @@ namespace NoMercy.Data.Repositories;
 /// Writes come from the detector (chromaprint pipeline) or manual edits
 /// from the dashboard; reads come from the player on every playback start.
 /// </summary>
-public class ContentSegmentRepository(MediaContext context)
+public class ContentSegmentRepository(MediaContext context) : IContentSegmentRepository
 {
     public Task<List<ContentSegment>> GetForEpisodeAsync(int episodeId) =>
         context

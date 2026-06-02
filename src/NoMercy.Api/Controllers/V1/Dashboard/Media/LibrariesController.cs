@@ -33,11 +33,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/libraries", Order = 10)]
 public class LibrariesController(
-    LibraryRepository libraryRepository,
-    EncoderRepository encoderRepository,
-    FolderRepository folderRepository,
+    ILibraryRepository libraryRepository,
+    IEncoderRepository encoderRepository,
+    IFolderRepository folderRepository,
     JobDispatcher jobDispatcher,
-    LanguageRepository languageRepository,
+    ILanguageRepository languageRepository,
     IDbContextFactory<MediaContext> mediaContextFactory,
     IActivityLogger activityLogger,
     IStorageDriver storageDriver,

@@ -17,8 +17,8 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/folders", Order = 10)]
 public class FolderDriverController(
-    FolderRepository folderRepository,
-    DriverRepository driverRepository,
+    IFolderRepository folderRepository,
+    IDriverRepository driverRepository,
     IStorageFactory storageFactory
 ) : BaseController
 {

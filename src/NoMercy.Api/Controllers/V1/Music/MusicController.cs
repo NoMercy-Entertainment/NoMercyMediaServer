@@ -19,9 +19,9 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music")]
 public class MusicController : BaseController
 {
-    private readonly MusicRepository _musicRepository;
+    private readonly IMusicRepository _musicRepository;
 
-    public MusicController(MusicRepository musicService)
+    public MusicController(IMusicRepository musicService)
     {
         _musicRepository = musicService;
     }

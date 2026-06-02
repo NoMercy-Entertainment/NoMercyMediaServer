@@ -19,11 +19,11 @@ namespace NoMercy.Api.Services;
 public class RecommendationService
 {
     private readonly IDbContextFactory<MediaContext> _contextFactory;
-    private readonly RecommendationRepository _recommendationRepository;
+    private readonly IRecommendationRepository _recommendationRepository;
     private readonly IMemoryCache _cache;
 
     public RecommendationService(
-        RecommendationRepository recommendationRepository,
+        IRecommendationRepository recommendationRepository,
         IDbContextFactory<MediaContext> contextFactory,
         IMemoryCache cache
     )

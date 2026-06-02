@@ -39,7 +39,7 @@ public class EncoderProfilesController(
     IProfileSignatureVerifier signatureVerifier,
     IHttpClientFactory httpClientFactory,
     MediaContext mediaContext,
-    EncodingPresetRepository presetRepository,
+    IEncodingPresetRepository presetRepository,
     IActivityLogger activityLogger
 ) : BaseController
 {
@@ -919,7 +919,7 @@ public record ImportProfileRequest(
 /// is pure and doesn't await, so the adapter blocks on async repository
 /// calls.
 /// </summary>
-internal sealed class EncoderProfilesPresetLookup(EncodingPresetRepository repository)
+internal sealed class EncoderProfilesPresetLookup(IEncodingPresetRepository repository)
     : INamePresetLookup
 {
     public PresetResolveRequest? FindByName(string name)

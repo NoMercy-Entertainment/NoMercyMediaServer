@@ -11,7 +11,7 @@ namespace NoMercy.Data.Repositories;
 /// encoder actually consumes. That decoupling means deleting or renaming a
 /// preset never breaks an in-flight encode job.
 /// </summary>
-public class EncodingPresetRepository(MediaContext context)
+public class EncodingPresetRepository(MediaContext context) : IEncodingPresetRepository
 {
     public Task<List<EncodingPreset>> ListAsync(
         int pageSize = 100,

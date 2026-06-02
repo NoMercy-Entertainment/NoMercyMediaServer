@@ -4,7 +4,7 @@ using NoMercy.Database.Models.Media;
 
 namespace NoMercy.Data.Repositories;
 
-public class EncoderRepository(MediaContext context)
+public class EncoderRepository(MediaContext context) : IEncoderRepository
 {
     public Task<List<EncoderProfile>> GetEncoderProfilesAsync()
     {

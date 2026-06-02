@@ -19,9 +19,9 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/genres", Order = 4)]
 public class GenresController : BaseController
 {
-    private readonly GenreRepository _genreRepository;
+    private readonly IGenreRepository _genreRepository;
 
-    public GenresController(GenreRepository genreRepository)
+    public GenresController(IGenreRepository genreRepository)
     {
         _genreRepository = genreRepository;
     }

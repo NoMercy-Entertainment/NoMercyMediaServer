@@ -19,7 +19,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [Route("api/v{version:apiVersion}/dashboard/storage", Order = 10)]
 public class StorageBrowserController(
     ILogger<StorageBrowserController> logger,
-    DriverRepository driverRepository,
+    IDriverRepository driverRepository,
     IStorageFactory storageFactory
 ) : BaseController
 {

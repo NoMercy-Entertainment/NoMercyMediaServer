@@ -57,7 +57,7 @@ public class HomeTvCardDto
     public string? CertificationCountry { get; set; }
 }
 
-public class HomeRepository
+public class HomeRepository : IHomeRepository
 {
     public async Task<List<Genre>> GetHome(
         MediaContext mediaContext,

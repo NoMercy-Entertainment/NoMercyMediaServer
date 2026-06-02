@@ -24,11 +24,11 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Route("api/v{version:apiVersion}/search")]
 public class SearchController : BaseController
 {
-    private readonly MusicRepository _musicRepository;
+    private readonly IMusicRepository _musicRepository;
     private readonly IDbContextFactory<MediaContext> _contextFactory;
 
     public SearchController(
-        MusicRepository musicService,
+        IMusicRepository musicService,
         IDbContextFactory<MediaContext> contextFactory
     )
     {

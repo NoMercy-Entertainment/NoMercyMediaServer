@@ -14,7 +14,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/content-segments")]
-public class ContentSegmentsController(ContentSegmentRepository repository) : BaseController
+public class ContentSegmentsController(IContentSegmentRepository repository) : BaseController
 {
     /// <summary>
     /// Paginated overview of every content segment. Handy for the moderator

@@ -19,7 +19,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Authorize]
 [Route("api/v{version:apiVersion}/libraries")]
 public class LibrariesController(
-    LibraryRepository libraryRepository,
+    ILibraryRepository libraryRepository,
     IDbContextFactory<MediaContext> contextFactory
 ) : BaseController
 {

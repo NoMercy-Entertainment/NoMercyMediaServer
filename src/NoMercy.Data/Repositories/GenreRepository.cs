@@ -22,7 +22,7 @@ public class GenreWithCountsDto
     public int TvShowsWithVideo { get; set; }
 }
 
-public class GenreRepository(MediaContext context)
+public class GenreRepository(MediaContext context) : IGenreRepository
 {
     private static readonly string[] Letters =
     [

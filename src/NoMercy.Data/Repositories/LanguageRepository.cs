@@ -4,7 +4,7 @@ using NoMercy.Database.Models.Libraries;
 
 namespace NoMercy.Data.Repositories;
 
-public class LanguageRepository(MediaContext context)
+public class LanguageRepository(MediaContext context) : ILanguageRepository
 {
     public async Task<List<Language>> GetLanguagesAsync()
     {

@@ -9,7 +9,7 @@ namespace NoMercy.Data.Repositories;
 /// Append-only repository for encoding history entries. The encoder writes
 /// one row per successful encode; the dashboard reads it paginated.
 /// </summary>
-public class EncodingHistoryRepository(MediaContext context)
+public class EncodingHistoryRepository(MediaContext context) : IEncodingHistoryRepository
 {
     public Task AddAsync(EncodingHistory entry)
     {

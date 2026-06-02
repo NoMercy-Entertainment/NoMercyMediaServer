@@ -1,0 +1,223 @@
+using NoMercy.Database.Models.Music;
+using NoMercy.NmSystem.NewtonSoftConverters;
+
+namespace NoMercy.Data.Repositories;
+
+public interface IMusicRepository
+{
+    Task<Artist?> GetArtistAsync(Guid userId, Guid id, CancellationToken ct = default);
+
+    Task<List<Artist>> GetArtists(Guid userId, string letter, CancellationToken ct = default);
+
+    Task LikeArtistAsync(Guid userId, Artist artist, bool liked, CancellationToken ct = default);
+
+    Task<Album?> GetAlbumAsync(Guid userId, Guid id, CancellationToken ct = default);
+
+    Task<List<Album>> GetAlbums(Guid userId, string letter, CancellationToken ct = default);
+
+    Task LikeAlbumAsync(Guid userId, Album album, bool liked, CancellationToken ct = default);
+
+    Task<List<AlbumTrack>> GetAlbumTracksForIdsAsync(
+        List<Guid> albumIds,
+        CancellationToken ct = default
+    );
+
+    Task<Track?> GetTrackAsync(Guid id, CancellationToken ct = default);
+
+    Task<List<TrackUser>> GetTracks(Guid userId, CancellationToken ct = default);
+
+    Task LikeTrackAsync(Guid userId, Track track, bool liked, CancellationToken ct = default);
+
+    Task RecordPlaybackAsync(Guid trackId, Guid userId, CancellationToken ct = default);
+
+    Task<Track?> GetTrackWithIncludesAsync(Guid id, CancellationToken ct = default);
+
+    Task<Lyric[]?> UpdateTrackLyricsAsync(
+        Track track,
+        string lyricsJson,
+        CancellationToken ct = default
+    );
+
+    Task UpdateTrackLyricsOffsetAsync(Track track, int? offsetMs, CancellationToken ct = default);
+
+    Task<List<CarouselResponseItemDto>> GetCarouselPlaylistsAsync(
+        Guid userId,
+        CancellationToken ct = default
+    );
+
+    Task<Playlist?> GetPlaylistAsync(Guid userId, Guid id, CancellationToken ct = default);
+
+    Task<List<Album>> GetLatestAlbums(CancellationToken ct = default);
+
+    Task<List<Artist>> GetLatestArtists(CancellationToken ct = default);
+
+    Task<List<MusicGenre>> GetLatestGenres(CancellationToken ct = default);
+
+    Task<List<ArtistTrack>> GetFavoriteArtistAsync(Guid userId, CancellationToken ct = default);
+
+    Task<List<AlbumTrack>> GetFavoriteAlbumAsync(Guid userId, CancellationToken ct = default);
+
+    Task<List<PlaylistTrack>> GetFavoritePlaylistAsync(Guid userId, CancellationToken ct = default);
+
+    Task<List<ArtistUser>> GetFavoriteArtists(Guid userId, CancellationToken ct = default);
+
+    Task<List<AlbumUser>> GetFavoriteAlbums(Guid userId, CancellationToken ct = default);
+
+    Task<List<TrackUser>> GetFavoriteTracks(Guid userId, CancellationToken ct = default);
+
+    Task<List<ArtistTrack>> GetArtistTracksForCollectionAsync(
+        List<Guid> artistIds,
+        CancellationToken ct = default
+    );
+
+    Task<List<Guid>> SearchArtistIdsAsync(string normalizedQuery, CancellationToken ct = default);
+
+    Task<List<Guid>> SearchAlbumIdsAsync(string normalizedQuery, CancellationToken ct = default);
+
+    Task<List<Guid>> SearchPlaylistIdsAsync(string normalizedQuery, CancellationToken ct = default);
+
+    Task<List<Guid>> SearchTrackIdsAsync(string normalizedQuery, CancellationToken ct = default);
+
+    Task<List<Artist>> GetArtistsByIdsAsync(List<Guid> artistIds, CancellationToken ct = default);
+
+    Task<List<Album>> GetAlbumsByIdsAsync(List<Guid> albumIds, CancellationToken ct = default);
+
+    Task<List<Playlist>> GetPlaylistsByIdsAsync(
+        List<Guid> playlistIds,
+        CancellationToken ct = default
+    );
+
+    Task<List<Track>> GetTracksByIdsAsync(List<Guid> trackIds, CancellationToken ct = default);
+
+    Task<PlaylistTrack?> GetPlaylistTrackAsync(
+        Guid userId,
+        Guid playlistId,
+        Guid trackId,
+        CancellationToken ct = default
+    );
+
+    Task<AlbumTrack?> GetAlbumTrackAsync(
+        Guid userId,
+        Guid albumId,
+        Guid trackId,
+        CancellationToken ct = default
+    );
+
+    Task<ArtistTrack?> GetArtistTrackAsync(
+        Guid userId,
+        Guid artistId,
+        Guid trackId,
+        CancellationToken ct = default
+    );
+
+    Task<MusicGenreTrack?> GetGenreTrackAsync(
+        Guid userId,
+        Guid genreId,
+        Guid trackId,
+        CancellationToken ct = default
+    );
+
+    Task<List<ArtistCardDto>> GetArtistCardsAsync(
+        Guid userId,
+        string letter,
+        CancellationToken ct = default
+    );
+
+    Task<List<ArtistCardDto>> GetAllArtistCardsAsync(Guid userId, CancellationToken ct = default);
+
+    Task<List<ArtistCardDto>> GetLatestArtistCardsAsync(
+        int take = 36,
+        CancellationToken ct = default
+    );
+
+    Task<List<ArtistCardDto>> GetFavoriteArtistCardsAsync(
+        Guid userId,
+        int take = 36,
+        CancellationToken ct = default
+    );
+
+    Task<List<ArtistCardDto>> GetArtistCardsByIdsAsync(
+        List<Guid> artistIds,
+        CancellationToken ct = default
+    );
+
+    Task<List<AlbumCardDto>> GetAlbumCardsAsync(
+        Guid userId,
+        string letter,
+        string language,
+        CancellationToken ct = default
+    );
+
+    Task<List<AlbumCardDto>> GetAllAlbumCardsAsync(
+        Guid userId,
+        string language,
+        CancellationToken ct = default
+    );
+
+    Task<List<AlbumCardDto>> GetLatestAlbumCardsAsync(
+        int take = 36,
+        CancellationToken ct = default
+    );
+
+    Task<List<AlbumCardDto>> GetFavoriteAlbumCardsAsync(
+        Guid userId,
+        int take = 36,
+        CancellationToken ct = default
+    );
+
+    Task<List<AlbumCardDto>> GetAlbumCardsByIdsAsync(
+        List<Guid> albumIds,
+        CancellationToken ct = default
+    );
+
+    Task<List<PlaylistCardDto>> GetPlaylistCardsAsync(
+        Guid userId,
+        int take = 36,
+        CancellationToken ct = default
+    );
+
+    Task<List<PlaylistCardDto>> GetPlaylistCardsByIdsAsync(
+        List<Guid> playlistIds,
+        CancellationToken ct = default
+    );
+
+    Task<List<MusicGenreCardDto>> GetLatestGenreCardsAsync(
+        int take = 36,
+        CancellationToken ct = default
+    );
+
+    Task<TopMusicItemDto?> GetTopArtistAsync(Guid userId, CancellationToken ct = default);
+
+    Task<TopMusicItemDto?> GetTopAlbumAsync(Guid userId, CancellationToken ct = default);
+
+    Task<TopMusicItemDto?> GetTopPlaylistAsync(Guid userId, CancellationToken ct = default);
+
+    Task<List<Guid>> GetArtistIdsFromAlbumsAsync(
+        List<Guid> albumIds,
+        CancellationToken ct = default
+    );
+
+    Task<List<Guid>> GetArtistIdsFromPlaylistTracksAsync(
+        List<Guid> playlistIds,
+        CancellationToken ct = default
+    );
+
+    Task<List<Guid>> GetArtistIdsFromTracksAsync(
+        List<Guid> trackIds,
+        CancellationToken ct = default
+    );
+
+    Task<List<Guid>> GetAlbumIdsFromTracksAsync(
+        List<Guid> trackIds,
+        CancellationToken ct = default
+    );
+
+    Task<List<SearchTrackCardDto>> SearchTrackCardsAsync(
+        List<Guid> trackIds,
+        Guid userId,
+        string country,
+        CancellationToken ct = default
+    );
+
+    Task<MusicStartPageData> GetMusicStartPageAsync(Guid userId, CancellationToken ct = default);
+}

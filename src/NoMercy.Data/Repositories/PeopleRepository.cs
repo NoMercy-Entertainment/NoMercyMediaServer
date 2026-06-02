@@ -4,7 +4,7 @@ using NoMercy.Database.Models.People;
 
 namespace NoMercy.Data.Repositories;
 
-public class PeopleRepository(MediaContext context)
+public class PeopleRepository(MediaContext context) : IPeopleRepository
 {
     public Task<List<Person>> GetPeopleAsync(
         Guid userId,

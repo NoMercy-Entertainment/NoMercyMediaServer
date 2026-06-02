@@ -5,7 +5,7 @@ using NoMercy.Database.Models.Users;
 
 namespace NoMercy.Data.Repositories;
 
-public class DeviceRepository(MediaContext context)
+public class DeviceRepository(MediaContext context) : IDeviceRepository
 {
     public IIncludableQueryable<Device, ICollection<ActivityLog>> GetDevices()
     {

@@ -28,12 +28,12 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/playlists", Order = 3)]
 public class PlaylistsController : BaseController
 {
-    private readonly MusicRepository _musicRepository;
+    private readonly IMusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
     private readonly IEventBus _eventBus;
 
     public PlaylistsController(
-        MusicRepository musicService,
+        IMusicRepository musicService,
         MediaContext mediaContext,
         IEventBus eventBus
     )

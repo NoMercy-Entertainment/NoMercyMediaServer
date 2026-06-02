@@ -11,7 +11,7 @@ using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 
-public class MovieRepository(MediaContext context)
+public class MovieRepository(MediaContext context) : IMovieRepository
 {
     public Task<Movie?> GetMovieAsync(
         Guid userId,
@@ -41,14 +41,14 @@ public class MovieRepository(MediaContext context)
             .FirstOrDefaultAsync(ct);
     }
 
-    public readonly Func<
+    private static readonly Func<
         MediaContext,
         Guid,
         int,
         string,
         string,
         Task<Movie?>
-    > GetMovieDetailAsync = EF.CompileAsyncQuery(
+    > GetMovieDetailAsyncQuery = EF.CompileAsyncQuery(
         (MediaContext mediaContext, Guid userId, int id, string language, string country) =>
             mediaContext
                 .Movies.AsNoTracking()
@@ -108,6 +108,14 @@ public class MovieRepository(MediaContext context)
                     .ThenInclude(ctv => ctv.Company)
                 .FirstOrDefault()
     );
+
+    public Task<Movie?> GetMovieDetailAsync(
+        MediaContext mediaContext,
+        Guid userId,
+        int id,
+        string language,
+        string country
+    ) => GetMovieDetailAsyncQuery(mediaContext, userId, id, language, country);
 
     public Task<bool> GetMovieAvailableAsync(Guid userId, int id, CancellationToken ct = default)
     {

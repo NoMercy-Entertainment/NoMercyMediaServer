@@ -145,7 +145,7 @@ public class SpecialCrewProjection
     public int? Order { get; set; }
 }
 
-public class SpecialRepository(MediaContext context)
+public class SpecialRepository(MediaContext context) : ISpecialRepository
 {
     public async Task<List<Special>> GetSpecialsAsync(
         Guid userId,

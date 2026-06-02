@@ -21,7 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Authorize]
 [Route("api/v{version:apiVersion}/userData")]
 public class UserDataController(
-    HomeRepository homeRepository,
+    IHomeRepository homeRepository,
     MediaContext mediaContext,
     IEventBus eventBus
 ) : BaseController

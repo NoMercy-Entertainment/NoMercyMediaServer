@@ -17,7 +17,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/encoderprofiles", Order = 10)]
-public class EncoderController(EncoderRepository encoderRepository, CodecRegistry codecRegistry)
+public class EncoderController(IEncoderRepository encoderRepository, CodecRegistry codecRegistry)
     : BaseController
 {
     [HttpGet]

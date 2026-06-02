@@ -9,7 +9,7 @@ namespace NoMercy.Data.Repositories;
 public class MusicRepository(
     MediaContext mediaContext,
     IDbContextFactory<MediaContext> contextFactory
-)
+) : IMusicRepository
 {
     private static readonly string[] AlphaLetters =
     [

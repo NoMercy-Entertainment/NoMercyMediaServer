@@ -38,7 +38,7 @@ public class TasksController(
     MediaContext mediaContext,
     IEncoderProcessRegistry processRegistry,
     ProcessThrottle processThrottle,
-    EncodingHistoryRepository historyRepository
+    IEncodingHistoryRepository historyRepository
 ) : BaseController
 {
     [HttpGet]

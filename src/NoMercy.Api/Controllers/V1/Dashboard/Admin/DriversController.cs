@@ -21,7 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/drivers", Order = 11)]
-public class DriversController(DriverRepository driverRepository, IStorageFactory storageFactory)
+public class DriversController(IDriverRepository driverRepository, IStorageFactory storageFactory)
     : BaseController
 {
     // -----------------------------------------------------------------------

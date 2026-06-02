@@ -28,7 +28,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Authorize]
 [Route("api/v{version:apiVersion}/tv/{id:int}")] // match themoviedb.org API
 public class TvShowsController(
-    TvShowRepository tvShowRepository,
+    ITvShowRepository tvShowRepository,
     JobDispatcher jobDispatcher,
     MediaContext mediaContext
 ) : BaseController

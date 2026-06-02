@@ -9,18 +9,18 @@ namespace NoMercy.Api.Services.Video;
 
 public class VideoPlaylistManager
 {
-    private readonly MovieRepository _movieRepository;
-    private readonly TvShowRepository _tvShowRepository;
-    private readonly CollectionRepository _collectionRepository;
-    private readonly SpecialRepository _specialRepository;
+    private readonly IMovieRepository _movieRepository;
+    private readonly ITvShowRepository _tvShowRepository;
+    private readonly ICollectionRepository _collectionRepository;
+    private readonly ISpecialRepository _specialRepository;
     private readonly MediaContext _mediaContext;
 
     public VideoPlaylistManager(
         MediaContext mediaContext,
-        MovieRepository movieRepository,
-        CollectionRepository collectionRepository,
-        SpecialRepository specialRepository,
-        TvShowRepository tvShowRepository
+        IMovieRepository movieRepository,
+        ICollectionRepository collectionRepository,
+        ISpecialRepository specialRepository,
+        ITvShowRepository tvShowRepository
     )
     {
         _movieRepository = movieRepository;

@@ -14,7 +14,8 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/encoding/history", Order = 10)]
-public class EncodingHistoryController(EncodingHistoryRepository historyRepository) : BaseController
+public class EncodingHistoryController(IEncodingHistoryRepository historyRepository)
+    : BaseController
 {
     /// <summary>
     /// Paginated encoding history. Newest encodes first.

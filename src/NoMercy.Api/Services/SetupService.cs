@@ -13,12 +13,12 @@ namespace NoMercy.Api.Services;
 public class SetupService
 {
     private readonly MediaContext _mediaContext;
-    private readonly LibraryRepository _libraryRepository;
-    private readonly HomeRepository _homeRepository;
+    private readonly ILibraryRepository _libraryRepository;
+    private readonly IHomeRepository _homeRepository;
 
     public SetupService(
-        HomeRepository homeRepository,
-        LibraryRepository libraryRepository,
+        IHomeRepository homeRepository,
+        ILibraryRepository libraryRepository,
         MediaContext mediaContext
     )
     {

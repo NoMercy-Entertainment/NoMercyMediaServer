@@ -17,12 +17,12 @@ public class HomeService
 {
     private readonly MediaContext _mediaContext;
     private readonly IDbContextFactory<MediaContext> _contextFactory;
-    private readonly LibraryRepository _libraryRepository;
-    private readonly HomeRepository _homeRepository;
+    private readonly ILibraryRepository _libraryRepository;
+    private readonly IHomeRepository _homeRepository;
 
     public HomeService(
-        HomeRepository homeRepository,
-        LibraryRepository libraryRepository,
+        IHomeRepository homeRepository,
+        ILibraryRepository libraryRepository,
         MediaContext mediaContext,
         IDbContextFactory<MediaContext> contextFactory
     )

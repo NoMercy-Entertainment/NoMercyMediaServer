@@ -4,7 +4,7 @@ using NoMercy.Database.Models.Storage;
 
 namespace NoMercy.Data.Repositories;
 
-public class DriverRepository(MediaContext context)
+public class DriverRepository(MediaContext context) : IDriverRepository
 {
     public Task<List<Driver>> GetAllDriversAsync()
     {

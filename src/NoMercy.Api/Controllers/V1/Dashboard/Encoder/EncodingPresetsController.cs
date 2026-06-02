@@ -17,7 +17,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/encoding/presets")]
 public class EncodingPresetsController(
-    EncodingPresetRepository presetRepository,
+    IEncodingPresetRepository presetRepository,
     INamePresetResolver presetResolver,
     IProfileValidator profileValidator,
     IHttpClientFactory httpClientFactory
@@ -542,7 +542,7 @@ public record CreatePresetRequest(
 /// calls. Fine for the rare resolve path; optimize if it ever gets called
 /// in a tight loop.
 /// </summary>
-internal sealed class RepositoryPresetLookup(EncodingPresetRepository repository)
+internal sealed class RepositoryPresetLookup(IEncodingPresetRepository repository)
     : INamePresetLookup
 {
     public PresetResolveRequest? FindByName(string name)

@@ -15,7 +15,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Tags(tags: "Media People")]
 [ApiVersion(1.0)]
 [Authorize]
-public class PeopleController(MediaContext mediaContext, PeopleRepository peopleRepository)
+public class PeopleController(MediaContext mediaContext, IPeopleRepository peopleRepository)
     : BaseController
 {
     [HttpGet]

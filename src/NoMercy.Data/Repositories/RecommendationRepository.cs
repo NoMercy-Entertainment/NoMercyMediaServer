@@ -37,7 +37,7 @@ public class UserAffinitySourceDto
     public List<int> KeywordIds { get; set; } = [];
 }
 
-public class RecommendationRepository
+public class RecommendationRepository : IRecommendationRepository
 {
     public async Task<List<RecommendationCandidateDto>> GetUnownedMovieRecommendationsAsync(
         MediaContext context,

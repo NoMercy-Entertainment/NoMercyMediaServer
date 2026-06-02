@@ -45,7 +45,7 @@ public class TvCardDto
     public string? CertificationCountry { get; set; }
 }
 
-public class LibraryRepository(MediaContext context)
+public class LibraryRepository(MediaContext context) : ILibraryRepository
 {
     private static readonly string[] Letters =
     [
@@ -199,7 +199,7 @@ public class LibraryRepository(MediaContext context)
             .FirstOrDefaultAsync(ct);
     }
 
-    public readonly Func<
+    private static readonly Func<
         MediaContext,
         Guid,
         Ulid,
@@ -209,7 +209,7 @@ public class LibraryRepository(MediaContext context)
         Expression<Func<Movie, object>>?,
         string?,
         IAsyncEnumerable<Movie>
-    > GetLibraryMovies = EF.CompileAsyncQuery(
+    > GetLibraryMoviesQuery = EF.CompileAsyncQuery(
         (
             MediaContext mediaContext,
             Guid userId,
@@ -248,6 +248,27 @@ public class LibraryRepository(MediaContext context)
                 .Take(take)
     );
 
+    public IAsyncEnumerable<Movie> GetLibraryMovies(
+        MediaContext mediaContext,
+        Guid userId,
+        Ulid libraryId,
+        string language,
+        int take,
+        int skip,
+        Expression<Func<Movie, object>>? orderByExpression,
+        string? direction
+    ) =>
+        GetLibraryMoviesQuery(
+            mediaContext,
+            userId,
+            libraryId,
+            language,
+            take,
+            skip,
+            orderByExpression,
+            direction
+        );
+
     // public async Task<List<Movie>> GetLibraryMovies(Guid userId, Ulid libraryId, string language, int take, int page)
     // {
     //     // First get movie IDs with pagination (no filtered includes)
@@ -277,7 +298,7 @@ public class LibraryRepository(MediaContext context)
     //         .ToListAsync();
     // }
 
-    public readonly Func<
+    private static readonly Func<
         MediaContext,
         Guid,
         Ulid,
@@ -287,7 +308,7 @@ public class LibraryRepository(MediaContext context)
         Expression<Func<Tv, object>>?,
         string?,
         IAsyncEnumerable<Tv>
-    > GetLibraryShows = EF.CompileAsyncQuery(
+    > GetLibraryShowsQuery = EF.CompileAsyncQuery(
         (
             MediaContext mediaContext,
             Guid userId,
@@ -330,6 +351,27 @@ public class LibraryRepository(MediaContext context)
                 .Skip(skip)
                 .Take(take)
     );
+
+    public IAsyncEnumerable<Tv> GetLibraryShows(
+        MediaContext mediaContext,
+        Guid userId,
+        Ulid libraryId,
+        string language,
+        int take,
+        int skip,
+        Expression<Func<Tv, object>>? orderByExpression,
+        string? direction
+    ) =>
+        GetLibraryShowsQuery(
+            mediaContext,
+            userId,
+            libraryId,
+            language,
+            take,
+            skip,
+            orderByExpression,
+            direction
+        );
 
     // public async Task<List<Tv>> GetLibraryShows(Guid userId, Ulid libraryId, string language, int take, int page)
     // {
