@@ -1,0 +1,57 @@
+namespace NoMercy.NmSystem.Extensions;
+
+/// <summary>
+/// A-Z paging buckets for title lists. Buckets are derived from the normalized
+/// <c>TitleSort</c> value (e.g. "【Oshi No Ko】" -> "oshi.no.ko" -> bucket "O"),
+/// never the raw display title, so titles starting with articles or special
+/// characters land in a stable, predictable bucket. "#" catches anything whose
+/// TitleSort does not start with a letter.
+/// </summary>
+public static class AlphaBucket
+{
+    public static readonly string[] Buckets =
+    [
+        "#",
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
+    ];
+
+    /// <summary>
+    /// True when <paramref name="titleSort"/> belongs in <paramref name="bucket"/>.
+    /// Pass the normalized TitleSort, not the raw Title.
+    /// </summary>
+    public static bool Matches(string? titleSort, string bucket)
+    {
+        if (string.IsNullOrEmpty(titleSort))
+            return bucket == "#";
+
+        if (bucket == "#")
+            return !char.IsLetter(titleSort[0]);
+
+        return titleSort.StartsWith(bucket, StringComparison.OrdinalIgnoreCase);
+    }
+}

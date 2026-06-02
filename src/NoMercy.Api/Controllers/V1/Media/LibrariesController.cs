@@ -11,6 +11,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -511,19 +512,11 @@ public class LibrariesController(
 
             List<CardData> carouselItems = libraryMovies
                 .Select(movie => new CardData(movie, country))
-                .Where(collection =>
-                    letter == "#"
-                        ? Numbers.Any(p => collection.Title.StartsWith(p))
-                        : collection.Title.StartsWith(letter)
-                )
+                .Where(collection => AlphaBucket.Matches(collection.TitleSort, letter))
                 .Concat(
                     libraryShows
                         .Select(tv => new CardData(tv, country))
-                        .Where(collection =>
-                            letter == "#"
-                                ? Numbers.Any(p => collection.Title.StartsWith(p))
-                                : collection.Title.StartsWith(letter)
-                        )
+                        .Where(collection => AlphaBucket.Matches(collection.TitleSort, letter))
                 )
                 .OrderBy(item => item.TitleSort)
                 .ToList();

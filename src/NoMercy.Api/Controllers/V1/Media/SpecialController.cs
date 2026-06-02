@@ -66,11 +66,7 @@ public class SpecialController(
             {
                 List<CardData> letterItems = specials
                     .Select(special => new CardData(special, country))
-                    .Where(item =>
-                        letter == "#"
-                            ? Numbers.Any(p => item.Title.StartsWith(p))
-                            : item.Title.StartsWith(letter)
-                    )
+                    .Where(item => AlphaBucket.Matches(item.TitleSort, letter))
                     .ToList();
 
                 return Component

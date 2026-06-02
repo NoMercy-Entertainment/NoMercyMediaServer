@@ -13,6 +13,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -72,12 +73,8 @@ public class CollectionsController(
                 (letter, index) =>
                 {
                     List<CardData> letterItems = collectionDtos
-                        .Where(dto =>
-                            letter == "#"
-                                ? Numbers.Any(p => dto.Title.StartsWith(p))
-                                : dto.Title.StartsWith(letter)
-                        )
                         .Select(dto => new CardData(dto))
+                        .Where(card => AlphaBucket.Matches(card.TitleSort, letter))
                         .OrderBy(item => item.TitleSort)
                         .ToList();
 

@@ -6,6 +6,7 @@ using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Data.Repositories;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -110,20 +111,12 @@ public class GenresController : BaseController
                 (letter, index) =>
                 {
                     List<CardData> carouselItems = movies
-                        .Where(movie =>
-                            letter == "#"
-                                ? Numbers.Any(p => movie.Title.StartsWith(p))
-                                : movie.Title.StartsWith(letter)
-                        )
                         .Select(movie => new CardData(movie, country))
+                        .Where(card => AlphaBucket.Matches(card.TitleSort, letter))
                         .Concat(
                             tvShows
-                                .Where(tv =>
-                                    letter == "#"
-                                        ? Numbers.Any(p => tv.Title.StartsWith(p))
-                                        : tv.Title.StartsWith(letter)
-                                )
                                 .Select(tv => new CardData(tv, country))
+                                .Where(card => AlphaBucket.Matches(card.TitleSort, letter))
                         )
                         .OrderBy(card => card.TitleSort)
                         .ToList();
