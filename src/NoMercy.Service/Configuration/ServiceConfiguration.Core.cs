@@ -357,6 +357,7 @@ public static partial class ServiceConfiguration
         services.AddScoped<SeasonManager>();
         services.AddScoped<EpisodeManager>();
         services.AddScoped<PersonManager>();
+        services.AddScoped<EncoderProfileService>();
         services.AddScoped<HomeService>();
         services.AddScoped<RecommendationService>();
         services.AddScoped<SetupService>();
