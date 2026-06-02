@@ -26,8 +26,6 @@ public class ArtistManager(
     IStorageFactory storageFactory
 ) : BaseManager, IArtistManager
 {
-    private readonly IStorageFactory _storageFactory = storageFactory;
-
     /** this is the store for a Release artist */
     public async Task Store(
         ReleaseArtistCredit artistCredit,
@@ -117,7 +115,9 @@ public class ArtistManager(
             Disambiguation = string.IsNullOrEmpty(artistCredit.Disambiguation)
                 ? null
                 : artistCredit.Disambiguation,
-            Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
+            Cover = coverPalette?.Url is not null 
+                ? $"/{coverPalette.Url.FileName()}" 
+                : null,
             Country = artistCredit.Country,
             TitleSort = string.IsNullOrEmpty(artistCredit.SortName)
                 ? artistCredit.Name.TitleSort()
@@ -195,7 +195,9 @@ public class ArtistManager(
             Disambiguation = string.IsNullOrEmpty(artistCredit.Disambiguation)
                 ? null
                 : artistCredit.Disambiguation,
-            Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
+            Cover = coverPalette?.Url is not null 
+                ? $"/{coverPalette.Url.FileName()}" 
+                : null,
             Country = artistCredit.Country,
             TitleSort = string.IsNullOrEmpty(artistCredit.SortName)
                 ? artistCredit.Name.TitleSort()
@@ -327,7 +329,7 @@ public class ArtistManager(
 
     private string ResolveLibraryRoot(Folder libraryFolder)
     {
-        IStorage folderStorage = _storageFactory.For(
+        IStorage folderStorage = storageFactory.For(
             libraryFolder.Id,
             libraryFolder.DriverId,
             string.Empty

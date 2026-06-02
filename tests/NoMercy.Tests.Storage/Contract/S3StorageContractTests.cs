@@ -134,21 +134,19 @@ public sealed class S3ContractIntegrationCollection : ICollectionFixture<S3Contr
 [Trait("Category", "Integration")]
 public sealed class S3StorageContractTests(S3ContractFixture fixture) : IStorageContractTests
 {
-    private readonly S3ContractFixture _fixture = fixture;
-
     // -----------------------------------------------------------------------
     // IStorageContractTests hooks
     // -----------------------------------------------------------------------
 
     protected override IStorage CreateStorage()
     {
-        Skip.If(!_fixture.Available, "Docker / MinIO not available — skipping S3 contract test");
+        Skip.If(!fixture.Available, "Docker / MinIO not available — skipping S3 contract test");
 
         S3StorageDriver driver = new(
-            bucket: _fixture.Bucket,
+            bucket: fixture.Bucket,
             region: "us-east-1",
             prefix: null,
-            endpoint: _fixture.Endpoint,
+            endpoint: fixture.Endpoint,
             accessKey: S3ContractFixture.AccessKey,
             secretKey: S3ContractFixture.SecretKey
         );
@@ -161,11 +159,11 @@ public sealed class S3StorageContractTests(S3ContractFixture fixture) : IStorage
     /// </summary>
     protected override async Task SeedFile(string relativePath, byte[] content)
     {
-        using AmazonS3Client client = _fixture.BuildRawClient();
+        using AmazonS3Client client = fixture.BuildRawClient();
 
         PutObjectRequest request = new()
         {
-            BucketName = _fixture.Bucket,
+            BucketName = fixture.Bucket,
             Key = relativePath.TrimStart('/'),
             InputStream = new MemoryStream(content),
             ContentType = "application/octet-stream",
@@ -180,13 +178,13 @@ public sealed class S3StorageContractTests(S3ContractFixture fixture) : IStorage
     /// </summary>
     protected override async Task SeedDirectory(string relativePath)
     {
-        using AmazonS3Client client = _fixture.BuildRawClient();
+        using AmazonS3Client client = fixture.BuildRawClient();
 
         string key = relativePath.TrimStart('/').TrimEnd('/') + "/";
 
         PutObjectRequest request = new()
         {
-            BucketName = _fixture.Bucket,
+            BucketName = fixture.Bucket,
             Key = key,
             InputStream = new MemoryStream(Array.Empty<byte>()),
             ContentType = "application/x-directory",
@@ -200,13 +198,13 @@ public sealed class S3StorageContractTests(S3ContractFixture fixture) : IStorage
     /// </summary>
     protected override async Task<bool> BackendHasFile(string relativePath)
     {
-        using AmazonS3Client client = _fixture.BuildRawClient();
+        using AmazonS3Client client = fixture.BuildRawClient();
 
         try
         {
             GetObjectMetadataRequest request = new()
             {
-                BucketName = _fixture.Bucket,
+                BucketName = fixture.Bucket,
                 Key = relativePath.TrimStart('/'),
             };
 
@@ -245,7 +243,7 @@ public sealed class S3StorageContractTests(S3ContractFixture fixture) : IStorage
     [Trait("Category", "Integration")]
     public async Task S3_double_slash_is_known_failure_requires_driver_normalisation()
     {
-        Skip.If(!_fixture.Available, "Docker not available");
+        Skip.If(!fixture.Available, "Docker not available");
 
         IStorage storage = CreateStorage();
         try

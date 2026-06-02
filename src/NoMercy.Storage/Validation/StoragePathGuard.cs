@@ -56,7 +56,7 @@ public sealed class StoragePathGuard
             || requestedPath.EndsWith("/..", StringComparison.Ordinal)
             || requestedPath.EndsWith("\\..", StringComparison.Ordinal)
             || requestedPath.Contains("/../", StringComparison.Ordinal)
-            || requestedPath.Contains("\\..\\", StringComparison.Ordinal)
+            || requestedPath.Contains(@"\..\", StringComparison.Ordinal)
         )
             throw new StoragePathNotAllowedException(requestedPath, ".. traversal is not allowed");
 

@@ -629,7 +629,7 @@ public partial class MusicLogic : IAsyncDisposable
 
             insert.Filename = "/" + StoragePathHelpers.GetName(file);
             insert.Quality = (int)Math.Floor(ffProbeData.Format.BitRate / 1000.0);
-            insert.Duration = HmsRegex().Replace(ffProbeData.Duration.ToString("hh\\:mm\\:ss"), "");
+            insert.Duration = HmsRegex().Replace(ffProbeData.Duration.ToString(@"hh\:mm\:ss"), "");
 
             insert.FolderId = Folder!.Id;
             insert.Folder = folder.Replace(ResolveLibraryRoot(), "").Replace("\\", "/");

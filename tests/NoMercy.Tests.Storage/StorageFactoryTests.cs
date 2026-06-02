@@ -59,7 +59,7 @@ public class StorageFactoryTests
     // Helper: local resolver with a rootPath config pointing at the given directory.
     private static IDriverConfigResolver LocalResolver(string rootPath)
     {
-        string escaped = rootPath.Replace("\\", "\\\\");
+        string escaped = rootPath.Replace("\\", @"\\");
         string json = $"{{\"rootPath\":\"{escaped}\"}}";
         return StubResolver("local", json);
     }

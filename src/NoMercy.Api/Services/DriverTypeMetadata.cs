@@ -35,7 +35,7 @@ public static class DriverTypeMetadata
             {
                 {
                     "rootPath",
-                    "string (required) — local filesystem path or UNC path, e.g. /mnt/movies or \\\\nas\\share"
+                    @"string (required) — local filesystem path or UNC path, e.g. /mnt/movies or \\nas\share"
                 },
             },
         },

@@ -32,13 +32,11 @@ public class Tv : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("have_episodes")]
     public int? HaveEpisodes { get; set; }
 
-    private string? _folder;
-
     [JsonProperty("folder")]
     public string? Folder
     {
-        get => _folder;
-        set => _folder = PathNormalizer.NormalizeNullable(value);
+        get;
+        set => field = PathNormalizer.NormalizeNullable(value);
     }
 
     [JsonProperty("backdrop")]

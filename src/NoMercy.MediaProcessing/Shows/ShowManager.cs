@@ -26,9 +26,6 @@ public class ShowManager(
     IStorageDriver storageDriver
 ) : BaseManager, IShowManager
 {
-    private readonly IStorageFactory _storageFactory = storageFactory;
-    private readonly IStorageDriver _storageDriver = storageDriver;
-
     public async Task<TmdbTvShowAppends?> AddShowAsync(
         int id,
         Library library,
@@ -50,7 +47,7 @@ public class ShowManager(
 
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
         {
-            IStorage folderStorage = _storageFactory.For(
+            IStorage folderStorage = storageFactory.For(
                 folderLibrary.Folder.Id,
                 folderLibrary.Folder.DriverId,
                 string.Empty
@@ -61,7 +58,7 @@ public class ShowManager(
             if (!folderStorage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
-                    _storageDriver,
+                    storageDriver,
                     folderRoot,
                     baseUrl.Replace("/", "")
                 );
@@ -134,8 +131,8 @@ public class ShowManager(
         ShowManager showManager = new(
             showRepository,
             jobDispatcher,
-            _storageFactory,
-            _storageDriver
+            storageFactory,
+            storageDriver
         );
         await showManager.StoreGenres(showAppends);
         await showManager.StoreContentRatings(showAppends);

@@ -28,7 +28,6 @@ public class AutoEncodeSubscriber(
     IStorage storage
 ) : IHostedService
 {
-    private readonly IStorage _storage = storage;
     private readonly List<IDisposable> _subscriptions = [];
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -218,19 +217,19 @@ public class AutoEncodeSubscriber(
         string sourceExt = Path.GetExtension(file.Filename).ToLowerInvariant();
         try
         {
-            if (!_storage.Exists(file.HostFolder))
+            if (!storage.Exists(file.HostFolder))
                 return false;
 
             // Any .NoMercy subdirectory counts as encoded.
             if (
-                _storage
+                storage
                     .List(file.HostFolder, "*.NoMercy", recursive: false)
                     .Any(e => e.IsDirectory)
             )
                 return true;
 
             // Any master playlist alongside counts too.
-            if (_storage.List(file.HostFolder, "*.m3u8", recursive: false).Any(e => !e.IsDirectory))
+            if (storage.List(file.HostFolder, "*.m3u8", recursive: false).Any(e => !e.IsDirectory))
                 return true;
 
             _ = sourceExt;

@@ -11,11 +11,9 @@ namespace NoMercy.MediaProcessing.Libraries;
 public class LibraryRepository(MediaContext context, IStorageDriver storageDriver)
     : ILibraryRepository
 {
-    private readonly IStorageDriver _storageDriver = storageDriver;
-
     public async Task<IEnumerable<MediaFolderExtend>> GetRootFoldersAsync(string path)
     {
-        await using MediaScan mediaScan = new(_storageDriver);
+        await using MediaScan mediaScan = new(storageDriver);
         return (await mediaScan.DisableRegexFilter().Process(path, 2))
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();

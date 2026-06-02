@@ -17,9 +17,7 @@ public class LibraryLogic(
     IStorageFactory storageFactory
 ) : IDisposable, IAsyncDisposable
 {
-    private readonly MediaContext _mediaContext = mediaContext;
     private readonly IStorageDriver _storageDriver = storageDriver;
-    private readonly IStorageFactory _storageFactory = storageFactory;
     private Library Library { get; set; } = new();
 
     public Ulid Id { get; set; } = id;
@@ -31,7 +29,7 @@ public class LibraryLogic(
 
     public async Task<bool> Process()
     {
-        Library? library = await _mediaContext
+        Library? library = await mediaContext
             .Libraries.AsNoTracking()
             .Include(library => library.FolderLibraries)
                 .ThenInclude(folderLibrary => folderLibrary.Folder)
@@ -82,7 +80,7 @@ public class LibraryLogic(
 
     private async Task ScanAudioFolder(Folder folder)
     {
-        IStorage folderStorage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         string scanRoot = folderStorage.GetFullPath(folder.Path);
 
         await using MediaScan mediaScan = new(folderStorage.Driver);
@@ -110,11 +108,11 @@ public class LibraryLogic(
 
     public void Dispose()
     {
-        _mediaContext.Dispose();
+        mediaContext.Dispose();
     }
 
     public async ValueTask DisposeAsync()
     {
-        await _mediaContext.DisposeAsync();
+        await mediaContext.DisposeAsync();
     }
 }

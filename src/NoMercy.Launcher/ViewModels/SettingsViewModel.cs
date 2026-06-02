@@ -10,160 +10,145 @@ public class SettingsViewModel : INotifyPropertyChanged
 {
     private readonly ServerConnection _serverConnection;
 
-    private bool _isServerRunning;
-    private bool _configLoaded;
-    private string _configServerName = string.Empty;
-    private int _internalPort;
-    private int _externalPort;
-    private int _libraryWorkers;
-    private int _importWorkers;
-    private int _extrasWorkers;
-    private int _encoderWorkers;
-    private int _cronWorkers;
-    private int _imageWorkers;
-    private int _fileWorkers;
-    private int _musicWorkers;
-    private string _actionStatus = string.Empty;
-
     public bool IsServerRunning
     {
-        get => _isServerRunning;
+        get;
         set
         {
-            _isServerRunning = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public bool ConfigLoaded
     {
-        get => _configLoaded;
+        get;
         set
         {
-            _configLoaded = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public string ConfigServerName
     {
-        get => _configServerName;
+        get;
         set
         {
-            _configServerName = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = string.Empty;
 
     public int InternalPort
     {
-        get => _internalPort;
+        get;
         set
         {
-            _internalPort = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public int ExternalPort
     {
-        get => _externalPort;
+        get;
         set
         {
-            _externalPort = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public int LibraryWorkers
     {
-        get => _libraryWorkers;
+        get;
         set
         {
-            _libraryWorkers = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public int ImportWorkers
     {
-        get => _importWorkers;
+        get;
         set
         {
-            _importWorkers = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public int ExtrasWorkers
     {
-        get => _extrasWorkers;
+        get;
         set
         {
-            _extrasWorkers = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public int EncoderWorkers
     {
-        get => _encoderWorkers;
+        get;
         set
         {
-            _encoderWorkers = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public int CronWorkers
     {
-        get => _cronWorkers;
+        get;
         set
         {
-            _cronWorkers = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public int ImageWorkers
     {
-        get => _imageWorkers;
+        get;
         set
         {
-            _imageWorkers = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public int FileWorkers
     {
-        get => _fileWorkers;
+        get;
         set
         {
-            _fileWorkers = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public int MusicWorkers
     {
-        get => _musicWorkers;
+        get;
         set
         {
-            _musicWorkers = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public string ActionStatus
     {
-        get => _actionStatus;
+        get;
         set
         {
-            _actionStatus = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = string.Empty;
 
     public SettingsViewModel(ServerConnection serverConnection)
     {

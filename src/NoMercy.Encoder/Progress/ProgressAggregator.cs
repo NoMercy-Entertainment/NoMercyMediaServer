@@ -4,13 +4,12 @@ public class ProgressAggregator
 {
     private readonly double[] _weights;
     private readonly double[] _groupProgress;
-    private readonly double _totalWeight;
 
     public ProgressAggregator(TimeSpan[] estimatedDurations)
     {
         _weights = estimatedDurations.Select(d => d.TotalSeconds).ToArray();
         _groupProgress = new double[_weights.Length];
-        _totalWeight = _weights.Sum();
+        OverallPercentage = _weights.Sum();
     }
 
     public void UpdateGroup(int groupIndex, double percentage)
@@ -23,12 +22,12 @@ public class ProgressAggregator
     {
         get
         {
-            if (_totalWeight <= 0)
+            if (field <= 0)
                 return 0;
             double weighted = 0;
             for (int i = 0; i < _groupProgress.Length; i++)
                 weighted += _groupProgress[i] * _weights[i];
-            return weighted / _totalWeight;
+            return weighted / field;
         }
     }
 

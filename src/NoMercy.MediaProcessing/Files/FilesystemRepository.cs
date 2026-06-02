@@ -13,14 +13,12 @@ namespace NoMercy.MediaProcessing.Files;
 /// </summary>
 public class FilesystemRepository(IStorageDriver driver)
 {
-    private readonly IStorageDriver _driver = driver;
-
     public (string? parent, List<DirectoryTree> entries) List(string folder, bool withEmpty)
     {
         if (string.IsNullOrEmpty(folder))
             return (null, []);
 
-        if (!_driver.DirectoryExists(folder))
+        if (!driver.DirectoryExists(folder))
             return (null, []);
 
         List<DirectoryTree> entries;
@@ -50,7 +48,7 @@ public class FilesystemRepository(IStorageDriver driver)
             Environment.SpecialFolderOption.DoNotVerify
         );
 
-        if (string.IsNullOrEmpty(home) || !_driver.DirectoryExists(home))
+        if (string.IsNullOrEmpty(home) || !driver.DirectoryExists(home))
             home = "/";
 
         (string? parent, List<DirectoryTree> entries) = List(home, withEmpty);
@@ -121,14 +119,14 @@ public class FilesystemRepository(IStorageDriver driver)
         if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             throw new ArgumentException("name contains invalid characters", nameof(name));
 
-        if (!_driver.DirectoryExists(parent))
+        if (!driver.DirectoryExists(parent))
             throw new DirectoryNotFoundException($"parent does not exist: {parent}");
 
         string fullPath = Path.Combine(parent, name);
-        if (_driver.DirectoryExists(fullPath))
+        if (driver.DirectoryExists(fullPath))
             return fullPath;
 
-        _driver.CreateDirectory(fullPath);
+        driver.CreateDirectory(fullPath);
         return fullPath;
     }
 
@@ -145,14 +143,14 @@ public class FilesystemRepository(IStorageDriver driver)
     private IEnumerable<string> EnumerateChildDirectories(string folder)
     {
         foreach (
-            string entry in _driver.EnumerateFileSystemEntries(
+            string entry in driver.EnumerateFileSystemEntries(
                 folder,
                 "*",
                 SearchOption.TopDirectoryOnly
             )
         )
         {
-            if (!_driver.DirectoryExists(entry))
+            if (!driver.DirectoryExists(entry))
                 continue;
             if (IsBrowsable(entry))
                 yield return entry;
@@ -172,7 +170,7 @@ public class FilesystemRepository(IStorageDriver driver)
 
         // Windows Hidden / System attributes for everything else
         // (`System Volume Information`, `Recovery`, `Config.Msi`, ...).
-        return !_driver.IsHidden(path);
+        return !driver.IsHidden(path);
     }
 
     private static string? ParentOf(string folder)

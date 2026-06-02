@@ -22,32 +22,26 @@ public class Metadata : MetadataTracks
     [JsonProperty("duration")]
     public string Duration { get; set; } = string.Empty;
 
-    private string _filename = string.Empty;
-
     [JsonProperty("filename")]
     public string Filename
     {
-        get => _filename;
-        set => _filename = PathNormalizer.Normalize(value);
-    }
-
-    private string _folder = string.Empty;
+        get;
+        set => field = PathNormalizer.Normalize(value);
+    } = string.Empty;
 
     [JsonProperty("folder")]
     public string Folder
     {
-        get => _folder;
-        set => _folder = PathNormalizer.Normalize(value);
-    }
-
-    private string _hostFolder = string.Empty;
+        get;
+        set => field = PathNormalizer.Normalize(value);
+    } = string.Empty;
 
     [JsonProperty("host_folder")]
     public string HostFolder
     {
-        get => _hostFolder;
-        set => _hostFolder = PathNormalizer.Normalize(value);
-    }
+        get;
+        set => field = PathNormalizer.Normalize(value);
+    } = string.Empty;
 
     [JsonProperty("folder_size")]
     public long FolderSize { get; set; }

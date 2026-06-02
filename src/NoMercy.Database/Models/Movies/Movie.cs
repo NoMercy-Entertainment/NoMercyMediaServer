@@ -34,13 +34,11 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("show")]
     public bool Show { get; set; }
 
-    private string? _folder;
-
     [JsonProperty("folder")]
     public string? Folder
     {
-        get => _folder;
-        set => _folder = PathNormalizer.NormalizeNullable(value);
+        get;
+        set => field = PathNormalizer.NormalizeNullable(value);
     }
 
     [JsonProperty("adult")]

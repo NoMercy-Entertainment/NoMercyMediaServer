@@ -295,7 +295,7 @@ public partial class SubtitleOcrEngine(
         // then terminates the file= option.  Double-escape so each layer strips one
         // backslash: C# "\\\\:" → emitted "\\:" → after filterchain → "\:" → after
         // filter-option → literal ":".
-        return path.Replace('\\', '/').Replace(":", "\\\\:");
+        return path.Replace('\\', '/').Replace(":", @"\\:");
     }
 
     private static string TrimErr(string stdErr)

@@ -148,8 +148,6 @@ public sealed class WebDavContractIntegrationCollection
 public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
     : IStorageContractTests
 {
-    private readonly WebDavContractFixture _fixture = fixture;
-
     // -----------------------------------------------------------------------
     // IStorageContractTests hooks
     // -----------------------------------------------------------------------
@@ -157,11 +155,11 @@ public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
     protected override IStorage CreateStorage()
     {
         Skip.If(
-            !_fixture.Available,
+            !fixture.Available,
             "Docker / WebDAV not available — skipping WebDAV contract test"
         );
 
-        return new RemoteStorage(_fixture.BuildDriver());
+        return new RemoteStorage(fixture.BuildDriver());
     }
 
     /// <summary>
@@ -175,9 +173,9 @@ public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
         if (!string.IsNullOrEmpty(parent))
             await SeedDirectory(parent);
 
-        string url = _fixture.BaseUrl + normalized;
+        string url = fixture.BaseUrl + normalized;
         using ByteArrayContent body = new(content);
-        HttpResponseMessage response = await _fixture.RawHttp.PutAsync(url, body);
+        HttpResponseMessage response = await fixture.RawHttp.PutAsync(url, body);
         response.EnsureSuccessStatusCode();
     }
 
@@ -195,9 +193,9 @@ public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
         {
             accumulated = string.IsNullOrEmpty(accumulated) ? segment : accumulated + "/" + segment;
 
-            string url = _fixture.BaseUrl + accumulated + "/";
+            string url = fixture.BaseUrl + accumulated + "/";
             using HttpRequestMessage mkcol = new(new HttpMethod("MKCOL"), url);
-            HttpResponseMessage response = await _fixture.RawHttp.SendAsync(mkcol);
+            HttpResponseMessage response = await fixture.RawHttp.SendAsync(mkcol);
 
             if (
                 !response.IsSuccessStatusCode
@@ -213,10 +211,10 @@ public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
     /// </summary>
     protected override async Task<bool> BackendHasFile(string relativePath)
     {
-        string url = _fixture.BaseUrl + relativePath.TrimStart('/');
+        string url = fixture.BaseUrl + relativePath.TrimStart('/');
         using HttpRequestMessage propfind = new(new HttpMethod("PROPFIND"), url);
         propfind.Headers.Add("Depth", "0");
-        HttpResponseMessage response = await _fixture.RawHttp.SendAsync(propfind);
+        HttpResponseMessage response = await fixture.RawHttp.SendAsync(propfind);
         return response.StatusCode == HttpStatusCode.MultiStatus;
     }
 
@@ -227,16 +225,16 @@ public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
         // class (per-class fixture) so without this each test sees leftover
         // files from earlier tests, breaking "list shows exactly N entries"
         // assertions in unpredictable ways.
-        if (!_fixture.Available)
+        if (!fixture.Available)
             return;
 
         try
         {
             // Enumerate top-level resources and DELETE each. Recursive deletes
             // on collections take the whole subtree.
-            using HttpRequestMessage propfind = new(new HttpMethod("PROPFIND"), _fixture.BaseUrl);
+            using HttpRequestMessage propfind = new(new HttpMethod("PROPFIND"), fixture.BaseUrl);
             propfind.Headers.Add("Depth", "1");
-            HttpResponseMessage list = await _fixture.RawHttp.SendAsync(propfind);
+            HttpResponseMessage list = await fixture.RawHttp.SendAsync(propfind);
             if (list.StatusCode != HttpStatusCode.MultiStatus)
                 return;
 
@@ -253,12 +251,12 @@ public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
             {
                 string href = m.Groups[1].Value;
                 // Skip the root itself.
-                Uri full = new(new Uri(_fixture.BaseUrl), href);
-                if (full.AbsoluteUri.TrimEnd('/') == _fixture.BaseUrl.TrimEnd('/'))
+                Uri full = new(new Uri(fixture.BaseUrl), href);
+                if (full.AbsoluteUri.TrimEnd('/') == fixture.BaseUrl.TrimEnd('/'))
                     continue;
 
                 using HttpRequestMessage del = new(HttpMethod.Delete, full);
-                _ = await _fixture.RawHttp.SendAsync(del);
+                _ = await fixture.RawHttp.SendAsync(del);
             }
         }
         catch
@@ -285,7 +283,7 @@ public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
     [Trait("Category", "Integration")]
     public async Task WebDav_double_slash_is_known_failure_requires_driver_normalisation()
     {
-        Skip.If(!_fixture.Available, "Docker not available");
+        Skip.If(!fixture.Available, "Docker not available");
 
         IStorage storage = CreateStorage();
         try

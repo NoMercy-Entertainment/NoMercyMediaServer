@@ -62,7 +62,7 @@ public sealed class AssBurnInFilterBuilder
 
         // Order is critical: \ -> \\ must precede escaping other chars.
         string escaped = normalised
-            .Replace("\\", "\\\\") // \ -> \\ (no-op on normalised path)
+            .Replace("\\", @"\\") // \ -> \\ (no-op on normalised path)
             .Replace("'", "\\'") // ' -> \' (apostrophe in filename)
             .Replace(":", "\\:"); // : -> \: (drive letter / stream specifier)
 

@@ -97,7 +97,7 @@ public static class FfProbe
                 string line = lines[i].TrimEnd('\r');
                 if (line.StartsWith("#EXT-X-STREAM-INF", StringComparison.Ordinal))
                 {
-                    Match res = Regex.Match(line, "RESOLUTION=(\\d+)x(\\d+)");
+                    Match res = Regex.Match(line, @"RESOLUTION=(\d+)x(\d+)");
                     if (res.Success)
                     {
                         width = int.Parse(res.Groups[1].Value);

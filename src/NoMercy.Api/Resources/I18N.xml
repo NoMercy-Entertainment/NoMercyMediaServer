@@ -621,4 +621,16 @@
     <Key>Device not found</Key>
     <Value lang="nl">Device not found</Value>
   </Entry>
+  <Entry>
+    <Key>Artists: #</Key>
+    <Value lang="nl">Artists: #</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: D</Key>
+    <Value lang="nl">Artists: D</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: L</Key>
+    <Value lang="nl">Artists: L</Value>
+  </Entry>
 </I18N>

@@ -11,20 +11,18 @@ namespace NoMercy.MediaProcessing.Jobs;
 
 public class JobDispatcher
 {
-    private readonly QueueJobDispatcher? _dispatcher;
-
     public JobDispatcher(QueueJobDispatcher dispatcher)
     {
-        _dispatcher = dispatcher;
+        Dispatcher = dispatcher;
     }
 
     public JobDispatcher()
     {
-        _dispatcher = QueueRunner.Current?.Dispatcher;
+        Dispatcher = QueueRunner.Current?.Dispatcher;
     }
 
     private QueueJobDispatcher Dispatcher =>
-        _dispatcher
+        field
         ?? throw new InvalidOperationException(
             "JobDispatcher requires a QueueRunner instance. Ensure QueueRunner is initialized before dispatching jobs."
         );

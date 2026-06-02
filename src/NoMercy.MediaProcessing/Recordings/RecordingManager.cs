@@ -28,40 +28,6 @@ public partial class RecordingManager(
     IStorageFactory storageFactory
 ) : BaseManager, IRecordingManager
 {
-    private readonly IStorageDriver _storageDriver = storageDriver;
-    private readonly IStorageFactory _storageFactory = storageFactory;
-
-    // public async Task StoreWithoutFiles(MusicBrainzReleaseAppends releaseAppends, Folder libraryFolder)
-    // {
-    //     foreach (MusicBrainzMedia media in releaseAppends.Media)
-    //     foreach (MusicBrainzTrack musicBrainzTrack in media.Tracks)
-    //     {
-    //         Track insert = new()
-    //         {
-    //             Id = musicBrainzTrack.Id,
-    //             Name = musicBrainzTrack.Title,
-    //             Date = releaseAppends.DateTime ?? releaseAppends.ReleaseEvents?.FirstOrDefault()?.DateTime,
-    //             DiscNumber = media.Position,
-    //             TrackNumber = musicBrainzTrack.Position,
-    //             FolderId = libraryFolder.Id
-    //         };
-    //
-    //         await recordingRepository.Store(insert);
-    //
-    //         await LinkToRelease(musicBrainzTrack, releaseAppends);
-    //         await LinkToLibrary(musicBrainzTrack, libraryFolder.FolderLibraries.FirstOrDefault()!.Library);
-    //
-    //         List<MusicGenreTrack> genres = musicBrainzTrack.Genres
-    //             ?.Select(genre => new MusicGenreTrack
-    //             {
-    //                 TrackId = musicBrainzTrack.Id,
-    //                 GenreId = genre.Id
-    //             }).ToList() ?? [];
-    //
-    //         await musicGenreRepository.LinkToRecording(genres);
-    //     }
-    // }
-
     public async Task<bool> Store(
         MusicBrainzReleaseAppends releaseAppends,
         MusicBrainzTrack musicBrainzTrack,
@@ -76,7 +42,7 @@ public partial class RecordingManager(
             LogEventLevel.Verbose
         );
 
-        MediaScan mediaScan = new(_storageDriver);
+        MediaScan mediaScan = new(storageDriver);
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType("music")
@@ -96,6 +62,7 @@ public partial class RecordingManager(
                 );
                 if (mediaFile is null)
                     continue;
+                
                 TagFile? tagFile = file.TagFile;
                 if (tagFile == null || mediaFile.FFprobe == null)
                 {
@@ -111,7 +78,7 @@ public partial class RecordingManager(
                 string path =
                     mediaFile
                         .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                        ?.Replace("\\" + mediaFile.Name, "")
+                        .Replace("\\" + mediaFile.Name, "")
                     ?? string.Empty;
 
                 Track insert = new()
@@ -139,7 +106,7 @@ public partial class RecordingManager(
                                 mediaFile.FFprobe?.Duration
                                 ?? tagFile!.Properties?.Duration
                                 ?? TimeSpan.Zero
-                            ).ToString("hh\\:mm\\:ss"),
+                            ).ToString(@"hh\:mm\:ss"),
                             ""
                         ),
 
@@ -367,7 +334,7 @@ public partial class RecordingManager(
 
     private string ResolveLibraryRoot(Folder libraryFolder)
     {
-        IStorage folderStorage = _storageFactory.For(
+        IStorage folderStorage = storageFactory.For(
             libraryFolder.Id,
             libraryFolder.DriverId,
             string.Empty
@@ -419,16 +386,17 @@ public partial class RecordingManager(
                     FolderId = libraryFolder.Id,
                     Folder = mediaFile
                         .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                        ?.Replace("\\" + mediaFile.Name, "")
-                        ?.Replace(ResolveLibraryRoot(libraryFolder), "")
-                        ?.Replace("\\", "/"),
+                        .Replace("\\" + mediaFile.Name, "")
+                        .Replace(ResolveLibraryRoot(libraryFolder), "")
+                        .Replace("\\", "/"),
                     HostFolder = mediaFile
                         .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                        ?.Replace("\\" + mediaFile.Name, "")
-                        ?.PathName()!,
+                        .Replace("\\" + mediaFile.Name, "")
+                        .PathName()!,
 
                     LibraryId = libraryFolder.FolderLibraries.FirstOrDefault()!.LibraryId,
                 };
+                
                 await artistRepository.StoreAsync(artistEntity);
                 jobDispatcher.DispatchJob<MusicMetadataJob>(artist);
             }
@@ -441,7 +409,7 @@ public partial class RecordingManager(
         string path =
             mediaFile
                 .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                ?.Replace("\\" + mediaFile.Name, "")
+                .Replace("\\" + mediaFile.Name, "")
             ?? string.Empty;
 
         Track insert = new()
@@ -465,7 +433,7 @@ public partial class RecordingManager(
                 .Replace(
                     (
                         mediaFile.FFprobe?.Duration ?? mediaFile.TagFile!.Properties!.Duration
-                    ).ToString("hh\\:mm\\:ss"),
+                    ).ToString(@"hh\:mm\:ss"),
                     ""
                 ),
 
@@ -497,16 +465,13 @@ public partial class RecordingManager(
         }
         List<MusicGenreTrack> genres =
             (trackAppends.Genres ?? trackAppends.Recording.Genres)
-                ?.Select(genre => new MusicGenreTrack { TrackId = insert.Id, GenreId = genre.Id })
-                .ToList()
-            ?? [];
+            .Select(genre => new MusicGenreTrack { TrackId = insert.Id, GenreId = genre.Id })
+            .ToList();
 
         if (genres.Count > 0)
             await musicGenreRepository.LinkToRecording(genres);
 
         Logger.MusicBrainz($"Recording {trackAppends.Title} stored", LogEventLevel.Verbose);
-
-        // jobDispatcher.DispatchJob<LyricFetchJob>(insert);
     }
 
     private async Task LinkToArtist(Track insert, MusicBrainzArtistAppends[] artistAppends)

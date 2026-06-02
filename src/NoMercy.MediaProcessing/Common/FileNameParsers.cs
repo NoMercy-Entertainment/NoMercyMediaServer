@@ -70,7 +70,7 @@ public static class FileNameParsers
 
         // Step 3: Replace ": " and " and the" with the parsed year (if available) or "."
         string replacement = date != null ? $".{date.ParseYear()}." : ".";
-        title = Regex.Replace(title, ":\\s|\\sand\\sthe", replacement, RegexOptions.IgnoreCase);
+        title = Regex.Replace(title, @":\s|\sand\sthe", replacement, RegexOptions.IgnoreCase);
 
         // Step 4: Replace all "." with " "
         title = title.Replace(".", " ");

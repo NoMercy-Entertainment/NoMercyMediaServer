@@ -16,7 +16,6 @@ namespace NoMercy.Networking.Discovery;
 public class NetworkDiscovery : INetworkDiscovery
 {
     private readonly IStorageDriver _driver;
-    private string? _internalIp;
     private string? _externalIp;
     private INatDevice? _device;
     private bool _hasFoundDevice;
@@ -28,12 +27,12 @@ public class NetworkDiscovery : INetworkDiscovery
 
     public string InternalIp
     {
-        get => _internalIp ?? GetInternalIp();
+        get => field ?? GetInternalIp();
         set
         {
-            if (_internalIp == value)
+            if (field == value)
                 return;
-            _internalIp = value;
+            field = value;
         }
     }
 
@@ -50,16 +49,14 @@ public class NetworkDiscovery : INetworkDiscovery
 
     public string? InternalIpV6 => GetInternalIpV6();
 
-    private string? _externalIpV6;
-
     public string? ExternalIpV6
     {
-        get => _externalIpV6;
+        get;
         set
         {
-            if (_externalIpV6 == value)
+            if (field == value)
                 return;
-            _externalIpV6 = value;
+            field = value;
         }
     }
 

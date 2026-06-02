@@ -15,7 +15,6 @@ public static class OfflineJwksCache
     // AuthManager.InitializeAsync — both run before StorageProvider is initialized.
     private static readonly IStorageDriver Backend = new LocalStorageDriver();
     private static readonly object CacheLock = new();
-    private static RsaSecurityKey? _cachedSigningKey;
 
     public static RsaSecurityKey? CachedSigningKey
     {
@@ -23,14 +22,14 @@ public static class OfflineJwksCache
         {
             lock (CacheLock)
             {
-                return _cachedSigningKey;
+                return field;
             }
         }
         private set
         {
             lock (CacheLock)
             {
-                _cachedSigningKey = value;
+                field = value;
             }
         }
     }

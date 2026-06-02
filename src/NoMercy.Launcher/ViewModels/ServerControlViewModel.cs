@@ -14,160 +14,145 @@ public class ServerControlViewModel : INotifyPropertyChanged
     private readonly ServerProcessLauncher _processLauncher;
     private CancellationTokenSource? _pollCts;
 
-    private string _serverStatus = "Disconnected";
-    private string _serverName = "--";
-    private string _version = "--";
-    private string _platform = "--";
-    private string _uptime = "--";
-    private bool _isServerRunning;
-    private bool _isServerStopped = true;
-    private bool _isActionInProgress;
-    private string _actionStatus = string.Empty;
-    private string _statusColor = "#EF4444";
-    private bool _autoStartEnabled;
-    private bool _updateAvailable;
-    private bool _restartNeeded;
-    private string _latestVersion = string.Empty;
-
     public string ServerStatus
     {
-        get => _serverStatus;
+        get;
         set
         {
-            _serverStatus = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "Disconnected";
 
     public string ServerName
     {
-        get => _serverName;
+        get;
         set
         {
-            _serverName = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "--";
 
     public string Version
     {
-        get => _version;
+        get;
         set
         {
-            _version = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "--";
 
     public string Platform
     {
-        get => _platform;
+        get;
         set
         {
-            _platform = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "--";
 
     public string Uptime
     {
-        get => _uptime;
+        get;
         set
         {
-            _uptime = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "--";
 
     public bool IsServerRunning
     {
-        get => _isServerRunning;
+        get;
         set
         {
-            _isServerRunning = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public bool IsServerStopped
     {
-        get => _isServerStopped;
+        get;
         set
         {
-            _isServerStopped = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = true;
 
     public bool IsActionInProgress
     {
-        get => _isActionInProgress;
+        get;
         set
         {
-            _isActionInProgress = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public string ActionStatus
     {
-        get => _actionStatus;
+        get;
         set
         {
-            _actionStatus = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = string.Empty;
 
     public string StatusColor
     {
-        get => _statusColor;
+        get;
         set
         {
-            _statusColor = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "#EF4444";
 
     public bool AutoStartEnabled
     {
-        get => _autoStartEnabled;
+        get;
         set
         {
-            _autoStartEnabled = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public bool UpdateAvailable
     {
-        get => _updateAvailable;
+        get;
         set
         {
-            _updateAvailable = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public bool RestartNeeded
     {
-        get => _restartNeeded;
+        get;
         set
         {
-            _restartNeeded = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public string LatestVersion
     {
-        get => _latestVersion;
+        get;
         set
         {
-            _latestVersion = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = string.Empty;
 
     private readonly InstallerUpdater _installerUpdater;
 

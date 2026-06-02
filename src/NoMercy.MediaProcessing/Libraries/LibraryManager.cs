@@ -32,7 +32,6 @@ public class LibraryManager(
 ) : BaseManager, ILibraryManager
 {
     private Library? _library;
-    private readonly IEventBus? _eventBus = eventBus;
 
     public async Task ProcessLibrary(Ulid id)
     {
@@ -44,7 +43,7 @@ public class LibraryManager(
         int itemsFound = 0;
 
         IEventBus? bus =
-            _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+            eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
 
         if (bus is not null)
         {
@@ -118,7 +117,7 @@ public class LibraryManager(
         int itemsFound = 0;
 
         IEventBus? bus =
-            _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+            eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
 
         if (bus is not null)
         {
@@ -202,7 +201,7 @@ public class LibraryManager(
             .ToList();
 
         IEventBus? bus =
-            _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+            eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
 
         if (bus is not null && _library is not null)
         {
@@ -255,7 +254,7 @@ public class LibraryManager(
             .ToList();
 
         IEventBus? bus =
-            _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+            eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
 
         if (bus is not null && _library is not null)
         {
@@ -296,7 +295,7 @@ public class LibraryManager(
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(scanRoot, depth);
 
         IEventBus? bus =
-            _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+            eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
 
         if (bus is not null && _library is not null)
         {
@@ -339,7 +338,7 @@ public class LibraryManager(
             .ToList();
 
         IEventBus? bus =
-            _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+            eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
 
         if (bus is not null && _library is not null)
         {

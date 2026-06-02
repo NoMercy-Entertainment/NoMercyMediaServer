@@ -63,7 +63,7 @@ public record MusicCardData
     {
         Id = album.Id.ToString();
         Name = album.Name;
-        Cover = $"/images/music{album.Cover}";
+        Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
         Type = "album";
         Link = $"/music/album/{album.Id}";
         ColorPalette = album.ColorPalette;
@@ -76,7 +76,7 @@ public record MusicCardData
     {
         Id = artist.Id.ToString();
         Name = artist.Name;
-        Cover = $"/images/music{artist.Cover}";
+        Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
         Type = "artist";
         Link = $"/music/artist/{artist.Id}";
         ColorPalette = artist.ColorPalette;
@@ -90,7 +90,7 @@ public record MusicCardData
     {
         Id = playlist.Id.ToString();
         Name = playlist.Name;
-        Cover = $"/images/music{playlist.Cover}";
+        Cover = playlist.Cover is not null ? $"/images/music{playlist.Cover}" : null;
         Type = "playlist";
         Link = $"/music/playlist/{playlist.Id}";
         Tracks = playlist.Tracks.Count;
@@ -110,7 +110,7 @@ public record MusicCardData
     {
         Id = carousel.Id;
         Name = carousel.Name;
-        Cover = carousel.Cover;
+        Cover = carousel.Cover is not null ? $"/images/music{carousel.Cover}" : null;
         Type = carousel.Type;
         Link = carousel.Link.ToString();
         Tracks = carousel.Tracks;
@@ -121,7 +121,7 @@ public record MusicCardData
     {
         Id = carousel.Id;
         Name = carousel.Name.ToTitleCase();
-        Cover = carousel.Cover;
+        Cover = carousel.Cover is not null ? $"/images/music{carousel.Cover}" : null;
         Type = carousel.Type;
         Link = carousel.Link.ToString();
         Tracks = carousel.Tracks;
@@ -229,6 +229,7 @@ public record MusicHomeCardData
     {
         Id = album.Id.ToString();
         Name = album.Name;
+        Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
         Cover = $"/images/music{album.Cover}";
         Type = "album";
         Link = $"/music/album/{album.Id}";
@@ -242,6 +243,7 @@ public record MusicHomeCardData
     {
         Id = artist.Id.ToString();
         Name = artist.Name;
+        Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
         Cover = $"/images/music{artist.Cover}";
         Type = "artist";
         Link = $"/music/artist/{artist.Id}";
@@ -256,6 +258,7 @@ public record MusicHomeCardData
     {
         Id = topMusic.Id;
         Name = topMusic.Name;
+        Cover = topMusic.Cover is not null ? $"/images/music{topMusic.Cover}" : null;
         Cover = topMusic.Cover;
         Type = topMusic.Type;
         Link = topMusic.Link.ToString();

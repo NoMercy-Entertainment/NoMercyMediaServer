@@ -5,8 +5,6 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record StatusResponseDto<T>
 {
-    private string? _message;
-
     [JsonProperty("status")]
     public string Status { get; set; } = "ok";
 
@@ -16,8 +14,8 @@ public record StatusResponseDto<T>
     [JsonProperty("message")]
     public string? Message
     {
-        get => _message;
-        set => _message = value?.Localize();
+        get;
+        set => field = value?.Localize();
     }
 
     [JsonProperty("args")]

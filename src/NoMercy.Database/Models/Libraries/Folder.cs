@@ -16,14 +16,12 @@ public class Folder
     [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    private string _path = string.Empty;
-
     [JsonProperty("path")]
     public string Path
     {
-        get => _path;
-        set => _path = PathNormalizer.Normalize(value);
-    }
+        get;
+        set => field = PathNormalizer.Normalize(value);
+    } = string.Empty;
 
     [JsonProperty("driver_id")]
     public Ulid DriverId { get; set; }

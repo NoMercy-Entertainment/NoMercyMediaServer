@@ -32,7 +32,6 @@ public class IntroDetectionSubscriber(
     IStorage storage
 ) : IHostedService
 {
-    private readonly IStorage _storage = storage;
     private const int MinEpisodes = 3;
     private static readonly TimeSpan IntroScanWindow = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan OutroScanWindow = TimeSpan.FromMinutes(3);
@@ -274,8 +273,8 @@ public class IntroDetectionSubscriber(
             )
                 continue;
 
-            string path = _storage.CombinePath(file.HostFolder, file.Filename);
-            if (_storage.Exists(path))
+            string path = storage.CombinePath(file.HostFolder, file.Filename);
+            if (storage.Exists(path))
                 return path;
         }
 

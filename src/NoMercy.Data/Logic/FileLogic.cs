@@ -24,10 +24,6 @@ public partial class FileLogic(
     IStorageDriver storageDriver
 ) : IDisposable, IAsyncDisposable
 {
-    private readonly MediaContext _mediaContext = mediaContext;
-    private readonly IStorageFactory _storageFactory = storageFactory;
-    private readonly IStorageDriver _storageDriver = storageDriver;
-
     private int Id { get; set; } = id;
     private Library Library { get; set; } = library;
     private Movie? Movie { get; set; }
@@ -153,7 +149,7 @@ public partial class FileLogic(
 
         string subtitleFolder = hostFolder.TrimEnd('/') + "/subtitles";
 
-        IStorage storage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        IStorage storage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         if (await storage.ExistsAsync(subtitleFolder, CancellationToken.None))
         {
             IReadOnlyList<StorageEntry> subtitleEntries = storage.List(subtitleFolder, "*", false);
@@ -183,7 +179,7 @@ public partial class FileLogic(
             }
         }
 
-        Episode? episode = await _mediaContext
+        Episode? episode = await mediaContext
             .Episodes.Where(e => Show != null && e.TvId == Show.Id)
             .Where(e => e.SeasonNumber == item.Parsed.Season)
             .Where(e => e.EpisodeNumber == item.Parsed.Episode)
@@ -201,7 +197,7 @@ public partial class FileLogic(
 
                 Share = folder.Id.ToString(),
                 Duration = Regex.Replace(
-                    Regex.Replace((item.FFprobe?.Duration.ToString()).OrEmpty(), "\\.\\d+", ""),
+                    Regex.Replace((item.FFprobe?.Duration.ToString()).OrEmpty(), @"\.\d+", ""),
                     "^00:",
                     ""
                 ),
@@ -215,7 +211,7 @@ public partial class FileLogic(
                 Subtitles = JsonConvert.SerializeObject(subtitles),
             };
 
-            await _mediaContext
+            await mediaContext
                 .VideoFiles.Upsert(videoFile)
                 .On(vf => vf.Filename)
                 .WhenMatched(
@@ -249,15 +245,15 @@ public partial class FileLogic(
         switch (Library.Type)
         {
             case Config.MovieMediaType:
-                Movie = await _mediaContext.Movies.Where(m => m.Id == Id).FirstOrDefaultAsync();
+                Movie = await mediaContext.Movies.Where(m => m.Id == Id).FirstOrDefaultAsync();
                 Type = Config.MovieMediaType;
                 break;
             case Config.TvMediaType:
-                Show = await _mediaContext.Tvs.Where(t => t.Id == Id).FirstOrDefaultAsync();
+                Show = await mediaContext.Tvs.Where(t => t.Id == Id).FirstOrDefaultAsync();
                 Type = Config.TvMediaType;
                 break;
             case Config.AnimeMediaType:
-                Show = await _mediaContext.Tvs.Where(t => t.Id == Id).FirstOrDefaultAsync();
+                Show = await mediaContext.Tvs.Where(t => t.Id == Id).FirstOrDefaultAsync();
                 Type = Config.AnimeMediaType;
                 break;
         }
@@ -266,7 +262,7 @@ public partial class FileLogic(
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Folder folder)
     {
         // Resolve the per-folder driver so NFS/SMB folders use the right backend.
-        IStorage folderStorage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         MediaScan mediaScan = new(folderStorage.Driver);
 
         int depth = Library.Type switch
@@ -306,7 +302,7 @@ public partial class FileLogic(
 
         foreach (Folder rootFolder in rootFolders)
         {
-            IStorage folderStorage = _storageFactory.For(
+            IStorage folderStorage = storageFactory.For(
                 rootFolder.Id,
                 rootFolder.DriverId,
                 string.Empty
@@ -316,7 +312,7 @@ public partial class FileLogic(
 
             if (!folderStorage.Exists(path))
             {
-                string? match = Str.FindMatchingDirectory(_storageDriver, resolvedRoot, folder);
+                string? match = Str.FindMatchingDirectory(storageDriver, resolvedRoot, folder);
                 if (match != null)
                     path = match;
             }
@@ -342,11 +338,11 @@ public partial class FileLogic(
 
     public void Dispose()
     {
-        _mediaContext.Dispose();
+        mediaContext.Dispose();
     }
 
     public async ValueTask DisposeAsync()
     {
-        await _mediaContext.DisposeAsync();
+        await mediaContext.DisposeAsync();
     }
 }

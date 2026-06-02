@@ -26,8 +26,6 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
     private string _selectedLevel = "All";
     private int _tailCount = 200;
     private bool _autoRefresh = true;
-    private bool _isLoading;
-    private string _statusText = "Ready";
 
     public ObservableCollection<LogEntryResponse> LogEntries { get; } = [];
     public ObservableCollection<LogEntryResponse> FilteredEntries { get; } = [];
@@ -87,23 +85,23 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
 
     public bool IsLoading
     {
-        get => _isLoading;
+        get;
         set
         {
-            _isLoading = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public string StatusText
     {
-        get => _statusText;
+        get;
         set
         {
-            _statusText = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "Ready";
 
     public LogViewerViewModel(ServerConnection serverConnection)
     {
@@ -355,7 +353,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
             .Replace("\\r", "\r")
             .Replace("\\t", "\t")
             .Replace("\\\"", "\"")
-            .Replace("\\\\", "\\");
+            .Replace(@"\\", "\\");
 
         entry.Message = message;
     }

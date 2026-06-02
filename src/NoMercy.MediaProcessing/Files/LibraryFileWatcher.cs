@@ -23,8 +23,7 @@ public class LibraryFileWatcher
     private static IStorageDriver? _driverStore;
     private static IStorageFactory? _storageFactoryStore;
 
-    private static FolderWatcher? _fs;
-    private static FolderWatcher Fs => _fs ??= new(_driverStore!);
+    private static FolderWatcher Fs => field ??= new(_driverStore!);
     private static IStorageDriver StorageDriver => _driverStore!;
     private static IStorageFactory StorageFactory => _storageFactoryStore!;
 

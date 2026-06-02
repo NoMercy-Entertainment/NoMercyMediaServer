@@ -78,22 +78,18 @@ public class Track : ColorPaletteTimeStamps
         set => _lyrics = JsonConvert.SerializeObject(value);
     }
 
-    private string? _folder;
-
     [JsonProperty("folder")]
     public string? Folder
     {
-        get => _folder;
-        set => _folder = PathNormalizer.NormalizeNullable(value);
+        get;
+        set => field = PathNormalizer.NormalizeNullable(value);
     }
-
-    private string? _hostFolder;
 
     [JsonProperty("host_folder")]
     public string? HostFolder
     {
-        get => _hostFolder;
-        set => _hostFolder = PathNormalizer.NormalizeNullable(value);
+        get;
+        set => field = PathNormalizer.NormalizeNullable(value);
     }
 
     [JsonProperty("folder_id")]

@@ -30,11 +30,8 @@ public partial class FileManager(
     IStorageDriver storageDriver
 ) : IFileManager
 {
-    private readonly IStorageFactory _storageFactory = storageFactory;
-    private readonly IStorageDriver _storageDriver = storageDriver;
-
     private IStorage StorageFor(Folder folder) =>
-        _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        storageFactory.For(folder.Id, folder.DriverId, string.Empty);
 
     private int Id { get; set; }
     private Movie? Movie { get; set; }
@@ -159,7 +156,7 @@ public partial class FileManager(
                 if (!folderStorage.Exists(path))
                 {
                     string? match = Str.FindMatchingDirectory(
-                        _storageDriver,
+                        storageDriver,
                         folderRoot,
                         tv.Folder.Replace("/", "")
                     );
@@ -185,7 +182,7 @@ public partial class FileManager(
                 if (!folderStorage.Exists(path))
                 {
                     string? match = Str.FindMatchingDirectory(
-                        _storageDriver,
+                        storageDriver,
                         folderRoot,
                         movie.Folder.Replace("/", "")
                     );
@@ -385,7 +382,7 @@ public partial class FileManager(
 
             Share = folder.Id.ToString(),
             Duration = Regex.Replace(
-                Regex.Replace((item.FFprobe?.Duration.ToString()).OrEmpty(), "\\.\\d+", ""),
+                Regex.Replace((item.FFprobe?.Duration.ToString()).OrEmpty(), @"\.\d+", ""),
                 "^00:",
                 ""
             ),
@@ -1027,7 +1024,7 @@ public partial class FileManager(
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Library library, Folder folder)
     {
         // Mount at configured root; MediaScan walks via absolute paths.
-        IStorage folderStorage = _storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
         string scanRoot = folderStorage.GetFullPath(folder.Path);
         MediaScan mediaScan = new(folderStorage.Driver);
 

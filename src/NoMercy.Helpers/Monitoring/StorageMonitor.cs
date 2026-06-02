@@ -119,45 +119,39 @@ public record StorageDto
 
 public class Usage
 {
-    private long _movies;
-    private long _shows;
-    private long _music;
-    private long _other;
-    private long _used;
-
     [JsonProperty("movies")]
     public long Movies
     {
-        get => CalculatePercentage(_movies);
-        set => _movies = value / 1024 / 8;
+        get => CalculatePercentage(field);
+        set => field = value / 1024 / 8;
     }
 
     [JsonProperty("shows")]
     public long Shows
     {
-        get => CalculatePercentage(_shows);
-        set => _shows = value / 1024 / 8;
+        get => CalculatePercentage(field);
+        set => field = value / 1024 / 8;
     }
 
     [JsonProperty("music")]
     public long Music
     {
-        get => CalculatePercentage(_music);
-        set => _music = value / 1024 / 8;
+        get => CalculatePercentage(field);
+        set => field = value / 1024 / 8;
     }
 
     [JsonProperty("other")]
     public long Other
     {
-        get => CalculatePercentage(_other);
-        set => _other = value / 1024 / 8;
+        get => CalculatePercentage(field);
+        set => field = value / 1024 / 8;
     }
 
     [JsonProperty("used")]
     public long Used
     {
-        get => _used;
-        set => _used = value / 1024 / 8;
+        get;
+        set => field = value / 1024 / 8;
     }
 
     private long CalculatePercentage(long value)

@@ -23,32 +23,26 @@ public class VideoFile : VideoTracks
     [JsonProperty("duration")]
     public string? Duration { get; set; }
 
-    private string _filename = string.Empty;
-
     [JsonProperty("filename")]
     public string Filename
     {
-        get => _filename;
-        set => _filename = PathNormalizer.Normalize(value);
-    }
-
-    private string? _folder;
+        get;
+        set => field = PathNormalizer.Normalize(value);
+    } = string.Empty;
 
     [JsonProperty("folder")]
     public string? Folder
     {
-        get => _folder;
-        set => _folder = PathNormalizer.NormalizeNullable(value);
+        get;
+        set => field = PathNormalizer.NormalizeNullable(value);
     }
-
-    private string _hostFolder = string.Empty;
 
     [JsonProperty("host_folder")]
     public string HostFolder
     {
-        get => _hostFolder;
-        set => _hostFolder = PathNormalizer.Normalize(value);
-    }
+        get;
+        set => field = PathNormalizer.Normalize(value);
+    } = string.Empty;
 
     [JsonProperty("languages")]
     public string Languages { get; set; } = string.Empty;

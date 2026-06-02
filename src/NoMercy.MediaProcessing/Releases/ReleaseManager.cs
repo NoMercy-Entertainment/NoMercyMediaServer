@@ -22,8 +22,6 @@ public class ReleaseManager(
     IStorageFactory storageFactory
 ) : BaseManager, IReleaseManager
 {
-    private readonly IStorageFactory _storageFactory = storageFactory;
-
     public async Task<(
         MusicBrainzReleaseAppends? releaseAppends,
         CoverArtImageManagerManager.CoverPalette? coverPalette
@@ -212,7 +210,7 @@ public class ReleaseManager(
 
     private string ResolveLibraryRoot(Folder libraryFolder)
     {
-        IStorage folderStorage = _storageFactory.For(
+        IStorage folderStorage = storageFactory.For(
             libraryFolder.Id,
             libraryFolder.DriverId,
             string.Empty

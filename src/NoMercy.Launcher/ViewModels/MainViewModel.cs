@@ -6,8 +6,6 @@ namespace NoMercy.Launcher.ViewModels;
 
 public class MainViewModel : INotifyPropertyChanged
 {
-    private int _selectedTabIndex;
-
     public ServerControlViewModel ServerControlViewModel { get; }
     public SettingsViewModel SettingsViewModel { get; }
     public StartupArgumentsViewModel StartupArgumentsViewModel { get; }
@@ -15,10 +13,10 @@ public class MainViewModel : INotifyPropertyChanged
 
     public int SelectedTabIndex
     {
-        get => _selectedTabIndex;
+        get;
         set
         {
-            _selectedTabIndex = value;
+            field = value;
             OnPropertyChanged();
         }
     }

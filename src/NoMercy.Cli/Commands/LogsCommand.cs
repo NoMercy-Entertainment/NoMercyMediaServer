@@ -202,7 +202,7 @@ internal static partial class LogsCommand
             .Replace("\\r", "\r")
             .Replace("\\t", "\t")
             .Replace("\\\"", "\"")
-            .Replace("\\\\", "\\");
+            .Replace(@"\\", "\\");
 
         return message;
     }

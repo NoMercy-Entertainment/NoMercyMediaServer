@@ -31,7 +31,7 @@ public class AssBurnInFilterBuilderTests
     public void Build_PathWithBackslashes_NormalisesToForwardSlashThenEscapesColon()
     {
         // Windows path with backslash separators
-        string result = _builder.Build("C:\\movies\\my film\\subtitle.ass");
+        string result = _builder.Build(@"C:\movies\my film\subtitle.ass");
 
         // Backslashes normalised to forward slashes; colon on drive letter escaped
         Assert.Contains("C\\:/movies/my film/subtitle.ass", result);
@@ -74,7 +74,7 @@ public class AssBurnInFilterBuilderTests
     [Fact]
     public void EscapeForFilterGraph_BackslashPath_NormalisesAndEscapes()
     {
-        string result = AssBurnInFilterBuilder.EscapeForFilterGraph("C:\\path\\file.ass");
+        string result = AssBurnInFilterBuilder.EscapeForFilterGraph(@"C:\path\file.ass");
 
         // Backslashes → forward slashes, colon escaped
         Assert.Equal("C\\:/path/file.ass", result);

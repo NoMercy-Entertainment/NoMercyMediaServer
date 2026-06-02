@@ -220,7 +220,7 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
     {
         // Simple glob matching: * matches any characters, ** matches any path
         string regexPattern =
-            "^" + Regex.Escape(pattern).Replace("\\*\\*", ".*").Replace("\\*", "[^/]*") + "$";
+            "^" + Regex.Escape(pattern).Replace(@"\*\*", ".*").Replace("\\*", "[^/]*") + "$";
 
         return Regex.IsMatch(path, regexPattern, RegexOptions.IgnoreCase);
     }

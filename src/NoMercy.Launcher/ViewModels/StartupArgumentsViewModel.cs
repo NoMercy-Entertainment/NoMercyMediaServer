@@ -7,28 +7,25 @@ namespace NoMercy.Launcher.ViewModels;
 
 public class StartupArgumentsViewModel : INotifyPropertyChanged
 {
-    private string _startupArguments = string.Empty;
-    private string _saveStatus = string.Empty;
-
     public string StartupArguments
     {
-        get => _startupArguments;
+        get;
         set
         {
-            _startupArguments = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = string.Empty;
 
     public string SaveStatus
     {
-        get => _saveStatus;
+        get;
         set
         {
-            _saveStatus = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = string.Empty;
 
     public Task LoadAsync()
     {

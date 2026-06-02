@@ -18,8 +18,7 @@ public class VideoPlaybackService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IClientMessenger _clientMessenger;
     private readonly IEventBus? _eventBus;
-    private static int _playerStateEventId;
-    private static int PlayerStateEventId => Interlocked.Increment(ref _playerStateEventId);
+    private static int PlayerStateEventId => Interlocked.Increment(ref field);
 
     public VideoPlaybackService(
         VideoPlayerStateManager stateManager,

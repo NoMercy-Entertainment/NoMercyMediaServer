@@ -52,12 +52,10 @@ public static class Config
         set => _externalServerPort = value;
     }
 
-    private static string? _managementPipeName;
-
     public static string ManagementPipeName
     {
-        get => _managementPipeName ?? "NoMercyManagement";
-        set => _managementPipeName = value;
+        get => field ?? "NoMercyManagement";
+        set;
     }
 
     public static string ManagementSocketPath =>

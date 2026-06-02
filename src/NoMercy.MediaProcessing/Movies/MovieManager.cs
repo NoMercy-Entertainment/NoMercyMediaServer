@@ -25,9 +25,6 @@ public class MovieManager(
     IStorageDriver storageDriver
 ) : BaseManager, IMovieManager
 {
-    private readonly IStorageFactory _storageFactory = storageFactory;
-    private readonly IStorageDriver _storageDriver = storageDriver;
-
     public async Task<TmdbMovieAppends?> Add(int id, Library library)
     {
         Logger.MovieDb($"Movie: {id}: Adding to Library {library.Title}");
@@ -44,7 +41,7 @@ public class MovieManager(
 
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
         {
-            IStorage folderStorage = _storageFactory.For(
+            IStorage folderStorage = storageFactory.For(
                 folderLibrary.Folder.Id,
                 folderLibrary.Folder.DriverId,
                 string.Empty
@@ -55,7 +52,7 @@ public class MovieManager(
             if (!folderStorage.Exists(folderName))
             {
                 string? match = Str.FindMatchingDirectory(
-                    _storageDriver,
+                    storageDriver,
                     folderRoot,
                     baseUrl.Replace("/", "")
                 );

@@ -44,23 +44,19 @@ public class Album : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("tracks")]
     public int Tracks { get; set; }
 
-    private string? _folder;
-
     [JsonProperty("folder")]
     public string? Folder
     {
-        get => _folder;
-        set => _folder = PathNormalizer.NormalizeNullable(value);
+        get;
+        set => field = PathNormalizer.NormalizeNullable(value);
     }
-
-    private string _hostFolder = string.Empty;
 
     [JsonProperty("host_folder")]
     public string HostFolder
     {
-        get => _hostFolder;
-        set => _hostFolder = PathNormalizer.Normalize(value);
-    }
+        get;
+        set => field = PathNormalizer.Normalize(value);
+    } = string.Empty;
 
     [JsonProperty("library_id")]
     public Ulid LibraryId { get; set; }

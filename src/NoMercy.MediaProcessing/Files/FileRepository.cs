@@ -35,26 +35,23 @@ namespace NoMercy.MediaProcessing.Files;
 
 public class FileRepository(MediaContext context, IStorageDriver storageDriver) : IFileRepository
 {
-    private readonly MediaContext _context = context;
-    private readonly IStorageDriver _storageDriver = storageDriver;
-
-    public IStorageDriver StorageDriver => _storageDriver;
+    public IStorageDriver StorageDriver => storageDriver;
 
     public Task<IDbContextTransaction> BeginTransactionAsync()
     {
-        return _context.Database.BeginTransactionAsync();
+        return context.Database.BeginTransactionAsync();
     }
 
     public async Task StoreVideoFile(VideoFile videoFile)
     {
-        VideoFile? existing = await _context.VideoFiles.FirstOrDefaultAsync(v =>
+        VideoFile? existing = await context.VideoFiles.FirstOrDefaultAsync(v =>
             v.Filename == videoFile.Filename && v.HostFolder == videoFile.HostFolder
         );
 
         if (existing is null)
         {
-            _context.VideoFiles.Add(videoFile);
-            await _context.SaveChangesAsync();
+            context.VideoFiles.Add(videoFile);
+            await context.SaveChangesAsync();
             Logger.App(
                 $"[StoreVideoFile] inserted {videoFile.Filename}",
                 LogEventLevel.Information
@@ -76,20 +73,20 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         existing._tracks = videoFile._tracks;
         existing.MetadataId = videoFile.MetadataId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         Logger.App($"[StoreVideoFile] updated {videoFile.Filename}", LogEventLevel.Information);
     }
 
     public async Task<Ulid> StoreMetadata(Metadata metadata)
     {
-        Metadata? existing = await _context.Metadata.FirstOrDefaultAsync(m =>
+        Metadata? existing = await context.Metadata.FirstOrDefaultAsync(m =>
             m.Filename == metadata.Filename && m.HostFolder == metadata.HostFolder
         );
 
         if (existing is null)
         {
-            _context.Metadata.Add(metadata);
-            await _context.SaveChangesAsync();
+            context.Metadata.Add(metadata);
+            await context.SaveChangesAsync();
             Logger.App(
                 $"[StoreMetadata] inserted {metadata.Filename} (id={metadata.Id})",
                 LogEventLevel.Information
@@ -113,7 +110,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         existing._subtitles = metadata._subtitles;
         existing._video = metadata._video;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         Logger.App(
             $"[StoreMetadata] updated {metadata.Filename} (id={existing.Id})",
             LogEventLevel.Information
@@ -126,7 +123,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         if (item.Parsed == null)
             return null;
 
-        return await _context
+        return await context
             .Episodes.Where(e => e.TvId == showId)
             .Where(e => e.SeasonNumber == item.Parsed!.Season)
             .Where(e => e.EpisodeNumber == item.Parsed!.Episode)
@@ -142,22 +139,22 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         switch (library.Type)
         {
             case Config.MovieMediaType:
-                movie = await _context.Movies.Where(m => m.Id == id).FirstOrDefaultAsync();
+                movie = await context.Movies.Where(m => m.Id == id).FirstOrDefaultAsync();
                 type = library.Type;
                 break;
             case Config.TvMediaType:
             case Config.AnimeMediaType:
-                show = await _context.Tvs.Where(t => t.Id == id).FirstOrDefaultAsync();
+                show = await context.Tvs.Where(t => t.Id == id).FirstOrDefaultAsync();
 
                 if (show == null)
                 {
-                    Episode? episode = await _context
+                    Episode? episode = await context
                         .Episodes.Where(e => e.Id == id)
                         .FirstOrDefaultAsync();
 
                     if (episode != null)
                     {
-                        show = await _context
+                        show = await context
                             .Tvs.Where(t => t.Id == episode.TvId)
                             .FirstOrDefaultAsync();
                     }
@@ -179,9 +176,9 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
     public FileInfo[] GetVideoFilesInDirectory(string directoryPath)
     {
-        return _storageDriver
+        return storageDriver
             .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.TopDirectoryOnly)
-            .Where(p => !_storageDriver.DirectoryExists(p))
+            .Where(p => !storageDriver.DirectoryExists(p))
             .Where(p =>
             {
                 string ext = Path.GetExtension(p);
@@ -193,9 +190,9 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
     public FileInfo[] GetAudioFilesInDirectory(string directoryPath)
     {
-        return _storageDriver
+        return storageDriver
             .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.TopDirectoryOnly)
-            .Where(p => !_storageDriver.DirectoryExists(p))
+            .Where(p => !storageDriver.DirectoryExists(p))
             .Where(p =>
             {
                 string ext = Path.GetExtension(p);
@@ -270,7 +267,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             {
                 try
                 {
-                    await ProcessVideoFileInfo(_context, libraryType, file, fileList);
+                    await ProcessVideoFileInfo(context, libraryType, file, fileList);
                 }
                 catch (Exception e)
                 {
@@ -381,7 +378,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             {
                 try
                 {
-                    await ProcessVideoStorageEntry(_context, libraryType, entry, storage, fileList);
+                    await ProcessVideoStorageEntry(context, libraryType, entry, storage, fileList);
                 }
                 catch (Exception e)
                 {
@@ -1735,14 +1732,14 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
     public async Task<int> DeleteVideoFilesByHostFolderAsync(string hostFolder)
     {
-        return await _context
+        return await context
             .VideoFiles.Where(vf => vf.HostFolder == hostFolder)
             .ExecuteDeleteAsync();
     }
 
     public async Task<int> DeleteMetadataByHostFolderAsync(string hostFolder)
     {
-        return await _context.Metadata.Where(m => m.HostFolder == hostFolder).ExecuteDeleteAsync();
+        return await context.Metadata.Where(m => m.HostFolder == hostFolder).ExecuteDeleteAsync();
     }
 
     public async Task<int> UpdateVideoFilePathsAsync(
@@ -1754,7 +1751,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     {
         string newFolder = "/" + StoragePathHelpers.GetName(newHostFolder);
 
-        return await _context
+        return await context
             .VideoFiles.Where(vf => vf.HostFolder == oldHostFolder && vf.Filename == oldFilename)
             .ExecuteUpdateAsync(setters =>
                 setters
@@ -1766,27 +1763,27 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
     public async Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId)
     {
-        List<Ulid> metadataIds = await _context
+        List<Ulid> metadataIds = await context
             .VideoFiles.Where(vf => vf.MovieId == movieId && vf.MetadataId != null)
             .Select(vf => vf.MetadataId!.Value)
             .ToListAsync();
 
-        await _context.VideoFiles.Where(vf => vf.MovieId == movieId).ExecuteDeleteAsync();
+        await context.VideoFiles.Where(vf => vf.MovieId == movieId).ExecuteDeleteAsync();
 
         if (metadataIds.Count > 0)
         {
-            await _context.Metadata.Where(m => metadataIds.Contains(m.Id)).ExecuteDeleteAsync();
+            await context.Metadata.Where(m => metadataIds.Contains(m.Id)).ExecuteDeleteAsync();
         }
     }
 
     public async Task DeleteVideoFilesAndMetadataByTvIdAsync(int tvId)
     {
-        List<int> episodeIds = await _context
+        List<int> episodeIds = await context
             .Episodes.Where(e => e.TvId == tvId)
             .Select(e => e.Id)
             .ToListAsync();
 
-        List<Ulid> metadataIds = await _context
+        List<Ulid> metadataIds = await context
             .VideoFiles.Where(vf =>
                 vf.EpisodeId != null
                 && episodeIds.Contains(vf.EpisodeId.Value)
@@ -1795,13 +1792,13 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             .Select(vf => vf.MetadataId!.Value)
             .ToListAsync();
 
-        await _context
+        await context
             .VideoFiles.Where(vf => vf.EpisodeId != null && episodeIds.Contains(vf.EpisodeId.Value))
             .ExecuteDeleteAsync();
 
         if (metadataIds.Count > 0)
         {
-            await _context.Metadata.Where(m => metadataIds.Contains(m.Id)).ExecuteDeleteAsync();
+            await context.Metadata.Where(m => metadataIds.Contains(m.Id)).ExecuteDeleteAsync();
         }
     }
 
@@ -1824,15 +1821,15 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             folder = "/";
         }
 
-        if (!_storageDriver.DirectoryExists(folder))
+        if (!storageDriver.DirectoryExists(folder))
             return array;
 
         IEnumerable<string> directories;
         try
         {
-            directories = _storageDriver
+            directories = storageDriver
                 .EnumerateFileSystemEntries(folder, "*", SearchOption.TopDirectoryOnly)
-                .Where(e => _storageDriver.DirectoryExists(e));
+                .Where(e => storageDriver.DirectoryExists(e));
         }
         catch (IOException)
         {

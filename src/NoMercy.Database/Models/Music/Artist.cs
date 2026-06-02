@@ -41,23 +41,19 @@ public class Artist : ColorPaletteTimeStamps
     [JsonProperty("year")]
     public int? Year { get; set; }
 
-    private string? _folder;
-
     [JsonProperty("folder")]
     public string? Folder
     {
-        get => _folder;
-        set => _folder = PathNormalizer.NormalizeNullable(value);
+        get;
+        set => field = PathNormalizer.NormalizeNullable(value);
     }
-
-    private string _hostFolder = null!;
 
     [JsonProperty("host_folder")]
     public string HostFolder
     {
-        get => _hostFolder;
-        set => _hostFolder = PathNormalizer.Normalize(value);
-    }
+        get;
+        set => field = PathNormalizer.Normalize(value);
+    } = null!;
 
     [JsonProperty("library_id")]
     public Ulid? LibraryId { get; set; }
