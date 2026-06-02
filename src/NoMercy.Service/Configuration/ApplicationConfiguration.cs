@@ -1,8 +1,10 @@
 ﻿using Asp.Versioning.ApiExplorer;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
@@ -31,6 +33,8 @@ public static class ApplicationConfiguration
         IApiVersionDescriptionProvider provider
     )
     {
+        IWebHostEnvironment env = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
+
         HttpClientProvider.Initialize(
             app.ApplicationServices.GetRequiredService<IHttpClientFactory>()
         );
@@ -40,7 +44,14 @@ public static class ApplicationConfiguration
         NoMercyImageClient.Initialize(storage);
         FanArtImageClient.Initialize(storage);
         CoverArtCoverArtClient.Initialize(storage);
-        app.ApplicationServices.InitializeSignalREventHandlers();
+
+        // Skip eager singleton resolution in the test environment — event handlers use
+        // IClientMessenger which captures ConnectedClients at construction time.  During
+        // integration tests the ConnectedClients instance may be replaced by the test
+        // harness after service collection construction; eagerly resolving here would
+        // pin the original instance and prevent test-supplied instances from being used.
+        if (!env.IsEnvironment("Testing"))
+            app.ApplicationServices.InitializeSignalREventHandlers();
 
         ConfigureLocalization(app);
         ConfigureMiddleware(app);

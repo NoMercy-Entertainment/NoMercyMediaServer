@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercy.Database;
 
@@ -10,9 +11,11 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations
 {
     [DbContext(typeof(MediaContext))]
-    partial class MediaContextModelSnapshot : ModelSnapshot
+    [Migration("20260601154427_ActivityLogCascadeOnDeviceDelete")]
+    partial class ActivityLogCascadeOnDeviceDelete
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.7");
@@ -1711,8 +1714,6 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt");
-
                     b.HasIndex("ImdbId");
 
                     b.HasIndex("LibraryId");
@@ -1722,8 +1723,6 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("Title");
 
                     b.HasIndex("TitleSort");
-
-                    b.HasIndex("LibraryId", "CreatedAt");
 
                     b.HasIndex("LibraryId", "TitleSort");
 
@@ -2685,8 +2684,6 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("Name");
 
                     b.HasIndex("TrackNumber");
-
-                    b.HasIndex("Filename", "HostFolder");
 
                     b.ToTable("Tracks", t =>
                         {
@@ -3668,8 +3665,6 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt");
-
                     b.HasIndex("FirstAirDate");
 
                     b.HasIndex("ImdbId");
@@ -3681,8 +3676,6 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("TitleSort");
 
                     b.HasIndex("TvdbId");
-
-                    b.HasIndex("LibraryId", "CreatedAt");
 
                     b.HasIndex("LibraryId", "TitleSort");
 

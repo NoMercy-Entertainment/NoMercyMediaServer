@@ -13,7 +13,10 @@ namespace NoMercy.Database.Models.Music;
 [Index(nameof(Filename))]
 [Index(nameof(TrackNumber))]
 [Index(nameof(DiscNumber))]
-// [Index(nameof(Filename), nameof(HostFolder), IsUnique = true)]
+// Non-unique on purpose: a unique constraint would fail to apply on existing
+// libraries that already contain duplicate tracks. Speeds the dedup lookup; a
+// unique constraint needs a separate de-dup migration first.
+[Index(nameof(Filename), nameof(HostFolder))]
 public class Track : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]

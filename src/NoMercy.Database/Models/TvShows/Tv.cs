@@ -15,6 +15,8 @@ namespace NoMercy.Database.Models.TvShows;
 [Index(nameof(TvdbId))]
 [Index(nameof(FirstAirDate))]
 [Index(nameof(LibraryId), nameof(TitleSort))]
+[Index(nameof(CreatedAt))]
+[Index(nameof(LibraryId), nameof(CreatedAt))]
 public class Tv : ColorPaletteTimeStamps, IHasLibrary
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]

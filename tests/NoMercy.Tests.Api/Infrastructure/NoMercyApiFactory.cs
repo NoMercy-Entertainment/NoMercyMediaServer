@@ -21,6 +21,7 @@ using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Information;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Service;
@@ -58,12 +59,23 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             ReplaceAuth(services);
             ReplacePluginManager(services);
             ReplaceSetupState(services);
+
+            // Ensure all ConnectedClients registrations (from Startup AND from
+            // CreateWebHostBuilder.ConfigureServices) are replaced by the single
+            // shared instance so controllers and tests operate on the same dictionary.
+            services.RemoveAll<ConnectedClients>();
+            services.AddSingleton(SharedConnectedClients);
         });
     }
 
     protected override IWebHostBuilder? CreateWebHostBuilder()
     {
 #pragma warning disable ASPDEPR008 // WebHost kept until Startup is migrated to minimal-hosting
+        // Capture the instance into a local so the lambda below closes over it — the
+        // lambda must not reference `this` because the lambda outlives the factory in
+        // some test harness configurations.
+        ConnectedClients sharedClients = SharedConnectedClients;
+
         return WebHost
             .CreateDefaultBuilder([])
             .UseContentRoot(AppContext.BaseDirectory)
@@ -79,9 +91,29 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 >();
 
                 services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
+
+                // Register the shared ConnectedClients instance early.  Because
+                // ConfigureServices callbacks are applied in registration order,
+                // this runs before Startup.ConfigureServices.  Startup's later
+                // AddSingleton<ConnectedClients>() call adds a SECOND descriptor; the
+                // last-registered wins for plain resolution — so we must remove the
+                // Startup-registered one in ConfigureTestServices (below) to guarantee
+                // our instance is used.
+                services.AddSingleton(sharedClients);
             });
 #pragma warning restore ASPDEPR008
     }
+
+    // The ConnectedClients singleton injected into the server's DI container.
+    // Configured via ConfigureWebHost so it is the exact same instance the request
+    // pipeline (and controllers) receive.  Tests that need to simulate an "online"
+    // device seed this dictionary directly.
+    public ConnectedClients SharedConnectedClients { get; } = new();
+
+    // Forces the test server to start (if not already started) and returns the
+    // ConnectedClients singleton from the server's root service provider.
+    // This is the same instance that controllers receive via constructor injection.
+    public ConnectedClients GetConnectedClients() => SharedConnectedClients;
 
     public static readonly Ulid MovieLibraryId = Ulid.NewUlid();
     public static readonly Ulid TvLibraryId = Ulid.NewUlid();

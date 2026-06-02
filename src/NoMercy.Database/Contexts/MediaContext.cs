@@ -236,6 +236,16 @@ public class MediaContext : DbContext
             .HasForeignKey(d => d.OwnerUserId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        // ActivityLog is owned by its device — a connection history entry is
+        // meaningless once the device is deleted.  DeviceId is non-nullable, so
+        // SetNull is not an option; Cascade is the only correct behaviour here.
+        modelBuilder
+            .Entity<ActivityLog>()
+            .HasOne(al => al.Device)
+            .WithMany(d => d.ActivityLogs)
+            .HasForeignKey(al => al.DeviceId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<EncodingPresetFolder>(b =>
         {
             b.HasOne(epf => epf.Preset)

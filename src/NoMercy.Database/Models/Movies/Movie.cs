@@ -14,6 +14,8 @@ namespace NoMercy.Database.Models.Movies;
 [Index(nameof(ImdbId))]
 [Index(nameof(ReleaseDate))]
 [Index(nameof(LibraryId), nameof(TitleSort))]
+[Index(nameof(CreatedAt))]
+[Index(nameof(LibraryId), nameof(CreatedAt))]
 public class Movie : ColorPaletteTimeStamps, IHasLibrary
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]

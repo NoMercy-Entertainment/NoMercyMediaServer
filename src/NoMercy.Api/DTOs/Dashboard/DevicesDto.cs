@@ -22,6 +22,9 @@ public record DevicesDto
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
+    [JsonProperty("online")]
+    public bool Online { get; set; }
+
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 

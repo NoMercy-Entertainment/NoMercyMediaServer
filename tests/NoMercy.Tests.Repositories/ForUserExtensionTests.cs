@@ -136,6 +136,7 @@ public class ForUserExtensionTests
                 LibraryId = SeedConstants.MovieLibraryId,
                 FolderId = folder.Id,
                 Library = null!,
+                LibraryFolder = null!,
             }
         );
         await context.SaveChangesAsync();
