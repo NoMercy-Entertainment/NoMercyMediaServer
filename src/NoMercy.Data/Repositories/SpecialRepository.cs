@@ -868,6 +868,30 @@ public class SpecialRepository(MediaContext context)
         );
     }
 
+    private static readonly Func<
+        MediaContext,
+        Guid,
+        Ulid,
+        Task<Special?>
+    > GetSpecialAvailableQuery = EF.CompileAsyncQuery(
+        (MediaContext mediaContext, Guid userId, Ulid id) =>
+            mediaContext
+                .Specials.AsNoTracking()
+                .Where(special => special.Id == id)
+                .Include(special => special.Items)
+                    .ThenInclude(specialItem => specialItem.Movie)
+                        .ThenInclude(movie => movie!.VideoFiles)
+                            .ThenInclude(file => file.UserData)
+                .Include(special => special.Items)
+                    .ThenInclude(specialItem => specialItem.Episode)
+                        .ThenInclude(episode => episode!.VideoFiles)
+                            .ThenInclude(file => file.UserData)
+                .FirstOrDefault()
+    );
+
+    public Task<Special?> GetSpecialAvailableAsync(Guid userId, Ulid id) =>
+        GetSpecialAvailableQuery(context, userId, id);
+
     public Task<List<Special>> GetSpecialItems(
         Guid userId,
         string? language,

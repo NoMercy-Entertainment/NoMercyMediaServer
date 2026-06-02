@@ -40,7 +40,7 @@ public class HomeService
         PageRequestDto request
     )
     {
-        List<Genre> genreItems = await HomeResponseDto.GetHome(
+        List<Genre> genreItems = await _homeRepository.GetHome(
             _mediaContext,
             userId,
             language,

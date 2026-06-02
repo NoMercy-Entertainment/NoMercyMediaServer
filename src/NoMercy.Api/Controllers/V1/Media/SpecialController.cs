@@ -154,7 +154,7 @@ public class SpecialController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view a special");
 
-        Special? special = await SpecialResponseDto.GetSpecialAvailable(context, userId, id);
+        Special? special = await specialRepository.GetSpecialAvailableAsync(userId, id);
 
         bool hasFiles =
             special is not null

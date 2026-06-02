@@ -59,6 +59,48 @@ public class HomeTvCardDto
 
 public class HomeRepository
 {
+    public async Task<List<Genre>> GetHome(
+        MediaContext mediaContext,
+        Guid userId,
+        string? language,
+        int take,
+        int page = 0
+    )
+    {
+        IOrderedQueryable<Genre> query = mediaContext
+            .Genres.AsNoTracking()
+            .OrderBy(genre => genre.Name)
+            .Where(genre =>
+                genre.GenreMovies.Any(g =>
+                    g.Movie.Library.LibraryUsers.FirstOrDefault(u => u.UserId.Equals(userId))
+                    != null
+                )
+                || genre.GenreTvShows.Any(g =>
+                    g.Tv.Library.LibraryUsers.FirstOrDefault(u => u.UserId.Equals(userId)) != null
+                )
+            )
+            .Include(genre =>
+                genre.GenreMovies.Where(genreTv =>
+                    genreTv.Movie.VideoFiles.Any(videoFile => videoFile.Folder != null) == true
+                )
+            )
+            .Include(genre =>
+                genre.GenreTvShows.Where(genreTv =>
+                    genreTv.Tv.Episodes.Any(episode =>
+                        episode.VideoFiles.Any(videoFile => videoFile.Folder != null)
+                    ) == true
+                )
+            )
+            .Include(movie =>
+                movie.Translations.Where(translation => translation.Iso6391 == language)
+            )
+            .OrderBy(genre => genre.Name);
+
+        List<Genre> genres = await query.Skip(page * take).Take(take).ToListAsync();
+
+        return genres;
+    }
+
     public async Task<List<HomeTvCardDto>> GetHomeTvs(
         MediaContext mediaContext,
         List<int> tvIds,
