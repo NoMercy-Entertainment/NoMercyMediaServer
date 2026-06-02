@@ -316,22 +316,21 @@ public class OfflineTokenValidationIntegrationTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(
-                dir,
-                "src",
-                "NoMercy.Service",
-                "Configuration",
-                "ServiceConfiguration.cs"
-            );
-            if (File.Exists(candidate))
+            string configDir = Path.Combine(dir, "src", "NoMercy.Service", "Configuration");
+            if (Directory.Exists(configDir))
             {
-                string source = File.ReadAllText(candidate);
+                // ServiceConfiguration is split into partial files (ServiceConfiguration*.cs);
+                // the JWT bearer setup lives in ServiceConfiguration.Auth.cs.
+                string source = string.Empty;
+                foreach (string file in Directory.GetFiles(configDir, "ServiceConfiguration*.cs"))
+                    source += File.ReadAllText(file);
+
                 Assert.Contains("IssuerSigningKeyResolver", source);
                 Assert.Contains("OfflineJwksCache.CachedSigningKey", source);
                 return;
             }
             dir = Path.GetDirectoryName(dir)!;
         }
-        Assert.Fail("Could not find ServiceConfiguration.cs");
+        Assert.Fail("Could not find the NoMercy.Service Configuration directory");
     }
 }

@@ -1,3 +1,4 @@
+using NoMercy.Data.DTOs.Specials;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;

@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database.Models.Libraries;
 
-namespace NoMercy.Data.Repositories;
+namespace NoMercy.Data.DTOs;
 
 public class FolderLibraryDto
 {

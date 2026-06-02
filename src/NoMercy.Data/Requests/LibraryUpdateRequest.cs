@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
+using NoMercy.Data.DTOs;
 
-namespace NoMercy.Data.Repositories;
+namespace NoMercy.Data.Requests;
 
 public class LibraryUpdateRequest
 {

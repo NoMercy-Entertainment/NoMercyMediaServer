@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Data.DTOs;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;

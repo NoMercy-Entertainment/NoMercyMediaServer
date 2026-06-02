@@ -1,3 +1,4 @@
+using NoMercy.Data.DTOs;
 using NoMercy.Database.Models.Libraries;
 
 namespace NoMercy.Data.Repositories;

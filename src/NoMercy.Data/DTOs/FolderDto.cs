@@ -3,7 +3,7 @@ using NoMercy.Data.Logic;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Extensions;
 
-namespace NoMercy.Data.Repositories;
+namespace NoMercy.Data.DTOs;
 
 public class FolderDto
 {

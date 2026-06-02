@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Data.DTOs.Specials;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;

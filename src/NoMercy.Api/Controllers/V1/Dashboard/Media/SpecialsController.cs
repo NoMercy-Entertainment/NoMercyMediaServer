@@ -9,6 +9,7 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Logic;
 using NoMercy.Data.Repositories;
+using NoMercy.Data.Requests;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;

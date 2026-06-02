@@ -1,9 +1,10 @@
 using Newtonsoft.Json;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
 
-namespace NoMercy.Data.Repositories;
+namespace NoMercy.Data.DTOs;
 
 public record CarouselResponseItemDto
 {

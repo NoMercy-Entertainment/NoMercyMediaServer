@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace NoMercy.Data.Repositories;
+namespace NoMercy.Data.Requests;
 
 public class LibrarySortRequest
 {
