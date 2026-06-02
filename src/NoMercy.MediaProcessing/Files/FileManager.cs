@@ -860,7 +860,7 @@ public partial class FileManager(
 
         foreach (SubtitleModel subtitleParserResult in chapterParser.Subtitles)
         {
-            if (subtitleParserResult?.StartTime == null || subtitleParserResult?.EndTime == null)
+            if (subtitleParserResult.StartTime == null || subtitleParserResult.EndTime == null)
             {
                 Logger.App($"Invalid chapter time in {chapterFile}", LogEventLevel.Warning);
                 continue;

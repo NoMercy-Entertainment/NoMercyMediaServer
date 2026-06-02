@@ -28,7 +28,7 @@ public class ParentJobFailedSkipTests : IDisposable
 
     public void Dispose()
     {
-        _adapter?.Dispose();
+        _adapter.Dispose();
         _context.Dispose();
     }
 

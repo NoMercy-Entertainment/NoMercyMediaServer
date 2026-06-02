@@ -54,8 +54,8 @@ public sealed partial class BlurayDiscSource(
                 "Bluray probe parsed 0 playlists for {Drive} | exit={Exit} stdout_len={StdOutLen} stderr_len={StdErrLen} stderr_head={StdErrHead}",
                 drive.Path,
                 result.ExitCode,
-                result.StdOut?.Length ?? 0,
-                result.StdErr?.Length ?? 0,
+                result.StdOut.Length,
+                result.StdErr.Length,
                 (result.StdErr ?? "").Length > 600
                     ? result.StdErr![..600]
                     : (result.StdErr ?? "(no stderr)")

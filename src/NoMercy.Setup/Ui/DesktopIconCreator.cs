@@ -75,7 +75,7 @@ public static class DesktopIconCreator
             using (StreamWriter scriptWriter = new(scriptStream, Encoding.UTF8, leaveOpen: true))
                 scriptWriter.Write(script);
             using (Process? osascriptProc = Process.Start("osascript", scriptPath))
-                osascriptProc?.WaitForExit();
+                osascriptProc.WaitForExit();
 
             if (!string.IsNullOrEmpty(iconPath) && _driver.FileExists(iconPath))
             {
@@ -88,10 +88,10 @@ public static class DesktopIconCreator
                         $"-c \"cp '{iconPath}' '{aliasPath}/Icon.icns' && /usr/bin/SetFile -a C '{aliasPath}'\""
                     )
                 )
-                    shProc?.WaitForExit();
+                    shProc.WaitForExit();
 
                 using (Process? killProc = Process.Start("killall", "Finder"))
-                    killProc?.WaitForExit();
+                    killProc.WaitForExit();
             }
         }
         catch (Exception ex)
@@ -122,7 +122,7 @@ public static class DesktopIconCreator
             )
                 shortcutWriter.Write(content);
             using (Process? chmodProc = Process.Start("chmod", $"+x \"{shortcutPath}\""))
-                chmodProc?.WaitForExit();
+                chmodProc.WaitForExit();
         }
         catch (Exception ex)
         {

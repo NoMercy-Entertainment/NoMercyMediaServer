@@ -276,7 +276,7 @@ public static class Logger
             {
                 Type = logType,
                 Color = colorHex,
-                Message = message?.ToString() ?? string.Empty,
+                Message = message.ToString() ?? string.Empty,
                 LogLevel = logLevel,
                 Time = DateTime.UtcNow,
                 ThreadId = Environment.CurrentManagedThreadId,

@@ -207,19 +207,19 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
 
         foreach (SubtitleSearchResponseParam param in response.Params)
         {
-            if (param?.Value?.ArrayData?.Values is null)
+            if (param.Value.ArrayData.Values is null)
                 continue;
 
             foreach (SubtitleSearchResponseMemberValue item in param.Value.ArrayData.Values)
             {
-                if (item?.InnerStruct?.Members is null)
+                if (item.InnerStruct.Members is null)
                     continue;
 
                 Dictionary<string, string> members = item
                     .InnerStruct.Members.Where(m => m.Name is not null)
                     .ToDictionary(
                         m => m.Name!,
-                        m => m.MemberValue?.StringValue ?? string.Empty,
+                        m => m.MemberValue.StringValue ?? string.Empty,
                         StringComparer.OrdinalIgnoreCase
                     );
 

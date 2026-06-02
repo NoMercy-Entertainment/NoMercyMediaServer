@@ -63,14 +63,14 @@ public class ProcessThrottle(ILogger<ProcessThrottle> logger)
     {
         // SIGSTOP
         using Process? proc = Process.Start("kill", ["-STOP", processId.ToString()]);
-        proc?.WaitForExit(5000);
+        proc.WaitForExit(5000);
     }
 
     private static void ResumeUnix(int processId)
     {
         // SIGCONT
         using Process? proc = Process.Start("kill", ["-CONT", processId.ToString()]);
-        proc?.WaitForExit(5000);
+        proc.WaitForExit(5000);
     }
 
     [SupportedOSPlatform("windows")]

@@ -156,7 +156,7 @@ public class QueueWorker(
                     }
                     else
                     {
-                        string typeName = jobWithArguments?.GetType().FullName ?? "null";
+                        string typeName = jobWithArguments.GetType().FullName ?? "null";
                         logger?.LogError(
                             "QueueWorker {Name} - {CurrentIndex}: Job {JobId} deserialized to {TypeName} which does not implement IShouldQueue — rejecting",
                             name,

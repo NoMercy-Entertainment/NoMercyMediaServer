@@ -135,7 +135,7 @@ public record PlaylistTrackDto
         Quality = artistTrack.Track.Quality;
         Lyrics = artistTrack.Track.Lyrics;
         Type = "track";
-        AlbumName = artistTrack.Track.AlbumTrack?.FirstOrDefault()?.Album.Name;
+        AlbumName = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name;
 
         Album = artistTrack
             .Track.AlbumTrack!.DistinctBy(trackAlbum => trackAlbum.AlbumId)

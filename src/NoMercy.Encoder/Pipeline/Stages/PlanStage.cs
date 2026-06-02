@@ -121,7 +121,7 @@ public class PlanStage(
                     speedIndex ?? new SpeedIndex(new Dictionary<SpeedKey, SpeedMeasurement>());
 
                 List<string> availableEncoderNames =
-                    ffmpegCapabilities.AvailableEncoders?.ToList() ?? [];
+                    ffmpegCapabilities.AvailableEncoders.ToList() ?? [];
 
                 List<ResolvedCodec> codecList = [];
 

@@ -634,9 +634,9 @@ public class AuthManager
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            Process.Start("xdg-open", url)?.Dispose();
+            Process.Start("xdg-open", url).Dispose();
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            Process.Start("open", url)?.Dispose();
+            Process.Start("open", url).Dispose();
         else
             throw new PlatformNotSupportedException("Unsupported OS for browser launch");
     }

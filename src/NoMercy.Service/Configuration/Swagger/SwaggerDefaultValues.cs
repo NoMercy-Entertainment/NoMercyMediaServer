@@ -36,11 +36,11 @@ public class SwaggerDefaultValues : IOperationFilter
         foreach (OpenApiParameter parameter in operation.Parameters)
         {
             ApiParameterDescription? description =
-                apiDescription.ParameterDescriptions.FirstOrDefault(p => p.Name == parameter?.Name);
+                apiDescription.ParameterDescriptions.FirstOrDefault(p => p.Name == parameter.Name);
             if (description is null)
                 continue;
 
-            parameter.Description ??= description.ModelMetadata?.Description;
+            parameter.Description ??= description.ModelMetadata.Description;
 
             if (
                 parameter.Schema is OpenApiSchema schema

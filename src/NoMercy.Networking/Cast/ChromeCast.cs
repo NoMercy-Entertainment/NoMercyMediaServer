@@ -97,7 +97,7 @@ public class ChromeCast
                     _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
                     foreach (ChromecastReceiver chromecast in _chromecastReceivers)
                         Logger.Ping(
-                            $"Discovered chromecast: {chromecast.Name} @ {chromecast.DeviceUri?.Host}"
+                            $"Discovered chromecast: {chromecast.Name} @ {chromecast.DeviceUri.Host}"
                         );
                 }
                 catch (Exception ex)
@@ -586,7 +586,7 @@ public class ChromeCast
         watcher = (sender, status) =>
         {
             if (
-                status?.Application is not null
+                status.Application is not null
                 && string.Equals(
                     status.Application.AppId,
                     "925B4C3C",

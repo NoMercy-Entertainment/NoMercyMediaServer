@@ -1143,7 +1143,7 @@ public class MusicHub : ConnectionHub
         // shows the splash and waits for user input or a follow-up command.
         if (!_musicPlayerStateManager.TryGetValue(userId, out MusicPlayerState? state))
             return CastIntent.Idle();
-        if (state?.CurrentItem is null || state.CurrentList is null)
+        if (state.CurrentItem is null || state.CurrentList is null)
             return CastIntent.Idle();
 
         // CurrentList is "/music/{type}/{listId}" — split it back out.

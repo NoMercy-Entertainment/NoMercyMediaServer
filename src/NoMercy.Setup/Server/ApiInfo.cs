@@ -108,7 +108,7 @@ public class ApiInfo
             string content = await apiClient.SendAndReadAsync(HttpMethod.Get, "v1/info");
 
             ApiInfoResponse? data = content.FromJson<ApiInfoResponse>();
-            if (data?.Data?.Keys is null)
+            if (data?.Data.Keys is null)
                 return null;
 
             // nomercy-tv returns 200 with all keys as empty strings when the auth
@@ -186,7 +186,7 @@ public class ApiInfo
                 return null;
 
             ApiInfoResponse? data = json.FromJson<ApiInfoResponse>();
-            if (data?.Data?.Keys is null)
+            if (data?.Data.Keys is null)
                 return null;
 
             return data;

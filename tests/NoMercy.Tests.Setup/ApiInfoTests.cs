@@ -324,6 +324,6 @@ public class ApiInfoNoEnvironmentExitTests
         // In test environment, the NoMercy API isn't available
         // So this should return null (not throw)
         // Note: if running in dev container with network, it may succeed
-        Assert.True(result is null || result.Data?.Keys is not null);
+        Assert.True(result is null || result.Data.Keys is not null);
     }
 }

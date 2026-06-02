@@ -264,7 +264,7 @@ public class QueueWorkerTests : IDisposable
                 else
                 {
                     // This is the new rejection path
-                    string typeName = jobWithArguments?.GetType().FullName ?? "null";
+                    string typeName = jobWithArguments.GetType().FullName ?? "null";
                     _jobQueue.FailJob(
                         job,
                         new InvalidOperationException(
@@ -320,7 +320,7 @@ public class QueueWorkerTests : IDisposable
                 }
                 else
                 {
-                    string typeName = jobWithArguments?.GetType().FullName ?? "null";
+                    string typeName = jobWithArguments.GetType().FullName ?? "null";
                     _jobQueue.FailJob(
                         job,
                         new InvalidOperationException(

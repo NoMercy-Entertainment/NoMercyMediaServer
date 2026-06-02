@@ -22,7 +22,7 @@ public class JobQueueTests : IDisposable
 
     public void Dispose()
     {
-        _adapter?.Dispose();
+        _adapter.Dispose();
         _context.Dispose();
     }
 

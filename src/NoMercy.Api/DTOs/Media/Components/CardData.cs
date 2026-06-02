@@ -305,7 +305,7 @@ public record CardData
             TitleSort = item.Collection.Title.TitleSort();
             Overview = item.Collection.Overview;
             Logo = item.Collection.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
-            Duration = item.VideoFile?.Duration?.ToSeconds();
+            Duration = item.VideoFile.Duration?.ToSeconds();
             Year =
                 item.Collection.CollectionMovies.MinBy(movie =>
                         movie.Movie.ReleaseDate?.ParseYear()
@@ -345,7 +345,7 @@ public record CardData
             TitleSort = item.Movie.Title.TitleSort(item.Movie.ReleaseDate);
             Overview = item.Movie.Overview;
             Logo = item.Movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
-            Duration = item.VideoFile?.Duration?.ToSeconds();
+            Duration = item.VideoFile.Duration?.ToSeconds();
             Link = new($"/movie/{Id}/watch", UriKind.Relative);
             Type = Config.MovieMediaType;
             CreatedAt = item.Movie.CreatedAt;
@@ -376,7 +376,7 @@ public record CardData
             TitleSort = item.Tv.Title.TitleSort(item.Tv.FirstAirDate);
             Overview = item.Tv.Overview;
             Logo = item.Tv.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
-            Duration = item.VideoFile?.Duration?.ToSeconds();
+            Duration = item.VideoFile.Duration?.ToSeconds();
             Link = new($"/tv/{Id}/watch", UriKind.Relative);
             Type = "tv";
             CreatedAt = item.Tv.CreatedAt;

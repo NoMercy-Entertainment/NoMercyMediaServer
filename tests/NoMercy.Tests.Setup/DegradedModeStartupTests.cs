@@ -413,7 +413,7 @@ public class CloudflareFallbackTests
         // Result depends on network — may be non-null in environments where api.nomercy.tv is reachable
         // The key assertion is that it does NOT throw
         Assert.True(
-            result is null || result.Data?.Keys is not null,
+            result is null || result.Data.Keys is not null,
             "TryFetchFromNetwork should return null on failure or valid data on success"
         );
     }

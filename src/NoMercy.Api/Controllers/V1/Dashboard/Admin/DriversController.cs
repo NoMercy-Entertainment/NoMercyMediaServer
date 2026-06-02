@@ -395,7 +395,7 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
             try
             {
                 JObject? parsed = JObject.Parse(driver.Config);
-                string? credRef = parsed?["credentialsRef"]?.Value<string>();
+                string? credRef = parsed["credentialsRef"]?.Value<string>();
                 if (!string.IsNullOrWhiteSpace(credRef))
                 {
                     UserPass? stored = CredentialManager.Credential(credRef);

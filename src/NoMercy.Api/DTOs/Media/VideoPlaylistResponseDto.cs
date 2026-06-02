@@ -190,7 +190,7 @@ public class VideoPlaylistResponseDto
 
         Season = index is not null ? 0 : episode.SeasonNumber;
         Episode = index ?? episode.EpisodeNumber;
-        SeasonName = episode.Season?.Title;
+        SeasonName = episode.Season.Title;
         EpisodeId = episode.Id;
         Chapters = videoFile.Metadata?.Chapters ?? [];
         Fonts =

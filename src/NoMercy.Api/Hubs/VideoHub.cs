@@ -697,7 +697,7 @@ public class VideoHub : ConnectionHub
         // resume that exact item. Otherwise idle — receiver shows the splash.
         if (!_videoPlayerStateManager.TryGetValue(userId, out VideoPlayerState? state))
             return CastIntent.Idle();
-        if (state?.CurrentItem is null)
+        if (state.CurrentItem is null)
             return CastIntent.Idle();
 
         // CurrentList is "/{type}/{listId}/watch" — extract type for navigation.

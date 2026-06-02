@@ -37,7 +37,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement
 {
     public override string QueueName =>
-        Task?.Resources?.GpuDeviceKey is not null ? "encoder-gpu" : "encoder-cpu";
+        Task.Resources?.GpuDeviceKey is not null ? "encoder-gpu" : "encoder-cpu";
 
     public override int Priority => 4;
 
@@ -48,7 +48,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement
     public DecomposedTask Task { get; set; } = null!;
 
     /// <inheritdoc/>
-    public ResourceRequirement? ResourceRequirement => Task?.Resources;
+    public ResourceRequirement? ResourceRequirement => Task.Resources;
 
     /// <summary>
     /// Destination output directory for this encode task. Set at dispatch time

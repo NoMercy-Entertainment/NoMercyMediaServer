@@ -527,7 +527,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
                 .FirstOrDefaultAsync(ct);
 
             if (
-                firstMovieWithVideo?.Movie?.VideoFiles.FirstOrDefault(vf => vf.Folder != null) is
+                firstMovieWithVideo?.Movie.VideoFiles.FirstOrDefault(vf => vf.Folder != null) is
                 { } videoFile
             )
             {

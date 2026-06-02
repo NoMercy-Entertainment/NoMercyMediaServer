@@ -90,7 +90,7 @@ public class MediaFilesController(IDbContextFactory<MediaContext> contextFactory
 
         if (file.Episode is not null)
         {
-            string showTitle = file.Episode.Tv?.Title ?? "Unknown show";
+            string showTitle = file.Episode.Tv.Title ?? "Unknown show";
             string code = $"S{file.Episode.SeasonNumber:00}E{file.Episode.EpisodeNumber:00}";
             string episodeTitle = file.Episode.Title ?? "Untitled";
             return new()

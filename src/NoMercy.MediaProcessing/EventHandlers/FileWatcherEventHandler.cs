@@ -198,7 +198,7 @@ public class FileWatcherEventHandler : IDisposable
         MediaFolderExtend mediaFolder
     )
     {
-        if (mediaFolder.Parsed?.Title is null)
+        if (mediaFolder.Parsed.Title is null)
         {
             Logger.System(
                 $"FileWatcher: Could not parse title from {mediaFolder.Path}",
@@ -237,7 +237,7 @@ public class FileWatcherEventHandler : IDisposable
 
     private static async Task HandleTvFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
     {
-        if (mediaFolder.Parsed?.Title is null)
+        if (mediaFolder.Parsed.Title is null)
         {
             Logger.System(
                 $"FileWatcher: Could not parse title from {mediaFolder.Path}",

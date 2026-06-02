@@ -427,7 +427,7 @@ public partial class MusicLogic : IAsyncDisposable
         string folder =
             mediaFile
                 .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                ?.Replace("\\" + mediaFile.Name, "")
+                .Replace("\\" + mediaFile.Name, "")
             ?? string.Empty;
 
         Album insert = new()
@@ -624,7 +624,7 @@ public partial class MusicLogic : IAsyncDisposable
             string folder =
                 mediaFile
                     .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                    ?.Replace("\\" + mediaFile.Name, "")
+                    .Replace("\\" + mediaFile.Name, "")
                 ?? string.Empty;
 
             insert.Filename = "/" + StoragePathHelpers.GetName(file);
