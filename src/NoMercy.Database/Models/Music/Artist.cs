@@ -8,6 +8,7 @@ namespace NoMercy.Database.Models.Music;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Name))]
+[Index(nameof(TitleSort))]
 [Index(nameof(LibraryId))]
 [Index(nameof(FolderId))]
 [Index(nameof(Country))]

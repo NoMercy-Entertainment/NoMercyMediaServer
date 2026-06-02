@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.MediaProcessing.Releases;
 
@@ -8,6 +9,9 @@ public class ReleaseRepository(MediaContext context) : IReleaseRepository
 {
     public Task Store(Album release)
     {
+        if (string.IsNullOrEmpty(release.TitleSort))
+            release.TitleSort = release.Name.TitleSort();
+
         return context
             .Albums.Upsert(release)
             .On(e => new { e.Id })
@@ -17,6 +21,7 @@ public class ReleaseRepository(MediaContext context) : IReleaseRepository
                     {
                         Id = i.Id,
                         Name = i.Name,
+                        TitleSort = i.TitleSort,
                         Disambiguation = i.Disambiguation,
                         Description = i.Description,
                         Year = i.Year,

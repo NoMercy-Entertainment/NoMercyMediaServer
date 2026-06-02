@@ -434,6 +434,7 @@ public partial class MusicLogic : IAsyncDisposable
         {
             Id = musicBrainzRelease.Id,
             Name = musicBrainzRelease.Title,
+            TitleSort = musicBrainzRelease.Title.TitleSort(),
             Country = musicBrainzRelease.Country,
             Disambiguation = string.IsNullOrEmpty(musicBrainzRelease.Disambiguation)
                 ? null
@@ -461,6 +462,7 @@ public partial class MusicLogic : IAsyncDisposable
                         {
                             Id = i.Id,
                             Name = i.Name,
+                            TitleSort = i.TitleSort,
                             Disambiguation = i.Disambiguation,
                             Description = i.Description,
                             Year = i.Year,
@@ -522,7 +524,9 @@ public partial class MusicLogic : IAsyncDisposable
                 ? null
                 : musicBrainzArtist.Disambiguation,
             Country = musicBrainzArtist.Country,
-            TitleSort = musicBrainzArtist.SortName,
+            TitleSort = string.IsNullOrEmpty(musicBrainzArtist.SortName)
+                ? musicBrainzArtist.Name.TitleSort()
+                : musicBrainzArtist.SortName,
 
             Folder = artistFolder,
             HostFolder = Path.Join(ResolveLibraryRoot(), artistFolder).PathName(),
@@ -541,6 +545,7 @@ public partial class MusicLogic : IAsyncDisposable
                         {
                             Id = i.Id,
                             Name = i.Name,
+                            TitleSort = i.TitleSort,
                             Disambiguation = i.Disambiguation,
                             Description = i.Description,
 

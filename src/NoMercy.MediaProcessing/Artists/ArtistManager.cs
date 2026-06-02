@@ -52,7 +52,9 @@ public class ArtistManager(
                 ? null
                 : artistCredit.MusicBrainzArtist.Disambiguation,
             Country = artistCredit.MusicBrainzArtist.Country,
-            TitleSort = artistCredit.MusicBrainzArtist.SortName,
+            TitleSort = string.IsNullOrEmpty(artistCredit.MusicBrainzArtist.SortName)
+                ? artistCredit.MusicBrainzArtist.Name.TitleSort()
+                : artistCredit.MusicBrainzArtist.SortName,
 
             LibraryId = library.Id,
             FolderId = libraryFolder.Id,
@@ -117,7 +119,9 @@ public class ArtistManager(
                 : artistCredit.Disambiguation,
             Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
             Country = artistCredit.Country,
-            TitleSort = artistCredit.SortName,
+            TitleSort = string.IsNullOrEmpty(artistCredit.SortName)
+                ? artistCredit.Name.TitleSort()
+                : artistCredit.SortName,
 
             LibraryId = library.Id,
             FolderId = libraryFolder.Id,
@@ -193,7 +197,9 @@ public class ArtistManager(
                 : artistCredit.Disambiguation,
             Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
             Country = artistCredit.Country,
-            TitleSort = artistCredit.SortName,
+            TitleSort = string.IsNullOrEmpty(artistCredit.SortName)
+                ? artistCredit.Name.TitleSort()
+                : artistCredit.SortName,
 
             LibraryId = library.Id,
             FolderId = libraryFolder.Id,

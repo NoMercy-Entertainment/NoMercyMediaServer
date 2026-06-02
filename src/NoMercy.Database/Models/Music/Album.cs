@@ -8,6 +8,7 @@ namespace NoMercy.Database.Models.Music;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Name))]
+[Index(nameof(TitleSort))]
 [Index(nameof(LibraryId))]
 [Index(nameof(FolderId))]
 [Index(nameof(Year))]
@@ -20,6 +21,9 @@ public class Album : ColorPaletteTimeStamps, IHasLibrary
 
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
+
+    [JsonProperty("titleSort")]
+    public string? TitleSort { get; set; }
 
     [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }

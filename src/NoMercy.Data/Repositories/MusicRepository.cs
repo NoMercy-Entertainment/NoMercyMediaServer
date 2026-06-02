@@ -120,8 +120,10 @@ public class MusicRepository(
             .ForUser(userId)
             .Where(artist =>
                 (letter == "_" || letter == "#")
-                    ? !AlphaLetters.Any(p => artist.Name.ToLower().StartsWith(p))
-                    : artist.Name.ToLower().StartsWith(letter.ToLower())
+                    ? !AlphaLetters.Any(p =>
+                        (artist.TitleSort ?? artist.Name).ToLower().StartsWith(p)
+                    )
+                    : (artist.TitleSort ?? artist.Name).ToLower().StartsWith(letter.ToLower())
             )
             .Include(artist => artist.ArtistUser.Where(au => au.UserId == userId))
             .Include(artist => artist.Translations)
@@ -197,8 +199,10 @@ public class MusicRepository(
             .ForUser(userId)
             .Where(album =>
                 (letter == "_" || letter == "#")
-                    ? !AlphaLetters.Any(p => album.Name.ToLower().StartsWith(p))
-                    : album.Name.ToLower().StartsWith(letter.ToLower())
+                    ? !AlphaLetters.Any(p =>
+                        (album.TitleSort ?? album.Name).ToLower().StartsWith(p)
+                    )
+                    : (album.TitleSort ?? album.Name).ToLower().StartsWith(letter.ToLower())
             )
             .Include(album => album.AlbumUser.Where(au => au.UserId == userId))
             .Include(album => album.Translations)
@@ -769,11 +773,13 @@ public class MusicRepository(
             .ForUser(userId)
             .Where(artist =>
                 (letter == "_" || letter == "#")
-                    ? !AlphaLetters.Any(p => artist.Name.ToLower().StartsWith(p))
-                    : artist.Name.ToLower().StartsWith(letter.ToLower())
+                    ? !AlphaLetters.Any(p =>
+                        (artist.TitleSort ?? artist.Name).ToLower().StartsWith(p)
+                    )
+                    : (artist.TitleSort ?? artist.Name).ToLower().StartsWith(letter.ToLower())
             )
             .Where(artist => artist.ArtistTrack.Any())
-            .OrderBy(artist => artist.Name)
+            .OrderBy(artist => artist.TitleSort ?? artist.Name)
             .Select(artist => new ArtistCardDto
             {
                 Id = artist.Id,
@@ -812,7 +818,7 @@ public class MusicRepository(
             .Artists.AsNoTracking()
             .ForUser(userId)
             .Where(artist => artist.ArtistTrack.Any())
-            .OrderBy(artist => artist.Name)
+            .OrderBy(artist => artist.TitleSort ?? artist.Name)
             .Select(artist => new ArtistCardDto
             {
                 Id = artist.Id,
@@ -938,11 +944,13 @@ public class MusicRepository(
             .ForUser(userId)
             .Where(album =>
                 (letter == "_" || letter == "#")
-                    ? !AlphaLetters.Any(p => album.Name.ToLower().StartsWith(p))
-                    : album.Name.ToLower().StartsWith(letter.ToLower())
+                    ? !AlphaLetters.Any(p =>
+                        (album.TitleSort ?? album.Name).ToLower().StartsWith(p)
+                    )
+                    : (album.TitleSort ?? album.Name).ToLower().StartsWith(letter.ToLower())
             )
             .Where(album => album.AlbumTrack.Any(at => at.Track.Duration != null))
-            .OrderBy(album => album.Name)
+            .OrderBy(album => album.TitleSort ?? album.Name)
             .Select(album => new AlbumCardDto
             {
                 Id = album.Id,
@@ -985,7 +993,7 @@ public class MusicRepository(
             .Albums.AsNoTracking()
             .ForUser(userId)
             .Where(album => album.AlbumTrack.Any(at => at.Track.Duration != null))
-            .OrderBy(album => album.Name)
+            .OrderBy(album => album.TitleSort ?? album.Name)
             .Select(album => new AlbumCardDto
             {
                 Id = album.Id,
