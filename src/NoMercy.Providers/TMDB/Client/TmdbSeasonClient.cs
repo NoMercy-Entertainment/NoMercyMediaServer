@@ -73,7 +73,7 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
     )
     {
         // First get the season details to obtain the season ID
-        var seasonDetails = await Details(priority);
+        TmdbSeasonDetails? seasonDetails = await Details(priority);
         if (seasonDetails == null)
             return null;
 

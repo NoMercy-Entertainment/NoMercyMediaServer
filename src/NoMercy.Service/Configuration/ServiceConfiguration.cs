@@ -475,29 +475,10 @@ public static class ServiceConfiguration
         // optionsLifetime: Singleton so the Singleton IDbContextFactory below
         // can consume DbContextOptions without lifetime-validation errors.
         // The DbContext itself stays Scoped (default) for per-request use.
-        services.AddDbContext<MediaContext>(
-            optionsAction =>
-            {
-                optionsAction.UseSqlite(
-                    $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True;",
-                    o =>
-                    {
-                        o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-                        o.ExecutionStrategy(deps => new SqliteRetryingExecutionStrategy(deps));
-                    }
-                );
-                optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
-            },
-            optionsLifetime: ServiceLifetime.Singleton
-        );
-
-        // Factory itself is Singleton (default for AddDbContextFactory) so
-        // singleton consumers (MdnsDeviceScanner, DeviceBusRegistry,
-        // ActivityLogger) can inject it. Options registered above as Singleton
-        // so this resolves cleanly. CreateDbContextAsync() returns fresh
-        // disposable contexts per call.
-        services.AddDbContextFactory<MediaContext>(optionsAction =>
-        {
+        // Interceptors are registered once in MediaContext.OnConfiguring, which runs
+        // for every context path; registering them here too double-fired
+        // SqliteNormalizeSearchInterceptor on DI/factory-created contexts.
+        Action<DbContextOptionsBuilder> configureMediaContext = optionsAction =>
             optionsAction.UseSqlite(
                 $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True;",
                 o =>
@@ -506,8 +487,18 @@ public static class ServiceConfiguration
                     o.ExecutionStrategy(deps => new SqliteRetryingExecutionStrategy(deps));
                 }
             );
-            optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
-        });
+
+        services.AddDbContext<MediaContext>(
+            configureMediaContext,
+            optionsLifetime: ServiceLifetime.Singleton
+        );
+
+        // Factory itself is Singleton (default for AddDbContextFactory) so
+        // singleton consumers (MdnsDeviceScanner, DeviceBusRegistry,
+        // ActivityLogger) can inject it. Options registered above as Singleton
+        // so this resolves cleanly. CreateDbContextAsync() returns fresh
+        // disposable contexts per call.
+        services.AddDbContextFactory<MediaContext>(configureMediaContext);
 
         // Add Repositories
         services.AddScoped<HomeRepository>();
@@ -855,8 +846,8 @@ public static class ServiceConfiguration
 
                             if (!string.IsNullOrEmpty(raw))
                             {
-                                var handler = new JwtSecurityTokenHandler();
-                                var jwt = handler.ReadJwtToken(raw);
+                                JwtSecurityTokenHandler handler = new JwtSecurityTokenHandler();
+                                JwtSecurityToken jwt = handler.ReadJwtToken(raw);
                                 TimeSpan expired = DateTime.UtcNow - jwt.ValidTo;
                                 tokenAge =
                                     expired.TotalHours >= 1
