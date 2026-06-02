@@ -542,6 +542,7 @@ public static class ServiceConfiguration
         services.AddScoped<IPersonRepository, MediaProcessingPersonRepository>();
         services.AddScoped<SpecialRepository>();
         services.AddScoped<RecommendationRepository>();
+        services.AddScoped<NoMercy.Data.Repositories.PeopleRepository>();
 
         // Add Managers
         // services.AddScoped<EncoderManager>();

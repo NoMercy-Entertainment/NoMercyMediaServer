@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Providers.TMDB.Client;
@@ -14,7 +15,8 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Tags(tags: "Media People")]
 [ApiVersion(1.0)]
 [Authorize]
-public class PeopleController(MediaContext mediaContext) : BaseController
+public class PeopleController(MediaContext mediaContext, PeopleRepository peopleRepository)
+    : BaseController
 {
     [HttpGet]
     [Route("api/v{version:apiVersion}/person")] // match themoviedb.org API
@@ -27,13 +29,11 @@ public class PeopleController(MediaContext mediaContext) : BaseController
 
         string language = Language();
 
-        List<PeopleResponseItemDto> people = await PeopleResponseDto.GetPeople(
-            mediaContext,
-            userId,
-            language,
-            request.Take,
-            request.Page
-        );
+        List<PeopleResponseItemDto> people = (
+            await peopleRepository.GetPeopleAsync(userId, language, request.Take, request.Page)
+        )
+            .Select(person => new PeopleResponseItemDto(person))
+            .ToList();
 
         return GetPaginatedResponse(people, request);
     }
