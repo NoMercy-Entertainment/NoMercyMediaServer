@@ -69,6 +69,8 @@ public class FileWatcherEventHandler : IDisposable
 
             switch (@event.LibraryType)
             {
+                case Config.InboxMediaType:
+                    return;
                 case Config.MovieMediaType:
                     await HandleMovieFolder(@event, mediaFolder);
                     break;

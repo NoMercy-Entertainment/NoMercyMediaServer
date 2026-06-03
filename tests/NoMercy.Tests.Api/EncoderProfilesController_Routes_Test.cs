@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using NoMercy.Api.Controllers.V1.Dashboard.Encoder;
@@ -50,12 +51,27 @@ public class EncoderProfilesController_Routes_Test
 
             // Null template means the route is the controller base (index).
             string template = attr.Template ?? string.Empty;
-            if (string.Equals(template, routeSuffix, StringComparison.OrdinalIgnoreCase))
+            if (
+                string.Equals(
+                    StripConstraints(template),
+                    StripConstraints(routeSuffix),
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
                 return method;
         }
 
         return null;
     }
+
+    /// <summary>
+    /// Drops route-parameter constraints so the route SET is compared by verb +
+    /// path structure, not by constraint syntax. "{id:ulid}" → "{id}" — the
+    /// endpoint still exists at /{id}; whether it's ulid-constrained is a routing
+    /// detail this test doesn't guard.
+    /// </summary>
+    private static string StripConstraints(string template) =>
+        Regex.Replace(template, @"\{(\w+):[^}]+\}", "{$1}");
 
     private static void AssertEndpointExists(
         Type controller,
@@ -105,7 +121,7 @@ public class EncoderProfilesController_Routes_Test
     [InlineData(typeof(HttpPostAttribute), "validate", "POST /validate")]
     [InlineData(typeof(HttpPostAttribute), "{id}/preview", "POST /{id}/preview")]
     [InlineData(typeof(HttpPutAttribute), "{id}", "PUT /{id}")]
-    [InlineData(typeof(HttpPostAttribute), "{id}/clone", "POST /{id}/clone")]
+    [InlineData(typeof(HttpPostAttribute), "{parentId}/clone", "POST /{parentId}/clone")]
     [InlineData(typeof(HttpPostAttribute), "import", "POST /import")]
     [InlineData(typeof(HttpGetAttribute), "{id}/export", "GET /{id}/export")]
     public void EncoderProfilesController_HasExpectedEndpoint(

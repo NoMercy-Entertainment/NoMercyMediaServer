@@ -46,15 +46,14 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
                     _ = EventBusProvider.Current.PublishAsync(
                         new DriveStateChangedEvent
                         {
-                            DriveStateData = new
-                            {
-                                Method = methodName,
-                                Drive = evt.Drive.Path,
-                                VolumeLabel = evt.Drive.Label,
-                                evt.Drive.HasDisc,
-                                DiscType = evt.Drive.DiscType.ToString(),
-                                Timestamp = DateTime.UtcNow,
-                            },
+                            DriveStateData = new DriveStatePayload(
+                                Method: methodName,
+                                Drive: evt.Drive.Path,
+                                VolumeLabel: evt.Drive.Label,
+                                HasDisc: evt.Drive.HasDisc,
+                                DiscType: evt.Drive.DiscType.ToString().ToLowerInvariant(),
+                                Timestamp: DateTime.UtcNow
+                            ),
                         },
                         stoppingToken
                     );

@@ -1,10 +1,12 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
+using NoMercy.Storage;
 
 namespace NoMercy.OpticalMedia.Sources.Bluray;
 
@@ -14,10 +16,16 @@ namespace NoMercy.OpticalMedia.Sources.Bluray;
 /// the disc exposes by parsing libbluray's stderr playlist dump (cheap,
 /// one ffprobe call). <see cref="ProbeTitleAsync"/> returns the detailed
 /// streams + chapters for one playlist (slower, one ffprobe per call).
+///
+/// <see cref="ProbeAsync"/> also reads the disc-embedded title from
+/// <c>BDMV/META/DL/bdmt_*.xml</c> (if present) and surfaces it in
+/// <see cref="DiscInfo.DiscTitle"/>, which downstream identification
+/// prefers over the raw volume label.
 /// </summary>
 public sealed partial class BlurayDiscSource(
     EncoderOptions options,
     IProcessRunner processRunner,
+    IStorageDriver storageDriver,
     ILogger<BlurayDiscSource> logger
 ) : IDiscSource
 {
@@ -41,6 +49,11 @@ public sealed partial class BlurayDiscSource(
         // reads BDMV structure without keys), so we attach Protection to
         // the DiscInfo rather than throwing.
         DiscProtection? protection = ClassifyProtection(result.StdErr);
+
+        // Read the disc-embedded title from bdmt_*.xml before evaluating
+        // playlists — we want to populate DiscTitle regardless of whether
+        // any playlists are found.
+        string? embeddedTitle = TryReadBdmtTitle(drive.Path);
 
         // ffprobe always exits non-zero here (no input format chosen) — the
         // stderr is the payload we want regardless.
@@ -66,7 +79,8 @@ public sealed partial class BlurayDiscSource(
                 [],
                 null,
                 TimeSpan.Zero,
-                protection
+                protection,
+                DiscTitle: embeddedTitle
             );
         }
 
@@ -97,7 +111,8 @@ public sealed partial class BlurayDiscSource(
             TotalDuration: titles.Sum(t => t.Duration.Ticks) is long ticks
                 ? TimeSpan.FromTicks(ticks)
                 : TimeSpan.Zero,
-            Protection: protection
+            Protection: protection,
+            DiscTitle: embeddedTitle
         );
     }
 
@@ -280,6 +295,53 @@ public sealed partial class BlurayDiscSource(
             return false;
         dur = new TimeSpan(h, m, s);
         return true;
+    }
+
+    /// <summary>
+    /// Attempts to read the human-readable disc title from Blu-ray
+    /// <c>BDMV/META/DL/bdmt_*.xml</c>. Prefers the English variant
+    /// (<c>bdmt_eng.xml</c>) and falls back to the first locale file
+    /// found. Returns <c>null</c> when the disc has no embedded metadata
+    /// or the xml cannot be parsed.
+    /// </summary>
+    internal string? TryReadBdmtTitle(string mountPath)
+    {
+        try
+        {
+            string trimmed = mountPath.TrimEnd('\\', '/');
+            string dlDir = Path.Combine(trimmed, "BDMV", "META", "DL");
+
+            if (!storageDriver.DirectoryExists(dlDir))
+                return null;
+
+            // Prefer English; fall back to the first locale present.
+            string englishPath = Path.Combine(dlDir, "bdmt_eng.xml");
+            string? xmlPath = storageDriver.FileExists(englishPath)
+                ? englishPath
+                : storageDriver
+                    .EnumerateFileSystemEntries(dlDir, "bdmt_*.xml", SearchOption.TopDirectoryOnly)
+                    .FirstOrDefault();
+
+            if (xmlPath is null || !storageDriver.FileExists(xmlPath))
+                return null;
+
+            using Stream stream = storageDriver.OpenRead(xmlPath);
+            using StreamReader reader = new(stream);
+            string xmlContent = reader.ReadToEnd();
+            XDocument doc = XDocument.Parse(xmlContent);
+            XNamespace di = "urn:BDA:bdmv;discinfo";
+            return doc.Descendants(di + "name").FirstOrDefault()?.Value;
+        }
+        catch (Exception ex)
+        {
+            logger.LogInformation(
+                ex,
+                "Could not read bdmt title from {Mount}: {Message}",
+                mountPath,
+                ex.Message
+            );
+            return null;
+        }
     }
 
     private static string ToBlurayUrl(string mountPath)

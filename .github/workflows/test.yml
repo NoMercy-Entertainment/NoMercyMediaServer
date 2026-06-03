@@ -54,9 +54,26 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
 
+      # The coverage job runs the full suite, including the uncategorized and
+      # Integration encoder tests that shell out to ffmpeg/ffprobe. Without the
+      # binary they fail with "No such file or directory" — same fetch the
+      # integration_tests job uses.
+      - name: Fetch nomercy-ffmpeg fork (real-encode tests)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          dest="$HOME/.local/share/NoMercy_dev/binaries/ffmpeg"
+          mkdir -p "$dest"
+          gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber
+          tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-*.tar.gz -C "$dest"
+          chmod +x "$dest/ffmpeg" "$dest/ffprobe"
+          echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
+          echo "Fetched nomercy-ffmpeg $tag -> $dest"
+
       - name: Run tests with coverage
         run: >
-          dotnet test NoMercy.Server.sln 
+          dotnet test NoMercy.Server.sln
           --configuration Release
           --collect:"XPlat Code Coverage"
           --settings tests/coverletArgs.runsettings

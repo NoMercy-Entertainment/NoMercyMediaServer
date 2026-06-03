@@ -9,7 +9,13 @@ public record DiscInfo(
     DiscTitle[] Titles,
     DiscTrack[]? AudioTracks,
     TimeSpan TotalDuration,
-    DiscProtection? Protection = null
+    DiscProtection? Protection = null,
+    /// <summary>
+    /// Human-readable title read from disc-embedded metadata (Blu-ray
+    /// <c>BDMV/META/DL/bdmt_*.xml</c>). Preferred over the raw volume
+    /// label when available. Null when no embedded title was found.
+    /// </summary>
+    string? DiscTitle = null
 )
 {
     /// <summary>

@@ -11,8 +11,7 @@ public class TmdbDiscMatcherDurationTests
     [Fact]
     public void BlendConfidence_NoDuration_FallsBackToStringSimilarity()
     {
-        // discDurationSec = 0 → blend is pure string similarity (no runtime component).
-        double score = TmdbDiscMatcher.BlendConfidence(
+        double score = VideoDiscIdentifier.BlendConfidence(
             query: "Avatar",
             candidate: "Avatar",
             rank: 0,
@@ -20,14 +19,13 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: 162
         );
 
-        // perfect token match at rank 0 → similarity = 1.0, rankPenalty = 1.0
         score.Should().BeApproximately(1.0, precision: 0.0001);
     }
 
     [Fact]
     public void BlendConfidence_NullRuntime_FallsBackToStringSimilarity()
     {
-        double score = TmdbDiscMatcher.BlendConfidence(
+        double score = VideoDiscIdentifier.BlendConfidence(
             query: "Avatar",
             candidate: "Avatar",
             rank: 0,
@@ -41,8 +39,7 @@ public class TmdbDiscMatcherDurationTests
     [Fact]
     public void BlendConfidence_ExactDurationMatch_BoostsConfidence()
     {
-        // Disc = 9720 s (162 min), candidate runtime = 162 min → durScore = 1.0.
-        double exactMatch = TmdbDiscMatcher.BlendConfidence(
+        double exactMatch = VideoDiscIdentifier.BlendConfidence(
             query: "Avatar",
             candidate: "Avatar",
             rank: 0,
@@ -50,19 +47,15 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: 162
         );
 
-        // strScore = 1.0 * 1.0 = 1.0, durScore = 1.0 → blended = 0.6 + 0.4 = 1.0
         exactMatch.Should().BeApproximately(1.0, precision: 0.0001);
     }
 
     [Fact]
     public void BlendConfidence_CloserRuntimeWins()
     {
-        // Disc duration = 1380 s (23 min).
-        // Candidate A: runtime 23 min (exact match)
-        // Candidate B: runtime 45 min (off by 22 min)
         int discDurationSec = 1380;
 
-        double scoreA = TmdbDiscMatcher.BlendConfidence(
+        double scoreA = VideoDiscIdentifier.BlendConfidence(
             query: "Avatar Book 1",
             candidate: "Avatar Book 1",
             rank: 0,
@@ -70,7 +63,7 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: 23
         );
 
-        double scoreB = TmdbDiscMatcher.BlendConfidence(
+        double scoreB = VideoDiscIdentifier.BlendConfidence(
             query: "Avatar Book 1",
             candidate: "Avatar Book 1",
             rank: 0,
@@ -84,8 +77,7 @@ public class TmdbDiscMatcherDurationTests
     [Fact]
     public void BlendConfidence_PoorLabelMatchHighRankReducesScore()
     {
-        // Even with a good runtime match, rank=3 cuts the string component.
-        double highRankScore = TmdbDiscMatcher.BlendConfidence(
+        double highRankScore = VideoDiscIdentifier.BlendConfidence(
             query: "Avatar",
             candidate: "Avatar",
             rank: 3,
@@ -93,7 +85,7 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: 162
         );
 
-        double rank0Score = TmdbDiscMatcher.BlendConfidence(
+        double rank0Score = VideoDiscIdentifier.BlendConfidence(
             query: "Avatar",
             candidate: "Avatar",
             rank: 0,
@@ -107,8 +99,7 @@ public class TmdbDiscMatcherDurationTests
     [Fact]
     public void BlendConfidence_VeryDifferentRuntime_ReducesScore()
     {
-        // Disc = 7200 s (120 min), candidate runtime = 30 min → big delta.
-        double score = TmdbDiscMatcher.BlendConfidence(
+        double score = VideoDiscIdentifier.BlendConfidence(
             query: "Movie",
             candidate: "Movie",
             rank: 0,
@@ -116,9 +107,6 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: 30
         );
 
-        // durDelta = |7200 - 1800| = 5400, runtimeSec = 1800
-        // durScore = 1 - clamp(5400/1800, 0, 1) = 1 - 1 = 0
-        // blended = 0.6 * 1.0 + 0.4 * 0 = 0.6
         score.Should().BeApproximately(0.6, precision: 0.0001);
     }
 

@@ -269,32 +269,6 @@ public sealed class DvdDiscSource(
         return null;
     }
 
-    private static bool TryParseHmsDuration(string value, out TimeSpan dur)
-    {
-        dur = TimeSpan.Zero;
-        string[] parts = value.Split(':');
-        if (parts.Length != 3)
-            return false;
-        if (
-            !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int h)
-            || !int.TryParse(
-                parts[1],
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out int m
-            )
-            || !int.TryParse(
-                parts[2],
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out int s
-            )
-        )
-            return false;
-        dur = new TimeSpan(h, m, s);
-        return true;
-    }
-
     private static string ToDvdPath(string mountPath)
     {
         // libdvdread's filesystem-fallback path needs to point at the

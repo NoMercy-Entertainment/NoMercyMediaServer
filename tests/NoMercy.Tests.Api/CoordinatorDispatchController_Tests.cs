@@ -30,18 +30,17 @@ public class CoordinatorDispatchController_Tests
     // from the resolved Owner.Id and IsOwner() flips to false.
     private static readonly Guid OwnerUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-    // ── Owner seeding — matches WorkersController_RegisterHttpsTests pattern ──
+    // ── Owner seeding — reset+reseed unconditionally for order-independence ──
 
     private static void SeedOwnerInClaimsExtensions()
     {
-        FieldInfo field = typeof(ClaimsPrincipleExtensions).GetField(
-            "_users",
-            BindingFlags.NonPublic | BindingFlags.Static
-        )!;
-        List<User> users = (List<User>)field.GetValue(null)!;
-        if (users.Any(u => u.Id == OwnerUserId))
-            return;
-        users.Add(
+        // Reset wipes whatever a prior test left in the process-wide static.
+        // NoMercyApiFactory.InitializeAsync() replaces _users with DB users
+        // whose Id differs from OwnerUserId; ClaimsPrincipleExtensionsTests
+        // calls Reset() in Dispose(). Either leaves IsOwner() returning false.
+        ClaimsPrincipleExtensions.Reset();
+
+        ClaimsPrincipleExtensions.AddUser(
             new()
             {
                 Id = OwnerUserId,

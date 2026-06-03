@@ -27,7 +27,7 @@ public class DiscScanner(
     EncoderOptions options,
     IProcessRunner processRunner,
     ILogger<DiscScanner> logger
-) : IDiscScanner
+)
 {
     public async Task<DiscInfo> ScanAsync(string drivePath, CancellationToken ct)
     {

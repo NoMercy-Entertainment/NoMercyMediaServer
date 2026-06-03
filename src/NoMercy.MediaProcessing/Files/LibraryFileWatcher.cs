@@ -197,6 +197,25 @@ public class LibraryFileWatcher
                     Path.GetExtension(path),
                     StringComparer.OrdinalIgnoreCase
                 );
+            case Config.InboxMediaType:
+                string[] inboxExtensions =
+                [
+                    ".mp4",
+                    ".mkv",
+                    ".avi",
+                    ".webm",
+                    ".mov",
+                    ".m3u8",
+                    ".mp3",
+                    ".flac",
+                    ".opus",
+                    ".wav",
+                    ".m4a",
+                ];
+                return inboxExtensions.Contains(
+                    Path.GetExtension(path),
+                    StringComparer.OrdinalIgnoreCase
+                );
             default:
                 return false;
         }

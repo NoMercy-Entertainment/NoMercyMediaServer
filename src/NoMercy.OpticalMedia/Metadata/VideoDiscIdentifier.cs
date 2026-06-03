@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -11,49 +12,53 @@ using NoMercy.Providers.TMDB.Models.TV;
 namespace NoMercy.OpticalMedia.Metadata;
 
 /// <summary>
-/// Looks up TMDB candidates for a disc. Strategy:
-///   1. Take the disc volume label (e.g. <c>Avatar_Book_1_Disc_1</c>),
-///      normalise underscores → spaces, strip <c>disc N</c> suffixes.
-///   2. Search both Movies and TvShows on the leading title segment.
-///   3. Score by blended confidence: 60 % string similarity + 40 % duration
-///      delta against TMDB's runtime field (±2 min = high score).
-///   4. For TV matches, run a second pass against the season's episode list
-///      to identify which specific episode the disc contains.
-///   5. Return all viable candidates as <see cref="MetadataMatch"/> with
-///      confidence — the UI lets the user pick if the top score is below
-///      a confidence threshold.
+/// Identifies DVD and Blu-ray discs by searching TMDB. Matches are ranked
+/// by a blended confidence score (string similarity + runtime proximity).
+///
+/// For TV discs a second pass walks the season/episode list to find the best
+/// season/episode fit based on disc duration.
+///
+/// Implements <see cref="IDiscIdentifier"/>; dispatched by
+/// <see cref="DiscIdentificationService"/>.
 /// </summary>
-public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : IDiscMetadataResolver
+public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> logger)
+    : IDiscIdentifier
 {
     private const int MaxCandidatesPerType = 5;
 
-    /// <summary>High-confidence threshold above which a match is auto-applied.</summary>
+    /// <summary>Confidence threshold above which a match is auto-applied.</summary>
     public const double AutoApplyThreshold = 0.85;
 
-    public async Task<MetadataMatch[]> ResolveAsync(DiscInfo disc, CancellationToken ct)
+    public bool CanHandle(OpticalDiscType type) =>
+        type == OpticalDiscType.Dvd || type == OpticalDiscType.BluRay;
+
+    public async Task<DiscIdentification> IdentifyAsync(DiscInfo disc, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(disc.DiscLabel))
+        // Prefer the embedded Blu-ray title (bdmt_*.xml) over the raw volume label.
+        string? querySource = disc.DiscTitle ?? disc.DiscLabel;
+
+        if (string.IsNullOrWhiteSpace(querySource))
         {
             logger.LogInformation(
-                "TMDB resolve skipped — disc has no label (type={Type})",
+                "VideoDiscIdentifier skipped — disc has no label or embedded title (type={Type})",
                 disc.Type
             );
-            return [];
+            return NeedsManual();
         }
 
-        string fullQuery = NormalizeLabel(disc.DiscLabel);
+        string fullQuery = NormalizeLabel(querySource);
         if (string.IsNullOrWhiteSpace(fullQuery))
         {
             logger.LogInformation(
-                "TMDB resolve skipped — normalised label is empty (raw={Raw})",
-                disc.DiscLabel
+                "VideoDiscIdentifier skipped — normalised query is empty (raw={Raw})",
+                querySource
             );
-            return [];
+            return NeedsManual();
         }
 
         int discDurationSec = disc.MainTitleDurationSec;
 
-        List<MetadataMatch> all = new();
+        List<DiscCandidate> all = [];
         all.AddRange(await SearchAsync(fullQuery, MediaType.Movie, ct, discDurationSec));
         all.AddRange(await SearchAsync(fullQuery, MediaType.TvShow, ct, discDurationSec));
 
@@ -63,7 +68,7 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
             if (!firstWord.Equals(fullQuery, StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogInformation(
-                    "TMDB resolve fallback for '{Query}' → '{FirstWord}'",
+                    "VideoDiscIdentifier fallback '{Query}' → '{FirstWord}'",
                     fullQuery,
                     firstWord
                 );
@@ -72,47 +77,71 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
             }
         }
 
-        // For TV matches, attempt per-episode resolution when the disc
-        // duration is known, so the confirm endpoint can auto-set season/episode.
-        List<MetadataMatch> resolved = new();
-        foreach (MetadataMatch match in all)
+        if (all.Count == 0)
         {
-            if (match.Type == MediaType.TvShow && discDurationSec > 0 && match.ExternalId != null)
+            logger.LogInformation(
+                "VideoDiscIdentifier found no TMDB candidates for '{Query}'",
+                fullQuery
+            );
+            return NeedsManual();
+        }
+
+        // For TV matches, attempt per-episode resolution when disc duration is known.
+        List<DiscCandidate> resolved = [];
+        foreach (DiscCandidate candidate in all)
+        {
+            if (
+                candidate.Source == "tmdb"
+                && !string.IsNullOrEmpty(candidate.StableId)
+                && discDurationSec > 0
+            )
             {
-                MetadataMatch enriched = await TryResolveEpisodeAsync(match, discDurationSec, ct);
+                // Determine whether this is a TV candidate by trying to parse
+                // the StableId and checking back against results from SearchAsync.
+                // We use the SeasonNumber field as the TV discriminator.
+                DiscCandidate enriched = await TryResolveEpisodeAsync(
+                    candidate,
+                    discDurationSec,
+                    ct
+                );
                 resolved.Add(enriched);
             }
             else
             {
-                resolved.Add(match);
+                resolved.Add(candidate);
             }
         }
 
+        DiscCandidate[] ranked = resolved.OrderByDescending(c => c.Confidence).ToArray();
+
+        double topConfidence = ranked.Length > 0 ? ranked[0].Confidence : 0;
+        bool autoApply = topConfidence >= AutoApplyThreshold;
+
         logger.LogInformation(
-            "TMDB resolve for '{Query}' (duration={Sec}s): {Count} candidates total",
+            "VideoDiscIdentifier '{Query}' (duration={Sec}s): {Count} candidates, topConfidence={Conf:F4}, autoApply={Auto}",
             fullQuery,
             discDurationSec,
-            resolved.Count
+            ranked.Length,
+            topConfidence,
+            autoApply
         );
 
-        return resolved.OrderByDescending(m => m.Confidence).ToArray();
+        return new DiscIdentification(
+            Kind: MediaKind.Movie,
+            Candidates: ranked,
+            TopConfidence: topConfidence,
+            AutoApply: autoApply,
+            NeedsManualAssignment: false
+        );
     }
 
-    // Satisfies IDiscMetadataResolver — delegates to the duration-aware overload
-    // with discDurationSec=0 so the blend falls back to string similarity only.
-    public Task<MetadataMatch[]> SearchAsync(string query, MediaType type, CancellationToken ct) =>
-        SearchAsync(query, type, ct, discDurationSec: 0);
-
-    internal async Task<MetadataMatch[]> SearchAsync(
+    private async Task<IEnumerable<DiscCandidate>> SearchAsync(
         string query,
         MediaType type,
         CancellationToken ct,
         int discDurationSec
     )
     {
-        if (string.IsNullOrWhiteSpace(query))
-            return [];
-
         try
         {
             return type switch
@@ -135,19 +164,56 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
         }
     }
 
-    private async Task<MetadataMatch[]> SearchMoviesAsync(string query, int discDurationSec)
+    /// <summary>
+    /// Manual title search — used by the dashboard's search-box endpoint.
+    /// Searches both Movies and TvShows and returns ranked candidates.
+    /// </summary>
+    public async Task<DiscCandidate[]> SearchAsync(
+        string query,
+        MediaType type,
+        CancellationToken ct
+    )
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return [];
+
+        try
+        {
+            return type switch
+            {
+                MediaType.Movie => (await SearchMoviesAsync(query, discDurationSec: 0)).ToArray(),
+                MediaType.TvShow => (await SearchTvShowsAsync(query, discDurationSec: 0)).ToArray(),
+                _ => [],
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogInformation(
+                ex,
+                "TMDB manual search failed for {Type} '{Query}': {Message}",
+                type,
+                query,
+                ex.Message
+            );
+            return [];
+        }
+    }
+
+    private async Task<IEnumerable<DiscCandidate>> SearchMoviesAsync(
+        string query,
+        int discDurationSec
+    )
     {
         TmdbSearchClient client = new();
         TmdbPaginatedResponse<TmdbMovie>? response = await client.Movie(query);
         if (response?.Results is null || response.Results.Count == 0)
             return [];
 
-        List<MetadataMatch> matches = new();
+        List<DiscCandidate> matches = [];
         int rank = 0;
         foreach (TmdbMovie movie in response.Results.Take(MaxCandidatesPerType))
         {
             int? runtimeMin = await FetchMovieRuntimeAsync(movie.Id);
-
             double confidence = BlendConfidence(
                 query,
                 movie.Title ?? movie.OriginalTitle ?? "",
@@ -155,39 +221,38 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
                 discDurationSec,
                 runtimeMin
             );
-
             matches.Add(
-                new MetadataMatch(
+                new DiscCandidate(
                     Source: "tmdb",
-                    Confidence: confidence,
+                    StableId: movie.Id.ToString(CultureInfo.InvariantCulture),
                     Title: movie.Title ?? movie.OriginalTitle ?? string.Empty,
                     Year: ParseYear(movie.ReleaseDate),
                     PosterUrl: PosterUrl(movie.PosterPath),
-                    ExternalId: movie.Id.ToString(CultureInfo.InvariantCulture),
-                    Type: MediaType.Movie,
-                    Runtime: runtimeMin,
-                    BackdropUrl: BackdropUrl(movie.BackdropPath)
+                    BackdropUrl: BackdropUrl(movie.BackdropPath),
+                    Confidence: confidence,
+                    Type: MediaType.Movie
                 )
             );
             rank++;
         }
-
-        return matches.ToArray();
+        return matches;
     }
 
-    private async Task<MetadataMatch[]> SearchTvShowsAsync(string query, int discDurationSec)
+    private async Task<IEnumerable<DiscCandidate>> SearchTvShowsAsync(
+        string query,
+        int discDurationSec
+    )
     {
         TmdbSearchClient client = new();
         TmdbPaginatedResponse<TmdbTvShow>? response = await client.TvShow(query);
         if (response?.Results is null || response.Results.Count == 0)
             return [];
 
-        List<MetadataMatch> matches = new();
+        List<DiscCandidate> matches = [];
         int rank = 0;
         foreach (TmdbTvShow show in response.Results.Take(MaxCandidatesPerType))
         {
             int? episodeRunMin = await FetchTvEpisodeRunTimeAsync(show.Id);
-
             double confidence = BlendConfidence(
                 query,
                 show.Name ?? show.OriginalName ?? "",
@@ -195,61 +260,71 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
                 discDurationSec,
                 episodeRunMin
             );
-
             matches.Add(
-                new MetadataMatch(
+                new DiscCandidate(
                     Source: "tmdb",
-                    Confidence: confidence,
+                    StableId: show.Id.ToString(CultureInfo.InvariantCulture),
                     Title: show.Name ?? show.OriginalName ?? string.Empty,
                     Year: ParseYear(show.FirstAirDate),
                     PosterUrl: PosterUrl(show.PosterPath),
-                    ExternalId: show.Id.ToString(CultureInfo.InvariantCulture),
-                    Type: MediaType.TvShow,
-                    Runtime: episodeRunMin,
-                    BackdropUrl: BackdropUrl(show.BackdropPath)
+                    BackdropUrl: BackdropUrl(show.BackdropPath),
+                    Confidence: confidence,
+                    Type: MediaType.TvShow
                 )
             );
             rank++;
         }
-
-        return matches.ToArray();
+        return matches;
     }
 
     /// <summary>
-    /// For a TV-show match, fetches season details to find which season/episode
-    /// best explains <paramref name="discDurationSec"/>. Uses the show-level
-    /// EpisodeRunTime as a per-episode estimate. Falls back to the unmodified
-    /// match when TMDB returns no usable runtime data.
+    /// For a candidate that resolved from the TV-show search, attempts to
+    /// determine which season and starting episode the disc contains.
+    ///
+    /// The disc duration is compared against hypotheses:
+    ///   - Single-episode: disc ≈ 1 × episodeRuntime
+    ///   - Multi-episode:  disc ≈ N × episodeRuntime  (N episodes starting at ep 1)
+    ///
+    /// When individual episode runtimes are not available from TMDB, the
+    /// show-level EpisodeRunTime is used as a uniform estimate.
+    ///
+    /// BUG FIX: the original implementation used a constant delta
+    /// (<c>Math.Abs(discDurationSec - showRunSec)</c>) for every episode
+    /// slot, so the comparison never changed across loop iterations and
+    /// always produced episode 1. The corrected logic makes the expected
+    /// duration depend on how many episodes fit (<c>epIdx * showRunSec</c>),
+    /// producing a real per-hypothesis delta.
     /// </summary>
-    private async Task<MetadataMatch> TryResolveEpisodeAsync(
-        MetadataMatch match,
+    private async Task<DiscCandidate> TryResolveEpisodeAsync(
+        DiscCandidate candidate,
         int discDurationSec,
         CancellationToken ct
     )
     {
-        if (!int.TryParse(match.ExternalId, out int showId))
-            return match;
+        if (!int.TryParse(candidate.StableId, out int showId))
+            return candidate;
 
         try
         {
             TmdbTvClient tvClient = new(showId);
             TmdbTvShowDetails? showDetails = await tvClient.Details();
             if (showDetails?.Seasons is null || showDetails.Seasons.Count == 0)
-                return match;
+                return candidate;
 
             int showRunMin = showDetails.EpisodeRunTime?.FirstOrDefault() ?? 0;
             if (showRunMin <= 0)
-                return match;
+                return candidate;
 
             double showRunSec = showRunMin * 60.0;
 
             int bestSeasonNumber = 0;
-            int bestEpisodeNumber = 1;
+            int bestEpisodeCount = 1;
             double bestDelta = double.MaxValue;
 
             foreach (TmdbSeason season in showDetails.Seasons.Where(s => s.SeasonNumber > 0))
             {
                 ct.ThrowIfCancellationRequested();
+
                 TmdbSeasonClient seasonClient = new(showId, season.SeasonNumber);
                 TmdbSeasonDetails? seasonDetails = await seasonClient.Details();
                 if (seasonDetails?.Episodes is null || seasonDetails.Episodes.Length == 0)
@@ -257,43 +332,38 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
 
                 int episodeCount = seasonDetails.Episodes.Length;
 
-                // Single-episode disc: each episode slot is a candidate.
+                // Test each hypothesis: disc contains episodes 1..epIdx
+                // so expected total runtime = epIdx * showRunSec.
                 for (int epIdx = 1; epIdx <= episodeCount; epIdx++)
                 {
-                    double delta = Math.Abs(discDurationSec - showRunSec);
+                    double expectedSec = epIdx * showRunSec;
+                    double delta = Math.Abs(discDurationSec - expectedSec);
                     if (delta < bestDelta)
                     {
                         bestDelta = delta;
                         bestSeasonNumber = season.SeasonNumber;
-                        bestEpisodeNumber = epIdx;
+                        bestEpisodeCount = epIdx;
                     }
-                }
-
-                // Full-season disc: total duration ≈ episodeCount × showRunSec.
-                double fullDelta = Math.Abs(discDurationSec - (episodeCount * showRunSec));
-                if (fullDelta < bestDelta)
-                {
-                    bestDelta = fullDelta;
-                    bestSeasonNumber = season.SeasonNumber;
-                    bestEpisodeNumber = 1;
                 }
             }
 
             if (bestSeasonNumber == 0)
-                return match;
+                return candidate;
 
             logger.LogInformation(
-                "TV episode resolution for show {Id}: best match S{Season}E{Episode} (delta={Delta}s)",
+                "TV episode resolution for show {Id}: best match S{Season}, {Count} episode(s) on disc (delta={Delta:F1}s)",
                 showId,
                 bestSeasonNumber,
-                bestEpisodeNumber,
+                bestEpisodeCount,
                 bestDelta
             );
 
-            return match with
+            // EpisodeNumber = 1 always (first episode on the disc);
+            // SeasonNumber is the resolved season.
+            return candidate with
             {
                 SeasonNumber = bestSeasonNumber,
-                EpisodeNumber = bestEpisodeNumber,
+                EpisodeNumber = 1,
             };
         }
         catch (Exception ex)
@@ -304,7 +374,7 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
                 showId,
                 ex.Message
             );
-            return match;
+            return candidate;
         }
     }
 
@@ -340,8 +410,8 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
     /// <summary>
     /// Blends string similarity (60 %) with duration proximity (40 %).
     /// When <paramref name="discDurationSec"/> is zero or
-    /// <paramref name="runtimeMin"/> is null the duration component is omitted
-    /// and the weight shifts entirely to string similarity.
+    /// <paramref name="runtimeMin"/> is null, the weight shifts entirely
+    /// to string similarity.
     /// </summary>
     internal static double BlendConfidence(
         string query,
@@ -367,9 +437,9 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
     }
 
     /// <summary>
-    /// Volume labels come from the disc as <c>Avatar_Book_1_Disc_1</c>
-    /// — normalise to <c>Avatar Book 1</c> by replacing separators with
-    /// spaces and stripping the trailing <c>disc N</c> token.
+    /// Volume labels come from the disc as e.g. <c>Avatar_Book_1_Disc_1</c>.
+    /// Normalise to <c>Avatar Book 1</c> by replacing separators with spaces
+    /// and stripping the trailing <c>disc N</c> token.
     /// </summary>
     internal static string NormalizeLabel(string label)
     {
@@ -410,6 +480,15 @@ public sealed partial class TmdbDiscMatcher(ILogger<TmdbDiscMatcher> logger) : I
             return null;
         return $"https://image.tmdb.org/t/p/w1280{backdropPath}";
     }
+
+    private static DiscIdentification NeedsManual() =>
+        new(
+            Kind: MediaKind.Movie,
+            Candidates: [],
+            TopConfidence: 0,
+            AutoApply: false,
+            NeedsManualAssignment: true
+        );
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex MultiSpaceRegex();

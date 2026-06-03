@@ -6,7 +6,6 @@ using NoMercy.Encoder.Infrastructure;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.Storage;
-using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.OpticalMedia.Sources.AudioCd;
 
@@ -24,6 +23,7 @@ namespace NoMercy.OpticalMedia.Sources.AudioCd;
 public sealed class CdDiscSource(
     EncoderOptions options,
     IProcessRunner processRunner,
+    IStorageDriver storageDriver,
     ILogger<CdDiscSource> logger
 ) : IDiscSource
 {
@@ -134,24 +134,29 @@ public sealed class CdDiscSource(
     {
         try
         {
-            IStorageDriver driver = new LocalStorageDriver();
-            string root = drive.Path.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            // Derive separator from the drive path itself so the path is
+            // valid on both Windows and Linux regardless of the host.
+            char sep = drive.Path.Contains('\\') ? '\\' : '/';
+            string root = drive.Path.TrimEnd('\\', '/') + sep;
             int idx = 1;
             List<DiscTrack> tracks = new();
             foreach (
-                string entry in driver.EnumerateFileSystemEntries(
+                string entry in storageDriver.EnumerateFileSystemEntries(
                     root,
                     "*",
                     SearchOption.TopDirectoryOnly
                 )
             )
             {
-                if (driver.DirectoryExists(entry))
+                if (storageDriver.DirectoryExists(entry))
                     continue;
                 tracks.Add(
                     new DiscTrack(
                         Index: idx++,
-                        Title: Path.GetFileName(entry),
+                        // Separator-agnostic leaf: Path.GetFileName treats '\' as
+                        // a literal on Linux, so a Windows-style entry would keep
+                        // its whole path on the CI runner. Split on both separators.
+                        Title: entry[(entry.LastIndexOfAny(['\\', '/']) + 1)..],
                         Artist: null,
                         Duration: TimeSpan.Zero,
                         SampleRate: 0,

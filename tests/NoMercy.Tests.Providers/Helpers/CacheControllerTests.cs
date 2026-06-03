@@ -1,4 +1,7 @@
 using NoMercy.Providers.Helpers;
+using NoMercy.Storage;
+using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Tests.Providers.Helpers;
 
@@ -11,6 +14,13 @@ public class CacheControllerTests : IDisposable
         _testCacheDir = Path.Combine(Path.GetTempPath(), $"CacheControllerTest_{Guid.NewGuid():N}");
 
         Directory.CreateDirectory(_testCacheDir);
+
+        LocalStorageDriver driver = new();
+        // Scope to the system temp root so both _testCacheDir and any
+        // nonExistent sibling paths (also under temp) pass the allowlist check.
+        StoragePathGuard guard = new([Path.GetTempPath()], driver);
+        IStorage storage = new LocalStorage(driver, guard);
+        CacheController.Initialize(storage);
     }
 
     public void Dispose()
@@ -35,8 +45,10 @@ public class CacheControllerTests : IDisposable
             Array.Fill(data, (byte)'A');
             File.WriteAllBytes(filePath, data);
 
-            // Stagger creation times so ordering is deterministic
-            File.SetCreationTime(filePath, DateTime.Now.AddMinutes(-10 + i));
+            // PruneCache orders by StorageEntry.LastModified, which the facade
+            // derives from File.GetLastWriteTimeUtc. Stagger write times so the
+            // oldest-first deletion order is deterministic.
+            File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddMinutes(-10 + i));
             createdFiles.Add(filePath);
         }
 

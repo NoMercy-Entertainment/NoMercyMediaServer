@@ -1,12 +1,16 @@
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NoMercy.Encoder.Audio;
+using NoMercy.OpticalMedia.Audio;
+using NoMercy.OpticalMedia.Capabilities;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Drives.Backends;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;
 using NoMercy.OpticalMedia.Sources;
 using NoMercy.OpticalMedia.Sources.Bluray;
+using NoMercy.Providers.MusicBrainz.Client;
 
 namespace NoMercy.OpticalMedia.Composition;
 
@@ -33,8 +37,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IDriveMonitor, DriveMonitor>();
         services.TryAddSingleton<DriveLockRegistry>();
 
-        services.TryAddTransient<IDiscScanner, DiscScanner>();
         services.TryAddTransient<IDiscRipper, DiscRipper>();
+        services.TryAddTransient<IAudioMetadataWriter, TagLibAudioMetadataWriter>();
 
         // IDiscSource implementations — registered as IEnumerable so the
         // factory can pick the right one per disc type. CdDiscSource
@@ -44,9 +48,23 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IDiscSource, Sources.Dvd.DvdDiscSource>();
         services.AddTransient<IDiscSource, Sources.AudioCd.CdDiscSource>();
         services.TryAddSingleton<DiscSourceFactory>();
-        services.TryAddTransient<IDiscMetadataResolver, TmdbDiscMatcher>();
+
+        // Identification layer — contract-based DI, one impl per disc type.
+        // WindowsTocReader is registered first on Windows; TryAdd ensures
+        // NullTocReader is only wired when no Windows reader is present.
+        if (OperatingSystem.IsWindows())
+            services.AddTransient<ITocReader, WindowsTocReader>();
+        services.TryAddTransient<ITocReader, NullTocReader>();
+        services.TryAddTransient<MusicBrainzDiscClient>();
+        services.AddTransient<IDiscIdentifier, VideoDiscIdentifier>();
+        services.AddTransient<IDiscIdentifier, AudioCdIdentifier>();
+        services.TryAddTransient<DiscIdentificationService>();
 
         services.TryAddTransient<Live.ILiveDiscSession, Live.LiveDiscSession>();
+        services.TryAddSingleton<Live.IDiscSessionRegistry, Live.DiscSessionRegistry>();
+
+        services.TryAddSingleton<FfmpegBluRayCapability>();
+        services.AddHostedService<BluRayCapabilityStartupService>();
 
         return services;
     }

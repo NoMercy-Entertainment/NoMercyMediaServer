@@ -878,12 +878,13 @@ public class SetupServerCallbackHtmlTests
     }
 
     [Fact]
-    public void BuildCallbackHtml_Success_ContainsCloseScript()
+    public void BuildCallbackHtml_Success_ContainsRedirectScript()
     {
         string html = SetupServer.BuildCallbackHtml("Title", "Message");
 
-        Assert.Contains("window.close()", html);
-        Assert.Contains("Server is restarting with HTTPS. You can close this tab.", html);
+        Assert.Contains("setTimeout", html);
+        Assert.Contains("window.location.href='/setup'", html);
+        Assert.Contains("Redirecting to setup...", html);
     }
 
     [Fact]

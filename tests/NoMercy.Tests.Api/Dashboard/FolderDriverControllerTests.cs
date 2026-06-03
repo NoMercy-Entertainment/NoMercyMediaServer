@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Storage;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -60,11 +61,14 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
                 e => e.GetProperty("available").GetBoolean()
             );
 
+        // All five built-in driver types are now flagged as available;
+        // the old smb entry was replaced by nfs.
         Assert.True(availability["local"], "local should be available");
-        Assert.True(availability["smb"], "smb should be available");
         Assert.True(availability["nfs"], "nfs should be available");
-        Assert.False(availability["s3"], "s3 should not be available");
-        Assert.False(availability["r2"], "r2 should not be available");
+        Assert.True(availability["s3"], "s3 should be available");
+        Assert.True(availability["r2"], "r2 should be available");
+        Assert.True(availability["webdav"], "webdav should be available");
+        Assert.False(availability.ContainsKey("smb"), "smb is no longer a recognised driver type");
     }
 
     [Fact]
@@ -134,7 +138,8 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task PutBackend_ValidLocalConfig_Returns200AndPersists()
     {
-        object payload = new { driver_type = "local", driver_config = (object?)null };
+        // Assign the seeded system-local driver by its stable Ulid.
+        object payload = new { driver_id = Driver.SystemLocalDriverId.ToString() };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
             $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
@@ -157,16 +162,17 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
             .FirstOrDefaultAsync(f => f.Id == MovieFolderId);
 
         Assert.NotNull(folder);
-        Assert.Equal("local", folder!.Driver?.Type);
+        Assert.Equal(Driver.SystemLocalDriverId, folder!.DriverId);
     }
 
     [Fact]
     public async Task PutBackend_LocalWithRootPath_Returns200()
     {
+        // path is the optional sub-path within the driver root; driver_id is always required.
         object payload = new
         {
-            driver_type = "local",
-            driver_config = new { rootPath = "/mnt/media" },
+            driver_id = Driver.SystemLocalDriverId.ToString(),
+            path = "/mnt/media",
         };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
@@ -240,49 +246,27 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task PutBackend_S3ValidConfig_Returns200WithWarning()
     {
-        object payload = new
-        {
-            driver_type = "s3",
-            driver_config = new { bucket = "my-bucket", region = "us-east-1" },
-        };
+        // The assign endpoint no longer accepts driver_type/config inline — it takes a
+        // driver_id referencing an existing Driver row. Assigning a driver_id that does
+        // not exist in the DB must return 404 (driver not found).
+        Ulid nonExistentDriverId = Ulid.NewUlid();
+        object payload = new { driver_id = nonExistentDriverId.ToString() };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
             $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
             payload
         );
-        string body = await response.Content.ReadAsStringAsync();
 
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected 200, got {(int)response.StatusCode}: {body}"
-        );
-
-        JsonDocument json = JsonDocument.Parse(body);
-        JsonElement warnings = json.RootElement.GetProperty("warnings");
-
-        Assert.Equal(JsonValueKind.Array, warnings.ValueKind);
-        Assert.True(warnings.GetArrayLength() > 0, "Expected at least one warning for s3 driver");
-
-        string? warning = warnings[0].GetString();
-        Assert.NotNull(warning);
-        Assert.Contains("s3", warning, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("not yet implemented", warning, StringComparison.OrdinalIgnoreCase);
-
-        // Restore to local so other tests aren't affected
-        await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            new { driver_type = "local", driver_config = (object?)null }
-        );
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task PutBackend_R2ValidConfig_Returns200WithWarning()
     {
-        object payload = new
-        {
-            driver_type = "r2",
-            driver_config = new { bucket = "my-r2-bucket", region = "auto" },
-        };
+        // The assign endpoint no longer accepts driver_type/config inline — it takes a
+        // driver_id referencing an existing Driver row. Verify that assigning the seeded
+        // system-local driver returns the expected FolderDriverInfoDto shape.
+        object payload = new { driver_id = Driver.SystemLocalDriverId.ToString() };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
             $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
@@ -296,23 +280,22 @@ public class FolderDriverControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         JsonDocument json = JsonDocument.Parse(body);
-        JsonElement warnings = json.RootElement.GetProperty("warnings");
+        JsonElement root = json.RootElement;
 
-        Assert.Equal(JsonValueKind.Array, warnings.ValueKind);
-        Assert.True(warnings.GetArrayLength() > 0, "Expected at least one warning for r2 driver");
-
-        // Restore to local so other tests aren't affected
-        await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/folders/{MovieFolderId}/driver",
-            new { driver_type = "local", driver_config = (object?)null }
+        Assert.Equal(
+            Driver.SystemLocalDriverId.ToString(),
+            root.GetProperty("driver_id").GetString()
         );
+        Assert.Equal("local", root.GetProperty("driver_type").GetString());
     }
 
     [Fact]
     public async Task PutBackend_UnknownFolder_Returns404()
     {
         Ulid unknownId = Ulid.NewUlid();
-        object payload = new { driver_type = "local" };
+        // driver_id must be present and valid to pass the validation gate;
+        // the 404 should come from the folder lookup, not from missing driver_id.
+        object payload = new { driver_id = Driver.SystemLocalDriverId.ToString() };
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
             $"/api/v1/dashboard/folders/{unknownId}/driver",

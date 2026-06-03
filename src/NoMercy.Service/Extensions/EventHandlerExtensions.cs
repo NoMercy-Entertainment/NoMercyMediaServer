@@ -1,7 +1,10 @@
 ﻿using NoMercy.Api.EventHandlers;
 using NoMercy.Api.Services.Music;
+using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.EventHandlers;
+using NoMercy.MediaProcessing.Inbox;
+using NoMercy.MediaProcessing.Jobs;
 using NoMercy.Networking.Messaging;
 using NoMercy.Storage;
 
@@ -91,6 +94,44 @@ public static class EventHandlerExtensions
             return new(eventBus, clientMessenger);
         });
 
+        services.AddSingleton<IInboxMetadataProbe, TmdbMusicBrainzMetadataProbe>();
+        services.AddSingleton<IInboxAudioTagReader>(sp =>
+        {
+            IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
+            return new StorageAudioTagReader(storageFactory);
+        });
+        services.AddSingleton<InboxClassifier>(sp =>
+        {
+            IInboxMetadataProbe probe = sp.GetRequiredService<IInboxMetadataProbe>();
+            IInboxAudioTagReader tagReader = sp.GetRequiredService<IInboxAudioTagReader>();
+            return new InboxClassifier(probe, tagReader);
+        });
+        services.AddSingleton<InboxRoutingService>(sp =>
+        {
+            IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
+            return new InboxRoutingService(storageFactory, new JobDispatcher());
+        });
+        services.AddSingleton<InboxClassifierEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            InboxClassifier classifier = sp.GetRequiredService<InboxClassifier>();
+            InboxRoutingService routing = sp.GetRequiredService<InboxRoutingService>();
+            IStorageFactory storageFactory = sp.GetRequiredService<IStorageFactory>();
+            return new InboxClassifierEventHandler(
+                eventBus,
+                classifier,
+                routing,
+                () => new MediaContext(),
+                storageFactory
+            );
+        });
+        services.AddSingleton<SignalRInboxEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
+            return new SignalRInboxEventHandler(eventBus, clientMessenger);
+        });
+
         return services;
     }
 
@@ -110,6 +151,8 @@ public static class EventHandlerExtensions
         serviceProvider.GetRequiredService<DriveMonitorEventHandler>();
         serviceProvider.GetRequiredService<CastEventHandler>();
         serviceProvider.GetRequiredService<UserPermissionsEventHandler>();
+        serviceProvider.GetRequiredService<InboxClassifierEventHandler>();
+        serviceProvider.GetRequiredService<SignalRInboxEventHandler>();
 
         return serviceProvider;
     }

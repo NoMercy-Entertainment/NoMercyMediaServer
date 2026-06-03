@@ -368,6 +368,13 @@ public class MediaContext : DbContext
             .HasDatabaseName("IX_ReleaseGroups_ColorPalette_pending")
             .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
 
+        modelBuilder.Entity<InboxItem>().Property(i => i.CandidatesJson).HasMaxLength(int.MaxValue);
+        modelBuilder
+            .Entity<InboxItem>()
+            .Property(i => i.SelectedMatchJson)
+            .HasMaxLength(int.MaxValue);
+        modelBuilder.Entity<InboxItem>().Property(i => i.Error).HasMaxLength(4096);
+
         base.OnModelCreating(modelBuilder);
     }
 
@@ -471,4 +478,5 @@ public class MediaContext : DbContext
     public virtual DbSet<PlaybackPreference> PlaybackPreferences { get; init; }
     public virtual DbSet<TrustedPublisherKey> TrustedPublisherKeys { get; init; }
     public virtual DbSet<EncodeTaskOutcome> EncodeTaskOutcomes { get; init; }
+    public virtual DbSet<InboxItem> InboxItems { get; init; }
 }

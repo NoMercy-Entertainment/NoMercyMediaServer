@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
@@ -21,7 +22,7 @@ namespace NoMercy.OpticalMedia.Rip;
 /// through to the MKV container so the rip preserves source quality
 /// perfectly. Re-encoding happens later with the user's chosen profile.
 /// </summary>
-public class DiscRipper(
+public partial class DiscRipper(
     EncoderOptions options,
     IProcessRunner processRunner,
     IStorage storage,
@@ -62,6 +63,12 @@ public class DiscRipper(
     {
         storage.CreateDirectory(outputDirectory);
 
+        // CD audio discs use a dedicated per-track FLAC path. Each CD-DA
+        // track is a separate libcdio audio stream; the shared video path
+        // hardcodes -map 0:v:0 which is invalid for audio-only CD-DA.
+        if (ResolveDiscType(request) == OpticalDiscType.Cd)
+            return await RipCdTracksAsync(request, outputDirectory, ct);
+
         List<DiscRipResult> results = [];
         foreach (int titleIndex in request.SelectedTitleIndices)
         {
@@ -78,6 +85,163 @@ public class DiscRipper(
         }
         return results.ToArray();
     }
+
+    /// <summary>
+    /// Rips selected CD-DA tracks to individual FLAC files. Each CD-DA
+    /// track is exposed by libcdio as a separate audio stream; track N
+    /// (1-based) maps to stream index N-1 via <c>-map 0:a:&lt;N-1&gt;</c>.
+    ///
+    /// One ffmpeg invocation per track so progress / cancellation is
+    /// per-track rather than for the whole disc.
+    ///
+    /// // hardware-validate: confirm libcdio per-track stream mapping with a
+    /// // real CD — libcdio presents each track as a distinct audio stream
+    /// // indexed from 0 in the order they appear on the disc, which maps
+    /// // cleanly to 0:a:0, 0:a:1, … 0:a:N-1. Validated against the probe
+    /// // logic in CdDiscSource.ParseTracks (rawIndex + 1 = track number,
+    /// // so stream index = trackIndex - 1).
+    /// </summary>
+    private async Task<DiscRipResult[]> RipCdTracksAsync(
+        RipRequest request,
+        string outputDirectory,
+        CancellationToken ct
+    )
+    {
+        List<DiscRipResult> results = [];
+
+        foreach (int trackIndex in request.SelectedTitleIndices)
+        {
+            ct.ThrowIfCancellationRequested();
+            DiscRipResult result = await RipOneCdTrackAsync(
+                request,
+                trackIndex,
+                outputDirectory,
+                ct
+            );
+            results.Add(result);
+            if (!result.Success)
+                logger.LogWarning(
+                    "CD track rip {Index} from {Drive} failed: {Error}",
+                    trackIndex,
+                    request.DrivePath,
+                    result.Error
+                );
+        }
+
+        return results.ToArray();
+    }
+
+    /// <summary>
+    /// Rips one CD-DA track to a FLAC file.
+    ///
+    /// ffmpeg invocation:
+    ///   ffmpeg -y -hide_banner -f libcdio -i &lt;drivePath&gt;
+    ///          -map 0:a:&lt;trackIndex-1&gt; -c:a flac
+    ///          &lt;outputDir&gt;/NN - &lt;sanitized-title&gt;.flac
+    /// </summary>
+    internal async Task<DiscRipResult> RipOneCdTrackAsync(
+        RipRequest request,
+        int trackIndex,
+        string outputDirectory,
+        CancellationToken ct
+    )
+    {
+        // trackIndex is 1-based (matches DiscTrack.Index); stream 0:a:N-1.
+        int streamIndex = trackIndex - 1;
+
+        string trackTitle = ResolveTrackTitle(request, trackIndex);
+        string fileName = $"{trackIndex:D2} - {SanitizeForPath(trackTitle)}.flac";
+        string outputPath = Path.Combine(outputDirectory, fileName);
+
+        List<string> args =
+        [
+            "-y",
+            "-hide_banner",
+            "-f",
+            "libcdio",
+            "-i",
+            request.DrivePath,
+            "-map",
+            $"0:a:{streamIndex}",
+            "-c:a",
+            "flac",
+        ];
+
+        await using LocalPathLease outputLease = storage.AcquireLocalPath(outputPath);
+        args.Add(outputLease.Path);
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        ProcessResult result = await processRunner.RunAsync(
+            options.FfmpegPath,
+            args.ToArray(),
+            workingDirectory: outputDirectory,
+            cancellationToken: ct
+        );
+        stopwatch.Stop();
+
+        if (!result.IsSuccess)
+        {
+            string stderrTail =
+                string.IsNullOrEmpty(result.StdErr) ? "(no stderr)"
+                : result.StdErr.Length > 800 ? result.StdErr[^800..]
+                : result.StdErr;
+            logger.LogInformation(
+                "ffmpeg CD rip failed exit={Exit} args=[{Args}] stderr_tail={Stderr}",
+                result.ExitCode,
+                string.Join(" ", args),
+                stderrTail
+            );
+
+            return new(
+                TitleIndex: trackIndex,
+                OutputPath: outputPath,
+                Success: false,
+                Duration: stopwatch.Elapsed,
+                OutputSizeBytes: 0,
+                Error: $"ffmpeg exited with code {result.ExitCode}"
+            );
+        }
+
+        long size = storage.SizeOrZero(outputPath);
+        logger.LogInformation(
+            "Ripped CD track {Index} (stream 0:a:{Stream}) from {Drive} → {Path} ({Bytes} bytes, {Duration:c})",
+            trackIndex,
+            streamIndex,
+            request.DrivePath,
+            outputPath,
+            size,
+            stopwatch.Elapsed
+        );
+
+        return new(
+            TitleIndex: trackIndex,
+            OutputPath: outputPath,
+            Success: true,
+            Duration: stopwatch.Elapsed,
+            OutputSizeBytes: size,
+            Error: null
+        );
+    }
+
+    private static string ResolveTrackTitle(RipRequest request, int trackIndex)
+    {
+        // AudioTracks on the request carry the probed track titles from DiscInfo.
+        // For a CD rip the SelectedTitleIndices are track numbers, not playlist indices.
+        // If the caller didn't populate a title, fall back to "Track NN".
+        return $"Track {trackIndex:D2}";
+    }
+
+    private static string SanitizeForPath(string input)
+    {
+        string trimmed = InvalidFsCharsRegex().Replace(input, " ").Trim();
+        return WhitespaceRunRegex().Replace(trimmed, " ");
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"[<>:""/\\|?*\x00-\x1F]")]
+    private static partial Regex InvalidFsCharsRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRunRegex();
 
     private async Task<DiscRipResult> RipOneTitleAsync(
         RipRequest request,

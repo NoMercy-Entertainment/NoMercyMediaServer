@@ -7,6 +7,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 
@@ -71,6 +72,7 @@ public class LibraryRepository(MediaContext context) : ILibraryRepository
         return context
             .Libraries.AsNoTracking()
             .ForUser(userId)
+            .Where(library => library.Type != Config.InboxMediaType)
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
                     .ThenInclude(f => f.Driver)
@@ -95,6 +97,7 @@ public class LibraryRepository(MediaContext context) : ILibraryRepository
         return context
             .Libraries.AsNoTracking()
             .ForUser(userId)
+            .Where(library => library.Type != Config.InboxMediaType)
             .OrderBy(library => library.Order)
             .ToListAsync(ct);
     }

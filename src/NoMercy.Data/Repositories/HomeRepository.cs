@@ -382,7 +382,11 @@ public class HomeRepository : IHomeRepository
         CancellationToken ct = default
     )
     {
-        return mediaContext.Libraries.AsNoTracking().ForUser(userId).ToListAsync(ct);
+        return mediaContext
+            .Libraries.AsNoTracking()
+            .ForUser(userId)
+            .Where(library => library.Type != Config.InboxMediaType)
+            .ToListAsync(ct);
     }
 
     public Task<int> GetAnimeCountAsync(

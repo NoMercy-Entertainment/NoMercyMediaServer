@@ -13,6 +13,6 @@ public sealed record DiscRipPendingState(
     int TitleIndex,
     string DrivePath,
     int DiscDurationSec,
-    MetadataMatch[] Candidates,
+    DiscCandidate[] Candidates,
     DateTimeOffset CreatedAt
 );

@@ -249,6 +249,85 @@ namespace NoMercy.Database.Migrations
                     b.ToTable("FolderLibrary");
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.Libraries.InboxItem", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CandidatesJson")
+                        .IsRequired()
+                        .HasMaxLength(2147483647)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("Candidates");
+
+                    b.Property<string>("Confidence")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("DetectedType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DriverId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SelectedMatchJson")
+                        .HasMaxLength(2147483647)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("SelectedMatch");
+
+                    b.Property<string>("SourcePath")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetFolderId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetLibraryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetProfileId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("DetectedType");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("InboxItems", t =>
+                        {
+                            t.HasTrigger("update_InboxItems_updated_at");
+                        });
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.Libraries.Language", b =>
                 {
                     b.Property<int>("Id")

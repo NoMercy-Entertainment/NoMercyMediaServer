@@ -15,27 +15,25 @@ public class TmdbDiscMatcherTests
     [InlineData("Frozen", "Frozen")]
     public void NormalizeLabel_StripsSeparatorsAndDiscSuffix(string input, string expected)
     {
-        TmdbDiscMatcher.NormalizeLabel(input).Should().Be(expected);
+        VideoDiscIdentifier.NormalizeLabel(input).Should().Be(expected);
     }
 
     [Fact]
     public void NormalizeLabel_EmptyInput_ReturnsEmpty()
     {
-        TmdbDiscMatcher.NormalizeLabel("").Should().BeEmpty();
+        VideoDiscIdentifier.NormalizeLabel("").Should().BeEmpty();
     }
 
     [Fact]
     public void NormalizeLabel_OnlyDiscSuffix_ReturnsEmpty()
     {
-        // " disc 1" alone → suffix stripped, just whitespace, trimmed to ""
-        TmdbDiscMatcher.NormalizeLabel(" disc 1").Should().BeEmpty();
+        VideoDiscIdentifier.NormalizeLabel(" disc 1").Should().BeEmpty();
     }
 
     [Fact]
     public void NormalizeLabel_DoesNotStripDiscMidWord()
     {
-        // "Discovery Channel Disc 1" — only the trailing "Disc 1" should go
-        TmdbDiscMatcher
+        VideoDiscIdentifier
             .NormalizeLabel("Discovery Channel Disc 1")
             .Should()
             .Be("Discovery Channel");
@@ -44,8 +42,6 @@ public class TmdbDiscMatcherTests
     [Fact]
     public void NormalizeLabel_PreservesNumbersInTitle()
     {
-        // "Star Trek 2 Disc 1" → "Star Trek 2" (the 2 is part of the title,
-        // only the trailing disc-N gets stripped)
-        TmdbDiscMatcher.NormalizeLabel("Star_Trek_2_Disc_1").Should().Be("Star Trek 2");
+        VideoDiscIdentifier.NormalizeLabel("Star_Trek_2_Disc_1").Should().Be("Star Trek 2");
     }
 }

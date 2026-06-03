@@ -12,107 +12,146 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 [Collection("EventBusProvider")]
 public class EventBusProgressObserverTests
 {
+    // Helpers that read fields off the anonymous ProgressData object.
+    private static object? GetField(object obj, string fieldName) =>
+        obj.GetType().GetProperty(fieldName)?.GetValue(obj);
+
+    // Save and restore the static EventBusProvider._instance around a test body
+    // so no state leaks regardless of ordering or test failure.
+    private static IEventBus? GetCurrentInstance() =>
+        (IEventBus?)
+            typeof(EventBusProvider)
+                .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
+                .GetValue(null);
+
+    private static void SetInstance(IEventBus? bus) =>
+        typeof(EventBusProvider)
+            .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
+            .SetValue(null, bus);
+
     [Fact]
     public void OnProgress_WhenEventBusNotConfigured_DoesNotThrow()
     {
-        // Reach an unconfigured state by reflection — EventBusProvider has no Reset(),
-        // so we clear the backing field directly.
-        typeof(EventBusProvider)
-            .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
-            .SetValue(null, null);
+        IEventBus? previous = GetCurrentInstance();
+        try
+        {
+            SetInstance(null);
 
-        EventBusProgressObserver observer = new(jobId: 1, title: "Test Movie");
+            EventBusProgressObserver observer = new(jobId: 1, title: "Test Movie");
 
-        EncodingProgress progress = new(
-            CorrelationId: "test-id",
-            PercentComplete: 50.0,
-            Elapsed: TimeSpan.FromSeconds(10),
-            EstimatedRemaining: TimeSpan.FromSeconds(10),
-            CurrentFps: 30.0,
-            CurrentSpeed: 1.0,
-            CurrentStage: "video",
-            CurrentOperation: "encode"
-        );
+            EncodingProgress progress = new(
+                CorrelationId: "test-id",
+                PercentComplete: 50.0,
+                Elapsed: TimeSpan.FromSeconds(10),
+                EstimatedRemaining: TimeSpan.FromSeconds(10),
+                CurrentFps: 30.0,
+                CurrentSpeed: 1.0,
+                CurrentStage: "video",
+                CurrentOperation: "encode"
+            );
 
-        Exception? ex = Record.Exception(() => observer.OnProgress(progress));
-        Assert.Null(ex);
+            Exception? ex = Record.Exception(() => observer.OnProgress(progress));
+            Assert.Null(ex);
+        }
+        finally
+        {
+            SetInstance(previous);
+        }
     }
 
     [Fact]
     public void OnStageStarted_WhenEventBusConfigured_PublishesStageChangedEvent()
     {
-        EncodingStageChangedEvent? captured = null;
-        Mock<IEventBus> mockBus = new();
-        mockBus
-            .Setup(b =>
-                b.PublishAsync(It.IsAny<EncodingStageChangedEvent>(), It.IsAny<CancellationToken>())
-            )
-            .Callback<EncodingStageChangedEvent, CancellationToken>((e, _) => captured = e)
-            .Returns(Task.CompletedTask);
+        IEventBus? previous = GetCurrentInstance();
+        try
+        {
+            EncoderProgressBroadcastEvent? captured = null;
+            Mock<IEventBus> mockBus = new();
+            mockBus
+                .Setup(b =>
+                    b.PublishAsync(
+                        It.IsAny<EncoderProgressBroadcastEvent>(),
+                        It.IsAny<CancellationToken>()
+                    )
+                )
+                .Callback<EncoderProgressBroadcastEvent, CancellationToken>((e, _) => captured = e)
+                .Returns(Task.CompletedTask);
 
-        EventBusProvider.Configure(mockBus.Object);
+            EventBusProvider.Configure(mockBus.Object);
 
-        EventBusProgressObserver observer = new(jobId: 42, title: "Action Movie");
-        observer.OnStageStarted("VideoEncode");
+            EventBusProgressObserver observer = new(jobId: 42, title: "Action Movie");
+            observer.OnStageStarted("VideoEncode");
 
-        mockBus.Verify(
-            b =>
-                b.PublishAsync(
-                    It.IsAny<EncodingStageChangedEvent>(),
-                    It.IsAny<CancellationToken>()
-                ),
-            Times.Once
-        );
-        Assert.NotNull(captured);
-        Assert.Equal(42, (int)captured.JobId);
-        Assert.Equal("encoding", captured.Status);
-        Assert.Equal("Action Movie", captured.Title);
-        Assert.Equal("Stage: VideoEncode", captured.Message);
-
-        // Reset
-        EventBusProvider.Configure(mockBus.Object);
+            mockBus.Verify(
+                b =>
+                    b.PublishAsync(
+                        It.IsAny<EncoderProgressBroadcastEvent>(),
+                        It.IsAny<CancellationToken>()
+                    ),
+                Times.Once
+            );
+            Assert.NotNull(captured);
+            object progressData = captured.ProgressData;
+            Assert.Equal(42, (int)GetField(progressData, "id")!);
+            Assert.Equal("encoding", (string)GetField(progressData, "status")!);
+            Assert.Equal("Action Movie", (string)GetField(progressData, "title")!);
+            Assert.Equal("Stage: VideoEncode", (string)GetField(progressData, "message")!);
+        }
+        finally
+        {
+            SetInstance(previous);
+        }
     }
 
     [Fact]
     public void OnError_WhenEventBusConfigured_PublishesStageChangedEventWithFailedStatus()
     {
-        EncodingStageChangedEvent? captured = null;
-        Mock<IEventBus> mockBus = new();
-        mockBus
-            .Setup(b =>
-                b.PublishAsync(It.IsAny<EncodingStageChangedEvent>(), It.IsAny<CancellationToken>())
-            )
-            .Callback<EncodingStageChangedEvent, CancellationToken>((e, _) => captured = e)
-            .Returns(Task.CompletedTask);
+        IEventBus? previous = GetCurrentInstance();
+        try
+        {
+            EncoderProgressBroadcastEvent? captured = null;
+            Mock<IEventBus> mockBus = new();
+            mockBus
+                .Setup(b =>
+                    b.PublishAsync(
+                        It.IsAny<EncoderProgressBroadcastEvent>(),
+                        It.IsAny<CancellationToken>()
+                    )
+                )
+                .Callback<EncoderProgressBroadcastEvent, CancellationToken>((e, _) => captured = e)
+                .Returns(Task.CompletedTask);
 
-        EventBusProvider.Configure(mockBus.Object);
+            EventBusProvider.Configure(mockBus.Object);
 
-        EventBusProgressObserver observer = new(jobId: 7, title: "Documentary");
-        EncodingError error = new(
-            Kind: EncodingErrorKind.ProcessCrashed,
-            Message: "FFmpeg crashed",
-            FfmpegStderr: null,
-            StageName: "VideoEncode",
-            Recoverable: false
-        );
-        observer.OnError(error);
+            EventBusProgressObserver observer = new(jobId: 7, title: "Documentary");
+            EncodingError error = new(
+                Kind: EncodingErrorKind.ProcessCrashed,
+                Message: "FFmpeg crashed",
+                FfmpegStderr: null,
+                StageName: "VideoEncode",
+                Recoverable: false
+            );
+            observer.OnError(error);
 
-        mockBus.Verify(
-            b =>
-                b.PublishAsync(
-                    It.IsAny<EncodingStageChangedEvent>(),
-                    It.IsAny<CancellationToken>()
-                ),
-            Times.Once
-        );
-        Assert.NotNull(captured);
-        Assert.Equal(7, (int)captured.JobId);
-        Assert.Equal("failed", captured.Status);
-        Assert.Equal("Documentary", captured.Title);
-        Assert.Equal("FFmpeg crashed", captured.Message);
-
-        // Reset
-        EventBusProvider.Configure(mockBus.Object);
+            mockBus.Verify(
+                b =>
+                    b.PublishAsync(
+                        It.IsAny<EncoderProgressBroadcastEvent>(),
+                        It.IsAny<CancellationToken>()
+                    ),
+                Times.Once
+            );
+            Assert.NotNull(captured);
+            object progressData = captured.ProgressData;
+            Assert.Equal(7, (int)GetField(progressData, "id")!);
+            Assert.Equal("failed", (string)GetField(progressData, "status")!);
+            Assert.Equal("Documentary", (string)GetField(progressData, "title")!);
+            Assert.Equal("FFmpeg crashed", (string)GetField(progressData, "message")!);
+        }
+        finally
+        {
+            SetInstance(previous);
+        }
     }
 
     [Fact]

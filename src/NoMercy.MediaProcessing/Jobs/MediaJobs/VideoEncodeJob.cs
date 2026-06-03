@@ -68,6 +68,12 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
     /// </summary>
     public CoordinatorState? Coordinator { get; set; }
 
+    /// <summary>
+    /// When set, encoding is limited to the single preset with this id.
+    /// Null preserves the default all-presets behavior.
+    /// </summary>
+    public Ulid? PresetId { get; set; }
+
     private int _selfJobId;
 
     public void ReceiveJobId(int jobId) => _selfJobId = jobId;
@@ -102,6 +108,16 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             .EncodingPresetFolders.Where(link => link.Preset is not null)
             .Select(link => link.Preset!)
             .ToList();
+
+        if (PresetId is not null)
+        {
+            presets = presets.Where(preset => preset.Id == PresetId.Value).ToList();
+            if (presets.Count == 0)
+                Logger.Encoder(
+                    $"[VideoEncodeJob] PresetId {PresetId.Value} not found in folder {FolderId} — no presets to run",
+                    LogEventLevel.Warning
+                );
+        }
 
         if (presets.Count == 0)
             return;

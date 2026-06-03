@@ -283,63 +283,66 @@ public class DiscRippingModelTests
     }
 
     // ---------------------------------------------------------------------------
-    // MetadataMatch
+    // DiscCandidate
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public void MetadataMatch_ConfidenceRange_IsValid()
+    public void DiscCandidate_ConfidenceRange_IsValid()
     {
-        MetadataMatch match = new(
+        DiscCandidate candidate = new(
             Source: "tmdb",
-            Confidence: 0.95,
+            StableId: "603",
             Title: "The Matrix",
             Year: 1999,
             PosterUrl: "https://image.tmdb.org/t/p/w500/abc.jpg",
-            ExternalId: "603",
+            BackdropUrl: null,
+            Confidence: 0.95,
             Type: MediaType.Movie
         );
 
-        match.Confidence.Should().BeGreaterThanOrEqualTo(0.0);
-        match.Confidence.Should().BeLessThanOrEqualTo(1.0);
-        match.Source.Should().Be("tmdb");
-        match.Title.Should().Be("The Matrix");
-        match.Year.Should().Be(1999);
-        match.ExternalId.Should().Be("603");
-        match.Type.Should().Be(MediaType.Movie);
+        candidate.Confidence.Should().BeGreaterThanOrEqualTo(0.0);
+        candidate.Confidence.Should().BeLessThanOrEqualTo(1.0);
+        candidate.Source.Should().Be("tmdb");
+        candidate.Title.Should().Be("The Matrix");
+        candidate.Year.Should().Be(1999);
+        candidate.StableId.Should().Be("603");
+        candidate.Type.Should().Be(MediaType.Movie);
     }
 
     [Fact]
-    public void MetadataMatch_TvShow_TypeCorrect()
+    public void DiscCandidate_TvShow_TypeCorrect()
     {
-        MetadataMatch match = new(
+        DiscCandidate candidate = new(
             Source: "tvdb",
-            Confidence: 0.88,
+            StableId: "81189",
             Title: "Breaking Bad",
             Year: 2008,
             PosterUrl: null,
-            ExternalId: "81189",
+            BackdropUrl: null,
+            Confidence: 0.88,
             Type: MediaType.TvShow
         );
 
-        match.Type.Should().Be(MediaType.TvShow);
-        match.PosterUrl.Should().BeNull();
+        candidate.Type.Should().Be(MediaType.TvShow);
+        candidate.PosterUrl.Should().BeNull();
     }
 
     [Fact]
-    public void MetadataMatch_Music_TypeCorrect()
+    public void DiscCandidate_Music_TypeCorrect()
     {
-        MetadataMatch match = new(
+        DiscCandidate candidate = new(
             Source: "musicbrainz",
-            Confidence: 0.72,
+            StableId: "a14a5a9f-3c8b-4f5d-bc3e-bb9f4e1e2a8c",
             Title: "The Dark Side of the Moon",
             Year: 1973,
             PosterUrl: null,
-            ExternalId: "a14a5a9f-3c8b-4f5d-bc3e-bb9f4e1e2a8c",
+            BackdropUrl: null,
+            Confidence: 0.72,
             Type: MediaType.Music
         );
 
-        match.Type.Should().Be(MediaType.Music);
-        match.Confidence.Should().BeGreaterThanOrEqualTo(0.0).And.BeLessThanOrEqualTo(1.0);
+        candidate.Type.Should().Be(MediaType.Music);
+        candidate.Confidence.Should().BeGreaterThanOrEqualTo(0.0).And.BeLessThanOrEqualTo(1.0);
     }
 
     // ---------------------------------------------------------------------------

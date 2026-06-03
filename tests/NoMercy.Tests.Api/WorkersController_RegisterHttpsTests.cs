@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -65,20 +64,19 @@ public class WorkersController_RegisterHttpsTests
 
     /// <summary>
     /// IsOwner() checks the private static <c>_users</c> list inside
-    /// <see cref="ClaimsPrincipleExtensions"/> — there is no public seeding
-    /// API, so reflect into the field once per test class load and inject a
-    /// fake owner user that matches <see cref="OwnerUserId"/>.
+    /// <see cref="ClaimsPrincipleExtensions"/>. Because the list is process-wide,
+    /// another test fixture (e.g. NoMercyApiFactory) may have replaced it via
+    /// InitializeAsync() or cleared it via Reset() before these tests run.
+    /// We therefore reset+reseed unconditionally on every BuildController() call
+    /// so the owner check is order-independent.
     /// </summary>
     private static void SeedOwnerInClaimsExtensions()
     {
-        FieldInfo field = typeof(ClaimsPrincipleExtensions).GetField(
-            "_users",
-            BindingFlags.NonPublic | BindingFlags.Static
-        )!;
-        List<User> users = (List<User>)field.GetValue(null)!;
-        if (users.Any(u => u.Id == OwnerUserId))
-            return;
-        users.Add(
+        // Reset wipes whatever a prior test left in the static — InitializeAsync
+        // from integration fixtures or Reset() from ClaimsPrincipleExtensionsTests.
+        ClaimsPrincipleExtensions.Reset();
+
+        ClaimsPrincipleExtensions.AddUser(
             new()
             {
                 Id = OwnerUserId,
