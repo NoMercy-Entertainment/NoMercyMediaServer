@@ -264,6 +264,51 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
         throw new NotImplementedException();
     }
 
+    public async Task UpdatePersonAsync(int personId)
+    {
+        using TmdbPersonClient personClient = new(personId);
+        TmdbPersonAppends? person = await personClient.WithAppends([
+            "external_ids",
+            "images",
+            "translations",
+        ]);
+
+        if (person?.Name is null)
+        {
+            Logger.MovieDb($"Person {personId} not found during refresh", LogEventLevel.Warning);
+            return;
+        }
+
+        await personRepository.Store([ToPersonEntity(person)]);
+        await StoreTranslations(person);
+        await StoreImages(person);
+
+        Logger.MovieDb($"Person {person.Name}: refreshed from TMDB changes", LogEventLevel.Debug);
+    }
+
+    private static Person ToPersonEntity(TmdbPersonAppends person)
+    {
+        return new()
+        {
+            Id = person.Id,
+            Adult = person.Adult,
+            AlsoKnownAs = person.AlsoKnownAs.Length > 0 ? person.AlsoKnownAs.ToJson() : null,
+            Biography = person.Biography,
+            BirthDay = person.BirthDay,
+            DeathDay = person.DeathDay,
+            TmdbGender = (TmdbGender)person.TmdbGender,
+            _externalIds = person.ExternalIds.ToJson(),
+            Homepage = person.Homepage?.ToString(),
+            ImdbId = person.ImdbId,
+            KnownForDepartment = person.KnownForDepartment,
+            Name = person.Name,
+            PlaceOfBirth = person.PlaceOfBirth,
+            Popularity = person.Popularity,
+            Profile = person.ProfilePath,
+            TitleSort = person.Name,
+        };
+    }
+
     internal async Task StoreTranslations(TmdbPersonAppends person)
     {
         IEnumerable<Translation> translations = person

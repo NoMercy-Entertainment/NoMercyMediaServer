@@ -1,3 +1,4 @@
+using NoMercy.MediaProcessing.Jobs.ChangesJobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.Queue.MediaServer.Jobs;
 using NoMercyQueue.Extensions;
@@ -10,6 +11,7 @@ public static partial class ServiceConfiguration
     {
         services.RegisterCronJob<CertificateRenewalCronJob>("certificate-renewal");
         services.RegisterCronJob<ActivityLogRetentionCronJob>("activity-log-retention");
+        services.RegisterCronJob<TmdbChangesCronJob>("tmdb-changes-sync");
 
         services.RegisterCronJob<ShowPaletteCronJob>("show-palette-job");
         services.RegisterCronJob<SeasonPaletteCronJob>("season-palette-job");

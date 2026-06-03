@@ -10,6 +10,7 @@ using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
+using NoMercy.MediaProcessing.Jobs.ChangesJobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
@@ -71,6 +72,10 @@ public static class ApplicationConfiguration
         );
         cronWorker.RegisterJobWithSchedule<ActivityLogRetentionCronJob>(
             "activity-log-retention",
+            app.ApplicationServices
+        );
+        cronWorker.RegisterJobWithSchedule<TmdbChangesCronJob>(
+            "tmdb-changes-sync",
             app.ApplicationServices
         );
 

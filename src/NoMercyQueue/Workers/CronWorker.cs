@@ -76,7 +76,7 @@ public class CronWorker : BackgroundService
             JobType = jobType,
             Parameters = parameters != null ? JsonConvert.SerializeObject(parameters) : null,
             IsEnabled = true,
-            NextRun = CronService.GetNextOccurrence(cronExpression, DateTime.Now),
+            NextRun = CronService.GetNextOccurrence(cronExpression, DateTime.UtcNow),
         };
 
         _codeDefinedJobs.Add(job);
@@ -93,7 +93,7 @@ public class CronWorker : BackgroundService
         using IServiceScope scope = serviceProvider.CreateScope();
         T executor = scope.ServiceProvider.GetRequiredService<T>();
 
-        DateTime currentTime = DateTime.Now;
+        DateTime currentTime = DateTime.UtcNow;
         DateTime nextRun = CronService.GetNextOccurrence(executor.CronExpression, currentTime);
 
         // Individual registration logged at trace — summary logged in ExecuteAsync
@@ -160,7 +160,8 @@ public class CronWorker : BackgroundService
         {
             try
             {
-                DateTime currentTime = DateTime.Now;
+                // Schedules are evaluated in UTC so Daily(n) means n:00 UTC on every host.
+                DateTime currentTime = DateTime.UtcNow;
 
                 // Check if it's time to run
                 if (job.NextRun.HasValue && currentTime >= job.NextRun.Value)

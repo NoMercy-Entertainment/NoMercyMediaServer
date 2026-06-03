@@ -78,7 +78,7 @@ public class TmdbTvClient : TmdbBaseClient
             ["end_date"] = endDate,
         };
 
-        return Get<TmdbTvChanges>("tv/changes", queryParams, priority: priority);
+        return Get<TmdbTvChanges>("tv/" + Id + "/changes", queryParams, priority: priority);
     }
 
     public Task<TmdbTvContentRatings?> ContentRatings(bool? priority = false)
