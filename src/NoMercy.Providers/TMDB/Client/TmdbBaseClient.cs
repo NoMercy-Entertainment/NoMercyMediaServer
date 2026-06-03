@@ -72,7 +72,7 @@ public class TmdbBaseClient : IDisposable
 
         query["language"] = priority is true ? Language : "";
 
-        query["include_adult"] = Config.AllowAdultContent;
+        query["include_adult"] = Config.ShowAdultContent ? "true" : "false";
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 

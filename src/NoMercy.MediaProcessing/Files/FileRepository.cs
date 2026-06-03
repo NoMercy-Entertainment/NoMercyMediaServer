@@ -139,7 +139,10 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         switch (library.Type)
         {
             case Config.MovieMediaType:
-                movie = await context.Movies.Where(m => m.Id == id).FirstOrDefaultAsync();
+                movie = await context
+                    .Movies.IgnoreQueryFilters()
+                    .Where(m => m.Id == id)
+                    .FirstOrDefaultAsync();
                 type = library.Type;
                 break;
             case Config.TvMediaType:

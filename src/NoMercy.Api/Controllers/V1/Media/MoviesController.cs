@@ -61,6 +61,11 @@ public class MoviesController(
             if (movieAppends is null)
                 return NotFoundResponse("Movie not found");
 
+            if (movieAppends.Adult && !Config.ShowAdultContent)
+                return UnauthorizedResponse(
+                    "Movie is adult which is not allowed by the server configuration"
+                );
+
             return Ok(new InfoResponseDto { Data = new(movieAppends, country) });
         }
         catch (Exception)

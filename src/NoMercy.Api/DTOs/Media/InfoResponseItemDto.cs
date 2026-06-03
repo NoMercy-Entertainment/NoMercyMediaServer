@@ -17,6 +17,9 @@ public record InfoResponseItemDto
     [JsonProperty("id")]
     public long Id { get; set; }
 
+    [JsonProperty("adult")]
+    public bool? Adult { get; set; }
+
     [JsonProperty("title")]
     public string? Title { get; set; }
 
@@ -137,6 +140,7 @@ public record InfoResponseItemDto
         string? overview = movie.Translations.FirstOrDefault()?.Overview;
 
         Id = movie.Id;
+        Adult = movie.Adult;
         Title = movie.Title;
         Overview = !string.IsNullOrEmpty(overview) ? overview : movie.Overview;
         Type = Config.MovieMediaType;
@@ -215,6 +219,7 @@ public record InfoResponseItemDto
 
         Similar = movie
             .SimilarFrom.Select(similar => new RelatedDto(similar, Config.MovieMediaType))
+            .Where(related => related.Adult == false)
             .Where(item => item.Poster != null);
 
         Recommendations = movie
@@ -222,6 +227,7 @@ public record InfoResponseItemDto
                 recommendation,
                 Config.MovieMediaType
             ))
+            .Where(related => related.Adult == false)
             .Where(item => item.Poster != null);
 
         GroupedWatchProviders = movie
@@ -244,6 +250,7 @@ public record InfoResponseItemDto
             ?.Data.Overview;
 
         Id = tmdbMovie.Id;
+        Adult = tmdbMovie.Adult;
         Title = tmdbMovie.Title;
         Overview = !string.IsNullOrEmpty(overview) ? overview : tmdbMovie.Overview;
         Type = Config.MovieMediaType;
@@ -301,14 +308,16 @@ public record InfoResponseItemDto
 
         Similar = tmdbMovie
             .Similar.Results.Select(similar => new RelatedDto(similar, Config.MovieMediaType))
-            .Where(item => item.Poster != null);
+            .Where(related => related.Adult == false)
+            .Where(related => related.Poster != null);
 
         Recommendations = tmdbMovie
             .Recommendations.Results.Select(recommendation => new RelatedDto(
                 recommendation,
                 Config.MovieMediaType
             ))
-            .Where(item => item.Poster != null);
+            .Where(related => related.Adult == false)
+            .Where(related => related.Poster != null);
 
         GroupedWatchProviders = TmdbWatchProviders
             .ExtractProviders(tmdbMovie.WatchProviders.TmdbWatchProviderResults)
@@ -490,6 +499,7 @@ public record InfoResponseItemDto
             ?.Data.Overview;
 
         Id = tmdbTv.Id;
+        Adult = tmdbTv.Adult;
         Title = !string.IsNullOrEmpty(title) ? title : tmdbTv.Name;
         Overview = !string.IsNullOrEmpty(overview) ? overview : tmdbTv.Overview;
         Type = tmdbTv.Type ?? Config.TvMediaType;
@@ -681,11 +691,13 @@ public record InfoResponseItemDto
 
         PeopleDto[] cast = collection
             .CollectionMovies.SelectMany(collectionMovie => collectionMovie.Movie.Cast)
+            .Where(cast => cast.Person.Adult == false)
             .Select(cast => new PeopleDto(cast))
             .ToArray();
 
         PeopleDto[] crew = collection
             .CollectionMovies.SelectMany(collectionMovie => collectionMovie.Movie.Crew)
+            .Where(crew => crew.Person.Adult == false)
             .Select(crew => new PeopleDto(crew))
             .ToArray();
 

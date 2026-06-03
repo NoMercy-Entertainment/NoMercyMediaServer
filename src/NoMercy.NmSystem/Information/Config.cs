@@ -106,7 +106,11 @@ public static class Config
         MaxDegreeOfParallelism = (int)Math.Floor(Environment.ProcessorCount / 2.0),
     };
 
-    public static string? AllowAdultContent { get; set; } = "false";
+    public static bool? AllowAdultContent { get; set; }
+
+    // Safe-by-default: adult content is shown only when explicitly enabled.
+    // A null (never configured) or false setting both resolve to hidden.
+    public static bool ShowAdultContent => AllowAdultContent == true;
 
     public const int MaximumCardsInCarousel = 36;
     public const int MaximumItemsPerPage = 500;

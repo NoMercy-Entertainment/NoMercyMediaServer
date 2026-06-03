@@ -18,6 +18,12 @@ public class MediaContext : DbContext
 
     public MediaContext() { }
 
+    // Backs the adult-content query filter. Must be an instance member: EF Core
+    // parameterizes instance references in a filter (re-read per query) but
+    // constant-folds a static reference into the cached model, which would
+    // freeze the value at first build and ignore a runtime toggle.
+    public bool ShowAdultContent => Config.ShowAdultContent;
+
     [DbFunction("normalize_search", IsBuiltIn = true)]
     public static string NormalizeSearch(string? input) =>
         throw new NotSupportedException("This method is for EF Core query translation only.");
@@ -159,6 +165,15 @@ public class MediaContext : DbContext
             .WithMany()
             .HasForeignKey(c => c.LibraryId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Base adult-content filter: entities carrying an Adult column never surface
+        // explicit rows unless the server explicitly enables it. Filters reference the
+        // instance ShowAdultContent so EF parameterizes the value per query, letting a
+        // runtime toggle take effect on the next query. Internal by-id lookups in the
+        // encode/file pipeline use IgnoreQueryFilters() so already present media still
+        // processes.
+        modelBuilder.Entity<Movie>().HasQueryFilter(movie => ShowAdultContent || !movie.Adult);
+        modelBuilder.Entity<Person>().HasQueryFilter(person => ShowAdultContent || !person.Adult);
 
         modelBuilder
             .Entity<Album>()

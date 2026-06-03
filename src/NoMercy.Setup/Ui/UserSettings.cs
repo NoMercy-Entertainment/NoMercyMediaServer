@@ -134,6 +134,9 @@ public static class UserSettings
                 case "swagger":
                     Config.Swagger = setting.Value.ToBoolean();
                     break;
+                case "allowAdultContent":
+                    Config.AllowAdultContent = setting.Value.ToBoolean();
+                    break;
             }
         }
     }

@@ -1441,7 +1441,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
     private async Task<FileMetadata> GetFileMetaData(Folder folder, MediaContext context)
     {
         Movie? movie = folder.FolderLibraries.Any(x => x.Library.Type == Config.MovieMediaType)
-            ? await context.Movies.FirstOrDefaultAsync(x => x.Id == Id.ToInt())
+            ? await context.Movies.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == Id.ToInt())
             : null;
 
         Episode? episode = folder.FolderLibraries.Any(x =>

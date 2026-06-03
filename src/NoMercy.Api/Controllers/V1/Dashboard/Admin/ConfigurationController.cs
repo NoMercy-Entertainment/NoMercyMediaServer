@@ -54,6 +54,7 @@ public class ConfigurationController(
                     MusicWorkers = Config.MusicWorkers.Value,
                     ServerName = DeviceName(),
                     Swagger = Config.Swagger,
+                    AllowAdultContent = Config.ShowAdultContent,
                 },
             }
         );
@@ -244,6 +245,25 @@ public class ConfigurationController(
                 )
                 .RunAsync();
             changes.Add(("swagger", oldSwagger, (bool)request.Swagger));
+        }
+
+        if (request.AllowAdultContent is not null)
+        {
+            bool oldAllowAdult = Config.ShowAdultContent;
+            Config.AllowAdultContent = request.AllowAdultContent;
+            await appContext
+                .Configuration.Upsert(
+                    new()
+                    {
+                        Key = "allowAdultContent",
+                        Value = Config.ShowAdultContent.ToString(),
+                        ModifiedBy = userId,
+                    }
+                )
+                .On(e => e.Key)
+                .WhenMatched((o, n) => new() { Value = n.Value, ModifiedBy = n.ModifiedBy })
+                .RunAsync();
+            changes.Add(("allowAdultContent", oldAllowAdult, (bool)request.AllowAdultContent));
         }
 
         if (request.ServerName is not null)

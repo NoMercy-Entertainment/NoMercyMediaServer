@@ -13,6 +13,9 @@ public record RelatedDto
     [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
+    [JsonProperty("adult")]
+    public bool? Adult { get; set; }
+
     [JsonProperty("id")]
     public int Id { get; set; }
 
@@ -101,6 +104,7 @@ public record RelatedDto
     public RelatedDto(TmdbMovie tmdbSimilar, string type)
     {
         Id = tmdbSimilar.Id;
+        Adult = tmdbSimilar.Adult;
         Overview = tmdbSimilar.Overview;
         Poster = tmdbSimilar.PosterPath;
         Backdrop = tmdbSimilar.BackdropPath;

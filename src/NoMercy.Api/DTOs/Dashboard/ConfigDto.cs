@@ -45,4 +45,7 @@ public class ConfigDtoData
 
     [JsonProperty("swagger")]
     public bool? Swagger { get; set; }
+
+    [JsonProperty("allow_adult_content")]
+    public bool? AllowAdultContent { get; set; }
 }

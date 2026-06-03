@@ -633,4 +633,12 @@
     <Key>Artists: L</Key>
     <Value lang="nl">Artists: L</Value>
   </Entry>
+  <Entry>
+    <Key>Movie is adult which is not allowed by the server configuration</Key>
+    <Value lang="nl">Movie is adult which is not allowed by the server configuration</Value>
+  </Entry>
+  <Entry>
+    <Key>Person is adult which is not allowed by the server configuration</Key>
+    <Value lang="nl">Person is adult which is not allowed by the server configuration</Value>
+  </Entry>
 </I18N>

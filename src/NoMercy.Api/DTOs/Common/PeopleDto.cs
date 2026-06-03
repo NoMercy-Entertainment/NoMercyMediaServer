@@ -14,6 +14,9 @@ public record PeopleDto
     [JsonProperty("character")]
     public string? Character { get; set; }
 
+    [JsonProperty("adult")]
+    public bool? Adult { get; set; }
+
     [JsonProperty("job")]
     public string? Job { get; set; }
 
@@ -53,6 +56,7 @@ public record PeopleDto
     public PeopleDto()
     {
         Name = string.Empty;
+        Adult = null;
         Gender = string.Empty;
         Translations = [];
         Link = new("/person/0", UriKind.Relative);
@@ -61,6 +65,7 @@ public record PeopleDto
     public PeopleDto(Cast cast)
     {
         Id = cast.Person.Id;
+        Adult = cast.Person.Adult;
         Character = cast.Role.Character;
         ProfilePath = cast.Person.Profile;
         KnownForDepartment = cast.Person.KnownForDepartment;
@@ -76,6 +81,7 @@ public record PeopleDto
     public PeopleDto(TmdbCast tmdbCast)
     {
         Id = tmdbCast.Id;
+        Adult = tmdbCast.Adult;
         Character = tmdbCast.Character;
         ProfilePath = tmdbCast.ProfilePath;
         KnownForDepartment = tmdbCast.KnownForDepartment;
@@ -90,6 +96,7 @@ public record PeopleDto
     public PeopleDto(Crew crew)
     {
         Id = crew.Person.Id;
+        Adult = crew.Person.Adult;
         Job = crew.Job.Task;
         ProfilePath = crew.Person.Profile;
         KnownForDepartment = crew.Person.KnownForDepartment;
@@ -105,6 +112,7 @@ public record PeopleDto
     public PeopleDto(TmdbCrew tmdbCrew)
     {
         Id = tmdbCrew.Id;
+        Adult = tmdbCrew.Adult;
         Job = tmdbCrew.Job;
         ProfilePath = tmdbCrew.ProfilePath;
         KnownForDepartment = tmdbCrew.KnownForDepartment;
@@ -131,6 +139,7 @@ public record PeopleDto
     public PeopleDto(Creator creator)
     {
         Id = creator.Person.Id;
+        Adult = creator.Person.Adult;
         Job = "Creator";
         ProfilePath = creator.Person.Profile;
         KnownForDepartment = creator.Person.KnownForDepartment;

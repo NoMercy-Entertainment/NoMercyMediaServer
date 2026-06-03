@@ -6,6 +6,7 @@ using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.People;
 
@@ -53,6 +54,11 @@ public class PeopleController(MediaContext mediaContext, IPeopleRepository peopl
 
         if (personAppends is null)
             return NotFoundResponse("Person not found");
+
+        if (personAppends.Adult && !Config.ShowAdultContent)
+            return UnauthorizedResponse(
+                "Person is adult which is not allowed by the server configuration"
+            );
 
         return Ok(new PersonResponseDto { Data = new(personAppends, country, mediaContext) });
     }
