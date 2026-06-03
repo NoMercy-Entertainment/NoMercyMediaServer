@@ -19,6 +19,8 @@ using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Images.Palettes;
+using NoMercy.MediaProcessing.Images.Palettes.Sources;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.Movies;
@@ -362,6 +364,22 @@ public static partial class ServiceConfiguration
         services.AddScoped<RecommendationService>();
         services.AddScoped<SetupService>();
 
+        // Palette pipeline — contract-based DI, dispatched by EntityType
+        services.AddScoped<IPaletteSource, MoviePaletteSource>();
+        services.AddScoped<IPaletteSource, TvPaletteSource>();
+        services.AddScoped<IPaletteSource, SeasonPaletteSource>();
+        services.AddScoped<IPaletteSource, EpisodePaletteSource>();
+        services.AddScoped<IPaletteSource, CollectionPaletteSource>();
+        services.AddScoped<IPaletteSource, PersonPaletteSource>();
+        services.AddScoped<IPaletteSource, RecommendationPaletteSource>();
+        services.AddScoped<IPaletteSource, SimilarPaletteSource>();
+        services.AddScoped<IPaletteSource, ImagePaletteSource>();
+        services.AddScoped<IPaletteSource, ArtistPaletteSource>();
+        services.AddScoped<IPaletteSource, AlbumPaletteSource>();
+        services.AddScoped<IPaletteSource, PlaylistPaletteSource>();
+        services.AddScoped<IPaletteSource, ReleaseGroupPaletteSource>();
+        services.AddScoped<PaletteSourceRegistry>();
+
         services.AddMediaServerQueue();
         services.AddSingleton<JobDispatcher>();
 
@@ -412,6 +430,7 @@ public static partial class ServiceConfiguration
         services.AddHostedService<EncodingNotificationSubscriber>();
         services.AddHostedService<AutoEncodeSubscriber>();
         services.AddHostedService<IntroDetectionSubscriber>();
+        services.AddHostedService<PaletteBackfillStartupService>();
 
         services.AddPluginSystem(AppFiles.PluginsPath);
         services.RegisterPluginServicesFromManifests(AppFiles.PluginsPath);

@@ -2,6 +2,8 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -19,7 +21,8 @@ namespace NoMercy.MediaProcessing.Releases;
 public class ReleaseManager(
     IReleaseRepository releaseRepository,
     IMusicGenreRepository musicGenreRepository,
-    IStorageFactory storageFactory
+    IStorageFactory storageFactory,
+    JobDispatcher jobDispatcher
 ) : BaseManager, IReleaseManager
 {
     public async Task<(
@@ -93,6 +96,7 @@ public class ReleaseManager(
             };
 
             await releaseRepository.Store(release);
+            jobDispatcher.DispatchColorPaletteJob("album", release.Id.ToString());
 
             await LinkToLibrary(releaseAppends, library);
 
@@ -166,6 +170,7 @@ public class ReleaseManager(
             };
 
             await releaseRepository.Store(release);
+            jobDispatcher.DispatchColorPaletteJob("album", release.Id.ToString());
 
             await LinkToLibrary(releaseAppends, library);
             await LinkToReleaseGroup(releaseAppends);

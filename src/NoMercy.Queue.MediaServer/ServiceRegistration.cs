@@ -43,6 +43,7 @@ public static class ServiceRegistration
                     [Config.ImageWorkers.Key] = Config.ImageWorkers.Value,
                     [Config.FileWorkers.Key] = Config.FileWorkers.Value,
                     [Config.MusicWorkers.Key] = Config.MusicWorkers.Value,
+                    [Config.PaletteWorkers.Key] = Config.PaletteWorkers.Value,
                 },
             };
             return new(

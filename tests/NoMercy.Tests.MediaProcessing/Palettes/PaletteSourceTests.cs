@@ -1,0 +1,215 @@
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Music;
+using NoMercy.MediaProcessing.Images.Palettes;
+using NoMercy.MediaProcessing.Images.Palettes.Sources;
+using NoMercy.NmSystem.Information;
+
+namespace NoMercy.Tests.MediaProcessing.Palettes;
+
+[Trait("Category", "Unit")]
+public class PaletteSourceTests : IDisposable
+{
+    private readonly MediaContext _db;
+
+    public PaletteSourceTests()
+    {
+        DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new(options);
+    }
+
+    public void Dispose()
+    {
+        _db.Dispose();
+    }
+
+    // ── TMDB sources ────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Movie_returns_NoImage_when_both_image_fields_are_null()
+    {
+        Movie movie = new()
+        {
+            Id = 1,
+            Title = "Test",
+            Poster = null,
+            Backdrop = null,
+        };
+        _db.Movies.Add(movie);
+        await _db.SaveChangesAsync();
+
+        MoviePaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(_db, "1", CancellationToken.None);
+
+        result.Json.Should().Be("{}");
+        result.Permanent.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Movie_returns_NoImage_when_entity_not_found()
+    {
+        MoviePaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(_db, "999", CancellationToken.None);
+
+        result.Json.Should().Be("{}");
+        result.Permanent.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Tv_returns_NoImage_when_both_image_fields_are_null()
+    {
+        NoMercy.Database.Models.TvShows.Tv tv = new()
+        {
+            Id = 1,
+            Title = "Test",
+            Poster = null,
+            Backdrop = null,
+        };
+        _db.Tvs.Add(tv);
+        await _db.SaveChangesAsync();
+
+        TvPaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(_db, "1", CancellationToken.None);
+
+        result.Json.Should().Be("{}");
+        result.Permanent.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Season_returns_NoImage_when_poster_is_null()
+    {
+        NoMercy.Database.Models.TvShows.Season season = new() { Id = 1, Poster = null };
+        _db.Seasons.Add(season);
+        await _db.SaveChangesAsync();
+
+        SeasonPaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(_db, "1", CancellationToken.None);
+
+        result.Json.Should().Be("{}");
+        result.Permanent.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Image_returns_NoImage_for_non_tmdb_site()
+    {
+        NoMercy.Database.Models.Media.Image image = new()
+        {
+            FilePath = "/some/file.jpg",
+            Type = "poster",
+            Site = "https://assets.fanart.tv/",
+            AspectRatio = 1.0,
+        };
+        _db.Images.Add(image);
+        await _db.SaveChangesAsync();
+
+        ImagePaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(
+            _db,
+            image.Id.ToString(),
+            CancellationToken.None
+        );
+
+        result.Json.Should().Be("{}");
+        result.Permanent.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Image_returns_NoImage_for_svg_file()
+    {
+        NoMercy.Database.Models.Media.Image image = new()
+        {
+            FilePath = "/some/file.svg",
+            Type = "poster",
+            Site = "https://image.tmdb.org/t/p/",
+            AspectRatio = 1.0,
+        };
+        _db.Images.Add(image);
+        await _db.SaveChangesAsync();
+
+        ImagePaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(
+            _db,
+            image.Id.ToString(),
+            CancellationToken.None
+        );
+
+        result.Json.Should().Be("{}");
+        result.Permanent.Should().BeTrue();
+    }
+
+    // ── Local-file (music) sources ──────────────────────────────────────────
+
+    [Fact]
+    public async Task Artist_returns_NoImage_when_cover_is_null()
+    {
+        Artist artist = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test",
+            HostFolder = "/music",
+            Cover = null,
+        };
+        _db.Artists.Add(artist);
+        await _db.SaveChangesAsync();
+
+        ArtistPaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(
+            _db,
+            artist.Id.ToString(),
+            CancellationToken.None
+        );
+
+        result.Json.Should().Be("{}");
+        result.Permanent.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Artist_returns_NoImage_when_local_file_does_not_exist()
+    {
+        Artist artist = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test",
+            HostFolder = "/music",
+            Cover = "/nonexistent.jpg",
+        };
+        _db.Artists.Add(artist);
+        await _db.SaveChangesAsync();
+
+        ArtistPaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(
+            _db,
+            artist.Id.ToString(),
+            CancellationToken.None
+        );
+
+        result.Json.Should().Be("{}");
+        result.Permanent.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Album_returns_NoImage_when_cover_is_null()
+    {
+        Album album = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test",
+            Cover = null,
+        };
+        _db.Albums.Add(album);
+        await _db.SaveChangesAsync();
+
+        AlbumPaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(
+            _db,
+            album.Id.ToString(),
+            CancellationToken.None
+        );
+
+        result.Json.Should().Be("{}");
+        result.Permanent.Should().BeTrue();
+    }
+}

@@ -11,7 +11,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.ChangesJobs;
-using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Client;
@@ -76,57 +75,6 @@ public static class ApplicationConfiguration
         );
         cronWorker.RegisterJobWithSchedule<TmdbChangesCronJob>(
             "tmdb-changes-sync",
-            app.ApplicationServices
-        );
-
-        cronWorker.RegisterJobWithSchedule<ShowPaletteCronJob>(
-            "show-palette-job",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<SeasonPaletteCronJob>(
-            "season-palette-job",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<EpisodePaletteCronJob>(
-            "episode-palette-job",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<MoviePaletteCronJob>(
-            "movie-palette-job",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<CollectionPaletteCronJob>(
-            "collection-palette-job",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<PersonPaletteCronJob>(
-            "person-palette-job",
-            app.ApplicationServices
-        );
-        //
-        cronWorker.RegisterJobWithSchedule<ImagePaletteCronJob>(
-            "image-palette-job",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<RecommendationPaletteCronJob>(
-            "recommendation-palette-job",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<SimilarPaletteCronJob>(
-            "similar-palette-job",
-            app.ApplicationServices
-        );
-
-        cronWorker.RegisterJobWithSchedule<ArtistFanartCronJob>(
-            "artist-fanart-job",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<ArtistPaletteCronJob>(
-            "artist-palette-job",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<AlbumPaletteCronJob>(
-            "album-palette-job",
             app.ApplicationServices
         );
 

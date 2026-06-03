@@ -1,6 +1,8 @@
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.MusicBrainz.Models;
@@ -8,9 +10,10 @@ using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.ReleaseGroups;
 
-public class ReleaseGroupManager(IReleaseGroupRepository releaseGroupRepository)
-    : BaseManager,
-        IReleaseGroupManager
+public class ReleaseGroupManager(
+    IReleaseGroupRepository releaseGroupRepository,
+    JobDispatcher jobDispatcher
+) : BaseManager, IReleaseGroupManager
 {
     public async Task Store(
         MusicBrainzReleaseGroup releaseGroup,
@@ -37,6 +40,7 @@ public class ReleaseGroupManager(IReleaseGroupRepository releaseGroupRepository)
         };
 
         await releaseGroupRepository.Store(insert);
+        jobDispatcher.DispatchColorPaletteJob("releasegroup", insert.Id.ToString());
 
         Logger.MusicBrainz($"Release Group {releaseGroup.Title} stored", LogEventLevel.Verbose);
     }

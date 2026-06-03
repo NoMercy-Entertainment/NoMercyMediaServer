@@ -6,6 +6,7 @@ using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -62,6 +63,7 @@ public class ArtistManager(
         };
 
         await artistRepository.StoreAsync(artist);
+        jobDispatcher.DispatchColorPaletteJob("artist", artist.Id.ToString());
 
         await LinkToLibrary(artistCredit.MusicBrainzArtist, library);
         await LinkToRelease(artistCredit.MusicBrainzArtist, releaseAppends);
@@ -115,9 +117,7 @@ public class ArtistManager(
             Disambiguation = string.IsNullOrEmpty(artistCredit.Disambiguation)
                 ? null
                 : artistCredit.Disambiguation,
-            Cover = coverPalette?.Url is not null 
-                ? $"/{coverPalette.Url.FileName()}" 
-                : null,
+            Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
             Country = artistCredit.Country,
             TitleSort = string.IsNullOrEmpty(artistCredit.SortName)
                 ? artistCredit.Name.TitleSort()
@@ -131,6 +131,7 @@ public class ArtistManager(
         };
 
         await artistRepository.StoreAsync(artist);
+        jobDispatcher.DispatchColorPaletteJob("artist", artist.Id.ToString());
         jobDispatcher.DispatchJob<MusicMetadataJob>(artistCredit);
 
         await LinkToLibrary(artistCredit, library);
@@ -195,9 +196,7 @@ public class ArtistManager(
             Disambiguation = string.IsNullOrEmpty(artistCredit.Disambiguation)
                 ? null
                 : artistCredit.Disambiguation,
-            Cover = coverPalette?.Url is not null 
-                ? $"/{coverPalette.Url.FileName()}" 
-                : null,
+            Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
             Country = artistCredit.Country,
             TitleSort = string.IsNullOrEmpty(artistCredit.SortName)
                 ? artistCredit.Name.TitleSort()
@@ -211,6 +210,7 @@ public class ArtistManager(
         };
 
         await artistRepository.StoreAsync(artist);
+        jobDispatcher.DispatchColorPaletteJob("artist", artist.Id.ToString());
         jobDispatcher.DispatchJob<MusicMetadataJob>(artistCredit);
 
         await LinkToLibrary(artistCredit, library);

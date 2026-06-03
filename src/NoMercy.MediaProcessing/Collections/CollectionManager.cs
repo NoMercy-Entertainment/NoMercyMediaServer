@@ -50,6 +50,7 @@ public class CollectionManager(
 
         await StoreTranslations(collectionAppends);
 
+        jobDispatcher.DispatchColorPaletteJob("collection", collection.Id.ToString());
         jobDispatcher.DispatchJob<CollectionExtrasJob, TmdbCollectionAppends>(collectionAppends);
 
         Logger.MovieDb(

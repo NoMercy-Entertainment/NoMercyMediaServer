@@ -16,10 +16,12 @@ using NoMercy.Events.Library;
 using NoMercy.Events.Music;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
+using NoMercyQueue;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -140,6 +142,13 @@ public class AlbumsController : BaseController
 
         if (album is null)
             return NotFoundResponse("Albums not found");
+
+        if (string.IsNullOrEmpty(album._colorPalette) || album._colorPalette == "{}")
+            QueueRunner.Current?.Dispatcher.Dispatch(
+                new ColorPaletteJob("album", album.Id.ToString()),
+                "palette",
+                1
+            );
 
         return Ok(new AlbumResponseDto { Data = new(album, language) });
     }

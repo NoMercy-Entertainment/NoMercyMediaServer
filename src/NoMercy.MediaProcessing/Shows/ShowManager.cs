@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -128,18 +130,14 @@ public class ShowManager(
             LogEventLevel.Debug
         );
 
-        ShowManager showManager = new(
-            showRepository,
-            jobDispatcher,
-            storageFactory,
-            storageDriver
-        );
+        ShowManager showManager = new(showRepository, jobDispatcher, storageFactory, storageDriver);
         await showManager.StoreGenres(showAppends);
         await showManager.StoreContentRatings(showAppends);
         await showManager.StoreTranslations(showAppends);
 
         Logger.MovieDb($"Show {showAppends.Name}: Added to Library {library.Title}");
 
+        jobDispatcher.DispatchColorPaletteJob("tv", show.Id.ToString());
         jobDispatcher.DispatchJob<ShowExtrasJob, TmdbTvShowAppends>(showAppends);
 
         return showAppends;
@@ -231,6 +229,16 @@ public class ShowManager(
         await showRepository.StoreSimilar(similar);
 
         Logger.MovieDb($"Show {show.Name}: Similar stored", LogEventLevel.Debug);
+
+        await using MediaContext db = new();
+        List<int> similarIds = await db
+            .Similar.AsNoTracking()
+            .Where(s => s.TvFromId == show.Id && (s._colorPalette == null || s._colorPalette == ""))
+            .Select(s => s.Id)
+            .ToListAsync();
+
+        foreach (int id in similarIds)
+            jobDispatcher.DispatchColorPaletteJob("similar", id.ToString());
     }
 
     internal async Task StoreRecommendations(TmdbTvShowAppends show)
@@ -251,6 +259,16 @@ public class ShowManager(
         await showRepository.StoreRecommendations(recommendations);
 
         Logger.MovieDb($"Show {show.Name}: Recommendations stored", LogEventLevel.Debug);
+
+        await using MediaContext db = new();
+        List<int> recommendationIds = await db
+            .Recommendations.AsNoTracking()
+            .Where(r => r.TvFromId == show.Id && (r._colorPalette == null || r._colorPalette == ""))
+            .Select(r => r.Id)
+            .ToListAsync();
+
+        foreach (int id in recommendationIds)
+            jobDispatcher.DispatchColorPaletteJob("recommendation", id.ToString());
     }
 
     internal async Task StoreVideos(TmdbTvShowAppends show)
@@ -329,6 +347,16 @@ public class ShowManager(
 
         await showRepository.StoreImages(logos);
         Logger.MovieDb($"Show {show.Name}: Logos stored", LogEventLevel.Debug);
+
+        await using MediaContext db = new();
+        List<int> imageIds = await db
+            .Images.AsNoTracking()
+            .Where(i => i.TvId == show.Id && (i._colorPalette == null || i._colorPalette == ""))
+            .Select(i => i.Id)
+            .ToListAsync();
+
+        foreach (int id in imageIds)
+            jobDispatcher.DispatchColorPaletteJob("image", id.ToString());
     }
 
     internal async Task StoreKeywords(TmdbTvShowAppends show)

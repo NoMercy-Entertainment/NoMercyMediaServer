@@ -100,6 +100,7 @@ public static class Config
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 3);
     public static KeyValuePair<string, int> FileWorkers { get; set; } = new("file", 2);
     public static KeyValuePair<string, int> MusicWorkers { get; set; } = new("music", 2);
+    public static KeyValuePair<string, int> PaletteWorkers { get; set; } = new("palette", 1);
 
     public static readonly ParallelOptions ParallelOptions = new()
     {

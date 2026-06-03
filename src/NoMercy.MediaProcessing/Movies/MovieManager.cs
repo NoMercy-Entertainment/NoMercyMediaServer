@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -118,6 +120,7 @@ public class MovieManager(
 
         Logger.MovieDb($"Movie: {movieAppends.Title}: Added to Library {library.Title}");
 
+        jobDispatcher.DispatchColorPaletteJob("movie", movie.Id.ToString());
         jobDispatcher.DispatchJob<MovieExtrasJob, TmdbMovieAppends>(movieAppends);
 
         return movieAppends;
@@ -206,6 +209,18 @@ public class MovieManager(
         await movieRepository.StoreSimilar(similar);
 
         Logger.MovieDb($"Movie: {movie.Title}: Similar stored", LogEventLevel.Debug);
+
+        await using MediaContext db = new();
+        List<int> similarIds = await db
+            .Similar.AsNoTracking()
+            .Where(s =>
+                s.MovieFromId == movie.Id && (s._colorPalette == null || s._colorPalette == "")
+            )
+            .Select(s => s.Id)
+            .ToListAsync();
+
+        foreach (int id in similarIds)
+            jobDispatcher.DispatchColorPaletteJob("similar", id.ToString());
     }
 
     public async Task StoreRecommendations(TmdbMovieAppends movie)
@@ -225,10 +240,19 @@ public class MovieManager(
 
         await movieRepository.StoreRecommendations(recommendations);
 
-        IEnumerable<Recommendation> jobItems = recommendations.Select(x => new Recommendation
-        {
-            MovieFromId = x.MovieFromId,
-        });
+        Logger.MovieDb($"Movie: {movie.Title}: Recommendations stored", LogEventLevel.Debug);
+
+        await using MediaContext db = new();
+        List<int> recommendationIds = await db
+            .Recommendations.AsNoTracking()
+            .Where(r =>
+                r.MovieFromId == movie.Id && (r._colorPalette == null || r._colorPalette == "")
+            )
+            .Select(r => r.Id)
+            .ToListAsync();
+
+        foreach (int id in recommendationIds)
+            jobDispatcher.DispatchColorPaletteJob("recommendation", id.ToString());
     }
 
     public async Task StoreVideos(TmdbMovieAppends movie)
@@ -307,6 +331,16 @@ public class MovieManager(
 
         await movieRepository.StoreImages(logos);
         Logger.MovieDb($"Movie: {movie.Title}: Logos stored", LogEventLevel.Debug);
+
+        await using MediaContext db = new();
+        List<int> imageIds = await db
+            .Images.AsNoTracking()
+            .Where(i => i.MovieId == movie.Id && (i._colorPalette == null || i._colorPalette == ""))
+            .Select(i => i.Id)
+            .ToListAsync();
+
+        foreach (int id in imageIds)
+            jobDispatcher.DispatchColorPaletteJob("image", id.ToString());
     }
 
     public async Task StoreKeywords(TmdbMovieAppends movie)

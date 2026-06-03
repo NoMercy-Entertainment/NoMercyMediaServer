@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Common;
@@ -49,6 +51,9 @@ public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher 
             $"Show {show.Name}: Season {season.SeasonNumber} Episodes stored",
             LogEventLevel.Debug
         );
+
+        foreach (Episode episode in episodes)
+            jobDispatcher.DispatchColorPaletteJob("episode", episode.Id.ToString());
 
         jobDispatcher.DispatchJob<EpisodeExtrasJob, TmdbEpisodeAppends>(episodeAppends, show.Name);
 
@@ -145,6 +150,18 @@ public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher 
                 $"Show {showName}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Images stored",
                 LogEventLevel.Debug
             );
+
+            await using MediaContext db = new();
+            List<int> imageIds = await db
+                .Images.AsNoTracking()
+                .Where(i =>
+                    i.EpisodeId == episode.Id && (i._colorPalette == null || i._colorPalette == "")
+                )
+                .Select(i => i.Id)
+                .ToListAsync();
+
+            foreach (int id in imageIds)
+                jobDispatcher.DispatchColorPaletteJob("image", id.ToString());
         }
         catch (Exception e)
         {

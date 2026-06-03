@@ -17,10 +17,12 @@ using NoMercy.Events.Library;
 using NoMercy.Events.Music;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
+using NoMercyQueue;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -136,6 +138,13 @@ public class ArtistsController : BaseController
 
         if (artist is null)
             return NotFoundResponse("Artist not found");
+
+        if (string.IsNullOrEmpty(artist._colorPalette) || artist._colorPalette == "{}")
+            QueueRunner.Current?.Dispatcher.Dispatch(
+                new ColorPaletteJob("artist", artist.Id.ToString()),
+                "palette",
+                1
+            );
 
         return Ok(new ArtistResponseDto { Data = new(artist, userId, country) });
     }

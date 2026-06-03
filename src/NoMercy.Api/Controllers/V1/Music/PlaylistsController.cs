@@ -15,9 +15,11 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercyQueue;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -73,6 +75,13 @@ public class PlaylistsController : BaseController
             return NotFoundResponse("Playlist not found");
 
         string language = Language();
+
+        if (string.IsNullOrEmpty(playlist._colorPalette) || playlist._colorPalette == "{}")
+            QueueRunner.Current?.Dispatcher.Dispatch(
+                new ColorPaletteJob("playlist", playlist.Id.ToString()),
+                "palette",
+                1
+            );
 
         return Ok(new PlaylistResponseDto { Data = new(playlist, language) });
     }

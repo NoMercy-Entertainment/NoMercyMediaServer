@@ -73,6 +73,9 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.TvShow);
         Logger.MovieDb($"Show {show.Name}: Crew stored", LogEventLevel.Debug);
 
+        foreach (Person person in people)
+            jobDispatcher.DispatchColorPaletteJob("person", person.Id.ToString());
+
         jobDispatcher.DispatchJob<PersonExtrasJob, TmdbPersonAppends>(peopleAppends, show.Name);
     }
 
@@ -250,6 +253,9 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
 
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Movie);
         Logger.MovieDb($"Movie: {movie.Title}: Crew stored", LogEventLevel.Debug);
+
+        foreach (Person person in people)
+            jobDispatcher.DispatchColorPaletteJob("person", person.Id.ToString());
 
         jobDispatcher.DispatchJob<PersonExtrasJob, TmdbPersonAppends>(peopleAppends, movie.Title);
     }

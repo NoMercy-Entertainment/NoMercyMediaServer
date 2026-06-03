@@ -2,6 +2,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercyQueue;
@@ -193,5 +194,15 @@ public class JobDispatcher
     {
         TJob job = new() { Track = track };
         Dispatcher.Dispatch(job);
+    }
+
+    public virtual void DispatchColorPaletteJob(
+        string entityType,
+        string entityId,
+        int? priority = null
+    )
+    {
+        ColorPaletteJob job = new(entityType, entityId);
+        Dispatcher.Dispatch(job, "palette", priority ?? job.Priority);
     }
 }

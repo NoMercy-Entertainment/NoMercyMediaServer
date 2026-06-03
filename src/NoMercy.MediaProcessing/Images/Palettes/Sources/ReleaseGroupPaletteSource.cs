@@ -1,0 +1,66 @@
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
+using NoMercy.Database.Models.Music;
+using NoMercy.NmSystem.Information;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+
+namespace NoMercy.MediaProcessing.Images.Palettes.Sources;
+
+public class ReleaseGroupPaletteSource : IPaletteSource
+{
+    public string EntityType => "releasegroup";
+
+    public async Task<string?> CurrentPaletteAsync(
+        MediaContext db,
+        string entityId,
+        CancellationToken ct
+    )
+    {
+        Guid id = Guid.Parse(entityId);
+        return await db
+            .ReleaseGroups.Where(r => r.Id == id)
+            .Select(r => r._colorPalette)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<PaletteResult> GenerateAsync(
+        MediaContext db,
+        string entityId,
+        CancellationToken ct
+    )
+    {
+        Guid id = Guid.Parse(entityId);
+        ReleaseGroup? releaseGroup = await db.ReleaseGroups.FirstOrDefaultAsync(
+            r => r.Id == id,
+            ct
+        );
+        if (releaseGroup is null)
+            return PaletteResult.NoImage();
+        if (releaseGroup.Cover is null)
+            return PaletteResult.NoImage();
+
+        string filePath = AppFiles.MusicImagesPath + releaseGroup.Cover;
+        if (!File.Exists(filePath))
+            return PaletteResult.NoImage();
+
+        using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(filePath, ct);
+        string json = BaseImageManager.GenerateColorPalette([
+            new() { Key = "cover", ImageData = image },
+        ]);
+        return PaletteResult.Success(json);
+    }
+
+    public async Task PersistAsync(
+        MediaContext db,
+        string entityId,
+        string json,
+        CancellationToken ct
+    )
+    {
+        Guid id = Guid.Parse(entityId);
+        await db
+            .ReleaseGroups.Where(r => r.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r._colorPalette, json), ct);
+    }
+}
