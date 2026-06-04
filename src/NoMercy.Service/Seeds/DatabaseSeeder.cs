@@ -3,6 +3,7 @@ using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
+using NoMercy.Database.Maintenance;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
@@ -429,6 +430,36 @@ public static class DatabaseSeeder
             if (!string.IsNullOrEmpty(dbPath))
                 DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrations.Count);
 
+            // Rows whose parent was deleted before cascade rules existed make EF's
+            // SQLite table-rebuild migrations throw "FOREIGN KEY constraint failed"
+            // when they copy the orphan. Clear them first (the backup above is the
+            // safety net) so those migrations can apply. Best-effort: a cleanup
+            // failure must not block the migration — the catch below still reports
+            // any orphan that survives.
+            try
+            {
+                IReadOnlyDictionary<string, int> removedOrphans = ForeignKeyOrphanCleaner.Clean(
+                    context.Database.GetDbConnection(),
+                    contextName
+                );
+                if (removedOrphans.Count > 0)
+                    Logger.Setup(
+                        $"{contextName}: Removed {removedOrphans.Values.Sum()} foreign-key-orphaned row(s) before migration: "
+                            + string.Join(
+                                ", ",
+                                removedOrphans.Select(entry => $"{entry.Key}={entry.Value}")
+                            ),
+                        LogEventLevel.Warning
+                    );
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup(
+                    $"{contextName}: Orphan pre-flight failed (non-fatal): {ex.Message}",
+                    LogEventLevel.Warning
+                );
+            }
+
             try
             {
                 context.Database.Migrate();
@@ -449,6 +480,22 @@ public static class DatabaseSeeder
                     pendingMigrations,
                     availableMigrations
                 );
+            }
+            catch (Exception ex) when (ex.Message.Contains("FOREIGN KEY constraint failed"))
+            {
+                IReadOnlyList<string> violations = ForeignKeyOrphanCleaner.DescribeViolations(
+                    context.Database.GetDbConnection()
+                );
+                Logger.Setup(
+                    $"{contextName}: Migration failed on a foreign-key constraint. "
+                        + (
+                            violations.Count > 0
+                                ? $"Orphaned rows: {string.Join("; ", violations)}"
+                                : "No pre-existing orphans remain — the violation is in a migration's own data step."
+                        ),
+                    LogEventLevel.Fatal
+                );
+                throw;
             }
         }
 
