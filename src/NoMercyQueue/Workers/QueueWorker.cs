@@ -50,6 +50,8 @@ public class QueueWorker(
     /// retry notices for the entire duration of the holding ffmpeg.
     /// </summary>
     private bool _suppressBudgetSaturationLog;
+    private int _saturationRetryCount;
+    private const int SaturationLogInterval = 120; // Log every 10 minutes (120 * 5s)
 
     private int CurrentIndex => runner?.GetWorkerIndex(name, this) ?? -1;
 
@@ -227,11 +229,35 @@ public class QueueWorker(
         if (requirement is null)
             return true;
 
-        lease = resourceBudget.TryAcquire(requirement, TimeSpan.Zero);
+        try
+        {
+            lease = resourceBudget.TryAcquire(requirement, TimeSpan.Zero);
+        }
+        catch (Exception ex)
+        {
+            // The resource budget might throw if a GPU device key is unknown or other logic errors.
+            // We treat this as a temporary "saturated" state so the job stays
+            // in the queue until hardware detection completes or the requirement
+            // changes.
+            if (!_suppressBudgetSaturationLog)
+            {
+                logger?.LogWarning(
+                    "[{Queue}] budget acquisition failed for job {JobId}: {Message}. Will retry every {Delay}s.",
+                    name,
+                    job.Id,
+                    ex.Message,
+                    BudgetRetryDelay.TotalSeconds
+                );
+                _suppressBudgetSaturationLog = true;
+            }
+
+            return false;
+        }
 
         if (lease is null)
         {
-            // Log only the FIRST saturated retry per episode. A long-running
+            // Log the FIRST saturated retry per episode, and then every
+            // SaturationLogInterval retries thereafter. A long-running
             // ffmpeg bundle can hold the semaphore for tens of minutes; with
             // four workers polling every BudgetRetryDelay against a fully-
             // leased budget, an Info-level log per retry produces thousands
@@ -239,17 +265,23 @@ public class QueueWorker(
             // and (via synchronous Serilog sinks) contribute to host
             // unresponsiveness. The flag resets on the next successful
             // acquire so a new saturation episode logs once again.
-            if (!_suppressBudgetSaturationLog)
+            _saturationRetryCount++;
+            bool shouldLog =
+                !_suppressBudgetSaturationLog
+                || (_saturationRetryCount % SaturationLogInterval == 0);
+
+            if (shouldLog)
             {
                 int gpuAvailable = requirement.GpuDeviceKey is not null
                     ? resourceBudget.AvailableGpuEncoderSlots(requirement.GpuDeviceKey)
                     : -1;
                 int cpuAvailable = resourceBudget.AvailableCpuThreads();
 
-                logger?.LogDebug(
-                    "[{Queue}] budget saturated for job {JobId} — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Will retry every {Delay}s until a slot frees.",
+                logger?.LogInformation(
+                    "[{Queue}] budget saturated for job {JobId} ({Requirement}) — GPU slots available: {Gpu}, CPU threads available: {Cpu}. Still retrying every {Delay}s.",
                     name,
                     job.Id,
+                    requirement,
                     gpuAvailable,
                     cpuAvailable,
                     BudgetRetryDelay.TotalSeconds
@@ -261,6 +293,7 @@ public class QueueWorker(
         }
 
         _suppressBudgetSaturationLog = false;
+        _saturationRetryCount = 0;
         return true;
     }
 
@@ -394,7 +427,22 @@ public class QueueWorker(
         if (_stopCts.IsCancellationRequested)
             _stopCts = new();
         _isRunning = true;
-        _ = Task.Run(() => StartAsync(_stopCts.Token));
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await StartAsync(_stopCts.Token);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogCritical(
+                    ex,
+                    "QueueWorker {Name} - {CurrentIndex}: StartAsync crashed",
+                    name,
+                    CurrentIndex
+                );
+            }
+        });
     }
 
     /// <summary>

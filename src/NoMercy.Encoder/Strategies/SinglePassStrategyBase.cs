@@ -3,7 +3,6 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
-using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Progress;
 using NoMercy.Storage;
 

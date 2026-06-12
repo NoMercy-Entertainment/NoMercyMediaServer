@@ -2,8 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using NoMercy.Database;
+using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Helpers.Extensions;
@@ -18,7 +17,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 [Route("api/v{version:apiVersion}/dashboard/encoder")]
 public class EncoderBundleController(
     IBundleGarbageCollector bundleGarbageCollector,
-    IDbContextFactory<MediaContext> contextFactory,
+    IFolderRepository folderRepository,
     IStorageFactory storageFactory
 ) : BaseController
 {
@@ -37,8 +36,7 @@ public class EncoderBundleController(
                 "You do not have permission to view encoder bundle orphans"
             );
 
-        await using MediaContext db = await contextFactory.CreateDbContextAsync(ct);
-        List<Folder> folders = await db.Folders.AsNoTracking().ToListAsync(ct);
+        List<Folder> folders = await folderRepository.GetAllFoldersAsync(ct);
 
         List<BundleOrphan> allOrphans = [];
         foreach (Folder folder in folders)

@@ -1,11 +1,14 @@
+/*
+ * Copyright (c) NoMercy Entertainment. All Rights Reserved.
+ */
+
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
-using NoMercy.Database;
+using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
@@ -19,10 +22,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/users", Order = 10)]
-public class UsersController(
-    MediaContext mediaContext,
-    IDbContextFactory<MediaContext> contextFactory
-) : BaseController
+public class UsersController(IUserRepository userRepository) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index()
@@ -30,10 +30,7 @@ public class UsersController(
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to view users");
 
-        List<User> users = await mediaContext
-            .Users.Include(user => user.LibraryUser)
-                .ThenInclude(libraryUser => libraryUser.Library)
-            .ToListAsync();
+        List<User> users = await userRepository.GetAllWithLibrariesAsync();
 
         return Ok(
             new DataResponseDto<IEnumerable<PermissionsResponseItemDto>>
@@ -50,18 +47,14 @@ public class UsersController(
             return UnauthorizedResponse("You do not have permission to create a user");
 
         Guid userId = User.UserId();
-        User? hasPermission = await mediaContext.Users.FirstOrDefaultAsync(user =>
-            user.Id.Equals(userId)
-        );
+        User? hasPermission = await userRepository.GetByIdAsync(userId);
 
         if (hasPermission is null || hasPermission.Owner is false)
             return NotFoundResponse("You do not have permission to create a user");
 
-        User? user = await mediaContext
-            .Users.Include(user => user.LibraryUser)
-            .FirstOrDefaultAsync(user => user.Id == request.Id);
+        bool alreadyExists = await userRepository.ExistsAsync(request.Id);
 
-        if (user != null)
+        if (alreadyExists)
             return UnprocessableEntityResponse("User already exists");
 
         User newUser = new()
@@ -86,13 +79,9 @@ public class UsersController(
                 ?? [],
         };
 
-        mediaContext.Users.Add(newUser);
+        await userRepository.AddAsync(newUser);
 
-        await mediaContext.SaveChangesAsync();
-
-        User? createdUser = await mediaContext
-            .Users.Include(u => u.LibraryUser)
-            .FirstOrDefaultAsync(u => u.Id == newUser.Id);
+        User? createdUser = await userRepository.GetByIdWithLibrariesAfterAddAsync(newUser.Id);
 
         if (createdUser is null)
             return UnprocessableEntityResponse("User was created but could not be retrieved");
@@ -115,19 +104,15 @@ public class UsersController(
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to delete a user");
 
-        await using MediaContext deleteContext = await contextFactory.CreateDbContextAsync();
-        User? user = await deleteContext
-            .Users.Include(user => user.LibraryUser)
-            .FirstOrDefaultAsync(user => user.Id == id);
+        User? user = await userRepository.GetByIdWithLibrariesAsync(id);
 
-        if (user == null)
+        if (user is null)
             return NotFoundResponse("User not found");
 
         if (user.Owner)
             return UnauthorizedResponse("The owner cannot be deleted");
 
-        deleteContext.Users.Remove(user);
-        await deleteContext.SaveChangesAsync();
+        await userRepository.DeleteAsync(id);
 
         ClaimsPrincipleExtensions.RemoveUser(user);
 
@@ -141,10 +126,7 @@ public class UsersController(
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to view user permissions");
 
-        List<User> users = await mediaContext
-            .Users.Include(user => user.LibraryUser)
-                .ThenInclude(libraryUser => libraryUser.Library)
-            .ToListAsync();
+        List<User> users = await userRepository.GetAllWithLibrariesAsync();
 
         return Ok(
             new DataResponseDto<IEnumerable<PermissionsResponseItemDto>>
@@ -163,15 +145,9 @@ public class UsersController(
                 "You do not have permission to update notification settings"
             );
 
-        await using MediaContext notifContext = await contextFactory.CreateDbContextAsync();
-        User? user = await notifContext
-            .Users.Where(user => user.Id.Equals(userId))
-            .Include(user => user.LibraryUser)
-            .Include(user => user.NotificationUser)
-                .ThenInclude(notificationUser => notificationUser.Notification)
-            .FirstOrDefaultAsync(user => user.Id.Equals(userId));
+        User? user = await userRepository.GetByIdWithNotificationsAsync(userId);
 
-        if (user == null)
+        if (user is null)
             return NotFoundResponse("User not found");
 
         // TODO Implement notification settings.
@@ -195,13 +171,9 @@ public class UsersController(
         if (User.IsSelf(id))
             return UnauthorizedResponse("You do not have permission to edit your own permissions");
 
-        User? user = await mediaContext
-            .Users.Where(user => user.Id == id)
-            .Include(user => user.LibraryUser)
-                .ThenInclude(libraryUser => libraryUser.Library)
-            .FirstOrDefaultAsync();
+        User? user = await userRepository.GetByIdWithLibrariesAsync(id);
 
-        if (user == null)
+        if (user is null)
             return NotFoundResponse("User not found");
 
         return Ok(new DataResponseDto<UserPermissionRequest> { Data = new(user) });
@@ -222,30 +194,28 @@ public class UsersController(
                 "You do not have permission to update your own permissions"
             );
 
-        await using MediaContext permContext = await contextFactory.CreateDbContextAsync();
-        User? user = await permContext
-            .Users.Include(user => user.LibraryUser)
-            .FirstOrDefaultAsync(user => user.Id == id);
+        User? existing = await userRepository.GetByIdWithLibrariesAsync(id);
 
-        if (user == null)
+        if (existing is null)
             return NotFoundResponse("User not found");
 
-        if (User.IsOwner())
-            user.Manage = request.Manage;
+        bool? manage = User.IsOwner() ? request.Manage : null;
 
-        user.Allowed = request.Allowed;
-        user.AudioTranscoding = request.AudioTranscoding;
-        user.VideoTranscoding = request.VideoTranscoding;
-        user.NoTranscoding = request.NoTranscoding;
+        await userRepository.UpdatePermissionsAsync(
+            targetUserId: id,
+            actingUserId: userId,
+            allowed: request.Allowed,
+            audioTranscoding: request.AudioTranscoding,
+            videoTranscoding: request.VideoTranscoding,
+            noTranscoding: request.NoTranscoding,
+            manage: manage,
+            libraryIds: request.Libraries
+        );
 
-        user.LibraryUser.Clear();
+        User? updatedUser = await userRepository.GetByIdWithLibrariesAsync(id);
 
-        foreach (Ulid libraryId in request.Libraries)
-            user.LibraryUser.Add(new() { LibraryId = libraryId, UserId = userId });
-
-        await permContext.SaveChangesAsync();
-
-        ClaimsPrincipleExtensions.UpdateUser(user);
+        if (updatedUser is not null)
+            ClaimsPrincipleExtensions.UpdateUser(updatedUser);
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
@@ -264,15 +234,9 @@ public class UsersController(
                 "You do not have permission to update notification settings"
             );
 
-        await using MediaContext userNotifContext = await contextFactory.CreateDbContextAsync();
-        User? user = await userNotifContext
-            .Users.Where(user => user.Id.Equals(userId))
-            .Include(user => user.LibraryUser)
-            .Include(user => user.NotificationUser)
-                .ThenInclude(notificationUser => notificationUser.Notification)
-            .FirstOrDefaultAsync(user => user.Id.Equals(userId));
+        User? user = await userRepository.GetByIdWithNotificationsAsync(userId);
 
-        if (user == null)
+        if (user is null)
             return NotFoundResponse("User not found");
 
         // TODO Implement notification settings.

@@ -145,4 +145,6 @@ public interface IRecommendationRepository
         int movieId,
         CancellationToken ct = default
     );
+
+    Task<RecommendationDiagnosticsDto> GetDiagnosticsAsync(CancellationToken ct = default);
 }

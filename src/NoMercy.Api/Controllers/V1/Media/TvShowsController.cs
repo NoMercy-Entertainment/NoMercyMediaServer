@@ -2,12 +2,10 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Helpers.Extensions;
@@ -29,8 +27,8 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Route("api/v{version:apiVersion}/tv/{id:int}")] // match themoviedb.org API
 public class TvShowsController(
     ITvShowRepository tvShowRepository,
-    JobDispatcher jobDispatcher,
-    MediaContext mediaContext
+    ILibraryRepository libraryRepository,
+    JobDispatcher jobDispatcher
 ) : BaseController
 {
     [HttpGet]
@@ -44,10 +42,15 @@ public class TvShowsController(
         string language = Language();
         string country = Country();
 
-        Tv? tv = await tvShowRepository.GetTvAsync(mediaContext, userId, id, language, country);
+        TvDetail? tvDetail = await tvShowRepository.GetTvAsync(userId, id, language, country, ct);
 
-        if (tv is not null)
-            return Ok(new InfoResponseDto { Data = new(tv, country, mediaContext) });
+        if (tvDetail is not null)
+            return Ok(
+                new InfoResponseDto
+                {
+                    Data = new(tvDetail.Tv, country, tvDetail.Similars, tvDetail.Recommendations),
+                }
+            );
 
         TmdbTvClient tmdbTvClient = new(id, language: language);
         TmdbTvShowAppends? tvShowAppends = await tmdbTvClient.WithAllAppends(true);
@@ -192,13 +195,7 @@ public class TvShowsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan tv shows");
 
-        Tv? tv = await mediaContext
-            .Tvs.AsNoTracking()
-            .Where(tv => tv.Id == id)
-            .Include(tv => tv.Library)
-                .ThenInclude(library => library.FolderLibraries)
-                    .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .FirstOrDefaultAsync(ct);
+        Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id, ct);
 
         if (tv is null)
             return UnprocessableEntityResponse("Tv show not found");
@@ -234,11 +231,7 @@ public class TvShowsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh tv shows");
 
-        Tv? tv = await mediaContext
-            .Tvs.AsNoTracking()
-            .Where(tv => tv.Id == id)
-            .Include(tv => tv.Library)
-            .FirstOrDefaultAsync(ct);
+        Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id, ct);
 
         if (tv is null)
             return UnprocessableEntityResponse("Tv show not found");
@@ -247,9 +240,10 @@ public class TvShowsController(
 
         if (libraryId is not null)
         {
-            Library? specified = await mediaContext
-                .Libraries.Where(f => f.Id == libraryId.Value)
-                .FirstOrDefaultAsync(ct);
+            Library? specified = await libraryRepository.GetLibraryByIdLiteAsync(
+                libraryId.Value,
+                ct
+            );
 
             if (specified is null)
                 return NotFoundResponse("Library not found");
@@ -274,11 +268,11 @@ public class TvShowsController(
             )
                 isAnime = false;
 
-            Library? tvLibrary =
-                await mediaContext
-                    .Libraries.Where(f => f.Type == (isAnime ? "anime" : "tv"))
-                    .FirstOrDefaultAsync(ct)
-                ?? await mediaContext.Libraries.Where(f => f.Type == "tv").FirstOrDefaultAsync(ct);
+            Library? tvLibrary = await libraryRepository.GetLibraryByTypeAsync(
+                isAnime ? "anime" : "tv",
+                "tv",
+                ct
+            );
 
             targetLibraryId = tvLibrary?.Id ?? tv.Library.Id;
         }
@@ -310,9 +304,7 @@ public class TvShowsController(
 
         if (libraryId is not null)
         {
-            library = await mediaContext
-                .Libraries.Where(f => f.Id == libraryId.Value)
-                .FirstOrDefaultAsync(ct);
+            library = await libraryRepository.GetLibraryByIdLiteAsync(libraryId.Value, ct);
 
             if (library is null)
                 return NotFoundResponse("Library not found");
@@ -334,11 +326,11 @@ public class TvShowsController(
             )
                 isAnime = false;
 
-            library =
-                await mediaContext
-                    .Libraries.Where(f => f.Type == (isAnime ? "anime" : "tv"))
-                    .FirstOrDefaultAsync(ct)
-                ?? await mediaContext.Libraries.Where(f => f.Type == "tv").FirstOrDefaultAsync(ct);
+            library = await libraryRepository.GetLibraryByTypeAsync(
+                isAnime ? "anime" : "tv",
+                "tv",
+                ct
+            );
 
             if (library is null)
                 return UnprocessableEntityResponse("No Tv library found");

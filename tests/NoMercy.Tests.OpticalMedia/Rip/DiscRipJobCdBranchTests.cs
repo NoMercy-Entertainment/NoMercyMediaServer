@@ -3,7 +3,6 @@ using Moq;
 using NoMercy.Encoder.Audio;
 using NoMercy.Events;
 using NoMercy.Events.DriveMonitor;
-using NoMercy.Events.FileWatcher;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Metadata;

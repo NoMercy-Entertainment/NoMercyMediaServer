@@ -32,4 +32,6 @@ public interface IFolderRepository
     Task<int> DeleteFolderAsync(Folder folder);
 
     Task<int> SyncFolderLibraryAsync(FolderLibrary[] folderLibraries, List<Folder> folders);
+
+    Task<List<Folder>> GetAllFoldersAsync(CancellationToken ct = default);
 }

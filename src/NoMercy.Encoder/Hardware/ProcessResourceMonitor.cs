@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Errors;
-using NoMercy.Resources;
 
 namespace NoMercy.Encoder.Hardware;
 

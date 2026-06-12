@@ -5,7 +5,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
@@ -23,17 +22,11 @@ namespace NoMercy.Api.Controllers.V1.Music;
 public class TracksController : BaseController
 {
     private readonly IMusicRepository _musicRepository;
-    private readonly MediaContext _mediaContext;
     private readonly IEventBus _eventBus;
 
-    public TracksController(
-        IMusicRepository musicService,
-        MediaContext mediaContext,
-        IEventBus eventBus
-    )
+    public TracksController(IMusicRepository musicService, IEventBus eventBus)
     {
         _musicRepository = musicService;
-        _mediaContext = mediaContext;
         _eventBus = eventBus;
     }
 

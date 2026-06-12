@@ -38,7 +38,8 @@ public class ManagementController(
     INetworkDiscovery networkDiscovery,
     ISessionManager sessionManager,
     IStorageDriver storageDriver,
-    IStorage storage
+    IStorage storage,
+    IDbContextFactory<QueueContext> queueContextFactory
 ) : BaseController
 {
     [HttpGet("status")]
@@ -507,7 +508,7 @@ public class ManagementController(
     [ProducesResponseType(typeof(ManagementQueueStatusDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetQueueStatus()
     {
-        await using QueueContext queueContext = new();
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         int pendingJobs = await queueContext.QueueJobs.CountAsync();
         int failedJobs = await queueContext.FailedJobs.CountAsync();

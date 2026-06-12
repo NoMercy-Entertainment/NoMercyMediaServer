@@ -1,4 +1,3 @@
-using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 
 namespace NoMercy.Data.Repositories;
@@ -14,11 +13,11 @@ public interface IMovieRepository
     );
 
     Task<Movie?> GetMovieDetailAsync(
-        MediaContext mediaContext,
         Guid userId,
         int id,
         string language,
-        string country
+        string country,
+        CancellationToken ct = default
     );
 
     Task<bool> GetMovieAvailableAsync(Guid userId, int id, CancellationToken ct = default);
@@ -43,4 +42,8 @@ public interface IMovieRepository
         bool add = true,
         CancellationToken ct = default
     );
+
+    Task<Movie?> GetMovieForRescanAsync(int id, CancellationToken ct = default);
+
+    Task<Movie?> GetMovieForRefreshAsync(int id, CancellationToken ct = default);
 }

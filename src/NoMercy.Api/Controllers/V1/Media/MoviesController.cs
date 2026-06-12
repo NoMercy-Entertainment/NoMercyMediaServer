@@ -2,11 +2,9 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Helpers.Extensions;
@@ -27,8 +25,8 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Route("api/v{version:apiVersion}/movie/{id:int}")] // match themoviedb.org API
 public class MoviesController(
     IMovieRepository movieRepository,
-    JobDispatcher jobDispatcher,
-    MediaContext mediaContext
+    ILibraryRepository libraryRepository,
+    JobDispatcher jobDispatcher
 ) : BaseController
 {
     [HttpGet]
@@ -42,13 +40,7 @@ public class MoviesController(
         string language = Language();
         string country = Country();
 
-        Movie? movie = await movieRepository.GetMovieDetailAsync(
-            mediaContext,
-            userId,
-            id,
-            language,
-            country
-        );
+        Movie? movie = await movieRepository.GetMovieDetailAsync(userId, id, language, country, ct);
 
         if (movie is not null)
             return Ok(new InfoResponseDto { Data = new(movie, country) });
@@ -194,12 +186,7 @@ public class MoviesController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan movies");
 
-        Movie? movie = await mediaContext
-            .Movies.AsNoTracking()
-            .Include(movie => movie.Library)
-                .ThenInclude(f => f.FolderLibraries)
-                    .ThenInclude(f => f.Folder)
-            .FirstOrDefaultAsync(movie => movie.Id == id, ct);
+        Movie? movie = await movieRepository.GetMovieForRescanAsync(id, ct);
 
         if (movie is null)
             return UnprocessableEntityResponse("Movie not found");
@@ -231,10 +218,7 @@ public class MoviesController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh movies");
 
-        Movie? movie = await mediaContext
-            .Movies.AsNoTracking()
-            .Include(movie => movie.Library)
-            .FirstOrDefaultAsync(movie => movie.Id == id, ct);
+        Movie? movie = await movieRepository.GetMovieForRefreshAsync(id, ct);
 
         if (movie is null)
             return UnprocessableEntityResponse("Movie not found");
@@ -274,18 +258,18 @@ public class MoviesController(
 
         if (libraryId is not null)
         {
-            library = await mediaContext
-                .Libraries.Where(f => f.Id == libraryId.Value)
-                .FirstOrDefaultAsync(ct);
+            library = await libraryRepository.GetLibraryByIdLiteAsync(libraryId.Value, ct);
 
             if (library is null)
                 return NotFoundResponse("Library not found");
         }
         else
         {
-            library = await mediaContext
-                .Libraries.Where(f => f.Type == Config.MovieMediaType)
-                .FirstOrDefaultAsync(ct);
+            library = await libraryRepository.GetLibraryByTypeAsync(
+                Config.MovieMediaType,
+                null,
+                ct
+            );
 
             if (library is null)
                 return UnprocessableEntityResponse("No movie library found");

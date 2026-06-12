@@ -210,10 +210,18 @@ public static partial class ServiceConfiguration
             options.UseSqlite($"Data Source={AppFiles.AppDatabase}; Foreign Keys=True;")
         );
 
-        services.AddDbContext<QueueContext>(optionsAction =>
-        {
+        // optionsLifetime: Singleton so the Singleton IDbContextFactory<QueueContext>
+        // can consume DbContextOptions without lifetime-validation errors. The
+        // DbContext itself stays Scoped (default) for per-request use.
+        Action<DbContextOptionsBuilder> configureQueueContext = optionsAction =>
             optionsAction.UseSqlite($"Data Source={AppFiles.QueueDatabase}; Pooling=True;");
-        });
+
+        services.AddDbContext<QueueContext>(
+            configureQueueContext,
+            optionsLifetime: ServiceLifetime.Singleton
+        );
+
+        services.AddDbContextFactory<QueueContext>(configureQueueContext);
 
         // optionsLifetime: Singleton so the Singleton IDbContextFactory below
         // can consume DbContextOptions without lifetime-validation errors.
@@ -348,6 +356,31 @@ public static partial class ServiceConfiguration
         services.AddScoped<
             NoMercy.Data.Repositories.ITvShowRepository,
             NoMercy.Data.Repositories.TvShowRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IUserDataRepository,
+            NoMercy.Data.Repositories.UserDataRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IUserRepository,
+            NoMercy.Data.Repositories.UserRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IImageRepository,
+            NoMercy.Data.Repositories.ImageRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IVideoFileRepository,
+            NoMercy.Data.Repositories.VideoFileRepository
+        >();
+        services.AddScoped<NoMercy.Data.Repositories.InboxRepository>();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IInboxRepository,
+            NoMercy.Data.Repositories.InboxRepository
+        >();
+        services.AddScoped<
+            NoMercy.Data.Repositories.IActivityRepository,
+            NoMercy.Data.Repositories.ActivityRepository
         >();
 
         // Add Managers

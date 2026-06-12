@@ -24,9 +24,9 @@ public class HomeServiceConcurrencyTests : IDisposable
     public async Task GetHomeData_WithParallelQueries_DoesNotThrow()
     {
         MediaContext mainContext = await _factory.CreateDbContextAsync();
-        HomeRepository homeRepository = new();
-        LibraryRepository libraryRepository = new(mainContext);
-        HomeService service = new(homeRepository, libraryRepository, mainContext, _factory);
+        HomeRepository homeRepository = new(mainContext, _factory);
+        LibraryRepository libraryRepository = new(mainContext, _factory);
+        HomeService service = new(homeRepository, libraryRepository, _factory);
 
         Exception? exception = await Record.ExceptionAsync(async () =>
         {
@@ -41,9 +41,9 @@ public class HomeServiceConcurrencyTests : IDisposable
     public async Task GetHomeData_CalledMultipleTimes_DoesNotThrow()
     {
         MediaContext mainContext = await _factory.CreateDbContextAsync();
-        HomeRepository homeRepository = new();
-        LibraryRepository libraryRepository = new(mainContext);
-        HomeService service = new(homeRepository, libraryRepository, mainContext, _factory);
+        HomeRepository homeRepository = new(mainContext, _factory);
+        LibraryRepository libraryRepository = new(mainContext, _factory);
+        HomeService service = new(homeRepository, libraryRepository, _factory);
 
         for (int i = 0; i < 3; i++)
         {

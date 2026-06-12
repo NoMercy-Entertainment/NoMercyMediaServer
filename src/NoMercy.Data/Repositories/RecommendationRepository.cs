@@ -37,7 +37,20 @@ public class UserAffinitySourceDto
     public List<int> KeywordIds { get; set; } = [];
 }
 
-public class RecommendationRepository : IRecommendationRepository
+public class RecommendationDiagnosticsDto
+{
+    public List<string> Libraries { get; set; } = [];
+    public int AnimeByLibraryType { get; set; }
+    public int AnimeByMediaType { get; set; }
+    public int TotalRecsWithTv { get; set; }
+    public int AnimeRecsByMediaType { get; set; }
+    public int TotalSimWithTv { get; set; }
+    public int AnimeSimByMediaType { get; set; }
+    public List<int> SampleAnimeIds { get; set; } = [];
+    public int SampleRecsCount { get; set; }
+}
+
+public class RecommendationRepository(MediaContext context) : IRecommendationRepository
 {
     public async Task<List<RecommendationCandidateDto>> GetUnownedMovieRecommendationsAsync(
         MediaContext context,
@@ -1346,5 +1359,81 @@ public class RecommendationRepository : IRecommendationRepository
             .Include(t => t.KeywordTvs)
                 .ThenInclude(kt => kt.Keyword)
             .ToListAsync(ct);
+    }
+
+    public async Task<RecommendationDiagnosticsDto> GetDiagnosticsAsync(
+        CancellationToken ct = default
+    )
+    {
+        int animeByLibraryType = await context
+            .Tvs.AsNoTracking()
+            .CountAsync(t => t.Library.Type == Config.AnimeMediaType, ct);
+
+        int animeByMediaType = await context
+            .Tvs.AsNoTracking()
+            .CountAsync(t => t.MediaType == Config.AnimeMediaType, ct);
+
+        int totalRecsWithTv = await context
+            .Recommendations.AsNoTracking()
+            .CountAsync(r => r.TvFromId != null, ct);
+
+        int animeRecsByMediaType = await context
+            .Recommendations.AsNoTracking()
+            .CountAsync(
+                r =>
+                    r.TvFromId != null
+                    && context.Tvs.Any(t =>
+                        t.Id == r.TvFromId && t.MediaType == Config.AnimeMediaType
+                    ),
+                ct
+            );
+
+        int totalSimWithTv = await context
+            .Similar.AsNoTracking()
+            .CountAsync(s => s.TvFromId != null, ct);
+
+        int animeSimByMediaType = await context
+            .Similar.AsNoTracking()
+            .CountAsync(
+                s =>
+                    s.TvFromId != null
+                    && context.Tvs.Any(t =>
+                        t.Id == s.TvFromId && t.MediaType == Config.AnimeMediaType
+                    ),
+                ct
+            );
+
+        List<string> libraries = await context
+            .Libraries.AsNoTracking()
+            .Select(l => l.Title + " (" + l.Type + ")")
+            .ToListAsync(ct);
+
+        List<int> sampleAnimeIds = await context
+            .Tvs.AsNoTracking()
+            .Where(t => t.MediaType == Config.AnimeMediaType)
+            .OrderBy(t => t.Id)
+            .Take(5)
+            .Select(t => t.Id)
+            .ToListAsync(ct);
+
+        int sampleRecsCount =
+            sampleAnimeIds.Count > 0
+                ? await context
+                    .Recommendations.AsNoTracking()
+                    .CountAsync(r => sampleAnimeIds.Contains(r.TvFromId!.Value), ct)
+                : 0;
+
+        return new RecommendationDiagnosticsDto
+        {
+            Libraries = libraries,
+            AnimeByLibraryType = animeByLibraryType,
+            AnimeByMediaType = animeByMediaType,
+            TotalRecsWithTv = totalRecsWithTv,
+            AnimeRecsByMediaType = animeRecsByMediaType,
+            TotalSimWithTv = totalSimWithTv,
+            AnimeSimByMediaType = animeSimByMediaType,
+            SampleAnimeIds = sampleAnimeIds,
+            SampleRecsCount = sampleRecsCount,
+        };
     }
 }

@@ -47,7 +47,8 @@ public class TvCardDto
     public string? CertificationCountry { get; set; }
 }
 
-public class LibraryRepository(MediaContext context) : ILibraryRepository
+public class LibraryRepository(MediaContext context, IDbContextFactory<MediaContext> contextFactory)
+    : ILibraryRepository
 {
     private static readonly string[] Letters =
     [
@@ -758,6 +759,78 @@ public class LibraryRepository(MediaContext context) : ILibraryRepository
             .Include(library => library.LibraryMovies)
             .Include(library => library.LibraryTvs)
             .FirstOrDefaultAsync(library => library.Id == id);
+    }
+
+    public Task<Library?> GetLibraryByIdLiteAsync(Ulid id, CancellationToken ct = default)
+    {
+        return context
+            .Libraries.AsNoTracking()
+            .FirstOrDefaultAsync(library => library.Id == id, ct);
+    }
+
+    public async Task<Library?> GetLibraryByTypeAsync(
+        string type,
+        string? fallbackType = null,
+        CancellationToken ct = default
+    )
+    {
+        Library? library = await context
+            .Libraries.AsNoTracking()
+            .FirstOrDefaultAsync(lib => lib.Type == type, ct);
+
+        if (library is not null || fallbackType is null)
+            return library;
+
+        return await context
+            .Libraries.AsNoTracking()
+            .FirstOrDefaultAsync(lib => lib.Type == fallbackType, ct);
+    }
+
+    public async Task<VideoSearchResults> SearchVideoByTitleAsync(
+        string normalizedQuery,
+        CancellationToken ct = default
+    )
+    {
+        // Tv and Movie title searches run on separate factory contexts so the
+        // two queries execute in parallel without sharing a context.
+        Task<List<Tv>> tvsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await ctx
+                    .Tvs.Where(tv => tv.Title.ToLower().Contains(normalizedQuery))
+                    .ToListAsync(ct);
+            },
+            ct
+        );
+
+        Task<List<Movie>> moviesTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await ctx
+                    .Movies.Where(movie => movie.Title.ToLower().Contains(normalizedQuery))
+                    .ToListAsync(ct);
+            },
+            ct
+        );
+
+        await Task.WhenAll(tvsTask, moviesTask);
+
+        return new(tvsTask.Result, moviesTask.Result);
+    }
+
+    public async Task<bool> HasCompletedSetupAsync(CancellationToken ct = default)
+    {
+        bool hasLibrary = await context.Libraries.AnyAsync(ct);
+        if (!hasLibrary)
+            return false;
+
+        bool hasFolder = await context.Folders.AnyAsync(ct);
+        if (!hasFolder)
+            return false;
+
+        return await context.EncoderProfiles.AnyAsync(ct);
     }
 
     public Task<List<Library>> GetAllLibrariesAsync()

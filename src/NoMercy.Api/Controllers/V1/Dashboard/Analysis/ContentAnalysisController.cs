@@ -2,8 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using NoMercy.Database;
+using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Codecs;
@@ -31,7 +30,7 @@ public class ContentAnalysisController(
     IWhisperTranscriber? whisperTranscriber,
     IAudioFingerprinter fingerprinter,
     IIntroDetector introDetector,
-    IDbContextFactory<MediaContext> contextFactory,
+    IVideoFileRepository videoFileRepository,
     IStorageDriver storageDriver
 ) : BaseController
 {
@@ -54,8 +53,7 @@ public class ContentAnalysisController(
         if (!Ulid.TryParse(videoFileId, out Ulid fileId))
             return BadRequestResponse("Invalid video file id");
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(v => v.Id == fileId, ct);
+        VideoFile? file = await videoFileRepository.GetByIdAsync(fileId, ct);
 
         if (file is null)
             return NotFoundResponse("Video file not found");
@@ -115,8 +113,7 @@ public class ContentAnalysisController(
         if (string.IsNullOrWhiteSpace(language))
             return BadRequestResponse("language query parameter is required");
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(v => v.Id == fileId, ct);
+        VideoFile? file = await videoFileRepository.GetByIdAsync(fileId, ct);
 
         if (file is null)
             return NotFoundResponse("Video file not found");
@@ -177,8 +174,7 @@ public class ContentAnalysisController(
         if (string.IsNullOrWhiteSpace(language))
             return BadRequestResponse("language query parameter is required");
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        VideoFile? file = await context.VideoFiles.FirstOrDefaultAsync(v => v.Id == fileId, ct);
+        VideoFile? file = await videoFileRepository.GetByIdAsync(fileId, ct);
 
         if (file is null)
             return NotFoundResponse("Video file not found");
@@ -233,13 +229,10 @@ public class ContentAnalysisController(
         if (!User.IsOwner())
             return UnauthorizedResponse("Only the server owner can probe intro detection");
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        List<Episode> encoded = await context
-            .Episodes.AsNoTracking()
-            .Include(e => e.VideoFiles)
-            .Where(e => e.SeasonId == seasonId && e.VideoFiles.Count > 0)
-            .OrderBy(e => e.EpisodeNumber)
-            .ToListAsync(ct);
+        List<Episode> encoded = await videoFileRepository.GetEncodedEpisodesForSeasonAsync(
+            seasonId,
+            ct
+        );
 
         if (encoded.Count < 2)
             return BadRequestResponse(

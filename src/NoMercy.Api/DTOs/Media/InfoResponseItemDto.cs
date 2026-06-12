@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
@@ -334,7 +333,12 @@ public record InfoResponseItemDto
         Companies = tmdbMovie.ProductionCompanies.Select(cm => new CompanyDto(cm));
     }
 
-    public InfoResponseItemDto(Tv tv, string? country, MediaContext? mediaContext = null)
+    public InfoResponseItemDto(
+        Tv tv,
+        string? country,
+        Tv[]? similars = null,
+        Tv[]? recommendations = null
+    )
     {
         string? title = tv.Translations.FirstOrDefault()?.Title;
         string? overview = tv.Translations.FirstOrDefault()?.Overview;
@@ -437,33 +441,24 @@ public record InfoResponseItemDto
 
         Creator = tv.Creators.Select(people => new PeopleDto(people)).FirstOrDefault();
 
-        if (mediaContext is null)
+        // Detail-only enrichment: the lite callers pass no related arrays and must
+        // not get seasons / watch providers / networks / companies populated.
+        if (similars is null && recommendations is null)
             return;
 
-        IEnumerable<int> similarIds = tv.SimilarFrom.Select(similar => similar.MediaId);
-        Tv[] similars = mediaContext
-            .Tvs.Where(t => similarIds.Contains(t.Id))
-            .Include(t => t.Episodes)
-                .ThenInclude(episode => episode.VideoFiles)
-            .ToArray();
         Similar = tv
-            .SimilarFrom.Select(similar => new RelatedDto(similar, Config.TvMediaType, similars))
+            .SimilarFrom.Select(similar => new RelatedDto(
+                similar,
+                Config.TvMediaType,
+                similars ?? []
+            ))
             .Where(item => item.Poster != null);
-
-        IEnumerable<int> recommendationIds = tv.RecommendationFrom.Select(recommendation =>
-            recommendation.MediaId
-        );
-        Tv[] recommendations = mediaContext
-            .Tvs.Where(t => recommendationIds.Contains(t.Id))
-            .Include(t => t.Episodes)
-                .ThenInclude(episode => episode.VideoFiles)
-            .ToArray();
 
         Recommendations = tv
             .RecommendationFrom.Select(recommendation => new RelatedDto(
                 recommendation,
                 Config.TvMediaType,
-                recommendations
+                recommendations ?? []
             ))
             .Where(item => item.Poster != null);
 

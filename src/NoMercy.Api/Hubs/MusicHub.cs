@@ -936,7 +936,8 @@ public class MusicHub : ConnectionHub
             {
                 try
                 {
-                    await using MediaContext mediaContext = new();
+                    await using MediaContext mediaContext =
+                        await ContextFactory.CreateDbContextAsync();
                     await mediaContext
                         .Devices.Where(d => d.DeviceId == deviceId)
                         .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, clamped));

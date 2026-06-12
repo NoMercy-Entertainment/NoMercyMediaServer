@@ -1,18 +1,18 @@
-using NoMercy.Database;
 using NoMercy.Database.Models.TvShows;
 
 namespace NoMercy.Data.Repositories;
 
 public interface ITvShowRepository
 {
-    Task<Tv?> GetTvAsync(
-        MediaContext mediaContext,
+    Task<TvDetail?> GetTvAsync(
         Guid userId,
         int id,
         string language,
         string country,
         CancellationToken ct = default
     );
+
+    Task<Tv?> GetTvWithLibraryAsync(int id, CancellationToken ct = default);
 
     Task<bool> GetTvAvailableAsync(Guid userId, int id, CancellationToken ct = default);
 
@@ -44,3 +44,5 @@ public interface ITvShowRepository
         CancellationToken ct = default
     );
 }
+
+public record TvDetail(Tv Tv, Tv[] Similars, Tv[] Recommendations);

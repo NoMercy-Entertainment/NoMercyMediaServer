@@ -602,6 +602,20 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
 
         IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
 
+        // Pre-flight check: ensure the shared tempDir exists and contains at least 
+        // some expected output before proceeding to FinalizeOnly.
+        string relativeOutputPath = (fileMetadata.Path ?? string.Empty).Replace('\\', '/').Trim('/');
+        string tempDir = Path.Combine(NoMercy.Storage.StoragePaths.TranscodeRoot, relativeOutputPath.Replace('/', Path.DirectorySeparatorChar));
+        
+        if (!Directory.Exists(tempDir) || !Directory.EnumerateFiles(tempDir, "*.m3u8", SearchOption.AllDirectories).Any())
+        {
+            Logger.Encoder(
+                $"[VideoEncodeJob] Finalize: tempDir '{tempDir}' missing or empty. Cannot finalize GroupTag={state.GroupTag}.",
+                LogEventLevel.Error
+            );
+            return;
+        }
+
         // Coordinator finalize: run the pipeline once over the shared cache
         // tempDir with Options.FinalizeOnly=true. The orchestrator skips
         // Build + Execute, runs FinalizeStage against the variant playlists

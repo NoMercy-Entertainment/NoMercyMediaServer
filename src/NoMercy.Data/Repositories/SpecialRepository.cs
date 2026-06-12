@@ -2,14 +2,17 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.DTOs.Specials;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
+using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 
-public class SpecialRepository(MediaContext context) : ISpecialRepository
+public class SpecialRepository(MediaContext context, IDbContextFactory<MediaContext> contextFactory)
+    : ISpecialRepository
 {
     public async Task<List<Special>> GetSpecialsAsync(
         Guid userId,
@@ -836,6 +839,9 @@ public class SpecialRepository(MediaContext context) : ISpecialRepository
                         .ThenInclude(c => c.Certification)
             .Include(special => special.Items)
                 .ThenInclude(item => item.Episode)
+                    .ThenInclude(e => e!.Season)
+            .Include(special => special.Items)
+                .ThenInclude(item => item.Episode)
                     .ThenInclude(e => e!.Translations.Where(t => t.Iso6391 == language))
             .Include(special => special.Items)
                 .ThenInclude(item => item.Episode)
@@ -945,5 +951,282 @@ public class SpecialRepository(MediaContext context) : ISpecialRepository
 
         await context.SaveChangesAsync(ct);
         return true;
+    }
+
+    public async Task<SpecialItemProjections> GetSpecialItemProjectionsAsync(
+        Guid userId,
+        IEnumerable<int> movieIds,
+        IEnumerable<int> tvIds,
+        string country,
+        CancellationToken ct = default
+    )
+    {
+        // Movies and TVs run on separate contexts so the two queries can execute
+        // in parallel without sharing a (non-thread-safe) DbContext.
+        Task<List<SpecialMovieProjection>> moviesTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await GetSpecialMovieProjectionsAsync(ctx, userId, movieIds, country, ct);
+            },
+            ct
+        );
+
+        Task<List<SpecialTvProjection>> tvsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await GetSpecialTvProjectionsAsync(ctx, userId, tvIds, country, ct);
+            },
+            ct
+        );
+
+        await Task.WhenAll(moviesTask, tvsTask);
+
+        return new(moviesTask.Result, tvsTask.Result);
+    }
+
+    public async Task<Special?> LikeSpecialAsync(
+        Ulid id,
+        Guid userId,
+        bool like,
+        CancellationToken ct = default
+    )
+    {
+        Special? special = await context
+            .Specials.AsNoTracking()
+            .FirstOrDefaultAsync(special => special.Id == id, ct);
+
+        if (special is null)
+            return null;
+
+        if (like)
+        {
+            await context
+                .SpecialUser.Upsert(new(special.Id, userId))
+                .On(specialUser => new { specialUser.SpecialId, specialUser.UserId })
+                .WhenMatched(specialUser =>
+                    new() { SpecialId = specialUser.SpecialId, UserId = specialUser.UserId }
+                )
+                .RunAsync();
+        }
+        else
+        {
+            SpecialUser? specialUser = await context
+                .SpecialUser.Where(specialUser =>
+                    specialUser.SpecialId == special.Id && specialUser.UserId.Equals(userId)
+                )
+                .FirstOrDefaultAsync(ct);
+
+            if (specialUser is not null)
+                context.SpecialUser.Remove(specialUser);
+
+            await context.SaveChangesAsync(ct);
+        }
+
+        return special;
+    }
+
+    public async Task<List<Special>> GetAllSpecialsAdminAsync(CancellationToken ct = default)
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+        return await ctx.Specials.AsNoTracking().ToListAsync(ct);
+    }
+
+    public async Task<Special> CreateSpecialAsync(Guid userId, CancellationToken ct = default)
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+        int count = await ctx.Specials.CountAsync(ct);
+
+        Special special = new() { Id = Ulid.NewUlid(), Title = $"special {count}" };
+
+        await ctx
+            .Specials.Upsert(special)
+            .On(s => new { s.Id })
+            .WhenMatched((existing, incoming) => new() { Id = incoming.Id, Title = incoming.Title })
+            .RunAsync();
+
+        await ctx
+            .SpecialUser.Upsert(new() { SpecialId = special.Id, UserId = userId })
+            .On(su => new { su.SpecialId, su.UserId })
+            .WhenMatched(
+                (existing, incoming) =>
+                    new() { SpecialId = incoming.SpecialId, UserId = incoming.UserId }
+            )
+            .RunAsync();
+
+        return special;
+    }
+
+    public Task<Special?> GetSpecialByIdAsync(Ulid id, CancellationToken ct = default)
+    {
+        return context.Specials.Where(special => special.Id == id).FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<Special?> UpdateSpecialAsync(
+        Ulid id,
+        string? title,
+        string? overview,
+        string? poster,
+        string? backdrop,
+        string? logo,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+        Special? special = await ctx.Specials.Where(s => s.Id == id).FirstOrDefaultAsync(ct);
+
+        if (special is null)
+            return null;
+
+        if (
+            (poster is not null && special.Poster != poster)
+            || (backdrop is not null && special.Backdrop != backdrop)
+            || (logo is not null && special.Logo != logo)
+        )
+        {
+            special._colorPalette = await MovieDbImageManager.MultiColorPalette([
+                new("poster", poster),
+                new("backdrop", backdrop),
+                new("logo", logo),
+            ]);
+        }
+
+        if (title is not null)
+            special.Title = title;
+
+        if (overview is not null)
+            special.Overview = overview;
+
+        if (poster is not null)
+            special.Poster = poster;
+
+        if (backdrop is not null)
+            special.Backdrop = backdrop;
+
+        if (logo is not null)
+            special.Logo = logo;
+
+        await ctx.SaveChangesAsync(ct);
+
+        return special;
+    }
+
+    public async Task<Special?> DeleteSpecialAsync(Ulid id, CancellationToken ct = default)
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+        Special? special = await ctx.Specials.FindAsync(keyValues: [id], cancellationToken: ct);
+
+        if (special is null)
+            return null;
+
+        ctx.Specials.Remove(special);
+        await ctx.SaveChangesAsync(ct);
+
+        return special;
+    }
+
+    public async Task<List<Special>> GetAllSpecialsSortableAsync(CancellationToken ct = default)
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+        return await ctx.Specials.AsTracking().ToListAsync(ct);
+    }
+
+    public async Task<List<Special>> GetAllSpecialsForRescanAsync(CancellationToken ct = default)
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+        return await ctx.Specials.ToListAsync(ct);
+    }
+
+    public async Task<List<SpecialItem>> GetSpecialItemsAdminAsync(
+        Ulid id,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+        return await ctx
+            .SpecialItems.AsNoTracking()
+            .Where(si => si.SpecialId == id)
+            .Include(si => si.Movie)
+                .ThenInclude(m => m!.VideoFiles)
+            .Include(si => si.Episode)
+                .ThenInclude(e => e!.Tv)
+            .Include(si => si.Episode)
+                .ThenInclude(e => e!.VideoFiles)
+            .OrderBy(si => si.Order)
+            .ToListAsync(ct);
+    }
+
+    public async Task<bool> ReplaceSpecialItemsAsync(
+        Ulid id,
+        List<SpecialItemReplacement> items,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+        Special? special = await ctx.Specials.Where(s => s.Id == id).FirstOrDefaultAsync(ct);
+
+        if (special is null)
+            return false;
+
+        List<SpecialItem> existing = await ctx
+            .SpecialItems.Where(si => si.SpecialId == id)
+            .ToListAsync(ct);
+
+        ctx.SpecialItems.RemoveRange(existing);
+
+        List<SpecialItem> newItems = items
+            .Select(item => new SpecialItem
+            {
+                SpecialId = id,
+                Order = item.Order,
+                MovieId = item.MediaType == "movie" ? item.MediaId : null,
+                EpisodeId = item.MediaType == "episode" ? item.MediaId : null,
+            })
+            .ToList();
+
+        await ctx.SpecialItems.AddRangeAsync(newItems, ct);
+        await ctx.SaveChangesAsync(ct);
+
+        return true;
+    }
+
+    public async Task<List<Movie>> SearchMoviesAsync(
+        string query,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+        string normalized = query.ToLower();
+        return await ctx
+            .Movies.AsNoTracking()
+            .Where(m => m.Title.ToLower().Contains(normalized))
+            .Include(m => m.VideoFiles)
+            .Take(take)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<Episode>> SearchEpisodesAsync(
+        string query,
+        int take,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+        string normalized = query.ToLower();
+        return await ctx
+            .Episodes.AsNoTracking()
+            .Where(e =>
+                (e.Title != null && e.Title.ToLower().Contains(normalized))
+                || e.Tv.Title.ToLower().Contains(normalized)
+            )
+            .Include(e => e.Tv)
+            .Include(e => e.VideoFiles)
+            .OrderBy(e => e.Tv.Title)
+            .ThenBy(e => e.SeasonNumber)
+            .ThenBy(e => e.EpisodeNumber)
+            .Take(take)
+            .ToListAsync(ct);
     }
 }

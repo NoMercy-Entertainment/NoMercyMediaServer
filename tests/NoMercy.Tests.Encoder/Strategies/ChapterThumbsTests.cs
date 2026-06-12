@@ -155,7 +155,11 @@ public class ChapterThumbsTests : IDisposable
     [Fact]
     public void DecomposeAddsChapterTasks_WhenFlagSet()
     {
-        HlsSinglePassStrategy strategy = new(MockEncoder(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        HlsSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlanWithChapters(
             chapterCount: 5,
             generateChapterThumbs: true,
@@ -189,7 +193,11 @@ public class ChapterThumbsTests : IDisposable
     [Fact]
     public void DecomposeSkipsChapterTasks_WhenFlagFalse()
     {
-        HlsSinglePassStrategy strategy = new(MockEncoder(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        HlsSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlanWithChapters(
             chapterCount: 5,
             generateChapterThumbs: false,

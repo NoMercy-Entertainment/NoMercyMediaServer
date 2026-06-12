@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Moq;
 using NoMercy.Api.Controllers.V1.Dashboard.Encoder;
-using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Helpers.Extensions;

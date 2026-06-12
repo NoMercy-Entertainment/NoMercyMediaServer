@@ -1650,6 +1650,356 @@ public class MusicRepository(
     }
 
     #endregion
+
+    #region Mutations — Artist / Album / Playlist
+
+    public async Task<bool> DeleteArtistAsync(Guid id, CancellationToken ct = default)
+    {
+        int result = await mediaContext
+            .Artists.Where(artist => artist.Id == id)
+            .ExecuteDeleteAsync(ct);
+        return result > 0;
+    }
+
+    public Task<Artist?> GetArtistByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return mediaContext
+            .Artists.AsNoTracking()
+            .FirstOrDefaultAsync(artist => artist.Id == id, ct);
+    }
+
+    public Task<Album?> GetAlbumByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return mediaContext.Albums.AsNoTracking().FirstOrDefaultAsync(album => album.Id == id, ct);
+    }
+
+    public Task<Artist?> GetArtistForEditAsync(Guid id, CancellationToken ct = default)
+    {
+        return mediaContext
+            .Artists.AsNoTracking()
+            .FirstOrDefaultAsync(artist => artist.Id == id, ct);
+    }
+
+    public Task<Artist?> GetArtistWithLibraryFolderAsync(Guid id, CancellationToken ct = default)
+    {
+        return mediaContext
+            .Artists.AsNoTracking()
+            .Include(artist => artist.LibraryFolder)
+                .ThenInclude(folder => folder.Driver)
+            .FirstOrDefaultAsync(artist => artist.Id == id, ct);
+    }
+
+    public Task<Album?> GetAlbumForEditAsync(Guid id, CancellationToken ct = default)
+    {
+        return mediaContext.Albums.AsNoTracking().FirstOrDefaultAsync(album => album.Id == id, ct);
+    }
+
+    public Task<Album?> GetAlbumWithLibraryFolderAsync(Guid id, CancellationToken ct = default)
+    {
+        return mediaContext
+            .Albums.AsNoTracking()
+            .Include(album => album.LibraryFolder)
+                .ThenInclude(folder => folder.Driver)
+            .FirstOrDefaultAsync(album => album.Id == id, ct);
+    }
+
+    public Task<bool> PlaylistNameExistsAsync(
+        string name,
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        return mediaContext.Playlists.AnyAsync(
+            playlist => playlist.Name == name && playlist.UserId == userId,
+            ct
+        );
+    }
+
+    public async Task CreatePlaylistAsync(
+        Playlist playlist,
+        List<Guid> trackIds,
+        CancellationToken ct = default
+    )
+    {
+        mediaContext.Playlists.Add(playlist);
+
+        foreach (Guid trackId in trackIds)
+            mediaContext.PlaylistTrack.Add(new() { PlaylistId = playlist.Id, TrackId = trackId });
+
+        await mediaContext.SaveChangesAsync(ct);
+    }
+
+    public Task<Playlist?> GetPlaylistByNameAsync(
+        string name,
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        return mediaContext
+            .Playlists.Include(playlist => playlist.Tracks)
+                .ThenInclude(playlistTrack => playlistTrack.Track)
+            .FirstOrDefaultAsync(
+                playlist => playlist.Name == name && playlist.UserId == userId,
+                ct
+            );
+    }
+
+    public Task<Playlist?> GetPlaylistForEditAsync(Guid id, CancellationToken ct = default)
+    {
+        return mediaContext
+            .Playlists.AsNoTracking()
+            .FirstOrDefaultAsync(playlist => playlist.Id == id, ct);
+    }
+
+    public Task<Playlist?> GetPlaylistForCoverAsync(
+        Guid id,
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        return mediaContext
+            .Playlists.AsNoTracking()
+            .Where(playlist => playlist.UserId == userId)
+            .FirstOrDefaultAsync(playlist => playlist.Id == id, ct);
+    }
+
+    public Task<int> DeletePlaylistAsync(Guid id, Guid userId, CancellationToken ct = default)
+    {
+        return mediaContext
+            .Playlists.Where(playlist => playlist.Id == id && playlist.UserId == userId)
+            .ExecuteDeleteAsync(ct);
+    }
+
+    public async Task<int> AddPlaylistTrackAsync(
+        Guid playlistId,
+        Guid trackId,
+        CancellationToken ct = default
+    )
+    {
+        mediaContext.PlaylistTrack.Add(new() { PlaylistId = playlistId, TrackId = trackId });
+        return await mediaContext.SaveChangesAsync(ct);
+    }
+
+    public async Task<int> RemovePlaylistTrackAsync(
+        Guid playlistId,
+        Guid trackId,
+        Guid userId,
+        CancellationToken ct = default
+    )
+    {
+        PlaylistTrack? playlistTrack = await mediaContext
+            .PlaylistTrack.Where(pt => pt.Playlist.UserId == userId)
+            .FirstOrDefaultAsync(pt => pt.PlaylistId == playlistId && pt.TrackId == trackId, ct);
+
+        if (playlistTrack is null)
+            return -1;
+
+        mediaContext.PlaylistTrack.Remove(playlistTrack);
+        return await mediaContext.SaveChangesAsync(ct);
+    }
+
+    public async Task<int> UpdateArtistMetadataAsync(
+        Guid id,
+        string name,
+        string? description,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    )
+    {
+        Artist? artist = await mediaContext.Artists.FirstOrDefaultAsync(a => a.Id == id, ct);
+        if (artist is null)
+            return 0;
+
+        artist.Name = name;
+        artist.Description = description;
+        artist.Cover = cover;
+        artist._colorPalette = colorPalette;
+
+        return await mediaContext.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateArtistCoverAsync(
+        Guid id,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    )
+    {
+        Artist? artist = await mediaContext.Artists.FirstOrDefaultAsync(a => a.Id == id, ct);
+        if (artist is null)
+            return;
+
+        artist.Cover = cover;
+        artist._colorPalette = colorPalette;
+
+        await mediaContext.SaveChangesAsync(ct);
+    }
+
+    public async Task<int> UpdateAlbumMetadataAsync(
+        Guid id,
+        string name,
+        string? description,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    )
+    {
+        Album? album = await mediaContext.Albums.FirstOrDefaultAsync(a => a.Id == id, ct);
+        if (album is null)
+            return 0;
+
+        album.Name = name;
+        album.Description = description;
+        album.Cover = cover;
+        album._colorPalette = colorPalette;
+
+        return await mediaContext.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateAlbumCoverAsync(
+        Guid id,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    )
+    {
+        Album? album = await mediaContext.Albums.FirstOrDefaultAsync(a => a.Id == id, ct);
+        if (album is null)
+            return;
+
+        album.Cover = cover;
+        album._colorPalette = colorPalette;
+
+        await mediaContext.SaveChangesAsync(ct);
+    }
+
+    public async Task<int> UpdatePlaylistMetadataAsync(
+        Guid id,
+        string name,
+        string? description,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    )
+    {
+        Playlist? playlist = await mediaContext.Playlists.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (playlist is null)
+            return 0;
+
+        playlist.Name = name;
+        playlist.Description = description;
+        playlist.Cover = cover;
+        playlist._colorPalette = colorPalette;
+
+        return await mediaContext.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdatePlaylistCoverAsync(
+        Guid id,
+        Guid userId,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    )
+    {
+        Playlist? playlist = await mediaContext
+            .Playlists.Where(p => p.UserId == userId)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (playlist is null)
+            return;
+
+        playlist.Cover = cover;
+        playlist._colorPalette = colorPalette;
+
+        await mediaContext.SaveChangesAsync(ct);
+    }
+
+    #endregion
+
+    #region Search — Parallel Full-Data Fetch
+
+    public async Task<MusicSearchFullData> SearchMusicFullDataAsync(
+        List<Guid> artistIds,
+        List<Guid> albumIds,
+        List<Guid> playlistIds,
+        List<Guid> trackIds,
+        CancellationToken ct = default
+    )
+    {
+        // Each entity set is fetched on its own factory context so the four
+        // queries run in parallel without sharing a (non-thread-safe) context.
+        Task<List<Artist>> artistsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+                return await context
+                    .Artists.Where(artist => artistIds.Contains(artist.Id))
+                    .Include(artist => artist.ArtistTrack)
+                        .ThenInclude(artistTrack => artistTrack.Track)
+                    .Include(artist => artist.AlbumArtist)
+                        .ThenInclude(albumArtist => albumArtist.Album)
+                    .ToListAsync(ct);
+            },
+            ct
+        );
+
+        Task<List<Album>> albumsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+                return await context
+                    .Albums.Where(album => albumIds.Contains(album.Id))
+                    .Include(album => album.AlbumTrack)
+                        .ThenInclude(albumTrack => albumTrack.Track)
+                            .ThenInclude(track => track.ArtistTrack)
+                                .ThenInclude(artistTrack => artistTrack.Artist)
+                    .Include(album => album.AlbumTrack)
+                        .ThenInclude(albumTrack => albumTrack.Track)
+                            .ThenInclude(song => song.TrackUser)
+                    .ToListAsync(ct);
+            },
+            ct
+        );
+
+        Task<List<Playlist>> playlistsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+                return await context
+                    .Playlists.Where(playlist => playlistIds.Contains(playlist.Id))
+                    .Include(playlist => playlist.Tracks)
+                        .ThenInclude(playlistTrack => playlistTrack.Track)
+                            .ThenInclude(song => song.TrackUser)
+                    .ToListAsync(ct);
+            },
+            ct
+        );
+
+        Task<List<Track>> songsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+                return await context
+                    .Tracks.Where(track => trackIds.Contains(track.Id))
+                    .Include(track => track.ArtistTrack)
+                        .ThenInclude(artistTrack => artistTrack.Artist)
+                    .Include(track => track.AlbumTrack)
+                        .ThenInclude(albumTrack => albumTrack.Album)
+                    .Include(track => track.PlaylistTrack)
+                        .ThenInclude(playlistTrack => playlistTrack.Playlist)
+                    .Include(track => track.TrackUser)
+                    .ToListAsync(ct);
+            },
+            ct
+        );
+
+        await Task.WhenAll(artistsTask, albumsTask, playlistsTask, songsTask);
+
+        return new(artistsTask.Result, albumsTask.Result, playlistsTask.Result, songsTask.Result);
+    }
+
+    #endregion
 }
 
 public class MusicStartPageData

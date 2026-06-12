@@ -864,7 +864,8 @@ public class LibrariesController(
 
         try
         {
-            await using MediaContext mediaContext = new();
+            await using MediaContext mediaContext =
+                await mediaContextFactory.CreateDbContextAsync();
 
             FileRepository fileRepository = new(mediaContext, storageDriver);
             FileManager fileManager = new(fileRepository, storageFactory, storageDriver);

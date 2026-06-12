@@ -1,11 +1,16 @@
+/*
+ * This file is part of the NoMercy Entertainment application.
+ * Copyright (c) NoMercy Entertainment. All rights reserved.
+ * Licensed under the MIT License.
+ */
+
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
-using NoMercy.Database;
+using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Inbox;
@@ -19,11 +24,8 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/inbox", Order = 10)]
-public class InboxController(
-    IDbContextFactory<MediaContext> mediaContextFactory,
-    InboxRoutingService routingService,
-    IInboxMetadataProbe metadataProbe
-) : BaseController
+public class InboxController(IInboxRepository inboxRepository, IInboxMetadataProbe metadataProbe)
+    : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? status)
@@ -31,14 +33,10 @@ public class InboxController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view the inbox");
 
-        await using MediaContext context = await mediaContextFactory.CreateDbContextAsync();
-
-        IQueryable<InboxItem> query = context.InboxItems.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(status))
-            query = query.Where(item => item.Status == status);
-
-        List<InboxItem> items = await query.OrderByDescending(item => item.CreatedAt).ToListAsync();
+        List<InboxItem> items = await inboxRepository.GetAllAsync(
+            status,
+            HttpContext.RequestAborted
+        );
 
         return Ok(new { Data = items.Select(item => new InboxItemDto(item)) });
     }
@@ -49,11 +47,7 @@ public class InboxController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view inbox items");
 
-        await using MediaContext context = await mediaContextFactory.CreateDbContextAsync();
-
-        InboxItem? item = await context
-            .InboxItems.AsNoTracking()
-            .FirstOrDefaultAsync(inboxItem => inboxItem.Id == id);
+        InboxItem? item = await inboxRepository.GetByIdAsync(id, HttpContext.RequestAborted);
 
         if (item is null)
             return NotFoundResponse("Inbox item not found");
@@ -117,18 +111,15 @@ public class InboxController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to assign inbox items");
 
-        await using MediaContext context = await mediaContextFactory.CreateDbContextAsync();
-
-        InboxItem? item = await context.InboxItems.FirstOrDefaultAsync(inboxItem =>
-            inboxItem.Id == id
-        );
+        InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id, HttpContext.RequestAborted);
 
         if (item is null)
             return NotFoundResponse("Inbox item not found");
 
-        Folder? folder = await context
-            .Folders.AsNoTracking()
-            .FirstOrDefaultAsync(folderEntity => folderEntity.Id == request.TargetFolderId);
+        Folder? folder = await inboxRepository.GetFolderByIdAsync(
+            request.TargetFolderId,
+            HttpContext.RequestAborted
+        );
 
         if (folder is null)
             return NotFoundResponse("Target folder not found");
@@ -149,11 +140,10 @@ public class InboxController(
 
         try
         {
-            await routingService.ExecuteAssignment(
+            await inboxRepository.ExecuteAssignmentAsync(
                 item,
                 request.Match,
                 destination,
-                context,
                 HttpContext.RequestAborted
             );
         }
@@ -187,18 +177,12 @@ public class InboxController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to dismiss inbox items");
 
-        await using MediaContext context = await mediaContextFactory.CreateDbContextAsync();
-
-        InboxItem? item = await context.InboxItems.FirstOrDefaultAsync(inboxItem =>
-            inboxItem.Id == id
-        );
+        InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id, HttpContext.RequestAborted);
 
         if (item is null)
             return NotFoundResponse("Inbox item not found");
 
-        item.Status = "Dismissed";
-
-        await context.SaveChangesAsync();
+        await inboxRepository.DismissAsync(item, HttpContext.RequestAborted);
 
         if (EventBusProvider.IsConfigured)
         {
@@ -218,17 +202,12 @@ public class InboxController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to delete inbox items");
 
-        await using MediaContext context = await mediaContextFactory.CreateDbContextAsync();
-
-        InboxItem? item = await context.InboxItems.FirstOrDefaultAsync(inboxItem =>
-            inboxItem.Id == id
-        );
+        InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id, HttpContext.RequestAborted);
 
         if (item is null)
             return NotFoundResponse("Inbox item not found");
 
-        context.InboxItems.Remove(item);
-        await context.SaveChangesAsync();
+        await inboxRepository.DeleteAsync(item, HttpContext.RequestAborted);
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Inbox item removed." });
     }

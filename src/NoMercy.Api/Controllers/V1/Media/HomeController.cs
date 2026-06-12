@@ -81,7 +81,10 @@ public class HomeController : BaseController
         if (request.Page != 0)
             return Ok(response);
 
-        LibraryRepository libraryRepository = new(await _contextFactory.CreateDbContextAsync(ct));
+        LibraryRepository libraryRepository = new(
+            await _contextFactory.CreateDbContextAsync(ct),
+            _contextFactory
+        );
         List<Library> libraries = await libraryRepository.GetLibrariesLite(userId, ct);
 
         // Fetch all library data in parallel - each task needs its own MediaContext for thread safety

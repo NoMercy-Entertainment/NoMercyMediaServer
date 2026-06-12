@@ -7,7 +7,6 @@ using NoMercy.MediaProcessing.Inbox;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Storage;
-using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.MediaProcessing.Inbox;
 

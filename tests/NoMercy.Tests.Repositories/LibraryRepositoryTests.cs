@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.DTOs;
@@ -14,11 +15,14 @@ public class LibraryRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
     private readonly LibraryRepository _repository;
+    private readonly SqliteConnection _factoryConnection;
 
     public LibraryRepositoryTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new(_context);
+        (IDbContextFactory<MediaContext> factory, _factoryConnection) =
+            TestMediaContextFactory.CreateFactory();
+        _repository = new(_context, factory);
     }
 
     [Fact]
@@ -310,5 +314,6 @@ public class LibraryRepositoryTests : IDisposable
     {
         _context.Database.EnsureDeleted();
         _context.Dispose();
+        _factoryConnection.Dispose();
     }
 }

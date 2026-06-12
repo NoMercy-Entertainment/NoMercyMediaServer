@@ -36,4 +36,26 @@ public class PeopleRepository(MediaContext context) : IPeopleRepository
             .Take(take)
             .ToListAsync(ct);
     }
+
+    public Task<Person?> GetPersonWithCreditsAsync(int id, CancellationToken ct = default)
+    {
+        return context
+            .People.AsNoTracking()
+            .Where(person => person.Id == id)
+            .Include(person => person.Casts)
+                .ThenInclude(cast => cast.Movie)
+                    .ThenInclude(movie => movie!.VideoFiles)
+            .Include(person => person.Casts)
+                .ThenInclude(cast => cast.Tv)
+                    .ThenInclude(tv => tv!.Episodes)
+                        .ThenInclude(episode => episode.VideoFiles)
+            .Include(person => person.Crews)
+                .ThenInclude(crew => crew.Movie)
+                    .ThenInclude(movie => movie!.VideoFiles)
+            .Include(person => person.Crews)
+                .ThenInclude(crew => crew.Tv)
+                    .ThenInclude(tv => tv!.Episodes)
+                        .ThenInclude(episode => episode.VideoFiles)
+            .FirstOrDefaultAsync(ct);
+    }
 }

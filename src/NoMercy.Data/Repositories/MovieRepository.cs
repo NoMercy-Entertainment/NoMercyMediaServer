@@ -110,12 +110,12 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     );
 
     public Task<Movie?> GetMovieDetailAsync(
-        MediaContext mediaContext,
         Guid userId,
         int id,
         string language,
-        string country
-    ) => GetMovieDetailAsyncQuery(mediaContext, userId, id, language, country);
+        string country,
+        CancellationToken ct = default
+    ) => GetMovieDetailAsyncQuery(context, userId, id, language, country);
 
     public Task<bool> GetMovieAvailableAsync(Guid userId, int id, CancellationToken ct = default)
     {
@@ -308,5 +308,23 @@ public class MovieRepository(MediaContext context) : IMovieRepository
 
         await context.SaveChangesAsync(ct);
         return true;
+    }
+
+    public Task<Movie?> GetMovieForRescanAsync(int id, CancellationToken ct = default)
+    {
+        return context
+            .Movies.AsNoTracking()
+            .Include(movie => movie.Library)
+                .ThenInclude(library => library.FolderLibraries)
+                    .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .FirstOrDefaultAsync(movie => movie.Id == id, ct);
+    }
+
+    public Task<Movie?> GetMovieForRefreshAsync(int id, CancellationToken ct = default)
+    {
+        return context
+            .Movies.AsNoTracking()
+            .Include(movie => movie.Library)
+            .FirstOrDefaultAsync(movie => movie.Id == id, ct);
     }
 }

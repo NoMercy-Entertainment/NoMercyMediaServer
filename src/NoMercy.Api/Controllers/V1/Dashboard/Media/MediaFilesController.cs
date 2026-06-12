@@ -2,11 +2,10 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Helpers.Extensions;
+using NoMercy.MediaProcessing.Files;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
@@ -22,7 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/media/files", Order = 10)]
-public class MediaFilesController(IDbContextFactory<MediaContext> contextFactory) : BaseController
+public class MediaFilesController(IFileRepository fileRepository) : BaseController
 {
     [HttpGet("search")]
     public async Task<IActionResult> Search(
@@ -39,31 +38,15 @@ public class MediaFilesController(IDbContextFactory<MediaContext> contextFactory
         int safeLimit = Math.Clamp(limit, 1, 200);
         string normalized = (q ?? string.Empty).Trim();
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-
-        IQueryable<VideoFile> baseQuery = context
-            .VideoFiles.AsNoTracking()
-            .Include(f => f.Movie)
-            .Include(f => f.Episode)
-                .ThenInclude(e => e!.Tv);
-
-        IQueryable<VideoFile> filtered = string.IsNullOrEmpty(normalized)
-            ? baseQuery
-            : baseQuery.Where(f =>
-                EF.Functions.Like(f.Filename, $"%{normalized}%")
-                || (f.Movie != null && EF.Functions.Like(f.Movie.Title, $"%{normalized}%"))
-                || (f.Episode != null && EF.Functions.Like(f.Episode.Title!, $"%{normalized}%"))
-                || (
-                    f.Episode != null
-                    && f.Episode.Tv != null
-                    && EF.Functions.Like(f.Episode.Tv.Title, $"%{normalized}%")
-                )
-            );
-
-        List<VideoFile> rows = await filtered
-            .OrderByDescending(f => f.UpdatedAt)
-            .Take(safeLimit)
-            .ToListAsync(ct);
+        // BLOCKER: IFileRepository.SearchVideoFilesAsync does not exist yet.
+        // Required signature (add to IFileRepository + FileRepository):
+        //   Task<List<VideoFile>> SearchVideoFilesAsync(string? query, int limit, CancellationToken ct = default)
+        // See MediaFilesController for the exact EF query it must run.
+        List<VideoFile> rows = await fileRepository.SearchVideoFilesAsync(
+            normalized,
+            safeLimit,
+            ct
+        );
 
         VideoFileSearchDto[] results = rows.Select(BuildDto).ToArray();
 

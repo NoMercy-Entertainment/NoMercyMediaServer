@@ -2,14 +2,11 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
-using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
@@ -32,19 +29,16 @@ namespace NoMercy.Api.Controllers.V1.Music;
 public class AlbumsController : BaseController
 {
     private readonly IMusicRepository _musicRepository;
-    private readonly MediaContext _mediaContext;
     private readonly IEventBus _eventBus;
     private readonly IStorageFactory _storageFactory;
 
     public AlbumsController(
         IMusicRepository musicService,
-        MediaContext mediaContext,
         IEventBus eventBus,
         IStorageFactory storageFactory
     )
     {
         _musicRepository = musicService;
-        _mediaContext = mediaContext;
         _eventBus = eventBus;
         _storageFactory = storageFactory;
     }
@@ -216,7 +210,7 @@ public class AlbumsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to edit an album");
 
-        Album? album = await _mediaContext.Albums.FirstOrDefaultAsync(a => a.Id == id);
+        Album? album = await _musicRepository.GetAlbumForEditAsync(id);
 
         if (album is null)
             return NotFoundResponse("Album not found");
@@ -250,12 +244,13 @@ public class AlbumsController : BaseController
             colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
         }
 
-        album.Name = request.Name;
-        album.Description = request.Description;
-        album.Cover = cover;
-        album._colorPalette = colorPalette;
-
-        int result = await _mediaContext.SaveChangesAsync();
+        int result = await _musicRepository.UpdateAlbumMetadataAsync(
+            id,
+            request.Name,
+            request.Description,
+            cover,
+            colorPalette
+        );
 
         await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music", "album", id] });
 
@@ -276,10 +271,7 @@ public class AlbumsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to upload album covers");
 
-        Album? album = await _mediaContext
-            .Albums.Include(album => album.LibraryFolder)
-                .ThenInclude((Folder folder) => folder.Driver)
-            .FirstOrDefaultAsync(album => album.Id == id);
+        Album? album = await _musicRepository.GetAlbumWithLibraryFolderAsync(id);
 
         if (album is null)
             return NotFoundResponse("Album not found");
@@ -315,13 +307,15 @@ public class AlbumsController : BaseController
             await image.CopyToAsync(stream);
         }
 
-        album.Cover = $"/{slug}.jpg";
-        album._colorPalette = await CoverArtImageManagerManager.ColorPalette(
+        string cover = $"/{slug}.jpg";
+        string colorPalette = await CoverArtImageManagerManager.ColorPalette(
             "cover",
             new(filePath2)
         );
 
-        await _mediaContext.SaveChangesAsync();
+        await _musicRepository.UpdateAlbumCoverAsync(id, cover, colorPalette);
+
+        album._colorPalette = colorPalette;
 
         return Ok(
             new StatusResponseDto<ImageUploadResponseDto>

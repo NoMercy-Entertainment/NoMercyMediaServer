@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Api.Controllers.V1.Dashboard.Admin;
-using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Helpers.Extensions;

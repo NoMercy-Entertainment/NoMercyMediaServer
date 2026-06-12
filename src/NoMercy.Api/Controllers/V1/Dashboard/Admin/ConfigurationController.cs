@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Common;
@@ -25,10 +26,10 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/configuration", Order = 10)]
 public class ConfigurationController(
-    MediaContext mediaContext,
     AppDbContext appContext,
     QueueRunner queueRunner,
-    IActivityLogger activityLogger
+    IActivityLogger activityLogger,
+    ILanguageRepository languageRepository
 ) : BaseController
 {
     [HttpGet]
@@ -323,7 +324,7 @@ public class ConfigurationController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view languages");
 
-        List<Language> languages = await mediaContext.Languages.ToListAsync();
+        List<Language> languages = await languageRepository.GetLanguagesAsync();
 
         return Ok(
             languages
@@ -346,7 +347,7 @@ public class ConfigurationController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view countries");
 
-        List<Country> countries = await mediaContext.Countries.ToListAsync();
+        List<Country> countries = await languageRepository.GetCountriesAsync();
 
         return Ok(
             countries

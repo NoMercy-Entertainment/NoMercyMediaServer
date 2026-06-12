@@ -1,12 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Encoder.LiveTranscode;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 

@@ -71,4 +71,8 @@ public interface ICollectionRepository
     );
 
     Task DeleteAsync(int id, CancellationToken ct = default);
+
+    Task<Collection?> GetCollectionForRescanAsync(int id, CancellationToken ct = default);
+
+    Task<Collection?> GetCollectionWithMovieLibrariesAsync(int id, CancellationToken ct = default);
 }

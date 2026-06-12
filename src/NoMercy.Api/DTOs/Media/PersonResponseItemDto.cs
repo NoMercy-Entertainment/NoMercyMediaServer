@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.People;
@@ -135,7 +134,7 @@ public record PersonResponseItemDto
     public PersonResponseItemDto(
         TmdbPersonAppends tmdbPersonAppends,
         string? country,
-        MediaContext mediaContext
+        Person? person
     )
     {
         string? biography = tmdbPersonAppends
@@ -143,24 +142,6 @@ public record PersonResponseItemDto
                 translation.Iso31661 == country
             )
             ?.TmdbPersonTranslationData.Overview;
-
-        Person? person = mediaContext
-            .People.Where(p => p.Id == tmdbPersonAppends.Id)
-            .Include(p => p.Casts)
-                .ThenInclude(c => c.Movie)
-                    .ThenInclude(movie => movie!.VideoFiles)
-            .Include(p => p.Casts)
-                .ThenInclude(c => c.Tv)
-                    .ThenInclude(tv => tv!.Episodes)
-                        .ThenInclude(episode => episode.VideoFiles)
-            .Include(p => p.Crews)
-                .ThenInclude(c => c.Movie)
-                    .ThenInclude(movie => movie!.VideoFiles)
-            .Include(p => p.Crews)
-                .ThenInclude(c => c.Tv)
-                    .ThenInclude(tv => tv!.Episodes)
-                        .ThenInclude(episode => episode.VideoFiles)
-            .FirstOrDefault();
 
         Id = tmdbPersonAppends.Id;
         Name = tmdbPersonAppends.Name;

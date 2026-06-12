@@ -30,7 +30,11 @@ public class DashSinglePassStrategyTests
     {
         // Dispatcher routes on OutputFormat — wrong value sends DASH jobs through
         // the HLS pipeline.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         strategy.Format.Should().Be(OutputFormat.Dash);
     }
@@ -38,7 +42,11 @@ public class DashSinglePassStrategyTests
     [Fact]
     public void EncodeMode_IsSinglePass()
     {
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         strategy.EncodeMode.Should().Be(EncodeMode.SinglePass);
     }
@@ -68,7 +76,11 @@ public class DashSinglePassStrategyTests
             )
             .ReturnsAsync(expected);
 
-        DashSinglePassStrategy strategy = new(encoder.Object, NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            encoder.Object,
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
 
         EncodingRequest request = new(
             InputPath: "/media/test.mkv",
@@ -118,7 +130,11 @@ public class DashSinglePassStrategyTests
         // Cost units gate dispatcher concurrency — wrong banding = wrong bundle
         // sizing under load. Unlike HLS, DASH single-pass has no HDR-tonemap
         // bump, so banding is the only cost input.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [Video(width: width, height: Math.Max(180, width * 9 / 16))],
@@ -140,7 +156,11 @@ public class DashSinglePassStrategyTests
         // Documented contrast with HLS single-pass: HLS adds +1 for tonemap,
         // DASH does not. If anyone unifies the EstimateVideoCost helpers, this
         // test pins the current cost shape so the change is intentional.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [Video(width: 1920, height: 1080, convertHdrToSdr: true)],
@@ -162,7 +182,11 @@ public class DashSinglePassStrategyTests
     public void Decompose_emits_one_video_task_per_rendition_with_indexed_ids()
     {
         // TaskId pattern `{groupTag}-video-{i}` is what the dispatcher de-duplicates on.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs:
@@ -192,7 +216,11 @@ public class DashSinglePassStrategyTests
     [Fact]
     public void Decompose_audio_task_label_carries_language_and_encoder()
     {
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [],
@@ -225,7 +253,11 @@ public class DashSinglePassStrategyTests
     public void Decompose_audio_task_label_uses_und_when_language_missing()
     {
         // No language → "und" (ISO 639-2 undetermined) — must not crash on null.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [],
@@ -255,7 +287,11 @@ public class DashSinglePassStrategyTests
     [Fact]
     public void Decompose_subtitle_task_label_uses_und_when_language_missing()
     {
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [],
@@ -284,7 +320,11 @@ public class DashSinglePassStrategyTests
     [Fact]
     public void Decompose_multiple_subtitles_each_get_indexed_task()
     {
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [],
@@ -310,7 +350,11 @@ public class DashSinglePassStrategyTests
     {
         // Opt-in chapter thumbs expand to one Chapters task per chapter so
         // BuildStage can extract a still per timestamp in parallel.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [Video()],
@@ -343,7 +387,11 @@ public class DashSinglePassStrategyTests
     public void Decompose_chapter_thumbs_opt_out_skips_chapter_tasks()
     {
         // Opt-out (default false) — chapters present but no tasks emitted.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [Video()],
@@ -367,7 +415,11 @@ public class DashSinglePassStrategyTests
     {
         // Opt-in but Chapters is empty — guard predicate `is { Count: > 0 }`
         // must short-circuit cleanly without IndexOutOfRange.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [Video()],
@@ -390,7 +442,11 @@ public class DashSinglePassStrategyTests
     public void Decompose_chapter_thumbs_opt_in_but_null_chapters_skips()
     {
         // Opt-in but Chapters is null — guard predicate must short-circuit.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [Video()],
@@ -416,7 +472,11 @@ public class DashSinglePassStrategyTests
     {
         // Strategy contract: always at least one task — fallback to a single
         // "whole" task if no outputs declared.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [],
@@ -436,7 +496,11 @@ public class DashSinglePassStrategyTests
     {
         // Order matters for dispatcher scheduling — video first (cost-heavy),
         // then audio, then subs, then chapters last.
-        DashSinglePassStrategy strategy = new(Mock.Of<IEncoder>(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            Mock.Of<IEncoder>(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = new(
             Format: OutputFormat.Dash,
             VideoOutputs: [Video()],

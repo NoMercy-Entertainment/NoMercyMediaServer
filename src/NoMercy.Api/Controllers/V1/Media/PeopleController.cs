@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
+using NoMercy.Database.Models.People;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
@@ -16,8 +16,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Tags(tags: "Media People")]
 [ApiVersion(1.0)]
 [Authorize]
-public class PeopleController(MediaContext mediaContext, IPeopleRepository peopleRepository)
-    : BaseController
+public class PeopleController(IPeopleRepository peopleRepository) : BaseController
 {
     [HttpGet]
     [Route("api/v{version:apiVersion}/person")] // match themoviedb.org API
@@ -60,6 +59,8 @@ public class PeopleController(MediaContext mediaContext, IPeopleRepository peopl
                 "Person is adult which is not allowed by the server configuration"
             );
 
-        return Ok(new PersonResponseDto { Data = new(personAppends, country, mediaContext) });
+        Person? person = await peopleRepository.GetPersonWithCreditsAsync(id);
+
+        return Ok(new PersonResponseDto { Data = new(personAppends, country, person) });
     }
 }

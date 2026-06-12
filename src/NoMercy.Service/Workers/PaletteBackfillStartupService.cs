@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.Images.Palettes;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;

@@ -47,8 +47,24 @@ public class FormatStrategiesTests
         return new()
         {
             { new MkvStrategy(encoder), OutputFormat.Mkv, EncodeMode.SinglePass },
-            { new Mp4SinglePassStrategy(encoder, NullLogger<Mp4SinglePassStrategy>.Instance, TestStorageFactory.CreateLocal()), OutputFormat.Mp4, EncodeMode.SinglePass },
-            { new DashSinglePassStrategy(encoder, NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal()), OutputFormat.Dash, EncodeMode.SinglePass },
+            {
+                new Mp4SinglePassStrategy(
+                    encoder,
+                    NullLogger<Mp4SinglePassStrategy>.Instance,
+                    TestStorageFactory.CreateLocal()
+                ),
+                OutputFormat.Mp4,
+                EncodeMode.SinglePass
+            },
+            {
+                new DashSinglePassStrategy(
+                    encoder,
+                    NullLogger<DashSinglePassStrategy>.Instance,
+                    TestStorageFactory.CreateLocal()
+                ),
+                OutputFormat.Dash,
+                EncodeMode.SinglePass
+            },
         };
     }
 
@@ -58,8 +74,16 @@ public class FormatStrategiesTests
         return new()
         {
             new MkvStrategy(encoder),
-            new Mp4SinglePassStrategy(encoder, NullLogger<Mp4SinglePassStrategy>.Instance, TestStorageFactory.CreateLocal()),
-            new DashSinglePassStrategy(encoder, NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal()),
+            new Mp4SinglePassStrategy(
+                encoder,
+                NullLogger<Mp4SinglePassStrategy>.Instance,
+                TestStorageFactory.CreateLocal()
+            ),
+            new DashSinglePassStrategy(
+                encoder,
+                NullLogger<DashSinglePassStrategy>.Instance,
+                TestStorageFactory.CreateLocal()
+            ),
         };
     }
 

@@ -149,7 +149,11 @@ public class DecomposeTests
     [Fact]
     public void HlsSinglePass_Decompose_EmptyPlan_ReturnsSingleWhole()
     {
-        HlsSinglePassStrategy strategy = new(MockEncoder(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        HlsSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan emptyPlan = MakePlan();
 
         DecomposedTask[] tasks = strategy.Decompose(emptyPlan, GroupTag);
@@ -166,7 +170,11 @@ public class DecomposeTests
         // as the unit of tracking, retry, future distributed dispatch.
         // Dispatch-time bundling (in VideoEncodeJob.DispatchDecomposedAsync)
         // packs these into ONE ffmpeg invocation.
-        HlsSinglePassStrategy strategy = new(MockEncoder(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        HlsSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlan(videoCount: 2, audioCount: 1);
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
@@ -188,7 +196,11 @@ public class DecomposeTests
         // HEVC ladder + H.264 fallback → one task per rung. The bundler
         // packs them into ONE ffmpeg at dispatch — each rung keeps its own
         // -map [vN] -c:v <encoder> block in the bundled invocation.
-        HlsSinglePassStrategy strategy = new(MockEncoder(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        HlsSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakeMixedCodecPlan();
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
@@ -207,7 +219,11 @@ public class DecomposeTests
     [Fact]
     public void HlsSinglePass_Decompose_PerTrackAudioTasks()
     {
-        HlsSinglePassStrategy strategy = new(MockEncoder(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        HlsSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlan(videoCount: 1, audioCount: 3);
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
@@ -223,7 +239,11 @@ public class DecomposeTests
     [Fact]
     public void HlsSinglePass_Decompose_WithThumbnails_IncludesThumbnailsTask()
     {
-        HlsSinglePassStrategy strategy = new(MockEncoder(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        HlsSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlan(videoCount: 1, hasThumbnails: true);
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
@@ -239,7 +259,11 @@ public class DecomposeTests
     public void HlsSinglePass_Decompose_WithSubtitles_KeepsOneTaskPerSubtitle()
     {
         // Subtitles stay fanned out — each track is cheap and independent.
-        HlsSinglePassStrategy strategy = new(MockEncoder(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        HlsSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlan(videoCount: 1, audioCount: 1, subtitleCount: 2);
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
@@ -255,7 +279,11 @@ public class DecomposeTests
     [Fact]
     public void HlsSinglePass_Decompose_AllTasksShareGroupTag()
     {
-        HlsSinglePassStrategy strategy = new(MockEncoder(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        HlsSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlan(
             videoCount: 2,
             audioCount: 1,
@@ -273,7 +301,11 @@ public class DecomposeTests
     [Fact]
     public void DashSinglePass_Decompose_EmptyPlan_ReturnsSingleWhole()
     {
-        DashSinglePassStrategy strategy = new(MockEncoder(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan emptyPlan = MakePlan();
 
         DecomposedTask[] tasks = strategy.Decompose(emptyPlan, GroupTag);
@@ -285,7 +317,11 @@ public class DecomposeTests
     [Fact]
     public void DashSinglePass_Decompose_TwoVideoOneAudio_ReturnsCorrectCount()
     {
-        DashSinglePassStrategy strategy = new(MockEncoder(), NullLogger<DashSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        DashSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<DashSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlan(videoCount: 2, audioCount: 2);
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
@@ -299,7 +335,11 @@ public class DecomposeTests
     [Fact]
     public void Mp4SinglePass_Decompose_AlwaysReturnsWholeTask()
     {
-        IEncodingStrategy strategy = new Mp4SinglePassStrategy(MockEncoder(), NullLogger<Mp4SinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        IEncodingStrategy strategy = new Mp4SinglePassStrategy(
+            MockEncoder(),
+            NullLogger<Mp4SinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlan(videoCount: 3, audioCount: 2);
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
@@ -325,7 +365,11 @@ public class DecomposeTests
     [Fact]
     public void HlsSinglePass_Decompose_AllTaskIdsAreUnique()
     {
-        HlsSinglePassStrategy strategy = new(MockEncoder(), NullLogger<HlsSinglePassStrategy>.Instance, TestStorageFactory.CreateLocal());
+        HlsSinglePassStrategy strategy = new(
+            MockEncoder(),
+            NullLogger<HlsSinglePassStrategy>.Instance,
+            TestStorageFactory.CreateLocal()
+        );
         OutputPlan plan = MakePlan(
             videoCount: 3,
             audioCount: 2,

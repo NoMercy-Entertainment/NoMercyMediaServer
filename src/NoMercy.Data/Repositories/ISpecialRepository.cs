@@ -1,6 +1,5 @@
 using NoMercy.Data.DTOs.Specials;
-using NoMercy.Database;
-using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 
 namespace NoMercy.Data.Repositories;
@@ -65,4 +64,62 @@ public interface ISpecialRepository
         bool add = true,
         CancellationToken ct = default
     );
+
+    Task<SpecialItemProjections> GetSpecialItemProjectionsAsync(
+        Guid userId,
+        IEnumerable<int> movieIds,
+        IEnumerable<int> tvIds,
+        string country,
+        CancellationToken ct = default
+    );
+
+    Task<Special?> LikeSpecialAsync(
+        Ulid id,
+        Guid userId,
+        bool like,
+        CancellationToken ct = default
+    );
+
+    // --- Dashboard / admin methods ---
+
+    Task<List<Special>> GetAllSpecialsAdminAsync(CancellationToken ct = default);
+
+    Task<Special> CreateSpecialAsync(Guid userId, CancellationToken ct = default);
+
+    Task<Special?> GetSpecialByIdAsync(Ulid id, CancellationToken ct = default);
+
+    Task<Special?> UpdateSpecialAsync(
+        Ulid id,
+        string? title,
+        string? overview,
+        string? poster,
+        string? backdrop,
+        string? logo,
+        CancellationToken ct = default
+    );
+
+    Task<Special?> DeleteSpecialAsync(Ulid id, CancellationToken ct = default);
+
+    Task<List<Special>> GetAllSpecialsSortableAsync(CancellationToken ct = default);
+
+    Task<List<Special>> GetAllSpecialsForRescanAsync(CancellationToken ct = default);
+
+    Task<List<SpecialItem>> GetSpecialItemsAdminAsync(Ulid id, CancellationToken ct = default);
+
+    Task<bool> ReplaceSpecialItemsAsync(
+        Ulid id,
+        List<SpecialItemReplacement> items,
+        CancellationToken ct = default
+    );
+
+    Task<List<Movie>> SearchMoviesAsync(string query, int take, CancellationToken ct = default);
+
+    Task<List<Episode>> SearchEpisodesAsync(string query, int take, CancellationToken ct = default);
 }
+
+public record SpecialItemProjections(
+    List<SpecialMovieProjection> Movies,
+    List<SpecialTvProjection> Tvs
+);
+
+public record SpecialItemReplacement(string MediaType, int MediaId, int Order);

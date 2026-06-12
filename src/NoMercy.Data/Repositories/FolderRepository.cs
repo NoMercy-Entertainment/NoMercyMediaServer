@@ -122,6 +122,11 @@ public class FolderRepository(MediaContext context) : IFolderRepository
         }
     }
 
+    public Task<List<Folder>> GetAllFoldersAsync(CancellationToken ct = default)
+    {
+        return context.Folders.AsNoTracking().ToListAsync(ct);
+    }
+
     public async Task<int> SyncFolderLibraryAsync(
         FolderLibrary[] folderLibraries,
         List<Folder> folders

@@ -11,4 +11,6 @@ public interface IPeopleRepository
         int page = 0,
         CancellationToken ct = default
     );
+
+    Task<Person?> GetPersonWithCreditsAsync(int id, CancellationToken ct = default);
 }

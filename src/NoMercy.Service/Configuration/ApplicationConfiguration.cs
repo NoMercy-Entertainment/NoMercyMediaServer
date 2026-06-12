@@ -1,10 +1,8 @@
 ﻿using Asp.Versioning.ApiExplorer;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Hosting;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;

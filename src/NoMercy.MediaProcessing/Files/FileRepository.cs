@@ -1850,4 +1850,32 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         return array;
     }
+
+    public Task<List<VideoFile>> SearchVideoFilesAsync(
+        string? query,
+        int limit,
+        CancellationToken ct = default
+    )
+    {
+        IQueryable<VideoFile> baseQuery = context
+            .VideoFiles.AsNoTracking()
+            .Include(file => file.Movie)
+            .Include(file => file.Episode)
+                .ThenInclude(episode => episode!.Tv);
+
+        IQueryable<VideoFile> filtered = string.IsNullOrEmpty(query)
+            ? baseQuery
+            : baseQuery.Where(file =>
+                EF.Functions.Like(file.Filename, $"%{query}%")
+                || (file.Movie != null && EF.Functions.Like(file.Movie.Title, $"%{query}%"))
+                || (file.Episode != null && EF.Functions.Like(file.Episode.Title!, $"%{query}%"))
+                || (
+                    file.Episode != null
+                    && file.Episode.Tv != null
+                    && EF.Functions.Like(file.Episode.Tv.Title, $"%{query}%")
+                )
+            );
+
+        return filtered.OrderByDescending(file => file.UpdatedAt).Take(limit).ToListAsync(ct);
+    }
 }

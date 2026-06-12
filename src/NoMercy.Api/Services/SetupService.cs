@@ -54,10 +54,7 @@ public class SetupService
 
     public async Task<ScreensaverDto> GetSetupScreensaverContent(Guid userId)
     {
-        HashSet<Image> data = await _homeRepository.GetScreensaverImagesAsync(
-            _mediaContext,
-            userId
-        );
+        HashSet<Image> data = await _homeRepository.GetScreensaverImagesAsync(userId);
 
         IEnumerable<Image> logos = data.Where(image => image.Type == "logo");
 

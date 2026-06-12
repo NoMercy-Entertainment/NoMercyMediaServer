@@ -137,6 +137,21 @@ public interface ILibraryRepository
 
     Task<Library?> GetLibraryByIdAsync(Ulid id);
 
+    Task<Library?> GetLibraryByIdLiteAsync(Ulid id, CancellationToken ct = default);
+
+    Task<bool> HasCompletedSetupAsync(CancellationToken ct = default);
+
+    Task<Library?> GetLibraryByTypeAsync(
+        string type,
+        string? fallbackType = null,
+        CancellationToken ct = default
+    );
+
+    Task<VideoSearchResults> SearchVideoByTitleAsync(
+        string normalizedQuery,
+        CancellationToken ct = default
+    );
+
     Task<List<Library>> GetAllLibrariesAsync();
 
     Task<List<FolderDto>> GetFoldersAsync();
@@ -180,3 +195,5 @@ public interface ILibraryRepository
         List<Folder> folders
     );
 }
+
+public record VideoSearchResults(List<Tv> Tvs, List<Movie> Movies);

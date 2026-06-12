@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Events;
 using NoMercy.Events.DriveMonitor;
-using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Rip;

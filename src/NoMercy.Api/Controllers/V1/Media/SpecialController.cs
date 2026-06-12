@@ -2,13 +2,11 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Data.DTOs.Specials;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Helpers.Extensions;
@@ -21,11 +19,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/specials")]
-public class SpecialController(
-    SpecialRepository specialRepository,
-    MediaContext context,
-    IDbContextFactory<MediaContext> contextFactory
-) : BaseController
+public class SpecialController(ISpecialRepository specialRepository) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index(
@@ -107,38 +101,19 @@ public class SpecialController(
             .Select(item => item.TvId)
             .Distinct();
 
-        // Fetch movies and TVs in parallel using separate DbContexts
-        Task<List<SpecialItemsDto>> moviesTask = Task.Run(async () =>
-        {
-            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-            List<SpecialMovieProjection> projections =
-                await SpecialRepository.GetSpecialMovieProjectionsAsync(
-                    mediaContext,
-                    userId,
-                    movieIds,
-                    country,
-                    ct
-                );
-            return projections.Select(p => new SpecialItemsDto(p)).ToList();
-        });
+        SpecialItemProjections projections = await specialRepository.GetSpecialItemProjectionsAsync(
+            userId,
+            movieIds,
+            tvIds,
+            country,
+            ct
+        );
 
-        Task<List<SpecialItemsDto>> tvsTask = Task.Run(async () =>
-        {
-            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-            List<SpecialTvProjection> projections =
-                await SpecialRepository.GetSpecialTvProjectionsAsync(
-                    mediaContext,
-                    userId,
-                    tvIds,
-                    country,
-                    ct
-                );
-            return projections.Select(p => new SpecialItemsDto(p)).ToList();
-        });
-
-        await Task.WhenAll(moviesTask, tvsTask);
-
-        List<SpecialItemsDto> items = [.. moviesTask.Result, .. tvsTask.Result];
+        List<SpecialItemsDto> items =
+        [
+            .. projections.Movies.Select(projection => new SpecialItemsDto(projection)),
+            .. projections.Tvs.Select(projection => new SpecialItemsDto(projection)),
+        ];
 
         return Ok(new DataResponseDto<SpecialResponseItemDto> { Data = new(detail, items) });
     }
@@ -229,36 +204,10 @@ public class SpecialController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like a special");
 
-        Special? collection = await context
-            .Specials.AsNoTracking()
-            .Where(collection => collection.Id == id)
-            .FirstOrDefaultAsync(ct);
+        Special? special = await specialRepository.LikeSpecialAsync(id, userId, request.Value, ct);
 
-        if (collection is null)
+        if (special is null)
             return NotFoundResponse("Special not found");
-
-        if (request.Value)
-        {
-            await context
-                .SpecialUser.Upsert(new(collection.Id, userId))
-                .On(m => new { m.SpecialId, m.UserId })
-                .WhenMatched(m => new() { SpecialId = m.SpecialId, UserId = m.UserId })
-                .RunAsync();
-        }
-        else
-        {
-            SpecialUser? collectionUser = await context
-                .SpecialUser.Where(collectionUser =>
-                    collectionUser.SpecialId == collection.Id
-                    && collectionUser.UserId.Equals(userId)
-                )
-                .FirstOrDefaultAsync(ct);
-
-            if (collectionUser is not null)
-                context.SpecialUser.Remove(collectionUser);
-
-            await context.SaveChangesAsync(ct);
-        }
 
         return Ok(
             new StatusResponseDto<string>
@@ -267,7 +216,7 @@ public class SpecialController(
                 Message = "{0} {1}",
                 Args = new object[]
                 {
-                    collection.Title.OrEmpty(),
+                    special.Title.OrEmpty(),
                     request.Value ? "liked" : "unliked",
                 },
             }

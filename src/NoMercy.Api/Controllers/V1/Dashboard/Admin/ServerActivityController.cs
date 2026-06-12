@@ -2,11 +2,10 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
-using NoMercy.Database;
+using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 
@@ -17,7 +16,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/activity", Order = 10)]
-public class ServerActivityController(MediaContext mediaContext) : BaseController
+public class ServerActivityController(IActivityRepository activityRepository) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] ServerActivityRequest request)
@@ -28,45 +27,37 @@ public class ServerActivityController(MediaContext mediaContext) : BaseControlle
         int take = request.Take ?? 50;
         int skip = request.Skip ?? 0;
 
-        IQueryable<ActivityLog> query = mediaContext.ActivityLogs.AsQueryable();
+        List<ActivityLog> activityLogs = await activityRepository.GetPagedAsync(
+            request.Category,
+            request.UserId,
+            request.DeviceId,
+            request.MediaId,
+            request.From,
+            request.To,
+            request.Success,
+            skip,
+            take
+        );
 
-        if (request.Category is { } category)
-            query = query.Where(x => x.Category == category);
-        if (request.UserId is { } userId)
-            query = query.Where(x => x.UserId == userId);
-        if (request.DeviceId is { } deviceId)
-            query = query.Where(x => x.DeviceId == deviceId);
-        if (request.MediaId is { } mediaId)
-            query = query.Where(x => x.MediaId == mediaId);
-        if (request.From is { } from)
-            query = query.Where(x => x.CreatedAt >= from);
-        if (request.To is { } to)
-            query = query.Where(x => x.CreatedAt <= to);
-        if (request.Success is { } success)
-            query = query.Where(x => x.Success == success);
-
-        ServerActivityDto[] activityDtos = await query
-            .OrderByDescending(x => x.CreatedAt)
-            .Skip(skip)
-            .Take(take)
-            .Select(x => new ServerActivityDto
+        ServerActivityDto[] activityDtos = activityLogs
+            .Select(activityLog => new ServerActivityDto
             {
-                Id = x.Id,
-                Category = x.Category,
-                Type = x.Type,
-                Time = x.Time,
-                CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt,
-                UserId = x.UserId,
-                DeviceId = x.DeviceId,
-                MediaId = x.MediaId,
-                Success = x.Success,
-                ErrorCode = x.ErrorCode,
-                Metadata = x.Metadata,
-                Device = x.Device.Name,
-                User = x.User.Name,
+                Id = activityLog.Id,
+                Category = activityLog.Category,
+                Type = activityLog.Type,
+                Time = activityLog.Time,
+                CreatedAt = activityLog.CreatedAt,
+                UpdatedAt = activityLog.UpdatedAt,
+                UserId = activityLog.UserId,
+                DeviceId = activityLog.DeviceId,
+                MediaId = activityLog.MediaId,
+                Success = activityLog.Success,
+                ErrorCode = activityLog.ErrorCode,
+                Metadata = activityLog.Metadata,
+                Device = activityLog.Device.Name,
+                User = activityLog.User.Name,
             })
-            .ToArrayAsync();
+            .ToArray();
 
         return Ok(
             new StatusResponseDto<ServerActivityDto[]> { Status = "ok", Data = activityDtos }
@@ -91,13 +82,7 @@ public class ServerActivityController(MediaContext mediaContext) : BaseControlle
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to delete activity");
 
-        IQueryable<ActivityLog> query = mediaContext.ActivityLogs.AsQueryable();
-        if (category is { } cat)
-            query = query.Where(x => x.Category == cat);
-        if (before is { } cutoff)
-            query = query.Where(x => x.CreatedAt < cutoff);
-
-        int deleted = await query.ExecuteDeleteAsync();
+        int deleted = await activityRepository.DeleteAsync(category, before);
         return Ok(new StatusResponseDto<object> { Status = "ok", Data = new { deleted } });
     }
 }

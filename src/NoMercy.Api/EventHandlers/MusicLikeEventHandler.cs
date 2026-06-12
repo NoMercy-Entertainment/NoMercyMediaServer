@@ -1,8 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
-using NoMercy.Database;
+using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Music;
@@ -43,11 +42,9 @@ public class MusicLikeEventHandler : IDisposable
                 track.Favorite = @event.Liked;
 
         await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
-        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<
-            IDbContextFactory<MediaContext>
-        >();
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        User? user = await context.Users.FirstOrDefaultAsync(u => u.Id == @event.UserId, ct);
+        IUserRepository userRepository =
+            scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        User? user = await userRepository.GetByIdAsync(@event.UserId);
         if (user is null)
             return;
 

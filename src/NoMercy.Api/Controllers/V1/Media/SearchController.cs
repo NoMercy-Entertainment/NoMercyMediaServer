@@ -3,12 +3,10 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.TvShows;
@@ -25,15 +23,12 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class SearchController : BaseController
 {
     private readonly IMusicRepository _musicRepository;
-    private readonly IDbContextFactory<MediaContext> _contextFactory;
+    private readonly ILibraryRepository _libraryRepository;
 
-    public SearchController(
-        IMusicRepository musicService,
-        IDbContextFactory<MediaContext> contextFactory
-    )
+    public SearchController(IMusicRepository musicService, ILibraryRepository libraryRepository)
     {
         _musicRepository = musicService;
-        _contextFactory = contextFactory;
+        _libraryRepository = libraryRepository;
     }
 
     [HttpGet("music")]
@@ -230,66 +225,19 @@ public class SearchController : BaseController
         List<Guid> playlistIds = await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery, ct);
         List<Guid> trackIds = await _musicRepository.SearchTrackIdsAsync(normalizedQuery, ct);
 
-        // Step 2: Query full data using the IDs in parallel - each task needs its own MediaContext for thread safety
-        Task<List<Artist>> artistsTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await context
-                .Artists.Where(artist => artistIds.Contains(artist.Id))
-                .Include(artist => artist.ArtistTrack)
-                    .ThenInclude(artistTrack => artistTrack.Track)
-                .Include(artist => artist.AlbumArtist)
-                    .ThenInclude(albumArtist => albumArtist.Album)
-                .ToListAsync(ct);
-        });
+        // Step 2: Query full data using the IDs in parallel (repository owns the fan-out)
+        MusicSearchFullData fullData = await _musicRepository.SearchMusicFullDataAsync(
+            artistIds,
+            albumIds,
+            playlistIds,
+            trackIds,
+            ct
+        );
 
-        Task<List<Album>> albumsTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await context
-                .Albums.Where(album => albumIds.Contains(album.Id))
-                .Include(album => album.AlbumTrack)
-                    .ThenInclude(albumTrack => albumTrack.Track)
-                        .ThenInclude(track => track.ArtistTrack)
-                            .ThenInclude(artistTrack => artistTrack.Artist)
-                .Include(album => album.AlbumTrack)
-                    .ThenInclude(albumTrack => albumTrack.Track)
-                        .ThenInclude(song => song.TrackUser)
-                .ToListAsync(ct);
-        });
-
-        Task<List<Playlist>> playlistsTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await context
-                .Playlists.Where(playlist => playlistIds.Contains(playlist.Id))
-                .Include(playlist => playlist.Tracks)
-                    .ThenInclude(playlistTrack => playlistTrack.Track)
-                        .ThenInclude(song => song.TrackUser)
-                .ToListAsync(ct);
-        });
-
-        Task<List<Track>> songsTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await context
-                .Tracks.Where(track => trackIds.Contains(track.Id))
-                .Include(track => track.ArtistTrack)
-                    .ThenInclude(artistTrack => artistTrack.Artist)
-                .Include(track => track.AlbumTrack)
-                    .ThenInclude(albumTrack => albumTrack.Album)
-                .Include(track => track.PlaylistTrack)
-                    .ThenInclude(playlistTrack => playlistTrack.Playlist)
-                .Include(track => track.TrackUser)
-                .ToListAsync(ct);
-        });
-
-        await Task.WhenAll(artistsTask, albumsTask, playlistsTask, songsTask);
-
-        List<Artist> artists = await artistsTask;
-        List<Album> albums = await albumsTask;
-        List<Playlist> playlists = await playlistsTask;
-        List<Track> songs = await songsTask;
+        List<Artist> artists = fullData.Artists;
+        List<Album> albums = fullData.Albums;
+        List<Playlist> playlists = fullData.Playlists;
+        List<Track> songs = fullData.Songs;
 
         if (albums.Count > 0)
             foreach (Album album in albums)
@@ -337,28 +285,13 @@ public class SearchController : BaseController
         CancellationToken ct
     )
     {
-        Task<List<Tv>> tvsTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await context
-                .Tvs.Where(tv => tv.Title.ToLower().Contains(normalizedQuery))
-                .ToListAsync(ct);
-        });
+        VideoSearchResults videoResults = await _libraryRepository.SearchVideoByTitleAsync(
+            normalizedQuery,
+            ct
+        );
 
-        Task<List<Movie>> moviesTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await context
-                .Movies.Where(movie => movie.Title.ToLower().Contains(normalizedQuery))
-                .ToListAsync(ct);
-        });
-
-        await Task.WhenAll(tvsTask, moviesTask);
-
-        List<Tv> tvs = await tvsTask;
-        List<Movie> movies = await moviesTask;
-
-        List<CardData> cardItems = tvs.Concat<dynamic>(movies)
+        List<CardData> cardItems = videoResults
+            .Tvs.Concat<dynamic>(videoResults.Movies)
             .OrderBy(item => item is Tv tv ? tv.Title : ((Movie)item).Title)
             .Select(item => new CardData(item, country))
             .ToList();

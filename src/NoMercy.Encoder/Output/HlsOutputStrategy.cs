@@ -175,6 +175,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         // Measure actual bitrates from the encoded variant playlists.
         // These are the real values — not estimates from profile settings.
         HlsVariantAnalyzer analyzer = new(storage);
+        List<string> measuredVariantPaths = [];
         Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics = [];
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
@@ -191,6 +192,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                 $"{playlistFile}.m3u8"
             );
 
+            measuredVariantPaths.Add(variantPath);
             videoMetrics[video.MapLabel] = analyzer.Measure(variantPath);
         }
 
@@ -214,7 +216,31 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                 $"{playlistFile}.m3u8"
             );
 
+            measuredVariantPaths.Add(variantPath);
             audioMetrics[audio.MapLabel] = analyzer.Measure(variantPath);
+        }
+
+        // A master that lists zero variants is unplayable; writing it would also
+        // clobber a previously good master when several presets share one output
+        // directory. Fail loudly instead — FinalizeStage surfaces this as a
+        // stage failure with the exact paths that came up empty.
+        bool anyVariantMeasured =
+            videoMetrics.Values.Any(metrics => metrics.PeakBandwidth > 0)
+            || audioMetrics.Values.Any(metrics => metrics.PeakBandwidth > 0);
+
+        if (measuredVariantPaths.Count > 0 && !anyVariantMeasured)
+        {
+            var missing = measuredVariantPaths.Where(p => !storage.Exists(p)).ToList();
+            var empty = measuredVariantPaths
+                .Where(p => storage.Exists(p) && analyzer.Measure(p).PeakBandwidth == 0)
+                .ToList();
+
+            throw new InvalidOperationException(
+                "Master playlist would list zero variants — no variant playlist produced "
+                    + $"measurable segments. Output dir: {outputDirectory}. "
+                    + $"Missing: {string.Join(", ", missing)}. "
+                    + $"Empty/Invalid: {string.Join(", ", empty)}."
+            );
         }
 
         // Build subtitle sidecars first so the master playlist only advertises

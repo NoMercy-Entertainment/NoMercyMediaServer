@@ -2,12 +2,10 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Helpers.Extensions;
@@ -29,8 +27,8 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Route("api/v{version:apiVersion}/collection/{id:int}")] // match themoviedb.org API
 public class CollectionsController(
     ICollectionRepository collectionRepository,
-    JobDispatcher jobDispatcher,
-    MediaContext mediaContext
+    ILibraryRepository libraryRepository,
+    JobDispatcher jobDispatcher
 ) : BaseController
 {
     [HttpGet]
@@ -267,14 +265,7 @@ public class CollectionsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan movies");
 
-        Collection? collection = await mediaContext
-            .Collections.AsNoTracking()
-            .Include(collection => collection.CollectionMovies)
-                .ThenInclude(cm => cm.Movie)
-                    .ThenInclude(movie => movie.Library)
-                        .ThenInclude(f => f.FolderLibraries)
-                            .ThenInclude(f => f.Folder)
-            .FirstOrDefaultAsync(collection => collection.Id == id, ct);
+        Collection? collection = await collectionRepository.GetCollectionForRescanAsync(id, ct);
 
         if (collection is null)
             return UnprocessableEntityResponse("Collection not found");
@@ -312,12 +303,10 @@ public class CollectionsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh movies");
 
-        Collection? collection = await mediaContext
-            .Collections.AsNoTracking()
-            .Include(collection => collection.CollectionMovies)
-                .ThenInclude(cm => cm.Movie)
-                    .ThenInclude(movie => movie.Library)
-            .FirstOrDefaultAsync(movie => movie.Id == id, ct);
+        Collection? collection = await collectionRepository.GetCollectionWithMovieLibrariesAsync(
+            id,
+            ct
+        );
 
         if (collection is null)
             return UnprocessableEntityResponse("Collection not found");
@@ -355,19 +344,18 @@ public class CollectionsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add tv shows");
 
-        Library? library = await mediaContext
-            .Libraries.Where(f => f.Type == Config.MovieMediaType)
-            .FirstOrDefaultAsync(ct);
+        Library? library = await libraryRepository.GetLibraryByTypeAsync(
+            Config.MovieMediaType,
+            ct: ct
+        );
 
         if (library is null)
             return UnprocessableEntityResponse("No movie library found");
 
-        Collection? collection = await mediaContext
-            .Collections.AsNoTracking()
-            .Include(collection => collection.CollectionMovies)
-                .ThenInclude(cm => cm.Movie)
-                    .ThenInclude(movie => movie.Library)
-            .FirstOrDefaultAsync(movie => movie.Id == id, ct);
+        Collection? collection = await collectionRepository.GetCollectionWithMovieLibrariesAsync(
+            id,
+            ct
+        );
 
         if (collection is null)
             return UnprocessableEntityResponse("Collection not found");

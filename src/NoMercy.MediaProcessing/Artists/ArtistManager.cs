@@ -6,7 +6,6 @@ using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;

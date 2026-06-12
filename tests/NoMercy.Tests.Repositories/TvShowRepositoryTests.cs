@@ -146,7 +146,7 @@ public class TvShowRepositoryTests : IDisposable
     {
         SeedDetailData(_context);
 
-        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 1399, "en", "US");
+        Tv? tv = (await _repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US"))?.Tv;
 
         Assert.NotNull(tv);
         Assert.Equal(1399, tv.Id);
@@ -170,7 +170,7 @@ public class TvShowRepositoryTests : IDisposable
     {
         SeedDetailData(_context);
 
-        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 1399, "en", "US");
+        Tv? tv = (await _repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US"))?.Tv;
 
         Assert.NotNull(tv);
 
@@ -202,7 +202,7 @@ public class TvShowRepositoryTests : IDisposable
     {
         SeedDetailData(_context);
 
-        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 1399, "en", "US");
+        Tv? tv = (await _repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US"))?.Tv;
 
         Assert.NotNull(tv);
 
@@ -222,23 +222,22 @@ public class TvShowRepositoryTests : IDisposable
     [Fact]
     public async Task GetTvAsync_ReturnsNull_WhenUserHasNoAccess()
     {
-        Tv? tv = await _repository.GetTvAsync(
-            _context,
+        TvDetail? detail = await _repository.GetTvAsync(
             SeedConstants.OtherUserId,
             1399,
             "en",
             "US"
         );
 
-        Assert.Null(tv);
+        Assert.Null(detail);
     }
 
     [Fact]
     public async Task GetTvAsync_ReturnsNull_WhenShowDoesNotExist()
     {
-        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 999999, "en", "US");
+        TvDetail? detail = await _repository.GetTvAsync(SeedConstants.UserId, 999999, "en", "US");
 
-        Assert.Null(tv);
+        Assert.Null(detail);
     }
 
     [Fact]
@@ -246,7 +245,7 @@ public class TvShowRepositoryTests : IDisposable
     {
         SeedDetailData(_context);
 
-        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 1399, "en", "US");
+        Tv? tv = (await _repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US"))?.Tv;
 
         Assert.NotNull(tv);
 
@@ -266,7 +265,7 @@ public class TvShowRepositoryTests : IDisposable
     [Fact]
     public async Task GetTvAsync_IncludesSeasonsWithEpisodesAndVideoFiles()
     {
-        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 1399, "en", "US");
+        Tv? tv = (await _repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US"))?.Tv;
 
         Assert.NotNull(tv);
         Assert.NotEmpty(tv.Seasons);
@@ -284,7 +283,7 @@ public class TvShowRepositoryTests : IDisposable
         SeedDetailData(ctx);
         interceptor.Clear();
 
-        await repo.GetTvAsync(ctx, SeedConstants.UserId, 1399, "en", "US");
+        await repo.GetTvAsync(SeedConstants.UserId, 1399, "en", "US");
 
         // Should generate multiple SQL queries (split query behavior)
         Assert.True(

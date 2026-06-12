@@ -1,6 +1,5 @@
 using NoMercy.Data.DTOs;
 using NoMercy.Database.Models.Music;
-using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.Data.Repositories;
 
@@ -221,4 +220,111 @@ public interface IMusicRepository
     );
 
     Task<MusicStartPageData> GetMusicStartPageAsync(Guid userId, CancellationToken ct = default);
+
+    Task<bool> DeleteArtistAsync(Guid id, CancellationToken ct = default);
+
+    Task<Artist?> GetArtistByIdAsync(Guid id, CancellationToken ct = default);
+
+    Task<Album?> GetAlbumByIdAsync(Guid id, CancellationToken ct = default);
+
+    Task<Artist?> GetArtistForEditAsync(Guid id, CancellationToken ct = default);
+
+    Task<Artist?> GetArtistWithLibraryFolderAsync(Guid id, CancellationToken ct = default);
+
+    Task<Album?> GetAlbumForEditAsync(Guid id, CancellationToken ct = default);
+
+    Task<Album?> GetAlbumWithLibraryFolderAsync(Guid id, CancellationToken ct = default);
+
+    Task<bool> PlaylistNameExistsAsync(string name, Guid userId, CancellationToken ct = default);
+
+    Task CreatePlaylistAsync(
+        Playlist playlist,
+        List<Guid> trackIds,
+        CancellationToken ct = default
+    );
+
+    Task<Playlist?> GetPlaylistByNameAsync(
+        string name,
+        Guid userId,
+        CancellationToken ct = default
+    );
+
+    Task<Playlist?> GetPlaylistForEditAsync(Guid id, CancellationToken ct = default);
+
+    Task<Playlist?> GetPlaylistForCoverAsync(Guid id, Guid userId, CancellationToken ct = default);
+
+    Task<int> DeletePlaylistAsync(Guid id, Guid userId, CancellationToken ct = default);
+
+    Task<int> AddPlaylistTrackAsync(Guid playlistId, Guid trackId, CancellationToken ct = default);
+
+    Task<int> RemovePlaylistTrackAsync(
+        Guid playlistId,
+        Guid trackId,
+        Guid userId,
+        CancellationToken ct = default
+    );
+
+    Task<int> UpdateArtistMetadataAsync(
+        Guid id,
+        string name,
+        string? description,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    );
+
+    Task UpdateArtistCoverAsync(
+        Guid id,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    );
+
+    Task<int> UpdateAlbumMetadataAsync(
+        Guid id,
+        string name,
+        string? description,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    );
+
+    Task UpdateAlbumCoverAsync(
+        Guid id,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    );
+
+    Task<int> UpdatePlaylistMetadataAsync(
+        Guid id,
+        string name,
+        string? description,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    );
+
+    Task UpdatePlaylistCoverAsync(
+        Guid id,
+        Guid userId,
+        string cover,
+        string colorPalette,
+        CancellationToken ct = default
+    );
+
+    Task<MusicSearchFullData> SearchMusicFullDataAsync(
+        List<Guid> artistIds,
+        List<Guid> albumIds,
+        List<Guid> playlistIds,
+        List<Guid> trackIds,
+        CancellationToken ct = default
+    );
 }
+
+public record MusicSearchFullData(
+    List<Artist> Artists,
+    List<Album> Albums,
+    List<Playlist> Playlists,
+    List<Track> Songs
+);

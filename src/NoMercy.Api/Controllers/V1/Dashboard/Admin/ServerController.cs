@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
@@ -44,7 +45,6 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [Route("api/v{version:apiVersion}/dashboard/server", Order = 10)]
 public class ServerController(
     IHostApplicationLifetime appLifetime,
-    MediaContext context,
     AppDbContext appContext,
     FileRepository fileRepository,
     JobDispatcher jobDispatcher,
@@ -54,7 +54,10 @@ public class ServerController(
     INetworkDiscovery networkDiscovery,
     IHttpClientFactory httpClientFactory,
     IStorageDriver storageDriver,
-    IStorageFactory storageFactory
+    IStorageFactory storageFactory,
+    ILibraryRepository libraryRepository,
+    IFolderRepository folderRepository,
+    IImageRepository imageRepository
 ) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
@@ -76,14 +79,7 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to access the setup");
 
-        List<Library> libraries = await context
-            .Libraries.Include(library => library.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Folder)
-                    .ThenInclude(folder => folder.EncoderProfileFolder)
-                        .ThenInclude(encoderProfileFolder => encoderProfileFolder.EncoderProfile)
-            .Include(library => library.LibraryUsers.Where(x => x.UserId.Equals(userId)))
-                .ThenInclude(libraryUser => libraryUser.User)
-            .ToListAsync();
+        List<Library> libraries = await libraryRepository.GetLibraries(userId);
 
         int libraryCount = libraries.Count;
 
@@ -196,9 +192,7 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add files");
 
-        Library? library = await context.Libraries.FirstOrDefaultAsync(x =>
-            x.Id == request.LibraryId
-        );
+        Library? library = await libraryRepository.GetLibraryByIdLiteAsync(request.LibraryId);
 
         if (library == null)
             return NotFoundResponse("Library not found");
@@ -206,10 +200,7 @@ public class ServerController(
         // Determine whether the folder lives on a remote driver. When it does,
         // the path from filelist is already driver-relative — do not call
         // Path.GetFullPath, which would prepend the process working directory.
-        Folder? folder = await context
-            .Folders.AsNoTracking()
-            .Include(f => f.Driver)
-            .FirstOrDefaultAsync(f => f.Id == request.FolderId);
+        Folder? folder = await folderRepository.GetFolderByIdAsync(request.FolderId);
 
         bool isRemoteDriver =
             folder?.Driver is not null
@@ -391,13 +382,12 @@ public class ServerController(
     [HttpGet]
     [Route("info")]
     [ResponseCache(NoStore = true)]
-    public IActionResult ServerInfo()
+    public async Task<IActionResult> ServerInfo()
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view server information");
 
-        bool setupComplete =
-            context.Libraries.Any() && context.Folders.Any() && context.EncoderProfiles.Any();
+        bool setupComplete = await libraryRepository.HasCompletedSetupAsync();
 
         return Ok(
             new StatusResponseDto<ServerInfoDto>
@@ -603,9 +593,7 @@ public class ServerController(
         if (!wallpaperService.IsSupported)
             return BadRequestResponse("Wallpaper setting is not supported on this platform");
 
-        Image? wallpaper = await context.Images.FirstOrDefaultAsync(config =>
-            config.FilePath == request.Path
-        );
+        Image? wallpaper = await imageRepository.GetImageByFilePathAsync(request.Path);
 
         if (wallpaper?.FilePath is null)
             return NotFoundResponse("Wallpaper not found");

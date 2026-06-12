@@ -4,7 +4,6 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Images.Palettes;
 using NoMercy.MediaProcessing.Images.Palettes.Sources;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Tests.MediaProcessing.Palettes;
 

@@ -1,12 +1,10 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Library;
@@ -22,7 +20,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Route("api/v{version:apiVersion}/userData")]
 public class UserDataController(
     IHomeRepository homeRepository,
-    MediaContext mediaContext,
+    IUserDataRepository userDataRepository,
     IEventBus eventBus
 ) : BaseController
 {
@@ -49,7 +47,6 @@ public class UserDataController(
         string country = Country();
 
         HashSet<UserData> continueWatching = await homeRepository.GetContinueWatchingAsync(
-            mediaContext,
             userId,
             language,
             country
@@ -78,38 +75,19 @@ public class UserDataController(
         if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
             return BadRequestResponse("Invalid id for the requested type");
 
-        List<UserData>? userData = body.Type switch
-        {
-            Config.MovieMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.MovieId == intId)
-                .ToListAsync(),
-            Config.TvMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.TvId == intId)
-                .ToListAsync(),
-            Config.SpecialMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.SpecialId == ulidId)
-                .ToListAsync(),
-            Config.CollectionMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.CollectionId == intId)
-                .ToListAsync(),
-            _ => null,
-        };
+        List<UserData> userData = await userDataRepository.GetUserDataAsync(
+            userId,
+            body.Type,
+            intId,
+            ulidId
+        );
 
-        if (userData == null || userData.Count == 0)
+        if (userData.Count == 0)
             return NotFoundResponse("Item not found");
 
         Logger.Socket(userData);
 
-        mediaContext.UserData.RemoveRange(userData);
-        await mediaContext.SaveChangesAsync();
+        await userDataRepository.DeleteUserDataAsync(userData);
 
         await eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["continue-watching"] });
 
@@ -127,30 +105,12 @@ public class UserDataController(
         if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
             return BadRequestResponse("Invalid id for the requested type");
 
-        UserData? userData = body.Type switch
-        {
-            Config.MovieMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.MovieId == intId)
-                .FirstOrDefaultAsync(),
-            Config.TvMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.TvId == intId)
-                .FirstOrDefaultAsync(),
-            Config.SpecialMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.SpecialId == ulidId)
-                .FirstOrDefaultAsync(),
-            Config.CollectionMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.CollectionId == intId)
-                .FirstOrDefaultAsync(),
-            _ => null,
-        };
+        UserData? userData = await userDataRepository.GetUserDataSingleAsync(
+            userId,
+            body.Type,
+            intId,
+            ulidId
+        );
 
         if (userData == null)
             return NotFoundResponse("Item not found");
@@ -171,30 +131,12 @@ public class UserDataController(
         if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
             return BadRequestResponse("Invalid id for the requested type");
 
-        UserData? userData = body.Type switch
-        {
-            Config.MovieMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.MovieId == intId)
-                .FirstOrDefaultAsync(),
-            Config.TvMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.TvId == intId)
-                .FirstOrDefaultAsync(),
-            Config.SpecialMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.SpecialId == ulidId)
-                .FirstOrDefaultAsync(),
-            Config.CollectionMediaType => await mediaContext
-                .UserData.AsNoTracking()
-                .Where(data => data.UserId.Equals(userId))
-                .Where(data => data.CollectionId == intId)
-                .FirstOrDefaultAsync(),
-            _ => null,
-        };
+        UserData? userData = await userDataRepository.GetUserDataSingleAsync(
+            userId,
+            body.Type,
+            intId,
+            ulidId
+        );
 
         if (userData is null)
             return NotFoundResponse("Item not found");

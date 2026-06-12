@@ -24,4 +24,10 @@ public interface IFileRepository
     );
     Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId);
     Task DeleteVideoFilesAndMetadataByTvIdAsync(int tvId);
+
+    Task<List<VideoFile>> SearchVideoFilesAsync(
+        string? query,
+        int limit,
+        CancellationToken ct = default
+    );
 }

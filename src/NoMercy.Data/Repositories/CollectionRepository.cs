@@ -602,4 +602,29 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
                 await context.Database.CloseConnectionAsync();
         }
     }
+
+    public Task<Collection?> GetCollectionForRescanAsync(int id, CancellationToken ct = default)
+    {
+        return context
+            .Collections.AsNoTracking()
+            .Include(collection => collection.CollectionMovies)
+                .ThenInclude(collectionMovie => collectionMovie.Movie)
+                    .ThenInclude(movie => movie.Library)
+                        .ThenInclude(library => library.FolderLibraries)
+                            .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .FirstOrDefaultAsync(collection => collection.Id == id, ct);
+    }
+
+    public Task<Collection?> GetCollectionWithMovieLibrariesAsync(
+        int id,
+        CancellationToken ct = default
+    )
+    {
+        return context
+            .Collections.AsNoTracking()
+            .Include(collection => collection.CollectionMovies)
+                .ThenInclude(collectionMovie => collectionMovie.Movie)
+                    .ThenInclude(movie => movie.Library)
+            .FirstOrDefaultAsync(collection => collection.Id == id, ct);
+    }
 }

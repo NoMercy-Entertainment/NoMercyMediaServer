@@ -47,8 +47,11 @@ public class ShowManager(
 
         DateTime folderCreatedAt = DateTime.UtcNow;
 
-        foreach (FolderLibrary folderLibrary in library.FolderLibraries)
+        foreach (FolderLibrary folderLibrary in library.FolderLibraries ?? [])
         {
+            if (storageFactory == null)
+                continue;
+
             IStorage folderStorage = storageFactory.For(
                 folderLibrary.Folder.Id,
                 folderLibrary.Folder.DriverId,
@@ -101,7 +104,7 @@ public class ShowManager(
             Status = showAppends.Status,
             Tagline = showAppends.Tagline,
             Title = showAppends.Name,
-            TitleSort = showAppends.Name.TitleSort(showAppends.FirstAirDate),
+            TitleSort = showAppends.Name?.TitleSort(showAppends.FirstAirDate),
             TvdbId = showAppends.ExternalIds.TvdbId,
             Type = showAppends.Type,
             VoteAverage = showAppends.VoteAverage,

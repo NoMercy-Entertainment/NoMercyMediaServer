@@ -280,9 +280,19 @@ public class ResourceBudget : IResourceBudget
         if (!HasHeadroom(requirement, timeoutMs > 0))
             return null;
 
+        SemaphoreSlim? gpuSemaphore = null;
         if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
         {
-            SemaphoreSlim gpuSemaphore = GetGpuSemaphore(requirement.GpuDeviceKey);
+            try
+            {
+                gpuSemaphore = GetGpuSemaphore(requirement.GpuDeviceKey);
+            }
+            catch (InvalidOperationException)
+            {
+                // GPU key not registered (yet).
+                return null;
+            }
+
             int acquiredGpuSlots = 0;
 
             for (int slotIndex = 0; slotIndex < requirement.GpuSlots; slotIndex++)
@@ -333,8 +343,6 @@ public class ResourceBudget : IResourceBudget
 
                     if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
                     {
-                        SemaphoreSlim gpuSemaphore = GetGpuSemaphore(requirement.GpuDeviceKey);
-
                         for (int rollback = 0; rollback < requirement.GpuSlots; rollback++)
                         {
                             gpuSemaphore.Release();

@@ -26,13 +26,14 @@ using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 
 namespace NoMercy.Tests.Encoder.Pipeline;
 
-public class EncoderTests
+public class EncoderTests : IDisposable
 {
     private readonly Mock<IMediaAnalyzer> _analyzer = new();
     private readonly Mock<IStorage> _storage = new();
     private readonly Mock<IFfmpegExecutor> _ffmpegExecutor = new();
     private readonly Mock<ICodecResolver> _codecResolver = new();
     private readonly Mock<IHardwareCapabilities> _hardware = new();
+    private readonly List<string> _tempDirectories = [];
 
     private readonly NoMercy.Encoder.Pipeline.Encoder _encoder;
 
@@ -149,6 +150,43 @@ public class EncoderTests
                     DefaultRateControl: RateControlMode.Crf
                 )
             );
+    }
+
+    public void Dispose()
+    {
+        foreach (string directory in _tempDirectories)
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, true);
+        }
+    }
+
+    // Success-path tests must look like a finished encode on disk: the
+    // finalize stage refuses to write a master playlist when no variant
+    // produced measurable segments.
+    private string CreateSeededOutputDirectory()
+    {
+        string outputDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"nomercy-encoder-tests-{Guid.NewGuid():N}"
+        );
+        _tempDirectories.Add(outputDirectory);
+
+        SeedVariant(outputDirectory, "video_1920x1080_SDR");
+        SeedVariant(outputDirectory, "audio_en_aac");
+
+        return outputDirectory;
+    }
+
+    private static void SeedVariant(string outputDirectory, string name)
+    {
+        string variantDirectory = Path.Combine(outputDirectory, name);
+        Directory.CreateDirectory(variantDirectory);
+        File.WriteAllBytes(Path.Combine(variantDirectory, $"{name}_00000.ts"), new byte[120_000]);
+        File.WriteAllText(
+            Path.Combine(variantDirectory, $"{name}.m3u8"),
+            $"#EXTM3U\n#EXTINF:6.000000,\n{name}_00000.ts\n#EXT-X-ENDLIST\n"
+        );
     }
 
     private static MediaInfo BuildMediaInfo() =>
@@ -276,10 +314,11 @@ public class EncoderTests
     public async Task FullPipeline_AllStagesSucceed_ReturnsSuccess()
     {
         SetupSuccessPath();
+        string outputDirectory = CreateSeededOutputDirectory();
 
         EncodingRequest request = new(
             InputPath: "/movies/test.mkv",
-            OutputDirectory: "/output/test",
+            OutputDirectory: outputDirectory,
             Profile: BuildProfile()
         );
 
@@ -287,7 +326,7 @@ public class EncoderTests
 
         result.Success.Should().BeTrue();
         result.Error.Should().BeNull();
-        result.OutputPath.Should().Be("/output/test");
+        result.OutputPath.Should().Be(outputDirectory);
     }
 
     [Fact]
@@ -310,10 +349,11 @@ public class EncoderTests
     public async Task FullPipeline_MetricsHaveEncoderName()
     {
         SetupSuccessPath();
+        string outputDirectory = CreateSeededOutputDirectory();
 
         EncodingRequest request = new(
             InputPath: "/movies/test.mkv",
-            OutputDirectory: "/output/test",
+            OutputDirectory: outputDirectory,
             Profile: BuildProfile()
         );
 
@@ -437,11 +477,12 @@ public class EncoderTests
     public async Task ProgressObserver_OnCompleted_CalledOnSuccess()
     {
         SetupSuccessPath();
+        string outputDirectory = CreateSeededOutputDirectory();
 
         Mock<IProgressObserver> progressMock = new();
         EncodingRequest request = new(
             InputPath: "/movies/test.mkv",
-            OutputDirectory: "/output/test",
+            OutputDirectory: outputDirectory,
             Profile: BuildProfile()
         );
 

@@ -16,8 +16,7 @@ namespace NoMercy.Data.Repositories;
 
 public class TvShowRepository(MediaContext context) : ITvShowRepository
 {
-    public async Task<Tv?> GetTvAsync(
-        MediaContext mediaContext,
+    public async Task<TvDetail?> GetTvAsync(
         Guid userId,
         int id,
         string language,
@@ -28,7 +27,7 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
         // Query 1: Core TV data — show metadata, seasons/episodes, show-level cast/crew, etc.
         // Removed: AlternativeTitles (unused by DTO), Library.LibraryUsers (only needed in WHERE)
         // Episode cast/crew split to Query 2 to reduce round-trips
-        Tv? tv = await mediaContext
+        Tv? tv = await context
             .Tvs.AsNoTracking()
             .Where(tv => tv.Id == id)
             .ForUser(userId)
@@ -102,7 +101,7 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
 
         // Query 2: Episode-level cast/crew — loaded separately to reduce query complexity
         // This avoids 4 additional split-query round-trips in the main query
-        List<Episode> episodesWithCastCrew = await mediaContext
+        List<Episode> episodesWithCastCrew = await context
             .Episodes.AsNoTracking()
             .Where(e => e.TvId == id)
             .Include(e => e.Cast)
@@ -139,7 +138,37 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
             }
         }
 
-        return tv;
+        // Related shows (similar / recommended) enriched with availability, so the
+        // DTO can render related cards without itself touching a DbContext.
+        int[] similarIds = tv.SimilarFrom.Select(similar => similar.MediaId).ToArray();
+        Tv[] similars = await context
+            .Tvs.AsNoTracking()
+            .Where(t => similarIds.Contains(t.Id))
+            .Include(t => t.Episodes)
+                .ThenInclude(episode => episode.VideoFiles)
+            .ToArrayAsync(ct);
+
+        int[] recommendationIds = tv
+            .RecommendationFrom.Select(recommendation => recommendation.MediaId)
+            .ToArray();
+        Tv[] recommendations = await context
+            .Tvs.AsNoTracking()
+            .Where(t => recommendationIds.Contains(t.Id))
+            .Include(t => t.Episodes)
+                .ThenInclude(episode => episode.VideoFiles)
+            .ToArrayAsync(ct);
+
+        return new(tv, similars, recommendations);
+    }
+
+    public Task<Tv?> GetTvWithLibraryAsync(int id, CancellationToken ct = default)
+    {
+        return context
+            .Tvs.AsNoTracking()
+            .Include(tv => tv.Library)
+                .ThenInclude(library => library.FolderLibraries)
+                    .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .FirstOrDefaultAsync(tv => tv.Id == id, ct);
     }
 
     public Task<bool> GetTvAvailableAsync(Guid userId, int id, CancellationToken ct = default)

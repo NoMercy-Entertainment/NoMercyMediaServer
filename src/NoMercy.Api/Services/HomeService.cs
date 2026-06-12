@@ -13,26 +13,12 @@ using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Services;
 
-public class HomeService
+public class HomeService(
+    IHomeRepository homeRepository,
+    ILibraryRepository libraryRepository,
+    IDbContextFactory<MediaContext> contextFactory
+)
 {
-    private readonly MediaContext _mediaContext;
-    private readonly IDbContextFactory<MediaContext> _contextFactory;
-    private readonly ILibraryRepository _libraryRepository;
-    private readonly IHomeRepository _homeRepository;
-
-    public HomeService(
-        IHomeRepository homeRepository,
-        ILibraryRepository libraryRepository,
-        MediaContext mediaContext,
-        IDbContextFactory<MediaContext> contextFactory
-    )
-    {
-        _homeRepository = homeRepository;
-        _libraryRepository = libraryRepository;
-        _mediaContext = mediaContext;
-        _contextFactory = contextFactory;
-    }
-
     public async Task<List<GenreRowDto<GenreRowItemDto>>> GetHomePageContent(
         Guid userId,
         string language,
@@ -40,8 +26,7 @@ public class HomeService
         PageRequestDto request
     )
     {
-        List<Genre> genreItems = await _homeRepository.GetHome(
-            _mediaContext,
+        List<Genre> genreItems = await homeRepository.GetHome(
             userId,
             language,
             request.Take,
@@ -66,14 +51,8 @@ public class HomeService
             )
             .ToList();
 
-        List<HomeTvCardDto> tvData = await _homeRepository.GetHomeTvs(
-            _mediaContext,
+        HomeTvsAndMoviesData tvsAndMovies = await homeRepository.GetHomeTvsAndMoviesAsync(
             tvIds,
-            language,
-            country
-        );
-        List<HomeMovieCardDto> movieData = await _homeRepository.GetHomeMovies(
-            _mediaContext,
             movieIds,
             language,
             country
@@ -82,7 +61,14 @@ public class HomeService
         foreach (GenreRowDto<GenreRowItemDto> genre in genres)
         {
             genre.Items = genre
-                .Source.Select(source => TransformToRowItemDto(country, source, tvData, movieData))
+                .Source.Select(source =>
+                    TransformToRowItemDto(
+                        country,
+                        source,
+                        tvsAndMovies.TvData,
+                        tvsAndMovies.MovieData
+                    )
+                )
                 .Where(genreRow => genreRow != null);
         }
 
@@ -135,62 +121,19 @@ public class HomeService
 
     public async Task<ComponentResponse> GetHomeData(Guid userId, string language, string country)
     {
-        // Phase 1: Run initial independent queries in parallel - each task gets its own DbContext for thread safety
-        Task<HashSet<UserData>> continueWatchingTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
-            return await _homeRepository.GetContinueWatchingAsync(
-                context,
-                userId,
-                language,
-                country
-            );
-        });
-        Task<List<GenreHomeDto>> genreItemsTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
-            return await _homeRepository.GetHomeGenresAsync(
-                context,
-                userId,
-                language,
-                Config.MaximumItemsPerPage
-            );
-        });
-        Task<List<Library>> librariesTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
-            return await _homeRepository.GetLibrariesAsync(context, userId);
-        });
-        Task<int> animeCountTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
-            return await _homeRepository.GetAnimeCountAsync(context, userId);
-        });
-        Task<int> movieCountTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
-            return await _homeRepository.GetMovieCountAsync(context, userId);
-        });
-        Task<int> tvCountTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
-            return await _homeRepository.GetTvCountAsync(context, userId);
-        });
-        await Task.WhenAll(
-            continueWatchingTask,
-            genreItemsTask,
-            librariesTask,
-            animeCountTask,
-            movieCountTask,
-            tvCountTask
+        // Phase 1: Run initial independent queries in parallel — repository owns each DbContext
+        HomeParallelData parallelData = await homeRepository.GetHomeParallelDataAsync(
+            userId,
+            language,
+            country
         );
 
-        HashSet<UserData> continueWatching = continueWatchingTask.Result;
-        List<GenreHomeDto> genreItems = genreItemsTask.Result;
-        List<Library> libraries = librariesTask.Result;
-        int animeCount = animeCountTask.Result;
-        int movieCount = movieCountTask.Result;
-        int tvCount = tvCountTask.Result;
+        HashSet<UserData> continueWatching = parallelData.ContinueWatching;
+        List<GenreHomeDto> genreItems = parallelData.GenreItems;
+        List<Library> libraries = parallelData.Libraries;
+        int animeCount = parallelData.AnimeCount;
+        int movieCount = parallelData.MovieCount;
+        int tvCount = parallelData.TvCount;
 
         // Early-exit: return an NMEmptyState component when there is nothing to show
         bool hasNoContent = movieCount == 0 && tvCount == 0 && animeCount == 0;
@@ -264,27 +207,24 @@ public class HomeService
         }
 
         // Phase 3: Fetch genre media data AND library card data in parallel
-        Task<List<HomeTvCardDto>> tvDataTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
-            return await _homeRepository.GetHomeTvs(context, tvIds, language, country);
-        });
-        Task<List<HomeMovieCardDto>> movieDataTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
-            return await _homeRepository.GetHomeMovies(context, movieIds, language, country);
-        });
+        // tv+movie fan-out is owned by the repository; library tasks use their own factory contexts
+        // because LibraryRepository queries cannot share a DbContext across concurrent tasks
+        Task<HomeTvsAndMoviesData> tvsAndMoviesTask = homeRepository.GetHomeTvsAndMoviesAsync(
+            tvIds,
+            movieIds,
+            language,
+            country
+        );
 
-        // Library card queries run in parallel with genre media queries
         List<
             Task<(Library library, List<MovieCardDto> movies, List<TvCardDto> shows)>
         > libraryTasks = libraries
             .Select(async library =>
             {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync();
-                LibraryRepository repo = new(context);
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
+                LibraryRepository repo = new(ctx, contextFactory);
                 List<MovieCardDto> libraryMovies = await repo.GetLibraryMovieCardsAsync(
-                    context,
+                    ctx,
                     userId,
                     library.Id,
                     country,
@@ -292,7 +232,7 @@ public class HomeService
                     0
                 );
                 List<TvCardDto> libraryShows = await repo.GetLibraryTvCardsAsync(
-                    context,
+                    ctx,
                     userId,
                     library.Id,
                     country,
@@ -303,10 +243,11 @@ public class HomeService
             })
             .ToList();
 
-        await Task.WhenAll(Task.WhenAll(tvDataTask, movieDataTask), Task.WhenAll(libraryTasks));
+        await Task.WhenAll(tvsAndMoviesTask, Task.WhenAll(libraryTasks));
 
-        List<HomeTvCardDto> tvData = tvDataTask.Result;
-        List<HomeMovieCardDto> movieData = movieDataTask.Result;
+        HomeTvsAndMoviesData tvsAndMovies = tvsAndMoviesTask.Result;
+        List<HomeTvCardDto> tvData = tvsAndMovies.TvData;
+        List<HomeMovieCardDto> movieData = tvsAndMovies.MovieData;
 
         // Build genre carousels with resolved items
         List<GenreCarouselData> genreCarousels = genreSourceList
@@ -532,12 +473,8 @@ public class HomeService
         Ulid replaceId
     )
     {
-        HomeTvCardDto? tv = await _libraryRepository.GetRandomTvCardAsync(
-            userId,
-            language,
-            country
-        );
-        HomeMovieCardDto? movie = await _libraryRepository.GetRandomMovieCardAsync(
+        HomeTvCardDto? tv = await libraryRepository.GetRandomTvCardAsync(userId, language, country);
+        HomeMovieCardDto? movie = await libraryRepository.GetRandomMovieCardAsync(
             userId,
             language,
             country
@@ -585,10 +522,7 @@ public class HomeService
 
     public async Task<ScreensaverDto> GetSetupScreensaverContent(Guid userId)
     {
-        HashSet<Image> data = await _homeRepository.GetScreensaverImagesAsync(
-            _mediaContext,
-            userId
-        );
+        HashSet<Image> data = await homeRepository.GetScreensaverImagesAsync(userId);
 
         IEnumerable<Image> logos = data.Where(image => image.Type == "logo");
 
@@ -619,8 +553,7 @@ public class HomeService
         string country
     )
     {
-        HashSet<UserData> continueWatching = await _homeRepository.GetContinueWatchingAsync(
-            _mediaContext,
+        HashSet<UserData> continueWatching = await homeRepository.GetContinueWatchingAsync(
             userId,
             language,
             country
@@ -631,8 +564,7 @@ public class HomeService
         List<int> movieIds = [];
         List<int> tvIds = [];
 
-        List<GenreHomeDto> genreItems = await _homeRepository.GetHomeGenresAsync(
-            _mediaContext,
+        List<GenreHomeDto> genreItems = await homeRepository.GetHomeGenresAsync(
             userId,
             language,
             Config.MaximumItemsPerPage
@@ -667,14 +599,8 @@ public class HomeService
         }
 
         // Fetch data
-        List<HomeTvCardDto> tvData = await _homeRepository.GetHomeTvs(
-            _mediaContext,
+        HomeTvsAndMoviesData tvsAndMovies = await homeRepository.GetHomeTvsAndMoviesAsync(
             tvIds,
-            language,
-            country
-        );
-        List<HomeMovieCardDto> movieData = await _homeRepository.GetHomeMovies(
-            _mediaContext,
             movieIds,
             language,
             country
@@ -687,7 +613,13 @@ public class HomeService
                 g.Title,
                 g.MoreLink,
                 g.Source.Select(source =>
-                        ResolveCardData(source, tvData, movieData, country, watch: true)
+                        ResolveCardData(
+                            source,
+                            tvsAndMovies.TvData,
+                            tvsAndMovies.MovieData,
+                            country,
+                            watch: true
+                        )
                     )
                     .Where(c => c != null)
                     .Cast<CardData>()
@@ -736,8 +668,7 @@ public class HomeService
         Ulid replaceId
     )
     {
-        HashSet<UserData> continueWatching = await _homeRepository.GetContinueWatchingAsync(
-            _mediaContext,
+        HashSet<UserData> continueWatching = await homeRepository.GetContinueWatchingAsync(
             userId,
             language,
             country

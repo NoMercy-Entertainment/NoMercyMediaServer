@@ -153,7 +153,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
     {
         string swHandle = CanonicalSoftwareHandle(codec);
 
-        (string best, double bestFps) = BestHardwareEntry(codec, speedIndex);
+        (string best, double bestFps) = BestHardwareEntry(codec, speedIndex, availableEncoders);
 
         if (best == string.Empty)
         {
@@ -233,7 +233,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
         IDecisionLogSink decisions
     )
     {
-        (string best, double bestFps) = BestHardwareEntry(codec, speedIndex);
+        (string best, double bestFps) = BestHardwareEntry(codec, speedIndex, availableEncoders);
 
         if (best == string.Empty)
         {
@@ -303,11 +303,20 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
 
     // Returns the highest-fps hardware entry for the codec in the speed index.
     // Returns ("", 0) when no hardware entries exist.
+    //
+    // The speed index is a persisted cache: it can carry measurements from a
+    // previous ffmpeg build that had encoders the current build lacks (e.g.
+    // nvenc rows after swapping to an ffmpeg compiled without nvenc). Emitting
+    // such a handle makes every encode die on "Unknown encoder", so entries
+    // absent from availableEncoders are skipped.
     private static (string Handle, double Fps) BestHardwareEntry(
         VideoCodecType codec,
-        SpeedIndex speedIndex
+        SpeedIndex speedIndex,
+        IReadOnlyList<string> availableEncoders
     )
     {
+        HashSet<string> available = new(availableEncoders, StringComparer.OrdinalIgnoreCase);
+
         string bestHandle = string.Empty;
         double bestFps = 0;
 
@@ -317,6 +326,9 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                 continue;
 
             if (!CodecRegistry.IsHardware(kv.Key.Encoder))
+                continue;
+
+            if (!available.Contains(kv.Key.Encoder))
                 continue;
 
             if (kv.Value.Fps > bestFps)

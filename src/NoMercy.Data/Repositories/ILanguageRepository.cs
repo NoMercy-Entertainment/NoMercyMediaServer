@@ -1,3 +1,4 @@
+using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 
 namespace NoMercy.Data.Repositories;
@@ -7,4 +8,6 @@ public interface ILanguageRepository
     Task<List<Language>> GetLanguagesAsync();
 
     Task<List<LanguageLibrary>> GetLanguagesAsync(string[] list);
+
+    Task<List<Country>> GetCountriesAsync(CancellationToken ct = default);
 }

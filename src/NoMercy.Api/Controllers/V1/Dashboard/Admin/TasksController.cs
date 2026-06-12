@@ -36,6 +36,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [Route("api/v{version:apiVersion}/dashboard/tasks", Order = 10)]
 public class TasksController(
     MediaContext mediaContext,
+    IDbContextFactory<QueueContext> queueContextFactory,
     IEncoderProcessRegistry processRegistry,
     ProcessThrottle processThrottle,
     IEncodingHistoryRepository historyRepository
@@ -140,7 +141,7 @@ public class TasksController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view encoder queue");
 
-        await using QueueContext queueContext = new();
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         ImmutableList<QueueJob> jobs = queueContext
             .QueueJobs.Where(j => j.Queue == "encoder")
@@ -247,7 +248,7 @@ public class TasksController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to clear encoder queue");
 
-        await using QueueContext queueContext = new();
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
         QueueJob? job = queueContext.QueueJobs.FirstOrDefault(job => job.Id == id);
 
         if (job is null)
@@ -290,7 +291,7 @@ public class TasksController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to clear encoder queue");
 
-        await using QueueContext queueContext = new();
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         QueueJob? job = queueContext.QueueJobs.FirstOrDefault(job => job.Id == id);
 
@@ -389,7 +390,7 @@ public class TasksController(
             pageIndex: 0
         );
 
-        await using QueueContext queueContext = new();
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
         int queueDepth = await queueContext.QueueJobs.CountAsync(j => j.Queue == "encoder");
 
         if (recent.Count == 0 || queueDepth == 0)
@@ -432,7 +433,7 @@ public class TasksController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to reorder the queue");
 
-        await using QueueContext queueContext = new();
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         bool queueExists = await queueContext.QueueJobs.AnyAsync(j => j.Queue == request.QueueName);
 
@@ -494,7 +495,7 @@ public class TasksController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to retry failed jobs");
 
-        await using QueueContext queueContext = new();
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
         using EfQueueContextAdapter adapter = new(queueContext);
         JobQueue jobQueue = new(adapter);
 
@@ -521,7 +522,7 @@ public class TasksController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view failed jobs");
 
-        await using QueueContext queueContext = new();
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
         List<FailedJob> failedJobs = await queueContext
             .FailedJobs.OrderByDescending(j => j.FailedAt)

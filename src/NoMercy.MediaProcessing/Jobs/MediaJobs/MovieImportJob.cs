@@ -8,7 +8,6 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Media;
-using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -28,10 +27,7 @@ public class MovieImportJob : AbstractMediaJob
     {
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
-
-        FileRepository fileRepository = new(context, StorageDriver);
-        FileManager fileManager = new(fileRepository, StorageFactory, StorageDriver);
-
+        
         MovieRepository movieRepository = new(context);
         MovieManager movieManager = new(
             movieRepository,

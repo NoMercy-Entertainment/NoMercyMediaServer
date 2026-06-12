@@ -96,9 +96,6 @@ public class AlbumDto
         ColorPalette = albumTrack.Album.ColorPalette;
         Year = albumTrack.Album.Year;
 
-        // using MediaContext mediaContext = new();
-        // Tracks =  albumTrack.Albums.AlbumTrack.Select(a => a.Track);
-
         AlbumArtist = albumTrack.Album.AlbumArtist.MaxBy(at => at.ArtistId)?.ArtistId;
     }
 

@@ -1,3 +1,5 @@
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
@@ -9,10 +11,13 @@ namespace NoMercy.Tests.Repositories;
 public class CancellationTokenPropagationTests : IDisposable
 {
     private readonly MediaContext _context;
+    private readonly IDbContextFactory<MediaContext> _factory;
+    private readonly SqliteConnection _factoryConnection;
 
     public CancellationTokenPropagationTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
+        (_factory, _factoryConnection) = TestMediaContextFactory.CreateFactory();
     }
 
     [Fact]
@@ -90,7 +95,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraries_ThrowsWhenCancelled()
     {
-        LibraryRepository repository = new(_context);
+        LibraryRepository repository = new(_context, _factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -102,7 +107,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraryMovieCardsAsync_ThrowsWhenCancelled()
     {
-        LibraryRepository repository = new(_context);
+        LibraryRepository repository = new(_context, _factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -121,7 +126,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraryTvCardsAsync_ThrowsWhenCancelled()
     {
-        LibraryRepository repository = new(_context);
+        LibraryRepository repository = new(_context, _factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -164,7 +169,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task SpecialRepository_GetSpecialsAsync_ThrowsWhenCancelled()
     {
-        SpecialRepository repository = new(_context);
+        SpecialRepository repository = new(_context, _factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -197,5 +202,6 @@ public class CancellationTokenPropagationTests : IDisposable
     public void Dispose()
     {
         _context.Dispose();
+        _factoryConnection.Dispose();
     }
 }

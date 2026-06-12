@@ -3,14 +3,11 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
-using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
@@ -34,19 +31,16 @@ namespace NoMercy.Api.Controllers.V1.Music;
 public class ArtistsController : BaseController
 {
     private readonly IMusicRepository _musicRepository;
-    private readonly MediaContext _mediaContext;
     private readonly IEventBus _eventBus;
     private readonly IStorageFactory _storageFactory;
 
     public ArtistsController(
         IMusicRepository musicService,
-        MediaContext mediaContext,
         IEventBus eventBus,
         IStorageFactory storageFactory
     )
     {
         _musicRepository = musicService;
-        _mediaContext = mediaContext;
         _eventBus = eventBus;
         _storageFactory = storageFactory;
     }
@@ -157,10 +151,7 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like artists");
 
-        Artist? artist = await _mediaContext
-            .Artists.AsNoTracking()
-            .Where(artistUser => artistUser.Id == id)
-            .FirstOrDefaultAsync();
+        Artist? artist = await _musicRepository.GetArtistByIdAsync(id);
 
         if (artist is null)
             return UnprocessableEntityResponse("Artist not found");
@@ -215,14 +206,14 @@ public class ArtistsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to delete an artist");
 
-        int result = await _mediaContext.Artists.Where(p => p.Id == id).ExecuteDeleteAsync();
+        bool deleted = await _musicRepository.DeleteArtistAsync(id);
 
         await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music", "artist"] });
 
         return Ok(
             new StatusResponseDto<string>
             {
-                Data = (result > 0 ? "Artist deleted successfully" : "Artist not found").Localize(),
+                Data = (deleted ? "Artist deleted successfully" : "Artist not found").Localize(),
                 Status = "ok",
             }
         );
@@ -235,7 +226,7 @@ public class ArtistsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to edit an artist");
 
-        Artist? artist = await _mediaContext.Artists.FirstOrDefaultAsync(a => a.Id == id);
+        Artist? artist = await _musicRepository.GetArtistForEditAsync(id);
 
         if (artist is null)
             return NotFoundResponse("Artist not found");
@@ -269,12 +260,13 @@ public class ArtistsController : BaseController
             colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
         }
 
-        artist.Name = request.Name ?? artist.Name;
-        artist.Description = request.Description;
-        artist.Cover = cover;
-        artist._colorPalette = colorPalette;
-
-        int result = await _mediaContext.SaveChangesAsync();
+        int result = await _musicRepository.UpdateArtistMetadataAsync(
+            id,
+            request.Name ?? artist.Name,
+            request.Description,
+            cover,
+            colorPalette
+        );
 
         await _eventBus.PublishAsync(
             new LibraryRefreshEvent { QueryKey = ["music", "artist", id] }
@@ -297,10 +289,7 @@ public class ArtistsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to upload artist covers");
 
-        Artist? artist = await _mediaContext
-            .Artists.Include(artist => artist.LibraryFolder)
-                .ThenInclude((Folder folder) => folder.Driver)
-            .FirstOrDefaultAsync(artist => artist.Id == id);
+        Artist? artist = await _musicRepository.GetArtistWithLibraryFolderAsync(id);
 
         if (artist is null)
             return NotFoundResponse("Artist not found");
@@ -336,17 +325,19 @@ public class ArtistsController : BaseController
             await image.CopyToAsync(stream);
         }
 
-        artist.Cover = $"/{slug}.jpg";
-        artist._colorPalette = await CoverArtImageManagerManager.ColorPalette(
+        string cover = $"/{slug}.jpg";
+        string colorPalette = await CoverArtImageManagerManager.ColorPalette(
             "cover",
             new(filePath2)
         );
 
-        await _mediaContext.SaveChangesAsync();
+        await _musicRepository.UpdateArtistCoverAsync(id, cover, colorPalette);
 
         await _eventBus.PublishAsync(
             new LibraryRefreshEvent { QueryKey = ["music", "artist", artist.Id] }
         );
+
+        artist._colorPalette = colorPalette;
 
         return Ok(
             new StatusResponseDto<ImageUploadResponseDto>

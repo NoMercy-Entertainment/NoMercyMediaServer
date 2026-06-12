@@ -57,17 +57,12 @@ public class HomeTvCardDto
     public string? CertificationCountry { get; set; }
 }
 
-public class HomeRepository : IHomeRepository
+public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext> contextFactory)
+    : IHomeRepository
 {
-    public async Task<List<Genre>> GetHome(
-        MediaContext mediaContext,
-        Guid userId,
-        string? language,
-        int take,
-        int page = 0
-    )
+    public async Task<List<Genre>> GetHome(Guid userId, string? language, int take, int page = 0)
     {
-        IOrderedQueryable<Genre> query = mediaContext
+        IOrderedQueryable<Genre> query = context
             .Genres.AsNoTracking()
             .OrderBy(genre => genre.Name)
             .Where(genre =>
@@ -102,14 +97,13 @@ public class HomeRepository : IHomeRepository
     }
 
     public async Task<List<HomeTvCardDto>> GetHomeTvs(
-        MediaContext mediaContext,
         List<int> tvIds,
         string? language,
         string country,
         CancellationToken ct = default
     )
     {
-        return await mediaContext
+        return await context
             .Tvs.AsNoTracking()
             .Where(tv => tvIds.Contains(tv.Id))
             .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any()))
@@ -157,14 +151,13 @@ public class HomeRepository : IHomeRepository
     }
 
     public async Task<List<HomeMovieCardDto>> GetHomeMovies(
-        MediaContext mediaContext,
         List<int> movieIds,
         string? language,
         string country,
         CancellationToken ct = default
     )
     {
-        return await mediaContext
+        return await context
             .Movies.AsNoTracking()
             .Where(movie => movieIds.Contains(movie.Id))
             .Where(movie => movie.VideoFiles.Any())
@@ -209,7 +202,6 @@ public class HomeRepository : IHomeRepository
     }
 
     public async Task<HashSet<UserData>> GetContinueWatchingAsync(
-        MediaContext mediaContext,
         Guid userId,
         string language,
         string country,
@@ -218,7 +210,7 @@ public class HomeRepository : IHomeRepository
     {
         // Step 1: Project to minimal keys, deduplicate, and get unique UserData IDs
         // This avoids loading full entity trees for duplicates that get thrown away
-        List<Ulid> uniqueIds = await mediaContext
+        List<Ulid> uniqueIds = await context
             .UserData.AsNoTracking()
             .Where(ud => ud.UserId == userId)
             .Where(ud =>
@@ -255,7 +247,7 @@ public class HomeRepository : IHomeRepository
             return [];
 
         // Step 2: Hydrate only the unique entries with all includes
-        List<UserData> userData = await mediaContext
+        List<UserData> userData = await context
             .UserData.AsNoTracking()
             .AsSplitQuery()
             .Where(ud => uniqueIds.Contains(ud.Id))
@@ -353,12 +345,11 @@ public class HomeRepository : IHomeRepository
     }
 
     public Task<HashSet<Image>> GetScreensaverImagesAsync(
-        MediaContext mediaContext,
         Guid userId,
         CancellationToken ct = default
     )
     {
-        return mediaContext
+        return context
             .Images.AsNoTracking()
             .Where(image =>
                 image.Movie!.Library.LibraryUsers.Any(u => u.UserId == userId)
@@ -376,57 +367,40 @@ public class HomeRepository : IHomeRepository
             .ToHashSetAsync(ct);
     }
 
-    public Task<List<Library>> GetLibrariesAsync(
-        MediaContext mediaContext,
-        Guid userId,
-        CancellationToken ct = default
-    )
+    public Task<List<Library>> GetLibrariesAsync(Guid userId, CancellationToken ct = default)
     {
-        return mediaContext
+        return context
             .Libraries.AsNoTracking()
             .ForUser(userId)
             .Where(library => library.Type != Config.InboxMediaType)
             .ToListAsync(ct);
     }
 
-    public Task<int> GetAnimeCountAsync(
-        MediaContext mediaContext,
-        Guid userId,
-        CancellationToken ct = default
-    )
+    public Task<int> GetAnimeCountAsync(Guid userId, CancellationToken ct = default)
     {
-        return mediaContext
+        return context
             .Tvs.AsNoTracking()
             .ForUser(userId)
             .CountAsync(tv => tv.Library.Type == Config.AnimeMediaType, ct);
     }
 
-    public Task<int> GetMovieCountAsync(
-        MediaContext mediaContext,
-        Guid userId,
-        CancellationToken ct = default
-    )
+    public Task<int> GetMovieCountAsync(Guid userId, CancellationToken ct = default)
     {
-        return mediaContext
+        return context
             .Movies.AsNoTracking()
             .ForUser(userId)
             .CountAsync(movie => movie.Library.Type == Config.MovieMediaType, ct);
     }
 
-    public Task<int> GetTvCountAsync(
-        MediaContext mediaContext,
-        Guid userId,
-        CancellationToken ct = default
-    )
+    public Task<int> GetTvCountAsync(Guid userId, CancellationToken ct = default)
     {
-        return mediaContext
+        return context
             .Tvs.AsNoTracking()
             .ForUser(userId)
             .CountAsync(tv => tv.Library.Type == Config.TvMediaType, ct);
     }
 
     public async Task<List<GenreHomeDto>> GetHomeGenresAsync(
-        MediaContext mediaContext,
         Guid userId,
         string? language,
         int take,
@@ -436,7 +410,7 @@ public class HomeRepository : IHomeRepository
     {
         // Step 1: Fetch genre base data with translations — no client-side collections in projection
         // (SQLite does not support APPLY, so .ToList() inside .Select() is forbidden)
-        List<Genre> genres = await mediaContext
+        List<Genre> genres = await context
             .Genres.AsNoTracking()
             .Where(genre =>
                 genre.GenreMovies.Any(g =>
@@ -475,5 +449,132 @@ public class HomeRepository : IHomeRepository
                 TvIds = genre.GenreTvShows.Select(gt => gt.TvId).ToList(),
             })
             .ToList();
+    }
+
+    public async Task<HomeParallelData> GetHomeParallelDataAsync(
+        Guid userId,
+        string language,
+        string country,
+        CancellationToken ct = default
+    )
+    {
+        // Each task creates its own DbContext — EF DbContext is not thread-safe
+        Task<HashSet<UserData>> continueWatchingTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                HomeRepository repo = new(ctx, contextFactory);
+                return await repo.GetContinueWatchingAsync(userId, language, country, ct);
+            },
+            ct
+        );
+
+        Task<List<GenreHomeDto>> genreItemsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                HomeRepository repo = new(ctx, contextFactory);
+                return await repo.GetHomeGenresAsync(
+                    userId,
+                    language,
+                    Config.MaximumItemsPerPage,
+                    0,
+                    ct
+                );
+            },
+            ct
+        );
+
+        Task<List<Library>> librariesTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                HomeRepository repo = new(ctx, contextFactory);
+                return await repo.GetLibrariesAsync(userId, ct);
+            },
+            ct
+        );
+
+        Task<int> animeCountTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                HomeRepository repo = new(ctx, contextFactory);
+                return await repo.GetAnimeCountAsync(userId, ct);
+            },
+            ct
+        );
+
+        Task<int> movieCountTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                HomeRepository repo = new(ctx, contextFactory);
+                return await repo.GetMovieCountAsync(userId, ct);
+            },
+            ct
+        );
+
+        Task<int> tvCountTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                HomeRepository repo = new(ctx, contextFactory);
+                return await repo.GetTvCountAsync(userId, ct);
+            },
+            ct
+        );
+
+        await Task.WhenAll(
+            continueWatchingTask,
+            genreItemsTask,
+            librariesTask,
+            animeCountTask,
+            movieCountTask,
+            tvCountTask
+        );
+
+        return new(
+            continueWatchingTask.Result,
+            genreItemsTask.Result,
+            librariesTask.Result,
+            animeCountTask.Result,
+            movieCountTask.Result,
+            tvCountTask.Result
+        );
+    }
+
+    public async Task<HomeTvsAndMoviesData> GetHomeTvsAndMoviesAsync(
+        List<int> tvIds,
+        List<int> movieIds,
+        string language,
+        string country,
+        CancellationToken ct = default
+    )
+    {
+        // Each task creates its own DbContext — EF DbContext is not thread-safe
+        Task<List<HomeTvCardDto>> tvDataTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                HomeRepository repo = new(ctx, contextFactory);
+                return await repo.GetHomeTvs(tvIds, language, country, ct);
+            },
+            ct
+        );
+
+        Task<List<HomeMovieCardDto>> movieDataTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                HomeRepository repo = new(ctx, contextFactory);
+                return await repo.GetHomeMovies(movieIds, language, country, ct);
+            },
+            ct
+        );
+
+        await Task.WhenAll(tvDataTask, movieDataTask);
+
+        return new(tvDataTask.Result, movieDataTask.Result);
     }
 }
