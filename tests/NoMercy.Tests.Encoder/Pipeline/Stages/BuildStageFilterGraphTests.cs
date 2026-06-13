@@ -252,6 +252,91 @@ public class BuildStageFilterGraphTests
     }
 
     // ------------------------------------------------------------------
+    // Test 6: HDR source, one SDR rung + thumbnails → tonemap exactly once
+    // (single full-res SDR intermediate feeds both the rung and the sprite)
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task BuildStage_HdrSingleSdrRungWithThumbnails_TonemapsExactlyOnce()
+    {
+        const string tonemapChain =
+            "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,"
+            + "tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p";
+
+        VideoOutputPlan sdrRung = BuildVideoOutput(1920, 1080, "[v0]") with
+        {
+            ConvertHdrToSdr = true,
+            TonemapFilterChain = tonemapChain,
+        };
+
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [sdrRung],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new ThumbnailOutputPlan(320, 180, 10)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
+        FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
+
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
+        string filterValue = commands[0].Arguments[filterComplexIdx + 1];
+
+        int tonemapCount = CountOccurrences(filterValue, "tonemap=hable");
+        tonemapCount
+            .Should()
+            .Be(1, "the rung and the sprite must share one full-res SDR intermediate");
+    }
+
+    private static int CountOccurrences(string haystack, string needle)
+    {
+        int count = 0;
+        int index = 0;
+        while ((index = haystack.IndexOf(needle, index, StringComparison.Ordinal)) != -1)
+        {
+            count++;
+            index += needle.Length;
+        }
+        return count;
+    }
+
+    private static MediaInfo BuildHdrMediaInfo() =>
+        new(
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 50000,
+            FileSizeBytes: 30_000_000_000,
+            VideoStreams:
+            [
+                new(
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: 3840,
+                    Height: 2160,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: "smpte2084",
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 45000
+                ),
+            ],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
+        );
+
+    // ------------------------------------------------------------------
     // Test 5: video with CropFilter → crop=... filter emitted
     // ------------------------------------------------------------------
 

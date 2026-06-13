@@ -776,13 +776,14 @@ public class BuildStage(
 
         FilterGraphBuilder fg = new();
 
-        // Tonemap dedupe: when 2+ video branches need the SAME HDR→SDR
-        // tonemap chain we run it ONCE on the source and route every SDR
-        // branch from the shared [sdr] intermediate. Per-frame the
+        // Tonemap once: when any SDR consumer (rung or sprite) needs the same
+        // HDR→SDR tonemap chain we run it ONCE on the source and route every
+        // consumer from the shared [sdr] intermediate. Per-frame the
         // zscale/tonemap chain is the most expensive filter in the graph —
-        // running it 7-8 times in the same ffmpeg burns CPU for identical
-        // output. Thumbnails also branch from [sdr] when present so the
-        // sprite reflects SDR colors instead of crushed HDR values.
+        // running it per branch burns CPU for identical output, and a sprite
+        // sampling raw HDR shows crushed colours. Only genuinely mixed tonemap
+        // chains (different algorithms per rung) fall through to the per-branch
+        // legacy path below.
         bool[] needsTonemapPerBranch = new bool[videoOutputs.Length];
         for (int i = 0; i < videoOutputs.Length; i++)
         {
@@ -792,7 +793,7 @@ public class BuildStage(
 
         string? sharedTonemap = null;
         bool dedupeTonemap = false;
-        if (needsTonemapPerBranch.Count(needs => needs) >= 2)
+        if (needsTonemapPerBranch.Count(needs => needs) >= 1)
         {
             string?[] tonemapChains = videoOutputs
                 .Where((_, idx) => needsTonemapPerBranch[idx])
