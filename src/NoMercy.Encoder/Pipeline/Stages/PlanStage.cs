@@ -587,6 +587,16 @@ public class PlanStage(
                                     ? null
                                     : v.CodecProfile.ToString().ToLowerInvariant();
 
+                            // Profile/plugin CustomArguments escape hatch: merge the
+                            // per-video custom flags last so user/plugin intent wins.
+                            // ProfileValidator already blocks codec/format-overriding
+                            // keys, so what reaches here is safe to apply verbatim.
+                            if (v.CustomArguments is not null)
+                            {
+                                foreach ((string argKey, string argValue) in v.CustomArguments)
+                                    extraFlags[argKey] = argValue;
+                            }
+
                             return new VideoOutputPlan(
                                 Width: outputWidth,
                                 Height: outputHeight,
