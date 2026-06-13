@@ -186,6 +186,15 @@ public class EncoderOptions
     public bool EnableIntroDetectSubscriber { get; set; } = true;
 
     /// <summary>
+    /// Opt-in (default OFF): when true, PlanStage routes eligible plans through
+    /// the GPU-resident decode+scale path (-hwaccel decode + scale_cuda/scale_qsv
+    /// kept in GPU memory) on Nvidia/Intel hardware. Dark by default — this
+    /// changes GPU runtime behaviour and must be validated on real hardware
+    /// before being enabled in a release.
+    /// </summary>
+    public bool EnableGpuResident { get; set; }
+
+    /// <summary>
     /// When true (default), <c>OcrPostEncodeSubscriber</c> dispatches an OCR
     /// follow-up job when an encode that contains bitmap subtitle streams
     /// (PGS / VOBSUB) targeting HLS or DASH finishes.
