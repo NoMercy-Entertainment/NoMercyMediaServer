@@ -136,17 +136,11 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     {
         try
         {
-            string rawInternalIp = _networkDiscovery.InternalIp;
-            string safeInternalIp =
-                rawInternalIp == "0.0.0.0" || rawInternalIp == "127.0.0.1"
-                    ? string.Empty
-                    : rawInternalIp;
-
             Dictionary<string, string> serverData = new()
             {
                 { "id", Info.DeviceId.ToString() },
                 { "name", Info.DeviceName },
-                { "internal_ip", safeInternalIp },
+                { "internal_ip", _networkDiscovery.RegistrationInternalIp },
                 { "internal_ipv6", _networkDiscovery.InternalIpV6.OrEmpty() },
                 { "external_ipv6", _networkDiscovery.ExternalIpV6.OrEmpty() },
                 { "internal_port", Config.InternalServerPort.ToString() },

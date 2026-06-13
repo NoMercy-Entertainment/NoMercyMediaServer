@@ -36,6 +36,15 @@ public class NetworkDiscovery : INetworkDiscovery
         }
     }
 
+    public string RegistrationInternalIp
+    {
+        get
+        {
+            string ip = InternalIp;
+            return string.IsNullOrEmpty(ip) || ip == "127.0.0.1" ? "0.0.0.0" : ip;
+        }
+    }
+
     public string ExternalIp
     {
         get => _externalIp ?? "0.0.0.0";
