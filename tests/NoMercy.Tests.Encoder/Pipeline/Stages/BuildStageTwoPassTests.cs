@@ -103,6 +103,29 @@ public class BuildStageTwoPassTests
     }
 
     [Fact]
+    public async Task Pass2_MixedCodecLadder_EachRungGetsOwnIndexedStatsAndCodec()
+    {
+        // A mixed-codec 2-pass ladder must give each rung its OWN indexed stats
+        // file (-passlogfile _v0 / _v1) and its OWN -c:v — sharing one stats file
+        // across different codecs corrupts the second rung's rate-control data.
+        OutputPlan plan = PlanWith(
+            BuildVideo(1920, 1080, "[v0]", "libx264"),
+            BuildVideo(1280, 720, "[v1]", "libx265")
+        );
+        string statsPath = $"/tmp/stats-{Guid.NewGuid():N}";
+
+        FfmpegCommand[] commands = await RunBuild(plan, EncodingPass.Two, statsPath);
+
+        string joined = string.Join(" ", commands[0].Arguments);
+        joined.Should().Contain("-c:v libx264");
+        joined.Should().Contain("-c:v libx265");
+        joined.Should().Contain($"-passlogfile {statsPath}_v0");
+        joined.Should().Contain($"-passlogfile {statsPath}_v1");
+        // -pass 2 applied to both rungs (one -pass per video output).
+        commands[0].Arguments.Count(a => a == "-pass").Should().Be(2);
+    }
+
+    [Fact]
     public async Task SinglePass_DoesNotEmitPassFlags()
     {
         OutputPlan plan = PlanWith(BuildVideo(1920, 1080, "[v0]"));
@@ -180,11 +203,16 @@ public class BuildStageTwoPassTests
             Thumbnails: null
         );
 
-    private static VideoOutputPlan BuildVideo(int width, int height, string mapLabel) =>
+    private static VideoOutputPlan BuildVideo(
+        int width,
+        int height,
+        string mapLabel,
+        string encoder = "libx264"
+    ) =>
         new(
             Width: width,
             Height: height,
-            EncoderName: "libx264",
+            EncoderName: encoder,
             Crf: 23,
             BitrateKbps: 4000,
             Preset: "medium",

@@ -217,6 +217,69 @@ public class HlsOutputStrategyTests
         args.Should().Contain("audio_eng_aac");
     }
 
+    [Fact]
+    public void ConfigureOutput_MixedCodecLadder_EmitsPerRungCodecMapAndTag()
+    {
+        // A mixed-codec ladder (H.264 1080p + HEVC 720p) must emit each rung's
+        // own -c:v, its own -map, and the hvc1 tag on the HEVC rung ONLY — a
+        // shared tag would make players reject the H.264 variant.
+        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        FfmpegCommandBuilder builder = new();
+        builder.AddInput(new("/input.mkv"));
+        OutputPlan plan = CreateMixedCodecPlan();
+
+        strategy.ConfigureOutput(builder, plan, "/output");
+
+        FfmpegCommand cmd = builder.Build("ffmpeg");
+        string args = string.Join(" ", cmd.Arguments);
+
+        args.Should().Contain("-c:v libx264");
+        args.Should().Contain("-c:v libx265");
+        // hvc1 belongs only to the HEVC rung — exactly one occurrence overall.
+        cmd.Arguments.Count(a => a == "hvc1").Should().Be(1);
+        // Each rung maps its own video label; no cross-mapping.
+        args.Should().Contain("-map [v0]");
+        args.Should().Contain("-map [v1]");
+    }
+
+    private static OutputPlan CreateMixedCodecPlan()
+    {
+        return new(
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                CreateVideoOutput(1920, 1080, "libx264", "[v0]"),
+                CreateVideoOutput(1280, 720, "libx265", "[v1]"),
+            ],
+            AudioOutputs: [],
+            SubtitleOutputs: [],
+            Thumbnails: null
+        );
+    }
+
+    private static VideoOutputPlan CreateVideoOutput(
+        int width,
+        int height,
+        string encoder,
+        string mapLabel
+    ) =>
+        new(
+            Width: width,
+            Height: height,
+            EncoderName: encoder,
+            Crf: 23,
+            BitrateKbps: 0,
+            Preset: "medium",
+            Profile: "high",
+            Level: "4.0",
+            TenBit: false,
+            PixelFormat: "yuv420p",
+            MapLabel: mapLabel,
+            ExtraFlags: new(),
+            SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+            PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:"
+        );
+
     private static OutputPlan CreateSimplePlan(
         string videoEncoder = "libx264",
         StreamAction audioAction = StreamAction.Transcode
