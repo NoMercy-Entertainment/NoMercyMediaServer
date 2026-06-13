@@ -40,6 +40,20 @@ public class FilterGraphBuilder : IFilterGraphBuilder
         return this;
     }
 
+    // GPU-resident scale (scale_cuda / scale_qsv). Frames stay in GPU memory, so
+    // explicit W:H is used — the GPU scalers do not take ffmpeg's -2 token.
+    public IFilterGraphBuilder AddGpuScale(
+        string inputLabel,
+        string scaleFilter,
+        int width,
+        int height,
+        string outputLabel
+    )
+    {
+        _chains.Add($"[{inputLabel}]{scaleFilter}={width}:{height}[{outputLabel}]");
+        return this;
+    }
+
     // Add tonemap filter chain for HDR→SDR
     public IFilterGraphBuilder AddTonemap(string inputLabel, string algorithm, string outputLabel)
     {

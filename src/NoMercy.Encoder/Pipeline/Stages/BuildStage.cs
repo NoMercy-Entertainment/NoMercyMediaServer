@@ -240,8 +240,19 @@ public class BuildStage(
             FfmpegCommandBuilder builder = new();
 
             TimeSpan? resumeSeek = ResolveResumeSeek(input.ResumeFromMs);
+            bool useGpuResident = UsesGpuResidentPath(input.Plan.OutputPlan);
             builder.AddInput(
-                new(input.InputPath, SeekTo: resumeSeek, Duration: input.DurationLimit)
+                new(
+                    input.InputPath,
+                    SeekTo: resumeSeek,
+                    Duration: input.DurationLimit,
+                    HwAccelDevice: useGpuResident
+                        ? input.Plan.OutputPlan.GpuAccel!.HwAccelDevice
+                        : null,
+                    HwAccelOutputFormat: useGpuResident
+                        ? input.Plan.OutputPlan.GpuAccel!.HwAccelOutputFormat
+                        : null
+                )
             );
 
             // Exact-match acquired subtitles: inject each as an additional -i input
@@ -739,6 +750,15 @@ public class BuildStage(
     /// spurious <c>-i</c> inputs to encodes that won't consume them.
     /// Chapters / Drm / Layout are preserved as metadata across all slices.
     /// </summary>
+    /// <summary>
+    /// GPU-resident when the plan carries a resolved GpuAccel plan, has video
+    /// outputs, and requests no thumbnails (sprite generation needs a CPU
+    /// download that would break the GPU-memory chain). Drives both the
+    /// <c>-hwaccel</c> decode flags and the GPU scale branch.
+    /// </summary>
+    private static bool UsesGpuResidentPath(OutputPlan plan) =>
+        plan.GpuAccel is not null && plan.Thumbnails is null && plan.VideoOutputs.Length > 0;
+
     private static string? BuildFilterGraph(
         OutputPlan plan,
         MediaInfo? mediaInfo,
@@ -775,6 +795,44 @@ public class BuildStage(
         );
 
         FilterGraphBuilder fg = new();
+
+        // GPU-resident path: frames are decoded into GPU memory (-hwaccel set on
+        // the input) and scaled on the GPU. Eligibility guarantees no tonemap /
+        // crop / burn-in, so every branch is just a GPU scale. Sprites need a CPU
+        // download, so this path is skipped when thumbnails are requested.
+        if (UsesGpuResidentPath(plan))
+        {
+            string scaleFilter = plan.GpuAccel!.ScaleFilter;
+            if (videoOutputs.Length == 1)
+            {
+                VideoOutputPlan only = videoOutputs[0];
+                fg.AddGpuScale(
+                    "0:v:0",
+                    scaleFilter,
+                    only.Width,
+                    only.Height,
+                    only.MapLabel.Trim('[', ']')
+                );
+            }
+            else
+            {
+                List<string> splitLabels = videoOutputs.Select((_, i) => $"gsplit{i}").ToList();
+                fg.AddSplit("0:v:0", splitLabels.ToArray());
+                for (int i = 0; i < videoOutputs.Length; i++)
+                {
+                    VideoOutputPlan rung = videoOutputs[i];
+                    fg.AddGpuScale(
+                        splitLabels[i],
+                        scaleFilter,
+                        rung.Width,
+                        rung.Height,
+                        rung.MapLabel.Trim('[', ']')
+                    );
+                }
+            }
+
+            return fg.HasFilters ? fg.Build() : null;
+        }
 
         // Tonemap once: when any SDR consumer (rung or sprite) needs the same
         // HDR→SDR tonemap chain we run it ONCE on the source and route every

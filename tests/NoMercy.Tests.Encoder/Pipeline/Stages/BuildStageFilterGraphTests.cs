@@ -3,6 +3,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
@@ -249,6 +250,46 @@ public class BuildStageFilterGraphTests
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
         commands[0].Arguments.Should().NotContain("-filter_complex");
+    }
+
+    // ------------------------------------------------------------------
+    // Test 7: GPU-resident plan → -hwaccel decode + GPU scale, no CPU scale
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task BuildStage_GpuResidentPlan_EmitsHwaccelDecodeAndGpuScale()
+    {
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildVideoOutput(1280, 720, "[v0]", "h264_nvenc")],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: null,
+            GpuAccel: new GpuAccelPlan("cuda", "cuda", "scale_cuda")
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        EncodingContext context = new(
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfo(1920, 1080)
+        );
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
+        string[] args = ((StageSuccess<FfmpegCommand[]>)result).Value[0].Arguments;
+
+        int hwaccelIdx = Array.IndexOf(args, "-hwaccel");
+        hwaccelIdx.Should().BeGreaterThan(-1, "decode must be offloaded to the GPU");
+        args[hwaccelIdx + 1].Should().Be("cuda");
+        int outFmtIdx = Array.IndexOf(args, "-hwaccel_output_format");
+        outFmtIdx.Should().BeGreaterThan(-1);
+        args[outFmtIdx + 1].Should().Be("cuda", "frames stay in GPU memory");
+
+        string filterValue = args[Array.IndexOf(args, "-filter_complex") + 1];
+        filterValue.Should().Contain("scale_cuda=1280:720", "scaling runs on the GPU");
+        filterValue.Should().NotContain("scale=1280:-2", "no CPU scale on the GPU-resident path");
     }
 
     // ------------------------------------------------------------------

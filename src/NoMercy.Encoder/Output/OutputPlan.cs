@@ -1,5 +1,6 @@
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
@@ -50,7 +51,12 @@ public record OutputPlan(
     // and the master playlist references those m3u8 wrappers. When false the
     // raw .vtt extract still lands on disk for download but no segments are
     // produced and the master playlist omits the EXT-X-MEDIA subtitle entry.
-    bool EmitSubtitleWebVttChunks = true
+    bool EmitSubtitleWebVttChunks = true,
+    // Set by PlanStage when the plan is GPU-resident-eligible and a GPU vendor +
+    // scaler are available. BuildStage then decodes with -hwaccel into GPU memory
+    // and scales on the GPU (scale_cuda / scale_qsv) so decode + scaling leave
+    // the CPU. Null = the CPU filter graph (default, unchanged behaviour).
+    GpuAccelPlan? GpuAccel = null
 );
 
 public record VideoOutputPlan(
