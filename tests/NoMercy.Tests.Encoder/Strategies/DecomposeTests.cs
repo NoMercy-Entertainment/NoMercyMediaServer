@@ -413,6 +413,36 @@ public class DecomposeTests
     }
 
     [Fact]
+    public void DecomposedTask_DependencyFields_DefaultNullAndRoundTrip()
+    {
+        DecomposedTask noDep = new(
+            TaskId: "tag-video-0",
+            ParentJobId: 42,
+            GroupTag: "tag",
+            Kind: EncodeTaskKind.Video,
+            OutputIndex: 0,
+            Resources: null
+        );
+
+        noDep.DependsOnTaskId.Should().BeNull("default = reads source, exactly as before");
+        noDep.InputArtifactKey.Should().BeNull();
+
+        DecomposedTask derived = noDep with
+        {
+            DependsOnTaskId = "tag-mezzanine",
+            InputArtifactKey = "mezzanine/sdr_fullres.mkv",
+        };
+
+        DecomposedTask? round = JsonConvert.DeserializeObject<DecomposedTask>(
+            JsonConvert.SerializeObject(derived)
+        );
+
+        round.Should().NotBeNull();
+        round!.DependsOnTaskId.Should().Be("tag-mezzanine");
+        round.InputArtifactKey.Should().Be("mezzanine/sdr_fullres.mkv");
+    }
+
+    [Fact]
     public void DecomposedTask_AllKinds_RoundTripCorrectly()
     {
         foreach (EncodeTaskKind kind in Enum.GetValues<EncodeTaskKind>())
