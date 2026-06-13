@@ -56,7 +56,12 @@ public record OutputPlan(
     // scaler are available. BuildStage then decodes with -hwaccel into GPU memory
     // and scales on the GPU (scale_cuda / scale_qsv) so decode + scaling leave
     // the CPU. Null = the CPU filter graph (default, unchanged behaviour).
-    GpuAccelPlan? GpuAccel = null
+    GpuAccelPlan? GpuAccel = null,
+    // Profile-level CustomArguments — the global escape hatch. BuildStage emits
+    // these as ffmpeg global options (before the -i input) so a profile or plugin
+    // can pass whole-command flags the schema doesn't model. Per-stream overrides
+    // live on each VideoOutputPlan/AudioOutputPlan/SubtitleOutputPlan.ExtraFlags.
+    Dictionary<string, string>? GlobalExtraFlags = null
 );
 
 public record VideoOutputPlan(

@@ -238,6 +238,7 @@ public class BuildStage(
             }
 
             FfmpegCommandBuilder builder = new();
+            builder.WithGlobalExtraFlags(input.Plan.OutputPlan.GlobalExtraFlags);
 
             TimeSpan? resumeSeek = ResolveResumeSeek(input.ResumeFromMs);
             bool useGpuResident = UsesGpuResidentPath(input.Plan.OutputPlan);

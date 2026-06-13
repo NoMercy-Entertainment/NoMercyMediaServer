@@ -5,6 +5,7 @@ namespace NoMercy.Encoder.Commands;
 public class FfmpegCommandBuilder
 {
     private GlobalOptions _globalOptions = new();
+    private Dictionary<string, string>? _globalExtraFlags;
     private readonly List<InputOptions> _inputs = [];
     private string? _filterComplex;
     private readonly List<OutputOptions> _outputs = [];
@@ -12,6 +13,14 @@ public class FfmpegCommandBuilder
     public FfmpegCommandBuilder WithGlobalOptions(GlobalOptions options)
     {
         _globalOptions = options;
+        return this;
+    }
+
+    // Profile-level CustomArguments injected as global ffmpeg options (before the
+    // -i input). Null is a no-op so non-customized profiles emit unchanged commands.
+    public FfmpegCommandBuilder WithGlobalExtraFlags(Dictionary<string, string>? flags)
+    {
+        _globalExtraFlags = flags;
         return this;
     }
 
@@ -61,6 +70,16 @@ public class FfmpegCommandBuilder
         {
             args.Add("-analyzeduration");
             args.Add(_globalOptions.AnalyzeDurationUs.Value.ToString());
+        }
+
+        // Profile-level custom args — global escape hatch, emitted before inputs.
+        if (_globalExtraFlags is not null)
+        {
+            foreach (KeyValuePair<string, string> flag in _globalExtraFlags)
+            {
+                args.Add(flag.Key);
+                args.Add(flag.Value);
+            }
         }
 
         // Inputs

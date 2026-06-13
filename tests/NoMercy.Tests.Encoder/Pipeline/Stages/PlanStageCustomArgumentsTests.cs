@@ -101,6 +101,24 @@ public class PlanStageCustomArgumentsTests
     }
 
     [Fact]
+    public async Task ProfileCustomArguments_ReachTheGlobalExtraFlags()
+    {
+        EncodingProfile profile = BuildProfile(customArgs: null) with
+        {
+            CustomArguments = new() { ["-max_muxing_queue_size"] = "1024" },
+        };
+
+        OutputPlan plan = await RunPlan(profile);
+
+        plan.GlobalExtraFlags.Should()
+            .NotBeNull("profile-level CustomArguments is the global escape hatch");
+        plan.GlobalExtraFlags!.Should()
+            .ContainKey("-max_muxing_queue_size")
+            .WhoseValue.Should()
+            .Be("1024");
+    }
+
+    [Fact]
     public async Task AudioCustomArguments_ReachTheAudioOutputExtraFlags()
     {
         EncodingProfile profile = BuildProfile(customArgs: null) with

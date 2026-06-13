@@ -895,7 +895,10 @@ public class PlanStage(
             HlsOptions: hlsOptions,
             Layout: layout,
             GenerateChapterThumbs: generateChapterThumbs,
-            EmitSubtitleWebVttChunks: emitSubtitleChunks
+            EmitSubtitleWebVttChunks: emitSubtitleChunks,
+            GlobalExtraFlags: profile.CustomArguments is { Count: > 0 }
+                ? new Dictionary<string, string>(profile.CustomArguments)
+                : null
         );
     }
 
