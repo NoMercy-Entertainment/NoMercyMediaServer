@@ -245,6 +245,33 @@ public class EncoderArgumentResolverTests
         h.Should().Be(720);
     }
 
+    [Fact]
+    public void ResolveDimensions_ZeroHeight_DerivesFromSourceAspect()
+    {
+        // A width-only ladder rung (e.g. a 4K profile) reaches the resolver with
+        // Height == 0, not null: LadderRung.Height is a non-nullable int, so the
+        // "derive me" null gets collapsed to 0 by `?? 0` when a VideoOutput is
+        // turned into a rung and back. Zero must be treated like null — derive
+        // from the source aspect ratio. Otherwise the variant is named and
+        // advertised "3840x0" (RESOLUTION=3840x0) and players skip the rendition.
+        VideoOutput profile = MakeVideoOutput(width: 3840, height: 0);
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 2160);
+        w.Should().Be(3840);
+        h.Should().Be(2160, "zero height means derive from source AR, never literal 0");
+    }
+
+    [Fact]
+    public void ResolveDimensions_ZeroHeight_DerivesEvenHeightForScopeSource()
+    {
+        // 2.39:1 scope source (a "Marvel 4K" master is rarely 16:9): 3840-wide
+        // output must derive an even height from the real AR, not 2160.
+        VideoOutput profile = MakeVideoOutput(width: 3840, height: 0);
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 1606);
+        w.Should().Be(3840);
+        h.Should().Be(1606, "derived height tracks the source AR");
+        (h % 2).Should().Be(0, "encoders require even dimensions");
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────
