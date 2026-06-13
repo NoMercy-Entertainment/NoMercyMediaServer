@@ -1,0 +1,69 @@
+namespace NoMercy.Tests.NmSystem;
+
+/// <summary>
+/// Pins <see cref="NumberConverter"/>: aspect-ratio normalization (GCD + common
+/// ratio snapping) used for video metadata, and the integer-to-words conversion
+/// reached through <see cref="Str.ToName"/>.
+/// </summary>
+[Trait("Category", "Unit")]
+public class NumberConverterTests
+{
+    [Theory]
+    [InlineData(1920, 1080, "16:9")]
+    [InlineData(1280, 720, "16:9")]
+    [InlineData(3840, 2160, "16:9")]
+    [InlineData(640, 480, "4:3")]
+    [InlineData(500, 500, "1:1")]
+    public void NormalizeAspectRatio_SnapsCommonRatios(int width, int height, string expected)
+    {
+        NumberConverter.NormalizeAspectRatio(width, height).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(0, 1080)]
+    [InlineData(1920, 0)]
+    [InlineData(-1920, 1080)]
+    public void NormalizeAspectRatio_GuardsNonPositiveDimensions(int width, int height)
+    {
+        NumberConverter.NormalizeAspectRatio(width, height).Should().Be("1:1");
+    }
+
+    [Fact]
+    public void NormalizeAspectRatio_FallsBackToReducedFraction()
+    {
+        // 5:3 (1.667) is not within tolerance of any snapped ratio, so it stays
+        // as the reduced fraction.
+        NumberConverter.NormalizeAspectRatio(1000, 600).Should().Be("5:3");
+    }
+
+    [Fact]
+    public void NormalizeAspectRatio_RoundsDoubleOverload()
+    {
+        NumberConverter.NormalizeAspectRatio(1919.6, 1080.4).Should().Be("16:9");
+    }
+
+    [Theory]
+    [InlineData("0", "zero")]
+    [InlineData("7", "seven")]
+    [InlineData("13", "thirteen")]
+    [InlineData("21", "twenty one")]
+    [InlineData("100", "one hundred")]
+    [InlineData("1234", "one thousand two hundred thirty four")]
+    [InlineData("1000000", "one million")]
+    public void ToName_ConvertsNumbersToWords(string input, string expected)
+    {
+        input.ToName().Should().Be(expected);
+    }
+
+    [Fact]
+    public void ToName_ConvertsNumbersEmbeddedInText()
+    {
+        "I have 21 cats".ToName().Should().Be("I have twenty one cats");
+    }
+
+    [Fact]
+    public void ToName_LeavesNonNumericTextUntouched()
+    {
+        "no numbers here".ToName().Should().Be("no numbers here");
+    }
+}
