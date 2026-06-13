@@ -96,7 +96,10 @@ public record AudioOutputPlan(
     string MapLabel,
     string SegmentNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:",
     string PlaylistNameTemplate = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-    string? AudioFilter = null
+    string? AudioFilter = null,
+    // Per-audio CustomArguments escape hatch, merged by output strategies into the
+    // OutputOptions for this stream. Empty (default) = no extra flags.
+    Dictionary<string, string>? ExtraFlags = null
 );
 
 public record SubtitleOutputPlan(
@@ -109,7 +112,10 @@ public record SubtitleOutputPlan(
     SubtitlePolicy Policy = SubtitlePolicy.Extract,
     // Variant slot — full / sign / sdh / alt — derived from the source stream's
     // title and disposition flags so multi-track sources keep distinct URIs.
-    string Variant = "full"
+    string Variant = "full",
+    // Per-subtitle CustomArguments escape hatch, merged by output strategies into
+    // the OutputOptions for this stream. Empty (default) = no extra flags.
+    Dictionary<string, string>? ExtraFlags = null
 );
 
 public record ThumbnailOutputPlan(int Width, int Height, int IntervalSeconds);

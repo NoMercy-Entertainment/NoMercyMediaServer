@@ -677,7 +677,10 @@ public class PlanStage(
                         MapLabel: $"0:a:{si}",
                         SegmentNameTemplate: audioProfile.SegmentNameTemplate,
                         PlaylistNameTemplate: audioProfile.PlaylistNameTemplate,
-                        AudioFilter: audioFilter
+                        AudioFilter: audioFilter,
+                        ExtraFlags: audioProfile.CustomArguments is not null
+                            ? new Dictionary<string, string>(audioProfile.CustomArguments)
+                            : null
                     )
                 );
             }
@@ -736,7 +739,10 @@ public class PlanStage(
                         MapLabel: $"0:s:{si}",
                         PlaylistNameTemplate: subProfile.PlaylistNameTemplate,
                         Policy: subProfile.Policy,
-                        Variant: subtitleVariants[si]
+                        Variant: subtitleVariants[si],
+                        ExtraFlags: subProfile.CustomArguments is not null
+                            ? new Dictionary<string, string>(subProfile.CustomArguments)
+                            : null
                     )
                 );
             }

@@ -146,6 +146,14 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
                     extraFlags["-af"] = audio.AudioFilter;
                 }
 
+                // Per-audio CustomArguments escape hatch — applied last so author
+                // intent wins (validator already blocks codec/format keys).
+                if (audio.ExtraFlags is not null)
+                {
+                    foreach ((string key, string value) in audio.ExtraFlags)
+                        extraFlags[key] = value;
+                }
+
                 string audioCodec = audio.Action == StreamAction.Copy ? "copy" : audio.EncoderName;
 
                 builder.AddOutput(

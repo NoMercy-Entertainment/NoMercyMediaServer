@@ -12,6 +12,7 @@ using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using StreamPolicy = NoMercy.Encoder.Profiles.StreamPolicy;
+using SubtitlePolicy = NoMercy.Encoder.Profiles.SubtitlePolicy;
 using V2RateControlMode = NoMercy.Encoder.Profiles.RateControlMode;
 
 namespace NoMercy.Tests.Encoder.Pipeline.Stages;
@@ -99,14 +100,94 @@ public class PlanStageCustomArgumentsTests
             .Be("keyint=48:min-keyint=48");
     }
 
-    private async Task<OutputPlan> RunPlan(EncodingProfile profile)
+    [Fact]
+    public async Task AudioCustomArguments_ReachTheAudioOutputExtraFlags()
     {
-        ValidateInput input = new(BuildSdrMedia(), profile);
+        EncodingProfile profile = BuildProfile(customArgs: null) with
+        {
+            Audio =
+            [
+                new(
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "audio/{lang}",
+                    PlaylistNameTemplate: "audio/{lang}/playlist",
+                    CustomArguments: new() { ["-aac_coder"] = "twoloop" }
+                ),
+            ],
+        };
+
+        OutputPlan plan = await RunPlan(profile, BuildMediaWithStreams());
+
+        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
+        audio.ExtraFlags.Should().ContainKey("-aac_coder").WhoseValue.Should().Be("twoloop");
+    }
+
+    [Fact]
+    public async Task SubtitleCustomArguments_ReachTheSubtitleOutputExtraFlags()
+    {
+        EncodingProfile profile = BuildProfile(customArgs: null) with
+        {
+            Subtitles =
+            [
+                new(
+                    Policy: SubtitlePolicy.Extract,
+                    Codec: SubtitleCodecType.WebVtt,
+                    AllowedLanguages: [],
+                    IncludeForced: false,
+                    OcrLanguage: null,
+                    PlaylistNameTemplate: "subtitles/{lang}",
+                    CustomArguments: new() { ["-canvas_size"] = "1920x1080" }
+                ),
+            ],
+        };
+
+        OutputPlan plan = await RunPlan(profile, BuildMediaWithStreams());
+
+        SubtitleOutputPlan subtitle = Assert.Single(plan.SubtitleOutputs);
+        subtitle.ExtraFlags.Should().ContainKey("-canvas_size").WhoseValue.Should().Be("1920x1080");
+    }
+
+    private async Task<OutputPlan> RunPlan(EncodingProfile profile) =>
+        await RunPlan(profile, BuildSdrMedia());
+
+    private async Task<OutputPlan> RunPlan(EncodingProfile profile, MediaInfo media)
+    {
+        ValidateInput input = new(media, profile);
         EncodingContext context = EncodingContext.Create();
         StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
         StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
         return success.Value.OutputPlan;
     }
+
+    private static MediaInfo BuildMediaWithStreams() =>
+        BuildSdrMedia() with
+        {
+            AudioStreams =
+            [
+                new(
+                    Index: 1,
+                    Codec: "aac",
+                    Channels: 6,
+                    SampleRate: 48000,
+                    BitRateKbps: 384,
+                    Language: "eng",
+                    IsDefault: true,
+                    IsForced: false
+                ),
+            ],
+            SubtitleStreams =
+            [
+                new(Index: 2, Codec: "subrip", Language: "eng", IsDefault: true, IsForced: false),
+            ],
+        };
 
     private static MediaInfo BuildSdrMedia() =>
         new(
