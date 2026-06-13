@@ -1,7 +1,10 @@
+using System.Text;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
+using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Encoder.Storage;
 
 namespace NoMercy.Tests.Encoder.Output;
@@ -194,6 +197,87 @@ public class DashOutputStrategyTests
             .GetOutputSubdirectories(CreatePlan())
             .Should()
             .BeEmpty();
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_WithChapters_InjectsEventStreamIntoMpd()
+    {
+        LocalStorage storage = TestStorageFactory.CreateLocal();
+        DashOutputStrategy strategy = new(storage);
+        string dir = Path.Combine(Path.GetTempPath(), $"dash_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            const string mpd =
+                "<?xml version=\"1.0\"?><MPD xmlns=\"urn:mpeg:dash:schema:mpd:2011\"><Period></Period></MPD>";
+            await storage.WriteAsync(
+                Path.Combine(dir, "manifest.mpd"),
+                Encoding.UTF8.GetBytes(mpd),
+                CancellationToken.None
+            );
+
+            OutputPlan plan = CreatePlan() with
+            {
+                Chapters =
+                [
+                    new ChapterInfo(TimeSpan.Zero, TimeSpan.FromSeconds(300), "Intro"),
+                    new ChapterInfo(TimeSpan.FromSeconds(300), TimeSpan.FromSeconds(600), "Main"),
+                ],
+            };
+
+            await strategy.FinalizeAsync(dir, plan, "Movie", CancellationToken.None);
+
+            byte[] bytes = await storage.ReadAsync(
+                Path.Combine(dir, "Movie.mpd"),
+                CancellationToken.None
+            );
+            string xml = Encoding.UTF8.GetString(bytes);
+
+            xml.Should().Contain("urn:nomercy:chapters");
+            xml.Should().Contain("Intro").And.Contain("Main");
+            // timescale=1000 → ms. First chapter spans 0..300000, second starts at 300000.
+            xml.Should().Contain("presentationTime=\"0\"");
+            xml.Should().Contain("duration=\"300000\"");
+            xml.Should().Contain("presentationTime=\"300000\"");
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_NoChapters_RenamesManifestWithoutEventStream()
+    {
+        LocalStorage storage = TestStorageFactory.CreateLocal();
+        DashOutputStrategy strategy = new(storage);
+        string dir = Path.Combine(Path.GetTempPath(), $"dash_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            const string mpd =
+                "<?xml version=\"1.0\"?><MPD xmlns=\"urn:mpeg:dash:schema:mpd:2011\"><Period></Period></MPD>";
+            await storage.WriteAsync(
+                Path.Combine(dir, "manifest.mpd"),
+                Encoding.UTF8.GetBytes(mpd),
+                CancellationToken.None
+            );
+
+            await strategy.FinalizeAsync(dir, CreatePlan(), "Movie", CancellationToken.None);
+
+            (await storage.ExistsAsync(Path.Combine(dir, "Movie.mpd"), CancellationToken.None))
+                .Should()
+                .BeTrue("the manifest is renamed to the media title");
+            byte[] bytes = await storage.ReadAsync(
+                Path.Combine(dir, "Movie.mpd"),
+                CancellationToken.None
+            );
+            Encoding.UTF8.GetString(bytes).Should().NotContain("urn:nomercy:chapters");
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
     }
 
     private static OutputPlan CreatePlan() =>

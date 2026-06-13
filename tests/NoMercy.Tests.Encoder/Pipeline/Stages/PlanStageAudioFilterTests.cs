@@ -10,6 +10,8 @@ using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
 using CodecProfile = NoMercy.Encoder.Profiles.CodecProfile;
 using Container = NoMercy.Encoder.Profiles.Container;
+using DownmixConfig = NoMercy.Encoder.Profiles.DownmixConfig;
+using DownmixMode = NoMercy.Encoder.Profiles.DownmixMode;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using LoudnessConfig = NoMercy.Encoder.Profiles.LoudnessConfig;
 using LoudnessMode = NoMercy.Encoder.Profiles.LoudnessMode;
@@ -120,6 +122,39 @@ public class PlanStageAudioFilterTests
         Assert.Null(audio.AudioFilter);
     }
 
+    [Fact]
+    public async Task DownmixAndLoudness_ChainsPanBeforeLoudnorm()
+    {
+        // loudnorm expects the post-downmix channel layout, so pan must run
+        // first. The two filters chain as "pan=...,loudnorm=..." in that order.
+        EncodingProfile profile = BuildProfile(
+            LoudnessMode.EbuR128,
+            new DownmixConfig(DownmixMode.StereoItuR128)
+        );
+        OutputPlan plan = await RunPlan(profile);
+
+        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
+        Assert.Equal(
+            "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR,"
+                + "loudnorm=I=-16:TP=-1.5:LRA=11",
+            audio.AudioFilter
+        );
+    }
+
+    [Fact]
+    public async Task DownmixOnly_EmitsPanWithoutLoudnorm()
+    {
+        EncodingProfile profile = BuildProfile(
+            LoudnessMode.None,
+            new DownmixConfig(DownmixMode.Mono)
+        );
+        OutputPlan plan = await RunPlan(profile);
+
+        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
+        audio.AudioFilter.Should().StartWith("pan=mono|");
+        audio.AudioFilter.Should().NotContain("loudnorm");
+    }
+
     private async Task<OutputPlan> RunPlan(EncodingProfile profile)
     {
         ValidateInput input = new(BuildMedia(), profile);
@@ -171,7 +206,10 @@ public class PlanStageAudioFilterTests
             Chapters: []
         );
 
-    private static EncodingProfile BuildProfile(LoudnessMode loudness) =>
+    private static EncodingProfile BuildProfile(
+        LoudnessMode loudness,
+        DownmixConfig? downmix = null
+    ) =>
         new(
             Id: Ulid.NewUlid(),
             Name: "Audio Filter Test",
@@ -208,7 +246,7 @@ public class PlanStageAudioFilterTests
                     AllowedLanguages: [],
                     DefaultLanguage: null,
                     Loudness: loudness == LoudnessMode.None ? null : new LoudnessConfig(loudness),
-                    Downmix: null,
+                    Downmix: downmix,
                     SegmentNameTemplate: "audio/{lang}-{codec}",
                     PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),
