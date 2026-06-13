@@ -19,7 +19,8 @@ public class Encoder(
     BuildStage buildStage,
     ExecuteStage executeStage,
     FinalizeStage finalizeStage,
-    ILogger<Encoder> logger
+    ILogger<Encoder> logger,
+    IProfileOverride? profileOverride = null
 ) : IEncoder
 {
     public async Task<EncodingResult> EncodeAsync(
@@ -55,6 +56,24 @@ public class Encoder(
         MediaInfo mediaInfo = ((StageSuccess<MediaInfo>)analyzeResult).Value;
         context = context with { MediaInfo = mediaInfo };
         progress?.OnStageCompleted("Analyze", stopwatch.Elapsed);
+
+        // Profile override seam: a plugin may replace the configured profile based
+        // on the analyzed source (e.g. detect anime → an anime preset). Applied
+        // once here so every downstream stage sees the effective profile.
+        if (profileOverride is not null)
+        {
+            EncodingProfile effective = profileOverride.Apply(request.Profile, mediaInfo);
+            if (!ReferenceEquals(effective, request.Profile))
+            {
+                logger.LogInformation(
+                    "[{CorrelationId}] Profile overridden by plugin: '{Old}' → '{New}'",
+                    context.CorrelationId,
+                    request.Profile.Name,
+                    effective.Name
+                );
+                request = request with { Profile = effective };
+            }
+        }
 
         // Stage 2: Validate
         progress?.OnStageStarted("Validate");

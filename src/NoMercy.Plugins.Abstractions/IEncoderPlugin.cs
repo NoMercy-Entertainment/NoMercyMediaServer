@@ -2,5 +2,8 @@ namespace NoMercy.Plugins.Abstractions;
 
 public interface IEncoderPlugin : IPlugin
 {
-    EncodingProfile GetProfile(MediaInfo info);
+    // Return a profile to override the configured one for this source, or null to
+    // opt out (the configured profile stands). The first plugin returning non-null
+    // wins.
+    EncodingProfile? GetProfile(MediaInfo info);
 }

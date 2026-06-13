@@ -1,0 +1,128 @@
+using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Pipeline;
+using NoMercy.Plugins.Abstractions;
+using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
+using EncoderProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using EncoderVideoOutput = NoMercy.Encoder.Profiles.VideoOutput;
+using PluginProfile = NoMercy.Plugins.Abstractions.EncodingProfile;
+
+namespace NoMercy.Plugins;
+
+/// <summary>
+/// Wires <see cref="IEncoderPlugin.GetProfile"/> into the encoder's
+/// <see cref="IProfileOverride"/> seam: the first encoder plugin that returns a
+/// non-null profile for the analyzed source replaces the configured profile.
+/// No plugins, or all returning null, keeps the configured profile unchanged.
+///
+/// The plugin surface (<see cref="PluginProfile"/>) is a flat public DTO kept
+/// deliberately decoupled from the encoder's rich internal profile, so this class
+/// owns the bridge in both directions: encoder MediaInfo → plugin MediaInfo to
+/// call the hook, and the returned flat profile → a full encoder profile.
+/// </summary>
+public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverride
+{
+    public EncoderProfile Apply(EncoderProfile configured, EncoderMediaInfo media)
+    {
+        Abstractions.MediaInfo pluginMedia = ToPluginMediaInfo(media);
+
+        foreach (IEncoderPlugin plugin in pluginManager.GetPluginsOfType<IEncoderPlugin>())
+        {
+            PluginProfile? pluginProfile = plugin.GetProfile(pluginMedia);
+            if (pluginProfile is not null)
+                return ToEncoderProfile(pluginProfile);
+        }
+
+        return configured;
+    }
+
+    private static Abstractions.MediaInfo ToPluginMediaInfo(EncoderMediaInfo media)
+    {
+        Encoder.Analysis.VideoStreamInfo? video =
+            media.VideoStreams.Count > 0 ? media.VideoStreams[0] : null;
+        Encoder.Analysis.AudioStreamInfo? audio =
+            media.AudioStreams.Count > 0 ? media.AudioStreams[0] : null;
+
+        return new()
+        {
+            FilePath = media.FilePath,
+            VideoCodec = video?.Codec,
+            AudioCodec = audio?.Codec,
+            Width = video?.Width,
+            Height = video?.Height,
+            Bitrate = media.OverallBitRateKbps > 0 ? media.OverallBitRateKbps * 1000L : null,
+            Duration = media.Duration,
+            IsHdr = video?.IsHdr ?? false,
+        };
+    }
+
+    private static EncoderProfile ToEncoderProfile(PluginProfile profile)
+    {
+        VideoCodecType videoCodec =
+            CodecFamilyClassifier.ClassifyVideo(profile.VideoCodec) ?? VideoCodecType.H264;
+        AudioCodecType audioCodec =
+            CodecFamilyClassifier.ClassifyAudio(profile.AudioCodec) ?? AudioCodecType.Aac;
+
+        return new(
+            Id: Ulid.NewUlid(),
+            Name: profile.Name,
+            Container: ParseContainer(profile.Container),
+            Video: new EncoderVideoOutput(
+                Policy: Encoder.Profiles.StreamPolicy.Transcode,
+                Codec: videoCodec,
+                Width: profile.Width ?? 0,
+                Height: profile.Height,
+                RateControl: profile.VideoBitrate is > 0
+                    ? Encoder.Profiles.RateControlMode.Vbr
+                    : Encoder.Profiles.RateControlMode.Crf,
+                Crf: profile.VideoBitrate is > 0 ? 0 : 23,
+                BitrateKbps: profile.VideoBitrate ?? 0,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: Encoder.Profiles.CodecProfile.Auto,
+                Level: null,
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: null,
+                KeyframeIntervalSeconds: 2,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
+                CustomArguments: profile.ExtraParameters.Count > 0
+                    ? new Dictionary<string, string>(profile.ExtraParameters)
+                    : null
+            ),
+            Audio:
+            [
+                new(
+                    Policy: Encoder.Profiles.StreamPolicy.Transcode,
+                    Codec: audioCodec,
+                    BitrateKbps: profile.AudioBitrate ?? 0,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                    CustomArguments: null
+                ),
+            ],
+            Subtitles: []
+        );
+    }
+
+    private static Encoder.Profiles.Container ParseContainer(string container) =>
+        container.ToLowerInvariant() switch
+        {
+            "ts" or "mpegts" or "hls_ts" => Encoder.Profiles.Container.HlsTs,
+            "m3u8" or "hls" or "fmp4" or "hls_fmp4" => Encoder.Profiles.Container.HlsFmp4,
+            "mkv" or "matroska" => Encoder.Profiles.Container.Mkv,
+            "dash" or "mpd" => Encoder.Profiles.Container.Dash,
+            "mp3" => Encoder.Profiles.Container.Mp3,
+            "flac" => Encoder.Profiles.Container.Flac,
+            "ogg" or "oga" or "opus" => Encoder.Profiles.Container.Ogg,
+            _ => Encoder.Profiles.Container.Mp4,
+        };
+}
