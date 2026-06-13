@@ -760,6 +760,10 @@ public class BuildStage(
         int sourceHeight = mediaInfo.VideoStreams[0].Height;
         bool sourceIs10Bit = mediaInfo.VideoStreams[0].BitDepth > 8;
         bool hasThumbnails = plan.Thumbnails is not null;
+        bool sourceIsHdr = mediaInfo.VideoStreams[0].IsHdr;
+        string? thumbnailTonemapChain = videoOutputs
+            .Select(v => v.TonemapFilterChain)
+            .FirstOrDefault(c => !string.IsNullOrEmpty(c));
 
         // First text-based subtitle output with BurnIn mode (PGS burn-in uses
         // the overlay path handled before this method is called).
@@ -953,7 +957,12 @@ public class BuildStage(
                 ThumbnailOutputPlan thumbs = plan.Thumbnails!;
                 fg.AddFilter(
                     "thumbsrc",
-                    $"format=yuvj420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
+                    ThumbnailFilterResolver.Resolve(
+                        thumbs.IntervalSeconds,
+                        thumbs.Width,
+                        sourceIsHdr,
+                        thumbnailTonemapChain
+                    ),
                     "thumbs"
                 );
             }
