@@ -357,6 +357,12 @@ public class MediaContext : DbContext
             .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
+            .Entity<Track>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Tracks_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
             .Entity<Playlist>()
             .HasIndex(nameof(ColorPalettes._colorPalette))
             .HasDatabaseName("IX_Playlists_ColorPalette_pending")

@@ -62,7 +62,7 @@ public partial class RecordingManager(
                 );
                 if (mediaFile is null)
                     continue;
-                
+
                 TagFile? tagFile = file.TagFile;
                 if (tagFile == null || mediaFile.FFprobe == null)
                 {
@@ -138,6 +138,8 @@ public partial class RecordingManager(
                     ?? [];
 
                 await musicGenreRepository.LinkToRecording(genres);
+
+                new JobDispatcher().DispatchColorPaletteJob("track", insert.Id.ToString());
 
                 Logger.MusicBrainz(
                     $"Recording {musicBrainzTrack.Title} stored",
@@ -396,7 +398,7 @@ public partial class RecordingManager(
 
                     LibraryId = libraryFolder.FolderLibraries.FirstOrDefault()!.LibraryId,
                 };
-                
+
                 await artistRepository.StoreAsync(artistEntity);
                 jobDispatcher.DispatchJob<MusicMetadataJob>(artist);
             }
@@ -463,8 +465,7 @@ public partial class RecordingManager(
             };
             await musicGenreRepository.Store(musicGenre);
         }
-        List<MusicGenreTrack> genres =
-            (trackAppends.Genres ?? trackAppends.Recording.Genres)
+        List<MusicGenreTrack> genres = (trackAppends.Genres ?? trackAppends.Recording.Genres)
             .Select(genre => new MusicGenreTrack { TrackId = insert.Id, GenreId = genre.Id })
             .ToList();
 

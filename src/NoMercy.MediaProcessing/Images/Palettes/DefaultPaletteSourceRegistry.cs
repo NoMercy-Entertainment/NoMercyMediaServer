@@ -21,6 +21,7 @@ public static class DefaultPaletteSourceRegistry
         new ImagePaletteSource(),
         new ArtistPaletteSource(),
         new AlbumPaletteSource(),
+        new TrackPaletteSource(),
         new PlaylistPaletteSource(),
         new ReleaseGroupPaletteSource(),
     ]);

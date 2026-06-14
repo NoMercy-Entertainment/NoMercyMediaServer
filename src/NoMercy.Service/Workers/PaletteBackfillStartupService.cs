@@ -19,6 +19,12 @@ public class PaletteBackfillStartupService(ILogger<PaletteBackfillStartupService
         try
         {
             await using AppDbContext db = new();
+            await PaletteBackfillState.EnsureVersionAsync(
+                db,
+                PaletteBackfillJob.CurrentVersion,
+                PaletteBackfillJob.AllTypes,
+                cancellationToken
+            );
             bool complete = await PaletteBackfillState.IsCompleteAsync(db, cancellationToken);
             if (complete)
             {
