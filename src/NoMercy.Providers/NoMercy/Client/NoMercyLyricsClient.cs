@@ -32,10 +32,18 @@ public static class NoMercyLyricsClient
 
         LyricQuery query = new(track.Name, artists, albumName, durationSeconds);
 
-        LyricCandidate? candidate = await FromLrclib(lrclibClient, query, artists);
-        candidate ??= await FromMusixmatch(musixmatchClient, query);
+        // Free service first, but timed (synced) lyrics always win over untimed:
+        // if Lrclib only has plain lyrics, still try Musixmatch for a synced match
+        // and prefer it. Fall back to whatever plain result exists otherwise.
+        LyricCandidate? lrclib = await FromLrclib(lrclibClient, query, artists);
+        if (lrclib is { HasSyncedLyrics: true })
+            return lrclib.Lines;
 
-        return candidate?.Lines;
+        LyricCandidate? musixmatch = await FromMusixmatch(musixmatchClient, query);
+        if (musixmatch is { HasSyncedLyrics: true })
+            return musixmatch.Lines;
+
+        return (lrclib ?? musixmatch)?.Lines;
     }
 
     private static async Task<LyricCandidate?> FromLrclib(
