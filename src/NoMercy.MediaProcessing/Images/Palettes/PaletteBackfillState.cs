@@ -23,7 +23,9 @@ public class PaletteBackfillState
     /// cursor are reset so the drain walks all tables again — already-filled rows
     /// are skipped by the pending-palette filter, so only the new type does work.
     /// </summary>
-    public static async Task EnsureVersionAsync(
+    /// <returns><c>true</c> when the stored version was behind and the drain was
+    /// re-opened, <c>false</c> when nothing changed.</returns>
+    public static async Task<bool> EnsureVersionAsync(
         AppDbContext db,
         int currentVersion,
         IEnumerable<string> entityTypes,
@@ -32,12 +34,13 @@ public class PaletteBackfillState
     {
         int stored = await GetVersionAsync(db, ct);
         if (stored >= currentVersion)
-            return;
+            return false;
 
         await UpsertConfigAsync(db, CompleteKey, "false", ct);
         foreach (string entityType in entityTypes)
             await UpsertConfigAsync(db, CursorKey(entityType), "0", ct);
         await UpsertConfigAsync(db, VersionKey, currentVersion.ToString(), ct);
+        return true;
     }
 
     private static async Task<int> GetVersionAsync(AppDbContext db, CancellationToken ct)
