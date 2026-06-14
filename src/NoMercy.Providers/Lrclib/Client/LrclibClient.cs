@@ -2,12 +2,17 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using NoMercy.Providers.Lrclib.Models;
 using NoMercy.Providers.MusixMatch.Models;
+using NoMercy.Providers.NoMercy.Models;
 
 namespace NoMercy.Providers.Lrclib.Client;
 
 public partial class LrclibClient : LrclibBaseClient
 {
-    public async Task<MusixMatchFormattedLyric[]?> SongSearch(
+    /// <summary>
+    /// Exact signature lookup (<c>/api/get</c>). Returns a single release matched
+    /// on artist + track + album + duration, or null when none exists.
+    /// </summary>
+    public async Task<LrclibSongResult?> Get(
         string[] artists,
         string trackName,
         string? albumName = null,
@@ -28,15 +33,64 @@ public partial class LrclibClient : LrclibBaseClient
                 duration.Value.ToString(CultureInfo.InvariantCulture)
             );
 
-        LrclibSongResult? result = await Get<LrclibSongResult>("", additionalArguments, priority);
+        LrclibSongResult? result = await Get<LrclibSongResult>(
+            "get",
+            additionalArguments,
+            priority
+        );
         if (
             !string.IsNullOrEmpty(result?.Message)
             || result?.StatusCode != 200
             || result.Name == "TrackNotFound"
         )
             return null;
-        return ConvertToMusixmatchLyrics(
-            !string.IsNullOrEmpty(result.SyncedLyrics) ? result.SyncedLyrics : result.PlainLyrics
+        return result;
+    }
+
+    /// <summary>
+    /// Fuzzy search (<c>/api/search</c>). Returns every candidate release so the
+    /// caller can score them and pick the one whose duration matches the local
+    /// file, instead of blindly taking the first hit.
+    /// </summary>
+    public async Task<LrclibSongResult[]?> Search(
+        string[] artists,
+        string trackName,
+        string? albumName = null,
+        bool priority = false
+    )
+    {
+        Dictionary<string, string> additionalArguments = new() { { "track_name", trackName } };
+        string artistName = string.Join(",", artists);
+        if (!string.IsNullOrEmpty(artistName))
+            additionalArguments.Add("artist_name", artistName);
+        if (albumName != null)
+            additionalArguments.Add("album_name", albumName);
+
+        return await Get<LrclibSongResult[]>("search", additionalArguments, priority);
+    }
+
+    /// <summary>
+    /// Reduces a raw Lrclib release to a scoreable candidate, preferring synced
+    /// lyrics over plain. Returns null when the release has no usable lyrics.
+    /// </summary>
+    public static LyricCandidate? ToCandidate(LrclibSongResult result)
+    {
+        if (result.Instrumental)
+            return null;
+
+        bool hasSynced = !string.IsNullOrEmpty(result.SyncedLyrics);
+        MusixMatchFormattedLyric[]? lines = ConvertToMusixmatchLyrics(
+            hasSynced ? result.SyncedLyrics : result.PlainLyrics
+        );
+        if (lines is null)
+            return null;
+
+        return new(
+            result.TrackName,
+            result.ArtistName,
+            result.Duration > 0 ? (int)Math.Round(result.Duration) : null,
+            hasSynced,
+            lines
         );
     }
 
