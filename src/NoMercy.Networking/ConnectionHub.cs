@@ -152,7 +152,7 @@ public class ConnectionHub : Hub
             client.Id = device.Id;
 
         client.CustomName = device?.CustomName;
-        client.VolumePercent = device?.VolumePercent ?? 0;
+        client.VolumePercent = device?.VolumePercent;
         client.IsActive = true;
 
         if (device is not null)

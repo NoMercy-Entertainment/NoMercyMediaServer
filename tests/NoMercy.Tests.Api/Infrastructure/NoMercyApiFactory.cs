@@ -637,5 +637,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<PluginLoadResult>>(Array.Empty<PluginLoadResult>());
+
+        public IEnumerable<T> GetPluginsOfType<T>()
+            where T : IPlugin => Array.Empty<T>();
     }
 }

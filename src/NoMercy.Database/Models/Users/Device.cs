@@ -46,8 +46,10 @@ public class Device : Timestamps
     [JsonProperty("is_active")]
     public bool IsActive { get; set; }
 
+    public const int DefaultVolumePercent = 50;
+
     [JsonProperty("volume_percent")]
-    public int VolumePercent { get; set; }
+    public int? VolumePercent { get; set; }
 
     [JsonProperty("fingerprint")]
     public string? Fingerprint { get; set; }

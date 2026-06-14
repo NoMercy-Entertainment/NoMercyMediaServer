@@ -17,7 +17,7 @@ public class MusicPlayerStateFactory
         return new()
         {
             DeviceId = device.DeviceId,
-            VolumePercentage = device.VolumePercent,
+            VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent,
             CurrentItem = item,
             Backlog = [item],
             Playlist = playlist,
