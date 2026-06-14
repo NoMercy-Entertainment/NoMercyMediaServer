@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -103,6 +104,14 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
                 ? string.Empty
                 : Uri.UnescapeDataString(pathValue[pathValue.IndexOf('/', 1)..]).TrimStart('/');
 
+            // Per-request server-side timing for media serves. Audio/video file
+            // requests bypass AccessLogMiddleware, so without this they have zero
+            // timing visibility. Logs how long the server itself spends resolving
+            // + opening + streaming the file — isolating "server slow" from
+            // client-side connect/DNS/TLS latency.
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            long resolvedAtMs = 0;
+
             IStorage storage;
             try
             {
@@ -156,7 +165,25 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
                 return;
             }
 
+            // Time-to-first-byte on the server: everything before the stream loop
+            // (factory resolve + Exists + presigned probe + Size + OpenRead).
+            resolvedAtMs = stopwatch.ElapsedMilliseconds;
             await ServeFile(context, storage, relativeWithinFolder);
+            stopwatch.Stop();
+
+            if (resolvedAtMs > 1000 || stopwatch.ElapsedMilliseconds > 2000)
+                Logger.App(
+                    $"[DynamicStaticFiles] SLOW serve '{relativeWithinFolder}' "
+                        + $"prep={resolvedAtMs}ms total={stopwatch.ElapsedMilliseconds}ms "
+                        + $"(driver={storage.GetType().Name})",
+                    Serilog.Events.LogEventLevel.Warning
+                );
+            else
+                Logger.App(
+                    $"[DynamicStaticFiles] serve '{relativeWithinFolder}' "
+                        + $"prep={resolvedAtMs}ms total={stopwatch.ElapsedMilliseconds}ms",
+                    Serilog.Events.LogEventLevel.Debug
+                );
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
