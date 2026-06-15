@@ -174,6 +174,18 @@ public class AuthManager
         }
     }
 
+    private async Task HandleDeadRefreshTokenAsync()
+    {
+        _refreshCts?.Cancel();
+        await UpsertSecureValue("auth_refresh_token", string.Empty);
+        Globals.Globals.AccessToken = null;
+        ResetAuthReady();
+        Logger.Auth(
+            "Refresh token rejected as invalid_grant — re-authentication required through /setup UI",
+            LogEventLevel.Warning
+        );
+    }
+
     public void ScheduleBackgroundRefresh(CancellationToken ct)
     {
         _refreshCts?.Cancel();
@@ -360,6 +372,10 @@ public class AuthManager
                     $"Token refresh returned {(int)response.StatusCode}: {errorBody}",
                     LogEventLevel.Warning
                 );
+
+                if (IsPermanentRefreshFailure(errorBody))
+                    await HandleDeadRefreshTokenAsync();
+
                 return false;
             }
 
@@ -546,6 +562,9 @@ public class AuthManager
             new("code_verifier", codeVerifier),
         ];
     }
+
+    public static bool IsPermanentRefreshFailure(string errorBody) =>
+        errorBody.Contains("invalid_grant", StringComparison.OrdinalIgnoreCase);
 
     public static List<KeyValuePair<string, string>> BuildRefreshTokenBody(
         string clientId,

@@ -97,6 +97,33 @@ public class AuthTokenRequestTests
         Assert.Equal("refresh_token", dict["grant_type"]);
     }
 
+    // --- Permanent Refresh Failure Detection ---
+
+    [Fact]
+    public void PermanentRefreshFailure_TrueForInvalidGrant()
+    {
+        string body =
+            "{\"error\":\"invalid_grant\",\"error_description\":\"Offline user session not found\"}";
+
+        Assert.True(AuthManager.IsPermanentRefreshFailure(body));
+    }
+
+    [Fact]
+    public void PermanentRefreshFailure_IsCaseInsensitive()
+    {
+        Assert.True(AuthManager.IsPermanentRefreshFailure("ERROR: INVALID_GRANT"));
+    }
+
+    [Fact]
+    public void PermanentRefreshFailure_FalseForTransientErrors()
+    {
+        Assert.False(
+            AuthManager.IsPermanentRefreshFailure("{\"error\":\"temporarily_unavailable\"}")
+        );
+        Assert.False(AuthManager.IsPermanentRefreshFailure("502 Bad Gateway"));
+        Assert.False(AuthManager.IsPermanentRefreshFailure(string.Empty));
+    }
+
     // --- Device Code Request Body ---
 
     [Fact]
