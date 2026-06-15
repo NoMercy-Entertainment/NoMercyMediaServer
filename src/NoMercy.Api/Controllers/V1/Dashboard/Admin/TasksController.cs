@@ -155,90 +155,142 @@ public class TasksController(
             .Where(job => job is not null)
             .ToList()!;
 
-        List<Ulid> folderIds = encoderJobs.Select(j => j.FolderId).ToList();
+        // Parse each job id once — Id is either an int (movie/episode) or a Guid (track).
+        List<int> movieOrEpisodeIds = [];
+        List<Guid> trackIds = [];
 
-        // Load folders into memory first
+        foreach (VideoEncodeJob encoderJob in encoderJobs)
+        {
+            int intId = encoderJob.Id.ToInt();
+            if (intId != 0)
+            {
+                movieOrEpisodeIds.Add(intId);
+            }
+            else
+            {
+                Guid guidId = encoderJob.Id.ToGuid();
+                if (guidId != Guid.Empty)
+                    trackIds.Add(guidId);
+            }
+        }
+
+        List<Ulid> folderIds = encoderJobs.Select(j => j.FolderId).Distinct().ToList();
+
+        // Folders — only the profile include needed for the Profile field; no library graph.
         List<Folder> folders = await mediaContext
-            .Folders.Where(f => folderIds.Contains(f.Id))
+            .Folders.AsNoTracking()
+            .Where(f => folderIds.Contains(f.Id))
             .Include(f => f.EncoderProfileFolder)
                 .ThenInclude(e => e.EncoderProfile)
-            .Include(f => f.FolderLibraries)
-                .ThenInclude(f => f.Library)
-                    .ThenInclude(f => f.LibraryTvs)
-                        .ThenInclude(libraryTv => libraryTv.Tv)
-                            .ThenInclude(tv => tv.Episodes)
-            .Include(f => f.FolderLibraries)
-                .ThenInclude(f => f.Library)
-                    .ThenInclude(f => f.LibraryMovies)
-                        .ThenInclude(libraryMovie => libraryMovie.Movie)
-            .Include(f => f.FolderLibraries)
-                .ThenInclude(f => f.Library)
-                    .ThenInclude(f => f.LibraryTracks)
-                        .ThenInclude(libraryTrack => libraryTrack.Track)
-                            .ThenInclude(track => track.AlbumTrack)
-                                .ThenInclude(albumTrack => albumTrack.Album)
             .ToListAsync();
 
+        Dictionary<Ulid, Folder> folderById = folders.ToDictionary(f => f.Id);
+
+        // Load only the entities actually referenced by queued jobs.
+        Dictionary<int, Movie> movieById = [];
+        Dictionary<int, Episode> episodeById = [];
+        Dictionary<Guid, Track> trackById = [];
+
+        if (movieOrEpisodeIds.Count > 0)
+        {
+            List<Movie> movies = await mediaContext
+                .Movies.AsNoTracking()
+                .Where(m => movieOrEpisodeIds.Contains(m.Id))
+                .ToListAsync();
+
+            foreach (Movie movie in movies)
+                movieById[movie.Id] = movie;
+
+            // Episodes need Tv for CreateTitle (Tv.Title, SeasonNumber, EpisodeNumber).
+            List<Episode> episodes = await mediaContext
+                .Episodes.AsNoTracking()
+                .Where(e => movieOrEpisodeIds.Contains(e.Id))
+                .Include(e => e.Tv)
+                .ToListAsync();
+
+            foreach (Episode episode in episodes)
+                episodeById[episode.Id] = episode;
+        }
+
+        if (trackIds.Count > 0)
+        {
+            // Tracks need AlbumTrack → Album for CreateName.
+            List<Track> tracks = await mediaContext
+                .Tracks.AsNoTracking()
+                .Where(t => trackIds.Contains(t.Id))
+                .Include(t => t.AlbumTrack)
+                    .ThenInclude(at => at.Album)
+                .ToListAsync();
+
+            foreach (Track track in tracks)
+                trackById[track.Id] = track;
+        }
+
         QueueJobDto[] queueJobs = encoderJobs
-            .Select(j => new QueueJobDto
-            {
-                Id = jobs.ElementAt(encoderJobs.IndexOf(j)).Id,
-                Priority = jobs.ElementAt(encoderJobs.IndexOf(j)).Priority,
-                PayloadId = j.Id,
-                Title = GetTitle(folders, j),
-                Type = j.GetType().Name,
-                Status = j.Status.ToString(),
-                InputFile = j.InputFile,
-                Profile = folders
-                    .FirstOrDefault(f => f.Id == j.FolderId)
-                    ?.EncoderProfileFolder.FirstOrDefault()
-                    ?.EncoderProfile.Name,
-            })
+            .Select(
+                (j, index) =>
+                    new QueueJobDto
+                    {
+                        Id = jobs[index].Id,
+                        Priority = jobs[index].Priority,
+                        PayloadId = j.Id,
+                        Title = ResolveTitle(j, movieById, episodeById, trackById),
+                        Type = j.GetType().Name,
+                        Status = j.Status.ToString(),
+                        InputFile = j.InputFile,
+                        Profile = folderById
+                            .GetValueOrDefault(j.FolderId)
+                            ?.EncoderProfileFolder.FirstOrDefault()
+                            ?.EncoderProfile.Name,
+                    }
+            )
             .ToArray();
 
-        IEnumerable<VideoEncodeJob> runningJobs = encoderJobs.Where(j => j.Status == "running");
-
+        // Broadcast current progress for running jobs — reuse already-resolved titles.
         if (EventBusProvider.IsConfigured)
-            foreach (VideoEncodeJob job in runningJobs)
+        {
+            foreach (QueueJobDto dto in queueJobs.Where(dto => dto.Status == "running"))
+            {
                 _ = EventBusProvider.Current.PublishAsync(
                     new EncoderProgressBroadcastEvent
                     {
                         ProgressData = new
                         {
-                            job.Id,
+                            Id = dto.PayloadId,
                             Status = "running",
-                            Title = GetTitle(folders, job),
+                            dto.Title,
                             Message = "Encoding video",
                         },
                     }
                 );
+            }
+        }
 
         return Ok(new DataResponseDto<QueueJobDto[]> { Data = queueJobs });
     }
 
-    private static string GetTitle(List<Folder> folders, VideoEncodeJob j)
+    private static string ResolveTitle(
+        VideoEncodeJob j,
+        Dictionary<int, Movie> movieById,
+        Dictionary<int, Episode> episodeById,
+        Dictionary<Guid, Track> trackById
+    )
     {
-        Movie? movie = folders
-            .FirstOrDefault(f => f.Id == j.FolderId)
-            ?.FolderLibraries.FirstOrDefault()
-            ?.Library.LibraryMovies.FirstOrDefault(m => m.MovieId == j.Id.ToInt())
-            ?.Movie;
+        int intId = j.Id.ToInt();
+        if (intId != 0)
+        {
+            if (movieById.TryGetValue(intId, out Movie? movie))
+                return movie.CreateTitle();
 
-        Tv? tv = folders
-            .FirstOrDefault(f => f.Id == j.FolderId)
-            ?.FolderLibraries.FirstOrDefault()
-            ?.Library.LibraryTvs.FirstOrDefault(m => m.Tv.Episodes.Any(e => e.Id == j.Id.ToInt()))
-            ?.Tv;
+            if (episodeById.TryGetValue(intId, out Episode? episode))
+                return episode.CreateTitle();
+        }
 
-        Episode? episode = tv?.Episodes.FirstOrDefault(e => e.Id == j.Id.ToInt());
+        Guid guidId = j.Id.ToGuid();
+        if (guidId != Guid.Empty && trackById.TryGetValue(guidId, out Track? track))
+            return track.CreateName();
 
-        Track? track = folders
-            .FirstOrDefault(f => f.Id == j.FolderId)
-            ?.FolderLibraries.FirstOrDefault()
-            ?.Library.LibraryTracks.FirstOrDefault(m => m.TrackId == j.Id.ToGuid())
-            ?.Track;
-
-        return (movie?.CreateTitle() ?? episode?.CreateTitle() ?? track?.CreateName()).OrEmpty();
+        return string.Empty;
     }
 
     [HttpDelete]
