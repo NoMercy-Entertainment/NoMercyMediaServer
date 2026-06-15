@@ -4,15 +4,27 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
 using Serilog.Events;
+using SixLabors.ImageSharp;
 using Image = NoMercy.Database.Models.Media.Image;
 
 namespace NoMercy.MediaProcessing.Images;
 
 public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageManager
 {
+    private static readonly Size PaletteDecodeSize = new(
+        ColorQuantizer.MaxDimension,
+        ColorQuantizer.MaxDimension
+    );
+
     public static async Task<string> ColorPalette(string type, Uri url, bool? download = true)
     {
-        return await BaseImageManager.ColorPalette(FanArtImageClient.Download, type, url, download);
+        return await BaseImageManager.ColorPalette(
+            FanArtImageClient.Download,
+            type,
+            url,
+            download,
+            PaletteDecodeSize
+        );
     }
 
     public async Task<string> MultiColorPalette(
@@ -23,7 +35,8 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
         return await BaseImageManager.MultiColorPalette(
             FanArtImageClient.Download,
             items,
-            download
+            download,
+            PaletteDecodeSize
         );
     }
 

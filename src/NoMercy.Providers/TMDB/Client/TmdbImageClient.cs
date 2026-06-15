@@ -4,6 +4,7 @@ using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
 using Image = SixLabors.ImageSharp.Image;
 
@@ -24,7 +25,11 @@ public abstract class TmdbImageClient : TmdbBaseClient
             "TmdbImageClient has not been initialized. Call TmdbImageClient.Initialize() at startup."
         );
 
-    public static Task<Image<Rgba32>?>? Download(string? path, bool? download = true)
+    public static Task<Image<Rgba32>?>? Download(
+        string? path,
+        bool? download = true,
+        Size? maxDecodeSize = null
+    )
     {
         try
         {
@@ -62,7 +67,18 @@ public abstract class TmdbImageClient : TmdbBaseClient
 
                 string filePath = Path.Join(folder, path.Replace("/", ""));
                 if (await storage.ExistsAsync(filePath, CancellationToken.None))
-                    return isSvg ? null : await Image.LoadAsync<Rgba32>(filePath);
+                {
+                    if (isSvg)
+                        return null;
+
+                    if (maxDecodeSize.HasValue)
+                    {
+                        DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
+                        return await Image.LoadAsync<Rgba32>(options, filePath);
+                    }
+
+                    return await Image.LoadAsync<Rgba32>(filePath);
+                }
 
                 HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.TmdbImage);
 
@@ -74,20 +90,37 @@ public abstract class TmdbImageClient : TmdbBaseClient
 
                 if (download is false)
                 {
+                    if (isSvg)
+                        return null;
+
                     await using Stream contentStream = await response.Content.ReadAsStreamAsync();
-                    return isSvg ? null : Image.Load<Rgba32>(contentStream);
+
+                    if (maxDecodeSize.HasValue)
+                    {
+                        DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
+                        return Image.Load<Rgba32>(options, contentStream);
+                    }
+
+                    return Image.Load<Rgba32>(contentStream);
                 }
 
+                byte[] bytes = await response.Content.ReadAsByteArrayAsync();
+
                 if (!await storage.ExistsAsync(filePath, CancellationToken.None))
-                    await storage.WriteAsync(
-                        filePath,
-                        await response.Content.ReadAsByteArrayAsync(),
-                        CancellationToken.None
-                    );
+                    await storage.WriteAsync(filePath, bytes, CancellationToken.None);
 
                 try
                 {
-                    return isSvg ? null : Image.Load<Rgba32>(filePath);
+                    if (isSvg)
+                        return null;
+
+                    if (maxDecodeSize.HasValue)
+                    {
+                        DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
+                        return Image.Load<Rgba32>(options, filePath);
+                    }
+
+                    return Image.Load<Rgba32>(filePath);
                 }
                 catch (Exception e)
                 {

@@ -5,6 +5,7 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Storage;
 using Serilog.Events;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
 using Image = SixLabors.ImageSharp.Image;
 
@@ -25,7 +26,11 @@ public abstract class NoMercyImageClient : TmdbBaseClient
             "NoMercyImageClient has not been initialized. Call NoMercyImageClient.Initialize() at startup."
         );
 
-    public static Task<Image<Rgba32>?> Download(string? path, bool? download = true)
+    public static Task<Image<Rgba32>?> Download(
+        string? path,
+        bool? download = true,
+        Size? maxDecodeSize = null
+    )
     {
         return GetQueue().Enqueue(Task, $"original{path}", true);
 
@@ -44,7 +49,15 @@ public abstract class NoMercyImageClient : TmdbBaseClient
                 string filePath = Path.Combine(folder, path.Replace("/", "").Replace("\\", ""));
 
                 if (await storage.ExistsAsync(filePath, CancellationToken.None))
+                {
+                    if (maxDecodeSize.HasValue)
+                    {
+                        DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
+                        return Image.Load<Rgba32>(options, filePath);
+                    }
+
                     return Image.Load<Rgba32>(filePath);
+                }
 
                 HttpClient httpClient = HttpClientProvider.CreateClient(
                     HttpClientNames.NoMercyImage
@@ -63,6 +76,12 @@ public abstract class NoMercyImageClient : TmdbBaseClient
                     && !await storage.ExistsAsync(filePath, CancellationToken.None)
                 )
                     await storage.WriteAsync(filePath, bytes, CancellationToken.None);
+
+                if (maxDecodeSize.HasValue)
+                {
+                    DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
+                    return Image.Load<Rgba32>(options, bytes);
+                }
 
                 return Image.Load<Rgba32>(bytes);
             }
