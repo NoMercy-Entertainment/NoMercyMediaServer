@@ -593,6 +593,21 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                 );
             }
 
+            (IReadOnlyList<string> failedDescriptors, string? lastError) = SummarizeFailures(
+                outcomes.Where(o => !o.Success).ToList()
+            );
+
+            await new IncompleteEncodeRecorder().RecordAsync(
+                context,
+                mediaId: fileMetadata.Id,
+                folderId: FolderId.ToString(),
+                title: fileMetadata.Title,
+                missingKeys: failedDescriptors,
+                lastError: lastError,
+                attemptsMade: 0,
+                ct: CancellationToken.None
+            );
+
             return;
         }
 
@@ -602,12 +617,20 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
 
         IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
 
-        // Pre-flight check: ensure the shared tempDir exists and contains at least 
+        // Pre-flight check: ensure the shared tempDir exists and contains at least
         // some expected output before proceeding to FinalizeOnly.
-        string relativeOutputPath = (fileMetadata.Path ?? string.Empty).Replace('\\', '/').Trim('/');
-        string tempDir = Path.Combine(NoMercy.Storage.StoragePaths.TranscodeRoot, relativeOutputPath.Replace('/', Path.DirectorySeparatorChar));
-        
-        if (!Directory.Exists(tempDir) || !Directory.EnumerateFiles(tempDir, "*.m3u8", SearchOption.AllDirectories).Any())
+        string relativeOutputPath = (fileMetadata.Path ?? string.Empty)
+            .Replace('\\', '/')
+            .Trim('/');
+        string tempDir = Path.Combine(
+            NoMercy.Storage.StoragePaths.TranscodeRoot,
+            relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
+        );
+
+        if (
+            !Directory.Exists(tempDir)
+            || !Directory.EnumerateFiles(tempDir, "*.m3u8", SearchOption.AllDirectories).Any()
+        )
         {
             Logger.Encoder(
                 $"[VideoEncodeJob] Finalize: tempDir '{tempDir}' missing or empty. Cannot finalize GroupTag={state.GroupTag}.",
@@ -674,6 +697,18 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                     $"[VideoEncodeJob] Coordinator finalize failed for GroupTag={state.GroupTag}: {err}",
                     LogEventLevel.Error
                 );
+
+                await new IncompleteEncodeRecorder().RecordAsync(
+                    context,
+                    mediaId: fileMetadata.Id,
+                    folderId: FolderId.ToString(),
+                    title: fileMetadata.Title,
+                    missingKeys: ["finalize"],
+                    lastError: err,
+                    attemptsMade: 0,
+                    ct: CancellationToken.None
+                );
+
                 return;
             }
         }
@@ -694,6 +729,13 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         fileManager.FilterFiles(fileMetadata.FileName);
         await fileManager.FindFiles(fileMetadata.Id, library);
 
+        await new IncompleteEncodeRecorder().ClearAsync(
+            context,
+            fileMetadata.Id,
+            FolderId.ToString(),
+            CancellationToken.None
+        );
+
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
@@ -707,6 +749,37 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         }
 
         Logger.Encoder($"[VideoEncodeJob] Finalize complete for GroupTag={state.GroupTag}");
+    }
+
+    // ------------------------------------------------------------------
+    // Quarantine helpers
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Builds the quarantine descriptor list and first error from a set of
+    /// failed <see cref="EncodeTaskOutcome"/> rows. Pure — no I/O.
+    /// </summary>
+    internal static (IReadOnlyList<string> descriptors, string? lastError) SummarizeFailures(
+        IReadOnlyList<EncodeTaskOutcome> failedOutcomes
+    )
+    {
+        Dictionary<string, int> kindCounts = [];
+
+        foreach (EncodeTaskOutcome outcome in failedOutcomes)
+        {
+            kindCounts.TryGetValue(outcome.Kind, out int count);
+            kindCounts[outcome.Kind] = count + 1;
+        }
+
+        List<string> descriptors = kindCounts
+            .Select(pair => pair.Value > 1 ? $"{pair.Key} ({pair.Value}x)" : pair.Key)
+            .ToList();
+
+        string? lastError = failedOutcomes
+            .Select(o => o.ErrorMessage)
+            .FirstOrDefault(msg => !string.IsNullOrWhiteSpace(msg));
+
+        return (descriptors, lastError ?? "one or more rungs failed");
     }
 
     // ------------------------------------------------------------------

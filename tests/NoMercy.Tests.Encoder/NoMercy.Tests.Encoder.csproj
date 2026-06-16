@@ -9,10 +9,9 @@
     <ParallelizeTestCollections>true</ParallelizeTestCollections>
   </PropertyGroup>
 
-  <!-- Override shared test Directory.Build.props — encoder has no NmSystem dependency -->
+  <!-- Override shared test Directory.Build.props — encoder tests don't need TestEnvironmentSetup -->
   <ItemGroup>
     <Compile Remove="..\TestEnvironmentSetup.cs" />
-    <ProjectReference Remove="..\..\src\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
   </ItemGroup>
 
   <ItemGroup>

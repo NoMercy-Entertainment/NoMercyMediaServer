@@ -484,5 +484,6 @@ public class MediaContext : DbContext
     public virtual DbSet<PlaybackPreference> PlaybackPreferences { get; init; }
     public virtual DbSet<TrustedPublisherKey> TrustedPublisherKeys { get; init; }
     public virtual DbSet<EncodeTaskOutcome> EncodeTaskOutcomes { get; init; }
+    public virtual DbSet<IncompleteEncode> IncompleteEncodes { get; init; }
     public virtual DbSet<InboxItem> InboxItems { get; init; }
 }

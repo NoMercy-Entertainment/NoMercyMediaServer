@@ -11,6 +11,7 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
+using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
@@ -26,6 +27,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Queue.MediaServer;
 using NoMercyQueue;
+using MediaJobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
@@ -582,6 +584,104 @@ public class TasksController(
 
         return Ok(new DataResponseDto<List<FailedJob>> { Data = failedJobs });
     }
+
+    [HttpGet]
+    [Route("queue/incomplete")]
+    public async Task<IActionResult> IncompleteEncodes()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view incomplete encodes");
+
+        List<IncompleteEncodeDto> rows = await mediaContext
+            .IncompleteEncodes.AsNoTracking()
+            .OrderByDescending(r => r.LastSeenAt)
+            .Select(r => new IncompleteEncodeDto
+            {
+                Id = r.Id,
+                MediaId = r.MediaId,
+                Title = r.Title,
+                MissingRenditions = r.MissingRenditions.Split(
+                    '\n',
+                    StringSplitOptions.RemoveEmptyEntries
+                ),
+                LastError = r.LastError,
+                AttemptsMade = r.AttemptsMade,
+                LastSeenAt = r.LastSeenAt,
+            })
+            .ToListAsync();
+
+        return Ok(new DataResponseDto<List<IncompleteEncodeDto>> { Data = rows });
+    }
+
+    [HttpPost]
+    [Route("queue/incomplete/{id:int}/retry")]
+    public async Task<IActionResult> RetryIncompleteEncode(int id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to retry incomplete encodes");
+
+        IncompleteEncode? row = await mediaContext.IncompleteEncodes.FindAsync(id);
+        if (row is null)
+            return NotFoundResponse("Incomplete encode record not found");
+
+        if (Ulid.TryParse(row.FolderId, out Ulid folderUlid))
+        {
+            // Resolve the library that owns this folder.
+            FolderLibrary? folderLibrary = await mediaContext
+                .FolderLibrary.AsNoTracking()
+                .FirstOrDefaultAsync(fl => fl.FolderId == folderUlid);
+
+            if (folderLibrary is not null)
+            {
+                try
+                {
+                    int mediaId = checked((int)row.MediaId);
+
+                    // Pick the best available video file for this media item (movie or episode).
+                    VideoFile? videoFile = await mediaContext
+                        .VideoFiles.AsNoTracking()
+                        .FirstOrDefaultAsync(vf =>
+                            vf.MovieId == mediaId || vf.EpisodeId == mediaId
+                        );
+
+                    if (videoFile is not null)
+                    {
+                        string inputFile =
+                            videoFile.HostFolder.TrimEnd('/')
+                            + "/"
+                            + videoFile.Filename.TrimStart('/');
+
+                        try
+                        {
+                            MediaJobDispatcher dispatcher = new();
+                            dispatcher.DispatchJob<VideoEncodeJob>(
+                                folderLibrary.LibraryId,
+                                folderLibrary.FolderId,
+                                row.MediaId.ToString(),
+                                inputFile
+                            );
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            // Queue not running (e.g. server restart in progress) — the
+                            // quarantine row is removed regardless so the admin can retry
+                            // again once the queue is back up.
+                        }
+                    }
+                }
+                catch (OverflowException)
+                {
+                    // MediaId exceeds int range — cannot safely look up VideoFile.
+                    // Row is still removed so the admin can clear corrupt quarantine entries.
+                }
+            }
+        }
+
+        mediaContext.IncompleteEncodes.Remove(row);
+        await mediaContext.SaveChangesAsync();
+
+        return Ok(new StatusResponseDto<string> { Message = "Re-queued", Status = "success" });
+    }
 }
 
 public class QueueJobDto
@@ -624,4 +724,28 @@ public class ReorderQueueDto
 
     [JsonProperty("ordered_job_ids")]
     public List<int> OrderedJobIds { get; set; } = [];
+}
+
+public class IncompleteEncodeDto
+{
+    [JsonProperty("id")]
+    public int Id { get; set; }
+
+    [JsonProperty("media_id")]
+    public long MediaId { get; set; }
+
+    [JsonProperty("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonProperty("missing_renditions")]
+    public string[] MissingRenditions { get; set; } = [];
+
+    [JsonProperty("last_error")]
+    public string? LastError { get; set; }
+
+    [JsonProperty("attempts_made")]
+    public int AttemptsMade { get; set; }
+
+    [JsonProperty("last_seen_at")]
+    public DateTime LastSeenAt { get; set; }
 }
