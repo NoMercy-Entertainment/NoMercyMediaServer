@@ -74,8 +74,10 @@
   </Entry>
   <Entry>
     <Key>An error occurred while saving the entity changes. See the inner exception for details.</Key>
-    <Value lang="nl">Er is een fout opgetreden bij het opslaan van de entiteitswijzigingen. Zie de
-      binnenste uitzondering voor details.</Value>
+    <Value lang="nl"
+      >Er is een fout opgetreden bij het opslaan van de entiteitswijzigingen. Zie de
+      binnenste uitzondering voor details.</Value
+    >
   </Entry>
   <Entry>
     <Key>Albums not found</Key>
@@ -355,7 +357,9 @@
   </Entry>
   <Entry>
     <Key>Something went wrong updating the library encoder profiles: {0}</Key>
-    <Value lang="nl">Er ging iets mis bij het bijwerken van de bibliotheek encoder profielen: {0}</Value>
+    <Value lang="nl"
+      >Er ging iets mis bij het bijwerken van de bibliotheek encoder profielen: {0}</Value
+    >
   </Entry>
   <Entry>
     <Key>You do not have permission to update the library</Key>
@@ -579,11 +583,15 @@
   </Entry>
   <Entry>
     <Key>driver_config.endpoint is required for 'r2' (set to your R2 endpoint URL).</Key>
-    <Value lang="nl">driver_config.endpoint is required for 'r2' (set to your R2 endpoint URL).</Value>
+    <Value lang="nl"
+      >driver_config.endpoint is required for 'r2' (set to your R2 endpoint URL).</Value
+    >
   </Entry>
   <Entry>
     <Key>Invalid driver_type 'banana'. Allowed values: local, smb, nfs, s3, r2, webdav.</Key>
-    <Value lang="nl">Invalid driver_type 'banana'. Allowed values: local, smb, nfs, s3, r2, webdav.</Value>
+    <Value lang="nl"
+      >Invalid driver_type 'banana'. Allowed values: local, smb, nfs, s3, r2, webdav.</Value
+    >
   </Entry>
   <Entry>
     <Key>config.rootPath must be a non-empty string for 'local'.</Key>
@@ -648,5 +656,101 @@
   <Entry>
     <Key>Genres: #</Key>
     <Value lang="nl">Genres: #</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: A</Key>
+    <Value lang="nl">Artists: A</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: B</Key>
+    <Value lang="nl">Artists: B</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: C</Key>
+    <Value lang="nl">Artists: C</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: E</Key>
+    <Value lang="nl">Artists: E</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: F</Key>
+    <Value lang="nl">Artists: F</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: G</Key>
+    <Value lang="nl">Artists: G</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: H</Key>
+    <Value lang="nl">Artists: H</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: I</Key>
+    <Value lang="nl">Artists: I</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: J</Key>
+    <Value lang="nl">Artists: J</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: K</Key>
+    <Value lang="nl">Artists: K</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: M</Key>
+    <Value lang="nl">Artists: M</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: N</Key>
+    <Value lang="nl">Artists: N</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: O</Key>
+    <Value lang="nl">Artists: O</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: P</Key>
+    <Value lang="nl">Artists: P</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: Q</Key>
+    <Value lang="nl">Artists: Q</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: R</Key>
+    <Value lang="nl">Artists: R</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: S</Key>
+    <Value lang="nl">Artists: S</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: T</Key>
+    <Value lang="nl">Artists: T</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: U</Key>
+    <Value lang="nl">Artists: U</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: V</Key>
+    <Value lang="nl">Artists: V</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: W</Key>
+    <Value lang="nl">Artists: W</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: X</Key>
+    <Value lang="nl">Artists: X</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: Y</Key>
+    <Value lang="nl">Artists: Y</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists: Z</Key>
+    <Value lang="nl">Artists: Z</Value>
   </Entry>
 </I18N>
