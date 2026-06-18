@@ -27,7 +27,7 @@ public class MovieImportJob : AbstractMediaJob
     {
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
-        
+
         MovieRepository movieRepository = new(context);
         MovieManager movieManager = new(
             movieRepository,
