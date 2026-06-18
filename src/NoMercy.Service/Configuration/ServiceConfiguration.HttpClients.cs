@@ -145,10 +145,10 @@ public static partial class ServiceConfiguration
             HttpClientNames.Lrclib,
             client =>
             {
-                client.BaseAddress = new("https://lrclib.net/api/get");
+                client.BaseAddress = new("https://lrclib.net/api/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
             }
         );
 

@@ -19,6 +19,24 @@ public class PaletteBackfillStartupService(ILogger<PaletteBackfillStartupService
         try
         {
             await using AppDbContext db = new();
+            bool reopened = await PaletteBackfillState.EnsureVersionAsync(
+                db,
+                PaletteBackfillJob.CurrentVersion,
+                PaletteBackfillJob.AllTypes,
+                cancellationToken
+            );
+            if (reopened)
+            {
+                QueueRunner.Current?.Dispatcher.Dispatch(
+                    new TrackCoverBackfillJob(),
+                    "palette",
+                    20
+                );
+                logger.LogInformation(
+                    "Palette backfill re-opened for new entity types; track cover backfill dispatched"
+                );
+            }
+
             bool complete = await PaletteBackfillState.IsCompleteAsync(db, cancellationToken);
             if (complete)
             {

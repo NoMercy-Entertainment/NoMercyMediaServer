@@ -42,6 +42,12 @@ public partial class FfmpegCapabilities(IProcessRunner processRunner) : IFfmpegC
     )
     {
         ProcessResult result = await processRunner.RunAsync(AppFiles.FfmpegPath, [flag], null, ct);
+
+        if (!result.IsSuccess)
+            throw new InvalidOperationException(
+                $"ffmpeg {flag} exited with code {result.ExitCode}: {result.StdErr.Trim()}"
+            );
+
         HashSet<string> names = [];
         foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {

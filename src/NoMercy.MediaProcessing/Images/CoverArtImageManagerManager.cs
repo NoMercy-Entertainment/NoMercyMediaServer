@@ -3,18 +3,25 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.CoverArt.Models;
 using Serilog.Events;
+using SixLabors.ImageSharp;
 
 namespace NoMercy.MediaProcessing.Images;
 
 public class CoverArtImageManagerManager : ICoverArtImageManagerManager
 {
+    private static readonly Size PaletteDecodeSize = new(
+        ColorQuantizer.MaxDimension,
+        ColorQuantizer.MaxDimension
+    );
+
     public static async Task<string> ColorPalette(string type, Uri url, bool? download = true)
     {
         return await BaseImageManager.ColorPalette(
             CoverArtCoverArtClient.Download,
             type,
             url,
-            download
+            download,
+            PaletteDecodeSize
         );
     }
 
@@ -26,7 +33,8 @@ public class CoverArtImageManagerManager : ICoverArtImageManagerManager
         return await BaseImageManager.MultiColorPalette(
             CoverArtCoverArtClient.Download,
             items,
-            download
+            download,
+            PaletteDecodeSize
         );
     }
 

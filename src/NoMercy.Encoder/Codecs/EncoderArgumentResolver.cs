@@ -154,7 +154,14 @@ public static class EncoderArgumentResolver
     )
     {
         int outputWidth = Math.Min(profile.Width, sourceWidth);
-        int outputHeight = profile.Height ?? (outputWidth * sourceHeight / sourceWidth);
+        // Height <= 0 means "derive from source AR" just like null: ladder rungs
+        // carry a non-nullable int, so an upstream null collapses to 0 — a literal
+        // 0 here would name the variant "WIDTHx0" and advertise RESOLUTION=WIDTHx0,
+        // which players skip.
+        int outputHeight =
+            profile.Height is int explicitHeight and > 0 ? explicitHeight
+            : sourceWidth > 0 ? outputWidth * sourceHeight / sourceWidth
+            : 0;
 
         // Encoders require even dimensions
         if (outputHeight % 2 != 0)

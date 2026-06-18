@@ -39,7 +39,8 @@ public class PlanStage(
     SpeedIndex? speedIndex = null,
     IBitDepthPolicyResolver? bitDepthPolicyResolver = null,
     IOutputNamingResolver? outputNamingResolver = null,
-    ISubtitleAcquisitionService? subtitleAcquisitionService = null
+    ISubtitleAcquisitionService? subtitleAcquisitionService = null,
+    NoMercy.Encoder.Composition.EncoderOptions? options = null
 ) : IPipelineStage<ValidateInput, ExecutionPlan>, IPlanStage
 {
     public string Name => "Plan";
@@ -236,6 +237,10 @@ public class PlanStage(
 
             outputPlan = outputPlan with { AcquiredSubtitles = acquiredSubtitles };
 
+            GpuAccelPlan? gpuAccel = ResolveGpuAccel(outputPlan);
+            if (gpuAccel is not null)
+                outputPlan = outputPlan with { GpuAccel = gpuAccel };
+
             ExecutionPlan plan = new(groups.ToArray(), totalEstimate, outputPlan);
             return new StageSuccess<ExecutionPlan>(plan);
         }
@@ -251,6 +256,25 @@ public class PlanStage(
                 new(EncodingErrorKind.Unknown, $"Planning failed: {ex.Message}", null, Name, false)
             );
         }
+    }
+
+    /// <summary>
+    /// Resolves the GPU-resident decode+scale plan for this output, or null for
+    /// the CPU path. Dark by default: only when <c>EncoderOptions.EnableGpuResident</c>
+    /// is opted in, the host has a GPU, the plan is eligible (no tonemap / crop /
+    /// burn-in), has no thumbnails (sprites need a CPU download), and the vendor's
+    /// GPU scaler is present in the running ffmpeg build.
+    /// </summary>
+    private GpuAccelPlan? ResolveGpuAccel(OutputPlan outputPlan)
+    {
+        bool hasGpu = hardware is { HasGpu: true, Gpus.Count: > 0 };
+        return GpuResidentActivation.Resolve(
+            options?.EnableGpuResident == true,
+            hasGpu,
+            hasGpu ? hardware.Gpus[0].Vendor : null,
+            outputPlan,
+            ffmpegCapabilities.HasFilter
+        );
     }
 
     /// <summary>
@@ -563,6 +587,16 @@ public class PlanStage(
                                     ? null
                                     : v.CodecProfile.ToString().ToLowerInvariant();
 
+                            // Profile/plugin CustomArguments escape hatch: merge the
+                            // per-video custom flags last so user/plugin intent wins.
+                            // ProfileValidator already blocks codec/format-overriding
+                            // keys, so what reaches here is safe to apply verbatim.
+                            if (v.CustomArguments is not null)
+                            {
+                                foreach ((string argKey, string argValue) in v.CustomArguments)
+                                    extraFlags[argKey] = argValue;
+                            }
+
                             return new VideoOutputPlan(
                                 Width: outputWidth,
                                 Height: outputHeight,
@@ -643,7 +677,10 @@ public class PlanStage(
                         MapLabel: $"0:a:{si}",
                         SegmentNameTemplate: audioProfile.SegmentNameTemplate,
                         PlaylistNameTemplate: audioProfile.PlaylistNameTemplate,
-                        AudioFilter: audioFilter
+                        AudioFilter: audioFilter,
+                        ExtraFlags: audioProfile.CustomArguments is not null
+                            ? new Dictionary<string, string>(audioProfile.CustomArguments)
+                            : null
                     )
                 );
             }
@@ -702,7 +739,10 @@ public class PlanStage(
                         MapLabel: $"0:s:{si}",
                         PlaylistNameTemplate: subProfile.PlaylistNameTemplate,
                         Policy: subProfile.Policy,
-                        Variant: subtitleVariants[si]
+                        Variant: subtitleVariants[si],
+                        ExtraFlags: subProfile.CustomArguments is not null
+                            ? new Dictionary<string, string>(subProfile.CustomArguments)
+                            : null
                     )
                 );
             }
@@ -855,7 +895,10 @@ public class PlanStage(
             HlsOptions: hlsOptions,
             Layout: layout,
             GenerateChapterThumbs: generateChapterThumbs,
-            EmitSubtitleWebVttChunks: emitSubtitleChunks
+            EmitSubtitleWebVttChunks: emitSubtitleChunks,
+            GlobalExtraFlags: profile.CustomArguments is { Count: > 0 }
+                ? new Dictionary<string, string>(profile.CustomArguments)
+                : null
         );
     }
 

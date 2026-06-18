@@ -39,21 +39,13 @@ public static class Register
         return Info.DeviceName;
     }
 
-    private static string ResolveInternalIp()
-    {
-        string? ip = Discovery?.InternalIp;
-        if (string.IsNullOrEmpty(ip) || ip == "0.0.0.0" || ip == "127.0.0.1")
-            return string.Empty;
-        return ip;
-    }
-
     private static Dictionary<string, string> GetServerInfo()
     {
         Dictionary<string, string> serverData = new()
         {
             { "id", Info.DeviceId.ToString() },
             { "name", GetDeviceName() },
-            { "internal_ip", ResolveInternalIp() },
+            { "internal_ip", Discovery?.RegistrationInternalIp ?? "0.0.0.0" },
             { "internal_ipv6", (Discovery?.InternalIpV6).OrEmpty() },
             { "external_ipv6", (Discovery?.ExternalIpV6).OrEmpty() },
             { "internal_port", Config.InternalServerPort.ToString() },

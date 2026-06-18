@@ -4,6 +4,7 @@ using NoMercy.Providers.Helpers;
 using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
 using Configuration = AcoustID.Configuration;
 using Image = SixLabors.ImageSharp.Image;
@@ -46,13 +47,25 @@ public class FanArtImageClient : FanArtBaseClient
         return Get<CoverArtCovers>("release/" + Id, queryParams, priority);
     }
 
-    public static async Task<Image<Rgba32>?> Download(Uri url, bool? download = true)
+    public static async Task<Image<Rgba32>?> Download(
+        Uri url,
+        bool? download = true,
+        Size? maxDecodeSize = null
+    )
     {
         string filePath = Path.Combine(AppFiles.MusicImagesPath, Path.GetFileName(url.LocalPath));
 
         IStorage storage = Storage;
         if (await storage.ExistsAsync(filePath, CancellationToken.None))
+        {
+            if (maxDecodeSize.HasValue)
+            {
+                DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
+                return Image.Load<Rgba32>(options, filePath);
+            }
+
             return Image.Load<Rgba32>(filePath);
+        }
 
         HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.FanArtImage);
 
@@ -64,6 +77,12 @@ public class FanArtImageClient : FanArtBaseClient
 
         if (download is not false && !await storage.ExistsAsync(filePath, CancellationToken.None))
             await storage.WriteAsync(filePath, bytes, CancellationToken.None);
+
+        if (maxDecodeSize.HasValue)
+        {
+            DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
+            return Image.Load<Rgba32>(options, bytes);
+        }
 
         return Image.Load<Rgba32>(bytes);
     }

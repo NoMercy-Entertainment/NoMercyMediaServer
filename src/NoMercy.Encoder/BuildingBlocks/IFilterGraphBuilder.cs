@@ -6,6 +6,13 @@ public interface IFilterGraphBuilder
     IFilterGraphBuilder AddSplit(string inputLabel, string[] outputLabels);
     IFilterGraphBuilder AddScale(string inputLabel, int width, int height, string outputLabel);
     IFilterGraphBuilder AddScaleWidth(string inputLabel, int width, string outputLabel);
+    IFilterGraphBuilder AddGpuScale(
+        string inputLabel,
+        string scaleFilter,
+        int width,
+        int height,
+        string outputLabel
+    );
     IFilterGraphBuilder AddTonemap(string inputLabel, string algorithm, string outputLabel);
     IFilterGraphBuilder AddLibplaceboTonemap(
         string inputLabel,

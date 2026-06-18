@@ -32,4 +32,10 @@ public record EncodingProfile(
     public ClientCompatibility ClientCompatibility { get; init; } = ClientCompatibility.Universal;
     public SubtitleAcquisitionConfig? SubtitleAcquisition { get; init; }
     public Dictionary<string, string>? CustomArguments { get; init; }
+
+    // Near-lossless intermediate config for the distributed-encode derivation
+    // path. Null (default) = no mezzanine. When the planner derives rungs across
+    // a worker boundary it falls back to this default if a profile opts in
+    // without specifying one. See MezzanineConfig.
+    public MezzanineConfig? Mezzanine { get; init; }
 }

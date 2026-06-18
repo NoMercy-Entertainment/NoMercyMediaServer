@@ -14,6 +14,9 @@ public class ExecutionGraphBuilder
     {
         List<ExecutionNode> nodes = [];
         int nodeId = 0;
+        // Set when an HDR→SDR tonemap node exists so the thumbnail node can derive
+        // from the SDR intermediate instead of sampling raw HDR (crushed colours).
+        string? tonemapNodeId = null;
 
         VideoOutput[] videoOutputs = PlanStageHelpers.EnumerateVideo(profile);
 
@@ -49,6 +52,7 @@ public class ExecutionGraphBuilder
                     )
                 );
                 lastVideoNode = tonemapId;
+                tonemapNodeId = tonemapId;
             }
 
             // 3. Split if multiple outputs
@@ -217,11 +221,12 @@ public class ExecutionGraphBuilder
         if (profile.Thumbnails is not null && media.HasVideo)
         {
             string thumbId = $"node_{nodeId++}";
+            string[] thumbDeps = tonemapNodeId is not null ? [tonemapNodeId] : [];
             nodes.Add(
                 new(
                     thumbId,
                     OperationType.ThumbnailCapture,
-                    [],
+                    thumbDeps,
                     new()
                     {
                         ["width"] = profile.Thumbnails.Width.ToString(),

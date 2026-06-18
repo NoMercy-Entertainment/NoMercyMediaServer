@@ -117,5 +117,20 @@ public record DecomposedTask(
     /// <see cref="Resources"/> carries a null <c>GpuDeviceKey</c>. Null for
     /// non-video kinds.
     /// </summary>
-    string? VideoEncoderName = null
+    string? VideoEncoderName = null,
+    /// <summary>
+    /// Derivation dependency: when set, this task must not start until the task
+    /// with this id has produced its artifact. The coordinator's WaitChildren
+    /// phase holds dependents until the dependency completes. Null (default) =
+    /// no dependency — the task reads the original source, exactly as before.
+    /// </summary>
+    string? DependsOnTaskId = null,
+    /// <summary>
+    /// When set, this task reads <see cref="InputArtifactKey"/> (a derived
+    /// intermediate such as a full-res SDR mezzanine produced by
+    /// <see cref="DependsOnTaskId"/>) as its ffmpeg input instead of the source
+    /// file. Skips re-decode + re-tonemap with no generational loss. Null
+    /// (default) = read the original source.
+    /// </summary>
+    string? InputArtifactKey = null
 );

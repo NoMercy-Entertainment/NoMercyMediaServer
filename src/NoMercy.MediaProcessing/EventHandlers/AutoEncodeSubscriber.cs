@@ -222,9 +222,7 @@ public class AutoEncodeSubscriber(
 
             // Any .NoMercy subdirectory counts as encoded.
             if (
-                storage
-                    .List(file.HostFolder, "*.NoMercy", recursive: false)
-                    .Any(e => e.IsDirectory)
+                storage.List(file.HostFolder, "*.NoMercy", recursive: false).Any(e => e.IsDirectory)
             )
                 return true;
 

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Music;
+using NoMercy.Api.Services.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
@@ -11,7 +12,6 @@ using NoMercy.Events.Library;
 using NoMercy.Events.Music;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.NoMercy.Client;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -23,11 +23,17 @@ public class TracksController : BaseController
 {
     private readonly IMusicRepository _musicRepository;
     private readonly IEventBus _eventBus;
+    private readonly LyricsResolver _lyricsResolver;
 
-    public TracksController(IMusicRepository musicService, IEventBus eventBus)
+    public TracksController(
+        IMusicRepository musicService,
+        IEventBus eventBus,
+        LyricsResolver lyricsResolver
+    )
     {
         _musicRepository = musicService;
         _eventBus = eventBus;
+        _lyricsResolver = lyricsResolver;
     }
 
     [HttpGet]
@@ -134,17 +140,16 @@ public class TracksController : BaseController
 
         try
         {
-            dynamic? subtitles = await NoMercyLyricsClient.SearchLyrics(track);
-            if (subtitles is null)
+            // Coalesced: concurrent requests from multiple devices for this
+            // track share a single provider fetch instead of each hitting the
+            // rate-limited Lrclib/Musixmatch queues.
+            Lyric[]? lyrics = await _lyricsResolver.ResolveAsync(id);
+            if (lyrics is null)
                 return NotFoundResponse("Subtitle not found");
-            Lyric[]? saved = await _musicRepository.UpdateTrackLyricsAsync(
-                track,
-                JsonConvert.SerializeObject(subtitles)
-            );
             return Ok(
                 new LyricsResponseDto
                 {
-                    Data = ApplyLyricsOffset(saved ?? [], track.LyricsOffset),
+                    Data = ApplyLyricsOffset(lyrics, track.LyricsOffset),
                     Offset = track.LyricsOffset,
                 }
             );
@@ -184,21 +189,32 @@ public class TracksController : BaseController
         );
     }
 
+    // Pure: returns a new array and never mutates the input. The coalescing
+    // LyricsResolver hands the same Lyric[] instance to every concurrent caller,
+    // so in-place mutation here would double-apply the offset per extra device.
     private static Lyric[] ApplyLyricsOffset(Lyric[] lyrics, int? offsetMs)
     {
         if (offsetMs is null or 0)
             return lyrics;
         double offsetSec = offsetMs.Value / 1000.0;
-        foreach (Lyric line in lyrics)
-        {
-            double newTotal = Math.Max(0, line.Time.Total + offsetSec);
-            int totalHundredths = (int)Math.Round(newTotal * 100);
-            line.Time.Total = newTotal;
-            line.Time.Minutes = totalHundredths / 6000;
-            line.Time.Seconds = totalHundredths / 100 % 60;
-            line.Time.Hundredths = totalHundredths % 100;
-        }
-        return lyrics;
+        return lyrics
+            .Select(line =>
+            {
+                double newTotal = Math.Max(0, line.Time.Total + offsetSec);
+                int totalHundredths = (int)Math.Round(newTotal * 100);
+                return new Lyric
+                {
+                    Text = line.Text,
+                    Time = new()
+                    {
+                        Total = newTotal,
+                        Minutes = totalHundredths / 6000,
+                        Seconds = totalHundredths / 100 % 60,
+                        Hundredths = totalHundredths % 100,
+                    },
+                };
+            })
+            .ToArray();
     }
 
     [HttpPost]

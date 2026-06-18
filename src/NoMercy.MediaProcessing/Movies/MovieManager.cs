@@ -40,7 +40,10 @@ public class MovieManager(
         string? title = movieAppends.Title;
         if (string.IsNullOrEmpty(title))
         {
-            Logger.MovieDb($"Movie: {id}: Title is null or empty, skipping.", LogEventLevel.Warning);
+            Logger.MovieDb(
+                $"Movie: {id}: Title is null or empty, skipping.",
+                LogEventLevel.Warning
+            );
             return null;
         }
 
@@ -50,7 +53,8 @@ public class MovieManager(
 
         foreach (FolderLibrary folderLibrary in library.FolderLibraries ?? [])
         {
-            if (storageFactory == null) continue;
+            if (storageFactory == null)
+                continue;
 
             IStorage folderStorage = storageFactory.For(
                 folderLibrary.Folder.Id,
@@ -147,13 +151,14 @@ public class MovieManager(
 
     public async Task StoreAlternativeTitles(TmdbMovieAppends movie)
     {
-        IEnumerable<AlternativeTitle> alternativeTitles = (movie.AlternativeTitles?.Results ?? [])
-            .Select(tmdbMovieAlternativeTitles => new AlternativeTitle
-            {
-                Iso31661 = tmdbMovieAlternativeTitles.Iso31661,
-                Title = tmdbMovieAlternativeTitles.Title,
-                MovieId = movie.Id,
-            });
+        IEnumerable<AlternativeTitle> alternativeTitles = (
+            movie.AlternativeTitles?.Results ?? []
+        ).Select(tmdbMovieAlternativeTitles => new AlternativeTitle
+        {
+            Iso31661 = tmdbMovieAlternativeTitles.Iso31661,
+            Title = tmdbMovieAlternativeTitles.Title,
+            MovieId = movie.Id,
+        });
 
         await movieRepository.StoreAlternativeTitles(alternativeTitles);
 
@@ -162,8 +167,8 @@ public class MovieManager(
 
     public async Task StoreTranslations(TmdbMovieAppends movie)
     {
-        IEnumerable<Translation> translations = (movie.Translations?.Translations ?? [])
-            .Select(translation => new Translation
+        IEnumerable<Translation> translations = (movie.Translations?.Translations ?? []).Select(
+            translation => new Translation
             {
                 Iso31661 = translation.Iso31661,
                 Iso6391 = translation.Iso6391,
@@ -173,7 +178,8 @@ public class MovieManager(
                 EnglishName = translation.EnglishName,
                 Homepage = translation.Data.Homepage?.ToString(),
                 MovieId = movie.Id,
-            });
+            }
+        );
 
         await movieRepository.StoreTranslations(translations);
 
@@ -264,18 +270,17 @@ public class MovieManager(
 
     public async Task StoreVideos(TmdbMovieAppends movie)
     {
-        IEnumerable<Media> videos = (movie.Videos?.Results ?? [])
-            .Select(media => new Media
-            {
-                Id = Ulid.NewUlid(),
-                Iso6391 = media.Iso6391,
-                Name = media.Name,
-                Site = media.Site,
-                Size = media.Size,
-                Src = media.Key,
-                Type = media.Type,
-                MovieId = movie.Id,
-            });
+        IEnumerable<Media> videos = (movie.Videos?.Results ?? []).Select(media => new Media
+        {
+            Id = Ulid.NewUlid(),
+            Iso6391 = media.Iso6391,
+            Name = media.Name,
+            Site = media.Site,
+            Size = media.Size,
+            Src = media.Key,
+            Type = media.Type,
+            MovieId = movie.Id,
+        });
 
         await movieRepository.StoreVideos(videos);
         Logger.MovieDb($"Movie: {movie.Title}: Videos stored", LogEventLevel.Debug);
@@ -353,14 +358,16 @@ public class MovieManager(
 
     public async Task StoreKeywords(TmdbMovieAppends movie)
     {
-        IEnumerable<Keyword> keywords = (movie.Keywords?.Results ?? [])
-            .Select(keyword => new Keyword { Id = keyword.Id, Name = keyword.Name });
+        IEnumerable<Keyword> keywords = (movie.Keywords?.Results ?? []).Select(
+            keyword => new Keyword { Id = keyword.Id, Name = keyword.Name }
+        );
 
         await movieRepository.StoreKeywords(keywords);
         Logger.MovieDb($"Movie: {movie.Title}: Keywords stored", LogEventLevel.Debug);
 
-        IEnumerable<KeywordMovie> keywordMovies = (movie.Keywords?.Results ?? [])
-            .Select(keyword => new KeywordMovie { KeywordId = keyword.Id, MovieId = movie.Id });
+        IEnumerable<KeywordMovie> keywordMovies = (movie.Keywords?.Results ?? []).Select(
+            keyword => new KeywordMovie { KeywordId = keyword.Id, MovieId = movie.Id }
+        );
 
         await movieRepository.LinkKeywordsToMovie(keywordMovies);
         Logger.MovieDb($"Movie: {movie.Title}: Keywords linked to Movie", LogEventLevel.Debug);
@@ -368,8 +375,11 @@ public class MovieManager(
 
     public async Task StoreGenres(TmdbMovieAppends movie)
     {
-        IEnumerable<GenreMovie> genreMovies = (movie.Genres ?? [])
-            .Select(genre => new GenreMovie { GenreId = genre.Id, MovieId = movie.Id });
+        IEnumerable<GenreMovie> genreMovies = (movie.Genres ?? []).Select(genre => new GenreMovie
+        {
+            GenreId = genre.Id,
+            MovieId = movie.Id,
+        });
 
         await movieRepository.StoreGenres(genreMovies);
         Logger.MovieDb($"Movie: {movie.Title}: Genres stored", LogEventLevel.Debug);

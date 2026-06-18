@@ -454,7 +454,7 @@ public class VideoHub : ConnectionHub
         if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
             return;
         state.DeviceId = device.DeviceId;
-        state.VolumePercentage = device.VolumePercent;
+        state.VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent;
     }
 
     private void UpdatePlaylistInfo(
@@ -528,7 +528,7 @@ public class VideoHub : ConnectionHub
             if (device is not null)
             {
                 state.DeviceId = device.DeviceId;
-                state.VolumePercentage = device.VolumePercent;
+                state.VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent;
             }
 
         await _videoPlaybackService.UpdatePlaybackState(user, state);

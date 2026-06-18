@@ -238,10 +238,22 @@ public class BuildStage(
             }
 
             FfmpegCommandBuilder builder = new();
+            builder.WithGlobalExtraFlags(input.Plan.OutputPlan.GlobalExtraFlags);
 
             TimeSpan? resumeSeek = ResolveResumeSeek(input.ResumeFromMs);
+            bool useGpuResident = UsesGpuResidentPath(input.Plan.OutputPlan);
             builder.AddInput(
-                new(input.InputPath, SeekTo: resumeSeek, Duration: input.DurationLimit)
+                new(
+                    input.InputPath,
+                    SeekTo: resumeSeek,
+                    Duration: input.DurationLimit,
+                    HwAccelDevice: useGpuResident
+                        ? input.Plan.OutputPlan.GpuAccel!.HwAccelDevice
+                        : null,
+                    HwAccelOutputFormat: useGpuResident
+                        ? input.Plan.OutputPlan.GpuAccel!.HwAccelOutputFormat
+                        : null
+                )
             );
 
             // Exact-match acquired subtitles: inject each as an additional -i input
@@ -739,6 +751,15 @@ public class BuildStage(
     /// spurious <c>-i</c> inputs to encodes that won't consume them.
     /// Chapters / Drm / Layout are preserved as metadata across all slices.
     /// </summary>
+    /// <summary>
+    /// GPU-resident when the plan carries a resolved GpuAccel plan, has video
+    /// outputs, and requests no thumbnails (sprite generation needs a CPU
+    /// download that would break the GPU-memory chain). Drives both the
+    /// <c>-hwaccel</c> decode flags and the GPU scale branch.
+    /// </summary>
+    private static bool UsesGpuResidentPath(OutputPlan plan) =>
+        plan.GpuAccel is not null && plan.Thumbnails is null && plan.VideoOutputs.Length > 0;
+
     private static string? BuildFilterGraph(
         OutputPlan plan,
         MediaInfo? mediaInfo,
@@ -760,6 +781,10 @@ public class BuildStage(
         int sourceHeight = mediaInfo.VideoStreams[0].Height;
         bool sourceIs10Bit = mediaInfo.VideoStreams[0].BitDepth > 8;
         bool hasThumbnails = plan.Thumbnails is not null;
+        bool sourceIsHdr = mediaInfo.VideoStreams[0].IsHdr;
+        string? thumbnailTonemapChain = videoOutputs
+            .Select(v => v.TonemapFilterChain)
+            .FirstOrDefault(c => !string.IsNullOrEmpty(c));
 
         // First text-based subtitle output with BurnIn mode (PGS burn-in uses
         // the overlay path handled before this method is called).
@@ -772,13 +797,52 @@ public class BuildStage(
 
         FilterGraphBuilder fg = new();
 
-        // Tonemap dedupe: when 2+ video branches need the SAME HDR→SDR
-        // tonemap chain we run it ONCE on the source and route every SDR
-        // branch from the shared [sdr] intermediate. Per-frame the
+        // GPU-resident path: frames are decoded into GPU memory (-hwaccel set on
+        // the input) and scaled on the GPU. Eligibility guarantees no tonemap /
+        // crop / burn-in, so every branch is just a GPU scale. Sprites need a CPU
+        // download, so this path is skipped when thumbnails are requested.
+        if (UsesGpuResidentPath(plan))
+        {
+            string scaleFilter = plan.GpuAccel!.ScaleFilter;
+            if (videoOutputs.Length == 1)
+            {
+                VideoOutputPlan only = videoOutputs[0];
+                fg.AddGpuScale(
+                    "0:v:0",
+                    scaleFilter,
+                    only.Width,
+                    only.Height,
+                    only.MapLabel.Trim('[', ']')
+                );
+            }
+            else
+            {
+                List<string> splitLabels = videoOutputs.Select((_, i) => $"gsplit{i}").ToList();
+                fg.AddSplit("0:v:0", splitLabels.ToArray());
+                for (int i = 0; i < videoOutputs.Length; i++)
+                {
+                    VideoOutputPlan rung = videoOutputs[i];
+                    fg.AddGpuScale(
+                        splitLabels[i],
+                        scaleFilter,
+                        rung.Width,
+                        rung.Height,
+                        rung.MapLabel.Trim('[', ']')
+                    );
+                }
+            }
+
+            return fg.HasFilters ? fg.Build() : null;
+        }
+
+        // Tonemap once: when any SDR consumer (rung or sprite) needs the same
+        // HDR→SDR tonemap chain we run it ONCE on the source and route every
+        // consumer from the shared [sdr] intermediate. Per-frame the
         // zscale/tonemap chain is the most expensive filter in the graph —
-        // running it 7-8 times in the same ffmpeg burns CPU for identical
-        // output. Thumbnails also branch from [sdr] when present so the
-        // sprite reflects SDR colors instead of crushed HDR values.
+        // running it per branch burns CPU for identical output, and a sprite
+        // sampling raw HDR shows crushed colours. Only genuinely mixed tonemap
+        // chains (different algorithms per rung) fall through to the per-branch
+        // legacy path below.
         bool[] needsTonemapPerBranch = new bool[videoOutputs.Length];
         for (int i = 0; i < videoOutputs.Length; i++)
         {
@@ -788,7 +852,7 @@ public class BuildStage(
 
         string? sharedTonemap = null;
         bool dedupeTonemap = false;
-        if (needsTonemapPerBranch.Count(needs => needs) >= 2)
+        if (needsTonemapPerBranch.Count(needs => needs) >= 1)
         {
             string?[] tonemapChains = videoOutputs
                 .Where((_, idx) => needsTonemapPerBranch[idx])
@@ -953,7 +1017,12 @@ public class BuildStage(
                 ThumbnailOutputPlan thumbs = plan.Thumbnails!;
                 fg.AddFilter(
                     "thumbsrc",
-                    $"format=yuvj420p,fps=1/{thumbs.IntervalSeconds},scale={thumbs.Width}:-2",
+                    ThumbnailFilterResolver.Resolve(
+                        thumbs.IntervalSeconds,
+                        thumbs.Width,
+                        sourceIsHdr,
+                        thumbnailTonemapChain
+                    ),
                     "thumbs"
                 );
             }

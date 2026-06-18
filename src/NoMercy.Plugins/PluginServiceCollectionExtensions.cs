@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NoMercy.Encoder.Pipeline;
 using NoMercy.Events;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Storage;
@@ -30,6 +31,10 @@ public static class PluginServiceCollectionExtensions
             );
             return new PluginManager(eventBus, sp, logger, pluginsPath, storage, driver);
         });
+
+        // Wire encoder plugins' GetProfile into the encoder's profile-override seam.
+        // First plugin returning a non-null profile for the source wins.
+        services.AddSingleton<IProfileOverride, PluginProfileOverride>();
 
         return services;
     }

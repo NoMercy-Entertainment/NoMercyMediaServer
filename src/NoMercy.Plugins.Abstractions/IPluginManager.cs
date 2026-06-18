@@ -11,4 +11,8 @@ public interface IPluginManager
     // Boot-time scan: load all plugins in the plugins directory, isolating failures
     // per plugin so one bad plugin never blocks the others.
     Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default);
+
+    // Loaded plugin instances implementing T (e.g. IEncoderPlugin). Empty when none.
+    IEnumerable<T> GetPluginsOfType<T>()
+        where T : IPlugin;
 }

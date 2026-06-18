@@ -7,7 +7,7 @@ namespace NoMercy.MediaProcessing.Images;
 
 internal static class ColorQuantizer
 {
-    private const int MaxDimension = 128;
+    public const int MaxDimension = 128;
     private const int QuantizationBits = 5;
     private const int QuantizationShift = 8 - QuantizationBits;
     private const int QuantizationMask = (0xFF >> QuantizationShift) << QuantizationShift;

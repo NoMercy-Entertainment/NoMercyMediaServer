@@ -137,6 +137,38 @@ public class DegradedModeStartupTests
         Assert.True(isValid, $"GetInternalIp returned '{ip}' which is not a valid IP address");
         Assert.Equal(AddressFamily.InterNetwork, parsed!.AddressFamily);
     }
+
+    [Fact]
+    public void RegistrationInternalIp_IsAlwaysAValidIp()
+    {
+        // The API rejects registration with required|string|ip — an empty internal_ip
+        // returns 422 and the server never comes online.
+        NetworkDiscovery discovery = new(new LocalStorageDriver());
+
+        Assert.True(
+            IPAddress.TryParse(discovery.RegistrationInternalIp, out IPAddress? parsed),
+            $"RegistrationInternalIp returned '{discovery.RegistrationInternalIp}', not a valid IP"
+        );
+        Assert.Equal(AddressFamily.InterNetwork, parsed!.AddressFamily);
+    }
+
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("")]
+    public void RegistrationInternalIp_FallsBackToSentinel_WhenNonRoutable(string discovered)
+    {
+        NetworkDiscovery discovery = new(new LocalStorageDriver()) { InternalIp = discovered };
+
+        Assert.Equal("0.0.0.0", discovery.RegistrationInternalIp);
+    }
+
+    [Fact]
+    public void RegistrationInternalIp_PassesThroughRoutableIp()
+    {
+        NetworkDiscovery discovery = new(new LocalStorageDriver()) { InternalIp = "192.168.1.50" };
+
+        Assert.Equal("192.168.1.50", discovery.RegistrationInternalIp);
+    }
 }
 
 public class DegradedModeStartupPhasingTests

@@ -120,13 +120,17 @@ public class NoMercyImageClientTests
         MethodInfo method = GetDownloadMethod();
         ParameterInfo[] parameters = method.GetParameters();
 
-        Assert.Equal(2, parameters.Length);
+        Assert.Equal(3, parameters.Length);
         Assert.Equal(typeof(string), parameters[0].ParameterType);
         Assert.Equal("path", parameters[0].Name);
         Assert.Equal(typeof(bool?), parameters[1].ParameterType);
         Assert.Equal("download", parameters[1].Name);
         Assert.True(parameters[1].HasDefaultValue);
         Assert.Equal(true, parameters[1].DefaultValue);
+        Assert.Equal("maxDecodeSize", parameters[2].Name);
+        Assert.Equal("Size", Nullable.GetUnderlyingType(parameters[2].ParameterType)?.Name);
+        Assert.True(parameters[2].HasDefaultValue);
+        Assert.Null(parameters[2].DefaultValue);
     }
 
     [Fact]

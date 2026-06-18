@@ -45,7 +45,7 @@ public class VideoPlayerStateFactory
             return new()
             {
                 DeviceId = device.DeviceId,
-                VolumePercentage = device.VolumePercent,
+                VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent,
                 CurrentItem = item,
                 CurrentAudio = null,
                 CurrentCaption = null,
@@ -86,7 +86,7 @@ public class VideoPlayerStateFactory
         return new()
         {
             DeviceId = device.DeviceId,
-            VolumePercentage = device.VolumePercent,
+            VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent,
             CurrentItem = item,
             CurrentAudio = playbackPreference.Audio,
             CurrentCaption = playbackPreference.Subtitle,

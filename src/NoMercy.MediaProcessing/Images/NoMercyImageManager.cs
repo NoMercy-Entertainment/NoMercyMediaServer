@@ -1,16 +1,23 @@
 using NoMercy.Providers.NoMercy.Client;
+using SixLabors.ImageSharp;
 
 namespace NoMercy.MediaProcessing.Images;
 
 public abstract class NoMercyImageManager : INoMercyImageManager
 {
+    private static readonly Size PaletteDecodeSize = new(
+        ColorQuantizer.MaxDimension,
+        ColorQuantizer.MaxDimension
+    );
+
     public static async Task<string> ColorPalette(string type, string? path, bool? download = true)
     {
         return await BaseImageManager.ColorPalette(
             NoMercyImageClient.Download,
             type,
             path,
-            download
+            download,
+            PaletteDecodeSize
         );
     }
 
@@ -22,7 +29,8 @@ public abstract class NoMercyImageManager : INoMercyImageManager
         return await BaseImageManager.MultiColorPalette(
             NoMercyImageClient.Download,
             items,
-            download
+            download,
+            PaletteDecodeSize
         );
     }
 }

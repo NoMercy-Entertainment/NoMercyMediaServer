@@ -357,6 +357,12 @@ public class MediaContext : DbContext
             .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
+            .Entity<Track>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Tracks_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
             .Entity<Playlist>()
             .HasIndex(nameof(ColorPalettes._colorPalette))
             .HasDatabaseName("IX_Playlists_ColorPalette_pending")
@@ -478,5 +484,6 @@ public class MediaContext : DbContext
     public virtual DbSet<PlaybackPreference> PlaybackPreferences { get; init; }
     public virtual DbSet<TrustedPublisherKey> TrustedPublisherKeys { get; init; }
     public virtual DbSet<EncodeTaskOutcome> EncodeTaskOutcomes { get; init; }
+    public virtual DbSet<IncompleteEncode> IncompleteEncodes { get; init; }
     public virtual DbSet<InboxItem> InboxItems { get; init; }
 }

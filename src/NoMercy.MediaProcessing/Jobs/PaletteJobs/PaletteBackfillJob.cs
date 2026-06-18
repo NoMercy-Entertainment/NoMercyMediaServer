@@ -17,6 +17,10 @@ public class PaletteBackfillJob : IShouldQueue
 
     private const int BatchSize = 200;
 
+    // Bumped whenever a new entity type joins the backfill so the one-shot drain
+    // re-opens for existing libraries. v2 added "track".
+    public const int CurrentVersion = 2;
+
     // Entity types and their PK kind (int vs Guid)
     private static readonly string[] IntTypes =
     [
@@ -31,7 +35,16 @@ public class PaletteBackfillJob : IShouldQueue
         "image",
     ];
 
-    private static readonly string[] GuidTypes = ["artist", "album", "playlist", "releasegroup"];
+    private static readonly string[] GuidTypes =
+    [
+        "artist",
+        "album",
+        "track",
+        "playlist",
+        "releasegroup",
+    ];
+
+    public static IReadOnlyList<string> AllTypes => [.. IntTypes, .. GuidTypes];
 
     public PaletteBackfillJob() { }
 
@@ -269,6 +282,15 @@ public class PaletteBackfillJob : IShouldQueue
                 .Skip(offset)
                 .Take(BatchSize)
                 .Select(a => new ValueTuple<Guid, string?>(a.Id, a._colorPalette))
+                .ToListAsync(),
+            "track" => db
+                .Tracks.Where(t =>
+                    t._colorPalette == null || t._colorPalette == "" || t._colorPalette == "{}"
+                )
+                .OrderBy(t => t.Id)
+                .Skip(offset)
+                .Take(BatchSize)
+                .Select(t => new ValueTuple<Guid, string?>(t.Id, t._colorPalette))
                 .ToListAsync(),
             "playlist" => db
                 .Playlists.Where(p =>

@@ -7,9 +7,17 @@ namespace NoMercy.MediaProcessing.Images;
 
 public class BaseImageManager : IBaseImageManager, IDisposable
 {
-    public delegate Task<Image<Rgba32>?> DownloadUrl(Uri path, bool? download);
+    public delegate Task<Image<Rgba32>?> DownloadUrl(
+        Uri path,
+        bool? download,
+        Size? maxDecodeSize = null
+    );
 
-    public delegate Task<Image<Rgba32>?>? DownloadPath(string? path, bool? download);
+    public delegate Task<Image<Rgba32>?>? DownloadPath(
+        string? path,
+        bool? download,
+        Size? maxDecodeSize = null
+    );
 
     public class ColorPaletteArgument
     {
@@ -67,10 +75,11 @@ public class BaseImageManager : IBaseImageManager, IDisposable
         DownloadUrl client,
         string type,
         Uri path,
-        bool? download = true
+        bool? download = true,
+        Size? maxDecodeSize = null
     )
     {
-        Image<Rgba32>? imageData = await client.Invoke(path, download);
+        Image<Rgba32>? imageData = await client.Invoke(path, download, maxDecodeSize);
         if (imageData == null)
             return "";
 
@@ -85,13 +94,14 @@ public class BaseImageManager : IBaseImageManager, IDisposable
     public static async Task<string> MultiColorPalette(
         DownloadUrl client,
         IEnumerable<MultiUriType> items,
-        bool? download = true
+        bool? download = true,
+        Size? maxDecodeSize = null
     )
     {
         List<ColorPaletteArgument> list = new();
         foreach (MultiUriType item in items)
         {
-            Image<Rgba32>? imageData = await client.Invoke(item.Url, download);
+            Image<Rgba32>? imageData = await client.Invoke(item.Url, download, maxDecodeSize);
             list.Add(new() { Key = item.Key, ImageData = imageData });
         }
 
@@ -102,11 +112,12 @@ public class BaseImageManager : IBaseImageManager, IDisposable
         DownloadPath client,
         string type,
         string? path,
-        bool? download = true
+        bool? download = true,
+        Size? maxDecodeSize = null
     )
     {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
-        Image<Rgba32>? imageData = await client.Invoke(path, download);
+        Image<Rgba32>? imageData = await client.Invoke(path, download, maxDecodeSize);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
 
         return GenerateColorPalette(
@@ -120,14 +131,15 @@ public class BaseImageManager : IBaseImageManager, IDisposable
     public static async Task<string> MultiColorPalette(
         DownloadPath client,
         IEnumerable<MultiStringType> items,
-        bool? download = true
+        bool? download = true,
+        Size? maxDecodeSize = null
     )
     {
         List<ColorPaletteArgument> list = new();
         foreach (MultiStringType item in items)
         {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
-            Image<Rgba32>? imageData = await client.Invoke(item.Path, download);
+            Image<Rgba32>? imageData = await client.Invoke(item.Path, download, maxDecodeSize);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
             list.Add(new() { Key = item.Key, ImageData = imageData });
         }

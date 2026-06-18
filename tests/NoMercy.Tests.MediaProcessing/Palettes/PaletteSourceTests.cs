@@ -211,4 +211,105 @@ public class PaletteSourceTests : IDisposable
         result.Json.Should().Be("{}");
         result.Permanent.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task Track_derives_album_palette_when_cover_matches()
+    {
+        const string albumPalette = "{\"cover\":{\"dominant\":\"#102030\"}}";
+        Guid albumId = Guid.NewGuid();
+        Guid trackId = Guid.NewGuid();
+
+        _db.Albums.Add(
+            new()
+            {
+                Id = albumId,
+                Name = "Album",
+                Cover = "/cover.jpg",
+                _colorPalette = albumPalette,
+            }
+        );
+        _db.Tracks.Add(
+            new()
+            {
+                Id = trackId,
+                Name = "Track",
+                Cover = "/cover.jpg",
+            }
+        );
+        _db.AlbumTrack.Add(new(albumId, trackId));
+        await _db.SaveChangesAsync();
+
+        TrackPaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(
+            _db,
+            trackId.ToString(),
+            CancellationToken.None
+        );
+
+        result.Json.Should().Be(albumPalette);
+        result.Permanent.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Track_derives_album_palette_when_track_has_no_cover()
+    {
+        const string albumPalette = "{\"cover\":{\"dominant\":\"#abcdef\"}}";
+        Guid albumId = Guid.NewGuid();
+        Guid trackId = Guid.NewGuid();
+
+        _db.Albums.Add(
+            new()
+            {
+                Id = albumId,
+                Name = "Album",
+                Cover = "/cover.jpg",
+                _colorPalette = albumPalette,
+            }
+        );
+        _db.Tracks.Add(
+            new()
+            {
+                Id = trackId,
+                Name = "Track",
+                Cover = null,
+            }
+        );
+        _db.AlbumTrack.Add(new(albumId, trackId));
+        await _db.SaveChangesAsync();
+
+        TrackPaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(
+            _db,
+            trackId.ToString(),
+            CancellationToken.None
+        );
+
+        result.Json.Should().Be(albumPalette);
+        result.Permanent.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Track_returns_NoImage_when_no_album_and_no_cover()
+    {
+        Guid trackId = Guid.NewGuid();
+        _db.Tracks.Add(
+            new()
+            {
+                Id = trackId,
+                Name = "Track",
+                Cover = null,
+            }
+        );
+        await _db.SaveChangesAsync();
+
+        TrackPaletteSource source = new();
+        PaletteResult result = await source.GenerateAsync(
+            _db,
+            trackId.ToString(),
+            CancellationToken.None
+        );
+
+        result.Json.Should().Be("{}");
+        result.Permanent.Should().BeTrue();
+    }
 }

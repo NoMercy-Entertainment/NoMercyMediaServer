@@ -21,7 +21,7 @@ public class HlsVariantAnalyzer(IStorage storage) : IHlsVariantAnalyzer
     {
         if (!storage.Exists(playlistPath))
         {
-            // Failures here often mean BuildStage didn't write the playlist yet 
+            // Failures here often mean BuildStage didn't write the playlist yet
             // or the path template resolved differently between plan and build.
             return new(0, 0);
         }

@@ -13,7 +13,7 @@ public class LrclibBaseClient : IDisposable
     private const int MaxRetries = 10;
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
 
-    private readonly Uri _baseUrl = new("https://lrclib.net/api/get");
+    private readonly Uri _baseUrl = new("https://lrclib.net/api/");
     private readonly HttpClient _client;
 
     public LrclibBaseClient()

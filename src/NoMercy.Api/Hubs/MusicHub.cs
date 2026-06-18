@@ -99,6 +99,8 @@ public class MusicHub : ConnectionHub
         {
             string country = GetCountryFromContext();
 
+            System.Diagnostics.Stopwatch playlistStopwatch =
+                System.Diagnostics.Stopwatch.StartNew();
             (PlaylistTrackDto item, List<PlaylistTrackDto> playlist) =
                 await _musicPlaylistManager.GetPlaylist(
                     user.Id,
@@ -107,6 +109,15 @@ public class MusicHub : ConnectionHub
                     trackId.Value,
                     country
                 );
+            playlistStopwatch.Stop();
+            Logger.Socket(
+                $"[MusicHub.StartPlaybackCommand] GetPlaylist({type}) took "
+                    + $"{playlistStopwatch.ElapsedMilliseconds}ms ({playlist.Count} tracks)",
+                playlistStopwatch.ElapsedMilliseconds > 1000
+                    ? LogEventLevel.Warning
+                    : LogEventLevel.Debug
+            );
+
             await HandlePlaybackState(user, type, listId.Value, item, playlist);
         }
         catch (ArgumentException ex)
@@ -517,8 +528,28 @@ public class MusicHub : ConnectionHub
         if (callerIsActiveOrNoActive)
         {
             state.DeviceId = device.DeviceId;
-            state.VolumePercentage = device.VolumePercent;
+            state.VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent;
         }
+
+        UpdateDeviceVolumes(state, device.Sub);
+    }
+
+    // Rebuilds the per-device volume map carried on every broadcast so a
+    // controller can render a slider per device and each device can read its
+    // own level. Scoped to the caller's user so one user never sees another's
+    // devices. Never-set volumes coalesce to the same safe default the scoped
+    // volume_percentage field uses.
+    private void UpdateDeviceVolumes(MusicPlayerState state, Guid userSub)
+    {
+        Dictionary<string, int> volumes = new();
+        foreach (Client client in ConnectedClients.Clients.Values)
+        {
+            if (!client.Sub.Equals(userSub))
+                continue;
+            volumes[client.DeviceId] = client.VolumePercent ?? Device.DefaultVolumePercent;
+        }
+
+        state.DeviceVolumes = volumes;
     }
 
     private void UpdatePlaylistInfo(
@@ -614,7 +645,7 @@ public class MusicHub : ConnectionHub
                 if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
                 {
                     state.DeviceId = device.DeviceId;
-                    state.VolumePercentage = device.VolumePercent;
+                    state.VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent;
                 }
 
             UpdateActionsDisallows(state);
@@ -634,13 +665,25 @@ public class MusicHub : ConnectionHub
         }
     }
 
+    // Back-compat: position in whole seconds. Quantizes to 1000ms, which is a
+    // dominant source of cross-device drift. New clients call ReportPositionCommand.
     public async Task CurrentTimeCommand(int? time)
+    {
+        if (time is null)
+            return;
+        await ReportPositionCommand(time.Value * 1000);
+    }
+
+    // The active device reports its real audio position in MILLISECONDS. This is
+    // the playback truth; the server relays it so every passive client computes
+    // the same position via reference-time (position + (serverNow - timestamp)).
+    public async Task ReportPositionCommand(int? positionMs)
     {
         User? user = Context.User.User();
         if (user is null)
             return;
 
-        if (time is null)
+        if (positionMs is null)
             return;
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
@@ -648,7 +691,7 @@ public class MusicHub : ConnectionHub
             if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
                 return;
 
-            playerState.Time = time.Value * 1000;
+            playerState.Time = positionMs.Value;
 
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
@@ -656,6 +699,16 @@ public class MusicHub : ConnectionHub
         {
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
+    }
+
+    // Clock-sync handshake. A client samples this a few times, keeps the
+    // lowest-RTT result, and derives offset = serverTime + rtt/2 - clientRecv so
+    // it can convert its local clock to the shared server clock. Every device
+    // using the same offset-corrected clock computes the same playback position
+    // regardless of its own wall-clock skew.
+    public long GetServerTime()
+    {
+        return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 
     /// <summary>
@@ -892,7 +945,19 @@ public class MusicHub : ConnectionHub
         await _musicPlaybackService.UpdatePlaybackState(user, playerState);
     }
 
+    // Back-compat entry point: targets the active device (null deviceId).
+    // Old clients invoke this with a single argument; SignalR is strict about
+    // argument counts, so the signature must stay intact.
     public async Task ChangeVolumeCommand(int? volume)
+    {
+        await SetDeviceVolumeCommand(null, volume);
+    }
+
+    // Sets the volume of a NAMED device (null deviceId = the active device).
+    // Volume is owned by the device: setting a passive device's volume updates
+    // that device's stored level and the broadcast device_volumes map without
+    // disturbing the active device's playback level.
+    public async Task SetDeviceVolumeCommand(string? deviceId, int? volume)
     {
         User? user = Context.User.User();
         if (user is null)
@@ -903,51 +968,60 @@ public class MusicHub : ConnectionHub
 
         int clamped = Math.Clamp(volume.Value, 0, 100);
 
-        // Diagnostic: log which device/connection sent this command so we can
-        // tell phone vs PC vs TV apart when hunting down echo loops.
-        string senderDevice = Context.ConnectionId;
-        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? sender))
-            senderDevice = $"{sender.Name}/{sender.DeviceId}/{sender.Browser}";
-        Logger.App($"ChangeVolumeCommand {clamped} from {senderDevice}");
+        Device? target = ResolveVolumeTarget(user.Id, deviceId);
+        if (target is null)
+            return;
+
+        bool targetIsActive =
+            CurrentDevice.TryGetValue(user.Id, out Device? active)
+            && active.DeviceId.Equals(target.DeviceId, StringComparison.OrdinalIgnoreCase);
+
+        target.VolumePercent = clamped;
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            playerState.VolumePercentage = clamped;
-            // Fire the broadcast FIRST so clients see the new value with the
-            // minimum possible latency. The in-memory state is already
-            // authoritative for future broadcasts.
+            // The scoped volume_percentage belongs to the active device; only
+            // move it when the active device is the one being changed. Either
+            // way refresh the device_volumes map so controller sliders update.
+            if (targetIsActive)
+                playerState.VolumePercentage = clamped;
+
+            UpdateDeviceVolumes(playerState, user.Id);
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);
-        }
-        else
-        {
-            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
-            return;
         }
 
-        // Persist to the ACTIVE device off the critical path. Clients don't
-        // need the DB row to land before they can react — the broadcast
-        // already reached them. Previous in-line await on ExecuteUpdateAsync
-        // added 500+ms of wire latency per volume event on SQLite under load.
-        if (CurrentDevice.TryGetValue(user.Id, out Device? device))
+        // Persist off the critical path — the broadcast already reached clients.
+        // An in-line await on ExecuteUpdateAsync added 500+ms of wire latency
+        // per volume event on SQLite under load.
+        string targetDeviceId = target.DeviceId;
+        _ = Task.Run(async () =>
         {
-            device.VolumePercent = clamped;
-            string deviceId = device.DeviceId;
-            _ = Task.Run(async () =>
+            try
             {
-                try
-                {
-                    await using MediaContext mediaContext =
-                        await ContextFactory.CreateDbContextAsync();
-                    await mediaContext
-                        .Devices.Where(d => d.DeviceId == deviceId)
-                        .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, clamped));
-                }
-                catch (Exception ex)
-                {
-                    Logger.App($"ChangeVolumeCommand DB persist failed: {ex.Message}");
-                }
-            });
-        }
+                await using MediaContext mediaContext = await ContextFactory.CreateDbContextAsync();
+                await mediaContext
+                    .Devices.Where(d => d.DeviceId == targetDeviceId)
+                    .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, clamped));
+            }
+            catch (Exception ex)
+            {
+                Logger.App($"SetDeviceVolumeCommand DB persist failed: {ex.Message}");
+            }
+        });
+    }
+
+    // Resolves which device a volume command targets, scoped to the requesting
+    // user so one user can never address another's device. Null/empty deviceId
+    // falls back to the user's active device (back-compat with ChangeVolumeCommand).
+    private Device? ResolveVolumeTarget(Guid userId, string? deviceId)
+    {
+        if (string.IsNullOrEmpty(deviceId))
+            return CurrentDevice.TryGetValue(userId, out Device? active) ? active : null;
+
+        return ConnectedClients.Clients.Values.FirstOrDefault(client =>
+            client.Sub.Equals(userId)
+            && client.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     public override async Task OnConnectedAsync()

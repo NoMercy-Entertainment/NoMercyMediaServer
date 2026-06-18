@@ -137,4 +137,32 @@ public class FfmpegCommandBuilderTests
 
         cmd.Arguments.Should().ContainInConsecutiveOrder("-progress", "pipe:1");
     }
+
+    [Fact]
+    public void GlobalExtraFlags_EmittedAsGlobalOptionsBeforeInput()
+    {
+        FfmpegCommand cmd = new FfmpegCommandBuilder()
+            .WithGlobalExtraFlags(new() { ["-max_muxing_queue_size"] = "1024" })
+            .AddInput(new("/input.mkv"))
+            .AddOutput(new(FilePath: "/output.mp4"))
+            .Build("ffmpeg");
+
+        cmd.Arguments.Should().ContainInConsecutiveOrder("-max_muxing_queue_size", "1024");
+
+        int flagIndex = Array.IndexOf(cmd.Arguments, "-max_muxing_queue_size");
+        int inputIndex = Array.IndexOf(cmd.Arguments, "-i");
+        flagIndex.Should().BeLessThan(inputIndex, "global custom args belong before the -i input");
+    }
+
+    [Fact]
+    public void GlobalExtraFlags_NullIsNoOp()
+    {
+        FfmpegCommand cmd = new FfmpegCommandBuilder()
+            .WithGlobalExtraFlags(null)
+            .AddInput(new("/input.mkv"))
+            .AddOutput(new(FilePath: "/output.mp4"))
+            .Build("ffmpeg");
+
+        cmd.Arguments.Should().Contain("-i");
+    }
 }

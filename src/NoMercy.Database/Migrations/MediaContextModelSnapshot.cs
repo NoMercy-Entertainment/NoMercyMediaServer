@@ -210,6 +210,51 @@ namespace NoMercy.Database.Migrations
                     b.ToTable("EncodeTaskOutcomes");
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.Encoder.IncompleteEncode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AttemptsMade")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FolderId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("MediaId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MissingRenditions")
+                        .IsRequired()
+                        .HasMaxLength(2147483647)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MediaId", "FolderId")
+                        .IsUnique();
+
+                    b.ToTable("IncompleteEncodes");
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.Libraries.Folder", b =>
                 {
                     b.Property<string>("Id")
@@ -2809,6 +2854,10 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TrackNumber");
 
+                    b.HasIndex("_colorPalette")
+                        .HasDatabaseName("IX_Tracks_ColorPalette_pending")
+                        .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
                     b.HasIndex("Filename", "HostFolder");
 
                     b.ToTable("Tracks", t =>
@@ -4000,7 +4049,7 @@ namespace NoMercy.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("VolumePercent")
+                    b.Property<int?>("VolumePercent")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("WsConnectedAt")

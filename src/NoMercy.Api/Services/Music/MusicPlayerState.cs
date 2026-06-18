@@ -62,6 +62,9 @@ public class MusicPlayerState
     [JsonProperty("volume_percentage")]
     public int VolumePercentage { get; set; }
 
+    [JsonProperty("device_volumes")]
+    public Dictionary<string, int> DeviceVolumes { get; set; } = new();
+
     [JsonProperty("seek_offset")]
     public int SeekOffset { get; set; }
 

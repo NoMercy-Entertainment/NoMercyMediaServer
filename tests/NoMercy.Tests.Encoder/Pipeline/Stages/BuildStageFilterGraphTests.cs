@@ -3,6 +3,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
+using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Optimizer;
@@ -250,6 +251,131 @@ public class BuildStageFilterGraphTests
 
         commands[0].Arguments.Should().NotContain("-filter_complex");
     }
+
+    // ------------------------------------------------------------------
+    // Test 7: GPU-resident plan → -hwaccel decode + GPU scale, no CPU scale
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task BuildStage_GpuResidentPlan_EmitsHwaccelDecodeAndGpuScale()
+    {
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [BuildVideoOutput(1280, 720, "[v0]", "h264_nvenc")],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: null,
+            GpuAccel: new GpuAccelPlan("cuda", "cuda", "scale_cuda")
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        EncodingContext context = new(
+            EncodingContext.Create().CorrelationId,
+            BuildMediaInfo(1920, 1080)
+        );
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
+        string[] args = ((StageSuccess<FfmpegCommand[]>)result).Value[0].Arguments;
+
+        int hwaccelIdx = Array.IndexOf(args, "-hwaccel");
+        hwaccelIdx.Should().BeGreaterThan(-1, "decode must be offloaded to the GPU");
+        args[hwaccelIdx + 1].Should().Be("cuda");
+        int outFmtIdx = Array.IndexOf(args, "-hwaccel_output_format");
+        outFmtIdx.Should().BeGreaterThan(-1);
+        args[outFmtIdx + 1].Should().Be("cuda", "frames stay in GPU memory");
+
+        string filterValue = args[Array.IndexOf(args, "-filter_complex") + 1];
+        filterValue.Should().Contain("scale_cuda=1280:720", "scaling runs on the GPU");
+        filterValue.Should().NotContain("scale=1280:-2", "no CPU scale on the GPU-resident path");
+    }
+
+    // ------------------------------------------------------------------
+    // Test 6: HDR source, one SDR rung + thumbnails → tonemap exactly once
+    // (single full-res SDR intermediate feeds both the rung and the sprite)
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task BuildStage_HdrSingleSdrRungWithThumbnails_TonemapsExactlyOnce()
+    {
+        const string tonemapChain =
+            "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,"
+            + "tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p";
+
+        VideoOutputPlan sdrRung = BuildVideoOutput(1920, 1080, "[v0]") with
+        {
+            ConvertHdrToSdr = true,
+            TonemapFilterChain = tonemapChain,
+        };
+
+        OutputPlan outputPlan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs: [sdrRung],
+            AudioOutputs: [BuildAudioOutput()],
+            SubtitleOutputs: [],
+            Thumbnails: new ThumbnailOutputPlan(320, 180, 10)
+        );
+
+        ExecutionPlan plan = BuildPlan(outputPlan);
+        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
+
+        StageResult result = await _stage.ExecuteAsync(input, context, default);
+
+        result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
+        FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
+
+        int filterComplexIdx = Array.IndexOf(commands[0].Arguments, "-filter_complex");
+        string filterValue = commands[0].Arguments[filterComplexIdx + 1];
+
+        int tonemapCount = CountOccurrences(filterValue, "tonemap=hable");
+        tonemapCount
+            .Should()
+            .Be(1, "the rung and the sprite must share one full-res SDR intermediate");
+    }
+
+    private static int CountOccurrences(string haystack, string needle)
+    {
+        int count = 0;
+        int index = 0;
+        while ((index = haystack.IndexOf(needle, index, StringComparison.Ordinal)) != -1)
+        {
+            count++;
+            index += needle.Length;
+        }
+        return count;
+    }
+
+    private static MediaInfo BuildHdrMediaInfo() =>
+        new(
+            FilePath: "/movies/test.mkv",
+            Format: "matroska",
+            Duration: TimeSpan.FromHours(2),
+            OverallBitRateKbps: 50000,
+            FileSizeBytes: 30_000_000_000,
+            VideoStreams:
+            [
+                new(
+                    Index: 0,
+                    Codec: "hevc",
+                    Width: 3840,
+                    Height: 2160,
+                    FrameRate: 24.0,
+                    BitDepth: 10,
+                    PixelFormat: "yuv420p10le",
+                    ColorPrimaries: "bt2020",
+                    ColorTransfer: "smpte2084",
+                    ColorSpace: "bt2020nc",
+                    IsDefault: true,
+                    BitRateKbps: 45000
+                ),
+            ],
+            AudioStreams: [],
+            SubtitleStreams: [],
+            Chapters: []
+        );
 
     // ------------------------------------------------------------------
     // Test 5: video with CropFilter → crop=... filter emitted

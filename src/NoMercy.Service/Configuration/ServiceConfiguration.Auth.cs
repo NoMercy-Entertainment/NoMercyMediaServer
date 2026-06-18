@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
@@ -91,8 +92,43 @@ public static partial class ServiceConfiguration
                         StringValues accessToken = context.Request.Query["access_token"];
                         string[] result = accessToken.ToString().Split('&');
 
-                        if (result.Length > 0 && !string.IsNullOrEmpty(result[0]))
-                            context.Token = result[0];
+                        string? token =
+                            result.Length > 0 && !string.IsNullOrEmpty(result[0])
+                                ? result[0]
+                                : null;
+
+                        if (token is not null)
+                        {
+                            while (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                                token = token["Bearer ".Length..];
+
+                            context.Token = token;
+                        }
+                        else
+                        {
+                            // If not in query, check header for double Bearer
+                            string? authHeader =
+                                context.Request.Headers.Authorization.FirstOrDefault();
+                            if (
+                                authHeader is not null
+                                && authHeader.StartsWith(
+                                    "Bearer Bearer ",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                            {
+                                string tokenFromHeader = authHeader;
+                                while (
+                                    tokenFromHeader.StartsWith(
+                                        "Bearer ",
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
+                                    tokenFromHeader = tokenFromHeader["Bearer ".Length..];
+
+                                context.Token = tokenFromHeader;
+                            }
+                        }
 
                         return Task.CompletedTask;
                     },
@@ -157,7 +193,10 @@ public static partial class ServiceConfiguration
 
                             if (!string.IsNullOrEmpty(raw))
                             {
-                                JwtSecurityTokenHandler handler = new JwtSecurityTokenHandler();
+                                if (raw.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                                    raw = raw["Bearer ".Length..];
+
+                                JwtSecurityTokenHandler handler = new();
                                 JwtSecurityToken jwt = handler.ReadJwtToken(raw);
                                 TimeSpan expired = DateTime.UtcNow - jwt.ValidTo;
                                 tokenAge =
@@ -177,7 +216,8 @@ public static partial class ServiceConfiguration
                             SecurityTokenInvalidSignatureException => "Invalid token signature",
                             SecurityTokenInvalidAudienceException => "Token audience mismatch",
                             SecurityTokenInvalidIssuerException => "Token issuer mismatch",
-                            _ => $"{context.Exception.GetType().Name}: {context.Exception.Message}",
+                            _ =>
+                                $"{context.Exception.GetType().Name}: {context.Exception.Message}{(context.Exception.InnerException != null ? $" (Inner: {context.Exception.InnerException.Message})" : "")}",
                         };
 
                         Logger.Auth(
