@@ -562,7 +562,6 @@ public static class Program
 
         if (blockingPid <= 0)
         {
-            // Cannot identify the process — apply registered-server rules conservatively.
             if (Certificate.HasValidCertificate())
             {
                 Logger.Error(
@@ -589,9 +588,6 @@ public static class Program
         {
             Process blockingProcess = Process.GetProcessById(blockingPid);
             blockingProcessName = blockingProcess.ProcessName;
-            // NOTE: ProcessName cannot distinguish between a stale instance of this server
-            // and a different valid NoMercy instance on the same machine. Auto-kill is
-            // acceptable because two instances sharing the same port is never valid.
             isStaleInstance = blockingProcessName == "NoMercyMediaServer";
         }
         catch
@@ -607,13 +603,10 @@ public static class Program
         }
         else
         {
-            // A different process is holding the port.
             bool isRegistered = Certificate.HasValidCertificate();
 
             if (isRegistered)
             {
-                // Registered servers CANNOT switch ports — the port is embedded in DNS
-                // records, the SSL certificate, and any firewall rules the user configured.
                 Logger.Error(
                     $"Port {port} is in use by {blockingProcessName} (PID {blockingPid}). "
                         + "NoMercy is registered on this port and cannot use a different one. "
@@ -624,8 +617,6 @@ public static class Program
                 return;
             }
 
-            // Not yet registered — find the next available port so first-time setup
-            // can proceed without the user having to manually free the default port.
             int alternativePort = FindNextAvailablePort(port + 1);
             Logger.App(
                 $"Port {port} is in use by {blockingProcessName} (PID {blockingPid}). "
@@ -635,38 +626,10 @@ public static class Program
             return;
         }
 
-        try
-        {
-            Process blockingProcess = Process.GetProcessById(blockingPid);
-            Logger.App($"Killing process {blockingPid} ({blockingProcess.ProcessName})...");
-            blockingProcess.Kill();
-            blockingProcess.WaitForExit(5000);
-            Logger.App($"Process {blockingPid} terminated.");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Failed to kill process {blockingPid}: {ex.Message}");
-            Environment.ExitCode = 1;
-            Environment.Exit(1);
-            return;
-        }
-
-        // Retry port check — the OS may not release the socket immediately
-        bool portFreed = false;
-        for (int attempt = 1; attempt <= 5; attempt++)
-        {
-            await Task.Delay(500);
-            if (IsPortAvailable(port))
-            {
-                portFreed = true;
-                break;
-            }
-            Logger.App($"Port {port} still in use, retrying ({attempt}/5)...");
-        }
+        bool portFreed = await KillAndWaitAsync(blockingPid, port);
 
         if (!portFreed)
         {
-            Logger.Error($"Port {port} still not available after killing process. Exiting.");
             Environment.ExitCode = 1;
             Environment.Exit(1);
             return;
@@ -777,35 +740,42 @@ public static class Program
             }
         }
 
-        try
+        bool portFreed = await KillAndWaitAsync(blockingPid, port);
+        if (!portFreed)
         {
-            Process blockingProcess = Process.GetProcessById(blockingPid);
-            Logger.App($"Killing process {blockingPid} ({blockingProcess.ProcessName})...");
-            blockingProcess.Kill();
-            blockingProcess.WaitForExit(5000);
-            Logger.App($"Process {blockingPid} terminated.");
-        }
-        catch (Exception killEx)
-        {
-            Logger.Error($"Failed to kill process {blockingPid}: {killEx.Message}");
             Environment.ExitCode = 1;
             return false;
         }
 
-        // Retry port check — the OS may not release the socket immediately
+        Logger.App("Port freed — retrying...");
+        return true;
+    }
+
+    private static async Task<bool> KillAndWaitAsync(int pid, int port)
+    {
+        try
+        {
+            Process blockingProcess = Process.GetProcessById(pid);
+            Logger.App($"Killing process {pid} ({blockingProcess.ProcessName})...");
+            blockingProcess.Kill();
+            blockingProcess.WaitForExit(5000);
+            Logger.App($"Process {pid} terminated.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Failed to kill process {pid}: {ex.Message}");
+            return false;
+        }
+
         for (int attempt = 1; attempt <= 5; attempt++)
         {
             await Task.Delay(500);
             if (IsPortAvailable(port))
-            {
-                Logger.App("Port freed — retrying...");
                 return true;
-            }
             Logger.App($"Port {port} still in use, retrying ({attempt}/5)...");
         }
 
         Logger.Error($"Port {port} still not available after killing process.");
-        Environment.ExitCode = 1;
         return false;
     }
 
