@@ -144,71 +144,20 @@ public class StartupOptions
             options.Add("loglevel", LogLevel);
         }
 
-        if (InternalPort != 0)
-        {
-            Logger.App("Setting internal port to " + InternalPort);
-            Config.InternalServerPort = InternalPort;
-            options.Add("internalPort", InternalPort.ToString());
-        }
-        else
-        {
-            InternalPort = 7626;
-            try
-            {
-                AppDbContext appContext = new();
-                ConfigurationModel? internalPortConfig = appContext.Configuration.FirstOrDefault(
-                    c => c.Key == "internalPort"
-                );
-                if (internalPortConfig != null)
-                {
-                    InternalPort = int.Parse(internalPortConfig.Value);
-                    Logger.App("Loaded internal port from database: " + InternalPort);
-                }
-                appContext.Dispose();
-            }
-            catch (Exception)
-            {
-                Logger.App(
-                    "Database not yet initialized, using default internal port.",
-                    LogEventLevel.Debug
-                );
-            }
-            Config.InternalServerPort = InternalPort;
-            options.Add("internalPort", InternalPort.ToString());
-        }
-
-        if (ExternalPort != 0)
-        {
-            Logger.App("Setting external port to " + ExternalPort);
-            Config.ExternalServerPort = ExternalPort;
-            options.Add("externalPort", ExternalPort.ToString());
-        }
-        else
-        {
-            ExternalPort = 7626;
-            try
-            {
-                AppDbContext appContext = new();
-                ConfigurationModel? externalPortConfig = appContext.Configuration.FirstOrDefault(
-                    c => c.Key == "externalPort"
-                );
-                if (externalPortConfig != null)
-                {
-                    ExternalPort = int.Parse(externalPortConfig.Value);
-                    Logger.App("Loaded external port from database: " + ExternalPort);
-                }
-                appContext.Dispose();
-            }
-            catch (Exception)
-            {
-                Logger.App(
-                    "Database not yet initialized, using default external port.",
-                    LogEventLevel.Debug
-                );
-            }
-            Config.ExternalServerPort = ExternalPort;
-            options.Add("externalPort", ExternalPort.ToString());
-        }
+        InternalPort = ResolvePort(
+            InternalPort,
+            "internalPort",
+            "internal",
+            port => Config.InternalServerPort = port,
+            options
+        );
+        ExternalPort = ResolvePort(
+            ExternalPort,
+            "externalPort",
+            "external",
+            port => Config.ExternalServerPort = port,
+            options
+        );
 
         if (!string.IsNullOrEmpty(PipeName))
         {
@@ -231,5 +180,48 @@ public class StartupOptions
         }
 
         UserSettings.ApplySettings(options, silent: true);
+    }
+
+    private static int ResolvePort(
+        int cliPort,
+        string configKey,
+        string label,
+        Action<int> setConfigPort,
+        Dictionary<string, string> options
+    )
+    {
+        if (cliPort != 0)
+        {
+            Logger.App($"Setting {label} port to " + cliPort);
+            setConfigPort(cliPort);
+            options.Add(configKey, cliPort.ToString());
+            return cliPort;
+        }
+
+        int resolved = 7626;
+        try
+        {
+            AppDbContext appContext = new();
+            ConfigurationModel? portConfig = appContext.Configuration.FirstOrDefault(c =>
+                c.Key == configKey
+            );
+            if (portConfig != null)
+            {
+                resolved = int.Parse(portConfig.Value);
+                Logger.App($"Loaded {label} port from database: " + resolved);
+            }
+            appContext.Dispose();
+        }
+        catch (Exception)
+        {
+            Logger.App(
+                $"Database not yet initialized, using default {label} port.",
+                LogEventLevel.Debug
+            );
+        }
+
+        setConfigPort(resolved);
+        options.Add(configKey, resolved.ToString());
+        return resolved;
     }
 }
