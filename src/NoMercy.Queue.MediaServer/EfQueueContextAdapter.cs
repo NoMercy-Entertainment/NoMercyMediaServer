@@ -54,10 +54,35 @@ public class EfQueueContextAdapter : IQueueContext
             context.Dispose();
     }
 
-    public void AddJob(QueueJobModel job)
+    private T Execute<T>(Func<QueueContext, T> operation)
     {
         QueueContext context = AcquireContext();
         try
+        {
+            return operation(context);
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
+    }
+
+    private void Execute(Action<QueueContext> operation)
+    {
+        QueueContext context = AcquireContext();
+        try
+        {
+            operation(context);
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
+    }
+
+    public void AddJob(QueueJobModel job)
+    {
+        Execute(context =>
         {
             QueueJob entity = new()
             {
@@ -75,17 +100,12 @@ public class EfQueueContextAdapter : IQueueContext
             context.SaveChanges();
             context.ChangeTracker.Clear();
             job.Id = entity.Id;
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public void RemoveJob(QueueJobModel job)
     {
-        QueueContext context = AcquireContext();
-        try
+        Execute(context =>
         {
             QueueJob? entity = context.QueueJobs.Find(job.Id);
             if (entity == null)
@@ -101,17 +121,12 @@ public class EfQueueContextAdapter : IQueueContext
             context.QueueJobs.Remove(entity);
             context.SaveChanges();
             context.ChangeTracker.Clear();
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId)
     {
-        QueueContext context = AcquireContext();
-        try
+        return Execute<QueueJobModel?>(context =>
         {
             if (string.IsNullOrEmpty(queueName))
             {
@@ -121,44 +136,26 @@ public class EfQueueContextAdapter : IQueueContext
 
             QueueJob? job = ReserveJobQuery(context, maxAttempts, queueName, currentJobId);
             return job == null ? null : ToModel(job);
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public QueueJobModel? FindJob(int id)
     {
-        QueueContext context = AcquireContext();
-        try
+        return Execute<QueueJobModel?>(context =>
         {
             QueueJob? job = context.QueueJobs.Find(id);
             return job == null ? null : ToModel(job);
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public bool JobExists(string payload)
     {
-        QueueContext context = AcquireContext();
-        try
-        {
-            return ExistsQuery(context, payload);
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        return Execute(context => ExistsQuery(context, payload));
     }
 
     public void UpdateJob(QueueJobModel job)
     {
-        QueueContext context = AcquireContext();
-        try
+        Execute(context =>
         {
             QueueJob? entity = context.QueueJobs.Find(job.Id);
             if (entity == null)
@@ -171,17 +168,12 @@ public class EfQueueContextAdapter : IQueueContext
             entity.AvailableAt = job.AvailableAt;
             context.SaveChanges();
             context.ChangeTracker.Clear();
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
     {
-        QueueContext context = AcquireContext();
-        try
+        Execute(context =>
         {
             QueueJob? entity = context.QueueJobs.Find(jobId);
             if (entity == null)
@@ -192,17 +184,12 @@ public class EfQueueContextAdapter : IQueueContext
             entity.AvailableAt = availableAt;
             context.SaveChanges();
             context.ChangeTracker.Clear();
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public void ResetAllReservedJobs()
     {
-        QueueContext context = AcquireContext();
-        try
+        Execute(context =>
         {
             foreach (QueueJob job in context.QueueJobs)
             {
@@ -210,34 +197,24 @@ public class EfQueueContextAdapter : IQueueContext
             }
             context.SaveChanges();
             context.ChangeTracker.Clear();
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc)
     {
-        QueueContext context = AcquireContext();
-        try
+        return Execute(context =>
         {
             List<QueueJob> rows = context
                 .QueueJobs.AsNoTracking()
                 .Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc)
                 .ToList();
             return rows.Select(ToModel).ToList();
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public void AddFailedJob(FailedJobModel failedJob)
     {
-        QueueContext context = AcquireContext();
-        try
+        Execute(context =>
         {
             FailedJob entity = new()
             {
@@ -251,17 +228,12 @@ public class EfQueueContextAdapter : IQueueContext
             context.FailedJobs.Add(entity);
             context.SaveChanges();
             context.ChangeTracker.Clear();
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public void RemoveFailedJob(FailedJobModel failedJob)
     {
-        QueueContext context = AcquireContext();
-        try
+        Execute(context =>
         {
             FailedJob? entity = context.FailedJobs.Find(failedJob.Id);
             if (entity != null)
@@ -270,99 +242,75 @@ public class EfQueueContextAdapter : IQueueContext
                 context.SaveChanges();
                 context.ChangeTracker.Clear();
             }
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public FailedJobModel? FindFailedJob(int id)
     {
-        QueueContext context = AcquireContext();
-        try
+        return Execute<FailedJobModel?>(context =>
         {
             FailedJob? entity = context.FailedJobs.Find((long)id);
             return entity == null ? null : ToFailedModel(entity);
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public IReadOnlyList<FailedJobModel> GetFailedJobs(long? failedJobId = null)
     {
-        QueueContext context = AcquireContext();
-        try
+        return Execute(context =>
         {
             IQueryable<FailedJob> query = context.FailedJobs;
             if (failedJobId.HasValue)
                 query = query.Where(j => j.Id == failedJobId.Value);
 
-            return query
-                .Select(j => new FailedJobModel
-                {
-                    Id = j.Id,
-                    Uuid = j.Uuid,
-                    Connection = j.Connection,
-                    Queue = j.Queue,
-                    Payload = j.Payload,
-                    Exception = j.Exception,
-                    FailedAt = j.FailedAt,
-                })
-                .ToList();
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+            return (IReadOnlyList<FailedJobModel>)
+                query
+                    .Select(j => new FailedJobModel
+                    {
+                        Id = j.Id,
+                        Uuid = j.Uuid,
+                        Connection = j.Connection,
+                        Queue = j.Queue,
+                        Payload = j.Payload,
+                        Exception = j.Exception,
+                        FailedAt = j.FailedAt,
+                    })
+                    .ToList();
+        });
     }
 
     public IReadOnlyList<CronJobModel> GetEnabledCronJobs()
     {
-        QueueContext context = AcquireContext();
-        try
-        {
-            return context
-                .CronJobs.Where(c => c.IsEnabled)
-                .Select(c => new CronJobModel
-                {
-                    Id = c.Id,
-                    Name = c.Name,
-                    CronExpression = c.CronExpression,
-                    JobType = c.JobType,
-                    Parameters = c.Parameters,
-                    IsEnabled = c.IsEnabled,
-                    LastRun = c.LastRun,
-                    NextRun = c.NextRun,
-                })
-                .ToList();
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        return Execute(context =>
+            (IReadOnlyList<CronJobModel>)
+                context
+                    .CronJobs.Where(c => c.IsEnabled)
+                    .Select(c => new CronJobModel
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        CronExpression = c.CronExpression,
+                        JobType = c.JobType,
+                        Parameters = c.Parameters,
+                        IsEnabled = c.IsEnabled,
+                        LastRun = c.LastRun,
+                        NextRun = c.NextRun,
+                    })
+                    .ToList()
+        );
     }
 
     public CronJobModel? FindCronJobByName(string name)
     {
-        QueueContext context = AcquireContext();
-        try
+        return Execute<CronJobModel?>(context =>
         {
             CronJob? entity = context.CronJobs.FirstOrDefault(c => c.Name == name);
             return entity == null ? null : ToCronModel(entity);
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public void AddCronJob(CronJobModel cronJob)
     {
-        QueueContext context = AcquireContext();
-        try
+        Execute(context =>
         {
             CronJob entity = new()
             {
@@ -377,17 +325,12 @@ public class EfQueueContextAdapter : IQueueContext
             context.CronJobs.Add(entity);
             context.SaveChanges();
             context.ChangeTracker.Clear();
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public void UpdateCronJob(CronJobModel cronJob)
     {
-        QueueContext context = AcquireContext();
-        try
+        Execute(context =>
         {
             CronJob? entity = context.CronJobs.Find(cronJob.Id);
             if (entity == null)
@@ -399,17 +342,12 @@ public class EfQueueContextAdapter : IQueueContext
             entity.NextRun = cronJob.NextRun;
             context.SaveChanges();
             context.ChangeTracker.Clear();
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     public void RemoveCronJob(CronJobModel cronJob)
     {
-        QueueContext context = AcquireContext();
-        try
+        Execute(context =>
         {
             CronJob? entity = context.CronJobs.Find(cronJob.Id);
             if (entity != null)
@@ -418,37 +356,22 @@ public class EfQueueContextAdapter : IQueueContext
                 context.SaveChanges();
                 context.ChangeTracker.Clear();
             }
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
-    public void SaveChanges()
-    {
-        // No-op: each method now manages its own context and saves immediately
-    }
+    public void SaveChanges() { }
 
-    public void Dispose()
-    {
-        // No shared context to dispose when using per-operation contexts
-    }
+    public void Dispose() { }
 
     public bool IsParentFailed(int parentJobId)
     {
-        QueueContext context = AcquireContext();
-        try
+        return Execute(context =>
         {
             string parentPayloadPrefix = $"\"Id\":{parentJobId},";
             return context
                 .FailedJobs.AsNoTracking()
                 .Any(f => f.Payload.Contains(parentPayloadPrefix));
-        }
-        finally
-        {
-            ReleaseContext(context);
-        }
+        });
     }
 
     private static QueueJobModel ToModel(QueueJob entity)
