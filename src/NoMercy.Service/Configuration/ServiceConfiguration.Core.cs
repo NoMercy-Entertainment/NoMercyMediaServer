@@ -12,6 +12,7 @@
 using I18N.DotNet;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Services;
 using NoMercy.Api.WebSockets;
@@ -78,13 +79,14 @@ using MediaProcessingSeasonRepository = NoMercy.MediaProcessing.Seasons.SeasonRe
 using MediaProcessingShowRepository = NoMercy.MediaProcessing.Shows.ShowRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
 
-using Microsoft.Extensions.Configuration;
-
 namespace NoMercy.Service.Configuration;
 
 public static partial class ServiceConfiguration
 {
-    private static void ConfigureCoreServices(IServiceCollection services, IConfiguration configuration)
+    private static void ConfigureCoreServices(
+        IServiceCollection services,
+        IConfiguration configuration
+    )
     {
         services
             .AddDataProtection()
@@ -168,7 +170,11 @@ public static partial class ServiceConfiguration
         services.AddSingleton<INetworkDiscovery>(sp =>
         {
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
-            NetworkDiscovery discovery = new(storageDriver, sp.GetRequiredService<IAuthTokenStore>());
+            NetworkDiscovery discovery = new(
+                storageDriver,
+                sp.GetRequiredService<IAuthTokenStore>(),
+                sp.GetRequiredService<IConnectivityStatus>()
+            );
             if (!string.IsNullOrEmpty(StartupOptions.OverrideInternalIp))
                 discovery.InternalIp = StartupOptions.OverrideInternalIp;
             if (!string.IsNullOrEmpty(StartupOptions.OverrideExternalIp))
@@ -185,26 +191,24 @@ public static partial class ServiceConfiguration
 
         // Connectivity strategies (ordered by priority)
         services.AddSingleton<IConnectivityStrategy>(sp => new PortForwardStrategy(
-            (NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>()
+            (NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>(),
+            sp.GetRequiredService<IConnectivityStatus>()
         ));
         services.AddSingleton<IConnectivityStrategy, StunHolePunchStrategy>();
-        services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(() =>
-            Task.FromResult(string.Empty) // Register.GetTunnelAvailability
+        services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(
+            sp.GetRequiredService<IConnectivityStatus>(),
+            () => Task.FromResult(string.Empty) // Register.GetTunnelAvailability
         ));
 
         // Add Auth services
         services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
 
         // Add Configuration POCOs
-        services.Configure<ExternalServicesConfig>(
-            configuration.GetSection("ExternalServices")
-        );
+        services.Configure<ExternalServicesConfig>(configuration.GetSection("ExternalServices"));
         services.Configure<ServerConfig>(configuration.GetSection("Server"));
         services.Configure<ConnectivityConfig>(configuration.GetSection("Connectivity"));
         services.Configure<WorkerConfig>(configuration.GetSection("Workers"));
-        services.Configure<EncoderResourceConfig>(
-            configuration.GetSection("EncoderResources")
-        );
+        services.Configure<EncoderResourceConfig>(configuration.GetSection("EncoderResources"));
         services.Configure<ContentPolicy>(configuration.GetSection("ContentPolicy"));
 
         // Add runtime status singletons
@@ -401,7 +405,8 @@ public static partial class ServiceConfiguration
         services.AddMediaServerQueue();
         services.AddSingleton<JobDispatcher>();
         services.AddSingleton<NoMercy.MediaProcessing.Jobs.IJobDispatcher>(sp =>
-            sp.GetRequiredService<JobDispatcher>());
+            sp.GetRequiredService<JobDispatcher>()
+        );
 
         // Storage driver resolvers — registered before AddNoMercyEncoder so
         // the TryAdd inside AddNoMercyStorage picks them up via GetService<>.

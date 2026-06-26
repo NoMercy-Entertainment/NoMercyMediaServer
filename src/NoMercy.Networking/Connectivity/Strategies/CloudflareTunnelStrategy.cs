@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -22,6 +23,7 @@ namespace NoMercy.Networking.Connectivity.Strategies;
 public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
 {
     private readonly Func<Task>? _checkTunnelAvailability;
+    private readonly IConnectivityStatus _connectivityStatus;
     private Process? _tunnelProcess;
     private bool _disposed;
 
@@ -29,9 +31,13 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
     public int Priority => 3;
     public ConnectivityType Type => ConnectivityType.CloudflareTunnel;
 
-    public CloudflareTunnelStrategy(Func<Task>? checkTunnelAvailability = null)
+    public CloudflareTunnelStrategy(
+        IConnectivityStatus connectivityStatus,
+        Func<Task>? checkTunnelAvailability = null
+    )
     {
         _checkTunnelAvailability = checkTunnelAvailability;
+        _connectivityStatus = connectivityStatus;
     }
 
     public async Task<bool> TryEstablishAsync(CancellationToken ct)
@@ -81,7 +87,7 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
             _tunnelProcess.BeginOutputReadLine();
             _tunnelProcess.BeginErrorReadLine();
 
-            Config.NatStatus = NatStatus.Tunneled;
+            _connectivityStatus.NatStatus = NatStatus.Tunneled;
             Logger.Setup("Cloudflare tunnel started successfully");
             return true;
         }

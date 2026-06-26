@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
-using NoMercy.NmSystem.Auth;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
@@ -18,9 +17,11 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
 using Serilog.Events;
@@ -31,8 +32,9 @@ public class ServerRegistrationService : IServerRegistrationService
 {
     private readonly IDbContextFactory<AppDbContext> _appDbContextFactory;
     private readonly IUserProvisioningService _userProvisioningService;
+    private readonly IConnectivityStatus _connectivityStatus;
     private readonly INetworkDiscovery? _networkDiscovery;
-    
+
     private static readonly int[] BackoffSeconds = [2, 5, 15, 30, 60];
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private DateTime _lastFailureUtc = DateTime.MinValue;
@@ -44,12 +46,14 @@ public class ServerRegistrationService : IServerRegistrationService
         IAuthTokenStore authTokenStore,
         IDbContextFactory<AppDbContext> appDbContextFactory,
         IUserProvisioningService userProvisioningService,
+        IConnectivityStatus connectivityStatus,
         INetworkDiscovery? networkDiscovery = null
     )
     {
         _authTokenStore = authTokenStore;
         _appDbContextFactory = appDbContextFactory;
         _userProvisioningService = userProvisioningService;
+        _connectivityStatus = connectivityStatus;
         _networkDiscovery = networkDiscovery;
     }
 
@@ -58,7 +62,9 @@ public class ServerRegistrationService : IServerRegistrationService
         TimeSpan sinceLastFailure = DateTime.UtcNow - _lastFailureUtc;
         if (sinceLastFailure < FailureCooldown)
         {
-            Logger.Register($"Registration failed recently, cooling down for {(FailureCooldown - sinceLastFailure).TotalSeconds:F0}s");
+            Logger.Register(
+                $"Registration failed recently, cooling down for {(FailureCooldown - sinceLastFailure).TotalSeconds:F0}s"
+            );
             throw new InvalidOperationException("Registration on cooldown after recent failure");
         }
 
@@ -104,7 +110,9 @@ public class ServerRegistrationService : IServerRegistrationService
 
                 object? data = JsonConvert.DeserializeObject(response);
                 if (data == null)
-                    throw new InvalidOperationException("Failed to register Server — empty response");
+                    throw new InvalidOperationException(
+                        "Failed to register Server — empty response"
+                    );
 
                 Logger.Register("Server registered successfully");
                 return;
@@ -112,7 +120,10 @@ public class ServerRegistrationService : IServerRegistrationService
             catch (Exception ex) when (attempt < maxRetries)
             {
                 int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
-                Logger.Register($"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})", LogEventLevel.Warning);
+                Logger.Register(
+                    $"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    LogEventLevel.Warning
+                );
 
                 if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
                     break;
@@ -134,7 +145,10 @@ public class ServerRegistrationService : IServerRegistrationService
             catch (Exception ex) when (attempt < maxRetries)
             {
                 int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
-                Logger.Register($"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})", LogEventLevel.Warning);
+                Logger.Register(
+                    $"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    LogEventLevel.Warning
+                );
 
                 if (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
                     break;
@@ -198,7 +212,8 @@ public class ServerRegistrationService : IServerRegistrationService
                 new FormUrlEncodedContent(serverData)
             );
 
-            ServerTunnelAvailabilityResponse? data = response.FromJson<ServerTunnelAvailabilityResponse>();
+            ServerTunnelAvailabilityResponse? data =
+                response.FromJson<ServerTunnelAvailabilityResponse>();
 
             if (data is null || !data.Allowed || data.Token is null)
                 return;
@@ -226,9 +241,9 @@ public class ServerRegistrationService : IServerRegistrationService
             { "external_port", Config.ExternalServerPort.ToString() },
             { "version", Software.Version!.ToString() },
             { "platform", Info.Platform },
-            { "stun_public_ip", Config.StunPublicIp.OrEmpty() },
-            { "stun_public_port", (Config.StunPublicPort?.ToString()).OrEmpty() },
-            { "stun_nat_type", Config.NatStatus.ToString() },
+            { "stun_public_ip", _connectivityStatus.StunPublicIp.OrEmpty() },
+            { "stun_public_port", (_connectivityStatus.StunPublicPort?.ToString()).OrEmpty() },
+            { "stun_nat_type", _connectivityStatus.NatStatus.ToString() },
         };
     }
 
@@ -237,7 +252,9 @@ public class ServerRegistrationService : IServerRegistrationService
         try
         {
             await using AppDbContext appContext = await _appDbContextFactory.CreateDbContextAsync();
-            Configuration? device = await appContext.Configuration.FirstOrDefaultAsync(device => device.Key == "serverName");
+            Configuration? device = await appContext.Configuration.FirstOrDefaultAsync(device =>
+                device.Key == "serverName"
+            );
 
             Info.DeviceName = device?.Value ?? Environment.MachineName;
         }

@@ -13,6 +13,7 @@ using System.Net;
 using System.Net.Sockets;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 using STUN.Enums;
@@ -29,6 +30,13 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
     public string Name => "StunHolePunch";
     public int Priority => 2;
     public ConnectivityType Type => ConnectivityType.StunHolePunch;
+
+    private readonly IConnectivityStatus _connectivityStatus;
+
+    public StunHolePunchStrategy(IConnectivityStatus connectivityStatus)
+    {
+        _connectivityStatus = connectivityStatus;
+    }
 
     private static readonly (string Host, int Port)[] StunServers =
     [
@@ -66,8 +74,8 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             if (secondResult is null)
             {
                 // Only one server responded, assume restricted cone
-                Config.StunPublicIp = firstResult.Address.ToString();
-                Config.StunPublicPort = firstResult.Port;
+                _connectivityStatus.StunPublicIp = firstResult.Address.ToString();
+                _connectivityStatus.StunPublicPort = firstResult.Port;
             }
             else if (
                 firstResult.Port == secondResult.Port
@@ -75,8 +83,8 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             )
             {
                 // Same public IP:port from different servers → Full Cone or Restricted Cone
-                Config.StunPublicIp = firstResult.Address.ToString();
-                Config.StunPublicPort = firstResult.Port;
+                _connectivityStatus.StunPublicIp = firstResult.Address.ToString();
+                _connectivityStatus.StunPublicPort = firstResult.Port;
             }
             else if (
                 firstResult.Address.Equals(secondResult.Address)
@@ -102,9 +110,9 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
                 return false;
             }
 
-            Config.NatStatus = NatStatus.HolePunched;
+            _connectivityStatus.NatStatus = NatStatus.HolePunched;
             Logger.Setup(
-                $"STUN discovered public endpoint: {Config.StunPublicIp}:{Config.StunPublicPort}"
+                $"STUN discovered public endpoint: {_connectivityStatus.StunPublicIp}:{_connectivityStatus.StunPublicPort}"
             );
 
             // Start keep-alive to maintain NAT mapping

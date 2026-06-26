@@ -10,14 +10,15 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using NoMercy.NmSystem.Auth;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using NoMercy.Networking.Connectivity;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -27,6 +28,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
 {
     private readonly INetworkDiscovery _networkDiscovery;
     private readonly IConnectivityManager _connectivityManager;
+    private readonly IConnectivityStatus _connectivityStatus;
     private readonly SemaphoreSlim _reevaluationLock = new(1, 1);
 
     private readonly IAuthTokenStore _authTokenStore;
@@ -34,12 +36,14 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     public NetworkChangeMonitor(
         IAuthTokenStore authTokenStore,
         INetworkDiscovery networkDiscovery,
-        IConnectivityManager connectivityManager
+        IConnectivityManager connectivityManager,
+        IConnectivityStatus connectivityStatus
     )
     {
         _authTokenStore = authTokenStore;
         _networkDiscovery = networkDiscovery;
         _connectivityManager = connectivityManager;
+        _connectivityStatus = connectivityStatus;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -163,9 +167,9 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                 { "external_port", Config.ExternalServerPort.ToString() },
                 { "version", Software.Version!.ToString() },
                 { "platform", Info.Platform },
-                { "stun_public_ip", Config.StunPublicIp.OrEmpty() },
-                { "stun_public_port", (Config.StunPublicPort?.ToString()).OrEmpty() },
-                { "stun_nat_type", Config.NatStatus.ToString() },
+                { "stun_public_ip", _connectivityStatus.StunPublicIp.OrEmpty() },
+                { "stun_public_port", (_connectivityStatus.StunPublicPort?.ToString()).OrEmpty() },
+                { "stun_nat_type", _connectivityStatus.NatStatus.ToString() },
             };
 
             Logger.Register("Your IP address has changed, updating server information...");

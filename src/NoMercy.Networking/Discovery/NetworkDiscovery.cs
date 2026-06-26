@@ -10,14 +10,15 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using NoMercy.NmSystem.Auth;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using Mono.Nat;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using Serilog.Events;
@@ -33,10 +34,16 @@ public class NetworkDiscovery : INetworkDiscovery
     private bool _hasFoundDevice;
 
     private readonly IAuthTokenStore _authTokenStore;
+    private readonly IConnectivityStatus _connectivityStatus;
 
-    public NetworkDiscovery(IStorageDriver driver, IAuthTokenStore authTokenStore)
+    public NetworkDiscovery(
+        IStorageDriver driver,
+        IAuthTokenStore authTokenStore,
+        IConnectivityStatus connectivityStatus
+    )
     {
         _authTokenStore = authTokenStore;
+        _connectivityStatus = connectivityStatus;
         _driver = driver;
     }
 
@@ -177,7 +184,7 @@ public class NetworkDiscovery : INetworkDiscovery
     {
         if (_device == null)
         {
-            Config.NatStatus = NatStatus.None;
+            _connectivityStatus.NatStatus = NatStatus.None;
             return;
         }
 
@@ -220,11 +227,11 @@ public class NetworkDiscovery : INetworkDiscovery
         {
             Logger.Setup($"Failed to create UPNP records: {e.Message}");
             _hasFoundDevice = false;
-            Config.NatStatus = NatStatus.Closed;
+            _connectivityStatus.NatStatus = NatStatus.Closed;
             return;
         }
 
-        Config.NatStatus = NatStatus.Filtered;
+        _connectivityStatus.NatStatus = NatStatus.Filtered;
     }
 
     public async Task<bool> IsPortOpenAsync()
