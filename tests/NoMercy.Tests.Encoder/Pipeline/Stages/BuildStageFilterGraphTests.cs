@@ -141,7 +141,7 @@ public class BuildStageFilterGraphTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
             BuildMediaInfo(320, 180)
@@ -175,7 +175,7 @@ public class BuildStageFilterGraphTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
             BuildMediaInfo(1920, 1080)
@@ -213,7 +213,7 @@ public class BuildStageFilterGraphTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
             BuildMediaInfo(1920, 1080)
@@ -249,7 +249,7 @@ public class BuildStageFilterGraphTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
             BuildMediaInfo(1920, 1080)
@@ -280,7 +280,7 @@ public class BuildStageFilterGraphTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
             BuildMediaInfo(1920, 1080)
@@ -330,7 +330,7 @@ public class BuildStageFilterGraphTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
 
         StageResult result = await _stage.ExecuteAsync(input, context, default);
@@ -409,7 +409,7 @@ public class BuildStageFilterGraphTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
             BuildMediaInfo(1920, 1080)

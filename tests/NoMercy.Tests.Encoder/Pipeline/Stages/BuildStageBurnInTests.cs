@@ -122,7 +122,7 @@ public class BuildStageBurnInTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
             BuildMediaInfoWithSubtitle(1920, 1080, textBased: true)
@@ -205,7 +205,7 @@ public class BuildStageBurnInTests
     )
     {
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, inputPath, "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, inputPath, "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
             BuildMediaInfoWithSubtitle(srcWidth, srcHeight, textBased: true)
@@ -335,7 +335,7 @@ public class BuildStageBurnInTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
             BuildMediaInfoWithSubtitle(1920, 1080, textBased: false)
@@ -372,7 +372,7 @@ public class BuildStageBurnInTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         ScopedDecisionLog decisions = new();
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
@@ -408,7 +408,7 @@ public class BuildStageBurnInTests
         );
 
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
         ScopedDecisionLog decisions = new();
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
@@ -436,7 +436,7 @@ public class BuildStageBurnInTests
     )
     {
         ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, inputPath, "/output/test", "Test.NoMercy");
+        BuildInput input = new(plan, inputPath, "/tmp/nmtest-output/test", "Test.NoMercy");
         EncodingContext context = new(
             EncodingContext.Create().CorrelationId,
             BuildMediaInfoWithCodec(srcWidth, srcHeight, subtitleCodec)
