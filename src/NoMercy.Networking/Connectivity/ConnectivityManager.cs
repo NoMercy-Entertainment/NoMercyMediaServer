@@ -10,8 +10,8 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.Hosting;
-using NoMercy.NmSystem.Auth;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;

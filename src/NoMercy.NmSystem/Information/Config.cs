@@ -122,5 +122,4 @@ public static class Config
     // Safe-by-default: adult content is shown only when explicitly enabled.
     // A null (never configured) or false setting both resolve to hidden.
     public static bool ShowAdultContent => AllowAdultContent == true;
-
 }

@@ -10,10 +10,8 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using NoMercy.NmSystem;
-using NoMercy.Database;
 using Microsoft.Extensions.DependencyInjection;
-using NoMercyQueue;
+using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
@@ -29,10 +27,12 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.MediaProcessing.Recordings;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
+using NoMercyQueue;
 using Serilog.Events;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
@@ -46,6 +46,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
     {
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
     }
+
     public override string QueueName => "encoder";
     public override int Priority => 3;
 

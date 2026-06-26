@@ -34,7 +34,8 @@ public class ServerRunner : IServerRunner
     public ServerRunner(
         ILogger<ServerRunner> logger,
         IPortManager portManager,
-        IShutdownCoordinator shutdownCoordinator)
+        IShutdownCoordinator shutdownCoordinator
+    )
     {
         _logger = logger;
         _portManager = portManager;
@@ -68,7 +69,10 @@ public class ServerRunner : IServerRunner
         }
 
         string setupUrl = $"http://localhost:{Config.InternalServerPort}/setup";
-        _logger.LogInformation("Server is in setup mode. Please complete setup at: {SetupUrl}", setupUrl);
+        _logger.LogInformation(
+            "Server is in setup mode. Please complete setup at: {SetupUrl}",
+            setupUrl
+        );
 
         // Try to open the browser automatically if running interactively.
         if (!options.RunAsService && AuthManager.IsDesktopEnvironment())
@@ -79,8 +83,14 @@ public class ServerRunner : IServerRunner
             }
             catch (Exception ex)
             {
-                _logger.LogInformation("Could not open browser automatically: {Message}", ex.Message);
-                _logger.LogInformation("Please open your browser and navigate to: {SetupUrl}", setupUrl);
+                _logger.LogInformation(
+                    "Could not open browser automatically: {Message}",
+                    ex.Message
+                );
+                _logger.LogInformation(
+                    "Please open your browser and navigate to: {SetupUrl}",
+                    setupUrl
+                );
             }
         }
 
@@ -93,11 +103,17 @@ public class ServerRunner : IServerRunner
                 {
                     try
                     {
-                        await orchestrator.StartHeadlessDeviceCodeFlowAsync(shutdownCoordinator.Token);
+                        await orchestrator.StartHeadlessDeviceCodeFlowAsync(
+                            shutdownCoordinator.Token
+                        );
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Headless device code flow error: {Message}", ex.Message);
+                        _logger.LogError(
+                            ex,
+                            "Headless device code flow error: {Message}",
+                            ex.Message
+                        );
                     }
                 },
                 shutdownCoordinator.Token
@@ -149,7 +165,9 @@ public class ServerRunner : IServerRunner
         // Setup completed — certificate should now be available
         if (!Certificate.HasValidCertificate())
         {
-            _logger.LogInformation("Setup completed but certificate not found — continuing on HTTP");
+            _logger.LogInformation(
+                "Setup completed but certificate not found — continuing on HTTP"
+            );
             await httpHost.WaitForShutdownAsync(shutdownCoordinator.Token);
             await httpHost.DisposeAsync();
             return false;
@@ -172,8 +190,9 @@ public class ServerRunner : IServerRunner
         WebApplication httpsHost = WebHostFactory.Create(options);
 
         _shutdownCoordinator.RequestShutdown(); // Reset existing (if any)
-        
-        IShutdownCoordinator httpsShutdownCoordinator = httpsHost.Services.GetRequiredService<IShutdownCoordinator>();
+
+        IShutdownCoordinator httpsShutdownCoordinator =
+            httpsHost.Services.GetRequiredService<IShutdownCoordinator>();
         IPortManager httpsPortManager = httpsHost.Services.GetRequiredService<IPortManager>();
 
         // The new DI container has a fresh AuthManager and SetupState — load tokens

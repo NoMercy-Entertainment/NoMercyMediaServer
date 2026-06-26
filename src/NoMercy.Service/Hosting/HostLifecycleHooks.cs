@@ -33,7 +33,6 @@ using NoMercy.Setup.Ui;
 using NoMercy.Storage;
 using NoMercyQueue;
 
-
 namespace NoMercy.Service.Hosting;
 
 public static class HostLifecycleHooks
