@@ -1,0 +1,48 @@
+name: 'Test Only (churn)'
+
+# Full test suite WITHOUT the release/version-bump pipeline, for commits whose
+# message contains [test-only]. Unlike the fast `test` job in the main pipeline
+# (Unit|ErrorHandling|Characterization only), this runs the ENTIRE solution test
+# suite — including uncategorized tests (e.g. plugins) and the ffmpeg-backed
+# integration/encoder tests — so refactor churn gets a true stability picture on
+# dev without triggering create_release (version bump + force-push).
+on:
+  push:
+    branches:
+      - dev
+      - 'refactor/**'
+
+jobs:
+  full-test:
+    if: ${{ contains(github.event.head_commit.message, '[test-only]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: Setup .NET Environment
+        uses: ./.github/actions/setup-dotnet
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Fetch nomercy-ffmpeg fork (real-encode integration tests)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(gh release list --repo NoMercy-Entertainment/nomercy-ffmpeg --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          dest="$HOME/.local/share/NoMercy_dev/binaries/ffmpeg"
+          mkdir -p "$dest"
+          gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber
+          tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-*.tar.gz -C "$dest"
+          chmod +x "$dest/ffmpeg" "$dest/ffprobe"
+          echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
+
+      - name: Run FULL test suite (all categories, all projects)
+        run: >
+          dotnet test NoMercy.Server.sln
+          --configuration Debug
+          --verbosity minimal
+          --logger trx
+          --blame-hang-timeout 10m

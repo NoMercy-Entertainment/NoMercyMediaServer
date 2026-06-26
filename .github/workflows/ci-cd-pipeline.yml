@@ -33,6 +33,7 @@ permissions:
 jobs:
   # Step 1: Run Tests
   test:
+    if: ${{ !contains(github.event.head_commit.message, '[test-only]') }}
     uses: ./.github/workflows/test.yml
     with:
       dotnet-version: "10.0.x"
