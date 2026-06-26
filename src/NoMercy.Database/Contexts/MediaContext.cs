@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Storage;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Database;
@@ -33,7 +34,7 @@ public class MediaContext : DbContext
     // parameterizes instance references in a filter (re-read per query) but
     // constant-folds a static reference into the cached model, which would
     // freeze the value at first build and ignore a runtime toggle.
-    public bool ShowAdultContent => Config.ShowAdultContent;
+    public bool ShowAdultContent => RuntimeServerSettings.Current.ShowAdultContent;
 
     [DbFunction("normalize_search", IsBuiltIn = true)]
     public static string NormalizeSearch(string? input) =>

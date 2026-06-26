@@ -12,6 +12,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.People;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Providers.TMDB.Models.People;
@@ -183,26 +184,26 @@ public record PersonResponseItemDto
         {
             Cast = tmdbPersonAppends
                 .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
-                .Where(knownFor => Config.ShowAdultContent || !knownFor.Adult)
+                .Where(knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
                 .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
 
             Crew = tmdbPersonAppends
                 .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
-                .Where(knownFor => Config.ShowAdultContent || !knownFor.Adult)
+                .Where(knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
                 .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
         };
 
         KnownForDto[] cast = tmdbPersonAppends
             .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
-            .Where(knownFor => Config.ShowAdultContent || !knownFor.Adult)
+            .Where(knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
             .DistinctBy(knownFor => knownFor.Id)
             .ToArray();
 
         KnownForDto[] crew = tmdbPersonAppends
             .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
-            .Where(knownFor => Config.ShowAdultContent || !knownFor.Adult)
+            .Where(knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
             .DistinctBy(knownFor => knownFor.Id)
             .ToArray();
 

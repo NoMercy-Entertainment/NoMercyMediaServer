@@ -11,6 +11,7 @@
 
 using System.Net;
 using Microsoft.AspNetCore.WebUtilities;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -84,7 +85,7 @@ public class TmdbBaseClient : IDisposable
 
         query["language"] = priority is true ? Language : "";
 
-        query["include_adult"] = Config.ShowAdultContent ? "true" : "false";
+        query["include_adult"] = RuntimeServerSettings.Current.ShowAdultContent ? "true" : "false";
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 

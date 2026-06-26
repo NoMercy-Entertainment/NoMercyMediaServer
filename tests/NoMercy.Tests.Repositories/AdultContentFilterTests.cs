@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.People;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.Tests.Repositories.Infrastructure;
 
@@ -23,7 +24,7 @@ public class AdultContentFilterTests : IDisposable
 {
     private const int AdultMovieId = 9_999_001;
 
-    private readonly bool? _originalAllowAdult = Config.AllowAdultContent;
+    private readonly bool? _originalAllowAdult = RuntimeServerSettings.Current.AllowAdultContent;
     private readonly MediaContext _context;
 
     public AdultContentFilterTests()
@@ -33,7 +34,7 @@ public class AdultContentFilterTests : IDisposable
 
     public void Dispose()
     {
-        Config.AllowAdultContent = _originalAllowAdult;
+        RuntimeServerSettings.Current.AllowAdultContent = _originalAllowAdult;
         _context.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -44,15 +45,15 @@ public class AdultContentFilterTests : IDisposable
     [InlineData(true, true)]
     public void ShowAdultContent_TreatsNullAndFalseAsHidden(bool? configured, bool expected)
     {
-        Config.AllowAdultContent = configured;
+        RuntimeServerSettings.Current.AllowAdultContent = configured;
 
-        Assert.Equal(expected, Config.ShowAdultContent);
+        Assert.Equal(expected, RuntimeServerSettings.Current.ShowAdultContent);
     }
 
     [Fact]
     public async Task MovieQueryFilter_HidesAdultRows_WhenUnconfigured()
     {
-        Config.AllowAdultContent = null; // the shipped default
+        RuntimeServerSettings.Current.AllowAdultContent = null; // the shipped default
         AddAdultMovie();
 
         List<Movie> visible = await _context.Movies.ToListAsync();
@@ -64,7 +65,7 @@ public class AdultContentFilterTests : IDisposable
     [Fact]
     public async Task MovieQueryFilter_ShowsAdultRows_WhenAllowed()
     {
-        Config.AllowAdultContent = true;
+        RuntimeServerSettings.Current.AllowAdultContent = true;
         AddAdultMovie();
 
         List<Movie> visible = await _context.Movies.ToListAsync();
@@ -75,7 +76,7 @@ public class AdultContentFilterTests : IDisposable
     [Fact]
     public async Task MovieQueryFilter_IsBypassedByIgnoreQueryFilters()
     {
-        Config.AllowAdultContent = false;
+        RuntimeServerSettings.Current.AllowAdultContent = false;
         AddAdultMovie();
 
         Movie? viaFilter = await _context.Movies.FirstOrDefaultAsync(movie =>
@@ -92,7 +93,7 @@ public class AdultContentFilterTests : IDisposable
     [Fact]
     public async Task PersonQueryFilter_HidesAdultPeople_WhenNotAllowed()
     {
-        Config.AllowAdultContent = false;
+        RuntimeServerSettings.Current.AllowAdultContent = false;
         _context.People.Add(
             new Person
             {

@@ -53,4 +53,8 @@ public class RuntimeServerSettings
     public bool Swagger { get; set; } = true;
 
     public bool? AllowAdultContent { get; set; }
+
+    // Safe-by-default: adult content is shown only when explicitly enabled.
+    // A null (never configured) or false setting both resolve to hidden.
+    public bool ShowAdultContent => AllowAdultContent == true;
 }

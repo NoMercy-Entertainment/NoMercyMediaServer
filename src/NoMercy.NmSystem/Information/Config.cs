@@ -47,14 +47,4 @@ public static class Config
 
     public static bool IsDev { get; set; }
     public static bool IsTest { get; set; }
-
-    public static bool? AllowAdultContent
-    {
-        get => RuntimeServerSettings.Current.AllowAdultContent;
-        set => RuntimeServerSettings.Current.AllowAdultContent = value;
-    }
-
-    // Safe-by-default: adult content is shown only when explicitly enabled.
-    // A null (never configured) or false setting both resolve to hidden.
-    public static bool ShowAdultContent => AllowAdultContent == true;
 }

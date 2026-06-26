@@ -183,7 +183,7 @@ public static class UserSettings
                     RuntimeServerSettings.Current.Swagger = setting.Value.ToBoolean();
                     break;
                 case "allowAdultContent":
-                    Config.AllowAdultContent = setting.Value.ToBoolean();
+                    RuntimeServerSettings.Current.AllowAdultContent = setting.Value.ToBoolean();
                     break;
             }
         }
