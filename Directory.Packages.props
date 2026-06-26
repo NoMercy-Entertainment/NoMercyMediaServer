@@ -48,6 +48,15 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.7" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.7" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.7" />
+    <!-- Security: pin the native SQLite binary to 3.50.3 (SQLite 3.50.3) to patch
+         NU1903 in SQLitePCLRaw.lib.e_sqlite3 2.1.11, which bundles a vulnerable
+         SQLite. Transitive pin only; the managed SQLitePCLRaw / Microsoft.Data.Sqlite
+         stack stays at the EF-Core-10-tested 2.1.11. -->
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
+    <!-- Security: pin System.Formats.Asn1 to patch NU1903 (GHSA-447r-wph3-92pm),
+         pulled transitively at 5.0.0 by the Roslyn analyzer-testing packages.
+         10.0.9 is framework-aligned (net10.0). -->
+    <PackageVersion Include="System.Formats.Asn1" Version="10.0.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.7" />
     <!-- Serialization -->
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
