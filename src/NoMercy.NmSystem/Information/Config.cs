@@ -37,8 +37,6 @@ public static class Config
     public static string UserAgent =>
         $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
 
-    public static string? CloudflareTunnelToken { get; set; }
-
     public static int StunPort => InternalServerPort + 1;
 
     private static int? _internalServerPort;

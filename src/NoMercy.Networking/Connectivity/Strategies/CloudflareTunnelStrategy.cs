@@ -45,7 +45,7 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
         if (_checkTunnelAvailability is not null)
             await _checkTunnelAvailability();
 
-        if (string.IsNullOrEmpty(Config.CloudflareTunnelToken))
+        if (string.IsNullOrEmpty(_connectivityStatus.CloudflareTunnelToken))
         {
             Logger.Setup(
                 "You don't have access to our Cloudflare tunnel service, this is a paid feature."
@@ -66,7 +66,7 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                 StartInfo = new()
                 {
                     FileName = AppFiles.CloudflareDPath,
-                    Arguments = $"tunnel run --token {Config.CloudflareTunnelToken}",
+                    Arguments = $"tunnel run --token {_connectivityStatus.CloudflareTunnelToken}",
                     UseShellExecute = false,
                     WorkingDirectory = AppFiles.DependenciesPath,
                     RedirectStandardOutput = true,

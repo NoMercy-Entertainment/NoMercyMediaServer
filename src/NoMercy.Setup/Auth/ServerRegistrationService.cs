@@ -218,7 +218,7 @@ public class ServerRegistrationService : IServerRegistrationService
             if (data is null || !data.Allowed || data.Token is null)
                 return;
 
-            Config.CloudflareTunnelToken = data.Token;
+            _connectivityStatus.CloudflareTunnelToken = data.Token;
 
             Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
         }
