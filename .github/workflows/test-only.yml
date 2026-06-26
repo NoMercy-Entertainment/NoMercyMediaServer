@@ -48,6 +48,7 @@ jobs:
         run: |
           set +e
           dotnet test NoMercy.Server.sln \
+            --settings tests/default.runsettings \
             --configuration Debug \
             --verbosity minimal \
             --logger "trx;LogFileName=results.trx" \
