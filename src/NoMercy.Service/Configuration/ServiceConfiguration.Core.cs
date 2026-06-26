@@ -301,6 +301,9 @@ public static partial class ServiceConfiguration
         services.AddScoped<ICollectionMetadataProvider, TmdbCollectionMetadataProvider>();
         services.AddScoped<IPersonMetadataProvider, TmdbPersonMetadataProvider>();
 
+        // Add Repositories
+        services.AddScoped<HomeRepository>();
+        services.AddScoped<EncoderRepository>();
         services.AddScoped<EncodingHistoryRepository>();
         services.AddScoped<ContentSegmentRepository>();
         services.AddScoped<LibraryRepository>();
