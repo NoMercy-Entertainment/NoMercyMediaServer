@@ -293,7 +293,7 @@ public static partial class ServiceConfiguration
         // disposable contexts per call.
         services.AddDbContextFactory<MediaContext>(configureMediaContext);
 
-        services.AddSingleton<IJobDispatcher, JobDispatcher>();
+        services.AddSingleton<NoMercyQueue.Core.Interfaces.IJobDispatcher, JobDispatcher>();
 
         // Add Provider Clients
         services.AddScoped<IMovieMetadataProvider, TmdbMovieMetadataProvider>();
@@ -303,7 +303,6 @@ public static partial class ServiceConfiguration
 
         // Add Repositories
         services.AddScoped<HomeRepository>();
-        services.AddScoped<MusicRepository>();
         services.AddScoped<EncoderRepository>();
         services.AddScoped<EncodingHistoryRepository>();
         services.AddScoped<EncodingPresetRepository>();
@@ -402,6 +401,8 @@ public static partial class ServiceConfiguration
 
         services.AddMediaServerQueue();
         services.AddSingleton<JobDispatcher>();
+        services.AddSingleton<NoMercy.MediaProcessing.Jobs.IJobDispatcher>(sp =>
+            sp.GetRequiredService<JobDispatcher>());
 
         // Storage driver resolvers — registered before AddNoMercyEncoder so
         // the TryAdd inside AddNoMercyStorage picks them up via GetService<>.

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using System.Collections.Concurrent;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -61,7 +62,7 @@ public class ServerController(
     IHostApplicationLifetime appLifetime,
     AppDbContext appContext,
     FileRepository fileRepository,
-    JobDispatcher jobDispatcher,
+    IJobDispatcher jobDispatcher,
     QueueRunner queueRunner,
     IEventBus eventBus,
     IWallpaperService wallpaperService,

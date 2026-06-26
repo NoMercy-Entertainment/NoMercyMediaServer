@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -51,7 +52,7 @@ public class LibrariesController(
     ILibraryRepository libraryRepository,
     IEncoderRepository encoderRepository,
     IFolderRepository folderRepository,
-    JobDispatcher jobDispatcher,
+    IJobDispatcher jobDispatcher,
     ILanguageRepository languageRepository,
     IDbContextFactory<MediaContext> mediaContextFactory,
     IActivityLogger activityLogger,

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -39,7 +40,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class MoviesController(
     IMovieRepository movieRepository,
     ILibraryRepository libraryRepository,
-    JobDispatcher jobDispatcher,
+    IJobDispatcher jobDispatcher,
     IMovieMetadataProvider movieMetadataProvider,
     IServerConfiguration config
 ) : BaseController
