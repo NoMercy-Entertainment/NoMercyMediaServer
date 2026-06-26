@@ -52,7 +52,8 @@ public class ManagementController(
     IStorageDriver storageDriver,
     IStorage storage,
     IDbContextFactory<QueueContext> queueContextFactory,
-    IBootStatus bootStatus
+    IBootStatus bootStatus,
+    IUpdateStatus updateStatus
 ) : BaseController
 {
     [HttpGet("status")]
@@ -78,9 +79,9 @@ public class ManagementController(
                 IsDev = Config.IsDev,
                 AutoStart = AutoStartupManager.IsEnabled(),
                 IsDocker = Screen.IsDocker,
-                UpdateAvailable = Config.UpdateAvailable,
-                RestartNeeded = Config.RestartNeeded,
-                LatestVersion = Config.LatestVersion,
+                UpdateAvailable = updateStatus.UpdateAvailable,
+                RestartNeeded = updateStatus.RestartNeeded,
+                LatestVersion = updateStatus.LatestVersion,
                 SetupPhase = setupState.CurrentPhase.ToString(),
                 InternalAddress = networkDiscovery.InternalAddress,
                 ExternalAddress = networkDiscovery.ExternalAddress,
@@ -291,7 +292,7 @@ public class ManagementController(
                             status = "ok",
                             message = "This is an installer deployment. Use the installer to update.",
                             use_installer = true,
-                            latest_version = Config.LatestVersion,
+                            latest_version = updateStatus.LatestVersion,
                         }
                     );
 

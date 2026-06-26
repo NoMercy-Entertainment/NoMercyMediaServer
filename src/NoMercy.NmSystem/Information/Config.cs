@@ -70,9 +70,6 @@ public static class Config
 
     public static bool IsDev { get; set; }
     public static bool IsTest { get; set; }
-    public static bool UpdateAvailable { get; set; }
-    public static bool RestartNeeded { get; set; }
-    public static string? LatestVersion { get; set; }
 
     public static KeyValuePair<string, int> LibraryWorkers { get; set; } = new("library", 1);
     public static KeyValuePair<string, int> ImportWorkers { get; set; } = new("import", 2);

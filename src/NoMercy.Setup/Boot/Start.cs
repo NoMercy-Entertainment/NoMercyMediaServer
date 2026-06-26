@@ -10,8 +10,8 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Networking.Cast;
-using NoMercy.NmSystem.Auth;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Lifecycle;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Maintenance;
@@ -102,13 +102,6 @@ public class Start
                 DependsOn: ["NetworkProbe"]
             ),
             new(
-                "UpdateChecker",
-                UpdateChecker.StartPeriodicUpdateCheck,
-                CanDefer: true,
-                Phase: 3,
-                DependsOn: ["NetworkProbe"]
-            ),
-            new(
                 "DesktopIcon",
                 () =>
                     Task.Run(() =>
@@ -138,7 +131,10 @@ public class Start
         _phase1Completed = [.. runner.CompletedTasks];
     }
 
-    public static async Task InitRemaining(IDegradedModeRecovery? recovery = null, string? accessToken = null)
+    public static async Task InitRemaining(
+        IDegradedModeRecovery? recovery = null,
+        string? accessToken = null
+    )
     {
         List<StartupTask> remainingTasks = _allTasks.Where(t => t.Phase > 1).ToList();
         StartupTaskRunner runner = new(remainingTasks, _phase1Completed);

@@ -9,8 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
-using NoMercy.NmSystem.Auth;
 using System.Collections.Concurrent;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -30,8 +28,10 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.Helpers.Wallpaper;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -47,10 +47,9 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 using HttpClient = System.Net.Http.HttpClient;
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Image = NoMercy.Database.Models.Media.Image;
 using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
-
-using NoMercy.MediaProcessing.Jobs;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
@@ -60,6 +59,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/server", Order = 10)]
 public class ServerController(
+    IUpdateChecker updateChecker,
     IHostApplicationLifetime appLifetime,
     AppDbContext appContext,
     FileRepository fileRepository,
@@ -176,7 +176,7 @@ public class ServerController(
     [HttpGet("update/check")]
     public async Task<IActionResult> CheckForUpdate()
     {
-        return Ok(new { updateAvailable = await UpdateChecker.IsUpdateAvailableAsync() });
+        return Ok(new { updateAvailable = await updateChecker.IsUpdateAvailableAsync() });
     }
 
     [HttpPost]

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -11,14 +11,21 @@
 
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem.SystemCalls;
 
-public static class UpdateChecker
+public interface IUpdateChecker
+{
+    Task<bool> IsUpdateAvailableAsync();
+}
+
+public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
 {
     private static readonly HttpClient HttpClient = new();
+
     private const string GithubReleasesUrl =
         "https://api.github.com/repos/NoMercy-Entertainment/nomercy-media-server/releases/latest";
 
@@ -27,24 +34,7 @@ public static class UpdateChecker
         HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
     }
 
-    public static Task StartPeriodicUpdateCheck()
-    {
-        Task.Run(async () =>
-        {
-            while (true)
-            {
-                bool available = await IsUpdateAvailableAsync();
-                Config.UpdateAvailable = available;
-                await Task.Delay(TimeSpan.FromHours(6));
-            }
-
-            // ReSharper disable once FunctionNeverReturns
-        });
-
-        return Task.CompletedTask;
-    }
-
-    public static async Task<bool> IsUpdateAvailableAsync()
+    public async Task<bool> IsUpdateAvailableAsync()
     {
         try
         {
@@ -63,15 +53,17 @@ public static class UpdateChecker
 
             string currentVersion = Software.GetReleaseVersion();
 
-            Config.LatestVersion = latestVersion;
+            updateStatus.LatestVersion = latestVersion;
 
             if (string.Equals(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
             {
-                Config.RestartNeeded = false;
+                updateStatus.RestartNeeded = false;
+                updateStatus.UpdateAvailable = false;
+
                 return false;
             }
 
-            // LOCAL-ONLY: UpdateChecker is a static class in NmSystem; no reference to NoMercy.Providers.
+            // LOCAL-ONLY: UpdateChecker lives in NmSystem; no reference to NoMercy.Providers.
             string? onDiskVersion = Software.GetFileVersion(
                 new LocalStorageDriver(),
                 AppFiles.ServerExePath
@@ -84,16 +76,19 @@ public static class UpdateChecker
             )
             {
                 string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
+
                 if (!string.IsNullOrEmpty(installDir))
                 {
                     string installedExe = Path.Combine(
                         installDir,
                         "NoMercyMediaServer" + Info.ExecSuffix
                     );
+
                     string? installedVersion = Software.GetFileVersion(
                         new LocalStorageDriver(),
                         installedExe
                     );
+
                     if (
                         installedVersion is not null
                         && string.Equals(
@@ -108,27 +103,36 @@ public static class UpdateChecker
                 }
             }
 
-            Config.RestartNeeded =
+            updateStatus.RestartNeeded =
                 onDiskVersion is not null
                 && string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase);
+
+            bool updateAvailable;
 
             if (
                 Version.TryParse(latestVersion, out Version? latest)
                 && Version.TryParse(currentVersion, out Version? current)
             )
             {
-                return latest > current;
+                updateAvailable = latest > current;
+            }
+            else
+            {
+                updateAvailable = !string.Equals(
+                    latestVersion,
+                    currentVersion,
+                    StringComparison.OrdinalIgnoreCase
+                );
             }
 
-            return !string.Equals(
-                latestVersion,
-                currentVersion,
-                StringComparison.OrdinalIgnoreCase
-            );
+            updateStatus.UpdateAvailable = updateAvailable;
+
+            return updateAvailable;
         }
         catch (Exception e)
         {
             Logger.Setup($"Update check failed: {e.Message}", LogEventLevel.Debug);
+
             return false;
         }
     }

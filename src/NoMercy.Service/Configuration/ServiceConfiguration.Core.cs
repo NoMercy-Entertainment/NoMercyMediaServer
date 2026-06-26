@@ -216,6 +216,10 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IConnectivityStatus, ConnectivityStatus>();
         services.AddSingleton<IUpdateStatus, UpdateStatus>();
 
+        // Update checker + periodic background check
+        services.AddSingleton<IUpdateChecker, UpdateChecker>();
+        services.AddHostedService<PeriodicUpdateCheckService>();
+
         // Connectivity manager (replaces ServerRegistrationService + CloudflareTunnelService)
         services.AddSingleton<IConnectivityManager, ConnectivityManager>();
         services.AddHostedService(sp =>
