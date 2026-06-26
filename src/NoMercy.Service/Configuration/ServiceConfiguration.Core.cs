@@ -303,7 +303,6 @@ public static partial class ServiceConfiguration
 
         // Add Repositories
         services.AddScoped<HomeRepository>();
-        services.AddScoped<MusicRepository>();
         services.AddScoped<EncoderRepository>();
         services.AddScoped<EncodingHistoryRepository>();
         services.AddScoped<EncodingPresetRepository>();
