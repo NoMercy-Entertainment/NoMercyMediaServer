@@ -25,6 +25,7 @@ using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
 using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.MediaProcessing.Episodes;
 

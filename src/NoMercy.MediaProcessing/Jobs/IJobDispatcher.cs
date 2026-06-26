@@ -97,4 +97,7 @@ public interface IJobDispatcher : NoMercyQueue.Core.Interfaces.IJobDispatcher
             string entityId,
             int? priority = null
         );
+
+    void DispatchJob<TJob, TChild>(IEnumerable<TChild> data, string name)
+        where TJob : AbstractShowExtraDataJob<TChild, string>, new();
 }
