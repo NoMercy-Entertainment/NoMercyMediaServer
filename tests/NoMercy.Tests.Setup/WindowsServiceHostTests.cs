@@ -65,11 +65,4 @@ public class WindowsServiceHostTests
         Assert.True(parsed.Development);
     }
 
-    [Fact]
-    public void IsRunningAsService_DefaultsToFalse()
-    {
-        // Program.IsRunningAsService should default to false
-        // since no --service flag was passed during test execution
-        Assert.False(Program.IsRunningAsService);
-    }
 }

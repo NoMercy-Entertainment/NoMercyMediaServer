@@ -168,7 +168,7 @@ public class ServerRunner : IServerRunner
         Stopwatch restartStopWatch = new();
         restartStopWatch.Start();
 
-        WebApplication httpsHost = Program.CreateWebApplication(options);
+        WebApplication httpsHost = WebHostFactory.Create(options);
 
         _shutdownCoordinator.RequestShutdown(); // Reset existing (if any)
         
@@ -192,7 +192,7 @@ public class ServerRunner : IServerRunner
         // Initialize queue workers so they can process jobs on the HTTPS host.
         await httpsQueueRunner.Initialize();
 
-        Program.RegisterLifetimeEvents(httpsHost, restartStopWatch);
+        HostLifecycleHooks.Register(httpsHost, restartStopWatch);
 
         _logger.LogInformation("HTTPS server starting...");
         return await RunHost(httpsHost);
