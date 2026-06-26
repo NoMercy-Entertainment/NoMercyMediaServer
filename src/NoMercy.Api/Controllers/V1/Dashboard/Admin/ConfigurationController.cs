@@ -23,6 +23,7 @@ using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercyQueue;
@@ -40,7 +41,8 @@ public class ConfigurationController(
     AppDbContext appContext,
     QueueRunner queueRunner,
     IActivityLogger activityLogger,
-    ILanguageRepository languageRepository
+    ILanguageRepository languageRepository,
+    RuntimeServerSettings runtimeSettings
 ) : BaseController
 {
     [HttpGet]
@@ -56,14 +58,14 @@ public class ConfigurationController(
                 {
                     InternalServerPort = Config.InternalServerPort,
                     ExternalServerPort = Config.ExternalServerPort,
-                    LibraryWorkers = Config.LibraryWorkers.Value,
-                    ImportWorkers = Config.ImportWorkers.Value,
-                    ExtrasWorkers = Config.ExtrasWorkers.Value,
-                    EncoderWorkers = Config.EncoderWorkers.Value,
-                    CronWorkers = Config.CronWorkers.Value,
-                    ImageWorkers = Config.ImageWorkers.Value,
-                    FileWorkers = Config.FileWorkers.Value,
-                    MusicWorkers = Config.MusicWorkers.Value,
+                    LibraryWorkers = runtimeSettings.LibraryWorkers.Value,
+                    ImportWorkers = runtimeSettings.ImportWorkers.Value,
+                    ExtrasWorkers = runtimeSettings.ExtrasWorkers.Value,
+                    EncoderWorkers = runtimeSettings.EncoderWorkers.Value,
+                    CronWorkers = runtimeSettings.CronWorkers.Value,
+                    ImageWorkers = runtimeSettings.ImageWorkers.Value,
+                    FileWorkers = runtimeSettings.FileWorkers.Value,
+                    MusicWorkers = runtimeSettings.MusicWorkers.Value,
                     ServerName = DeviceName(),
                     Swagger = Config.Swagger,
                     AllowAdultContent = Config.ShowAdultContent,
@@ -168,74 +170,74 @@ public class ConfigurationController(
 
         if (request.LibraryWorkers is not null)
         {
-            int oldCount = Config.LibraryWorkers.Value;
+            int oldCount = runtimeSettings.LibraryWorkers.Value;
             int newCount = (int)request.LibraryWorkers;
-            Config.LibraryWorkers = new(Config.LibraryWorkers.Key, newCount);
-            await PersistWorkerCount(Config.LibraryWorkers.Key, newCount, userId);
-            changes.Add((Config.LibraryWorkers.Key, oldCount, newCount));
+            runtimeSettings.LibraryWorkers = new(runtimeSettings.LibraryWorkers.Key, newCount);
+            await PersistWorkerCount(runtimeSettings.LibraryWorkers.Key, newCount, userId);
+            changes.Add((runtimeSettings.LibraryWorkers.Key, oldCount, newCount));
         }
 
         if (request.ImportWorkers is not null)
         {
-            int oldCount = Config.ImportWorkers.Value;
+            int oldCount = runtimeSettings.ImportWorkers.Value;
             int newCount = (int)request.ImportWorkers;
-            Config.ImportWorkers = new(Config.ImportWorkers.Key, newCount);
-            await PersistWorkerCount(Config.ImportWorkers.Key, newCount, userId);
-            changes.Add((Config.ImportWorkers.Key, oldCount, newCount));
+            runtimeSettings.ImportWorkers = new(runtimeSettings.ImportWorkers.Key, newCount);
+            await PersistWorkerCount(runtimeSettings.ImportWorkers.Key, newCount, userId);
+            changes.Add((runtimeSettings.ImportWorkers.Key, oldCount, newCount));
         }
 
         if (request.ExtrasWorkers is not null)
         {
-            int oldCount = Config.ExtrasWorkers.Value;
+            int oldCount = runtimeSettings.ExtrasWorkers.Value;
             int newCount = (int)request.ExtrasWorkers;
-            Config.ExtrasWorkers = new(Config.ExtrasWorkers.Key, newCount);
-            await PersistWorkerCount(Config.ExtrasWorkers.Key, newCount, userId);
-            changes.Add((Config.ExtrasWorkers.Key, oldCount, newCount));
+            runtimeSettings.ExtrasWorkers = new(runtimeSettings.ExtrasWorkers.Key, newCount);
+            await PersistWorkerCount(runtimeSettings.ExtrasWorkers.Key, newCount, userId);
+            changes.Add((runtimeSettings.ExtrasWorkers.Key, oldCount, newCount));
         }
 
         if (request.EncoderWorkers is not null)
         {
-            int oldCount = Config.EncoderWorkers.Value;
+            int oldCount = runtimeSettings.EncoderWorkers.Value;
             int newCount = (int)request.EncoderWorkers;
-            Config.EncoderWorkers = new(Config.EncoderWorkers.Key, newCount);
-            await PersistWorkerCount(Config.EncoderWorkers.Key, newCount, userId);
-            changes.Add((Config.EncoderWorkers.Key, oldCount, newCount));
+            runtimeSettings.EncoderWorkers = new(runtimeSettings.EncoderWorkers.Key, newCount);
+            await PersistWorkerCount(runtimeSettings.EncoderWorkers.Key, newCount, userId);
+            changes.Add((runtimeSettings.EncoderWorkers.Key, oldCount, newCount));
         }
 
         if (request.CronWorkers is not null)
         {
-            int oldCount = Config.CronWorkers.Value;
+            int oldCount = runtimeSettings.CronWorkers.Value;
             int newCount = (int)request.CronWorkers;
-            Config.CronWorkers = new(Config.CronWorkers.Key, newCount);
-            await PersistWorkerCount(Config.CronWorkers.Key, newCount, userId);
-            changes.Add((Config.CronWorkers.Key, oldCount, newCount));
+            runtimeSettings.CronWorkers = new(runtimeSettings.CronWorkers.Key, newCount);
+            await PersistWorkerCount(runtimeSettings.CronWorkers.Key, newCount, userId);
+            changes.Add((runtimeSettings.CronWorkers.Key, oldCount, newCount));
         }
 
         if (request.ImageWorkers is not null)
         {
-            int oldCount = Config.ImageWorkers.Value;
+            int oldCount = runtimeSettings.ImageWorkers.Value;
             int newCount = (int)request.ImageWorkers;
-            Config.ImageWorkers = new(Config.ImageWorkers.Key, newCount);
-            await PersistWorkerCount(Config.ImageWorkers.Key, newCount, userId);
-            changes.Add((Config.ImageWorkers.Key, oldCount, newCount));
+            runtimeSettings.ImageWorkers = new(runtimeSettings.ImageWorkers.Key, newCount);
+            await PersistWorkerCount(runtimeSettings.ImageWorkers.Key, newCount, userId);
+            changes.Add((runtimeSettings.ImageWorkers.Key, oldCount, newCount));
         }
 
         if (request.FileWorkers is not null)
         {
-            int oldCount = Config.FileWorkers.Value;
+            int oldCount = runtimeSettings.FileWorkers.Value;
             int newCount = (int)request.FileWorkers;
-            Config.FileWorkers = new(Config.FileWorkers.Key, newCount);
-            await PersistWorkerCount(Config.FileWorkers.Key, newCount, userId);
-            changes.Add((Config.FileWorkers.Key, oldCount, newCount));
+            runtimeSettings.FileWorkers = new(runtimeSettings.FileWorkers.Key, newCount);
+            await PersistWorkerCount(runtimeSettings.FileWorkers.Key, newCount, userId);
+            changes.Add((runtimeSettings.FileWorkers.Key, oldCount, newCount));
         }
 
         if (request.MusicWorkers is not null)
         {
-            int oldCount = Config.MusicWorkers.Value;
+            int oldCount = runtimeSettings.MusicWorkers.Value;
             int newCount = (int)request.MusicWorkers;
-            Config.MusicWorkers = new(Config.MusicWorkers.Key, newCount);
-            await PersistWorkerCount(Config.MusicWorkers.Key, newCount, userId);
-            changes.Add((Config.MusicWorkers.Key, oldCount, newCount));
+            runtimeSettings.MusicWorkers = new(runtimeSettings.MusicWorkers.Key, newCount);
+            await PersistWorkerCount(runtimeSettings.MusicWorkers.Key, newCount, userId);
+            changes.Add((runtimeSettings.MusicWorkers.Key, oldCount, newCount));
         }
 
         if (request.Swagger is not null)

@@ -12,6 +12,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -116,31 +117,55 @@ public static class UserSettings
                         .Run();
                     break;
                 case "libraryRunners":
-                    Config.LibraryWorkers = new(Config.LibraryWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.LibraryWorkers = new(
+                        RuntimeServerSettings.Current.LibraryWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "importRunners" or "queueRunners":
-                    Config.ImportWorkers = new(Config.ImportWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.ImportWorkers = new(
+                        RuntimeServerSettings.Current.ImportWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "extrasRunners" or "dataRunners":
-                    Config.ExtrasWorkers = new(Config.ExtrasWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.ExtrasWorkers = new(
+                        RuntimeServerSettings.Current.ExtrasWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "encoderRunners":
-                    Config.EncoderWorkers = new(Config.EncoderWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.EncoderWorkers = new(
+                        RuntimeServerSettings.Current.EncoderWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     Logger.App(
-                        $"UserSettings: Config.EncoderWorkers loaded as {Config.EncoderWorkers.Value} (DB value '{setting.Value}')"
+                        $"UserSettings: RuntimeServerSettings.Current.EncoderWorkers loaded as {RuntimeServerSettings.Current.EncoderWorkers.Value} (DB value '{setting.Value}')"
                     );
                     break;
                 case "cronRunners":
-                    Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.CronWorkers = new(
+                        RuntimeServerSettings.Current.CronWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "imageRunners":
-                    Config.ImageWorkers = new(Config.ImageWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.ImageWorkers = new(
+                        RuntimeServerSettings.Current.ImageWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "fileRunners":
-                    Config.FileWorkers = new(Config.FileWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.FileWorkers = new(
+                        RuntimeServerSettings.Current.FileWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "musicRunners":
-                    Config.MusicWorkers = new(Config.MusicWorkers.Key, setting.Value.ToInt());
+                    RuntimeServerSettings.Current.MusicWorkers = new(
+                        RuntimeServerSettings.Current.MusicWorkers.Key,
+                        setting.Value.ToInt()
+                    );
                     break;
                 case "swagger":
                     Config.Swagger = setting.Value.ToBoolean();

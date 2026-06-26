@@ -49,21 +49,22 @@ public static class ServiceRegistration
             NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker =
                 sp.GetService<NmSystem.Lifecycle.IServerPhaseTracker>();
             IResourceBudget? resourceBudget = sp.GetService<IResourceBudget>();
+            RuntimeServerSettings rs = sp.GetRequiredService<RuntimeServerSettings>();
             QueueConfiguration configuration = new()
             {
                 WorkerCounts = new()
                 {
-                    [Config.LibraryWorkers.Key] = Config.LibraryWorkers.Value,
-                    [Config.ImportWorkers.Key] = Config.ImportWorkers.Value,
-                    [Config.ExtrasWorkers.Key] = Config.ExtrasWorkers.Value,
-                    [Config.EncoderWorkers.Key] = Config.EncoderWorkers.Value,
-                    [Config.GpuEncoderWorkers.Key] = Config.GpuEncoderWorkers.Value,
-                    [Config.CpuEncoderWorkers.Key] = Config.CpuEncoderWorkers.Value,
-                    [Config.CronWorkers.Key] = Config.CronWorkers.Value,
-                    [Config.ImageWorkers.Key] = Config.ImageWorkers.Value,
-                    [Config.FileWorkers.Key] = Config.FileWorkers.Value,
-                    [Config.MusicWorkers.Key] = Config.MusicWorkers.Value,
-                    [Config.PaletteWorkers.Key] = Config.PaletteWorkers.Value,
+                    [rs.LibraryWorkers.Key] = rs.LibraryWorkers.Value,
+                    [rs.ImportWorkers.Key] = rs.ImportWorkers.Value,
+                    [rs.ExtrasWorkers.Key] = rs.ExtrasWorkers.Value,
+                    [rs.EncoderWorkers.Key] = rs.EncoderWorkers.Value,
+                    [rs.GpuEncoderWorkers.Key] = rs.GpuEncoderWorkers.Value,
+                    [rs.CpuEncoderWorkers.Key] = rs.CpuEncoderWorkers.Value,
+                    [rs.CronWorkers.Key] = rs.CronWorkers.Value,
+                    [rs.ImageWorkers.Key] = rs.ImageWorkers.Value,
+                    [rs.FileWorkers.Key] = rs.FileWorkers.Value,
+                    [rs.MusicWorkers.Key] = rs.MusicWorkers.Value,
+                    [rs.PaletteWorkers.Key] = rs.PaletteWorkers.Value,
                 },
             };
             return new(
