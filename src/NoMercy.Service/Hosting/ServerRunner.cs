@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Service.Seeds;
 using NoMercy.Setup.Auth;
@@ -160,7 +161,7 @@ public class ServerRunner : IServerRunner
         await Task.Delay(3000);
 
         // Gracefully stop the HTTP host
-        Config.Started = false;
+        httpHost.Services.GetRequiredService<IBootStatus>().MarkStopped();
         await httpHost.StopAsync(TimeSpan.FromSeconds(10));
         await httpHost.DisposeAsync();
 

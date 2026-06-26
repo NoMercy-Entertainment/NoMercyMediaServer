@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Service.Configuration;
@@ -42,7 +43,7 @@ public static class HostLifecycleHooks
         app.Services.GetService<IHostApplicationLifetime>()
             ?.ApplicationStarted.Register(() =>
             {
-                Config.Started = true;
+                app.Services.GetRequiredService<IBootStatus>().MarkStarted();
                 stopWatch.Stop();
             });
 

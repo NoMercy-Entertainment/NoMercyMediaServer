@@ -37,7 +37,6 @@ public static class Config
     public static string UserAgent =>
         $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
 
-    public static bool Started { get; set; }
     public static string? CloudflareTunnelToken { get; set; }
 
     public static NatStatus NatStatus { get; set; } = NatStatus.None;

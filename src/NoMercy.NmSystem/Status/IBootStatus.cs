@@ -9,14 +9,15 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Information;
-
 namespace NoMercy.NmSystem.Status;
 
 public interface IBootStatus
 {
     bool IsStarted { get; }
+
     void MarkStarted();
+
+    void MarkStopped();
 }
 
 public class BootStatus : IBootStatus
@@ -28,5 +29,10 @@ public class BootStatus : IBootStatus
     public void MarkStarted()
     {
         _started = true;
+    }
+
+    public void MarkStopped()
+    {
+        _started = false;
     }
 }

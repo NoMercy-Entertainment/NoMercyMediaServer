@@ -24,6 +24,7 @@ using NoMercy.Helpers.Monitoring;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Setup.Server;
@@ -50,7 +51,8 @@ public class ManagementController(
     ISessionManager sessionManager,
     IStorageDriver storageDriver,
     IStorage storage,
-    IDbContextFactory<QueueContext> queueContextFactory
+    IDbContextFactory<QueueContext> queueContextFactory,
+    IBootStatus bootStatus
 ) : BaseController
 {
     [HttpGet("status")]
@@ -65,7 +67,7 @@ public class ManagementController(
         return Ok(
             new ManagementStatusDto
             {
-                Status = Config.Started ? "running" : "starting",
+                Status = bootStatus.IsStarted ? "running" : "starting",
                 ServerName = serverName,
                 Version = Software.GetReleaseVersion(),
                 Platform = Info.Platform,

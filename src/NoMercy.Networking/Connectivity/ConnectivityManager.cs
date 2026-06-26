@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using NoMercy.NmSystem.Auth;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -31,16 +32,19 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
     public event Action<ConnectivityState>? StateChanged;
 
     private readonly IAuthTokenStore _authTokenStore;
+    private readonly IBootStatus _bootStatus;
 
     public ConnectivityManager(
         IAuthTokenStore authTokenStore,
         INetworkDiscovery networkDiscovery,
-        IEnumerable<IConnectivityStrategy> strategies
+        IEnumerable<IConnectivityStrategy> strategies,
+        IBootStatus bootStatus
     )
     {
         _authTokenStore = authTokenStore;
         _networkDiscovery = networkDiscovery;
         _strategies = strategies.OrderBy(s => s.Priority);
+        _bootStatus = bootStatus;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -53,7 +57,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
     {
         try
         {
-            while (!Config.Started && !cancellationToken.IsCancellationRequested)
+            while (!_bootStatus.IsStarted && !cancellationToken.IsCancellationRequested)
                 await Task.Delay(1000, cancellationToken);
 
             if (cancellationToken.IsCancellationRequested)
