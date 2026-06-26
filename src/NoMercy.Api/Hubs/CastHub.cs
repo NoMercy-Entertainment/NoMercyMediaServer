@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.AspNetCore.Http;
+using NoMercy.NmSystem.Auth;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
@@ -31,15 +32,18 @@ public class CastHub : ConnectionHub
 {
     private readonly IClientMessenger _clientMessenger;
 
+    private readonly IAuthTokenStore _authTokenStore;
+
     public CastHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
         IClientMessenger clientMessenger,
-        IActivityLogger activityLogger
-    )
+        IActivityLogger activityLogger,
+        IAuthTokenStore authTokenStore)
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
+        _authTokenStore = authTokenStore;
         _clientMessenger = clientMessenger;
     }
 
@@ -222,7 +226,7 @@ public class CastHub : ConnectionHub
 
     public async Task CastPlaylist(string value)
     {
-        await ChromeCast.CastPlaylist(value);
+        await ChromeCast.CastPlaylist(value, accessToken: _authTokenStore.AccessToken);
     }
 
     public ChromecastStatus? GetChromecastStatus()

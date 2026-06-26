@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using NoMercy.NmSystem.Auth;
 using NoMercy.Database;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Extensions;
@@ -31,14 +32,17 @@ public class BootOrchestrator
     private readonly IDegradedModeRecovery _degradedModeRecovery;
     private readonly IServerRegistrationService _serverRegistrationService;
 
+    private readonly IAuthTokenStore _authTokenStore;
+
     public BootOrchestrator(
         SetupState setupState,
         AuthManager authManager,
         IApiKeyLoader apiKeyLoader,
         IDegradedModeRecovery degradedModeRecovery,
-        IServerRegistrationService serverRegistrationService
-    )
+        IServerRegistrationService serverRegistrationService,
+        IAuthTokenStore authTokenStore)
     {
+        _authTokenStore = authTokenStore;
         _setupState = setupState;
         _authManager = authManager;
         _apiKeyLoader = apiKeyLoader;
@@ -307,7 +311,7 @@ public class BootOrchestrator
         try
         {
             Logger.Setup("Phase 4: Starting background tasks...");
-            await Start.InitRemaining(_degradedModeRecovery);
+            await Start.InitRemaining(_degradedModeRecovery, _authTokenStore.AccessToken);
         }
         catch (Exception ex)
         {

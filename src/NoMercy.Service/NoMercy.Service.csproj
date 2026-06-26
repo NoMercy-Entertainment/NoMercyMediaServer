@@ -70,7 +70,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
     <ProjectReference Include="..\NoMercy.Api\NoMercy.Api.csproj" />
     <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />
     <ProjectReference Include="..\NoMercy.Data\NoMercy.Data.csproj" />

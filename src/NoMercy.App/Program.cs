@@ -10,6 +10,8 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercy.NmSystem.Auth;
 using System.Reflection;
 using InfiniFrame;
 using InfiniFrame.Js.MessageHandlers;
@@ -137,7 +139,8 @@ internal class Program
                     bool ok = await AuthManager.TryCompletePkceFromCallbackAsync(
                         code,
                         state,
-                        redirectUri
+                        redirectUri,
+                    context.RequestServices.GetService<IAuthTokenStore>()
                     );
                     if (ok)
                     {

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Data;
+using NoMercy.NmSystem.Auth;
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -312,13 +313,13 @@ public static class DatabaseSeeder
     /// Seed auth-dependent data (users, library assignment, claims).
     /// Called after auth completes via BootOrchestrator.
     /// </summary>
-    public static async Task SeedAuthData(IStorage storage)
+    public static async Task SeedAuthData(IStorage storage, string? accessToken)
     {
         MediaContext mediaDbContext = new();
 
         Func<Task>[] seeds =
         [
-            () => UsersSeed.Init(mediaDbContext, storage),
+            () => UsersSeed.Init(mediaDbContext, storage, accessToken),
             () => AssignOwnerToUnassignedLibraries(mediaDbContext),
             () => ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext),
         ];

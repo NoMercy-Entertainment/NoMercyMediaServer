@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
+using NoMercy.NmSystem.Auth;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -216,7 +217,7 @@ public static class Certificate
 
     private const int CertRetryDelaySeconds = 10;
 
-    public static async Task RenewSslCertificate(int maxRetries = 30)
+    public static async Task RenewSslCertificate(string? accessToken, int maxRetries = 30)
     {
         if (ValidateSslCertificate())
         {
@@ -232,7 +233,7 @@ public static class Certificate
 
         try
         {
-            string? token = Globals.Globals.AccessToken;
+            string? token = accessToken;
             if (string.IsNullOrEmpty(token))
             {
                 Logger.Setup(

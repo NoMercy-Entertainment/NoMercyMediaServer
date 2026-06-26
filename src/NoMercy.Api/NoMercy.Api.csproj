@@ -34,7 +34,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
     <ProjectReference Include="..\NoMercy.Data\NoMercy.Data.csproj" />
     <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj" />
     <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />

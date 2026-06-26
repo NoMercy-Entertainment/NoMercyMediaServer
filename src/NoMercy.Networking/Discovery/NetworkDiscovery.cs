@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
+using NoMercy.NmSystem.Auth;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
@@ -31,8 +32,11 @@ public class NetworkDiscovery : INetworkDiscovery
     private INatDevice? _device;
     private bool _hasFoundDevice;
 
-    public NetworkDiscovery(IStorageDriver driver)
+    private readonly IAuthTokenStore _authTokenStore;
+
+    public NetworkDiscovery(IStorageDriver driver, IAuthTokenStore authTokenStore)
     {
+        _authTokenStore = authTokenStore;
         _driver = driver;
     }
 
@@ -427,7 +431,7 @@ public class NetworkDiscovery : INetworkDiscovery
         Logger.Setup("Getting external IP address");
 
         // 1. Try API
-        string? apiToken = Globals.Globals.AccessToken;
+        string? apiToken = _authTokenStore.AccessToken;
         if (string.IsNullOrEmpty(apiToken))
         {
             Logger.Setup("Skipping API external IP lookup — no auth token", LogEventLevel.Verbose);

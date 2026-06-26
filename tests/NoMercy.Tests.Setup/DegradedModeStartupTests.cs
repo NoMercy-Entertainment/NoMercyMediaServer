@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem.Auth;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Data.Sqlite;
@@ -115,7 +116,7 @@ public class DegradedModeStartupTests
         // Should return immediately without looping
         DateTime start = DateTime.UtcNow;
         // Mock dependencies or use real ones if they don't hit network
-        DegradedModeRecovery recovery = new(null!, null!, null!);
+        DegradedModeRecovery recovery = new(new AuthTokenStore(), null!, null!, null!);
         await recovery.StartRecoveryLoop(deferred);
         TimeSpan elapsed = DateTime.UtcNow - start;
 
@@ -130,7 +131,7 @@ public class DegradedModeStartupTests
     {
         // GetInternalIp now uses NetworkInterface enumeration first,
         // which works without network connectivity
-        NetworkDiscovery discovery = new(new LocalStorageDriver());
+        NetworkDiscovery discovery = new(new LocalStorageDriver(), new AuthTokenStore());
         string ip = discovery.InternalIp;
 
         Assert.False(
@@ -142,7 +143,7 @@ public class DegradedModeStartupTests
     [Fact]
     public void GetInternalIp_ReturnsValidIpFormat()
     {
-        NetworkDiscovery discovery = new(new LocalStorageDriver());
+        NetworkDiscovery discovery = new(new LocalStorageDriver(), new AuthTokenStore());
         string ip = discovery.InternalIp;
 
         // Should be a valid IPv4 address
@@ -156,7 +157,7 @@ public class DegradedModeStartupTests
     {
         // The API rejects registration with required|string|ip — an empty internal_ip
         // returns 422 and the server never comes online.
-        NetworkDiscovery discovery = new(new LocalStorageDriver());
+        NetworkDiscovery discovery = new(new LocalStorageDriver(), new AuthTokenStore());
 
         Assert.True(
             IPAddress.TryParse(discovery.RegistrationInternalIp, out IPAddress? parsed),
@@ -170,7 +171,7 @@ public class DegradedModeStartupTests
     [InlineData("")]
     public void RegistrationInternalIp_FallsBackToSentinel_WhenNonRoutable(string discovered)
     {
-        NetworkDiscovery discovery = new(new LocalStorageDriver()) { InternalIp = discovered };
+        NetworkDiscovery discovery = new(new LocalStorageDriver(), new AuthTokenStore()) { InternalIp = discovered };
 
         Assert.Equal("0.0.0.0", discovery.RegistrationInternalIp);
     }
@@ -178,7 +179,7 @@ public class DegradedModeStartupTests
     [Fact]
     public void RegistrationInternalIp_PassesThroughRoutableIp()
     {
-        NetworkDiscovery discovery = new(new LocalStorageDriver()) { InternalIp = "192.168.1.50" };
+        NetworkDiscovery discovery = new(new LocalStorageDriver(), new AuthTokenStore()) { InternalIp = "192.168.1.50" };
 
         Assert.Equal("192.168.1.50", discovery.RegistrationInternalIp);
     }
@@ -319,7 +320,7 @@ public class CloudflareFallbackTests
     {
         // ExternalIp property should return "0.0.0.0" when no IP has been discovered,
         // not throw an exception
-        NetworkDiscovery discovery = new(new LocalStorageDriver());
+        NetworkDiscovery discovery = new(new LocalStorageDriver(), new AuthTokenStore());
         string ip = discovery.ExternalIp;
         Assert.NotNull(ip);
     }
@@ -353,7 +354,7 @@ public class CloudflareFallbackTests
         // All are acceptable in an isolated test environment.
         try
         {
-            await Certificate.RenewSslCertificate(maxRetries: 1);
+            await Certificate.RenewSslCertificate(null, maxRetries: 1);
         }
         catch (SqliteException)
         {
@@ -387,7 +388,7 @@ public class CloudflareFallbackTests
         // api.nomercy.tv (Cloudflare) is down, it should not throw
         try
         {
-            NetworkDiscovery discovery = new(new LocalStorageDriver());
+            NetworkDiscovery discovery = new(new LocalStorageDriver(), new AuthTokenStore());
             await discovery.DiscoverExternalIpAsync();
         }
         catch (Exception ex)

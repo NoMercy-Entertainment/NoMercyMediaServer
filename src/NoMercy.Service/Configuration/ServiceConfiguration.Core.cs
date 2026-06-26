@@ -103,7 +103,7 @@ public static partial class ServiceConfiguration
             AppDbContext authDbContext =
                 authScope.ServiceProvider.GetRequiredService<AppDbContext>();
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
-            return new(authDbContext, storageDriver);
+            return new(authDbContext, storageDriver, sp.GetRequiredService<IAuthTokenStore>());
         });
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
@@ -168,7 +168,7 @@ public static partial class ServiceConfiguration
         services.AddSingleton<INetworkDiscovery>(sp =>
         {
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
-            NetworkDiscovery discovery = new(storageDriver);
+            NetworkDiscovery discovery = new(storageDriver, sp.GetRequiredService<IAuthTokenStore>());
             if (!string.IsNullOrEmpty(StartupOptions.OverrideInternalIp))
                 discovery.InternalIp = StartupOptions.OverrideInternalIp;
             if (!string.IsNullOrEmpty(StartupOptions.OverrideExternalIp))

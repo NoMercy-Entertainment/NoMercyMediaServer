@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
+using NoMercy.NmSystem.Auth;
 using System.Collections.Concurrent;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -72,7 +73,8 @@ public class ServerController(
     IStorageFactory storageFactory,
     ILibraryRepository libraryRepository,
     IFolderRepository folderRepository,
-    IImageRepository imageRepository
+    IImageRepository imageRepository,
+    IAuthTokenStore authTokenStore
 ) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
@@ -458,7 +460,7 @@ public class ServerController(
             HttpClient client = httpClientFactory.CreateClient(HttpClientNames.General);
             client.BaseAddress = new(Config.ApiServerBaseUrl);
 
-            string? token = Globals.Globals.AccessToken;
+            string? token = authTokenStore.AccessToken;
             if (string.IsNullOrEmpty(token))
             {
                 return StatusCode(503, new { message = "Re-authentication in progress" });

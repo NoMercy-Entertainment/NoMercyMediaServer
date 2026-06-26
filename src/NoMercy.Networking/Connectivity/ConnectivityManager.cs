@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.Hosting;
+using NoMercy.NmSystem.Auth;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -29,11 +30,15 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
     public ConnectivityType ActiveStrategy => _activeStrategy?.Type ?? ConnectivityType.LocalOnly;
     public event Action<ConnectivityState>? StateChanged;
 
+    private readonly IAuthTokenStore _authTokenStore;
+
     public ConnectivityManager(
+        IAuthTokenStore authTokenStore,
         INetworkDiscovery networkDiscovery,
         IEnumerable<IConnectivityStrategy> strategies
     )
     {
+        _authTokenStore = authTokenStore;
         _networkDiscovery = networkDiscovery;
         _strategies = strategies.OrderBy(s => s.Priority);
     }
@@ -54,7 +59,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
             if (cancellationToken.IsCancellationRequested)
                 return;
 
-            if (Globals.Globals.AccessToken is null)
+            if (_authTokenStore.AccessToken is null)
             {
                 Logger.Setup(
                     "ConnectivityManager waiting for authentication...",
@@ -62,13 +67,13 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
                 );
                 int maxWait = 30;
                 while (
-                    Globals.Globals.AccessToken is null
+                    _authTokenStore.AccessToken is null
                     && maxWait-- > 0
                     && !cancellationToken.IsCancellationRequested
                 )
                     await Task.Delay(1000, cancellationToken);
 
-                if (Globals.Globals.AccessToken is null)
+                if (_authTokenStore.AccessToken is null)
                 {
                     Logger.Setup(
                         "ConnectivityManager skipped — no authentication available",

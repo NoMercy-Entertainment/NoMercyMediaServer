@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using NoMercy.NmSystem.Auth;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Users;
@@ -25,7 +26,7 @@ namespace NoMercy.Service.Seeds;
 
 public static class UsersSeed
 {
-    public static async Task Init(this MediaContext dbContext, IStorage storage)
+    public static async Task Init(this MediaContext dbContext, IStorage storage, string? accessToken)
     {
         try
         {
@@ -41,7 +42,7 @@ public static class UsersSeed
                 ["with_self"] = "true",
             };
 
-            string? token = Globals.Globals.AccessToken;
+            string? token = accessToken;
             if (string.IsNullOrEmpty(token))
             {
                 Logger.Setup(

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
+using NoMercy.NmSystem.Auth;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Hosting;
@@ -28,11 +29,15 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     private readonly IConnectivityManager _connectivityManager;
     private readonly SemaphoreSlim _reevaluationLock = new(1, 1);
 
+    private readonly IAuthTokenStore _authTokenStore;
+
     public NetworkChangeMonitor(
+        IAuthTokenStore authTokenStore,
         INetworkDiscovery networkDiscovery,
         IConnectivityManager connectivityManager
     )
     {
+        _authTokenStore = authTokenStore;
         _networkDiscovery = networkDiscovery;
         _connectivityManager = connectivityManager;
     }
@@ -165,7 +170,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
 
             Logger.Register("Your IP address has changed, updating server information...");
 
-            string? token = Globals.Globals.AccessToken;
+            string? token = _authTokenStore.AccessToken;
             if (string.IsNullOrEmpty(token))
             {
                 Logger.Setup("Skipping network change ping — no auth token", LogEventLevel.Verbose);

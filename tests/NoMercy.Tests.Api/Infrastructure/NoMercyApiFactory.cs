@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Asp.Versioning;
+using NoMercy.NmSystem.Auth;
 using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
@@ -579,7 +580,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         AppDbContext testAppContext = new();
         testAppContext.Database.EnsureCreated();
 
-        AuthManager testAuthManager = new(testAppContext, new LocalStorageDriver());
+        AuthManager testAuthManager = new(testAppContext, new LocalStorageDriver(), new AuthTokenStore());
         services.AddSingleton(testAuthManager);
         IServerRegistrationService registrationService = Mock.Of<IServerRegistrationService>();
         services.AddSingleton(
@@ -592,7 +593,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 Mock.Of<IApiKeyLoader>(),
                 Mock.Of<IDegradedModeRecovery>(),
                 registrationService
-            )
+            , new AuthTokenStore())
         );
     }
 

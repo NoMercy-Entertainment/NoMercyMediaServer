@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Text;
+using NoMercy.NmSystem.Auth;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
@@ -30,8 +31,12 @@ public class ApiKeyLoader : IApiKeyLoader
     private readonly IStorageDriver _storageDriver;
     private static readonly int[] BackoffSeconds = [30, 60, 300, 900, 1800];
 
-    public ApiKeyLoader(ILogger<ApiKeyLoader> logger, IApiKeyStore apiKeyStore, IStorageDriver storageDriver)
+    private readonly IAuthTokenStore _authTokenStore;
+
+    public ApiKeyLoader(
+        IAuthTokenStore authTokenStore,ILogger<ApiKeyLoader> logger, IApiKeyStore apiKeyStore, IStorageDriver storageDriver)
     {
+        _authTokenStore = authTokenStore;
         _logger = logger;
         _apiKeyStore = apiKeyStore;
         _storageDriver = storageDriver;
@@ -88,7 +93,7 @@ public class ApiKeyLoader : IApiKeyLoader
             _logger.LogInformation("Requesting server info");
 
             GenericHttpClient apiClient = new(Config.ApiBaseUrl);
-            apiClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+            apiClient.SetDefaultHeaders(Config.UserAgent, _authTokenStore.AccessToken);
 
             string content = await apiClient.SendAndReadAsync(HttpMethod.Get, "v1/info");
 

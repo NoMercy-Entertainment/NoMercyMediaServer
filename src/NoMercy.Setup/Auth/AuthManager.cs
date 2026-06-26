@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using NoMercy.NmSystem.Auth;
 using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -38,8 +39,11 @@ public class AuthManager
     );
     private CancellationTokenSource? _refreshCts;
 
-    public AuthManager(AppDbContext appContext, IStorageDriver driver)
+    private readonly IAuthTokenStore _authTokenStore;
+
+    public AuthManager(AppDbContext appContext, IStorageDriver driver, IAuthTokenStore authTokenStore)
     {
+        _authTokenStore = authTokenStore;
         _appContext = appContext;
         _driver = driver;
     }
@@ -85,7 +89,7 @@ public class AuthManager
 
         if (isValid)
         {
-            Globals.Globals.AccessToken = accessToken;
+            _authTokenStore.SetAccessToken(accessToken);
             OfflineJwksCache.LoadCachedPublicKey();
             SignalAuthReady();
             Logger.Auth("Using cached token (still valid)");
@@ -129,7 +133,7 @@ public class AuthManager
         };
         await UpsertSecureValue("auth_token_metadata", JsonConvert.SerializeObject(metadata));
 
-        Globals.Globals.AccessToken = accessToken;
+        _authTokenStore.SetAccessToken(accessToken);
         SignalAuthReady();
 
         Logger.Auth("Tokens stored to DB");
@@ -171,7 +175,7 @@ public class AuthManager
         if (string.IsNullOrEmpty(refreshToken))
         {
             Logger.Auth("No refresh token in DB — re-auth required", LogEventLevel.Warning);
-            Globals.Globals.AccessToken = null;
+            _authTokenStore.SetAccessToken(null);
             ResetAuthReady();
             return;
         }
@@ -180,7 +184,7 @@ public class AuthManager
         if (!success)
         {
             Logger.Auth("Background refresh failed — clearing access token", LogEventLevel.Warning);
-            Globals.Globals.AccessToken = null;
+            _authTokenStore.SetAccessToken(null);
             ResetAuthReady();
         }
     }
@@ -189,7 +193,7 @@ public class AuthManager
     {
         _refreshCts?.Cancel();
         await UpsertSecureValue("auth_refresh_token", string.Empty);
-        Globals.Globals.AccessToken = null;
+        _authTokenStore.SetAccessToken(null);
         ResetAuthReady();
         Logger.Auth(
             "Refresh token rejected as invalid_grant — re-authentication required through /setup UI",
@@ -210,7 +214,7 @@ public class AuthManager
                 {
                     try
                     {
-                        string? accessToken = Globals.Globals.AccessToken;
+                        string? accessToken = _authTokenStore.AccessToken;
                         DateTime expiry = DateTime.UtcNow.AddMinutes(5);
 
                         if (!string.IsNullOrEmpty(accessToken))
@@ -272,7 +276,8 @@ public class AuthManager
     public static async Task<bool> TryCompletePkceFromCallbackAsync(
         string code,
         string state,
-        string redirectUri
+        string redirectUri,
+        IAuthTokenStore? authTokenStore = null
     )
     {
         if (_pendingCodeVerifier is null || _pendingState is null || _pkceCompletionSource is null)
@@ -314,7 +319,7 @@ public class AuthManager
             if (data?.AccessToken is null)
                 throw new InvalidOperationException("Token response missing access_token");
 
-            Globals.Globals.AccessToken = data.AccessToken;
+            authTokenStore?.SetAccessToken(data.AccessToken);
             _pkceCompletionSource.TrySetResult(true);
             return true;
         }

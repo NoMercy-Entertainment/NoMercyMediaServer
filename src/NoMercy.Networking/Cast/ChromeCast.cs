@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem.Auth;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Timers;
@@ -721,7 +722,7 @@ public class ChromeCast
     /// Casts a playlist to the named receiver. If <paramref name="name"/> is
     /// null the last receiver selected on this thread is used.
     /// </summary>
-    public static async Task CastPlaylist(string value, string? name = null)
+    public static async Task CastPlaylist(string value, string? name = null, string? accessToken = null)
     {
         string? target = name ?? _lastSelectedName;
         if (target == null)
@@ -733,7 +734,7 @@ public class ChromeCast
         Logger.Ping($"Casting playlist to {target}: {value}");
 
         string externalAddress = (NetworkDiscovery?.ExternalAddress).OrEmpty();
-        string? token = Globals.Globals.AccessToken;
+        string? token = accessToken;
 
         CastCustomData customData = new()
         {

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using NoMercy.NmSystem.Auth;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -175,7 +176,7 @@ public sealed class ServerBootstrapper
 
         // Auth completed — seed auth-dependent data (users, library assignment, claims)
         if (!needsSetupMode)
-            await DatabaseSeeder.SeedAuthData(diStorage);
+            await DatabaseSeeder.SeedAuthData(diStorage, app.Services.GetRequiredService<IAuthTokenStore>().AccessToken);
 
         // Force QueueRunner singleton creation and initialize workers immediately —
         // don't wait for InitRemaining() which can be blocked by rate-limited HTTP calls.
