@@ -216,6 +216,10 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IConnectivityStatus, ConnectivityStatus>();
         services.AddSingleton<IUpdateStatus, UpdateStatus>();
 
+        // Runtime server settings (DB-hydrated, dashboard-mutable). DI hands out
+        // the same static Current instance the Config facade and boot path use.
+        services.AddSingleton(_ => RuntimeServerSettings.Current);
+
         // Update checker + periodic background check
         services.AddSingleton<IUpdateChecker, UpdateChecker>();
         services.AddHostedService<PeriodicUpdateCheckService>();
