@@ -22,6 +22,7 @@ using NoMercy.Database;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
@@ -53,7 +54,8 @@ public class ManagementController(
     IStorage storage,
     IDbContextFactory<QueueContext> queueContextFactory,
     IBootStatus bootStatus,
-    IUpdateStatus updateStatus
+    IUpdateStatus updateStatus,
+    RuntimeServerSettings runtimeSettings
 ) : BaseController
 {
     [HttpGet("status")]
@@ -378,14 +380,14 @@ public class ManagementController(
                 InternalPort = Config.InternalServerPort,
                 ExternalPort = Config.ExternalServerPort,
                 ServerName = serverNameConfig?.Value ?? Environment.MachineName,
-                LibraryWorkers = Config.LibraryWorkers.Value,
-                ImportWorkers = Config.ImportWorkers.Value,
-                ExtrasWorkers = Config.ExtrasWorkers.Value,
-                EncoderWorkers = Config.EncoderWorkers.Value,
-                CronWorkers = Config.CronWorkers.Value,
-                ImageWorkers = Config.ImageWorkers.Value,
-                FileWorkers = Config.FileWorkers.Value,
-                MusicWorkers = Config.MusicWorkers.Value,
+                LibraryWorkers = runtimeSettings.LibraryWorkers.Value,
+                ImportWorkers = runtimeSettings.ImportWorkers.Value,
+                ExtrasWorkers = runtimeSettings.ExtrasWorkers.Value,
+                EncoderWorkers = runtimeSettings.EncoderWorkers.Value,
+                CronWorkers = runtimeSettings.CronWorkers.Value,
+                ImageWorkers = runtimeSettings.ImageWorkers.Value,
+                FileWorkers = runtimeSettings.FileWorkers.Value,
+                MusicWorkers = runtimeSettings.MusicWorkers.Value,
                 Swagger = Config.Swagger,
             }
         );
@@ -397,9 +399,12 @@ public class ManagementController(
     {
         if (request.LibraryWorkers is not null)
         {
-            Config.LibraryWorkers = new(Config.LibraryWorkers.Key, (int)request.LibraryWorkers);
+            runtimeSettings.LibraryWorkers = new(
+                runtimeSettings.LibraryWorkers.Key,
+                (int)request.LibraryWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.LibraryWorkers.Key,
+                runtimeSettings.LibraryWorkers.Key,
                 (int)request.LibraryWorkers,
                 null
             );
@@ -407,9 +412,12 @@ public class ManagementController(
 
         if (request.ImportWorkers is not null)
         {
-            Config.ImportWorkers = new(Config.ImportWorkers.Key, (int)request.ImportWorkers);
+            runtimeSettings.ImportWorkers = new(
+                runtimeSettings.ImportWorkers.Key,
+                (int)request.ImportWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.ImportWorkers.Key,
+                runtimeSettings.ImportWorkers.Key,
                 (int)request.ImportWorkers,
                 null
             );
@@ -417,9 +425,12 @@ public class ManagementController(
 
         if (request.ExtrasWorkers is not null)
         {
-            Config.ExtrasWorkers = new(Config.ExtrasWorkers.Key, (int)request.ExtrasWorkers);
+            runtimeSettings.ExtrasWorkers = new(
+                runtimeSettings.ExtrasWorkers.Key,
+                (int)request.ExtrasWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.ExtrasWorkers.Key,
+                runtimeSettings.ExtrasWorkers.Key,
                 (int)request.ExtrasWorkers,
                 null
             );
@@ -427,9 +438,12 @@ public class ManagementController(
 
         if (request.EncoderWorkers is not null)
         {
-            Config.EncoderWorkers = new(Config.EncoderWorkers.Key, (int)request.EncoderWorkers);
+            runtimeSettings.EncoderWorkers = new(
+                runtimeSettings.EncoderWorkers.Key,
+                (int)request.EncoderWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.EncoderWorkers.Key,
+                runtimeSettings.EncoderWorkers.Key,
                 (int)request.EncoderWorkers,
                 null
             );
@@ -437,9 +451,12 @@ public class ManagementController(
 
         if (request.CronWorkers is not null)
         {
-            Config.CronWorkers = new(Config.CronWorkers.Key, (int)request.CronWorkers);
+            runtimeSettings.CronWorkers = new(
+                runtimeSettings.CronWorkers.Key,
+                (int)request.CronWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.CronWorkers.Key,
+                runtimeSettings.CronWorkers.Key,
                 (int)request.CronWorkers,
                 null
             );
@@ -447,9 +464,12 @@ public class ManagementController(
 
         if (request.ImageWorkers is not null)
         {
-            Config.ImageWorkers = new(Config.ImageWorkers.Key, (int)request.ImageWorkers);
+            runtimeSettings.ImageWorkers = new(
+                runtimeSettings.ImageWorkers.Key,
+                (int)request.ImageWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.ImageWorkers.Key,
+                runtimeSettings.ImageWorkers.Key,
                 (int)request.ImageWorkers,
                 null
             );
@@ -457,9 +477,12 @@ public class ManagementController(
 
         if (request.FileWorkers is not null)
         {
-            Config.FileWorkers = new(Config.FileWorkers.Key, (int)request.FileWorkers);
+            runtimeSettings.FileWorkers = new(
+                runtimeSettings.FileWorkers.Key,
+                (int)request.FileWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.FileWorkers.Key,
+                runtimeSettings.FileWorkers.Key,
                 (int)request.FileWorkers,
                 null
             );
@@ -467,9 +490,12 @@ public class ManagementController(
 
         if (request.MusicWorkers is not null)
         {
-            Config.MusicWorkers = new(Config.MusicWorkers.Key, (int)request.MusicWorkers);
+            runtimeSettings.MusicWorkers = new(
+                runtimeSettings.MusicWorkers.Key,
+                (int)request.MusicWorkers
+            );
             await queueRunner.SetWorkerCount(
-                Config.MusicWorkers.Key,
+                runtimeSettings.MusicWorkers.Key,
                 (int)request.MusicWorkers,
                 null
             );
