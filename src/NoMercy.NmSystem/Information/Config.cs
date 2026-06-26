@@ -36,20 +36,6 @@ public static class Config
     public static string UserAgent =>
         $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
 
-    public static int StunPort => InternalServerPort + 1;
-
-    public static int InternalServerPort
-    {
-        get => RuntimeServerSettings.Current.InternalServerPort;
-        set => RuntimeServerSettings.Current.InternalServerPort = value;
-    }
-
-    public static int ExternalServerPort
-    {
-        get => RuntimeServerSettings.Current.ExternalServerPort;
-        set => RuntimeServerSettings.Current.ExternalServerPort = value;
-    }
-
     public static string ManagementPipeName
     {
         get => field ?? "NoMercyManagement";
