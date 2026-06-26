@@ -1,8 +1,20 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Users;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
@@ -345,7 +357,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
             .ToListAsync(ct);
     }
 
-    public Task<List<Collection>> GetCollectionItems(
+    public async Task<List<Collection>> GetCollectionItems(
         Guid userId,
         string? language,
         string country,
@@ -354,7 +366,8 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .AsSplitQuery()
             .ForUser(userId)
@@ -391,13 +404,14 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
             .ToListAsync(ct);
     }
 
-    public Task<Collection?> GetAvailableCollectionAsync(
+    public async Task<Collection?> GetAvailableCollectionAsync(
         Guid userId,
         int id,
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .AsSplitQuery()
             .Where(collection => collection.Id == id)
@@ -418,7 +432,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
             .FirstOrDefaultAsync(ct);
     }
 
-    public Task<Collection?> GetCollectionPlaylistAsync(
+    public async Task<Collection?> GetCollectionPlaylistAsync(
         Guid userId,
         int id,
         string language,
@@ -426,7 +440,8 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .AsSplitQuery()
             .Where(collection => collection.Id == id)
@@ -472,6 +487,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Collection? collection = await context
             .Collections.AsNoTracking()
             .Where(collection => collection.Id == id)
@@ -513,6 +529,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Collection? collection = await context
             .Collections.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == collectionId, ct);
@@ -551,7 +568,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
                             CollectionId = collectionId,
                             Time = 0,
                             LastPlayedDate = DateTime.UtcNow.ToString("o"),
-                            Type = Config.CollectionMediaType,
+                            Type = MediaTypes.CollectionMediaType,
                         }
                     );
                 }
@@ -573,6 +590,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         // SQLite schema uses DeleteBehavior.Restrict globally.
         // Temporarily disable FK enforcement so the collection and all its dependents
         // are removed atomically.
@@ -607,9 +625,10 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
         }
     }
 
-    public Task<Collection?> GetCollectionForRescanAsync(int id, CancellationToken ct = default)
+    public async Task<Collection?> GetCollectionForRescanAsync(int id, CancellationToken ct = default)
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(collectionMovie => collectionMovie.Movie)
@@ -619,12 +638,13 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
             .FirstOrDefaultAsync(collection => collection.Id == id, ct);
     }
 
-    public Task<Collection?> GetCollectionWithMovieLibrariesAsync(
+    public async Task<Collection?> GetCollectionWithMovieLibrariesAsync(
         int id,
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(collectionMovie => collectionMovie.Movie)

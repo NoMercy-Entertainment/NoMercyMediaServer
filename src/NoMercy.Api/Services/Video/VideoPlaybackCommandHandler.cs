@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +19,7 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Users;
 using NoMercy.Networking.Http;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 
@@ -237,7 +249,7 @@ public class VideoPlaybackCommandHandler(
             return;
 
         VideoPlaylistResponseDto? item = state.Playlist.FirstOrDefault(p =>
-            p.PlaylistType == Config.TvMediaType
+            p.PlaylistType == MediaTypes.TvMediaType
             && p.Season == episodeData.Season
             && p.Episode == episodeData.Episode
         );
@@ -606,19 +618,19 @@ public class VideoPlaybackCommandHandler(
         {
             UserId = user.Id,
             MovieId =
-                state.CurrentItem.PlaylistType == Config.MovieMediaType
+                state.CurrentItem.PlaylistType == MediaTypes.MovieMediaType
                     ? state.CurrentItem.TmdbId
                     : null,
             TvId =
-                state.CurrentItem.PlaylistType == Config.TvMediaType
+                state.CurrentItem.PlaylistType == MediaTypes.TvMediaType
                     ? state.CurrentItem.TmdbId
                     : null,
             CollectionId =
-                state.CurrentItem.PlaylistType == Config.CollectionMediaType
+                state.CurrentItem.PlaylistType == MediaTypes.CollectionMediaType
                     ? int.Parse(state.CurrentItem.PlaylistId)
                     : null,
             SpecialId =
-                state.CurrentItem.PlaylistType == Config.SpecialMediaType
+                state.CurrentItem.PlaylistType == MediaTypes.SpecialMediaType
                     ? Ulid.Parse(state.CurrentItem.PlaylistId)
                     : null,
             Video = video?.Width is not null
@@ -656,17 +668,17 @@ public class VideoPlaybackCommandHandler(
 
         switch (state.CurrentItem.PlaylistType)
         {
-            case Config.MovieMediaType:
+            case MediaTypes.MovieMediaType:
                 query.On(p => new { p.UserId, p.MovieId });
                 break;
-            case Config.TvMediaType:
-            case Config.AnimeMediaType:
+            case MediaTypes.TvMediaType:
+            case MediaTypes.AnimeMediaType:
                 query.On(p => new { p.UserId, p.TvId });
                 break;
-            case Config.CollectionMediaType:
+            case MediaTypes.CollectionMediaType:
                 query.On(p => new { p.UserId, p.CollectionId });
                 break;
-            case Config.SpecialMediaType:
+            case MediaTypes.SpecialMediaType:
                 query.On(p => new { p.UserId, p.SpecialId });
                 break;
         }

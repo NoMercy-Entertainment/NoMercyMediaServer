@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using NoMercy.Api.DTOs.Common;
@@ -7,6 +18,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -21,16 +33,22 @@ public class RecommendationService
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly IRecommendationRepository _recommendationRepository;
     private readonly IMemoryCache _cache;
+    private readonly IMovieMetadataProvider _movieMetadataProvider;
+    private readonly ITvShowMetadataProvider _tvShowMetadataProvider;
 
     public RecommendationService(
         IRecommendationRepository recommendationRepository,
         IDbContextFactory<MediaContext> contextFactory,
-        IMemoryCache cache
+        IMemoryCache cache,
+        IMovieMetadataProvider movieMetadataProvider,
+        ITvShowMetadataProvider tvShowMetadataProvider
     )
     {
         _recommendationRepository = recommendationRepository;
         _contextFactory = contextFactory;
         _cache = cache;
+        _movieMetadataProvider = movieMetadataProvider;
+        _tvShowMetadataProvider = tvShowMetadataProvider;
     }
 
     public async Task<List<RecommendationDto>> GetPersonalizedRecommendationsAsync(
@@ -40,9 +58,9 @@ public class RecommendationService
         CancellationToken ct = default
     )
     {
-        bool wantMovie = mediaTypeFilter == Config.MovieMediaType;
-        bool wantTv = mediaTypeFilter == Config.TvMediaType;
-        bool wantAnime = mediaTypeFilter == Config.AnimeMediaType;
+        bool wantMovie = mediaTypeFilter == MediaTypes.MovieMediaType;
+        bool wantTv = mediaTypeFilter == MediaTypes.TvMediaType;
+        bool wantAnime = mediaTypeFilter == MediaTypes.AnimeMediaType;
 
         // Phase 1: Parallel queries — only fetch candidates for the requested type
         Task<List<RecommendationCandidateDto>> movieRecsTask = wantMovie
@@ -184,9 +202,9 @@ public class RecommendationService
             if (!isHighSignal)
                 continue;
 
-            if (src.MediaType == Config.MovieMediaType)
+            if (src.MediaType == MediaTypes.MovieMediaType)
                 movieKeywordMap[src.ItemId] = src.KeywordIds;
-            else if (src.MediaType == Config.AnimeMediaType)
+            else if (src.MediaType == MediaTypes.AnimeMediaType)
                 animeKeywordMap[src.ItemId] = src.KeywordIds;
             else
                 tvKeywordMap[src.ItemId] = src.KeywordIds;
@@ -281,13 +299,13 @@ public class RecommendationService
         List<int> allSourceMovieIds = allSourceIds
             .Where(id =>
                 profile.SourceItems.TryGetValue(id, out UserAffinitySourceDto? s)
-                && s.MediaType == Config.MovieMediaType
+                && s.MediaType == MediaTypes.MovieMediaType
             )
             .ToList();
         List<int> allSourceTvIds = allSourceIds
             .Where(id =>
                 profile.SourceItems.TryGetValue(id, out UserAffinitySourceDto? s)
-                && s.MediaType != Config.MovieMediaType
+                && s.MediaType != MediaTypes.MovieMediaType
             )
             .ToList();
 
@@ -380,10 +398,10 @@ public class RecommendationService
 
         // Fetch TMDB data and local source items in parallel
         Task<TmdbMovieAppends?> movieAppendsTask = isMovie
-            ? new TmdbMovieClient(mediaId, language: tmdbLanguage).WithAllAppends()
+            ? _movieMetadataProvider.GetMovieAsync(mediaId, tmdbLanguage, ct)
             : Task.FromResult<TmdbMovieAppends?>(null);
         Task<TmdbTvShowAppends?> tvAppendsTask = !isMovie
-            ? new TmdbTvClient(mediaId, language: tmdbLanguage).WithAllAppends()
+            ? _tvShowMetadataProvider.GetTvShowAsync(mediaId, tmdbLanguage, ct)
             : Task.FromResult<TmdbTvShowAppends?>(null);
 
         await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
@@ -897,7 +915,7 @@ public class RecommendationService
             sourceMap[src.ItemId] = src;
             if (src.IsFavorited)
             {
-                if (src.MediaType == Config.MovieMediaType)
+                if (src.MediaType == MediaTypes.MovieMediaType)
                     favMovies.Add(src.ItemId);
                 else
                     favTvs.Add(src.ItemId);

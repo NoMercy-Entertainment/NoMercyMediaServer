@@ -1,10 +1,22 @@
-﻿using System.Globalization;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Validation;
+using NoMercy.NmSystem.Domain;
 
 namespace NoMercy.Service;
 
@@ -58,7 +70,7 @@ public static class Dev
         // }
 
         // List<Movie> movies = await context
-        //     .Movies.Where(tv => tv.Library.Type == Config.MovieMediaType)
+        //     .Movies.Where(tv => tv.Library.Type == MediaTypes.MovieMediaType)
         //     .Include(episode => episode.VideoFiles)
         //         .ThenInclude(videoFile => videoFile.Metadata)
         //     // .Where(tv => tv.Id == 60808)

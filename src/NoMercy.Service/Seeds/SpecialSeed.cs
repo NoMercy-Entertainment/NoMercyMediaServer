@@ -1,9 +1,21 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -25,13 +37,13 @@ public static class SpecialSeed
         try
         {
             Library movieLibrary = await context
-                .Libraries.Where(f => f.Type == Config.MovieMediaType)
+                .Libraries.Where(f => f.Type == MediaTypes.MovieMediaType)
                 .Include(l => l.FolderLibraries)
                     .ThenInclude(fl => fl.Folder)
                 .FirstAsync();
 
             Library tvLibrary = await context
-                .Libraries.Where(f => f.Type == Config.TvMediaType)
+                .Libraries.Where(f => f.Type == MediaTypes.TvMediaType)
                 .Include(l => l.FolderLibraries)
                     .ThenInclude(fl => fl.Folder)
                 .FirstAsync();
@@ -80,7 +92,7 @@ public static class SpecialSeed
                 Logger.Setup($"Searching for {item.Title} ({item.Year})");
                 switch (item.Type)
                 {
-                    case Config.MovieMediaType:
+                    case MediaTypes.MovieMediaType:
                         await AddMovieItem(
                             context,
                             client,
@@ -90,8 +102,8 @@ public static class SpecialSeed
                             specialItems
                         );
                         break;
-                    case Config.TvMediaType:
-                    case Config.AnimeMediaType:
+                    case MediaTypes.TvMediaType:
+                    case MediaTypes.AnimeMediaType:
                         await AddTvItem(context, client, tvLibrary, item, tvIds, specialItems);
                         break;
                 }

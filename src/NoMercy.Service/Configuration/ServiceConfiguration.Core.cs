@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using I18N.DotNet;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -67,11 +78,13 @@ using MediaProcessingSeasonRepository = NoMercy.MediaProcessing.Seasons.SeasonRe
 using MediaProcessingShowRepository = NoMercy.MediaProcessing.Shows.ShowRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
 
+using Microsoft.Extensions.Configuration;
+
 namespace NoMercy.Service.Configuration;
 
 public static partial class ServiceConfiguration
 {
-    private static void ConfigureCoreServices(IServiceCollection services)
+    private static void ConfigureCoreServices(IServiceCollection services, IConfiguration configuration)
     {
         services
             .AddDataProtection()
@@ -184,15 +197,15 @@ public static partial class ServiceConfiguration
 
         // Add Configuration POCOs
         services.Configure<ExternalServicesConfig>(
-            builder.Configuration.GetSection("ExternalServices")
+            configuration.GetSection("ExternalServices")
         );
-        services.Configure<ServerConfig>(builder.Configuration.GetSection("Server"));
-        services.Configure<ConnectivityConfig>(builder.Configuration.GetSection("Connectivity"));
-        services.Configure<WorkerConfig>(builder.Configuration.GetSection("Workers"));
+        services.Configure<ServerConfig>(configuration.GetSection("Server"));
+        services.Configure<ConnectivityConfig>(configuration.GetSection("Connectivity"));
+        services.Configure<WorkerConfig>(configuration.GetSection("Workers"));
         services.Configure<EncoderResourceConfig>(
-            builder.Configuration.GetSection("EncoderResources")
+            configuration.GetSection("EncoderResources")
         );
-        services.Configure<ContentPolicy>(builder.Configuration.GetSection("ContentPolicy"));
+        services.Configure<ContentPolicy>(configuration.GetSection("ContentPolicy"));
 
         // Add runtime status singletons
         services.AddSingleton<IBootStatus, BootStatus>();
@@ -280,7 +293,7 @@ public static partial class ServiceConfiguration
         // disposable contexts per call.
         services.AddDbContextFactory<MediaContext>(configureMediaContext);
 
-        services.AddSingleton<IJobDispatcher, JobDispatcher>();
+        services.AddSingleton<NoMercyQueue.Core.Interfaces.IJobDispatcher, JobDispatcher>();
 
         // Add Provider Clients
         services.AddScoped<IMovieMetadataProvider, TmdbMovieMetadataProvider>();
@@ -288,12 +301,7 @@ public static partial class ServiceConfiguration
         services.AddScoped<ICollectionMetadataProvider, TmdbCollectionMetadataProvider>();
         services.AddScoped<IPersonMetadataProvider, TmdbPersonMetadataProvider>();
 
-        // Add Repositories
-        services.AddScoped<HomeRepository>();
-        services.AddScoped<MusicRepository>();
-        services.AddScoped<EncoderRepository>();
         services.AddScoped<EncodingHistoryRepository>();
-        services.AddScoped<EncodingPresetRepository>();
         services.AddScoped<ContentSegmentRepository>();
         services.AddScoped<LibraryRepository>();
         services.AddScoped<MediaProcessingLibraryRepository>();
@@ -389,6 +397,8 @@ public static partial class ServiceConfiguration
 
         services.AddMediaServerQueue();
         services.AddSingleton<JobDispatcher>();
+        services.AddSingleton<NoMercy.MediaProcessing.Jobs.IJobDispatcher>(sp =>
+            sp.GetRequiredService<JobDispatcher>());
 
         // Storage driver resolvers — registered before AddNoMercyEncoder so
         // the TryAdd inside AddNoMercyStorage picks them up via GetService<>.

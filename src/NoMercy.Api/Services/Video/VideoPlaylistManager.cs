@@ -1,8 +1,20 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Services.Video;
@@ -44,22 +56,22 @@ public class VideoPlaylistManager
     {
         return type switch
         {
-            Config.SpecialMediaType => await GetSpecialItems(
+            MediaTypes.SpecialMediaType => await GetSpecialItems(
                 userId,
                 listId,
                 itemId,
                 language,
                 country
             ),
-            Config.CollectionMediaType => await GetCollectionItems(
+            MediaTypes.CollectionMediaType => await GetCollectionItems(
                 userId,
                 listId,
                 itemId,
                 language,
                 country
             ),
-            Config.TvMediaType => await GetTvItems(userId, listId, itemId, language, country),
-            Config.MovieMediaType => await GetMovieItems(userId, listId, itemId, language, country),
+            MediaTypes.TvMediaType => await GetTvItems(userId, listId, itemId, language, country),
+            MediaTypes.MovieMediaType => await GetMovieItems(userId, listId, itemId, language, country),
             _ => throw new ArgumentException("Invalid playlist type", nameof(type)),
         };
     }
@@ -102,14 +114,14 @@ public class VideoPlaylistManager
                         item.EpisodeId is not null
                             ? new(
                                 item.Episode ?? new Episode(),
-                                Config.SpecialMediaType,
+                                MediaTypes.SpecialMediaType,
                                 listId,
                                 country,
                                 index
                             )
                             : new VideoPlaylistResponseDto(
                                 item.Movie ?? new Movie(),
-                                Config.SpecialMediaType,
+                                MediaTypes.SpecialMediaType,
                                 listId,
                                 country,
                                 index
@@ -150,7 +162,7 @@ public class VideoPlaylistManager
                     (movie, index) =>
                         new VideoPlaylistResponseDto(
                             movie.Movie,
-                            Config.CollectionMediaType,
+                            MediaTypes.CollectionMediaType,
                             listId,
                             country,
                             index + 1,
@@ -191,7 +203,7 @@ public class VideoPlaylistManager
                 .SelectMany(season => season.Episodes)
                 .Select(episode => new VideoPlaylistResponseDto(
                     episode,
-                    Config.TvMediaType,
+                    MediaTypes.TvMediaType,
                     listId,
                     country
                 ))
@@ -203,7 +215,7 @@ public class VideoPlaylistManager
                 .SelectMany(season => season.Episodes)
                 .Select(episode => new VideoPlaylistResponseDto(
                     episode,
-                    Config.TvMediaType,
+                    MediaTypes.TvMediaType,
                     listId,
                     country
                 ))
@@ -240,7 +252,7 @@ public class VideoPlaylistManager
         List<VideoPlaylistResponseDto> playlist = movies
             .Select(movie => new VideoPlaylistResponseDto(
                 movie,
-                Config.MovieMediaType,
+                MediaTypes.MovieMediaType,
                 int.Parse(listId),
                 country
             ))

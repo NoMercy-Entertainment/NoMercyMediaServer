@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using NoMercy.Setup.Boot;
 
 namespace NoMercy.Tests.Setup;
@@ -520,12 +531,12 @@ public class BuildStartupTasksTests
     {
         List<StartupTask> tasks = Start.BuildStartupTasks();
 
-        // Auth is now handled by AuthManager/BootOrchestrator — no longer a startup task.
+        // Auth and API-key loading are now handled by BootOrchestrator
+        // (IApiKeyLoader.LoadKeys in Phase 1) — neither is a startup task anymore.
         string[] expectedNames =
         [
             "UserSettings",
             "CreateAppFolders",
-            "ApiInfo",
             "NetworkProbe",
             "Binaries",
             "Networking",
@@ -539,8 +550,9 @@ public class BuildStartupTasksTests
             Assert.Contains(tasks, t => t.Name == name);
         }
 
-        // Auth task should NOT exist in the task list.
+        // Auth and ApiInfo moved to BootOrchestrator — neither should be a startup task.
         Assert.DoesNotContain(tasks, t => t.Name == "Auth");
+        Assert.DoesNotContain(tasks, t => t.Name == "ApiInfo");
     }
 
     [Fact]

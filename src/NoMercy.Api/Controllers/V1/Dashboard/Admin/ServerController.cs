@@ -1,4 +1,16 @@
-﻿using System.Collections.Concurrent;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
+using System.Collections.Concurrent;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -25,6 +37,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
+using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 using SixLabors.ImageSharp;
@@ -35,6 +48,8 @@ using Configuration = NoMercy.Database.Models.Common.Configuration;
 using HttpClient = System.Net.Http.HttpClient;
 using Image = NoMercy.Database.Models.Media.Image;
 using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
+
+using NoMercy.MediaProcessing.Jobs;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 

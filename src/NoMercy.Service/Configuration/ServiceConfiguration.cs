@@ -1,14 +1,32 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Service.Configuration;
 
 public static partial class ServiceConfiguration
 {
-    public static void ConfigureServices(IServiceCollection services)
+    public static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
+        // Register IServerConfiguration FIRST: ConfigureHttpClients eagerly builds a
+        // provider and resolves it, so it must exist before any sub-config runs. The
+        // production Program.cs path registers it early too; this keeps the Startup
+        // path (used by the API test host) consistent.
+        services.Configure<ServerConfiguration>(configuration.GetSection("Server"));
+        services.AddSingleton<IServerConfiguration, ServerConfigurationWrapper>();
+
         ConfigureKestrel(services);
         ConfigureHttpClients(services);
-        ConfigureCoreServices(services);
+        ConfigureCoreServices(services, configuration);
         ConfigureLogging(services);
         ConfigureAuth(services);
         ConfigureApi(services);

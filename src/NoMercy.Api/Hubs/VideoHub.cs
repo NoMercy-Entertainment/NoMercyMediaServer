@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using System.Security.Claims;
 using FlexLabs.EntityFrameworkCore.Upsert;
@@ -16,6 +27,7 @@ using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
@@ -83,11 +95,11 @@ public class VideoHub : ConnectionHub
         if (!videoFileExists)
             return;
 
-        int? movieId = request.PlaylistType == Config.MovieMediaType ? request.TmdbId : null;
-        int? tvId = request.PlaylistType == Config.TvMediaType ? request.TmdbId : null;
+        int? movieId = request.PlaylistType == MediaTypes.MovieMediaType ? request.TmdbId : null;
+        int? tvId = request.PlaylistType == MediaTypes.TvMediaType ? request.TmdbId : null;
 
         int? collectionId = null;
-        if (request.PlaylistType == Config.CollectionMediaType)
+        if (request.PlaylistType == MediaTypes.CollectionMediaType)
         {
             if (!int.TryParse(request.PlaylistId, out int parsed))
                 return;
@@ -95,7 +107,7 @@ public class VideoHub : ConnectionHub
         }
 
         Ulid? specialId = null;
-        if (request.PlaylistType == Config.SpecialMediaType)
+        if (request.PlaylistType == MediaTypes.SpecialMediaType)
         {
             if (!Ulid.TryParse(request.PlaylistId, out Ulid parsed))
                 return;
@@ -133,25 +145,25 @@ public class VideoHub : ConnectionHub
 
         query = request.PlaylistType switch
         {
-            Config.MovieMediaType => query.On(x => new
+            MediaTypes.MovieMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.MovieId,
             }),
-            Config.TvMediaType => query.On(x => new
+            MediaTypes.TvMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.TvId,
             }),
-            Config.CollectionMediaType => query.On(x => new
+            MediaTypes.CollectionMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.CollectionId,
             }),
-            Config.SpecialMediaType => query.On(x => new
+            MediaTypes.SpecialMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,

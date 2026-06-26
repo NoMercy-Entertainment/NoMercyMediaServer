@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -7,6 +18,7 @@ using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
@@ -35,7 +47,7 @@ public class RecommendationsController(
         List<RecommendationDto> recommendations =
             await recommendationService.GetPersonalizedRecommendationsAsync(
                 userId,
-                Config.MovieMediaType,
+                MediaTypes.MovieMediaType,
                 take,
                 ct
             );
@@ -63,7 +75,7 @@ public class RecommendationsController(
         List<RecommendationDto> recommendations =
             await recommendationService.GetPersonalizedRecommendationsAsync(
                 userId,
-                Config.TvMediaType,
+                MediaTypes.TvMediaType,
                 take,
                 ct
             );
@@ -91,7 +103,7 @@ public class RecommendationsController(
         List<RecommendationDto> recommendations =
             await recommendationService.GetPersonalizedRecommendationsAsync(
                 userId,
-                Config.AnimeMediaType,
+                MediaTypes.AnimeMediaType,
                 take,
                 ct
             );

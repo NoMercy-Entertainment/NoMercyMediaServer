@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Extensions;
 using NoMercy.Database;
@@ -7,7 +18,10 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
+
+using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Repositories;
 
@@ -161,7 +175,7 @@ public class MovieRepository(IDbContextFactory<MediaContext> contextFactory) : I
             .Include(movie => movie.VideoFiles)
                 .ThenInclude(file =>
                     file.UserData.Where(userData =>
-                        userData.UserId.Equals(userId) && userData.Type == Config.MovieMediaType
+                        userData.UserId.Equals(userId) && userData.Type == MediaTypes.MovieMediaType
                     )
                 )
             .Include(movie =>
@@ -216,7 +230,7 @@ public class MovieRepository(IDbContextFactory<MediaContext> contextFactory) : I
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Library? movieLibrary = await context
-            .Libraries.Where(f => f.Type == Config.MovieMediaType)
+            .Libraries.Where(f => f.Type == MediaTypes.MovieMediaType)
             .FirstOrDefaultAsync(ct);
 
         if (movieLibrary == null)
@@ -301,7 +315,7 @@ public class MovieRepository(IDbContextFactory<MediaContext> contextFactory) : I
                             MovieId = movieId,
                             Time = 0,
                             LastPlayedDate = DateTime.UtcNow.ToString("o"),
-                            Type = Config.MovieMediaType,
+                            Type = MediaTypes.MovieMediaType,
                         }
                     );
                 }

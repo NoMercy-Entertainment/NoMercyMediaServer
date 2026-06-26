@@ -1,6 +1,18 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
@@ -58,10 +70,10 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
 
         return type switch
         {
-            Config.MovieMediaType => query.Where(data => data.MovieId == intId),
-            Config.TvMediaType => query.Where(data => data.TvId == intId),
-            Config.SpecialMediaType => query.Where(data => data.SpecialId == ulidId),
-            Config.CollectionMediaType => query.Where(data => data.CollectionId == intId),
+            MediaTypes.MovieMediaType => query.Where(data => data.MovieId == intId),
+            MediaTypes.TvMediaType => query.Where(data => data.TvId == intId),
+            MediaTypes.SpecialMediaType => query.Where(data => data.SpecialId == ulidId),
+            MediaTypes.CollectionMediaType => query.Where(data => data.CollectionId == intId),
             _ => null,
         };
     }

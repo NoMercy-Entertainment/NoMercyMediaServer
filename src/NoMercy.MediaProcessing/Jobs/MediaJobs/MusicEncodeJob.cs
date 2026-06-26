@@ -1,4 +1,15 @@
-﻿using System.Diagnostics;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using System.Diagnostics;
 using NoMercy.Database;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercyQueue;
@@ -161,7 +172,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                     await EventBusProvider.Current.PublishAsync(
                         new EncodingStageChangedEvent
                         {
-                            JobId = track.Id,
+                            JobId = track.Id.GetHashCode(),
                             Status = "completed",
                             Title = FoundTrack.Title,
                             Message = "Done",
@@ -188,7 +199,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                     await EventBusProvider.Current.PublishAsync(
                         new EncodingStageChangedEvent
                         {
-                            JobId = track.Id,
+                            JobId = track.Id.GetHashCode(),
                             Status = "failed",
                             Title = FoundTrack.Title,
                             Message = e.Message,

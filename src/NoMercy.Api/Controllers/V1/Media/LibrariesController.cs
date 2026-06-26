@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -55,12 +66,12 @@ public class LibrariesController(
         Task<List<Library>> librariesTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx, contextFactory).GetLibrariesLite(userId, ct);
+            return await new LibraryRepository(contextFactory).GetLibrariesLite(userId, ct);
         });
         Task<Dictionary<Ulid, int>> countsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx, contextFactory).GetLibraryItemCountsAsync(
+            return await new LibraryRepository(contextFactory).GetLibraryItemCountsAsync(
                 userId,
                 ct
             );
@@ -68,7 +79,7 @@ public class LibrariesController(
         Task<List<CollectionListDto>> collectionsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new CollectionRepository(ctx).GetCollectionItemCardsAsync(
+            return await new CollectionRepository(contextFactory).GetCollectionItemCardsAsync(
                 userId,
                 language,
                 country,
@@ -92,7 +103,7 @@ public class LibrariesController(
         Task<HomeTvCardDto?> randomTvTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx, contextFactory).GetRandomTvCardAsync(
+            return await new LibraryRepository(contextFactory).GetRandomTvCardAsync(
                 userId,
                 language,
                 country,
@@ -102,7 +113,7 @@ public class LibrariesController(
         Task<HomeMovieCardDto?> randomMovieTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx, contextFactory).GetRandomMovieCardAsync(
+            return await new LibraryRepository(contextFactory).GetRandomMovieCardAsync(
                 userId,
                 language,
                 country,
@@ -137,7 +148,7 @@ public class LibrariesController(
             .Select(async library =>
             {
                 await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-                LibraryRepository repo = new(ctx, contextFactory);
+                LibraryRepository repo = new(contextFactory);
                 List<MovieCardDto> movies = await repo.GetLibraryMovieCardsAsync(
                     userId,
                     library.Id,
@@ -275,12 +286,12 @@ public class LibrariesController(
         Task<List<Library>> librariesTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx, contextFactory).GetLibrariesLite(userId, ct);
+            return await new LibraryRepository(contextFactory).GetLibrariesLite(userId, ct);
         });
         Task<List<CollectionListDto>> collectionsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new CollectionRepository(ctx).GetCollectionItemCardsAsync(
+            return await new CollectionRepository(contextFactory).GetCollectionItemCardsAsync(
                 userId,
                 language,
                 country,
@@ -304,7 +315,7 @@ public class LibrariesController(
         Task<HomeTvCardDto?> randomTvTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx, contextFactory).GetRandomTvCardAsync(
+            return await new LibraryRepository(contextFactory).GetRandomTvCardAsync(
                 userId,
                 language,
                 country,
@@ -314,7 +325,7 @@ public class LibrariesController(
         Task<HomeMovieCardDto?> randomMovieTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx, contextFactory).GetRandomMovieCardAsync(
+            return await new LibraryRepository(contextFactory).GetRandomMovieCardAsync(
                 userId,
                 language,
                 country,
@@ -345,7 +356,7 @@ public class LibrariesController(
             .Select(async library =>
             {
                 await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-                LibraryRepository repo = new(ctx, contextFactory);
+                LibraryRepository repo = new(contextFactory);
                 List<MovieCardDto> movies = await repo.GetLibraryMovieCardsAsync(
                     userId,
                     library.Id,
@@ -465,7 +476,7 @@ public class LibrariesController(
         Task<List<MovieCardDto>> moviesTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx, contextFactory).GetLibraryMovieCardsAsync(
+            return await new LibraryRepository(contextFactory).GetLibraryMovieCardsAsync(
                 userId,
                 libraryId,
                 country,
@@ -477,7 +488,7 @@ public class LibrariesController(
         Task<List<TvCardDto>> showsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx, contextFactory).GetLibraryTvCardsAsync(
+            return await new LibraryRepository(contextFactory).GetLibraryTvCardsAsync(
                 userId,
                 libraryId,
                 country,
@@ -565,10 +576,7 @@ public class LibrariesController(
         Task<List<HomeMovieCardDto>> moviesTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(
-                ctx,
-                contextFactory
-            ).GetPaginatedLibraryMovieCardsAsync(
+            return await new LibraryRepository(contextFactory).GetPaginatedLibraryMovieCardsAsync(
                 userId,
                 libraryId,
                 letter,
@@ -582,7 +590,7 @@ public class LibrariesController(
         Task<List<HomeTvCardDto>> showsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx, contextFactory).GetPaginatedLibraryTvCardsAsync(
+            return await new LibraryRepository(contextFactory).GetPaginatedLibraryTvCardsAsync(
                 userId,
                 libraryId,
                 letter,

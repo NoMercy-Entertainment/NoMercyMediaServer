@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Data.Repositories;
@@ -5,6 +16,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media;
@@ -86,8 +98,8 @@ public record GenreRowItemDto
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
 
-        MediaType = Config.MovieMediaType;
-        Type = Config.MovieMediaType;
+        MediaType = MediaTypes.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         NumberOfItems = 1;
         HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
@@ -130,8 +142,8 @@ public record GenreRowItemDto
 
         Tags = tv.KeywordTvs.Select(tag => tag.Keyword.Name);
 
-        MediaType = Config.TvMediaType;
-        Type = Config.TvMediaType;
+        MediaType = MediaTypes.TvMediaType;
+        Type = MediaTypes.TvMediaType;
         Link = new($"/tv/{Id}", UriKind.Relative);
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.Episodes.Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
@@ -163,8 +175,8 @@ public record GenreRowItemDto
         Logo = movie.Logo;
         TitleSort = movie.TitleSort;
         Year = movie.ReleaseDate.ParseYear();
-        MediaType = Config.MovieMediaType;
-        Type = Config.MovieMediaType;
+        MediaType = MediaTypes.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
         Link = new($"/movie/{movie.Id}", UriKind.Relative);
         NumberOfItems = 1;
         HaveItems = movie.VideoFileCount;
@@ -198,8 +210,8 @@ public record GenreRowItemDto
         Logo = tv.Logo;
         TitleSort = tv.TitleSort;
         Year = tv.FirstAirDate.ParseYear();
-        MediaType = Config.TvMediaType;
-        Type = Config.TvMediaType;
+        MediaType = MediaTypes.TvMediaType;
+        Type = MediaTypes.TvMediaType;
         Link = new($"/tv/{tv.Id}", UriKind.Relative);
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.EpisodesWithVideo;
@@ -240,13 +252,13 @@ public record GenreRowItemDto
         TitleSort = collection.Title.TitleSort(
             collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate
         );
-        Type = Config.CollectionMediaType;
+        Type = MediaTypes.CollectionMediaType;
         Year = collection
             .CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)
             ?.Movie.ReleaseDate.ParseYear();
 
-        MediaType = Config.TvMediaType;
-        Type = Config.TvMediaType;
+        MediaType = MediaTypes.TvMediaType;
+        Type = MediaTypes.TvMediaType;
         Link = new($"/collection/{Id}", UriKind.Relative);
         NumberOfItems = collection.CollectionMovies.Count;
         HaveItems = collection.CollectionMovies.Count(movie =>
@@ -281,7 +293,7 @@ public record GenreRowItemDto
         Backdrop = special.Backdrop;
         Logo = special.Logo;
         TitleSort = special.Title.TitleSort();
-        Type = Config.CollectionMediaType;
+        Type = MediaTypes.CollectionMediaType;
         Year =
             special.Items.MinBy(movie => movie.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
             ?? special
@@ -289,8 +301,8 @@ public record GenreRowItemDto
                 .FirstOrDefault()
                 ?.FirstAirDate.ParseYear();
 
-        MediaType = Config.TvMediaType;
-        Type = Config.TvMediaType;
+        MediaType = MediaTypes.TvMediaType;
+        Type = MediaTypes.TvMediaType;
         Link = new($"/specials/{Id}", UriKind.Relative);
 
         NumberOfItems = special.Items.Count;

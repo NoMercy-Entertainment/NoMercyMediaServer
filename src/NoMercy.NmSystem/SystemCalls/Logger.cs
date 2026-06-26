@@ -1,4 +1,15 @@
-﻿using System.Drawing;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using System.Drawing;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -102,6 +113,7 @@ public static class Logger
         { "coverart", new("coverart", "CoverArt", Color.DodgerBlue, "Providers") },
         { "fanart", new("fanart", "Fanart", Color.DodgerBlue, "Providers") },
         { "fingerprint", new("fingerprint", "Fingerprint", Color.DodgerBlue, "Providers") },
+        { "lrclib", new("lrclib", "Lrclib", Color.DodgerBlue, "Providers") },
         { "moviedb", new("moviedb", "TheMovieDB", Color.DodgerBlue, "Providers") },
         { "musicbrainz", new("musicbrainz", "MusicBrainz", Color.DodgerBlue, "Providers") },
         { "musixmatch", new("musixmatch", "MusixMatch", Color.DodgerBlue, "Providers") },
@@ -382,6 +394,9 @@ public static class Logger
 
     public static void Fingerprint<T>(T message, LogEventLevel level = LogEventLevel.Information)
         where T : class => Log("fingerprint", message, level);
+
+    public static void Lrclib<T>(T message, LogEventLevel level = LogEventLevel.Information)
+        where T : class => Log("lrclib", message, level);
 
     public static void MovieDb<T>(T message, LogEventLevel level = LogEventLevel.Information)
         where T : class => Log("moviedb", message, level);

@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +19,7 @@ using NoMercy.Events;
 using NoMercy.Events.Playback;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Services.Video;
@@ -243,19 +255,19 @@ public class VideoPlaybackService
             Time = state.Time / 1000,
             VideoFileId = state.CurrentItem.VideoId,
             MovieId =
-                state.CurrentItem.PlaylistType == Config.MovieMediaType
+                state.CurrentItem.PlaylistType == MediaTypes.MovieMediaType
                     ? state.CurrentItem.TmdbId
                     : null,
             TvId =
-                state.CurrentItem.PlaylistType == Config.TvMediaType
+                state.CurrentItem.PlaylistType == MediaTypes.TvMediaType
                     ? state.CurrentItem.TmdbId
                     : null,
             CollectionId =
-                state.CurrentItem.PlaylistType == Config.CollectionMediaType
+                state.CurrentItem.PlaylistType == MediaTypes.CollectionMediaType
                     ? int.Parse(state.CurrentItem.PlaylistId)
                     : null,
             SpecialId =
-                state.CurrentItem.PlaylistType == Config.SpecialMediaType
+                state.CurrentItem.PlaylistType == MediaTypes.SpecialMediaType
                     ? Ulid.Parse(state.CurrentItem.PlaylistId)
                     : null,
         };
@@ -269,25 +281,25 @@ public class VideoPlaybackService
 
         query = state.CurrentItem.PlaylistType switch
         {
-            Config.MovieMediaType => query.On(x => new
+            MediaTypes.MovieMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.MovieId,
             }),
-            Config.TvMediaType => query.On(x => new
+            MediaTypes.TvMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.TvId,
             }),
-            Config.CollectionMediaType => query.On(x => new
+            MediaTypes.CollectionMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,
                 x.CollectionId,
             }),
-            Config.SpecialMediaType => query.On(x => new
+            MediaTypes.SpecialMediaType => query.On(x => new
             {
                 x.VideoFileId,
                 x.UserId,

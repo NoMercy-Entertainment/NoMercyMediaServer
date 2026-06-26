@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="NoMercy.Tests.Setup" />
+    <InternalsVisibleTo Include="NoMercy.Tests.Providers" />
   </ItemGroup>
 
   <ItemGroup>

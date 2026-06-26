@@ -1,4 +1,15 @@
-﻿// ---------------------------------------------------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -7,6 +18,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Libraries;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -41,8 +53,8 @@ public class FileRescanJob : AbstractMediaJob
 
         string type = library?.Type switch
         {
-            Config.TvMediaType or Config.AnimeMediaType => "tv",
-            Config.MovieMediaType => "movie",
+            MediaTypes.TvMediaType or MediaTypes.AnimeMediaType => "tv",
+            MediaTypes.MovieMediaType => "movie",
             _ => "unknown",
         };
 

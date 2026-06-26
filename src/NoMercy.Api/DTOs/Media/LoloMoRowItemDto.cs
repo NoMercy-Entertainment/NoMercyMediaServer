@@ -1,9 +1,21 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media;
@@ -64,7 +76,7 @@ public record LoloMoRowItemDto
         Backdrop = genreMovie.Movie.Backdrop;
         TitleSort = genreMovie.Movie.Title.TitleSort(genreMovie.Movie.ReleaseDate);
         Year = genreMovie.Movie.ReleaseDate.ParseYear();
-        MediaType = Config.MovieMediaType;
+        MediaType = MediaTypes.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         ColorPalette = genreMovie.Movie.ColorPalette;
     }
@@ -79,7 +91,7 @@ public record LoloMoRowItemDto
         TitleSort = genreTv.Tv.Title.TitleSort(genreTv.Tv.FirstAirDate);
         Type = genreTv.Tv.Type;
         Year = genreTv.Tv.FirstAirDate.ParseYear();
-        MediaType = Config.TvMediaType;
+        MediaType = MediaTypes.TvMediaType;
         Link = new($"/tv/{Id}", UriKind.Relative);
         ColorPalette = genreTv.Tv.ColorPalette;
     }

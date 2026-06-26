@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
@@ -50,6 +61,18 @@ public class DiContextInjectionTests : IDisposable
 
         TestMediaContext context = new(options);
         return context;
+    }
+
+    private IDbContextFactory<MediaContext> CreateFactory()
+    {
+        DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
+            .UseSqlite(
+                $"DataSource={_dbName};Mode=Memory;Cache=Shared",
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            )
+            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
+            .Options;
+        return new TestDbContextFactory(options);
     }
 
     private static void SeedMusicData(MediaContext context)
@@ -192,11 +215,10 @@ public class DiContextInjectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MusicRepository_UsesInjectedContext_NotNewInstance()
+    public async Task MusicRepository_UsesInjectedFactory_NotNewInstance()
     {
-        // Verify MusicRepository queries use the injected context by checking data is accessible
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        // Verify MusicRepository queries use the injected factory by checking data is accessible
+        MusicRepository repository = new(CreateFactory());
 
         List<Guid> artistIds = await repository.SearchArtistIdsAsync("test");
         Assert.Single(artistIds);
@@ -204,10 +226,9 @@ public class DiContextInjectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MusicRepository_SearchAlbumIds_UsesInjectedContext()
+    public async Task MusicRepository_SearchAlbumIds_UsesInjectedFactory()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         List<Guid> albumIds = await repository.SearchAlbumIdsAsync("test");
         Assert.Single(albumIds);
@@ -215,10 +236,9 @@ public class DiContextInjectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MusicRepository_SearchTrackIds_UsesInjectedContext()
+    public async Task MusicRepository_SearchTrackIds_UsesInjectedFactory()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         List<Guid> trackIds = await repository.SearchTrackIdsAsync("test");
         Assert.Single(trackIds);
@@ -226,10 +246,9 @@ public class DiContextInjectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MusicRepository_SearchPlaylistIds_UsesInjectedContext()
+    public async Task MusicRepository_SearchPlaylistIds_UsesInjectedFactory()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         List<Guid> playlistIds = await repository.SearchPlaylistIdsAsync("test");
         Assert.Single(playlistIds);
@@ -237,10 +256,9 @@ public class DiContextInjectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MusicRepository_GetArtistAsync_UsesInjectedContext()
+    public async Task MusicRepository_GetArtistAsync_UsesInjectedFactory()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         Artist? artist = await repository.GetArtistAsync(
             SeedConstants.UserId,
@@ -285,7 +303,7 @@ public class DiContextInjectionTests : IDisposable
     public async Task MusicRepository_EmptyContext_ReturnsNoResults()
     {
         // Verify that a repository with no data returns empty results
-        // (proves it reads from the injected context, not a global/static one)
+        // (proves it reads from the injected factory, not a global/static one)
         string isolatedDb = Guid.NewGuid().ToString();
         await using SqliteConnection isolatedConn = new(
             $"DataSource={isolatedDb};Mode=Memory;Cache=Shared"
@@ -298,15 +316,17 @@ public class DiContextInjectionTests : IDisposable
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                isolatedConn,
+                $"DataSource={isolatedDb};Mode=Memory;Cache=Shared",
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
             .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
-        await using TestMediaContext emptyContext = new(options);
-        await emptyContext.Database.EnsureCreatedAsync();
+        using (TestMediaContext initContext = new(options))
+        {
+            await initContext.Database.EnsureCreatedAsync();
+        }
 
-        MusicRepository repository = new(emptyContext, null!);
+        MusicRepository repository = new(new TestDbContextFactory(options));
 
         List<Guid> artistIds = await repository.SearchArtistIdsAsync("test");
         List<Guid> albumIds = await repository.SearchAlbumIdsAsync("test");

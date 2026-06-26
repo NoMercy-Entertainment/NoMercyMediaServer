@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Text;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -81,10 +92,7 @@ public class HomeController : BaseController
         if (request.Page != 0)
             return Ok(response);
 
-        LibraryRepository libraryRepository = new(
-            await _contextFactory.CreateDbContextAsync(ct),
-            _contextFactory
-        );
+        LibraryRepository libraryRepository = new(_contextFactory);
         List<Library> libraries = await libraryRepository.GetLibrariesLite(userId, ct);
 
         // Fetch all library data in parallel - each task needs its own MediaContext for thread safety

@@ -1,6 +1,13 @@
-#region License
-// Copyright NoMercy (c) 2026. All rights reserved.
-#endregion
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
 
 using System.Diagnostics;
 using System.Net.Sockets;
@@ -161,7 +168,7 @@ public class ServerRunner : IServerRunner
         Stopwatch restartStopWatch = new();
         restartStopWatch.Start();
 
-        WebApplication httpsHost = Program.CreateWebApplication(options);
+        WebApplication httpsHost = WebHostFactory.Create(options);
 
         _shutdownCoordinator.RequestShutdown(); // Reset existing (if any)
         
@@ -185,7 +192,7 @@ public class ServerRunner : IServerRunner
         // Initialize queue workers so they can process jobs on the HTTPS host.
         await httpsQueueRunner.Initialize();
 
-        Program.RegisterLifetimeEvents(httpsHost, restartStopWatch);
+        HostLifecycleHooks.Register(httpsHost, restartStopWatch);
 
         _logger.LogInformation("HTTPS server starting...");
         return await RunHost(httpsHost);

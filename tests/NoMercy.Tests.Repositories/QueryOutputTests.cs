@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
@@ -24,8 +35,9 @@ public class QueryOutputTests : IDisposable
 
     public QueryOutputTests()
     {
-        (_context, _interceptor) = TestMediaContextFactory.CreateSeededContextWithInterceptor();
-        (_homeFactory, _homeFactoryConnection) = TestMediaContextFactory.CreateFactory();
+        (_homeFactory, _interceptor, _homeFactoryConnection) =
+            TestMediaContextFactory.CreateSeededFactoryWithInterceptor();
+        _context = _homeFactory.CreateDbContext();
     }
 
     public void Dispose()
@@ -40,7 +52,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAsync_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(_context);
+        MovieRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
@@ -55,7 +67,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAvailableAsync_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(_context);
+        MovieRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetMovieAvailableAsync(SeedConstants.UserId, 129);
@@ -70,7 +82,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMoviePlaylistAsync_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(_context);
+        MovieRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetMoviePlaylistAsync(SeedConstants.UserId, 129, "en", "US");
@@ -85,7 +97,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_DeleteMovieAsync_GeneratesDeleteSql()
     {
-        MovieRepository repository = new(_context);
+        MovieRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.DeleteAsync(999);
@@ -103,7 +115,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvAvailableAsync_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(_context);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetTvAvailableAsync(SeedConstants.UserId, 1399);
@@ -119,7 +131,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvPlaylistAsync_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(_context);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetPlaylistAsync(SeedConstants.UserId, 1399, "en", "US");
@@ -135,7 +147,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_DeleteTvAsync_GeneratesDeleteSql()
     {
-        TvShowRepository repository = new(_context);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.DeleteAsync(999);
@@ -149,7 +161,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetMissingLibraryShows_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(_context);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetMissingLibraryShows(SeedConstants.UserId, 1399, "en");
@@ -394,7 +406,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraries_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetLibraries(SeedConstants.UserId);
@@ -409,7 +421,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraryByIdAsync_WithPagination_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetLibraryByIdAsync(
@@ -431,7 +443,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraryMovieCardsAsync_GeneratesProjectionSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetLibraryMovieCardsAsync(
@@ -454,7 +466,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraryTvCardsAsync_GeneratesProjectionSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetLibraryTvCardsAsync(
@@ -477,7 +489,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetPaginatedLibraryMovies_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetPaginatedLibraryMovies(
@@ -501,7 +513,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetPaginatedLibraryShows_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetPaginatedLibraryShows(
@@ -525,7 +537,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraryByIdAsync_Simple_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetLibraryByIdAsync(SeedConstants.MovieLibraryId);
@@ -539,7 +551,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetAllLibrariesAsync_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetAllLibrariesAsync();
@@ -553,7 +565,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetFoldersAsync_GeneratesProjectionSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetFoldersAsync();
@@ -566,7 +578,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetRandomTvShow_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetRandomTvShow(SeedConstants.UserId, "en");
@@ -580,7 +592,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetRandomMovie_GeneratesExpectedSql()
     {
-        LibraryRepository repository = new(_context, _homeFactory);
+        LibraryRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetRandomMovie(SeedConstants.UserId, "en");
@@ -598,7 +610,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task CollectionRepository_GetCollectionsAsync_GeneratesExpectedSql()
     {
-        CollectionRepository repository = new(_context);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetCollectionsAsync(SeedConstants.UserId, "en", 10, 0);
@@ -614,7 +626,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task CollectionRepository_GetCollectionsListAsync_GeneratesProjectionSql()
     {
-        CollectionRepository repository = new(_context);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetCollectionsListAsync(SeedConstants.UserId, "en", "US", 10, 0);
@@ -630,7 +642,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task CollectionRepository_GetCollectionAsync_GeneratesExpectedSql()
     {
-        CollectionRepository repository = new(_context);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetCollectionAsync(SeedConstants.UserId, 1, "en", "US");
@@ -644,7 +656,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task CollectionRepository_GetCollectionItems_GeneratesExpectedSql()
     {
-        CollectionRepository repository = new(_context);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetCollectionItems(SeedConstants.UserId, "en", "US", 10);
@@ -660,7 +672,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task CollectionRepository_GetAvailableCollectionAsync_GeneratesExpectedSql()
     {
-        CollectionRepository repository = new(_context);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetAvailableCollectionAsync(SeedConstants.UserId, 1);
@@ -676,7 +688,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task CollectionRepository_GetCollectionPlaylistAsync_GeneratesExpectedSql()
     {
-        CollectionRepository repository = new(_context);
+        CollectionRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetCollectionPlaylistAsync(SeedConstants.UserId, 1, "en", "US");
@@ -923,7 +935,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieDetailAsync_CompiledQuery_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(_context);
+        MovieRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetMovieDetailAsync(SeedConstants.UserId, 129, "en", "US");
@@ -942,7 +954,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvAsync_SplitQuery_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(_context);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US");
@@ -1018,7 +1030,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetMissingLibraryShows_UsesExistsForEmptyVideoFiles()
     {
-        TvShowRepository repository = new(_context);
+        TvShowRepository repository = new(_homeFactory);
         _interceptor.Clear();
 
         await repository.GetMissingLibraryShows(SeedConstants.UserId, 1399, "en");

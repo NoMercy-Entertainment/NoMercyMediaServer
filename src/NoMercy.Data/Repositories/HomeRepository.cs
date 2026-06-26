@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Extensions;
 using NoMercy.Database;
@@ -5,6 +16,7 @@ using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Users;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
@@ -372,7 +384,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
         return context
             .Libraries.AsNoTracking()
             .ForUser(userId)
-            .Where(library => library.Type != Config.InboxMediaType)
+            .Where(library => library.Type != MediaTypes.InboxMediaType)
             .ToListAsync(ct);
     }
 
@@ -381,7 +393,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
         return context
             .Tvs.AsNoTracking()
             .ForUser(userId)
-            .CountAsync(tv => tv.Library.Type == Config.AnimeMediaType, ct);
+            .CountAsync(tv => tv.Library.Type == MediaTypes.AnimeMediaType, ct);
     }
 
     public Task<int> GetMovieCountAsync(Guid userId, CancellationToken ct = default)
@@ -389,7 +401,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
         return context
             .Movies.AsNoTracking()
             .ForUser(userId)
-            .CountAsync(movie => movie.Library.Type == Config.MovieMediaType, ct);
+            .CountAsync(movie => movie.Library.Type == MediaTypes.MovieMediaType, ct);
     }
 
     public Task<int> GetTvCountAsync(Guid userId, CancellationToken ct = default)
@@ -397,7 +409,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
         return context
             .Tvs.AsNoTracking()
             .ForUser(userId)
-            .CountAsync(tv => tv.Library.Type == Config.TvMediaType, ct);
+            .CountAsync(tv => tv.Library.Type == MediaTypes.TvMediaType, ct);
     }
 
     public async Task<List<GenreHomeDto>> GetHomeGenresAsync(
@@ -477,7 +489,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                 return await repo.GetHomeGenresAsync(
                     userId,
                     language,
-                    Config.MaximumItemsPerPage,
+                    UiLimits.MaximumItemsPerPage,
                     0,
                     ct
                 );

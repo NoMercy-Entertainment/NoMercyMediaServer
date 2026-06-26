@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +20,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 using Serilog.Events;
@@ -48,14 +60,14 @@ public partial class FileLogic(
 
         switch (Library.Type)
         {
-            case Config.MovieMediaType:
+            case MediaTypes.MovieMediaType:
                 await StoreMovie();
                 break;
-            case Config.TvMediaType:
-            case Config.AnimeMediaType:
+            case MediaTypes.TvMediaType:
+            case MediaTypes.AnimeMediaType:
                 await StoreTvShow();
                 break;
-            case Config.MusicMediaType:
+            case MediaTypes.MusicMediaType:
                 await StoreMusic();
                 break;
             default:
@@ -244,17 +256,17 @@ public partial class FileLogic(
     {
         switch (Library.Type)
         {
-            case Config.MovieMediaType:
+            case MediaTypes.MovieMediaType:
                 Movie = await mediaContext.Movies.Where(m => m.Id == Id).FirstOrDefaultAsync();
-                Type = Config.MovieMediaType;
+                Type = MediaTypes.MovieMediaType;
                 break;
-            case Config.TvMediaType:
+            case MediaTypes.TvMediaType:
                 Show = await mediaContext.Tvs.Where(t => t.Id == Id).FirstOrDefaultAsync();
-                Type = Config.TvMediaType;
+                Type = MediaTypes.TvMediaType;
                 break;
-            case Config.AnimeMediaType:
+            case MediaTypes.AnimeMediaType:
                 Show = await mediaContext.Tvs.Where(t => t.Id == Id).FirstOrDefaultAsync();
-                Type = Config.AnimeMediaType;
+                Type = MediaTypes.AnimeMediaType;
                 break;
         }
     }
@@ -267,9 +279,9 @@ public partial class FileLogic(
 
         int depth = Library.Type switch
         {
-            Config.MovieMediaType => 1,
-            Config.TvMediaType => 2,
-            Config.AnimeMediaType => 2,
+            MediaTypes.MovieMediaType => 1,
+            MediaTypes.TvMediaType => 2,
+            MediaTypes.AnimeMediaType => 2,
             _ => 1,
         };
 
@@ -289,9 +301,9 @@ public partial class FileLogic(
     {
         string? folder = Library.Type switch
         {
-            Config.MovieMediaType => Movie?.Folder?.Replace("/", ""),
-            Config.TvMediaType => Show?.Folder?.Replace("/", ""),
-            Config.AnimeMediaType => Show?.Folder?.Replace("/", ""),
+            MediaTypes.MovieMediaType => Movie?.Folder?.Replace("/", ""),
+            MediaTypes.TvMediaType => Show?.Folder?.Replace("/", ""),
+            MediaTypes.AnimeMediaType => Show?.Folder?.Replace("/", ""),
             _ => "",
         };
 

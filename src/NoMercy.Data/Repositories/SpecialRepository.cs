@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.DTOs.Specials;
 using NoMercy.Database;
@@ -7,6 +18,7 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
@@ -709,10 +721,9 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
         return tvs;
     }
 
-    public Task<Special?> GetSpecialAsync(Guid userId, Ulid id, CancellationToken ct = default)
+    public async Task<Special?> GetSpecialAsync(Guid userId, Ulid id, CancellationToken ct = default)
     {
-        return Task.FromResult(
-            context
+        return await context
                 .Specials.AsNoTracking()
                 .AsSplitQuery()
                 .Where(special => special.Id == id)
@@ -731,8 +742,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                 .Include(special =>
                     special.SpecialUser.Where(specialUser => specialUser.UserId.Equals(userId))
                 )
-                .FirstOrDefault()
-        );
+                .FirstOrDefaultAsync(ct);
     }
 
     private static readonly Func<
@@ -932,7 +942,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                                 SpecialId = specialId,
                                 Time = 0,
                                 LastPlayedDate = DateTime.UtcNow.ToString("o"),
-                                Type = Config.SpecialMediaType,
+                                Type = MediaTypes.SpecialMediaType,
                             }
                         );
                     }

@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +20,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -162,14 +174,14 @@ public class UserDataController(
 
         switch (body.Type)
         {
-            case Config.MovieMediaType:
-            case Config.TvMediaType:
-            case Config.CollectionMediaType:
+            case MediaTypes.MovieMediaType:
+            case MediaTypes.TvMediaType:
+            case MediaTypes.CollectionMediaType:
                 if (!int.TryParse(body.Id, out int parsedInt))
                     return false;
                 intId = parsedInt;
                 return true;
-            case Config.SpecialMediaType:
+            case MediaTypes.SpecialMediaType:
                 if (!Ulid.TryParse(body.Id, out Ulid parsedUlid))
                     return false;
                 ulidId = parsedUlid;

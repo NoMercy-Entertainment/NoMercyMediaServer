@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -17,6 +28,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FFProbe;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.AcoustId.Client;
@@ -138,15 +150,15 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         switch (library.Type)
         {
-            case Config.MovieMediaType:
+            case MediaTypes.MovieMediaType:
                 movie = await context
                     .Movies.IgnoreQueryFilters()
                     .Where(m => m.Id == id)
                     .FirstOrDefaultAsync();
                 type = library.Type;
                 break;
-            case Config.TvMediaType:
-            case Config.AnimeMediaType:
+            case MediaTypes.TvMediaType:
+            case MediaTypes.AnimeMediaType:
                 show = await context.Tvs.Where(t => t.Id == id).FirstOrDefaultAsync();
 
                 if (show == null)
@@ -456,7 +468,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         (MovieOrEpisode episodeMatch, string? imdbId)? result = libraryType switch
         {
-            Config.AnimeMediaType or Config.TvMediaType => await ResolveShowEpisodeAsync(
+            MediaTypes.AnimeMediaType or MediaTypes.TvMediaType => await ResolveShowEpisodeAsync(
                 ctx,
                 libraryType,
                 parsed,
@@ -464,7 +476,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 overrideTmdbId,
                 seasonExplicit
             ),
-            Config.MovieMediaType => await ResolveMovieMatchAsync(
+            MediaTypes.MovieMediaType => await ResolveMovieMatchAsync(
                 ctx,
                 libraryType,
                 parsed,
@@ -585,7 +597,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         (MovieOrEpisode episodeMatch, string? imdbId)? result = libraryType switch
         {
-            Config.AnimeMediaType or Config.TvMediaType => await ResolveShowEpisodeAsync(
+            MediaTypes.AnimeMediaType or MediaTypes.TvMediaType => await ResolveShowEpisodeAsync(
                 ctx,
                 libraryType,
                 parsed,
@@ -593,7 +605,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 overrideTmdbId,
                 seasonExplicit
             ),
-            Config.MovieMediaType => await ResolveMovieMatchAsync(
+            MediaTypes.MovieMediaType => await ResolveMovieMatchAsync(
                 ctx,
                 libraryType,
                 parsed,
