@@ -388,7 +388,7 @@ public class ManagementController(
                 ImageWorkers = runtimeSettings.ImageWorkers.Value,
                 FileWorkers = runtimeSettings.FileWorkers.Value,
                 MusicWorkers = runtimeSettings.MusicWorkers.Value,
-                Swagger = Config.Swagger,
+                Swagger = runtimeSettings.Swagger,
             }
         );
     }

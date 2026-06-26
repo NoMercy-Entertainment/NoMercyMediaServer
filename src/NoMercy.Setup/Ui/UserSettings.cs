@@ -180,7 +180,7 @@ public static class UserSettings
                     );
                     break;
                 case "swagger":
-                    Config.Swagger = setting.Value.ToBoolean();
+                    RuntimeServerSettings.Current.Swagger = setting.Value.ToBoolean();
                     break;
                 case "allowAdultContent":
                     Config.AllowAdultContent = setting.Value.ToBoolean();

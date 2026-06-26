@@ -174,7 +174,7 @@ public static class ApplicationConfiguration
             async (context, next) =>
             {
                 if (
-                    !Config.Swagger
+                    !RuntimeServerSettings.Current.Swagger
                     && (
                         context.Request.Path.StartsWithSegments("/swagger")
                         || context.Request.Path.StartsWithSegments("/index.html")

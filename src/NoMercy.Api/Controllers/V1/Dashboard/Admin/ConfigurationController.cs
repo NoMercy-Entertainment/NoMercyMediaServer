@@ -67,7 +67,7 @@ public class ConfigurationController(
                     FileWorkers = runtimeSettings.FileWorkers.Value,
                     MusicWorkers = runtimeSettings.MusicWorkers.Value,
                     ServerName = DeviceName(),
-                    Swagger = Config.Swagger,
+                    Swagger = runtimeSettings.Swagger,
                     AllowAdultContent = Config.ShowAdultContent,
                 },
             }
@@ -242,20 +242,25 @@ public class ConfigurationController(
 
         if (request.Swagger is not null)
         {
-            bool oldSwagger = Config.Swagger;
-            Config.Swagger = (bool)request.Swagger;
+            bool oldSwagger = runtimeSettings.Swagger;
+            runtimeSettings.Swagger = (bool)request.Swagger;
             await appContext
                 .Configuration.Upsert(
                     new()
                     {
                         Key = "swagger",
-                        Value = Config.Swagger.ToString(),
+                        Value = runtimeSettings.Swagger.ToString(),
                         ModifiedBy = User.UserId(),
                     }
                 )
                 .On(e => e.Key)
                 .WhenMatched(
-                    (o, n) => new() { Value = Config.Swagger.ToString(), ModifiedBy = n.ModifiedBy }
+                    (o, n) =>
+                        new()
+                        {
+                            Value = runtimeSettings.Swagger.ToString(),
+                            ModifiedBy = n.ModifiedBy,
+                        }
                 )
                 .RunAsync();
             changes.Add(("swagger", oldSwagger, (bool)request.Swagger));
