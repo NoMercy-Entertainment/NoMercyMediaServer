@@ -19,11 +19,11 @@ namespace NoMercy.NmSystem.Extensions;
 
 public static class HttpClientExtensions
 {
+    private const string DefaultDnsServer = "1.1.1.1";
+
     private static readonly ConcurrentDictionary<string, LookupClient> DnsClients = new();
 
-    public static HttpClient WithNoMercyUserAgent(
-        this HttpClient client
-    )
+    public static HttpClient WithNoMercyUserAgent(this HttpClient client)
     {
         client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
         return client;
@@ -31,7 +31,7 @@ public static class HttpClientExtensions
 
     public static HttpClient WithDns(string? dnsServer = null)
     {
-        string server = dnsServer ?? Config.DnsServer;
+        string server = dnsServer ?? DefaultDnsServer;
         SocketsHttpHandler handler = new()
         {
             ConnectCallback = async (context, token) =>
