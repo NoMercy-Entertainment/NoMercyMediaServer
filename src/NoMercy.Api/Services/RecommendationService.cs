@@ -33,16 +33,22 @@ public class RecommendationService
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly IRecommendationRepository _recommendationRepository;
     private readonly IMemoryCache _cache;
+    private readonly IMovieMetadataProvider _movieMetadataProvider;
+    private readonly ITvShowMetadataProvider _tvShowMetadataProvider;
 
     public RecommendationService(
         IRecommendationRepository recommendationRepository,
         IDbContextFactory<MediaContext> contextFactory,
-        IMemoryCache cache
+        IMemoryCache cache,
+        IMovieMetadataProvider movieMetadataProvider,
+        ITvShowMetadataProvider tvShowMetadataProvider
     )
     {
         _recommendationRepository = recommendationRepository;
         _contextFactory = contextFactory;
         _cache = cache;
+        _movieMetadataProvider = movieMetadataProvider;
+        _tvShowMetadataProvider = tvShowMetadataProvider;
     }
 
     public async Task<List<RecommendationDto>> GetPersonalizedRecommendationsAsync(
@@ -392,10 +398,10 @@ public class RecommendationService
 
         // Fetch TMDB data and local source items in parallel
         Task<TmdbMovieAppends?> movieAppendsTask = isMovie
-            ? new TmdbMovieClient(mediaId, language: tmdbLanguage).WithAllAppends()
+            ? _movieMetadataProvider.GetMovieAsync(mediaId, tmdbLanguage, ct)
             : Task.FromResult<TmdbMovieAppends?>(null);
         Task<TmdbTvShowAppends?> tvAppendsTask = !isMovie
-            ? new TmdbTvClient(mediaId, language: tmdbLanguage).WithAllAppends()
+            ? _tvShowMetadataProvider.GetTvShowAsync(mediaId, tmdbLanguage, ct)
             : Task.FromResult<TmdbTvShowAppends?>(null);
 
         await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
