@@ -9,13 +9,14 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-// The Api suite drives a shared WebApplicationFactory and shares process-wide
-// statics (the ClaimsPrincipleExtensions _users cache + the on-disk test DB).
-// Worker/coordinator tests Reset() the user cache, so parallel classes can read
-// it mid-mutation and get spurious 403s. Serialize collections; combined with
-// the per-class user-cache reseed in NoMercyApiFactory this keeps the suite
-// deterministic. (The static cache is slated for a scoped IUserCache in the
-// wider refactor.)
+// Serialize xUnit test collections across every test assembly. The suite
+// exercises process-global mutable statics (ClaimsPrincipleExtensions._users,
+// HttpClientProvider._factory, the ApiKeyStore singleton, QueueRunner.Current,
+// Encoder service statics, ...). With collection parallelism one class can
+// mutate/Reset such a static while another reads it, yielding intermittent
+// failures that pass in isolation. Serializing collections makes the full suite
+// deterministic. (The statics are slated for scoped DI in the wider refactor;
+// this is the bridge until then.)
 using Xunit;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]

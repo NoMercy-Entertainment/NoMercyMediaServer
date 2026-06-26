@@ -10,6 +10,12 @@
       Include="$(MSBuildThisFileDirectory)TestEnvironmentSetup.cs"
       Link="TestEnvironmentSetup.cs"
     />
+    <!-- Serialize xUnit collections in every test assembly (not the plugin sample). -->
+    <Compile
+      Include="$(MSBuildThisFileDirectory)SharedTestParallelization.cs"
+      Link="SharedTestParallelization.cs"
+      Condition="'$(MSBuildProjectName)' != 'NoMercy.Plugin.Samples.Echo'"
+    />
   </ItemGroup>
   <ItemGroup>
     <!-- TestEnvironmentSetup.cs needs NmSystem for Config.IsTest and AppFiles.AppPath -->
