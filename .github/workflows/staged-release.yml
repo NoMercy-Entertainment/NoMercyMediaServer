@@ -3,7 +3,7 @@ name: Staged Release
 on:
   push:
     paths: ['src/**', 'tests/**']
-    branches-ignore: [dev, master]
+    branches-ignore: [dev, master, 'refactor/**']
   workflow_dispatch:
 
 concurrency:
