@@ -15,6 +15,7 @@ using System.Net.Sockets;
 using System.Text;
 using Mono.Nat;
 using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -92,13 +93,17 @@ public class NetworkDiscovery : INetworkDiscovery
     }
 
     public string InternalDomain => $"{InternalIp.SafeHost()}.{Info.DeviceId}.nomercy.tv";
-    public string InternalAddress => $"https://{InternalDomain}:{Config.InternalServerPort}";
+    public string InternalAddress =>
+        $"https://{InternalDomain}:{RuntimeServerSettings.Current.InternalServerPort}";
 
     public string ExternalDomain => $"{ExternalIp.SafeHost()}.{Info.DeviceId}.nomercy.tv";
-    public string ExternalAddress => $"https://{ExternalDomain}:{Config.ExternalServerPort}";
+    public string ExternalAddress =>
+        $"https://{ExternalDomain}:{RuntimeServerSettings.Current.ExternalServerPort}";
 
     public string? ExternalAddressV6 =>
-        ExternalIpV6 is not null ? $"https://[{ExternalIpV6}]:{Config.ExternalServerPort}" : null;
+        ExternalIpV6 is not null
+            ? $"https://[{ExternalIpV6}]:{RuntimeServerSettings.Current.ExternalServerPort}"
+            : null;
 
     public bool Ipv6Enabled => CheckIpv6();
 
@@ -195,8 +200,8 @@ public class NetworkDiscovery : INetworkDiscovery
             _device.CreatePortMap(
                 new(
                     Protocol.Tcp,
-                    Config.InternalServerPort,
-                    Config.ExternalServerPort,
+                    RuntimeServerSettings.Current.InternalServerPort,
+                    RuntimeServerSettings.Current.ExternalServerPort,
                     0,
                     "NoMercy MediaServer (TCP)"
                 )
@@ -205,8 +210,8 @@ public class NetworkDiscovery : INetworkDiscovery
             _device.CreatePortMap(
                 new(
                     Protocol.Udp,
-                    Config.InternalServerPort,
-                    Config.ExternalServerPort,
+                    RuntimeServerSettings.Current.InternalServerPort,
+                    RuntimeServerSettings.Current.ExternalServerPort,
                     0,
                     "NoMercy MediaServer (UDP)"
                 )
@@ -239,14 +244,17 @@ public class NetworkDiscovery : INetworkDiscovery
         int timeoutMilliseconds = 1500;
 
         using TcpClient client = new();
-        Task connectTask = client.ConnectAsync(ExternalIp, Config.ExternalServerPort);
+        Task connectTask = client.ConnectAsync(
+            ExternalIp,
+            RuntimeServerSettings.Current.ExternalServerPort
+        );
         Task delayTask = Task.Delay(timeoutMilliseconds);
         Task completedTask = await Task.WhenAny(connectTask, delayTask);
 
         if (completedTask == delayTask)
         {
             Logger.Setup(
-                $"Timeout checking {ExternalIp}:{Config.ExternalServerPort} after {timeoutMilliseconds}ms.",
+                $"Timeout checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort} after {timeoutMilliseconds}ms.",
                 LogEventLevel.Verbose
             );
             return false;
@@ -260,7 +268,7 @@ public class NetworkDiscovery : INetworkDiscovery
         catch (SocketException ex)
         {
             Logger.Setup(
-                $"SocketException checking {ExternalIp}:{Config.ExternalServerPort}: {ex.SocketErrorCode} ({ex.Message})",
+                $"SocketException checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort}: {ex.SocketErrorCode} ({ex.Message})",
                 LogEventLevel.Debug
             );
             return false;
@@ -268,7 +276,7 @@ public class NetworkDiscovery : INetworkDiscovery
         catch (Exception ex)
         {
             Logger.Setup(
-                $"Exception checking {ExternalIp}:{Config.ExternalServerPort}: {ex.Message}",
+                $"Exception checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort}: {ex.Message}",
                 LogEventLevel.Debug
             );
             return false;

@@ -15,6 +15,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -192,7 +193,7 @@ public class SetupEndpoints
             status = "setup_required",
             phase = _state.CurrentPhase.ToString(),
             error = _state.ErrorMessage,
-            server_port = Config.InternalServerPort,
+            server_port = RuntimeServerSettings.Current.InternalServerPort,
             auth_base_url = Config.AuthBaseUrl.OrEmpty(),
             client_id = Config.TokenClientId.OrEmpty(),
             code_challenge = codeChallenge,
@@ -499,7 +500,8 @@ public class SetupEndpoints
 
         _state.TransitionTo(SetupPhase.Authenticating);
 
-        string redirectUri = $"http://localhost:{Config.InternalServerPort}/sso-callback";
+        string redirectUri =
+            $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/sso-callback";
         string responseTitle;
         string responseMessage;
         bool responseIsError;
@@ -662,7 +664,8 @@ public class SetupEndpoints
 
             if (SetupTerminalUi.IsInteractiveTerminal)
             {
-                string setupPageUrl = $"http://localhost:{Config.InternalServerPort}/setup";
+                string setupPageUrl =
+                    $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/setup";
                 SetupTerminalUi terminalUi = _terminalUi ?? new SetupTerminalUi();
                 terminalUi.Show(
                     deviceData.VerificationUriComplete,
@@ -816,7 +819,7 @@ public class SetupEndpoints
             if (Certificate.HasValidCertificate())
             {
                 string serverUrl =
-                    $"https://{Info.DeviceId}.nomercy.tv:{Config.ExternalServerPort}";
+                    $"https://{Info.DeviceId}.nomercy.tv:{RuntimeServerSettings.Current.ExternalServerPort}";
                 _state.SetServerUrl(serverUrl);
                 _state.TransitionTo(SetupPhase.CertificateAcquired);
                 _state.TransitionTo(SetupPhase.Complete);
@@ -1000,7 +1003,7 @@ public class SetupEndpoints
 
     internal static string BuildRedirectUri(HttpRequest request)
     {
-        int port = request.Host.Port ?? Config.InternalServerPort;
+        int port = request.Host.Port ?? RuntimeServerSettings.Current.InternalServerPort;
         return $"http://localhost:{port}/sso-callback";
     }
 

@@ -18,6 +18,7 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -237,8 +238,8 @@ public class ServerRegistrationService : IServerRegistrationService
             { "internal_ip", _networkDiscovery?.RegistrationInternalIp ?? "0.0.0.0" },
             { "internal_ipv6", (_networkDiscovery?.InternalIpV6).OrEmpty() },
             { "external_ipv6", (_networkDiscovery?.ExternalIpV6).OrEmpty() },
-            { "internal_port", Config.InternalServerPort.ToString() },
-            { "external_port", Config.ExternalServerPort.ToString() },
+            { "internal_port", RuntimeServerSettings.Current.InternalServerPort.ToString() },
+            { "external_port", RuntimeServerSettings.Current.ExternalServerPort.ToString() },
             { "version", Software.Version!.ToString() },
             { "platform", Info.Platform },
             { "stun_public_ip", _connectivityStatus.StunPublicIp.OrEmpty() },

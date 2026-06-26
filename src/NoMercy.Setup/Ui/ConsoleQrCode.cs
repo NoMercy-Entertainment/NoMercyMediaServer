@@ -11,6 +11,7 @@
 
 using System.Collections.Specialized;
 using System.Web;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -33,7 +34,8 @@ public class ConsoleQrCode
         string userCode
     )
     {
-        string setupPageUrl = $"http://localhost:{Config.InternalServerPort}/setup";
+        string setupPageUrl =
+            $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/setup";
         Display(verificationUriComplete, verificationUri, userCode, setupPageUrl);
     }
 

@@ -56,8 +56,8 @@ public class ConfigurationController(
             {
                 Data = new()
                 {
-                    InternalServerPort = Config.InternalServerPort,
-                    ExternalServerPort = Config.ExternalServerPort,
+                    InternalServerPort = runtimeSettings.InternalServerPort,
+                    ExternalServerPort = runtimeSettings.ExternalServerPort,
                     LibraryWorkers = runtimeSettings.LibraryWorkers.Value,
                     ImportWorkers = runtimeSettings.ImportWorkers.Value,
                     ExtrasWorkers = runtimeSettings.ExtrasWorkers.Value,
@@ -132,8 +132,8 @@ public class ConfigurationController(
 
         if (request.InternalServerPort != 0)
         {
-            int oldPort = Config.InternalServerPort;
-            Config.InternalServerPort = request.InternalServerPort;
+            int oldPort = runtimeSettings.InternalServerPort;
+            runtimeSettings.InternalServerPort = request.InternalServerPort;
             await appContext
                 .Configuration.Upsert(
                     new()
@@ -151,8 +151,8 @@ public class ConfigurationController(
 
         if (request.ExternalServerPort != 0)
         {
-            int oldPort = Config.ExternalServerPort;
-            Config.ExternalServerPort = request.ExternalServerPort;
+            int oldPort = runtimeSettings.ExternalServerPort;
+            runtimeSettings.ExternalServerPort = request.ExternalServerPort;
             await appContext
                 .Configuration.Upsert(
                     new()

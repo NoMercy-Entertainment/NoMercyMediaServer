@@ -11,6 +11,7 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -51,7 +52,7 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                 "You don't have access to our Cloudflare tunnel service, this is a paid feature."
             );
             Logger.Setup(
-                $"You need to manually forward port {Config.InternalServerPort} to {Config.ExternalServerPort} if you want to use the server outside your local network"
+                $"You need to manually forward port {RuntimeServerSettings.Current.InternalServerPort} to {RuntimeServerSettings.Current.ExternalServerPort} if you want to use the server outside your local network"
             );
             Logger.Setup(
                 "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide"

@@ -377,8 +377,8 @@ public class ManagementController(
         return Ok(
             new ManagementConfigDto
             {
-                InternalPort = Config.InternalServerPort,
-                ExternalPort = Config.ExternalServerPort,
+                InternalPort = runtimeSettings.InternalServerPort,
+                ExternalPort = runtimeSettings.ExternalServerPort,
                 ServerName = serverNameConfig?.Value ?? Environment.MachineName,
                 LibraryWorkers = runtimeSettings.LibraryWorkers.Value,
                 ImportWorkers = runtimeSettings.ImportWorkers.Value,

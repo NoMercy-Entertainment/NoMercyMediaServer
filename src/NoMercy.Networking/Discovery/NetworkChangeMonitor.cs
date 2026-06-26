@@ -16,6 +16,7 @@ using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using NoMercy.Networking.Connectivity;
 using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
@@ -163,8 +164,8 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                 { "internal_ip", _networkDiscovery.RegistrationInternalIp },
                 { "internal_ipv6", _networkDiscovery.InternalIpV6.OrEmpty() },
                 { "external_ipv6", _networkDiscovery.ExternalIpV6.OrEmpty() },
-                { "internal_port", Config.InternalServerPort.ToString() },
-                { "external_port", Config.ExternalServerPort.ToString() },
+                { "internal_port", RuntimeServerSettings.Current.InternalServerPort.ToString() },
+                { "external_port", RuntimeServerSettings.Current.ExternalServerPort.ToString() },
                 { "version", Software.Version!.ToString() },
                 { "platform", Info.Platform },
                 { "stun_public_ip", _connectivityStatus.StunPublicIp.OrEmpty() },

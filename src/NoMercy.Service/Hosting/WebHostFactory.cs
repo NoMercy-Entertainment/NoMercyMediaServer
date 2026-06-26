@@ -20,6 +20,7 @@ using CommandLine;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
@@ -32,15 +33,11 @@ using NoMercy.Setup.Ui;
 using NoMercy.Storage;
 using NoMercyQueue;
 
-
 namespace NoMercy.Service.Hosting;
 
 public static class WebHostFactory
 {
-    public static WebApplication Create(
-        StartupOptions options,
-        bool forceHttp = false
-    )
+    public static WebApplication Create(StartupOptions options, bool forceHttp = false)
     {
         List<IPAddress> localAddresses = [IPAddress.Any];
 
@@ -95,7 +92,7 @@ public static class WebHostFactory
             {
                 kestrelOptions.Listen(
                     address,
-                    Config.InternalServerPort,
+                    RuntimeServerSettings.Current.InternalServerPort,
                     listenOptions =>
                     {
                         if (forceHttp)
@@ -114,7 +111,7 @@ public static class WebHostFactory
             // Health check endpoint — HTTP only, localhost only (for Docker HEALTHCHECK)
             kestrelOptions.Listen(
                 IPAddress.Loopback,
-                Config.InternalServerPort + 1,
+                RuntimeServerSettings.Current.InternalServerPort + 1,
                 listenOptions =>
                 {
                     listenOptions.Protocols = HttpProtocols.Http1;

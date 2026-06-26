@@ -14,6 +14,7 @@ using System.Net.Sockets;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
@@ -63,12 +64,16 @@ public class ServerRunner : IServerRunner
                 || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
             )
         {
-            bool shouldRetry = await _portManager.HandlePortInUse(Config.InternalServerPort, ex);
+            bool shouldRetry = await _portManager.HandlePortInUse(
+                RuntimeServerSettings.Current.InternalServerPort,
+                ex
+            );
             await httpHost.DisposeAsync();
             return shouldRetry;
         }
 
-        string setupUrl = $"http://localhost:{Config.InternalServerPort}/setup";
+        string setupUrl =
+            $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/setup";
         _logger.LogInformation(
             "Server is in setup mode. Please complete setup at: {SetupUrl}",
             setupUrl
@@ -231,7 +236,10 @@ public class ServerRunner : IServerRunner
                 || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
             )
         {
-            bool shouldRetry = await _portManager.HandlePortInUse(Config.InternalServerPort, ex);
+            bool shouldRetry = await _portManager.HandlePortInUse(
+                RuntimeServerSettings.Current.InternalServerPort,
+                ex
+            );
             await host.DisposeAsync();
             return shouldRetry;
         }

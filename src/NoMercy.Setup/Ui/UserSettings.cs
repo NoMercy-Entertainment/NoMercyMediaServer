@@ -35,15 +35,19 @@ public static class UserSettings
             {
                 switch (config.Key)
                 {
-                    case "internalPort" when Config.InternalServerPort != int.Parse(config.Value):
-                        config.Value = Config.InternalServerPort.ToString();
+                    case "internalPort"
+                        when RuntimeServerSettings.Current.InternalServerPort
+                            != int.Parse(config.Value):
+                        config.Value = RuntimeServerSettings.Current.InternalServerPort.ToString();
                         appContext
                             .Configuration.Upsert(new() { Key = config.Key, Value = config.Value })
                             .On(c => c.Key)
                             .Run();
                         break;
-                    case "externalPort" when Config.ExternalServerPort != int.Parse(config.Value):
-                        config.Value = Config.ExternalServerPort.ToString();
+                    case "externalPort"
+                        when RuntimeServerSettings.Current.ExternalServerPort
+                            != int.Parse(config.Value):
+                        config.Value = RuntimeServerSettings.Current.ExternalServerPort.ToString();
                         appContext
                             .Configuration.Upsert(new() { Key = config.Key, Value = config.Value })
                             .On(c => c.Key)
@@ -84,33 +88,41 @@ public static class UserSettings
 
             switch (setting.Key)
             {
-                case "internalPort" when Config.InternalServerPort == int.Parse(setting.Value):
-                    Config.InternalServerPort = int.Parse(setting.Value);
+                case "internalPort"
+                    when RuntimeServerSettings.Current.InternalServerPort
+                        == int.Parse(setting.Value):
+                    RuntimeServerSettings.Current.InternalServerPort = int.Parse(setting.Value);
                     break;
-                case "internalPort" when Config.InternalServerPort != int.Parse(setting.Value):
-                    Config.InternalServerPort = int.Parse(setting.Value);
+                case "internalPort"
+                    when RuntimeServerSettings.Current.InternalServerPort
+                        != int.Parse(setting.Value):
+                    RuntimeServerSettings.Current.InternalServerPort = int.Parse(setting.Value);
                     appContext
                         .Configuration.Upsert(
                             new()
                             {
                                 Key = setting.Key,
-                                Value = Config.InternalServerPort.ToString(),
+                                Value = RuntimeServerSettings.Current.InternalServerPort.ToString(),
                             }
                         )
                         .On(c => c.Key)
                         .Run();
                     break;
-                case "externalPort" when Config.ExternalServerPort == int.Parse(setting.Value):
-                    Config.ExternalServerPort = int.Parse(setting.Value);
+                case "externalPort"
+                    when RuntimeServerSettings.Current.ExternalServerPort
+                        == int.Parse(setting.Value):
+                    RuntimeServerSettings.Current.ExternalServerPort = int.Parse(setting.Value);
                     break;
-                case "externalPort" when Config.ExternalServerPort != int.Parse(setting.Value):
-                    Config.ExternalServerPort = int.Parse(setting.Value);
+                case "externalPort"
+                    when RuntimeServerSettings.Current.ExternalServerPort
+                        != int.Parse(setting.Value):
+                    RuntimeServerSettings.Current.ExternalServerPort = int.Parse(setting.Value);
                     appContext
                         .Configuration.Upsert(
                             new()
                             {
                                 Key = setting.Key,
-                                Value = Config.ExternalServerPort.ToString(),
+                                Value = RuntimeServerSettings.Current.ExternalServerPort.ToString(),
                             }
                         )
                         .On(c => c.Key)

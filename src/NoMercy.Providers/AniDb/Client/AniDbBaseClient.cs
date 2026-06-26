@@ -12,6 +12,7 @@
 using System.Security;
 using AniDB;
 using NoMercy.Helpers;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -30,7 +31,7 @@ public class AniDbBaseClient
     {
         ClientName = "nomercy",
         ClientVersion = 1,
-        LocalPort = (ushort)(Config.ExternalServerPort + 1),
+        LocalPort = (ushort)(RuntimeServerSettings.Current.ExternalServerPort + 1),
     };
 
     private static readonly AniDBClient AniDbClient = new(AniDbClientOptions);

@@ -11,6 +11,7 @@
 
 using CommandLine;
 using NoMercy.Database;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -159,14 +160,14 @@ public class StartupOptions
             InternalPort,
             "internalPort",
             "internal",
-            port => Config.InternalServerPort = port,
+            port => RuntimeServerSettings.Current.InternalServerPort = port,
             options
         );
         ExternalPort = ResolvePort(
             ExternalPort,
             "externalPort",
             "external",
-            port => Config.ExternalServerPort = port,
+            port => RuntimeServerSettings.Current.ExternalServerPort = port,
             options
         );
 

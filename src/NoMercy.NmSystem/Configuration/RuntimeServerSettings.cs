@@ -24,6 +24,8 @@ public class RuntimeServerSettings
 
     public int ExternalServerPort { get; set; } = 7626;
 
+    public int StunPort => InternalServerPort + 1;
+
     public KeyValuePair<string, int> LibraryWorkers { get; set; } = new("library", 1);
 
     public KeyValuePair<string, int> ImportWorkers { get; set; } = new("import", 2);

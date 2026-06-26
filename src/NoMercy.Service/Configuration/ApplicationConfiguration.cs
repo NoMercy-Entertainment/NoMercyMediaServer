@@ -21,6 +21,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.ChangesJobs;
 using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.FanArt.Client;
@@ -123,7 +124,8 @@ public static class ApplicationConfiguration
             app.UseWhen(
                 context =>
                     !context.Request.Path.StartsWithSegments("/manage")
-                    && context.Connection.LocalPort != Config.InternalServerPort + 1,
+                    && context.Connection.LocalPort
+                        != RuntimeServerSettings.Current.InternalServerPort + 1,
                 branch => branch.UseHttpsRedirection()
             );
         }

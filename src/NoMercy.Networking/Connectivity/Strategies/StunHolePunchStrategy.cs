@@ -11,6 +11,7 @@
 
 using System.Net;
 using System.Net.Sockets;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
@@ -48,7 +49,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
     {
         try
         {
-            int localPort = Config.StunPort;
+            int localPort = RuntimeServerSettings.Current.StunPort;
             _stunSocket = new(localPort);
 
             // Send STUN binding request to first server

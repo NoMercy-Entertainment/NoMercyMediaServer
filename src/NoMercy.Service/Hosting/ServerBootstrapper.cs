@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using NoMercy.NmSystem.Auth;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -21,6 +20,8 @@ using CommandLine;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
@@ -33,14 +34,12 @@ using NoMercy.Setup.Ui;
 using NoMercy.Storage;
 using NoMercyQueue;
 
-
 namespace NoMercy.Service.Hosting;
 
 public sealed class ServerBootstrapper
 {
     public async Task RunAsync(StartupOptions options)
     {
-
         switch (options.RunAsService)
         {
             case true:
@@ -109,7 +108,8 @@ public sealed class ServerBootstrapper
 
         WebApplication app = WebHostFactory.Create(options, forceHttp: !hasCert);
 
-        IShutdownCoordinator shutdownCoordinator = app.Services.GetRequiredService<IShutdownCoordinator>();
+        IShutdownCoordinator shutdownCoordinator =
+            app.Services.GetRequiredService<IShutdownCoordinator>();
         IPortManager portManager = app.Services.GetRequiredService<IPortManager>();
 
         IApiKeyLoader apiKeyLoader = app.Services.GetRequiredService<IApiKeyLoader>();
@@ -118,7 +118,7 @@ public sealed class ServerBootstrapper
         // Proactively resolve port conflicts before proceeding.
         // This avoids the costly build→fail→kill→rebuild cycle and prevents
         // CronWorker "Failed to start database job workers" errors.
-        await portManager.EnsurePortAvailable(Config.InternalServerPort);
+        await portManager.EnsurePortAvailable(RuntimeServerSettings.Current.InternalServerPort);
 
         // Hand the phase tracker to the static accessor so boot helpers in
         // NoMercy.Setup (Start.cs, Binaries.cs) can advance stages without DI
@@ -150,10 +150,7 @@ public sealed class ServerBootstrapper
         // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).
         // It returns true when interactive auth is required (setup mode).
         BootOrchestrator orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
-        bool needsSetupMode = await orchestrator.RunAsync(
-            app.Services,
-            shutdownCoordinator.Token
-        );
+        bool needsSetupMode = await orchestrator.RunAsync(app.Services, shutdownCoordinator.Token);
 
         // The initial forceHttp decision used cert presence as a proxy for "auth done".
         // It's wrong when a cert exists but tokens are missing/unreadable (DataProtection
@@ -176,7 +173,10 @@ public sealed class ServerBootstrapper
 
         // Auth completed — seed auth-dependent data (users, library assignment, claims)
         if (!needsSetupMode)
-            await DatabaseSeeder.SeedAuthData(diStorage, app.Services.GetRequiredService<IAuthTokenStore>().AccessToken);
+            await DatabaseSeeder.SeedAuthData(
+                diStorage,
+                app.Services.GetRequiredService<IAuthTokenStore>().AccessToken
+            );
 
         // Force QueueRunner singleton creation and initialize workers immediately —
         // don't wait for InitRemaining() which can be blocked by rate-limited HTTP calls.
@@ -242,7 +242,8 @@ public sealed class ServerBootstrapper
             WebApplication retryHost = WebHostFactory.Create(options, forceHttp: needsSetupMode);
             HostLifecycleHooks.Register(retryHost, retryStopWatch);
 
-            IServerRunner retryServerRunner = retryHost.Services.GetRequiredService<IServerRunner>();
+            IServerRunner retryServerRunner =
+                retryHost.Services.GetRequiredService<IServerRunner>();
 
             // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
             QueueRunner retryQueueRunner = retryHost.Services.GetRequiredService<QueueRunner>();

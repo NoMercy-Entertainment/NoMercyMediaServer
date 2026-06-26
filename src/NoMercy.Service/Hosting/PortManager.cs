@@ -15,6 +15,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -38,7 +39,11 @@ public class PortManager : IPortManager
         string processInfo = await FindProcessOnPortAsync(port);
 
         if (!string.IsNullOrEmpty(processInfo))
-            _logger.LogInformation("Process holding port {Port}:\n{ProcessInfo}", port, processInfo);
+            _logger.LogInformation(
+                "Process holding port {Port}:\n{ProcessInfo}",
+                port,
+                processInfo
+            );
 
         int blockingPid = ParsePidFromPortInfo(processInfo);
 
@@ -114,7 +119,7 @@ public class PortManager : IPortManager
                 blockingPid,
                 alternativePort
             );
-            Config.InternalServerPort = alternativePort;
+            RuntimeServerSettings.Current.InternalServerPort = alternativePort;
             return;
         }
 
@@ -140,7 +145,11 @@ public class PortManager : IPortManager
                 return candidate;
         }
 
-        _logger.LogError("No available port found in range {StartPort}–{MaxPort}.", startPort, MaxPort);
+        _logger.LogError(
+            "No available port found in range {StartPort}–{MaxPort}.",
+            startPort,
+            MaxPort
+        );
         Environment.ExitCode = 1;
         Environment.Exit(1);
         return -1;
@@ -176,11 +185,14 @@ public class PortManager : IPortManager
             return false;
         }
 
-        _logger.LogWarning("Host failed to bind to port {Port} (Address already in use). Attempting recovery...", port);
+        _logger.LogWarning(
+            "Host failed to bind to port {Port} (Address already in use). Attempting recovery...",
+            port
+        );
         await EnsurePortAvailable(port);
 
         // If EnsurePortAvailable didn't exit the process, we can retry on the same port
-        // (if it was freed) or we already switched Config.InternalServerPort.
+        // (if it was freed) or we already switched RuntimeServerSettings.Current.InternalServerPort.
         return true;
     }
 
@@ -191,7 +203,11 @@ public class PortManager : IPortManager
             Process process = Process.GetProcessById(pid);
             process.Kill();
 
-            _logger.LogInformation("Sent kill signal to PID {Pid}. Waiting for port {Port} to be freed...", pid, port);
+            _logger.LogInformation(
+                "Sent kill signal to PID {Pid}. Waiting for port {Port} to be freed...",
+                pid,
+                port
+            );
 
             // Wait up to 5 seconds for the port to be freed
             for (int i = 0; i < 50; i++)
@@ -201,12 +217,21 @@ public class PortManager : IPortManager
                     return true;
             }
 
-            _logger.LogError("Timed out waiting for port {Port} to be freed by PID {Pid}.", port, pid);
+            _logger.LogError(
+                "Timed out waiting for port {Port} to be freed by PID {Pid}.",
+                port,
+                pid
+            );
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to kill process {Pid} or wait for port {Port}.", pid, port);
+            _logger.LogError(
+                ex,
+                "Failed to kill process {Pid} or wait for port {Port}.",
+                pid,
+                port
+            );
             return false;
         }
     }
@@ -220,7 +245,8 @@ public class PortManager : IPortManager
             {
                 using Process process = new();
                 process.StartInfo.FileName = "cmd.exe";
-                process.StartInfo.Arguments = $"/c \"netstat -ano | findstr LISTENING | findstr :{port}\"";
+                process.StartInfo.Arguments =
+                    $"/c \"netstat -ano | findstr LISTENING | findstr :{port}\"";
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.CreateNoWindow = true;
@@ -235,7 +261,10 @@ public class PortManager : IPortManager
             }
         }
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        if (
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+        )
         {
             // Linux/macOS: lsof -i :<port>
             try
@@ -271,7 +300,10 @@ public class PortManager : IPortManager
         {
             // netstat output: last column is PID
             // Example: TCP    0.0.0.0:7625           0.0.0.0:0              LISTENING       1234
-            string[] lines = processInfo.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] lines = processInfo.Split(
+                new[] { '\r', '\n' },
+                StringSplitOptions.RemoveEmptyEntries
+            );
             if (lines.Length > 0)
             {
                 string[] parts = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
