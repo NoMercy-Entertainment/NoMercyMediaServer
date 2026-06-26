@@ -28,13 +28,13 @@ public class FanArtImageClient : FanArtBaseClient
 
     public FanArtImageClient()
     {
-        Configuration.ClientKey = ApiInfo.AcousticIdKey;
+        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
     }
 
     public FanArtImageClient(Guid id)
         : base(id)
     {
-        Configuration.ClientKey = ApiInfo.AcousticIdKey;
+        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
     }
 
     public Task<CoverArtCovers?> Cover(bool priority = false)

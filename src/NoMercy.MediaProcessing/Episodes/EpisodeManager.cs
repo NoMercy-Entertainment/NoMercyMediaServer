@@ -12,11 +12,12 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Episode;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Episodes;
 
-public class EpisodeManager(IEpisodeRepository episodeRepository, JobDispatcher jobDispatcher)
+public class EpisodeManager(IEpisodeRepository episodeRepository, IJobDispatcher jobDispatcher)
     : BaseManager,
         IEpisodeManager
 {

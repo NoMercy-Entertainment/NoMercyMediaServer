@@ -4,7 +4,7 @@ public record MediaItemRef(MediaType Type, long Id, string Title, int? Year);
 
 public interface IOutputNamingResolver
 {
-    BundleLayout Resolve(MediaItemRef media, NoMercy.Encoder.Profiles.EncodingProfile profile);
+    BundleLayout Resolve(MediaItemRef media, Profiles.EncodingProfile profile);
 
     string VideoVariantPath(BundleLayout layout, string label, string filename);
 

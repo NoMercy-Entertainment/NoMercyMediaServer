@@ -16,7 +16,11 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Tags(tags: "Media People")]
 [ApiVersion(1.0)]
 [Authorize]
-public class PeopleController(IPeopleRepository peopleRepository) : BaseController
+public class PeopleController(
+    IPeopleRepository peopleRepository,
+    IPersonMetadataProvider personMetadataProvider,
+    IServerConfiguration config
+) : BaseController
 {
     [HttpGet]
     [Route("api/v{version:apiVersion}/person")] // match themoviedb.org API
@@ -48,13 +52,12 @@ public class PeopleController(IPeopleRepository peopleRepository) : BaseControll
 
         string country = Country();
 
-        TmdbPersonClient tmdbPersonClient = new(id);
-        TmdbPersonAppends? personAppends = await tmdbPersonClient.WithAllAppends(true);
+        TmdbPersonAppends? personAppends = await personMetadataProvider.GetPersonAsync(id, default);
 
         if (personAppends is null)
             return NotFoundResponse("Person not found");
 
-        if (personAppends.Adult && !Config.ShowAdultContent)
+        if (personAppends.Adult && !config.ShowAdultContent)
             return UnauthorizedResponse(
                 "Person is adult which is not allowed by the server configuration"
             );

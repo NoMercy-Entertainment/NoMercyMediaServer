@@ -16,6 +16,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -28,7 +29,8 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class CollectionsController(
     ICollectionRepository collectionRepository,
     ILibraryRepository libraryRepository,
-    JobDispatcher jobDispatcher
+    IJobDispatcher jobDispatcher,
+    ICollectionMetadataProvider collectionMetadataProvider
 ) : BaseController
 {
     [HttpGet]
@@ -120,8 +122,8 @@ public class CollectionsController(
         )
             return Ok(new CollectionResponseDto { Data = new(collection) });
 
-        TmdbCollectionClient tmdbCollectionsClient = new(id, language: language);
-        TmdbCollectionAppends? collectionAppends = await tmdbCollectionsClient.WithAllAppends(true);
+        TmdbCollectionAppends? collectionAppends =
+            await collectionMetadataProvider.GetCollectionAsync(id, language, ct);
 
         if (collectionAppends is null)
             return NotFoundResponse("Collection not found");

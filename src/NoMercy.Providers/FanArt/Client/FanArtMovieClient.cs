@@ -8,7 +8,7 @@ public class FanArtMovieClient : FanArtBaseClient
 {
     public FanArtMovieClient()
     {
-        Configuration.ClientKey = ApiInfo.AcousticIdKey;
+        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
     }
 
     public Task<FanArtMovie?> Movie(Guid id, bool priority = false)

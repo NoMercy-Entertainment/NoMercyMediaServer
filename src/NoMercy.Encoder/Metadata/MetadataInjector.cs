@@ -101,11 +101,11 @@ public class MetadataInjector : IMetadataInjector
             args.Add(path);
 
             string tagSpec = $"-metadata:s:t:{attachIndex}";
-            string mime = MimeTypeForExtension(System.IO.Path.GetExtension(path));
+            string mime = MimeTypeForExtension(Path.GetExtension(path));
             args.Add(tagSpec);
             args.Add($"mimetype={mime}");
 
-            string filename = System.IO.Path.GetFileName(path);
+            string filename = Path.GetFileName(path);
             args.Add(tagSpec);
             args.Add($"filename={filename}");
 

@@ -160,7 +160,7 @@ public class OpenSubtitlesProvider : IOpenSubtitlesProvider
     public async Task<byte[]> DownloadSubtitleAsync(string downloadUrl, CancellationToken ct)
     {
         HttpClient client = _httpClientFactory.CreateClient(
-            NoMercy.Providers.Helpers.HttpClientNames.OpenSubtitlesDownload
+            Providers.Helpers.HttpClientNames.OpenSubtitlesDownload
         );
         using HttpResponseMessage response = await client
             .GetAsync(downloadUrl, ct)

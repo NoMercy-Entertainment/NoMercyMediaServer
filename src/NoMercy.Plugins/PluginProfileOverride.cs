@@ -23,7 +23,7 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
 {
     public EncoderProfile Apply(EncoderProfile configured, EncoderMediaInfo media)
     {
-        Abstractions.MediaInfo pluginMedia = ToPluginMediaInfo(media);
+        MediaInfo pluginMedia = ToPluginMediaInfo(media);
 
         foreach (IEncoderPlugin plugin in pluginManager.GetPluginsOfType<IEncoderPlugin>())
         {
@@ -35,7 +35,7 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
         return configured;
     }
 
-    private static Abstractions.MediaInfo ToPluginMediaInfo(EncoderMediaInfo media)
+    private static MediaInfo ToPluginMediaInfo(EncoderMediaInfo media)
     {
         Encoder.Analysis.VideoStreamInfo? video =
             media.VideoStreams.Count > 0 ? media.VideoStreams[0] : null;

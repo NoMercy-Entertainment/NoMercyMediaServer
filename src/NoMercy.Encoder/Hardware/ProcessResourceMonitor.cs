@@ -173,7 +173,7 @@ public class ProcessResourceMonitor : IResourceMonitor
         try
         {
             // /proc/stat first line: "cpu  user nice system idle iowait irq softirq steal ..."
-            string firstLine = System.IO.File.ReadAllLines("/proc/stat")[0];
+            string firstLine = File.ReadAllLines("/proc/stat")[0];
             string[] parts = firstLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             // parts[0] == "cpu", parts[1..] are tick counts.

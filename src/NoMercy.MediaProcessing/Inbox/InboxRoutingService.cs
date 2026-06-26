@@ -226,7 +226,7 @@ public class InboxRoutingService
         item.TargetProfileId = destination.ProfileId;
         item.SelectedMatch = match;
 
-        if (context.Entry(item).State == Microsoft.EntityFrameworkCore.EntityState.Detached)
+        if (context.Entry(item).State == EntityState.Detached)
             context.InboxItems.Add(item);
 
         await context.SaveChangesAsync(ct);

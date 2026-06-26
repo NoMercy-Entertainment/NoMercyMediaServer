@@ -45,13 +45,6 @@ public class Start
                 Phase: 1,
                 DependsOn: ["CreateAppFolders"]
             ),
-            new(
-                "ApiInfo",
-                ApiInfo.RequestInfo,
-                CanDefer: false,
-                Phase: 1,
-                DependsOn: ["CreateAppFolders"]
-            ),
             // ── PHASE 2: BEST-EFFORT (network, with fallback) ──────────
             new(
                 "NetworkProbe",
@@ -61,7 +54,7 @@ public class Start
                 },
                 CanDefer: false,
                 Phase: 2,
-                DependsOn: ["ApiInfo"]
+                DependsOn: ["CreateAppFolders"]
             ),
             // Auth is now handled by AuthManager (DI) via BootOrchestrator — not here.
             new(
@@ -133,7 +126,7 @@ public class Start
         _phase1Completed = [.. runner.CompletedTasks];
     }
 
-    public static async Task InitRemaining()
+    public static async Task InitRemaining(IDegradedModeRecovery? recovery = null)
     {
         List<StartupTask> remainingTasks = _allTasks.Where(t => t.Phase > 1).ToList();
         StartupTaskRunner runner = new(remainingTasks, _phase1Completed);
@@ -164,14 +157,15 @@ public class Start
 
             DeferredTasks deferred = new()
             {
-                ApiKeysLoaded = _phase1Completed.Contains("ApiInfo"),
+                ApiKeysLoaded = !string.IsNullOrEmpty(ApiKeyStore.Current.TmdbToken),
                 // Auth is handled by AuthManager/BootOrchestrator — check AccessToken directly.
                 Authenticated = !string.IsNullOrEmpty(Globals.Globals.AccessToken),
                 NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
                 SeedsRun = true,
                 Registered = runner.CompletedTasks.Contains("Register"),
             };
-            _ = Task.Run(() => DegradedModeRecovery.StartRecoveryLoop(deferred));
+            if (recovery is not null)
+                _ = Task.Run(() => recovery.StartRecoveryLoop(deferred));
         }
 
         // Delay heavy initialization tasks to run in the background after server is ready

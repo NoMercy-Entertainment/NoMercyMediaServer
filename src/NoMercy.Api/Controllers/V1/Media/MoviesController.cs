@@ -14,6 +14,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -26,7 +27,9 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class MoviesController(
     IMovieRepository movieRepository,
     ILibraryRepository libraryRepository,
-    JobDispatcher jobDispatcher
+    IJobDispatcher jobDispatcher,
+    IMovieMetadataProvider movieMetadataProvider,
+    IServerConfiguration config
 ) : BaseController
 {
     [HttpGet]
@@ -47,13 +50,12 @@ public class MoviesController(
 
         try
         {
-            TmdbMovieClient tmdbMovieClient = new(id, language: language);
-            TmdbMovieAppends? movieAppends = await tmdbMovieClient.WithAllAppends(true);
+            TmdbMovieAppends? movieAppends = await movieMetadataProvider.GetMovieAsync(id, language, ct);
 
             if (movieAppends is null)
                 return NotFoundResponse("Movie not found");
 
-            if (movieAppends.Adult && !Config.ShowAdultContent)
+            if (movieAppends.Adult && !config.ShowAdultContent)
                 return UnauthorizedResponse(
                     "Movie is adult which is not allowed by the server configuration"
                 );

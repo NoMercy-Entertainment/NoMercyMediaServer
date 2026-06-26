@@ -10,15 +10,15 @@ public static class HttpClientExtensions
 {
     private static readonly ConcurrentDictionary<string, LookupClient> DnsClients = new();
 
-    public static System.Net.Http.HttpClient WithNoMercyUserAgent(
-        this System.Net.Http.HttpClient client
+    public static HttpClient WithNoMercyUserAgent(
+        this HttpClient client
     )
     {
         client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
         return client;
     }
 
-    public static System.Net.Http.HttpClient WithDns(string? dnsServer = null)
+    public static HttpClient WithDns(string? dnsServer = null)
     {
         string server = dnsServer ?? Config.DnsServer;
         SocketsHttpHandler handler = new()

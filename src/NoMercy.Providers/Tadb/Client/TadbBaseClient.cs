@@ -11,7 +11,7 @@ namespace NoMercy.Providers.Tadb.Client;
 public class TadbBaseClient : IDisposable
 {
     private readonly Uri _baseUrl = new(
-        $"https://www.theaudiodb.com/api/v1/json/{ApiInfo.TadbKey}/"
+        $"https://www.theaudiodb.com/api/v1/json/{ApiKeyStore.Current.TadbKey}/"
     );
 
     private readonly HttpClient _client;

@@ -22,7 +22,7 @@ public sealed class BenchmarkJobTracker(
     private readonly ConcurrentDictionary<string, BenchmarkJobStatus> _jobs = new();
 
     public BenchmarkJobStatus Start(
-        IReadOnlyList<NoMercy.Encoder.Codecs.VideoCodecType> codecs,
+        IReadOnlyList<Codecs.VideoCodecType> codecs,
         IReadOnlyList<int> resolutions
     )
     {

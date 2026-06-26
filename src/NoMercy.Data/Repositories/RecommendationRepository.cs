@@ -50,7 +50,8 @@ public class RecommendationDiagnosticsDto
     public int SampleRecsCount { get; set; }
 }
 
-public class RecommendationRepository(MediaContext context) : IRecommendationRepository
+public class RecommendationRepository(IDbContextFactory<MediaContext> contextFactory)
+    : IRecommendationRepository
 {
     public async Task<List<RecommendationCandidateDto>> GetUnownedMovieRecommendationsAsync(
         MediaContext context,
@@ -1365,6 +1366,8 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         int animeByLibraryType = await context
             .Tvs.AsNoTracking()
             .CountAsync(t => t.Library.Type == Config.AnimeMediaType, ct);

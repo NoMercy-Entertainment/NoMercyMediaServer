@@ -30,7 +30,7 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
     public CoverArtCoverArtClient(Guid id)
         : base(id)
     {
-        Configuration.ClientKey = ApiInfo.AcousticIdKey;
+        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
     }
 
     public Task<CoverArtCovers?> Cover(bool priority = false)

@@ -9,9 +9,9 @@ namespace NoMercy.Setup.Ui;
 
 public abstract class ConsoleMessages
 {
-    private static string[] Colors => ApiInfo.Colors;
+    private static string[] Colors => ApiKeyStore.Current.Colors;
 
-    private static string Quote => ApiInfo.Quote;
+    private static string Quote => ApiKeyStore.Current.Quote;
 
     public static Task ServerRunning()
     {

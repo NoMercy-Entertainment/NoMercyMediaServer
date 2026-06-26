@@ -47,7 +47,7 @@ public class TvCardDto
     public string? CertificationCountry { get; set; }
 }
 
-public class LibraryRepository(MediaContext context, IDbContextFactory<MediaContext> contextFactory)
+public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory)
     : ILibraryRepository
 {
     private static readonly string[] Letters =
@@ -68,9 +68,10 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
         "0",
     ];
 
-    public Task<List<Library>> GetLibraries(Guid userId, CancellationToken ct = default)
+    public async Task<List<Library>> GetLibraries(Guid userId, CancellationToken ct = default)
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Libraries.AsNoTracking()
             .ForUser(userId)
             .Where(library => library.Type != Config.InboxMediaType)
@@ -93,9 +94,10 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
     /// Lightweight library query for endpoints that don't need LibraryMovies/LibraryTvs collections.
     /// Use this in Mobile/TV/Home endpoints to avoid loading thousands of join entities into memory.
     /// </summary>
-    public Task<List<Library>> GetLibrariesLite(Guid userId, CancellationToken ct = default)
+    public async Task<List<Library>> GetLibrariesLite(Guid userId, CancellationToken ct = default)
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Libraries.AsNoTracking()
             .ForUser(userId)
             .Where(library => library.Type != Config.InboxMediaType)
@@ -112,6 +114,7 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
             .Libraries.AsNoTracking()
             .ForUser(userId)
@@ -130,7 +133,7 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
     /// Prefer <see cref="GetLibraryMovieCardsAsync"/> and <see cref="GetLibraryTvCardsAsync"/> for new code —
     /// they use projection and proper Skip/Take pagination.
     /// </summary>
-    public Task<Library?> GetLibraryByIdAsync(
+    public async Task<Library?> GetLibraryByIdAsync(
         Ulid libraryId,
         Guid userId,
         string language,
@@ -140,7 +143,8 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Libraries.AsNoTracking()
             .Where(library => library.Id == libraryId)
             .ForUser(userId)
@@ -409,14 +413,18 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
     // }
 
     // Optimized query using projection - only fetches what NmCardDto needs
-    public Task<List<MovieCardDto>> GetLibraryMovieCardsAsync(
+    public async Task<List<MovieCardDto>> GetLibraryMovieCardsAsync(
         Guid userId,
         Ulid libraryId,
         string country,
         int take,
         int skip,
         CancellationToken ct = default
-    ) => GetLibraryMovieCardsAsync(context, userId, libraryId, country, take, skip, ct);
+    )
+    {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await GetLibraryMovieCardsAsync(context, userId, libraryId, country, take, skip, ct);
+    }
 
     public Task<List<MovieCardDto>> GetLibraryMovieCardsAsync(
         MediaContext mediaContext,
@@ -470,14 +478,18 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
     }
 
     // Optimized query using projection - only fetches what NmCardDto needs
-    public Task<List<TvCardDto>> GetLibraryTvCardsAsync(
+    public async Task<List<TvCardDto>> GetLibraryTvCardsAsync(
         Guid userId,
         Ulid libraryId,
         string country,
         int take,
         int skip,
         CancellationToken ct = default
-    ) => GetLibraryTvCardsAsync(context, userId, libraryId, country, take, skip, ct);
+    )
+    {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await GetLibraryTvCardsAsync(context, userId, libraryId, country, take, skip, ct);
+    }
 
     public Task<List<TvCardDto>> GetLibraryTvCardsAsync(
         MediaContext mediaContext,
@@ -533,7 +545,7 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
             .ToListAsync(ct);
     }
 
-    public Task<List<Movie>> GetPaginatedLibraryMovies(
+    public async Task<List<Movie>> GetPaginatedLibraryMovies(
         Guid userId,
         Ulid libraryId,
         string letter,
@@ -544,7 +556,8 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Movies.AsNoTracking()
             .Where(movie => movie.Library.Id == libraryId)
             .ForUser(userId)
@@ -573,7 +586,7 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
             .ToListAsync(ct);
     }
 
-    public Task<List<Tv>> GetPaginatedLibraryShows(
+    public async Task<List<Tv>> GetPaginatedLibraryShows(
         Guid userId,
         Ulid libraryId,
         string letter,
@@ -586,7 +599,8 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Tvs.AsNoTracking()
             .Where(tv => tv.Library.Id == libraryId)
             .ForUser(userId)
@@ -617,7 +631,7 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
             .ToListAsync(ct);
     }
 
-    public Task<List<HomeMovieCardDto>> GetPaginatedLibraryMovieCardsAsync(
+    public async Task<List<HomeMovieCardDto>> GetPaginatedLibraryMovieCardsAsync(
         Guid userId,
         Ulid libraryId,
         string letter,
@@ -628,7 +642,8 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Movies.AsNoTracking()
             .Where(movie => movie.Library.Id == libraryId)
             .ForUser(userId)
@@ -681,7 +696,7 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
             .ToListAsync(ct);
     }
 
-    public Task<List<HomeTvCardDto>> GetPaginatedLibraryTvCardsAsync(
+    public async Task<List<HomeTvCardDto>> GetPaginatedLibraryTvCardsAsync(
         Guid userId,
         Ulid libraryId,
         string letter,
@@ -692,7 +707,8 @@ public class LibraryRepository(MediaContext context, IDbContextFactory<MediaCont
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Tvs.AsNoTracking()
             .Where(tv => tv.Library.Id == libraryId)
             .ForUser(userId)

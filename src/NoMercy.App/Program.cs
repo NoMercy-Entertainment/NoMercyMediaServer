@@ -96,8 +96,9 @@ internal class Program
                     string? state = context.Request.Query["state"];
                     string? error = context.Request.Query["error"];
                     string? errorDescription = context.Request.Query["error_description"];
-                    string redirectUri =
-                        $"http://localhost:{context.Request.Host.Port ?? 7625}/sso-callback";
+
+                    int port = context.Request.Host.Port ?? 7625;
+                    string redirectUri = $"http://localhost:{port}/sso-callback";
 
                     if (!string.IsNullOrEmpty(error))
                     {
@@ -118,6 +119,10 @@ internal class Program
                         return;
                     }
 
+                    // Use the DI container from the web app if possible, but this is a middleware.
+                    // For now, keep it simple as this is a separate process.
+                    // Actually, AuthManager might need to be resolved from DI.
+                    
                     bool ok = await AuthManager.TryCompletePkceFromCallbackAsync(
                         code,
                         state,

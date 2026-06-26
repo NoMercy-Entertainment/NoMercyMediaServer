@@ -446,14 +446,12 @@ public class PlaylistGeneratorSubtitleVariantTests
             ),
         ];
 
-        System.Globalization.CultureInfo previous = System
-            .Threading
-            .Thread
+        System.Globalization.CultureInfo previous = Thread
             .CurrentThread
             .CurrentCulture;
         try
         {
-            System.Threading.Thread.CurrentThread.CurrentCulture =
+            Thread.CurrentThread.CurrentCulture =
                 new System.Globalization.CultureInfo(culture);
 
             string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(
@@ -466,7 +464,7 @@ public class PlaylistGeneratorSubtitleVariantTests
         }
         finally
         {
-            System.Threading.Thread.CurrentThread.CurrentCulture = previous;
+            Thread.CurrentThread.CurrentCulture = previous;
         }
     }
 

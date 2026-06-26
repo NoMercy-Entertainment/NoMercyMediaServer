@@ -205,7 +205,7 @@ public static class ServiceCollectionExtensions
         // Content intelligence (OCR / Whisper / crop detection)
         services.TryAddSingleton(sp =>
         {
-            System.Net.Http.HttpClient client = new();
+            HttpClient client = new();
             client.WithNoMercyUserAgent();
             return client;
         });

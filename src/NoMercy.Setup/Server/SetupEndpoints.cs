@@ -1,3 +1,4 @@
+using System.Net;
 using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Http;
@@ -36,10 +37,18 @@ public class SetupEndpoints
     private string _pkceState;
     private bool _exchangeCompleted;
 
-    public SetupEndpoints(SetupState state, AuthManager authManager)
+    private readonly IServerRegistrationService _serverRegistrationService;
+
+    public SetupEndpoints(
+        SetupState state,
+        AuthManager authManager,
+        IServerRegistrationService serverRegistrationService
+    )
     {
         _state = state;
         _authManager = authManager;
+        _serverRegistrationService = serverRegistrationService;
+
         _terminalUi = SetupTerminalUi.IsInteractiveTerminal ? new SetupTerminalUi() : null;
 
         _codeVerifier = AuthManager.GenerateCodeVerifier();
@@ -177,7 +186,7 @@ public class SetupEndpoints
             client_id = Config.TokenClientId.OrEmpty(),
             code_challenge = codeChallenge,
             pkce_state = pkceState,
-            is_first_boot = !Register.IsRegistered,
+            is_first_boot = !Certificate.HasValidCertificate(),
         };
 
         await WriteJsonResponse(context.Response, response);
@@ -437,11 +446,7 @@ public class SetupEndpoints
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsync(
-                SetupServer.BuildCallbackHtml(
-                    "Authorization Failed",
-                    displayMessage,
-                    isError: true
-                ),
+                BuildCallbackHtml("Authorization Failed", displayMessage, isError: true),
                 Encoding.UTF8
             );
             return;
@@ -556,7 +561,7 @@ public class SetupEndpoints
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsync(
-                SetupServer.BuildCallbackHtml(responseTitle, responseMessage, responseIsError),
+                BuildCallbackHtml(responseTitle, responseMessage, responseIsError),
                 Encoding.UTF8
             );
             await context.Response.CompleteAsync();
@@ -582,7 +587,7 @@ public class SetupEndpoints
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsync(
-                SetupServer.BuildCallbackHtml(responseTitle, responseMessage, responseIsError),
+                BuildCallbackHtml(responseTitle, responseMessage, responseIsError),
                 Encoding.UTF8
             );
         }
@@ -787,7 +792,7 @@ public class SetupEndpoints
 
             if (Start.NetworkDiscovery is not null)
                 await Start.NetworkDiscovery.DiscoverExternalIpAsync();
-            await Register.Init();
+            await _serverRegistrationService.Init();
 
             _state.TransitionTo(SetupPhase.Registered);
             _terminalUi?.ShowProgress("Registered", "Setting up your server address...");
@@ -929,6 +934,63 @@ public class SetupEndpoints
             throw new FileNotFoundException($"Embedded resource not found: {resourceName}");
         using StreamReader reader = new(stream);
         return await reader.ReadToEndAsync();
+    }
+
+    internal static string BuildCallbackHtml(string title, string message, bool isError = false)
+    {
+        string color = isError ? "#f08080" : "#CBAFFF";
+
+        if (isError)
+        {
+            return "<!DOCTYPE html><html><head>"
+                + "<meta charset=\"UTF-8\">"
+                + "<style>"
+                + "body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,"
+                + "BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;"
+                + "display:flex;align-items:center;justify-content:center;"
+                + "min-height:100vh;margin:0;}"
+                + ".card{background:#16161e;border:1px solid #2a2a3a;"
+                + "border-radius:12px;padding:32px 24px;text-align:center;"
+                + "max-width:440px;width:100%;}"
+                + $"h2{{color:{color};margin-bottom:12px;}}"
+                + "p{color:#999;font-size:14px;}"
+                + "</style></head><body>"
+                + "<div class=\"card\">"
+                + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
+                + $"<p>{WebUtility.HtmlEncode(message)}</p>"
+                + "<p style=\"margin-top:16px;color:#666;\">Redirecting to setup...</p>"
+                + "</div>"
+                + "<script>setTimeout(function(){window.location.href='/setup';}, 1500);</script>"
+                + "</body></html>";
+        }
+
+        // Success case: redirect back to setup page to show progress
+        return "<!DOCTYPE html><html><head>"
+            + "<meta charset=\"UTF-8\">"
+            + "<style>"
+            + "body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,"
+            + "BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;"
+            + "display:flex;align-items:center;justify-content:center;"
+            + "min-height:100vh;margin:0;}"
+            + ".card{background:#16161e;border:1px solid #2a2a3a;"
+            + "border-radius:12px;padding:32px 24px;text-align:center;"
+            + "max-width:440px;width:100%;}"
+            + $"h2{{color:{color};margin-bottom:12px;}}"
+            + "p{color:#999;font-size:14px;}"
+            + "</style></head><body>"
+            + "<div class=\"card\">"
+            + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
+            + $"<p>{WebUtility.HtmlEncode(message)}</p>"
+            + "<p style=\"margin-top:16px;color:#666;\">Redirecting to setup...</p>"
+            + "</div>"
+            + "<script>setTimeout(function(){window.location.href='/setup';}, 1500);</script>"
+            + "</body></html>";
+    }
+
+    internal static string BuildRedirectUri(HttpRequest request)
+    {
+        int port = request.Host.Port ?? Config.InternalServerPort;
+        return $"http://localhost:{port}/sso-callback";
     }
 
     private static async Task HandleEmbeddedBinary(

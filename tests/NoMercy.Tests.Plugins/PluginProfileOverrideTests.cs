@@ -79,7 +79,7 @@ public class PluginProfileOverrideTests
         new(
             Id: Ulid.NewUlid(),
             Name: "Configured Default",
-            Container: NoMercy.Encoder.Profiles.Container.HlsTs,
+            Container: Encoder.Profiles.Container.HlsTs,
             Video: null,
             Audio: [],
             Subtitles: []

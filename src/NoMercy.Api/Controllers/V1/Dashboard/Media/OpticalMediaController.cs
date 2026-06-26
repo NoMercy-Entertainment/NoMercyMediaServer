@@ -441,7 +441,7 @@ public class OpticalMediaController(
 
         await using (FileStream src = new(request.RipOutputPath, FileMode.Open, FileAccess.Read))
         await using (
-            System.IO.Stream dst = await folderStorage.OpenWriteAsync(
+            Stream dst = await folderStorage.OpenWriteAsync(
                 folderRelative,
                 overwrite: true,
                 ct

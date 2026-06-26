@@ -187,7 +187,7 @@ public class TwoPassSplitTests : IDisposable
             SourceStorage: TestStorageFactory.CreateLocal(),
             DestinationStorage: TestStorageFactory.CreateLocal(),
             Options: passOverride.HasValue
-                ? new NoMercy.Encoder.Pipeline.EncodingOptions
+                ? new EncodingOptions
                 {
                     Pass = passOverride.Value,
                     StatsFilePath = statsFilePath,

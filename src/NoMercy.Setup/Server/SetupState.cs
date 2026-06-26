@@ -93,6 +93,20 @@ public class SetupState
         return signal.Task.WaitAsync(cancellationToken);
     }
 
+    public async Task WaitForPhaseAsync(SetupPhase targetPhase, CancellationToken cancellationToken = default)
+    {
+        while (true)
+        {
+            lock (_lock)
+            {
+                if (_currentPhase >= targetPhase)
+                    return;
+            }
+
+            await WaitForChangeAsync(cancellationToken);
+        }
+    }
+
     public bool TransitionTo(SetupPhase targetPhase)
     {
         lock (_lock)

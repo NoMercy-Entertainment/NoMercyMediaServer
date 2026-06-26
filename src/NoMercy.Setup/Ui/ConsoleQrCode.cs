@@ -49,7 +49,7 @@ public class ConsoleQrCode
 
         // Keep the UI alive until the process ends — the terminal UI object
         // is intentionally not disposed here so the resize watcher keeps running.
-        // Callers that own the lifecycle (e.g. SetupServer) pass their own instance.
+        // Callers that own the lifecycle pass their own instance.
     }
 
     /// <summary>

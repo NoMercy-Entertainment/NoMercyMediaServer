@@ -45,7 +45,7 @@ public static class EncodingPresetsSeed
     {
         Logger.Setup("Seeding example encoding presets", LogEventLevel.Verbose);
 
-        NoMercy.Encoder.Profiles.EncodingProfile[] builtins = V2BuiltinPresets.All();
+        EncodingProfile[] builtins = V2BuiltinPresets.All();
         Dictionary<string, Ulid> builtinByName = builtins.ToDictionary(p => p.Name, p => p.Id);
 
         foreach (EncoderProfileSeedData.SeedExample example in EncoderProfileSeedData.Examples)
@@ -117,7 +117,7 @@ public static class EncodingPresetsSeed
         int refreshedPresets = 0;
         foreach (EncoderProfile v1 in v1Profiles)
         {
-            NoMercy.Encoder.Profiles.EncodingProfile v2Profile;
+            EncodingProfile v2Profile;
             try
             {
                 v2Profile = V2ProfileFactory.FromV1(

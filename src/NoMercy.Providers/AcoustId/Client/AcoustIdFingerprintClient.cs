@@ -8,7 +8,7 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
 {
     public AcoustIdFingerprintClient()
     {
-        Configuration.ClientKey = ApiInfo.AcousticIdKey;
+        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
     }
 
     private Task<AcoustIdFingerprint?> WithFingerprint(
@@ -19,7 +19,7 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["client"] = ApiInfo.AcousticIdKey,
+            ["client"] = ApiKeyStore.Current.AcousticIdKey,
             ["duration"] = fingerprintData.Duration.ToString(),
             ["fingerprint"] = fingerprintData.Fingerprint,
         };

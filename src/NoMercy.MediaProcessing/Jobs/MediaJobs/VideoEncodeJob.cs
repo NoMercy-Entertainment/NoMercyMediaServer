@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Libraries;
@@ -55,8 +56,24 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 /// the database and the job payload. No <see cref="MediaContext"/> or object references
 /// survive across <see cref="Handle"/> invocations.</para>
 /// </summary>
-public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
+public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInjector
 {
+    private IEncodingOrchestrator? _encodingOrchestrator;
+    private IHardwareBenchmark? _hardwareBenchmark;
+    private IHardwareCapabilities? _hardwareCapabilities;
+    private IEncoderProcessRegistry? _encoderProcessRegistry;
+    private IMediaAnalyzer? _mediaAnalyzer;
+    private ISubtitleOcrEngine? _subtitleOcrEngine;
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
+        _hardwareBenchmark = serviceProvider.GetRequiredService<IHardwareBenchmark>();
+        _hardwareCapabilities = serviceProvider.GetRequiredService<IHardwareCapabilities>();
+        _encoderProcessRegistry = serviceProvider.GetRequiredService<IEncoderProcessRegistry>();
+        _mediaAnalyzer = serviceProvider.GetRequiredService<IMediaAnalyzer>();
+        _subtitleOcrEngine = serviceProvider.GetRequiredService<ISubtitleOcrEngine>();
+    }
     public override string QueueName => "encoder";
     public override int Priority => 4;
     public string Status { get; set; } = "pending";
@@ -171,11 +188,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
                     );
                 }
 
-                IEncodingOrchestrator orchestrator =
-                    EncoderProvider.ResolveService<IEncodingOrchestrator>()
-                    ?? throw new InvalidOperationException(
-                        "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
-                    );
+                IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
                 IStorage destinationStorage = StorageFactory.For(
                     folder.Id,
@@ -623,7 +636,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
             .Replace('\\', '/')
             .Trim('/');
         string tempDir = Path.Combine(
-            NoMercy.Storage.StoragePaths.TranscodeRoot,
+            StoragePaths.TranscodeRoot,
             relativeOutputPath.Replace('/', Path.DirectorySeparatorChar)
         );
 
@@ -647,11 +660,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         // the destination and deletes it. Per-task EncodeAsync runs skip
         // FinalizeStage + publish + cleanup precisely to avoid racing this
         // single coordinator-driven pass.
-        IEncodingOrchestrator orchestrator =
-            EncoderProvider.ResolveService<IEncodingOrchestrator>()
-            ?? throw new InvalidOperationException(
-                "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
-            );
+        IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
         EncodingProfile finalizeProfile;
         await using (MediaContext profileLookup = new())
@@ -1025,7 +1034,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
     /// Additional video-only bundles (when the ladder exceeds the host cap)
     /// queue behind it and the worker pulls them sequentially.</para>
     /// </summary>
-    private static DecomposedTask[] BuildResourceBundles(
+    private DecomposedTask[] BuildResourceBundles(
         DecomposedTask[] tasks,
         int parentJobId,
         string groupTag
@@ -1163,10 +1172,10 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
     /// slow benchmark earns a smaller cap; a strong GPU earns a larger
     /// one. Driver-imposed session limits still apply as an outer ceiling.
     /// </summary>
-    private static (int GpuCap, int CpuCap) ResolveHostCaps(DecomposedTask[] tasks)
+    private (int GpuCap, int CpuCap) ResolveHostCaps(DecomposedTask[] tasks)
     {
-        IHardwareBenchmark? benchmark = EncoderProvider.ResolveService<IHardwareBenchmark>();
-        IHardwareCapabilities? hardware = EncoderProvider.ResolveService<IHardwareCapabilities>();
+        IHardwareBenchmark? benchmark = _hardwareBenchmark;
+        IHardwareCapabilities? hardware = _hardwareCapabilities;
 
         BundleCapResolver.PlannedRung[] plannedRungs = tasks
             .Where(task =>
@@ -1326,8 +1335,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         Folder folder
     )
     {
-        IEncoderProcessRegistry? processRegistry =
-            EncoderProvider.ResolveService<IEncoderProcessRegistry>();
+        IEncoderProcessRegistry? processRegistry = _encoderProcessRegistry;
 
         EventBusProgressObserver progressObserver = new(
             jobId: fileMetadata.Id,
@@ -1473,8 +1481,8 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver
         IStorage sourceStorage
     )
     {
-        IMediaAnalyzer? analyzer = EncoderProvider.ResolveService<IMediaAnalyzer>();
-        ISubtitleOcrEngine? ocrEngine = EncoderProvider.ResolveService<ISubtitleOcrEngine>();
+        IMediaAnalyzer? analyzer = _mediaAnalyzer;
+        ISubtitleOcrEngine? ocrEngine = _subtitleOcrEngine;
 
         if (analyzer is null || ocrEngine is null)
             return;

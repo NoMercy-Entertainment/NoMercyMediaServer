@@ -303,8 +303,8 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
 
         public IHardwareCapabilities GetCapabilities() => new HardwareCapabilities([], CpuCores: 1);
 
-        public Task<NoMercy.Encoder.Jobs.RemoteEncodingResult> ExecuteJobAsync(
-            NoMercy.Encoder.Jobs.EncodingJob job,
+        public Task<RemoteEncodingResult> ExecuteJobAsync(
+            EncodingJob job,
             IProgress<NoMercy.Encoder.Progress.EncodingProgress> progress,
             CancellationToken ct
         ) => throw new NotImplementedException("Stub for branch test");

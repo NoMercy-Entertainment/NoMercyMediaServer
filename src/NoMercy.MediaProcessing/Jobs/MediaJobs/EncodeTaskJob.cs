@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Libraries;
@@ -19,6 +20,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Resources;
 using NoMercy.Storage;
+using NoMercyQueue;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -34,8 +36,16 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 /// tasks and prevents the GPU session cap from being exceeded.
 /// </summary>
 [Serializable]
-public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement
+public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobStorageInjector
 {
+    private IEncodingOrchestrator? _encodingOrchestrator;
+    private IEncoderProcessRegistry? _encoderProcessRegistry;
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
+        _encoderProcessRegistry = serviceProvider.GetRequiredService<IEncoderProcessRegistry>();
+    }
     public override string QueueName =>
         Task.Resources?.GpuDeviceKey is not null ? "encoder-gpu" : "encoder-cpu";
 
@@ -91,11 +101,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement
             return;
         }
 
-        IEncodingOrchestrator orchestrator =
-            EncoderProvider.ResolveService<IEncodingOrchestrator>()
-            ?? throw new InvalidOperationException(
-                "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
-            );
+        IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
         IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
 
@@ -125,8 +131,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement
             };
         }
 
-        IEncoderProcessRegistry? processRegistry =
-            EncoderProvider.ResolveService<IEncoderProcessRegistry>();
+        IEncoderProcessRegistry? processRegistry = _encoderProcessRegistry;
 
         EventBusProgressObserver progressObserver = new(
             jobId: fileMetadata.Id,

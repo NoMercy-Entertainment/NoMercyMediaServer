@@ -103,7 +103,9 @@ public class DegradedModeStartupTests
 
         // Should return immediately without looping
         DateTime start = DateTime.UtcNow;
-        await DegradedModeRecovery.StartRecoveryLoop(deferred);
+        // Mock dependencies or use real ones if they don't hit network
+        DegradedModeRecovery recovery = new(null!, null!, null!);
+        await recovery.StartRecoveryLoop(deferred);
         TimeSpan elapsed = DateTime.UtcNow - start;
 
         Assert.True(
@@ -428,45 +430,4 @@ public class CloudflareFallbackTests
         Assert.False(File.Exists(cacheFile));
     }
 
-    [Fact]
-    public void ApiInfo_KeysLoaded_IsFalse_WhenNoNetworkAndNoCache()
-    {
-        // ApiInfo.KeysLoaded should be false when keys haven't been loaded
-        // This validates the flag exists and can be checked
-        bool keysLoaded = ApiInfo.KeysLoaded;
-        Assert.IsType<bool>(keysLoaded);
-    }
-
-    [Fact]
-    public async Task ApiInfo_TryFetchFromNetwork_ReturnsNull_OnFailure()
-    {
-        // TryFetchFromNetwork should return null (not throw) when api.nomercy.tv is unreachable
-        ApiInfoResponse? result = await ApiInfo.TryFetchFromNetwork();
-        // Result depends on network — may be non-null in environments where api.nomercy.tv is reachable
-        // The key assertion is that it does NOT throw
-        Assert.True(
-            result is null || result.Data.Keys is not null,
-            "TryFetchFromNetwork should return null on failure or valid data on success"
-        );
-    }
-
-    [Fact]
-    public async Task ApiInfo_TryReadCacheFile_ReturnsNull_WhenNoCacheFile()
-    {
-        // When no cache file exists, should return null gracefully
-        string cacheFile = ApiInfo.CacheFilePath;
-        bool cacheExists = File.Exists(cacheFile);
-
-        if (!cacheExists)
-        {
-            ApiInfoResponse? result = await ApiInfo.TryReadCacheFile();
-            Assert.Null(result);
-        }
-        else
-        {
-            // Cache exists — just verify it doesn't throw
-            ApiInfoResponse? result = await ApiInfo.TryReadCacheFile();
-            Assert.IsType<ApiInfoResponse>(result);
-        }
-    }
 }

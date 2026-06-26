@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using NoMercy.Database;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercyQueue;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
@@ -24,8 +26,14 @@ using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
-public class MusicEncodeJob : AbstractMusicEncoderJob
+public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 {
+    private IEncodingOrchestrator? _encodingOrchestrator;
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
+    }
     public override string QueueName => "encoder";
     public override int Priority => 3;
 
@@ -109,11 +117,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                         .ToArray()
                 );
 
-                IEncodingOrchestrator orchestrator =
-                    EncoderProvider.ResolveService<IEncodingOrchestrator>()
-                    ?? throw new InvalidOperationException(
-                        "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
-                    );
+                IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
                 IStorage folderStorage = StorageFactory.For(
                     folder.Id,

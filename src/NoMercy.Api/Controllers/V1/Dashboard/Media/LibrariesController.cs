@@ -24,6 +24,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
 
@@ -38,7 +39,7 @@ public class LibrariesController(
     ILibraryRepository libraryRepository,
     IEncoderRepository encoderRepository,
     IFolderRepository folderRepository,
-    JobDispatcher jobDispatcher,
+    IJobDispatcher jobDispatcher,
     ILanguageRepository languageRepository,
     IDbContextFactory<MediaContext> mediaContextFactory,
     IActivityLogger activityLogger,

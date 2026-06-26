@@ -37,7 +37,7 @@ public sealed class TagLibAudioMetadataWriter : IAudioMetadataWriter
         {
             tag.Pictures =
             [
-                new TagLib.Picture(new ByteVector(coverBytes))
+                new Picture(new ByteVector(coverBytes))
                 {
                     Type = PictureType.FrontCover,
                     MimeType = "image/jpeg",

@@ -25,7 +25,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
-using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -47,7 +47,7 @@ public class ServerController(
     IHostApplicationLifetime appLifetime,
     AppDbContext appContext,
     FileRepository fileRepository,
-    JobDispatcher jobDispatcher,
+    IJobDispatcher jobDispatcher,
     QueueRunner queueRunner,
     IEventBus eventBus,
     IWallpaperService wallpaperService,

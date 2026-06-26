@@ -90,7 +90,7 @@ public class TvdbBaseClient : IDisposable
 
     private async Task<TvdbLoginResponse?> LoginAsync()
     {
-        if (string.IsNullOrEmpty(ApiInfo.TvdbKey))
+        if (string.IsNullOrEmpty(ApiKeyStore.Current.TvdbKey))
         {
             Logger.Tvdb("TVDB API key not configured", LogEventLevel.Warning);
             return null;
@@ -101,7 +101,7 @@ public class TvdbBaseClient : IDisposable
             HttpClient loginClient = HttpClientProvider.CreateClient(HttpClientNames.TvdbLogin);
             loginClient.BaseAddress ??= _baseUrl;
 
-            using JsonContent content = JsonContent.Create(new { apikey = ApiInfo.TvdbKey });
+            using JsonContent content = JsonContent.Create(new { apikey = ApiKeyStore.Current.TvdbKey });
             using HttpRequestMessage request = new(HttpMethod.Post, "login");
             request.Content = content;
             using HttpResponseMessage response = await loginClient.SendAsync(request);

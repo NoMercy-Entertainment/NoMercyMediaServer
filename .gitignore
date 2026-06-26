@@ -653,3 +653,4 @@ docs/superpowers/
 src/NoMercy.Service/driver_fingerprint.json
 src/NoMercy.Service/speed_index.json
 .worktrees/
+.claude/

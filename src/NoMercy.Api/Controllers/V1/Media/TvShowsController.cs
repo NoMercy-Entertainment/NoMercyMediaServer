@@ -16,6 +16,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Other;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -28,7 +29,8 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class TvShowsController(
     ITvShowRepository tvShowRepository,
     ILibraryRepository libraryRepository,
-    JobDispatcher jobDispatcher
+    IJobDispatcher jobDispatcher,
+    ITvShowMetadataProvider tvShowMetadataProvider
 ) : BaseController
 {
     [HttpGet]
@@ -52,8 +54,11 @@ public class TvShowsController(
                 }
             );
 
-        TmdbTvClient tmdbTvClient = new(id, language: language);
-        TmdbTvShowAppends? tvShowAppends = await tmdbTvClient.WithAllAppends(true);
+        TmdbTvShowAppends? tvShowAppends = await tvShowMetadataProvider.GetTvShowAsync(
+            id,
+            language,
+            ct
+        );
 
         if (tvShowAppends is null)
             return NotFoundResponse("Tv show not found");
@@ -252,8 +257,7 @@ public class TvShowsController(
         }
         else
         {
-            TmdbTvClient tvClient = new(id);
-            TmdbTvShowDetails? show = await tvClient.Details(true);
+            TmdbTvShowDetails? show = await tvShowMetadataProvider.GetTvShowDetailsAsync(id, ct);
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
@@ -311,8 +315,7 @@ public class TvShowsController(
         }
         else
         {
-            TmdbTvClient tvClient = new(id);
-            TmdbTvShowDetails? show = await tvClient.Details(true);
+            TmdbTvShowDetails? show = await tvShowMetadataProvider.GetTvShowDetailsAsync(id, ct);
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 

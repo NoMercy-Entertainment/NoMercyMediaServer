@@ -24,7 +24,7 @@ public class TmdbBaseClient : IDisposable
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
         _client.BaseAddress ??= _baseUrl;
-        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
+        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiKeyStore.Current.TmdbToken}");
         Language = "en,null";
     }
 
@@ -32,7 +32,7 @@ public class TmdbBaseClient : IDisposable
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
         _client.BaseAddress ??= _baseUrl;
-        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
+        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiKeyStore.Current.TmdbToken}");
         Language = language + ",null";
         Id = id;
     }

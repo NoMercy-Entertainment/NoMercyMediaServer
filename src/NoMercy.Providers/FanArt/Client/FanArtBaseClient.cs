@@ -19,10 +19,10 @@ public class FanArtBaseClient : IDisposable
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.FanArt);
         _client.BaseAddress ??= _baseUrl;
-        _client.DefaultRequestHeaders.Add("api-key", ApiInfo.FanArtApiKey);
-        if (!string.IsNullOrEmpty(ApiInfo.FanArtClientKey))
+        _client.DefaultRequestHeaders.Add("api-key", ApiKeyStore.Current.FanArtApiKey);
+        if (!string.IsNullOrEmpty(ApiKeyStore.Current.FanArtClientKey))
         {
-            _client.DefaultRequestHeaders.Add("client-key", ApiInfo.FanArtClientKey);
+            _client.DefaultRequestHeaders.Add("client-key", ApiKeyStore.Current.FanArtClientKey);
         }
     }
 
@@ -30,10 +30,10 @@ public class FanArtBaseClient : IDisposable
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.FanArt);
         _client.BaseAddress ??= _baseUrl;
-        _client.DefaultRequestHeaders.Add("api-key", ApiInfo.FanArtApiKey);
-        if (!string.IsNullOrEmpty(ApiInfo.FanArtClientKey))
+        _client.DefaultRequestHeaders.Add("api-key", ApiKeyStore.Current.FanArtApiKey);
+        if (!string.IsNullOrEmpty(ApiKeyStore.Current.FanArtClientKey))
         {
-            _client.DefaultRequestHeaders.Add("client-key", ApiInfo.FanArtClientKey);
+            _client.DefaultRequestHeaders.Add("client-key", ApiKeyStore.Current.FanArtClientKey);
         }
         Id = id;
     }

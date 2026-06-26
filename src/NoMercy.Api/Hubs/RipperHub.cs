@@ -104,7 +104,7 @@ public class RipperHub : ConnectionHub
 
         try
         {
-            OpticalMedia.Sources.DiscInfo info = await source.ProbeAsync(
+            DiscInfo info = await source.ProbeAsync(
                 drive,
                 CancellationToken.None
             );

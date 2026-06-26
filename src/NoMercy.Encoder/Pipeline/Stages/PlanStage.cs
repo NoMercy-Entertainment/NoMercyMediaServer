@@ -40,7 +40,7 @@ public class PlanStage(
     IBitDepthPolicyResolver? bitDepthPolicyResolver = null,
     IOutputNamingResolver? outputNamingResolver = null,
     ISubtitleAcquisitionService? subtitleAcquisitionService = null,
-    NoMercy.Encoder.Composition.EncoderOptions? options = null
+    Composition.EncoderOptions? options = null
 ) : IPipelineStage<ValidateInput, ExecutionPlan>, IPlanStage
 {
     public string Name => "Plan";
@@ -347,8 +347,8 @@ public class PlanStage(
             AcquisitionRequest request = new(
                 SourcePath: media.FilePath,
                 SourceFileSize: media.FileSizeBytes,
-                SourceFilename: System.IO.Path.GetFileName(media.FilePath),
-                MediaTitle: System.IO.Path.GetFileNameWithoutExtension(media.FilePath),
+                SourceFilename: Path.GetFileName(media.FilePath),
+                MediaTitle: Path.GetFileNameWithoutExtension(media.FilePath),
                 Season: null,
                 Episode: null,
                 Year: null,

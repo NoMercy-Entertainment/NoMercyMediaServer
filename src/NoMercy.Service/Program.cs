@@ -1,39 +1,30 @@
 ﻿using System.Diagnostics;
 using System.Net;
-using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
-using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using NoMercy.Encoder.Composition;
-using NoMercy.Encoder.Pipeline;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Service.Configuration;
+using NoMercy.Service.Hosting;
 using NoMercy.Service.Seeds;
-using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
 using NoMercy.Setup.Ui;
 using NoMercy.Storage;
-using NoMercy.Storage.Drivers.Local;
 using NoMercyQueue;
 
 namespace NoMercy.Service;
 
 public static class Program
 {
-    private static int _shutdownAttempts;
-    private static readonly object ShutdownLock = new();
-    private static CancellationTokenSource? _applicationShutdownCts;
-
     public static async Task Main(string[] args)
     {
         // Resolve renamed OpenSSL DLL for installer deployments where
@@ -71,29 +62,6 @@ public static class Program
             e.SetObserved();
         };
 
-        Console.CancelKeyPress += (_, e) =>
-        {
-            lock (ShutdownLock)
-            {
-                _shutdownAttempts++;
-
-                if (_shutdownAttempts == 1)
-                {
-                    e.Cancel = true; // Prevent immediate termination
-                    Logger.App(
-                        "Graceful shutdown initiated... (Press Ctrl+C again to force shutdown)"
-                    );
-                    _applicationShutdownCts?.Cancel();
-                }
-                else if (_shutdownAttempts >= 2)
-                {
-                    e.Cancel = false; // Allow immediate termination
-                    Logger.App("Force shutdown requested!");
-                    Environment.Exit(1);
-                }
-            }
-        };
-
         await Parser
             .Default.ParseArguments<StartupOptions>(args)
             .MapResult(Start, ErrorParsingArguments);
@@ -111,26 +79,28 @@ public static class Program
     {
         IsRunningAsService = options.RunAsService;
 
-        if (IsRunningAsService)
+        switch (IsRunningAsService)
         {
-            // When running as a service, the working directory may not be the executable's directory.
-            // Windows services start in system32; systemd services start in /.
-            // Set it to the executable's directory so config and data paths resolve correctly.
-            string exeDir = AppContext.BaseDirectory;
-            Directory.SetCurrentDirectory(exeDir);
+            case true:
+            {
+                // When running as a service, the working directory may not be the executable's directory.
+                // Windows services start in system32; systemd services start in /.
+                // Set it to the executable's directory so config and data paths resolve correctly.
+                string exeDir = AppContext.BaseDirectory;
+                Directory.SetCurrentDirectory(exeDir);
 
-            string platform =
-                Software.IsWindows ? "Windows service"
-                : Software.IsLinux ? "systemd service"
-                : Software.IsMac ? "launchd service"
-                : "service";
-            Logger.App($"Running as {platform}, content root: {exeDir}");
-        }
-
-        if (!IsRunningAsService && !Console.IsOutputRedirected)
-        {
-            Console.Clear();
-            Console.Title = AppFiles.ApplicationName;
+                string platform =
+                    Software.IsWindows ? "Windows service"
+                    : Software.IsLinux ? "systemd service"
+                    : Software.IsMac ? "launchd service"
+                    : "service";
+                Logger.App($"Running as {platform}, content root: {exeDir}");
+                break;
+            }
+            case false when !Console.IsOutputRedirected:
+                Console.Clear();
+                Console.Title = AppFiles.ApplicationName;
+                break;
         }
 
         if (!IsRunningAsService)
@@ -138,7 +108,7 @@ public static class Program
 
         options.ApplySettings();
 
-        Version version = Assembly.GetExecutingAssembly().GetName().Version!;
+        Version version = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
         Software.Version = version;
         Logger.App(
             $"NoMercy MediaServer version: v{version.Major}.{version.Minor}.{version.Build}"
@@ -148,35 +118,27 @@ public static class Program
         stopWatch.Start();
 
         // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
-        await NoMercy.Setup.Boot.Start.InitEssential();
+        await Setup.Boot.Start.InitEssential();
 
         // Route storage-facade temp + transcode writes inside the NoMercy data
-        // directory instead of the OS temp folder. StoragePaths defaults to
+        // directory instead of the OS temp folder. StoragePaths default to
         // Path.GetTempPath(); the orchestrator + remote storage stage files
         // there. Encoder gets its own 'cache/encoder' subdir so transcodes
         // don't share scratch space with the rest of the lease churn.
-        NoMercy.Storage.StoragePaths.TempRoot = AppFiles.TempPath;
-        NoMercy.Storage.StoragePaths.TranscodeRoot = AppFiles.EncoderCachePath;
+        StoragePaths.TempRoot = AppFiles.TempPath;
+        StoragePaths.TranscodeRoot = AppFiles.EncoderCachePath;
 
         // Pre-DI storage pair — used for seed calls that run before the DI
         // container is built. Same pattern as Start.cs Binaries task.
-        IStorageDriver preBootBackend = new LocalStorageDriver();
-        IStorage preBootStorage = new LocalStorage(preBootBackend, new([], preBootBackend));
+        (IStorage preBootStorage, IStorageDriver preBootBackend) = BootstrapStorageFactory.Create();
 
-        // Create database schema before anything else can query it.
+        // Create a database schema before anything else can query it.
         // This does NOT require auth — only migrations + EnsureCreated.
         await DatabaseSeeder.InitSchema(preBootStorage);
 
         // Seed offline data (config, languages, encoder profiles, etc.)
         // immediately so the UI has data before auth completes.
         await DatabaseSeeder.SeedOfflineData(preBootStorage, preBootBackend);
-
-        // Proactively resolve port conflicts before building the host.
-        // This avoids the costly build→fail→kill→rebuild cycle and prevents
-        // CronWorker "Failed to start database job workers" errors.
-        await EnsurePortAvailable(Config.InternalServerPort);
-
-        _applicationShutdownCts = new();
 
         // Use certificate presence for the initial forceHttp decision — this is a
         // filesystem check that doesn't require DI. BootOrchestrator (resolved below)
@@ -185,14 +147,25 @@ public static class Program
 
         WebApplication app = CreateWebApplication(options, forceHttp: !hasCert);
 
+        IShutdownCoordinator shutdownCoordinator = app.Services.GetRequiredService<IShutdownCoordinator>();
+        IPortManager portManager = app.Services.GetRequiredService<IPortManager>();
+
+        IApiKeyLoader apiKeyLoader = app.Services.GetRequiredService<IApiKeyLoader>();
+        await apiKeyLoader.LoadKeys(shutdownCoordinator.Token);
+
+        // Proactively resolve port conflicts before proceeding.
+        // This avoids the costly build→fail→kill→rebuild cycle and prevents
+        // CronWorker "Failed to start database job workers" errors.
+        await portManager.EnsurePortAvailable(Config.InternalServerPort);
+
         // Hand the phase tracker to the static accessor so boot helpers in
         // NoMercy.Setup (Start.cs, Binaries.cs) can advance stages without DI
         // plumbing. Phase 1 (essentials) already completed pre-DI — mark it now.
-        NoMercy.NmSystem.Lifecycle.ServerPhaseTracker.RegisterCurrent(
-            app.Services.GetRequiredService<NoMercy.NmSystem.Lifecycle.IServerPhaseTracker>()
+        NmSystem.Lifecycle.ServerPhaseTracker.RegisterCurrent(
+            app.Services.GetRequiredService<NmSystem.Lifecycle.IServerPhaseTracker>()
         );
-        NoMercy.NmSystem.Lifecycle.ServerPhaseTracker.Current!.MarkComplete(
-            NoMercy.NmSystem.Lifecycle.BootStage.Essential
+        NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
+            NmSystem.Lifecycle.BootStage.Essential
         );
 
         // From this point on, use the DI-registered storage singletons.
@@ -217,15 +190,14 @@ public static class Program
         BootOrchestrator orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
         bool needsSetupMode = await orchestrator.RunAsync(
             app.Services,
-            _applicationShutdownCts.Token
+            shutdownCoordinator.Token
         );
 
         // The initial forceHttp decision used cert presence as a proxy for "auth done".
         // It's wrong when a cert exists but tokens are missing/unreadable (DataProtection
         // key rotation, manual wipe, schema migration) — Kestrel binds HTTPS-only but the
         // setup browser URL is plain HTTP, so the browser gets ERR_EMPTY_RESPONSE. Rebuild
-        // the host as HTTP-only so the setup flow can run; RunWithHttpsRestart will then
-        // restart with HTTPS once the user re-authenticates.
+        // the host as HTTP-only for setup flow, then let BootOrchestrator handle the real needsSetupMode determination.
         if (needsSetupMode && hasCert)
         {
             Logger.App(
@@ -234,7 +206,6 @@ public static class Program
             await app.DisposeAsync();
             app = CreateWebApplication(options, forceHttp: true);
             diStorage = app.Services.GetRequiredService<IStorage>();
-            dIStorageDriver = app.Services.GetRequiredService<IStorageDriver>();
             orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
         }
 
@@ -252,14 +223,10 @@ public static class Program
 
         // Scan and load plugins from the plugins directory. Missing directory is safe —
         // returns empty list and logs INFO. One plugin's failure never blocks others.
-        IPluginManager pluginManager = app.Services.GetRequiredService<IPluginManager>();
-        IReadOnlyList<PluginLoadResult> loadedPlugins = await pluginManager.LoadAllAsync(
-            _applicationShutdownCts.Token
+        IPluginLoader pluginLoader = app.Services.GetRequiredService<IPluginLoader>();
+        IReadOnlyList<PluginLoadResult> loadedPlugins = await pluginLoader.LoadPlugins(
+            shutdownCoordinator.Token
         );
-        foreach (PluginLoadResult pluginResult in loadedPlugins)
-            Logger.Setup(
-                $"Plugin loaded: {pluginResult.Name} {pluginResult.Version} ({pluginResult.PluginId})"
-            );
 
         RegisterLifetimeEvents(app, stopWatch);
 
@@ -289,26 +256,31 @@ public static class Program
             await Dev.Run();
         });
 
+        IServerRunner serverRunner = app.Services.GetRequiredService<IServerRunner>();
+
         bool shouldRetry;
         if (needsSetupMode)
         {
             Logger.App("Starting in HTTP mode — waiting for setup completion...");
-            shouldRetry = await RunWithHttpsRestart(app, options, orchestrator);
+            shouldRetry = await serverRunner.RunWithHttpsRestart(app, options, orchestrator);
         }
         else
         {
-            shouldRetry = await RunHost(app);
+            shouldRetry = await serverRunner.RunHost(app);
         }
 
         if (shouldRetry)
         {
             Logger.App("Rebuilding server after port conflict resolution...");
-            _applicationShutdownCts = new();
+            shutdownCoordinator.RequestShutdown(); // Reset existing (if any)
+
             Stopwatch retryStopWatch = new();
             retryStopWatch.Start();
 
             WebApplication retryHost = CreateWebApplication(options, forceHttp: needsSetupMode);
             RegisterLifetimeEvents(retryHost, retryStopWatch);
+
+            IServerRunner retryServerRunner = retryHost.Services.GetRequiredService<IServerRunner>();
 
             // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
             QueueRunner retryQueueRunner = retryHost.Services.GetRequiredService<QueueRunner>();
@@ -336,16 +308,16 @@ public static class Program
                 // Resolve a fresh orchestrator from the retry host's DI container.
                 BootOrchestrator retryOrchestrator =
                     retryHost.Services.GetRequiredService<BootOrchestrator>();
-                await RunWithHttpsRestart(retryHost, options, retryOrchestrator);
+                await retryServerRunner.RunWithHttpsRestart(retryHost, options, retryOrchestrator);
             }
             else
             {
-                await RunHost(retryHost);
+                await retryServerRunner.RunHost(retryHost);
             }
         }
     }
 
-    private static void RegisterLifetimeEvents(WebApplication app, Stopwatch stopWatch)
+    internal static void RegisterLifetimeEvents(WebApplication app, Stopwatch stopWatch)
     {
         app.Services.GetService<IHostApplicationLifetime>()
             ?.ApplicationStarted.Register(() =>
@@ -360,538 +332,8 @@ public static class Program
                 Logger.App("Application is shutting down...");
             });
     }
-
-    private static async Task<bool> RunWithHttpsRestart(
-        WebApplication httpHost,
-        StartupOptions options,
-        BootOrchestrator orchestrator
-    )
-    {
-        SetupState setupState = httpHost.Services.GetRequiredService<SetupState>();
-
-        // Start the HTTP host
-        try
-        {
-            await httpHost.StartAsync(_applicationShutdownCts!.Token);
-        }
-        catch (IOException ex)
-            when (ex.InnerException is SocketException
-                || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
-            )
-        {
-            bool shouldRetry = await HandlePortInUse(Config.InternalServerPort, ex);
-            await httpHost.DisposeAsync();
-            return shouldRetry;
-        }
-
-        // HTTP server is up — open setup page immediately so the user doesn't have to wait
-        // for Phase 2-4 background tasks (Auth, Networking, etc.) before seeing the UI.
-        if (!IsRunningAsService && AuthManager.IsDesktopEnvironment() && setupState.IsSetupRequired)
-        {
-            string setupUrl = $"http://localhost:{Config.InternalServerPort}/setup";
-            Logger.App($"Opening setup page in browser: {setupUrl}");
-            try
-            {
-                AuthManager.OpenBrowser(setupUrl);
-            }
-            catch (Exception ex)
-            {
-                Logger.App($"Could not open browser automatically: {ex.Message}");
-                Logger.App($"Please open your browser and navigate to: {setupUrl}");
-            }
-        }
-
-        // Headless environments (Docker, NAS, systemd) cannot open a browser — start
-        // the device code flow so the user can authenticate from another device.
-        if (IsRunningAsService || !AuthManager.IsDesktopEnvironment())
-        {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await orchestrator.StartHeadlessDeviceCodeFlowAsync(
-                        _applicationShutdownCts!.Token
-                    );
-                }
-                catch (Exception ex)
-                {
-                    Logger.App($"Headless device code flow error: {ex.Message}");
-                }
-            });
-        }
-
-        // Wait for either setup completion or shutdown.
-        // Use the host's ApplicationStopping token so that POST /manage/stop
-        // (which calls IHostApplicationLifetime.StopApplication()) also cancels
-        // this wait — not just Ctrl+C via _applicationShutdownCts.
-        CancellationToken hostStopping = httpHost
-            .Services.GetRequiredService<IHostApplicationLifetime>()
-            .ApplicationStopping;
-        using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-            _applicationShutdownCts!.Token,
-            hostStopping
-        );
-
-        // Run post-auth (registration + cert) in background — this waits for
-        // Authenticated state, then runs Phase 3 and transitions to Complete.
-        Task postAuthTask = Task.Run(
-            async () =>
-            {
-                try
-                {
-                    await orchestrator.RunPostAuthAsync(linkedCts.Token);
-                }
-                catch (OperationCanceledException) { }
-                catch (Exception ex)
-                {
-                    Logger.App($"Post-auth registration error: {ex.Message}");
-                }
-            },
-            linkedCts.Token
-        );
-
-        Task shutdownTask = Task.Delay(Timeout.Infinite, linkedCts.Token);
-        Task setupCompleteTask = setupState.WaitForSetupCompleteAsync(linkedCts.Token);
-
-        Task completedTask = await Task.WhenAny(setupCompleteTask, shutdownTask);
-
-        if (completedTask == shutdownTask || linkedCts.IsCancellationRequested)
-        {
-            await httpHost.StopAsync(TimeSpan.FromSeconds(10));
-            await httpHost.DisposeAsync();
-            return false;
-        }
-
-        // Setup completed — certificate should now be available
-        if (!Certificate.HasValidCertificate())
-        {
-            Logger.App("Setup completed but certificate not found — continuing on HTTP");
-            await httpHost.WaitForShutdownAsync(_applicationShutdownCts.Token);
-            await httpHost.DisposeAsync();
-            return false;
-        }
-
-        Logger.App("Certificate acquired — restarting with HTTPS...");
-
-        // Give the SSO callback page time to deliver its response to the browser
-        await Task.Delay(3000);
-
-        // Gracefully stop the HTTP host
-        Config.Started = false;
-        await httpHost.StopAsync(TimeSpan.FromSeconds(10));
-        await httpHost.DisposeAsync();
-
-        // Build and start a new host with HTTPS
-        _applicationShutdownCts = new();
-        Stopwatch restartStopWatch = new();
-        restartStopWatch.Start();
-
-        WebApplication httpsHost = CreateWebApplication(options);
-
-        // The new DI container has a fresh AuthManager and SetupState — load tokens
-        // from DB and mark setup complete so the middleware stops blocking requests.
-        AuthManager httpsAuthManager = httpsHost.Services.GetRequiredService<AuthManager>();
-        bool hasValidToken = await httpsAuthManager.InitializeAsync();
-
-        SetupState httpsSetupState = httpsHost.Services.GetRequiredService<SetupState>();
-        httpsSetupState.DetermineInitialPhase(hasValidToken: hasValidToken, isRegistered: true);
-
-        httpsAuthManager.ScheduleBackgroundRefresh(_applicationShutdownCts!.Token);
-
-        // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
-        // The constructor sets QueueRunner.Current = this.
-        QueueRunner httpsQueueRunner = httpsHost.Services.GetRequiredService<QueueRunner>();
-
-        // Initialize queue workers so they can process jobs on the HTTPS host.
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay(TimeSpan.FromSeconds(3));
-                Logger.App("Initializing QueueRunner for HTTPS host...");
-                await httpsQueueRunner.Initialize();
-                Logger.App("QueueRunner initialized for HTTPS host");
-            }
-            catch (Exception ex)
-            {
-                Logger.App($"Failed to initialize QueueRunner for HTTPS host: {ex}");
-            }
-        });
-
-        RegisterLifetimeEvents(httpsHost, restartStopWatch);
-
-        Logger.App("HTTPS server starting...");
-        return await RunHost(httpsHost);
-    }
-
-    private static async Task<bool> RunHost(WebApplication host)
-    {
-        try
-        {
-            await host.RunAsync(_applicationShutdownCts!.Token);
-        }
-        catch (IOException ex)
-            when (ex.InnerException is SocketException
-                || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
-            )
-        {
-            bool shouldRetry = await HandlePortInUse(Config.InternalServerPort, ex);
-            await host.DisposeAsync();
-            return shouldRetry;
-        }
-        catch (OperationCanceledException)
-        {
-            Logger.App("Shutdown completed");
-        }
-
-        return false;
-    }
-
-    private static async Task EnsurePortAvailable(int port)
-    {
-        if (IsPortAvailable(port))
-            return;
-
-        Logger.App($"Port {port} is in use — checking for stale instances...");
-        string processInfo = await FindProcessOnPortAsync(port);
-
-        if (!string.IsNullOrEmpty(processInfo))
-            Logger.App($"Process holding port {port}:\n{processInfo}");
-
-        int blockingPid = ParsePidFromPortInfo(processInfo);
-
-        if (blockingPid <= 0)
-        {
-            if (Certificate.HasValidCertificate())
-            {
-                Logger.Error(
-                    $"Port {port} is in use by an unknown process. "
-                        + "NoMercy is registered on this port and cannot use a different one. "
-                        + "Free the port and restart."
-                );
-            }
-            else
-            {
-                Logger.Error(
-                    $"Port {port} is in use but cannot identify the process. Please free it manually."
-                );
-            }
-
-            Environment.ExitCode = 1;
-            Environment.Exit(1);
-            return;
-        }
-
-        bool isStaleInstance = false;
-        string blockingProcessName = "unknown";
-        try
-        {
-            Process blockingProcess = Process.GetProcessById(blockingPid);
-            blockingProcessName = blockingProcess.ProcessName;
-            isStaleInstance = blockingProcessName == "NoMercyMediaServer";
-        }
-        catch
-        {
-            // Process may have exited between detection and lookup
-        }
-
-        if (isStaleInstance)
-        {
-            Logger.App(
-                $"Stale NoMercyMediaServer instance detected (PID {blockingPid}). Auto-killing..."
-            );
-        }
-        else
-        {
-            bool isRegistered = Certificate.HasValidCertificate();
-
-            if (isRegistered)
-            {
-                Logger.Error(
-                    $"Port {port} is in use by {blockingProcessName} (PID {blockingPid}). "
-                        + "NoMercy is registered on this port and cannot use a different one. "
-                        + "Free the port and restart."
-                );
-                Environment.ExitCode = 1;
-                Environment.Exit(1);
-                return;
-            }
-
-            int alternativePort = FindNextAvailablePort(port + 1);
-            Logger.App(
-                $"Port {port} is in use by {blockingProcessName} (PID {blockingPid}). "
-                    + $"Server is not yet registered — using port {alternativePort} instead."
-            );
-            Config.InternalServerPort = alternativePort;
-            return;
-        }
-
-        bool portFreed = await KillAndWaitAsync(blockingPid, port);
-
-        if (!portFreed)
-        {
-            Environment.ExitCode = 1;
-            Environment.Exit(1);
-            return;
-        }
-
-        Logger.App("Port freed — continuing startup...");
-    }
-
-    private static int FindNextAvailablePort(int startPort)
-    {
-        const int MaxPort = 65535;
-
-        for (int candidate = startPort; candidate <= MaxPort; candidate++)
-        {
-            if (IsPortAvailable(candidate))
-                return candidate;
-        }
-
-        Logger.Error($"No available port found in range {startPort}–{MaxPort}.");
-        Environment.ExitCode = 1;
-        Environment.Exit(1);
-        return -1;
-    }
-
-    private static bool IsPortAvailable(int port)
-    {
-        try
-        {
-            // Check on IPAddress.Any (0.0.0.0) to match how Kestrel binds.
-            // Checking only on Loopback can miss processes bound to 0.0.0.0.
-            using TcpListener listener = new(IPAddress.Any, port);
-            listener.Start();
-            listener.Stop();
-            return true;
-        }
-        catch (SocketException)
-        {
-            return false;
-        }
-    }
-
-    private static async Task<bool> HandlePortInUse(int port, IOException ex)
-    {
-        Logger.Error($"Failed to start: port {port} is already in use.");
-
-        string processInfo = await FindProcessOnPortAsync(port);
-
-        if (!string.IsNullOrEmpty(processInfo))
-            Logger.Error($"Process holding port {port}:\n{processInfo}");
-        else
-            Logger.Warning($"Could not identify the process using port {port}.");
-
-        int blockingPid = ParsePidFromPortInfo(processInfo);
-
-        if (blockingPid <= 0)
-        {
-            Logger.Error(
-                "Could not determine the PID of the blocking process. Please free the port manually."
-            );
-            Environment.ExitCode = 1;
-            return false;
-        }
-
-        // Check if the blocking process is a stale instance of ourselves
-        bool isStaleInstance = false;
-        try
-        {
-            Process blockingProcess = Process.GetProcessById(blockingPid);
-            isStaleInstance = blockingProcess.ProcessName == "NoMercyMediaServer";
-        }
-        catch
-        {
-            // Process may have exited between detection and lookup
-        }
-
-        if (isStaleInstance)
-        {
-            Logger.App(
-                $"Stale NoMercyMediaServer instance detected (PID {blockingPid}). Auto-killing..."
-            );
-        }
-        else
-        {
-            bool isInteractive =
-                !IsRunningAsService && !Console.IsInputRedirected && !Console.IsOutputRedirected;
-
-            if (!isInteractive)
-            {
-                Logger.Error(
-                    "Running non-interactively — cannot prompt to kill the blocking process. "
-                        + "Stop the other process manually and restart the server."
-                );
-                Environment.ExitCode = 1;
-                return false;
-            }
-
-            Console.Write($"\nWould you like to kill process {blockingPid} and retry? [y/N] ");
-            string? answer = Console.ReadLine();
-
-            if (
-                string.IsNullOrEmpty(answer)
-                || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase)
-            )
-            {
-                Logger.App("User declined to kill the blocking process. Exiting.");
-                Environment.ExitCode = 1;
-                return false;
-            }
-        }
-
-        bool portFreed = await KillAndWaitAsync(blockingPid, port);
-        if (!portFreed)
-        {
-            Environment.ExitCode = 1;
-            return false;
-        }
-
-        Logger.App("Port freed — retrying...");
-        return true;
-    }
-
-    private static async Task<bool> KillAndWaitAsync(int pid, int port)
-    {
-        try
-        {
-            Process blockingProcess = Process.GetProcessById(pid);
-            Logger.App($"Killing process {pid} ({blockingProcess.ProcessName})...");
-            blockingProcess.Kill();
-            blockingProcess.WaitForExit(5000);
-            Logger.App($"Process {pid} terminated.");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Failed to kill process {pid}: {ex.Message}");
-            return false;
-        }
-
-        for (int attempt = 1; attempt <= 5; attempt++)
-        {
-            await Task.Delay(500);
-            if (IsPortAvailable(port))
-                return true;
-            Logger.App($"Port {port} still in use, retrying ({attempt}/5)...");
-        }
-
-        Logger.Error($"Port {port} still not available after killing process.");
-        return false;
-    }
-
-    private static async Task<string> FindProcessOnPortAsync(int port)
-    {
-        try
-        {
-            if (Software.IsWindows)
-            {
-                Shell.ExecResult result = await Shell.ExecAsync("netstat", "-ano");
-                if (!result.Success)
-                    return string.Empty;
-
-                // Filter lines containing the port in LISTENING state
-                string[] lines = result.StandardOutput.Split('\n');
-                List<string> matches = [];
-                foreach (string line in lines)
-                {
-                    if (
-                        line.Contains($":{port} ")
-                        && line.Contains("LISTENING", StringComparison.OrdinalIgnoreCase)
-                    )
-                        matches.Add(line.Trim());
-                }
-
-                if (matches.Count == 0)
-                    return string.Empty;
-
-                // Extract PIDs and get process names
-                List<string> output = [];
-                foreach (string match in matches)
-                {
-                    string[] parts = match.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    string pidStr = parts[^1];
-                    if (int.TryParse(pidStr, out int pid))
-                    {
-                        try
-                        {
-                            Process proc = Process.GetProcessById(pid);
-                            output.Add($"  PID {pid} ({proc.ProcessName}) — {match}");
-                        }
-                        catch
-                        {
-                            output.Add($"  PID {pidStr} — {match}");
-                        }
-                    }
-                    else
-                    {
-                        output.Add($"  {match}");
-                    }
-                }
-                return string.Join("\n", output);
-            }
-            else
-            {
-                // Linux / macOS — try ss first, fall back to lsof
-                Shell.ExecResult result = await Shell.ExecAsync("ss", $"-tlnp sport = :{port}");
-                if (result.Success && result.StandardOutput.Contains($":{port}"))
-                    return result.StandardOutput;
-
-                result = await Shell.ExecAsync("lsof", $"-i :{port} -sTCP:LISTEN -P -n");
-                if (result.Success && !string.IsNullOrWhiteSpace(result.StandardOutput))
-                    return result.StandardOutput;
-
-                return string.Empty;
-            }
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
-
-    private static int ParsePidFromPortInfo(string processInfo)
-    {
-        if (string.IsNullOrEmpty(processInfo))
-            return -1;
-
-        if (Software.IsWindows)
-        {
-            // Look for "PID <number>" in our formatted output
-            Match match = Regex.Match(processInfo, @"PID\s+(\d+)");
-            if (match.Success && int.TryParse(match.Groups[1].Value, out int pid))
-                return pid;
-        }
-        else
-        {
-            // ss output: pid=<number>
-            Match match = Regex.Match(processInfo, @"pid=(\d+)");
-            if (match.Success && int.TryParse(match.Groups[1].Value, out int pid))
-                return pid;
-
-            // lsof output: second column is PID (skip header)
-            string[] lines = processInfo.Split('\n');
-            if (lines.Length > 1)
-            {
-                string[] parts = lines[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length > 1 && int.TryParse(parts[1], out pid))
-                    return pid;
-            }
-        }
-
-        return -1;
-    }
-
-    private static async Task Shutdown()
-    {
-        await Task.CompletedTask;
-    }
-
-    private static async Task Restart()
-    {
-        await Task.CompletedTask;
-    }
-
-    private static WebApplication CreateWebApplication(
+    
+    internal static WebApplication CreateWebApplication(
         StartupOptions options,
         bool forceHttp = false
     )
@@ -902,6 +344,16 @@ public static class Program
         //     localAddresses.Add(IPAddress.IPv6Any);
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
+
+        builder.Services.AddSingleton<IPortManager, PortManager>();
+        builder.Services.AddSingleton<IShutdownCoordinator, ShutdownCoordinator>();
+        builder.Services.AddSingleton<IServerRunner, ServerRunner>();
+        builder.Services.AddSingleton<IPluginLoader, PluginLoader>();
+        builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+        builder.Services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
+
+        builder.Services.Configure<ServerConfiguration>(builder.Configuration.GetSection("Server"));
+        builder.Services.AddSingleton<IServerConfiguration, ServerConfigurationWrapper>();
 
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton<
@@ -933,7 +385,7 @@ public static class Program
             Certificate.KestrelConfig(kestrelOptions);
 
             // Main server endpoints.
-            // forceHttp = true during setup/auth so we never need HTTPS to handle the
+            // forceHttp = true during setup/auth, so we never need HTTPS to handle the
             // OAuth callback and setup UI, even when a stale cert file is present.
             foreach (IPAddress address in localAddresses)
             {
@@ -1010,10 +462,6 @@ public static class Program
         builder.Services.AddSingleton(options);
 
         WebApplication app = builder.Build();
-
-        // Wire static EncoderProvider so queue jobs can resolve IEncoder without DI
-        EncoderProvider.Configure(() => app.Services.GetRequiredService<IEncoder>());
-        EncoderProvider.ConfigureServiceResolver(type => app.Services.GetService(type));
 
         // Configure middleware from Startup.Configure
         IApiVersionDescriptionProvider provider =

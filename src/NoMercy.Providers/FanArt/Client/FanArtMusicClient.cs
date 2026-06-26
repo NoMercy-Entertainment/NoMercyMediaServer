@@ -8,7 +8,7 @@ public class FanArtMusicClient : FanArtBaseClient
 {
     public FanArtMusicClient()
     {
-        Configuration.ClientKey = ApiInfo.AcousticIdKey;
+        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
     }
 
     public Task<FanArtArtistDetails?> Artist(Guid id, bool priority = false)

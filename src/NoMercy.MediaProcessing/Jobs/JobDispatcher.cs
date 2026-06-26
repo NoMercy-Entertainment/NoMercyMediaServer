@@ -6,11 +6,12 @@ using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
 using QueueJobDispatcher = NoMercyQueue.JobDispatcher;
 
 namespace NoMercy.MediaProcessing.Jobs;
 
-public class JobDispatcher
+public class JobDispatcher : IJobDispatcher
 {
     public JobDispatcher(QueueJobDispatcher dispatcher)
     {
@@ -20,6 +21,16 @@ public class JobDispatcher
     public JobDispatcher()
     {
         Dispatcher = QueueRunner.Current?.Dispatcher;
+    }
+
+    public void Dispatch(IShouldQueue job)
+    {
+        Dispatcher.Dispatch(job);
+    }
+
+    public void Dispatch(IShouldQueue job, string onQueue, int priority)
+    {
+        Dispatcher.Dispatch(job, onQueue, priority);
     }
 
     private QueueJobDispatcher Dispatcher =>

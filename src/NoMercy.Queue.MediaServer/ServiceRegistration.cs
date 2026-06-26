@@ -26,8 +26,8 @@ public static class ServiceRegistration
             IConfigurationStore configStore = sp.GetRequiredService<IConfigurationStore>();
             ILoggerFactory loggerFactory = sp.GetRequiredService<ILoggerFactory>();
             IServiceScopeFactory scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-            NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker =
-                sp.GetService<NoMercy.NmSystem.Lifecycle.IServerPhaseTracker>();
+            NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker =
+                sp.GetService<NmSystem.Lifecycle.IServerPhaseTracker>();
             IResourceBudget? resourceBudget = sp.GetService<IResourceBudget>();
             QueueConfiguration configuration = new()
             {

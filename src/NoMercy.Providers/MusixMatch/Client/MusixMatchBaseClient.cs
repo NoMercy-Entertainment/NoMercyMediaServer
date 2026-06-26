@@ -54,7 +54,7 @@ public class MusixMatchBaseClient : IDisposable
         query.Add("namespace", "lyrics_richsynched");
         query.Add("subtitle_format", "mxm");
         query.Add("app_id", "web-desktop-app-v1.0");
-        query.Add("usertoken", ApiInfo.MusixmatchKey);
+        query.Add("usertoken", ApiKeyStore.Current.MusixmatchKey);
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 

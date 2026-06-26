@@ -27,7 +27,7 @@ public class CollectionListDto
     public string? CertificationCountry { get; set; }
 }
 
-public class CollectionRepository(MediaContext context) : ICollectionRepository
+public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory) : ICollectionRepository
 {
     public async Task<List<Collection>> GetCollectionsAsync(
         Guid userId,
@@ -37,6 +37,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         List<Collection> collections = await context
             .Collections.AsNoTracking()
             .ForUser(userId)
@@ -74,6 +75,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
             .Collections.AsNoTracking()
             .ForUser(userId)
@@ -172,6 +174,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         // Query 1: Core collection data — metadata, translations, images
         // Removed: Library.LibraryUsers Include (only needed in WHERE clause, not consumed by DTO)
         // Movie cast/crew split to Query 2 to reduce round-trips
@@ -272,7 +275,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         return collection;
     }
 
-    public Task<List<CollectionListDto>> GetCollectionItemCardsAsync(
+    public async Task<List<CollectionListDto>> GetCollectionItemCardsAsync(
         Guid userId,
         string? language,
         string country,
@@ -281,7 +284,8 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .ForUser(userId)
             .Where(collection =>

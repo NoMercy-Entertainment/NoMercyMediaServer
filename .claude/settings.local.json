@@ -1,4 +1,18 @@
 {
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://localhost:4000",
+    "ANTHROPIC_API_KEY": "ollama",
+    "BASH_DEFAULT_TIMEOUT_MS": "2147483647",
+    "API_TIMEOUT_MS": "2147483647",
+    "CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS": "2147483647",
+    "CLAUDE_CODE_CONNECT_TIMEOUT_MS": "2147483647",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "45",
+    "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "DISABLE_TELEMETRY": "1",
+    "DISABLE_ERROR_REPORTING": "1",
+    "CLAUDE_ENABLE_STREAM_WATCHDOG": "0"
+  },
   "permissions": {
     "allow": [
       "Bash(dotnet build:*)",
@@ -63,5 +77,13 @@
     ],
     "deny": []
   },
-  "prefersReducedMotion": true
+  "model": "oroboroslabs/claude-mythos-6-5S4:latest",
+  "prefersReducedMotion": true,
+  "override_models": true,
+  "customSettings": {
+    "connectionTimeout": 2147483647,
+    "readTimeout": 2147483647,
+    "sendTimeout": 2147483647
+  },
+  "outputStyle": "Proactive"
 }

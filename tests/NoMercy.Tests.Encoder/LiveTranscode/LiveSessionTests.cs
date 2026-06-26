@@ -175,7 +175,7 @@ public class LiveSessionTests
             Label: "720p",
             Width: 1280,
             Height: 720,
-            Codec: NoMercy.Encoder.Codecs.VideoCodecType.H264,
+            Codec: VideoCodecType.H264,
             BitrateKbps: 4000,
             Encoder: "libx264",
             IsHardwareAccelerated: false,
