@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using System.Text.RegularExpressions;
 using MovieFileLibrary;
 using NoMercy.NmSystem.Extensions;
@@ -144,7 +145,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
             await Parallel.ForEachAsync(
                 directories,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 async (directory, cancellationToken) =>
                 {
                     string folderName = Path.GetFileName(directory);
@@ -238,7 +239,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
             Parallel.ForEach(
                 directories,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 (directory, _) =>
                 {
                     string dir = _driver.GetFullPath(directory.ToUtf8());
@@ -323,7 +324,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
             await Parallel.ForEachAsync(
                 entries,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 async (file, cancellationToken) =>
                 {
                     file = _driver.GetFullPath(file.ToUtf8());

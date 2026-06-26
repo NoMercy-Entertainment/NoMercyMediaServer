@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using NoMercy.NmSystem;
 using NoMercy.Database;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercyQueue;
@@ -264,7 +265,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
         await Parallel.ForEachAsync(
             FolderMetaData.MusicBrainzRelease.Media,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (media, t) =>
             {
                 if (
@@ -294,7 +295,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
                 await Parallel.ForEachAsync(
                     FoundTrack.ArtistCredit,
-                    Config.ParallelOptions,
+                    SystemParallelism.Options,
                     async (artist, _) =>
                     {
                         Logger.MusicBrainz(

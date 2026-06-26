@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using NoMercy.NmSystem;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -61,7 +62,7 @@ public class StorageJob : IShouldQueue
 
         await Parallel.ForEachAsync(
             libraries,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             (library, _) =>
             {
                 List<Metadata?> movieMetaData = library
@@ -159,7 +160,7 @@ public class StorageJob : IShouldQueue
     {
         await Parallel.ForEachAsync(
             folders,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             (folder, _) =>
             {
                 long size = GetDirectorySize(new(folder));

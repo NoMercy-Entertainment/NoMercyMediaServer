@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
@@ -461,7 +462,7 @@ public class MovieManager(
 
         await Parallel.ForEachAsync(
             movie.ProductionCompanies,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (productionCompany, _) =>
             {
                 TmdbTmdbNetworkDetails? nw = await movieClient.CompanyDetails(productionCompany.Id);

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem;
 
 namespace NoMercy.NmSystem.FileSystem;
 
@@ -42,7 +43,7 @@ public static class Folders
             if (recursive)
                 Parallel.ForEach(
                     directoryInfo.GetDirectories(),
-                    Config.ParallelOptions,
+                    SystemParallelism.Options,
                     subDirectory =>
                         Interlocked.Add(
                             ref startDirectorySize,

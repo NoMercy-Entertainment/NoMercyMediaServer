@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
@@ -83,7 +84,7 @@ public class EpisodeManager(IEpisodeRepository episodeRepository, IJobDispatcher
 
         await Parallel.ForEachAsync(
             season.Episodes,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (episode, _) =>
             {
                 try

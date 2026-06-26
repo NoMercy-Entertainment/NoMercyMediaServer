@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using System.Diagnostics;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -81,7 +82,7 @@ public class LibraryManager(
 
         await Parallel.ForEachAsync(
             targets,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (folder, _) =>
             {
                 Logger.App("Scanning " + folder.Path);
@@ -158,7 +159,7 @@ public class LibraryManager(
 
         await Parallel.ForEachAsync(
             targets,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (folder, _) =>
             {
                 Logger.App("Scanning for new items in " + folder.Path);
@@ -232,7 +233,7 @@ public class LibraryManager(
 
         await Parallel.ForEachAsync(
             newFolders.OrderBy(f => f.Path),
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (rootFolder, _) =>
             {
                 await ProcessVideoFolder(rootFolder);
@@ -285,7 +286,7 @@ public class LibraryManager(
 
         Parallel.ForEach(
             newFolders.OrderBy(f => f.Path),
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             (rootFolder, _) =>
             {
                 ProcessMusicFolder(rootFolder);
@@ -326,7 +327,7 @@ public class LibraryManager(
 
         await Parallel.ForEachAsync(
             rootFolders.OrderBy(f => f.Path),
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (rootFolder, _) =>
             {
                 await ProcessVideoFolder(rootFolder);
@@ -369,7 +370,7 @@ public class LibraryManager(
 
         Parallel.ForEach(
             rootFolders.OrderBy(f => f.Path),
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             (rootFolder, _) =>
             {
                 ProcessMusicFolder(rootFolder);

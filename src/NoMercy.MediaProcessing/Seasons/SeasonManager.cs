@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
@@ -39,7 +40,7 @@ public class SeasonManager(ISeasonRepository seasonRepository, JobDispatcher job
 
         await Parallel.ForEachAsync(
             show.Seasons,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (season, _) =>
             {
                 try

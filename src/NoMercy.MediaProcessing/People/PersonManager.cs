@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.People;
 using NoMercy.MediaProcessing.Common;
@@ -631,7 +632,7 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
 
             await Parallel.ForEachAsync(
                 ids,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 async (id, _) =>
                 {
                     try

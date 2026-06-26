@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Jobs;
@@ -97,7 +98,7 @@ public partial class MusicLogic : IAsyncDisposable
         Logger.App($"Processing Folder: {Folder?.Path}", LogEventLevel.Verbose);
         await Parallel.ForEachAsync(
             Files ?? [],
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (file, cancellationToken) =>
             {
                 try

@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -71,7 +72,7 @@ public class ReleaseImportJob : AbstractMusicFolderJob
 
         Parallel.ForEach(
             rootFolders,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             folder =>
             {
                 Logger.App("Processing folder: " + folder.Path);

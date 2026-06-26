@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
@@ -247,7 +248,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
             await Parallel.ForEachAsync(
                 audioFiles,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 (file, _) =>
                 {
                     fileList.Add(
@@ -358,7 +359,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
             await Parallel.ForEachAsync(
                 audioEntries,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 (entry, _) =>
                 {
                     string name = StoragePathHelpers.GetName(entry.Path);
@@ -1352,7 +1353,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         await Parallel.ForEachAsync(
             mediaFiles,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (mediaFile, _) =>
             {
                 AudioTagModel audioTagModel = await AudioTagModel.Create(mediaFile);
@@ -1531,7 +1532,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         await Parallel.ForEachAsync(
             releases,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (release, _) =>
             {
                 if (files.Any(x => x.Match.Id == release.Id))
@@ -1594,7 +1595,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         lookupReleaseIds = lookupReleaseIds.DistinctBy(x => x).ToList();
         await Parallel.ForEachAsync(
             lookupReleaseIds,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (releaseId, _) =>
             {
                 MusicBrainzReleaseAppends? musicBrainzRelease =
@@ -1622,7 +1623,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         await Parallel.ForEachAsync(
             matchedReleases,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (release, cancellationToken) =>
             {
                 int score = await CalculateMatchScoreAsync(release, mediaFiles);
@@ -1652,7 +1653,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         await Parallel.ForEachAsync(
             release.Media,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (media, cancellationToken) =>
             {
                 if (media.Tracks.Length == 0 || media.TrackCount == 0)
@@ -1660,7 +1661,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
                 await Parallel.ForEachAsync(
                     localFiles,
-                    Config.ParallelOptions,
+                    SystemParallelism.Options,
                     async (file, ct) =>
                     {
                         try

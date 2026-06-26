@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Database.Models.Libraries;
+using NoMercy.NmSystem;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.MediaProcessing.Common;
@@ -169,7 +170,7 @@ public class CollectionManager(
 
         await Parallel.ForEachAsync(
             collectionAppends.Parts,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (movie, _) =>
             {
                 TmdbMovieClient movieClient = new(movie.Id);

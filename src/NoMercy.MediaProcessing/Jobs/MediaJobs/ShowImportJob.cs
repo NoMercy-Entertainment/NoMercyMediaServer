@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -88,7 +89,7 @@ public class ShowImportJob : AbstractMediaJob
         ConcurrentBag<Episode> episodes = [];
         await Parallel.ForEachAsync(
             seasons,
-            Config.ParallelOptions,
+            SystemParallelism.Options,
             async (season, _) =>
             {
                 IEnumerable<Episode> eps = await episodeManager.Add(show, season, HighPriority);

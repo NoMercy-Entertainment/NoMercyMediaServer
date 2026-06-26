@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
@@ -70,7 +71,7 @@ public static class GenresSeed
 
             await Parallel.ForEachAsync(
                 languages,
-                Config.ParallelOptions,
+                SystemParallelism.Options,
                 async (language, _) =>
                 {
                     Logger.Setup(
