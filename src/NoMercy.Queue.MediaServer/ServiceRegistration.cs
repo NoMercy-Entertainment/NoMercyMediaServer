@@ -11,6 +11,8 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.Queue.MediaServer.Configuration;
 using NoMercy.Resources;
@@ -26,11 +28,18 @@ public static class ServiceRegistration
     {
         services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter());
         services.AddSingleton<IConfigurationStore, MediaConfigurationStore>();
-        services.AddSingleton(_ => new ResourceBudgetOptions(
-            CpuHeadroomPercent: Config.EncoderCpuHeadroomPercent,
-            GpuHeadroomPercent: Config.EncoderGpuHeadroomPercent,
-            MinFreeMemoryMb: Config.EncoderMinFreeMemoryMb
-        ));
+        services.AddSingleton(sp =>
+        {
+            EncoderResourceConfig resources = sp.GetRequiredService<
+                IOptions<EncoderResourceConfig>
+            >().Value;
+
+            return new ResourceBudgetOptions(
+                CpuHeadroomPercent: resources.EncoderCpuHeadroomPercent,
+                GpuHeadroomPercent: resources.EncoderGpuHeadroomPercent,
+                MinFreeMemoryMb: resources.EncoderMinFreeMemoryMb
+            );
+        });
         services.AddSingleton<QueueRunner>(sp =>
         {
             IQueueContext queueContext = sp.GetRequiredService<IQueueContext>();

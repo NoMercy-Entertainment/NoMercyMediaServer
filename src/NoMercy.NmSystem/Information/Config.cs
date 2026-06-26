@@ -92,9 +92,6 @@ public static class Config
     // Live-headroom thresholds consulted by ResourceBudget.TryAcquire before
     // granting a new encoder lease. Each value left at 0 disables that signal.
     // Defaults leave room for the user's other work — they don't max the box.
-    public static double EncoderCpuHeadroomPercent { get; set; } = 90.0;
-    public static double EncoderGpuHeadroomPercent { get; set; } = 95.0;
-    public static long EncoderMinFreeMemoryMb { get; set; } = 1024;
 
     public static KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 3);
