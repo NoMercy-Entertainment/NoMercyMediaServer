@@ -26,8 +26,8 @@ using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 using NoMercy.MediaProcessing.Libraries;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Resources;
@@ -53,11 +53,12 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
     private IEncodingOrchestrator? _encodingOrchestrator;
     private IEncoderProcessRegistry? _encoderProcessRegistry;
 
-    public void InjectStorageServices(IServiceProvider serviceProvider)
+    public new void InjectStorageServices(IServiceProvider serviceProvider)
     {
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
         _encoderProcessRegistry = serviceProvider.GetRequiredService<IEncoderProcessRegistry>();
     }
+
     public override string QueueName =>
         Task.Resources?.GpuDeviceKey is not null ? "encoder-gpu" : "encoder-cpu";
 

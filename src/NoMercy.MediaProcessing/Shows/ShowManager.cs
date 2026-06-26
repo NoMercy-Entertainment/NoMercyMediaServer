@@ -116,7 +116,7 @@ public class ShowManager(
             Status = showAppends.Status,
             Tagline = showAppends.Tagline,
             Title = showAppends.Name,
-            TitleSort = showAppends.Name?.TitleSort(showAppends.FirstAirDate),
+            TitleSort = showAppends.Name?.TitleSort(showAppends.FirstAirDate) ?? string.Empty,
             TvdbId = showAppends.ExternalIds.TvdbId,
             Type = showAppends.Type,
             VoteAverage = showAppends.VoteAverage,
@@ -145,7 +145,12 @@ public class ShowManager(
             LogEventLevel.Debug
         );
 
-        ShowManager showManager = new(showRepository, jobDispatcher, storageFactory, storageDriver);
+        ShowManager showManager = new(
+            showRepository,
+            jobDispatcher,
+            storageFactory!,
+            storageDriver
+        );
         await showManager.StoreGenres(showAppends);
         await showManager.StoreContentRatings(showAppends);
         await showManager.StoreTranslations(showAppends);

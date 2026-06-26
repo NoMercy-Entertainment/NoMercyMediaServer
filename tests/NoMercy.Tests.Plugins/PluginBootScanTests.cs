@@ -202,7 +202,7 @@ public class PluginBootScanTests : IDisposable
         IPlugin instance = results.Should().ContainSingle().Subject.Instance;
         IEncoderPlugin encoderPlugin = instance.Should().BeAssignableTo<IEncoderPlugin>().Subject;
 
-        EncodingProfile profile = encoderPlugin.GetProfile(new() { FilePath = "/test.mkv" });
+        EncodingProfile profile = encoderPlugin.GetProfile(new() { FilePath = "/test.mkv" })!;
 
         profile.Should().NotBeNull();
         profile.VideoCodec.Should().Be("h264");

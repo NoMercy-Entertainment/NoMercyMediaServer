@@ -33,8 +33,8 @@ using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 using NoMercy.MediaProcessing.Libraries;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Resources;
@@ -77,7 +77,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
     private IMediaAnalyzer? _mediaAnalyzer;
     private ISubtitleOcrEngine? _subtitleOcrEngine;
 
-    public void InjectStorageServices(IServiceProvider serviceProvider)
+    public new void InjectStorageServices(IServiceProvider serviceProvider)
     {
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
         _hardwareBenchmark = serviceProvider.GetRequiredService<IHardwareBenchmark>();
@@ -86,6 +86,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
         _mediaAnalyzer = serviceProvider.GetRequiredService<IMediaAnalyzer>();
         _subtitleOcrEngine = serviceProvider.GetRequiredService<ISubtitleOcrEngine>();
     }
+
     public override string QueueName => "encoder";
     public override int Priority => 4;
     public string Status { get; set; } = "pending";
@@ -696,7 +697,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
 
         EncodingRequest finalizeRequest = new(
             InputPath: InputFile,
-            OutputDirectory: fileMetadata.Path,
+            OutputDirectory: fileMetadata.Path ?? string.Empty,
             Profile: finalizeProfile,
             Options: new(FinalizeOnly: true),
             MediaTitle: fileMetadata.FileName,
@@ -763,7 +764,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
                 new EncodingCompletedEvent
                 {
                     JobId = fileMetadata.Id,
-                    OutputPath = fileMetadata.Path,
+                    OutputPath = fileMetadata.Path ?? string.Empty,
                     Duration = TimeSpan.Zero,
                 }
             );

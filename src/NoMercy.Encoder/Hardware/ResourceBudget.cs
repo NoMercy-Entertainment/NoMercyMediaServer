@@ -352,7 +352,7 @@ public class ResourceBudget : IResourceBudget
                         _cpuSemaphore.Release();
                     }
 
-                    if (requirement.GpuDeviceKey is not null && requirement.GpuSlots > 0)
+                    if (gpuSemaphore is not null && requirement.GpuSlots > 0)
                     {
                         for (int rollback = 0; rollback < requirement.GpuSlots; rollback++)
                         {

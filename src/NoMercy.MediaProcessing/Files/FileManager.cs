@@ -22,9 +22,9 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Library;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 using Serilog.Events;
@@ -869,12 +869,6 @@ public partial class FileManager(
 
         foreach (SubtitleModel subtitleParserResult in chapterParser.Subtitles)
         {
-            if (subtitleParserResult.StartTime == null || subtitleParserResult.EndTime == null)
-            {
-                Logger.App($"Invalid chapter time in {chapterFile}", LogEventLevel.Warning);
-                continue;
-            }
-
             IChapter chapter = new()
             {
                 Id = chapterParser.Subtitles.IndexOf(subtitleParserResult),

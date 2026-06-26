@@ -247,7 +247,7 @@ public class PlanStageCustomArgumentsTests
             Chapters: []
         );
 
-    private static EncodingProfile BuildProfile(Dictionary<string, string> customArgs) =>
+    private static EncodingProfile BuildProfile(Dictionary<string, string>? customArgs) =>
         new(
             Id: Ulid.NewUlid(),
             Name: "CustomArgs Test",

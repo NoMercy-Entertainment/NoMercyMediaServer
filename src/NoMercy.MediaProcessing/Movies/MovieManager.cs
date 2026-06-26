@@ -204,7 +204,7 @@ public class MovieManager(
             .Select(r => new CertificationCriteria
             {
                 Iso31661 = r.Iso31661,
-                Certification = r.ReleaseDates.FirstOrDefault()?.Certification,
+                Certification = r.ReleaseDates.FirstOrDefault()?.Certification ?? string.Empty,
             })
             .ToList();
 
@@ -408,7 +408,9 @@ public class MovieManager(
                 string providerType,
                 TmdbPaymentDetails provider,
                 string? link
-            ) in TmdbWatchProviders.ExtractProviders(movie.WatchProviders?.TmdbWatchProviderResults)
+            ) in TmdbWatchProviders.ExtractProviders(
+                movie.WatchProviders?.TmdbWatchProviderResults ?? new()
+            )
         )
         {
             if (watchProviders.All(wp => wp.Id != provider.ProviderId))

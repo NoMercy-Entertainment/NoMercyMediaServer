@@ -42,7 +42,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 {
     private IEncodingOrchestrator? _encodingOrchestrator;
 
-    public void InjectStorageServices(IServiceProvider serviceProvider)
+    public new void InjectStorageServices(IServiceProvider serviceProvider)
     {
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
     }
