@@ -51,7 +51,7 @@ jobs:
             --settings tests/default.runsettings \
             --configuration Debug \
             --verbosity minimal \
-            --logger "trx;LogFileName=results.trx" \
+            --logger "trx" \
             --results-directory ./testresults \
             --blame-hang-timeout 10m
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
@@ -69,6 +69,16 @@ jobs:
               done
             grep -qE 'outcome="Failed"' "$f" && found=1
           done
+          {
+            echo "## Failed tests"
+            for f in ./testresults/**/*.trx ./testresults/*.trx; do
+              [ -f "$f" ] || continue
+              grep -oE 'testName="[^"]+"[^>]*outcome="Failed"' "$f" \
+                | sed -E 's/.*testName="([^"]+)".*/- `\1`/' | sort -u
+            done
+            echo
+            echo "(found=$found)"
+          } >> "$GITHUB_STEP_SUMMARY"
           echo "Annotated failed tests (found=$found)"
 
       - name: Upload test results
