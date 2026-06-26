@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -10,17 +21,22 @@ namespace NoMercyQueue;
 
 public class QueueRunner
 {
+    private sealed class WorkerEntry
+    {
+        public int Count { get; set; }
+        public List<QueueWorker> WorkerInstances { get; } = [];
+        public CancellationTokenSource Cts { get; set; } = new();
+        public bool IsUpdating { get; set; }
+
+        public WorkerEntry(int count)
+        {
+            Count = count;
+        }
+    }
+
     private readonly object _workersLock = new();
 
-    private readonly Dictionary<
-        string,
-        (
-            int count,
-            List<QueueWorker> workerInstances,
-            CancellationTokenSource _cancellationTokenSource,
-            bool isUpdating
-        )
-    > _workers;
+    private readonly Dictionary<string, WorkerEntry> _workers;
 
     private volatile bool _isInitialized;
 
@@ -72,7 +88,7 @@ public class QueueRunner
         _workers = new();
         foreach (KeyValuePair<string, int> entry in configuration.WorkerCounts)
         {
-            _workers[entry.Key] = (entry.Value, [], new(), false);
+            _workers[entry.Key] = new WorkerEntry(entry.Value);
         }
 
         _logger.LogInformation(
@@ -97,19 +113,9 @@ public class QueueRunner
 
         int workerCount = 0;
         Dictionary<string, int> spawnedPerQueue = new();
-        foreach (
-            KeyValuePair<
-                string,
-                (
-                    int count,
-                    List<QueueWorker> workerInstances,
-                    CancellationTokenSource _cancellationTokenSource,
-                    bool isUpdating
-                )
-            > keyValuePair in _workers
-        )
+        foreach (KeyValuePair<string, WorkerEntry> keyValuePair in _workers)
         {
-            int target = keyValuePair.Value.count;
+            int target = keyValuePair.Value.Count;
             for (int i = 0; i < target; i++)
             {
                 SpawnWorkerThread(keyValuePair.Key);
@@ -200,7 +206,7 @@ public class QueueRunner
 
         lock (_workersLock)
         {
-            _workers[name].workerInstances.Add(queueWorkerInstance);
+            _workers[name].WorkerInstances.Add(queueWorkerInstance);
         }
 
         queueWorkerInstance.Start();
@@ -213,7 +219,7 @@ public class QueueRunner
         List<QueueWorker> snapshot;
         lock (_workersLock)
         {
-            snapshot = [.. _workers[name].workerInstances];
+            snapshot = [.. _workers[name].WorkerInstances];
         }
 
         foreach (QueueWorker workerInstance in snapshot)
@@ -241,7 +247,7 @@ public class QueueRunner
         List<QueueWorker> snapshot;
         lock (_workersLock)
         {
-            snapshot = [.. _workers[name].workerInstances];
+            snapshot = [.. _workers[name].WorkerInstances];
         }
 
         foreach (QueueWorker workerInstance in snapshot)
@@ -269,7 +275,7 @@ public class QueueRunner
         List<QueueWorker> snapshot;
         lock (_workersLock)
         {
-            snapshot = [.. _workers[name].workerInstances];
+            snapshot = [.. _workers[name].WorkerInstances];
         }
 
         foreach (QueueWorker workerInstance in snapshot)
@@ -354,14 +360,14 @@ public class QueueRunner
                     return;
 
                 instance.Stop();
-                _workers[name].workerInstances.Remove(instance);
+                _workers[name].WorkerInstances.Remove(instance);
             }
         };
     }
 
     private bool ShouldRemoveWorker(string name)
     {
-        return _workers[name].workerInstances.Count > _workers[name].count;
+        return _workers[name].WorkerInstances.Count > _workers[name].Count;
     }
 
     private void UpdateRunningWorkerCounts(string name)
@@ -373,9 +379,9 @@ public class QueueRunner
         {
             if (ShouldRemoveWorker(name))
                 return;
-            spawned = _workers[name].workerInstances.Count;
-            targetCount = _workers[name].count;
-            token = _workers[name]._cancellationTokenSource.Token;
+            spawned = _workers[name].WorkerInstances.Count;
+            targetCount = _workers[name].Count;
+            token = _workers[name].Cts.Token;
         }
 
         Task workerTask = Task.Run(
@@ -386,7 +392,7 @@ public class QueueRunner
                     bool isUpdating;
                     lock (_workersLock)
                     {
-                        isUpdating = _workers[name].isUpdating;
+                        isUpdating = _workers[name].IsUpdating;
                     }
 
                     if (isUpdating || spawned >= targetCount)
@@ -418,7 +424,7 @@ public class QueueRunner
         lock (_workersLock)
         {
             exists = _workers.ContainsKey(name);
-            if (exists && _workers[name].count == max)
+            if (exists && _workers[name].Count == max)
                 return true;
         }
 
@@ -435,18 +441,12 @@ public class QueueRunner
         CancellationToken token;
         lock (_workersLock)
         {
-            (
-                int count,
-                List<QueueWorker> workerInstances,
-                CancellationTokenSource _cancellationTokenSource,
-                bool isUpdating
-            ) valueTuple = _workers[name];
-            valueTuple.isUpdating = true;
-            valueTuple._cancellationTokenSource.Cancel();
-            valueTuple.count = max;
-            valueTuple._cancellationTokenSource = new();
-            _workers[name] = valueTuple;
-            token = valueTuple._cancellationTokenSource.Token;
+            WorkerEntry entry = _workers[name];
+            entry.IsUpdating = true;
+            entry.Cts.Cancel();
+            entry.Count = max;
+            entry.Cts = new();
+            token = entry.Cts.Token;
         }
 
         await Task.Run(
@@ -454,14 +454,7 @@ public class QueueRunner
             {
                 lock (_workersLock)
                 {
-                    (
-                        int count,
-                        List<QueueWorker> workerInstances,
-                        CancellationTokenSource _cancellationTokenSource,
-                        bool isUpdating
-                    ) valueTuple = _workers[name];
-                    valueTuple.isUpdating = false;
-                    _workers[name] = valueTuple;
+                    _workers[name].IsUpdating = false;
                 }
                 UpdateRunningWorkerCounts(name);
             },
@@ -475,7 +468,7 @@ public class QueueRunner
     {
         lock (_workersLock)
         {
-            return _workers[name].workerInstances.IndexOf(queueWorker);
+            return _workers[name].WorkerInstances.IndexOf(queueWorker);
         }
     }
 
@@ -500,21 +493,11 @@ public class QueueRunner
         int count = 0;
         lock (_workersLock)
         {
-            foreach (
-                KeyValuePair<
-                    string,
-                    (
-                        int count,
-                        List<QueueWorker> workerInstances,
-                        CancellationTokenSource _,
-                        bool isUpdating
-                    )
-                > entry in _workers
-            )
+            foreach (KeyValuePair<string, WorkerEntry> entry in _workers)
             {
                 if (!namePredicate(entry.Key))
                     continue;
-                foreach (QueueWorker worker in entry.Value.workerInstances)
+                foreach (QueueWorker worker in entry.Value.WorkerInstances)
                     if (worker.IsProcessingJob)
                         count++;
             }

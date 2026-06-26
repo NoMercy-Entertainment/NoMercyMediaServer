@@ -1,4 +1,15 @@
-﻿using NoMercy.Networking.Cast;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using NoMercy.Networking.Cast;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Lifecycle;
 using NoMercy.NmSystem.SystemCalls;
@@ -45,13 +56,6 @@ public class Start
                 Phase: 1,
                 DependsOn: ["CreateAppFolders"]
             ),
-            new(
-                "ApiInfo",
-                ApiInfo.RequestInfo,
-                CanDefer: false,
-                Phase: 1,
-                DependsOn: ["CreateAppFolders"]
-            ),
             // ── PHASE 2: BEST-EFFORT (network, with fallback) ──────────
             new(
                 "NetworkProbe",
@@ -61,7 +65,7 @@ public class Start
                 },
                 CanDefer: false,
                 Phase: 2,
-                DependsOn: ["ApiInfo"]
+                DependsOn: ["CreateAppFolders"]
             ),
             // Auth is now handled by AuthManager (DI) via BootOrchestrator — not here.
             new(
@@ -133,7 +137,7 @@ public class Start
         _phase1Completed = [.. runner.CompletedTasks];
     }
 
-    public static async Task InitRemaining()
+    public static async Task InitRemaining(IDegradedModeRecovery? recovery = null)
     {
         List<StartupTask> remainingTasks = _allTasks.Where(t => t.Phase > 1).ToList();
         StartupTaskRunner runner = new(remainingTasks, _phase1Completed);
@@ -164,14 +168,15 @@ public class Start
 
             DeferredTasks deferred = new()
             {
-                ApiKeysLoaded = _phase1Completed.Contains("ApiInfo"),
+                ApiKeysLoaded = !string.IsNullOrEmpty(ApiKeyStore.Current.TmdbToken),
                 // Auth is handled by AuthManager/BootOrchestrator — check AccessToken directly.
                 Authenticated = !string.IsNullOrEmpty(Globals.Globals.AccessToken),
                 NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
                 SeedsRun = true,
                 Registered = runner.CompletedTasks.Contains("Register"),
             };
-            _ = Task.Run(() => DegradedModeRecovery.StartRecoveryLoop(deferred));
+            if (recovery is not null)
+                _ = Task.Run(() => recovery.StartRecoveryLoop(deferred));
         }
 
         // Delay heavy initialization tasks to run in the background after server is ready

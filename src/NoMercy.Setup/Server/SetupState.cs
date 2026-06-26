@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -91,6 +102,20 @@ public class SetupState
         }
 
         return signal.Task.WaitAsync(cancellationToken);
+    }
+
+    public async Task WaitForPhaseAsync(SetupPhase targetPhase, CancellationToken cancellationToken = default)
+    {
+        while (true)
+        {
+            lock (_lock)
+            {
+                if (_currentPhase >= targetPhase)
+                    return;
+            }
+
+            await WaitForChangeAsync(cancellationToken);
+        }
     }
 
     public bool TransitionTo(SetupPhase targetPhase)

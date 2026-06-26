@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
@@ -60,7 +71,7 @@ public class PaletteSourceTests : IDisposable
     [Fact]
     public async Task Tv_returns_NoImage_when_both_image_fields_are_null()
     {
-        NoMercy.Database.Models.TvShows.Tv tv = new()
+        Database.Models.TvShows.Tv tv = new()
         {
             Id = 1,
             Title = "Test",
@@ -80,7 +91,7 @@ public class PaletteSourceTests : IDisposable
     [Fact]
     public async Task Season_returns_NoImage_when_poster_is_null()
     {
-        NoMercy.Database.Models.TvShows.Season season = new() { Id = 1, Poster = null };
+        Database.Models.TvShows.Season season = new() { Id = 1, Poster = null };
         _db.Seasons.Add(season);
         await _db.SaveChangesAsync();
 
@@ -94,7 +105,7 @@ public class PaletteSourceTests : IDisposable
     [Fact]
     public async Task Image_returns_NoImage_for_non_tmdb_site()
     {
-        NoMercy.Database.Models.Media.Image image = new()
+        Database.Models.Media.Image image = new()
         {
             FilePath = "/some/file.jpg",
             Type = "poster",
@@ -118,7 +129,7 @@ public class PaletteSourceTests : IDisposable
     [Fact]
     public async Task Image_returns_NoImage_for_svg_file()
     {
-        NoMercy.Database.Models.Media.Image image = new()
+        Database.Models.Media.Image image = new()
         {
             FilePath = "/some/file.svg",
             Type = "poster",

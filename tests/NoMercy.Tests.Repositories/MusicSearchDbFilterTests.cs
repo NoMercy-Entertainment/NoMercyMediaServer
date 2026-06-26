@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
@@ -48,6 +59,18 @@ public class MusicSearchDbFilterTests : IDisposable
             .Options;
 
         return new TestMediaContext(options);
+    }
+
+    private IDbContextFactory<MediaContext> CreateFactory()
+    {
+        DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
+            .UseSqlite(
+                $"DataSource={_dbName};Mode=Memory;Cache=Shared",
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            )
+            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
+            .Options;
+        return new TestDbContextFactory(options);
     }
 
     private static void SeedSearchData(MediaContext context)
@@ -230,8 +253,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_AccentedQuery_FindsMatch()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         // "beyonce" should find "Beyoncé" via accent normalization
         List<Guid> ids = await repository.SearchArtistIdsAsync("beyonce");
@@ -242,8 +264,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_UmlautQuery_FindsMatch()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         // "motley crue" should find "Mötley Crüe"
         List<Guid> ids = await repository.SearchArtistIdsAsync("motley crue");
@@ -254,8 +275,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_EmDashNormalized_FindsMatch()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         // "twenty-one" should find "Twenty—One Pilots" (em dash normalized to hyphen)
         List<Guid> ids = await repository.SearchArtistIdsAsync("twenty-one");
@@ -266,8 +286,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_CaseInsensitive_FindsMatch()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         // "rolling stones" should find "The Rolling Stones"
         List<Guid> ids = await repository.SearchArtistIdsAsync("rolling stones");
@@ -278,8 +297,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_NoMatch_ReturnsEmpty()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         List<Guid> ids = await repository.SearchArtistIdsAsync("nonexistent artist");
         Assert.Empty(ids);
@@ -288,8 +306,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchAlbumIdsAsync_AccentedAlbum_FindsMatch()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         // "resume" should find "Résumé"
         List<Guid> ids = await repository.SearchAlbumIdsAsync("resume");
@@ -300,8 +317,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchTrackIdsAsync_AccentedTrack_FindsMatch()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         // "deja vu" should find "Déjà Vu"
         List<Guid> ids = await repository.SearchTrackIdsAsync("deja vu");
@@ -312,8 +328,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchPlaylistIdsAsync_AccentedPlaylist_FindsMatch()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         // "cafe" should find "Café Vibes"
         List<Guid> ids = await repository.SearchPlaylistIdsAsync("cafe");
@@ -326,7 +341,9 @@ public class MusicSearchDbFilterTests : IDisposable
     {
         // Verify the query has a WHERE clause containing normalize_search
         string dbName = Guid.NewGuid().ToString();
-        SqliteConnection connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
+        await using SqliteConnection connection = new(
+            $"DataSource={dbName};Mode=Memory;Cache=Shared"
+        );
         connection.Open();
         connection.CreateFunction(
             "normalize_search",
@@ -336,16 +353,18 @@ public class MusicSearchDbFilterTests : IDisposable
         SqlCaptureInterceptor interceptor = new();
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection,
+                $"DataSource={dbName};Mode=Memory;Cache=Shared",
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
             )
             .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
             .Options;
 
-        await using TestMediaContext context = new(options);
-        await context.Database.EnsureCreatedAsync();
+        using (TestMediaContext initContext = new(options))
+        {
+            await initContext.Database.EnsureCreatedAsync();
+        }
 
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(new TestDbContextFactory(options));
         interceptor.Clear();
 
         await repository.SearchArtistIdsAsync("test");
@@ -359,8 +378,7 @@ public class MusicSearchDbFilterTests : IDisposable
     [Fact]
     public async Task SearchArtistIdsAsync_PartialMatch_FindsMultiple()
     {
-        await using MediaContext context = CreateContext();
-        MusicRepository repository = new(context, null!);
+        MusicRepository repository = new(CreateFactory());
 
         // "e" should match multiple artists (Beyoncé, Mötley Crüe, Twenty—One Pilots, The Rolling Stones)
         List<Guid> ids = await repository.SearchArtistIdsAsync("e");

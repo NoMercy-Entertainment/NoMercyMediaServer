@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Networking.Certificate;
@@ -16,11 +27,23 @@ public class BootOrchestrator
 {
     private readonly SetupState _setupState;
     private readonly AuthManager _authManager;
+    private readonly IApiKeyLoader _apiKeyLoader;
+    private readonly IDegradedModeRecovery _degradedModeRecovery;
+    private readonly IServerRegistrationService _serverRegistrationService;
 
-    public BootOrchestrator(SetupState setupState, AuthManager authManager)
+    public BootOrchestrator(
+        SetupState setupState,
+        AuthManager authManager,
+        IApiKeyLoader apiKeyLoader,
+        IDegradedModeRecovery degradedModeRecovery,
+        IServerRegistrationService serverRegistrationService
+    )
     {
         _setupState = setupState;
         _authManager = authManager;
+        _apiKeyLoader = apiKeyLoader;
+        _degradedModeRecovery = degradedModeRecovery;
+        _serverRegistrationService = serverRegistrationService;
     }
 
     /// <summary>
@@ -33,6 +56,8 @@ public class BootOrchestrator
         // Uses Start.cs as shim until Task 17 inlines task definitions
         Logger.Setup("Phase 1: Running essential tasks...");
         await Start.InitEssential();
+
+        await _apiKeyLoader.LoadKeys(ct);
 
         // Initialize TokenStore before any DB access that touches SecureValue
         TokenStore.Initialize(services);
@@ -58,10 +83,7 @@ public class BootOrchestrator
                 NmSystem.Lifecycle.BootStage.Auth
             );
 
-            // Check registration — if cert exists in DB, registration already happened
-            // (cert is issued during registration). This survives process restarts
-            // unlike the static Register.IsRegistered flag.
-            bool isRegistered = Register.IsRegistered || Certificate.HasValidCertificate();
+            bool isRegistered = Certificate.HasValidCertificate();
             _setupState.DetermineInitialPhase(hasValidToken: true, isRegistered: isRegistered);
 
             if (isRegistered)
@@ -236,14 +258,14 @@ public class BootOrchestrator
         }
     }
 
-    private async Task<bool> RunRegistrationAsync(CancellationToken ct)
+    public async Task<bool> RunRegistrationAsync(CancellationToken ct)
     {
         try
         {
             _setupState.TransitionTo(SetupPhase.Registering);
             _setupState.SetPhaseDetail("Registering server with NoMercy...");
 
-            await Register.Init();
+            await _serverRegistrationService.Init();
 
             _setupState.TransitionTo(SetupPhase.Registered);
             _setupState.SetPhaseDetail("Acquiring SSL certificate...");
@@ -285,7 +307,7 @@ public class BootOrchestrator
         try
         {
             Logger.Setup("Phase 4: Starting background tasks...");
-            await Start.InitRemaining();
+            await Start.InitRemaining(_degradedModeRecovery);
         }
         catch (Exception ex)
         {

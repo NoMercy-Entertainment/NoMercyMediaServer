@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -5,6 +16,7 @@ using NoMercy.Events;
 using NoMercy.Events.FileWatcher;
 using NoMercy.Events.Inbox;
 using NoMercy.MediaProcessing.Inbox;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
@@ -39,7 +51,7 @@ public class InboxClassifierEventHandler : IDisposable
 
     internal async Task OnFileCreated(FileCreatedEvent @event, CancellationToken ct)
     {
-        if (@event.LibraryType != Config.InboxMediaType)
+        if (@event.LibraryType != MediaTypes.InboxMediaType)
             return;
 
         Logger.System($"InboxClassifier: Processing drop event in {@event.FolderPath}");

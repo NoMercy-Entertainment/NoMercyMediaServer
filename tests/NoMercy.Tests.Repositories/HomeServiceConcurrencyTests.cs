@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Services;
@@ -25,7 +36,7 @@ public class HomeServiceConcurrencyTests : IDisposable
     {
         MediaContext mainContext = await _factory.CreateDbContextAsync();
         HomeRepository homeRepository = new(mainContext, _factory);
-        LibraryRepository libraryRepository = new(mainContext, _factory);
+        LibraryRepository libraryRepository = new(_factory);
         HomeService service = new(homeRepository, libraryRepository, _factory);
 
         Exception? exception = await Record.ExceptionAsync(async () =>
@@ -42,7 +53,7 @@ public class HomeServiceConcurrencyTests : IDisposable
     {
         MediaContext mainContext = await _factory.CreateDbContextAsync();
         HomeRepository homeRepository = new(mainContext, _factory);
-        LibraryRepository libraryRepository = new(mainContext, _factory);
+        LibraryRepository libraryRepository = new(_factory);
         HomeService service = new(homeRepository, libraryRepository, _factory);
 
         for (int i = 0; i < 3; i++)

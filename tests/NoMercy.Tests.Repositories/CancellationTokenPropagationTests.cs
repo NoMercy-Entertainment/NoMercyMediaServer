@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
@@ -17,13 +28,13 @@ public class CancellationTokenPropagationTests : IDisposable
     public CancellationTokenPropagationTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        (_factory, _factoryConnection) = TestMediaContextFactory.CreateFactory();
+        (_factory, _factoryConnection) = TestMediaContextFactory.CreateSeededFactory();
     }
 
     [Fact]
     public async Task MovieRepository_GetMovieAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(_context);
+        MovieRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -35,7 +46,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAvailableAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(_context);
+        MovieRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -47,7 +58,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMoviePlaylistAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(_context);
+        MovieRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -59,7 +70,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task MovieRepository_DeleteMovieAsync_ThrowsWhenCancelled()
     {
-        MovieRepository repository = new(_context);
+        MovieRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -71,7 +82,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvAvailableAsync_ThrowsWhenCancelled()
     {
-        TvShowRepository repository = new(_context);
+        TvShowRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -83,7 +94,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task TvShowRepository_DeleteTvAsync_ThrowsWhenCancelled()
     {
-        TvShowRepository repository = new(_context);
+        TvShowRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -95,7 +106,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraries_ThrowsWhenCancelled()
     {
-        LibraryRepository repository = new(_context, _factory);
+        LibraryRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -107,7 +118,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraryMovieCardsAsync_ThrowsWhenCancelled()
     {
-        LibraryRepository repository = new(_context, _factory);
+        LibraryRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -126,7 +137,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task LibraryRepository_GetLibraryTvCardsAsync_ThrowsWhenCancelled()
     {
-        LibraryRepository repository = new(_context, _factory);
+        LibraryRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -145,7 +156,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task CollectionRepository_GetCollectionsListAsync_ThrowsWhenCancelled()
     {
-        CollectionRepository repository = new(_context);
+        CollectionRepository repository = new(_factory);
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -181,7 +192,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAsync_WorksWithDefaultToken()
     {
-        MovieRepository repository = new(_context);
+        MovieRepository repository = new(_factory);
 
         Movie? movie = await repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
@@ -192,7 +203,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvAvailableAsync_WorksWithDefaultToken()
     {
-        TvShowRepository repository = new(_context);
+        TvShowRepository repository = new(_factory);
 
         bool available = await repository.GetTvAvailableAsync(SeedConstants.UserId, 1399);
 

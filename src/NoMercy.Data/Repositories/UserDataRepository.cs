@@ -1,13 +1,26 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 
-public class UserDataRepository(MediaContext context) : IUserDataRepository
+public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
+    : IUserDataRepository
 {
-    public Task<List<UserData>> GetUserDataAsync(
+    public async Task<List<UserData>> GetUserDataAsync(
         Guid userId,
         string type,
         int? intId,
@@ -15,11 +28,12 @@ public class UserDataRepository(MediaContext context) : IUserDataRepository
         CancellationToken ct = default
     )
     {
-        IQueryable<UserData>? query = BuildQuery(userId, type, intId, ulidId);
-        return query is null ? Task.FromResult(new List<UserData>()) : query.ToListAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        IQueryable<UserData>? query = BuildQuery(context, userId, type, intId, ulidId);
+        return query is null ? [] : await query.ToListAsync(ct);
     }
 
-    public Task<UserData?> GetUserDataSingleAsync(
+    public async Task<UserData?> GetUserDataSingleAsync(
         Guid userId,
         string type,
         int? intId,
@@ -27,8 +41,9 @@ public class UserDataRepository(MediaContext context) : IUserDataRepository
         CancellationToken ct = default
     )
     {
-        IQueryable<UserData>? query = BuildQuery(userId, type, intId, ulidId);
-        return query is null ? Task.FromResult<UserData?>(null) : query.FirstOrDefaultAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        IQueryable<UserData>? query = BuildQuery(context, userId, type, intId, ulidId);
+        return query is null ? null : await query.FirstOrDefaultAsync(ct);
     }
 
     public async Task<int> DeleteUserDataAsync(
@@ -36,11 +51,18 @@ public class UserDataRepository(MediaContext context) : IUserDataRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         context.UserData.RemoveRange(userData);
         return await context.SaveChangesAsync(ct);
     }
 
-    private IQueryable<UserData>? BuildQuery(Guid userId, string type, int? intId, Ulid? ulidId)
+    private IQueryable<UserData>? BuildQuery(
+        MediaContext context,
+        Guid userId,
+        string type,
+        int? intId,
+        Ulid? ulidId
+    )
     {
         IQueryable<UserData> query = context
             .UserData.AsNoTracking()
@@ -48,10 +70,10 @@ public class UserDataRepository(MediaContext context) : IUserDataRepository
 
         return type switch
         {
-            Config.MovieMediaType => query.Where(data => data.MovieId == intId),
-            Config.TvMediaType => query.Where(data => data.TvId == intId),
-            Config.SpecialMediaType => query.Where(data => data.SpecialId == ulidId),
-            Config.CollectionMediaType => query.Where(data => data.CollectionId == intId),
+            MediaTypes.MovieMediaType => query.Where(data => data.MovieId == intId),
+            MediaTypes.TvMediaType => query.Where(data => data.TvId == intId),
+            MediaTypes.SpecialMediaType => query.Where(data => data.SpecialId == ulidId),
+            MediaTypes.CollectionMediaType => query.Where(data => data.CollectionId == intId),
             _ => null,
         };
     }

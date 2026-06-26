@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Extensions;
 using NoMercy.Database;
@@ -14,7 +25,7 @@ using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.Data.Repositories;
 
-public class TvShowRepository(MediaContext context) : ITvShowRepository
+public class TvShowRepository(IDbContextFactory<MediaContext> contextFactory) : ITvShowRepository
 {
     public async Task<TvDetail?> GetTvAsync(
         Guid userId,
@@ -24,6 +35,7 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         // Query 1: Core TV data — show metadata, seasons/episodes, show-level cast/crew, etc.
         // Removed: AlternativeTitles (unused by DTO), Library.LibraryUsers (only needed in WHERE)
         // Episode cast/crew split to Query 2 to reduce round-trips
@@ -161,9 +173,10 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
         return new(tv, similars, recommendations);
     }
 
-    public Task<Tv?> GetTvWithLibraryAsync(int id, CancellationToken ct = default)
+    public async Task<Tv?> GetTvWithLibraryAsync(int id, CancellationToken ct = default)
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Tvs.AsNoTracking()
             .Include(tv => tv.Library)
                 .ThenInclude(library => library.FolderLibraries)
@@ -171,9 +184,10 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
             .FirstOrDefaultAsync(tv => tv.Id == id, ct);
     }
 
-    public Task<bool> GetTvAvailableAsync(Guid userId, int id, CancellationToken ct = default)
+    public async Task<bool> GetTvAvailableAsync(Guid userId, int id, CancellationToken ct = default)
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Tvs.AsNoTracking()
             .ForUser(userId)
             .Where(tv => tv.Id == id)
@@ -188,6 +202,7 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
             .Tvs.AsNoTracking()
             .Where(tv => tv.Id == id)
@@ -256,6 +271,7 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         TvUser? tvUser = await context.TvUser.FirstOrDefaultAsync(
             tu => tu.TvId == id && tu.UserId == userId,
             ct
@@ -280,6 +296,7 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
 
     public async Task AddTvShowAsync(int id)
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync();
         TmdbTvClient tvClient = new(id);
         TmdbTvShowDetails? show = await tvClient.Details(true);
         if (show == null)
@@ -311,6 +328,7 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         // SQLite schema uses DeleteBehavior.Restrict globally — the modelBuilder
         // cascade rules only affect EF's tracked-entity cascades, not bulk
         // ExecuteDeleteAsync. Without disabling FK enforcement the delete
@@ -354,6 +372,7 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Tv? tv = await context
             .Tvs.AsNoTracking()
             .Where(tv => tv.Id == id)
@@ -372,6 +391,7 @@ public class TvShowRepository(MediaContext context) : ITvShowRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Tv? tv = await context.Tvs.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tvId, ct);
 
         if (tv is null)

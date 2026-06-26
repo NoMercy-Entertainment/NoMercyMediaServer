@@ -1,9 +1,21 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Movies;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Movies;
 
@@ -84,10 +96,10 @@ public record CollectionMovieDto
         // Watched = movie.Watched;
         Logo = movie.Images.FirstOrDefault(media => media.Type == "logo")?.FilePath;
 
-        MediaType = Config.MovieMediaType;
+        MediaType = MediaTypes.MovieMediaType;
         ColorPalette = movie.ColorPalette;
         Poster = movie.Poster;
-        Type = Config.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
         Year = movie.ReleaseDate.ParseYear();
         Link = new($"/movie/{Id}", UriKind.Relative);
         Genres = movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie.Genre)).ToArray();
@@ -117,10 +129,10 @@ public record CollectionMovieDto
         // Logo = movie.Logo;
         Genres = [];
         Link = new($"/movie/{Id}", UriKind.Relative);
-        MediaType = Config.MovieMediaType;
+        MediaType = MediaTypes.MovieMediaType;
         ColorPalette = new();
         Poster = tmdbMovie.PosterPath;
-        Type = Config.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
         Year = tmdbMovie.ReleaseDate.ParseYear();
 
         NumberOfItems = 1;

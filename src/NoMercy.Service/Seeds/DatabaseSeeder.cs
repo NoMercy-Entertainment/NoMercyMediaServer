@@ -1,4 +1,15 @@
-﻿using System.Data;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using System.Data;
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -194,15 +205,15 @@ public static class DatabaseSeeder
         string overlayDir = Path.Combine(AppFiles.DataPath, "profiles");
         Directory.CreateDirectory(overlayDir);
 
-        Encoder.Profiles.DiskOverlayLoader.LoadResult overlay =
-            Encoder.Profiles.DiskOverlayLoader.Load(overlayDir);
+        DiskOverlayLoader.LoadResult overlay =
+            DiskOverlayLoader.Load(overlayDir);
 
         foreach (string error in overlay.Errors)
             Logger.Setup($"Disk overlay load error: {error}", LogEventLevel.Warning);
 
-        foreach (Encoder.Profiles.DiskOverlayLoader.LoadedPreset entry in overlay.Loaded)
+        foreach (DiskOverlayLoader.LoadedPreset entry in overlay.Loaded)
         {
-            Encoder.Profiles.EncodingProfile p = entry.Profile;
+            EncodingProfile p = entry.Profile;
             Database.Models.Media.EncodingPreset? existing =
                 await context.EncodingPresets.FirstOrDefaultAsync(x => x.Id == p.Id);
 

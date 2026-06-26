@@ -1,8 +1,20 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media;
@@ -117,8 +129,8 @@ public record CollectionsResponseItemDto
                 ?.Movie.ReleaseDate.ParseYear()
         );
 
-        MediaType = Config.CollectionMediaType;
-        Type = Config.CollectionMediaType;
+        MediaType = MediaTypes.CollectionMediaType;
+        Type = MediaTypes.CollectionMediaType;
 
         NumberOfItems = collection.Parts;
         HaveItems = collection.CollectionMovies.Count(collectionMovie =>

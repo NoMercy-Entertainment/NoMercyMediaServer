@@ -1,3 +1,16 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
@@ -11,12 +24,15 @@ namespace NoMercy.Tests.Repositories;
 public class TvShowRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
+    private readonly IDbContextFactory<MediaContext> _factory;
+    private readonly SqliteConnection _connection;
     private readonly TvShowRepository _repository;
 
     public TvShowRepositoryTests()
     {
-        _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new(_context);
+        (_factory, _connection) = TestMediaContextFactory.CreateSeededFactory();
+        _context = _factory.CreateDbContext();
+        _repository = new(_factory);
     }
 
     [Fact]
@@ -277,10 +293,16 @@ public class TvShowRepositoryTests : IDisposable
     [Fact]
     public async Task GetTvAsync_GeneratesSplitQueries()
     {
-        (MediaContext ctx, SqlCaptureInterceptor interceptor) =
-            TestMediaContextFactory.CreateSeededContextWithInterceptor();
-        TvShowRepository repo = new(ctx);
-        SeedDetailData(ctx);
+        (
+            IDbContextFactory<MediaContext> factory,
+            SqlCaptureInterceptor interceptor,
+            SqliteConnection connection
+        ) = TestMediaContextFactory.CreateSeededFactoryWithInterceptor();
+        TvShowRepository repo = new(factory);
+        using (MediaContext seedCtx = factory.CreateDbContext())
+        {
+            SeedDetailData(seedCtx);
+        }
         interceptor.Clear();
 
         await repo.GetTvAsync(SeedConstants.UserId, 1399, "en", "US");
@@ -291,8 +313,7 @@ public class TvShowRepositoryTests : IDisposable
             $"Expected multiple split queries, got {interceptor.CapturedSql.Count}"
         );
 
-        await ctx.Database.EnsureDeletedAsync();
-        await ctx.DisposeAsync();
+        connection.Dispose();
     }
 
     #endregion
@@ -448,5 +469,6 @@ public class TvShowRepositoryTests : IDisposable
     {
         _context.Database.EnsureDeleted();
         _context.Dispose();
+        _connection.Dispose();
     }
 }

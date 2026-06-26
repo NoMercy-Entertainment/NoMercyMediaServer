@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.IdentityModel.Tokens.Jwt;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.SystemCalls;
@@ -7,18 +18,31 @@ using Serilog.Events;
 
 namespace NoMercy.Setup.Boot;
 
-public class DeferredTasks
+public interface IDegradedModeRecovery
 {
-    public bool ApiKeysLoaded { get; set; }
-    public bool Authenticated { get; set; }
-    public bool NetworkDiscovered { get; set; }
-    public bool Registered { get; set; }
-    public bool SeedsRun { get; set; }
-    public bool AllCompleted { get; set; }
+    Task StartRecoveryLoop(DeferredTasks tasks);
 }
 
-public static class DegradedModeRecovery
+public class DegradedModeRecovery : IDegradedModeRecovery
 {
+    private readonly IApiKeyLoader _apiKeyLoader;
+    private readonly IApiKeyStore _apiKeyStore;
+    private readonly IServerRegistrationService _serverRegistrationService;
+    private readonly INetworkDiscovery? _networkDiscovery;
+
+    public DegradedModeRecovery(
+        IApiKeyLoader apiKeyLoader,
+        IApiKeyStore apiKeyStore,
+        IServerRegistrationService serverRegistrationService,
+        INetworkDiscovery? networkDiscovery = null
+    )
+    {
+        _apiKeyLoader = apiKeyLoader;
+        _apiKeyStore = apiKeyStore;
+        _serverRegistrationService = serverRegistrationService;
+        _networkDiscovery = networkDiscovery;
+    }
+
     private static readonly TimeSpan[] BackoffSchedule =
     [
         TimeSpan.FromSeconds(30),
@@ -28,7 +52,7 @@ public static class DegradedModeRecovery
         TimeSpan.FromMinutes(30),
     ];
 
-    public static async Task StartRecoveryLoop(DeferredTasks tasks)
+    public async Task StartRecoveryLoop(DeferredTasks tasks)
     {
         int attempt = 0;
 
@@ -53,8 +77,8 @@ public static class DegradedModeRecovery
             {
                 try
                 {
-                    await ApiInfo.RequestInfo();
-                    tasks.ApiKeysLoaded = ApiInfo.KeysLoaded;
+                    await _apiKeyLoader.LoadKeys();
+                    tasks.ApiKeysLoaded = _apiKeyStore.KeysLoaded;
                 }
                 catch (Exception e)
                 {
@@ -83,8 +107,8 @@ public static class DegradedModeRecovery
             {
                 try
                 {
-                    if (Start.NetworkDiscovery is not null)
-                        await Start.NetworkDiscovery.DiscoverExternalIpAsync();
+                    if (_networkDiscovery is not null)
+                        await _networkDiscovery.DiscoverExternalIpAsync();
                     tasks.NetworkDiscovered = true;
                 }
                 catch (Exception e)
@@ -98,66 +122,58 @@ public static class DegradedModeRecovery
 
             if (!tasks.Registered && tasks.Authenticated && tasks.NetworkDiscovered)
             {
-                // Skip if RunPostAuthRegistration() already completed registration
-                if (Register.IsRegistered)
+                try
                 {
-                    tasks.Registered = true;
-                }
-                else
-                {
-                    try
+                    // Ensure token is present and not expired before attempting registration.
+                    // AuthManager background refresh keeps the token alive; a null/empty check
+                    // is not sufficient — nomercy-tv will reject an expired JWT.
+                    bool tokenNeedsRefresh = true;
+
+                    string? registrationToken = Globals.Globals.AccessToken;
+                    if (!string.IsNullOrEmpty(registrationToken))
                     {
-                        // Ensure token is present and not expired before attempting registration.
-                        // AuthManager background refresh keeps the token alive; a null/empty check
-                        // is not sufficient — nomercy-tv will reject an expired JWT.
-                        bool tokenNeedsRefresh = true;
-
-                        string? registrationToken = Globals.Globals.AccessToken;
-                        if (!string.IsNullOrEmpty(registrationToken))
+                        try
                         {
-                            try
-                            {
-                                JwtSecurityTokenHandler tokenHandler = new();
-                                JwtSecurityToken parsedToken = tokenHandler.ReadJwtToken(
-                                    registrationToken
-                                );
-                                tokenNeedsRefresh =
-                                    parsedToken.ValidTo <= DateTime.UtcNow.AddSeconds(30);
-                            }
-                            catch
-                            {
-                                // Token could not be parsed — treat as expired
-                            }
-                        }
-
-                        if (tokenNeedsRefresh)
-                        {
-                            Logger.App(
-                                "Access token missing or expired before deferred registration — waiting for AuthManager background refresh",
-                                LogEventLevel.Warning
+                            JwtSecurityTokenHandler tokenHandler = new();
+                            JwtSecurityToken parsedToken = tokenHandler.ReadJwtToken(
+                                registrationToken
                             );
-                            // Auth not ready — AuthManager background refresh will handle it
-                            continue;
+                            tokenNeedsRefresh =
+                                parsedToken.ValidTo <= DateTime.UtcNow.AddSeconds(30);
                         }
+                        catch
+                        {
+                            // Token could not be parsed — treat as expired
+                        }
+                    }
 
-                        await Register.Init();
-                        tasks.Registered = true;
-                    }
-                    catch (InvalidOperationException e) when (e.Message.Contains("cooldown"))
-                    {
-                        // Cooldown active — will retry on next loop iteration
-                        Logger.App(
-                            $"Deferred registration deferred: {e.Message}",
-                            LogEventLevel.Debug
-                        );
-                    }
-                    catch (Exception e)
+                    if (tokenNeedsRefresh)
                     {
                         Logger.App(
-                            $"Deferred registration failed: {e.Message}",
+                            "Access token missing or expired before deferred registration — waiting for AuthManager background refresh",
                             LogEventLevel.Warning
                         );
+                        // Auth not ready — AuthManager background refresh will handle it
+                        continue;
                     }
+
+                    await _serverRegistrationService.Init();
+                    tasks.Registered = true;
+                }
+                catch (InvalidOperationException e) when (e.Message.Contains("cooldown"))
+                {
+                    // Cooldown active — will retry on next loop iteration
+                    Logger.App(
+                        $"Deferred registration deferred: {e.Message}",
+                        LogEventLevel.Debug
+                    );
+                }
+                catch (Exception e)
+                {
+                    Logger.App(
+                        $"Deferred registration failed: {e.Message}",
+                        LogEventLevel.Warning
+                    );
                 }
             }
 

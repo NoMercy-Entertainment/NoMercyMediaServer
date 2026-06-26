@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -16,7 +27,11 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Tags(tags: "Media People")]
 [ApiVersion(1.0)]
 [Authorize]
-public class PeopleController(IPeopleRepository peopleRepository) : BaseController
+public class PeopleController(
+    IPeopleRepository peopleRepository,
+    IPersonMetadataProvider personMetadataProvider,
+    IServerConfiguration config
+) : BaseController
 {
     [HttpGet]
     [Route("api/v{version:apiVersion}/person")] // match themoviedb.org API
@@ -48,13 +63,12 @@ public class PeopleController(IPeopleRepository peopleRepository) : BaseControll
 
         string country = Country();
 
-        TmdbPersonClient tmdbPersonClient = new(id);
-        TmdbPersonAppends? personAppends = await tmdbPersonClient.WithAllAppends(true);
+        TmdbPersonAppends? personAppends = await personMetadataProvider.GetPersonAsync(id, default);
 
         if (personAppends is null)
             return NotFoundResponse("Person not found");
 
-        if (personAppends.Adult && !Config.ShowAdultContent)
+        if (personAppends.Adult && !config.ShowAdultContent)
             return UnauthorizedResponse(
                 "Person is adult which is not allowed by the server configuration"
             );

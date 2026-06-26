@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -303,8 +314,8 @@ public class JsonRemoteWorkerRegistryBranchTests : IDisposable
 
         public IHardwareCapabilities GetCapabilities() => new HardwareCapabilities([], CpuCores: 1);
 
-        public Task<NoMercy.Encoder.Jobs.RemoteEncodingResult> ExecuteJobAsync(
-            NoMercy.Encoder.Jobs.EncodingJob job,
+        public Task<RemoteEncodingResult> ExecuteJobAsync(
+            EncodingJob job,
             IProgress<NoMercy.Encoder.Progress.EncodingProgress> progress,
             CancellationToken ct
         ) => throw new NotImplementedException("Stub for branch test");

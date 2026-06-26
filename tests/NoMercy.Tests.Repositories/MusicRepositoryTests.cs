@@ -1,3 +1,16 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -12,6 +25,8 @@ namespace NoMercy.Tests.Repositories;
 public class MusicRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
+    private readonly IDbContextFactory<MediaContext> _factory;
+    private readonly SqliteConnection _connection;
     private readonly MusicRepository _repository;
 
     private static readonly Guid ArtistId1 = Guid.Parse("a0000001-0000-0000-0000-000000000001");
@@ -24,9 +39,10 @@ public class MusicRepositoryTests : IDisposable
 
     public MusicRepositoryTests()
     {
-        _context = TestMediaContextFactory.CreateContext();
+        (_factory, _connection) = TestMediaContextFactory.CreateFactory();
+        _context = _factory.CreateDbContext();
         SeedMusicData(_context);
-        _repository = new(_context, null!);
+        _repository = new(_factory);
     }
 
     private static void SeedMusicData(MediaContext context)
@@ -383,5 +399,6 @@ public class MusicRepositoryTests : IDisposable
     public void Dispose()
     {
         _context.Dispose();
+        _connection.Dispose();
     }
 }

@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
@@ -40,7 +51,7 @@ public class PlanStage(
     IBitDepthPolicyResolver? bitDepthPolicyResolver = null,
     IOutputNamingResolver? outputNamingResolver = null,
     ISubtitleAcquisitionService? subtitleAcquisitionService = null,
-    NoMercy.Encoder.Composition.EncoderOptions? options = null
+    Composition.EncoderOptions? options = null
 ) : IPipelineStage<ValidateInput, ExecutionPlan>, IPlanStage
 {
     public string Name => "Plan";
@@ -347,8 +358,8 @@ public class PlanStage(
             AcquisitionRequest request = new(
                 SourcePath: media.FilePath,
                 SourceFileSize: media.FileSizeBytes,
-                SourceFilename: System.IO.Path.GetFileName(media.FilePath),
-                MediaTitle: System.IO.Path.GetFileNameWithoutExtension(media.FilePath),
+                SourceFilename: Path.GetFileName(media.FilePath),
+                MediaTitle: Path.GetFileNameWithoutExtension(media.FilePath),
                 Season: null,
                 Episode: null,
                 Year: null,

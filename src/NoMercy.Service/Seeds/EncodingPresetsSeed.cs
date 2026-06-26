@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
@@ -45,7 +56,7 @@ public static class EncodingPresetsSeed
     {
         Logger.Setup("Seeding example encoding presets", LogEventLevel.Verbose);
 
-        NoMercy.Encoder.Profiles.EncodingProfile[] builtins = V2BuiltinPresets.All();
+        EncodingProfile[] builtins = V2BuiltinPresets.All();
         Dictionary<string, Ulid> builtinByName = builtins.ToDictionary(p => p.Name, p => p.Id);
 
         foreach (EncoderProfileSeedData.SeedExample example in EncoderProfileSeedData.Examples)
@@ -117,7 +128,7 @@ public static class EncodingPresetsSeed
         int refreshedPresets = 0;
         foreach (EncoderProfile v1 in v1Profiles)
         {
-            NoMercy.Encoder.Profiles.EncodingProfile v2Profile;
+            EncodingProfile v2Profile;
             try
             {
                 v2Profile = V2ProfileFactory.FromV1(

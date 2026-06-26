@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Plugins.Abstractions;
@@ -23,7 +34,7 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
 {
     public EncoderProfile Apply(EncoderProfile configured, EncoderMediaInfo media)
     {
-        Abstractions.MediaInfo pluginMedia = ToPluginMediaInfo(media);
+        MediaInfo pluginMedia = ToPluginMediaInfo(media);
 
         foreach (IEncoderPlugin plugin in pluginManager.GetPluginsOfType<IEncoderPlugin>())
         {
@@ -35,7 +46,7 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
         return configured;
     }
 
-    private static Abstractions.MediaInfo ToPluginMediaInfo(EncoderMediaInfo media)
+    private static MediaInfo ToPluginMediaInfo(EncoderMediaInfo media)
     {
         Encoder.Analysis.VideoStreamInfo? video =
             media.VideoStreams.Count > 0 ? media.VideoStreams[0] : null;

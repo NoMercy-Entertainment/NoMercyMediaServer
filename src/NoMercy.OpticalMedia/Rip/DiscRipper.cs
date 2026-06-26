@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
@@ -237,10 +248,10 @@ public partial class DiscRipper(
         return WhitespaceRunRegex().Replace(trimmed, " ");
     }
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"[<>:""/\\|?*\x00-\x1F]")]
+    [GeneratedRegex(@"[<>:""/\\|?*\x00-\x1F]")]
     private static partial Regex InvalidFsCharsRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"\s+")]
+    [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRunRegex();
 
     private async Task<DiscRipResult> RipOneTitleAsync(

@@ -1,4 +1,15 @@
-﻿using System.Net;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using System.Net;
 using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -19,10 +30,10 @@ public class FanArtBaseClient : IDisposable
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.FanArt);
         _client.BaseAddress ??= _baseUrl;
-        _client.DefaultRequestHeaders.Add("api-key", ApiInfo.FanArtApiKey);
-        if (!string.IsNullOrEmpty(ApiInfo.FanArtClientKey))
+        _client.DefaultRequestHeaders.Add("api-key", ApiKeyStore.Current.FanArtApiKey);
+        if (!string.IsNullOrEmpty(ApiKeyStore.Current.FanArtClientKey))
         {
-            _client.DefaultRequestHeaders.Add("client-key", ApiInfo.FanArtClientKey);
+            _client.DefaultRequestHeaders.Add("client-key", ApiKeyStore.Current.FanArtClientKey);
         }
     }
 
@@ -30,10 +41,10 @@ public class FanArtBaseClient : IDisposable
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.FanArt);
         _client.BaseAddress ??= _baseUrl;
-        _client.DefaultRequestHeaders.Add("api-key", ApiInfo.FanArtApiKey);
-        if (!string.IsNullOrEmpty(ApiInfo.FanArtClientKey))
+        _client.DefaultRequestHeaders.Add("api-key", ApiKeyStore.Current.FanArtApiKey);
+        if (!string.IsNullOrEmpty(ApiKeyStore.Current.FanArtClientKey))
         {
-            _client.DefaultRequestHeaders.Add("client-key", ApiInfo.FanArtClientKey);
+            _client.DefaultRequestHeaders.Add("client-key", ApiKeyStore.Current.FanArtClientKey);
         }
         Id = id;
     }

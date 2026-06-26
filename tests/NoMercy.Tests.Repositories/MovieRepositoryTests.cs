@@ -1,3 +1,16 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
@@ -9,12 +22,15 @@ namespace NoMercy.Tests.Repositories;
 public class MovieRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
+    private readonly IDbContextFactory<MediaContext> _factory;
+    private readonly SqliteConnection _connection;
     private readonly MovieRepository _repository;
 
     public MovieRepositoryTests()
     {
-        _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new(_context);
+        (_factory, _connection) = TestMediaContextFactory.CreateSeededFactory();
+        _context = _factory.CreateDbContext();
+        _repository = new(_factory);
     }
 
     [Fact]
@@ -125,5 +141,6 @@ public class MovieRepositoryTests : IDisposable
     {
         _context.Database.EnsureDeleted();
         _context.Dispose();
+        _connection.Dispose();
     }
 }

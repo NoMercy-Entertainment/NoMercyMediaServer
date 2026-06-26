@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -10,10 +21,12 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -26,7 +39,9 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class MoviesController(
     IMovieRepository movieRepository,
     ILibraryRepository libraryRepository,
-    JobDispatcher jobDispatcher
+    JobDispatcher jobDispatcher,
+    IMovieMetadataProvider movieMetadataProvider,
+    IServerConfiguration config
 ) : BaseController
 {
     [HttpGet]
@@ -47,13 +62,12 @@ public class MoviesController(
 
         try
         {
-            TmdbMovieClient tmdbMovieClient = new(id, language: language);
-            TmdbMovieAppends? movieAppends = await tmdbMovieClient.WithAllAppends(true);
+            TmdbMovieAppends? movieAppends = await movieMetadataProvider.GetMovieAsync(id, language, ct);
 
             if (movieAppends is null)
                 return NotFoundResponse("Movie not found");
 
-            if (movieAppends.Adult && !Config.ShowAdultContent)
+            if (movieAppends.Adult && !config.ShowAdultContent)
                 return UnauthorizedResponse(
                     "Movie is adult which is not allowed by the server configuration"
                 );
@@ -116,7 +130,7 @@ public class MoviesController(
 
         IEnumerable<VideoPlaylistResponseDto> playlist = (
             await movieRepository.GetMoviePlaylistAsync(userId, id, language, country, ct)
-        ).Select(movie => new VideoPlaylistResponseDto(movie, Config.MovieMediaType, id, country));
+        ).Select(movie => new VideoPlaylistResponseDto(movie, MediaTypes.MovieMediaType, id, country));
 
         if (!playlist.Any())
             return NotFoundResponse("Movie not found");
@@ -266,7 +280,7 @@ public class MoviesController(
         else
         {
             library = await libraryRepository.GetLibraryByTypeAsync(
-                Config.MovieMediaType,
+                MediaTypes.MovieMediaType,
                 null,
                 ct
             );

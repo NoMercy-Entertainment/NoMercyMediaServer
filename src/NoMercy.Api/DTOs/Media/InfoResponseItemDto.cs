@@ -1,9 +1,21 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -142,8 +154,8 @@ public record InfoResponseItemDto
         Adult = movie.Adult;
         Title = movie.Title;
         Overview = !string.IsNullOrEmpty(overview) ? overview : movie.Overview;
-        Type = Config.MovieMediaType;
-        MediaType = Config.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
+        MediaType = MediaTypes.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         Watched = movie.VideoFiles.Any(videoFile => videoFile.UserData.Count != 0);
 
@@ -217,14 +229,14 @@ public record InfoResponseItemDto
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
         Similar = movie
-            .SimilarFrom.Select(similar => new RelatedDto(similar, Config.MovieMediaType))
+            .SimilarFrom.Select(similar => new RelatedDto(similar, MediaTypes.MovieMediaType))
             .Where(related => related.Adult == false)
             .Where(item => item.Poster != null);
 
         Recommendations = movie
             .RecommendationFrom.Select(recommendation => new RelatedDto(
                 recommendation,
-                Config.MovieMediaType
+                MediaTypes.MovieMediaType
             ))
             .Where(related => related.Adult == false)
             .Where(item => item.Poster != null);
@@ -252,8 +264,8 @@ public record InfoResponseItemDto
         Adult = tmdbMovie.Adult;
         Title = tmdbMovie.Title;
         Overview = !string.IsNullOrEmpty(overview) ? overview : tmdbMovie.Overview;
-        Type = Config.MovieMediaType;
-        MediaType = Config.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
+        MediaType = MediaTypes.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         Watched = false;
 
@@ -306,14 +318,14 @@ public record InfoResponseItemDto
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
         Similar = tmdbMovie
-            .Similar.Results.Select(similar => new RelatedDto(similar, Config.MovieMediaType))
+            .Similar.Results.Select(similar => new RelatedDto(similar, MediaTypes.MovieMediaType))
             .Where(related => related.Adult == false)
             .Where(related => related.Poster != null);
 
         Recommendations = tmdbMovie
             .Recommendations.Results.Select(recommendation => new RelatedDto(
                 recommendation,
-                Config.MovieMediaType
+                MediaTypes.MovieMediaType
             ))
             .Where(related => related.Adult == false)
             .Where(related => related.Poster != null);
@@ -346,8 +358,8 @@ public record InfoResponseItemDto
         Id = tv.Id;
         Title = !string.IsNullOrEmpty(title) ? title : tv.Title;
         Overview = !string.IsNullOrEmpty(overview) ? overview : tv.Overview;
-        Type = tv.Type ?? Config.TvMediaType;
-        MediaType = Config.TvMediaType;
+        Type = tv.Type ?? MediaTypes.TvMediaType;
+        MediaType = MediaTypes.TvMediaType;
         Link = new($"/tv/{Id}", UriKind.Relative);
         Watched = tv.Episodes.Any(episode =>
             episode.VideoFiles.Any(videoFile => videoFile.UserData.Count != 0)
@@ -449,7 +461,7 @@ public record InfoResponseItemDto
         Similar = tv
             .SimilarFrom.Select(similar => new RelatedDto(
                 similar,
-                Config.TvMediaType,
+                MediaTypes.TvMediaType,
                 similars ?? []
             ))
             .Where(item => item.Poster != null);
@@ -457,7 +469,7 @@ public record InfoResponseItemDto
         Recommendations = tv
             .RecommendationFrom.Select(recommendation => new RelatedDto(
                 recommendation,
-                Config.TvMediaType,
+                MediaTypes.TvMediaType,
                 recommendations ?? []
             ))
             .Where(item => item.Poster != null);
@@ -497,8 +509,8 @@ public record InfoResponseItemDto
         Adult = tmdbTv.Adult;
         Title = !string.IsNullOrEmpty(title) ? title : tmdbTv.Name;
         Overview = !string.IsNullOrEmpty(overview) ? overview : tmdbTv.Overview;
-        Type = tmdbTv.Type ?? Config.TvMediaType;
-        MediaType = Config.TvMediaType;
+        Type = tmdbTv.Type ?? MediaTypes.TvMediaType;
+        MediaType = MediaTypes.TvMediaType;
         Link = new($"/tv/{Id}", UriKind.Relative);
         Watched = false;
         Favorite = false;
@@ -576,13 +588,13 @@ public record InfoResponseItemDto
         Creator = tmdbTv.CreatedBy.Select(people => new PeopleDto(people)).FirstOrDefault();
 
         Similar = tmdbTv
-            .Similar.Results.Select(similar => new RelatedDto(similar, Config.TvMediaType))
+            .Similar.Results.Select(similar => new RelatedDto(similar, MediaTypes.TvMediaType))
             .Where(item => item.Poster != null);
 
         Recommendations = tmdbTv
             .Recommendations.Results.Select(recommendation => new RelatedDto(
                 recommendation,
-                Config.TvMediaType
+                MediaTypes.TvMediaType
             ))
             .Where(item => item.Poster != null);
 
@@ -614,8 +626,8 @@ public record InfoResponseItemDto
         Id = collection.Id;
         Title = !string.IsNullOrEmpty(title) ? title : collection.Title;
         Overview = !string.IsNullOrEmpty(overview) ? overview : collection.Overview;
-        Type = Config.CollectionMediaType;
-        MediaType = Config.CollectionMediaType;
+        Type = MediaTypes.CollectionMediaType;
+        MediaType = MediaTypes.CollectionMediaType;
         Link = new($"/collection/{Id}", UriKind.Relative);
         // Watched = tv.Watched;
         // Favorite = tv.Favorite;

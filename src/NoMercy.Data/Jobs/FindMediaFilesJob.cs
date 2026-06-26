@@ -1,4 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Data.Logic;
 using NoMercy.Database;
@@ -7,6 +18,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Library;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
@@ -105,9 +117,9 @@ public class FindMediaFilesJob : IShouldQueue
                 {
                     QueryKey =
                     [
-                        library.Type == Config.MovieMediaType
-                            ? Config.MovieMediaType
-                            : Config.TvMediaType,
+                        library.Type == MediaTypes.MovieMediaType
+                            ? MediaTypes.MovieMediaType
+                            : MediaTypes.TvMediaType,
                         Id,
                     ],
                 }

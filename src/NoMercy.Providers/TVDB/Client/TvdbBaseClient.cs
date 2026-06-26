@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.WebUtilities;
@@ -90,7 +101,7 @@ public class TvdbBaseClient : IDisposable
 
     private async Task<TvdbLoginResponse?> LoginAsync()
     {
-        if (string.IsNullOrEmpty(ApiInfo.TvdbKey))
+        if (string.IsNullOrEmpty(ApiKeyStore.Current.TvdbKey))
         {
             Logger.Tvdb("TVDB API key not configured", LogEventLevel.Warning);
             return null;
@@ -101,7 +112,7 @@ public class TvdbBaseClient : IDisposable
             HttpClient loginClient = HttpClientProvider.CreateClient(HttpClientNames.TvdbLogin);
             loginClient.BaseAddress ??= _baseUrl;
 
-            using JsonContent content = JsonContent.Create(new { apikey = ApiInfo.TvdbKey });
+            using JsonContent content = JsonContent.Create(new { apikey = ApiKeyStore.Current.TvdbKey });
             using HttpRequestMessage request = new(HttpMethod.Post, "login");
             request.Content = content;
             using HttpResponseMessage response = await loginClient.SendAsync(request);

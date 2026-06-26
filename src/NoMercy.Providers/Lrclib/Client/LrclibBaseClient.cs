@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Net;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -52,7 +63,7 @@ public class LrclibBaseClient : IDisposable
         if (CacheController.Read(newUrl, out T? result))
             return result;
 
-        Logger.MusicBrainz(_baseUrl + newUrl, LogEventLevel.Verbose);
+        Logger.Lrclib(_baseUrl + newUrl, LogEventLevel.Verbose);
 
         try
         {
@@ -70,7 +81,7 @@ public class LrclibBaseClient : IDisposable
         }
         catch (HttpRequestException ex) when (retry < MaxRetries)
         {
-            Logger.MusicBrainz(
+            Logger.Lrclib(
                 $"Lrclib {ex.StatusCode} retry {retry + 1}/{MaxRetries} for {newUrl}",
                 LogEventLevel.Debug
             );

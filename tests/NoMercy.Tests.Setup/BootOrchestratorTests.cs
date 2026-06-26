@@ -1,4 +1,15 @@
-﻿using Microsoft.AspNetCore.DataProtection;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
@@ -6,6 +17,7 @@ using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Tests.Setup.Infrastructure;
 
 namespace NoMercy.Tests.Setup;
 
@@ -32,7 +44,13 @@ public class BootOrchestratorTests : IDisposable
 
         _authManager = new(_appContext, new LocalStorageDriver());
         _setupState = new();
-        _orchestrator = new(_setupState, _authManager);
+        _orchestrator = new(
+            _setupState,
+            _authManager,
+            new FakeApiKeyLoader(),
+            new FakeDegradedModeRecovery(),
+            new FakeServerRegistrationService()
+        );
     }
 
     public void Dispose()

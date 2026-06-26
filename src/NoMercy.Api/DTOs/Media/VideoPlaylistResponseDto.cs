@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
@@ -5,6 +16,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media;
@@ -144,9 +156,9 @@ public class VideoPlaylistResponseDto
         Uuid = episode.Tv.Id + episode.Id;
         Duration = videoFile.Duration ?? "0";
         TmdbId = episode.Tv.Id;
-        VideoType = Config.TvMediaType;
+        VideoType = MediaTypes.TvMediaType;
         VideoId = videoFile.Id;
-        LibraryType = episode.Tv.MediaType ?? Config.TvMediaType;
+        LibraryType = episode.Tv.MediaType ?? MediaTypes.TvMediaType;
         PlaylistType = playlistType;
         PlaylistId = playlistId;
         Year = episode.Tv.FirstAirDate.ParseYear();
@@ -255,9 +267,9 @@ public class VideoPlaylistResponseDto
         Uuid = movie.Id;
         Duration = videoFile.Duration ?? "0";
         TmdbId = collection?.Id ?? movie.Id;
-        VideoType = Config.MovieMediaType;
+        VideoType = MediaTypes.MovieMediaType;
         VideoId = videoFile.Id;
-        LibraryType = Config.MovieMediaType;
+        LibraryType = MediaTypes.MovieMediaType;
         PlaylistType = playlistType;
         PlaylistId = playlistId;
         Year = movie.ReleaseDate.ParseYear();

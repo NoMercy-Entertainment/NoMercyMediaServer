@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using I18N.DotNet;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -34,10 +45,14 @@ using NoMercy.Networking.Connectivity.Strategies;
 using NoMercy.Networking.Devices;
 using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Messaging;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.OpticalMedia.Composition;
 using NoMercy.Plugins;
+using NoMercy.Providers.TMDB.Client;
 using NoMercy.Queue.MediaServer;
 using NoMercy.Service.Extensions;
 using NoMercy.Service.Workers;
@@ -46,6 +61,7 @@ using NoMercy.Setup.Boot;
 using NoMercy.Setup.Cast;
 using NoMercy.Setup.Server;
 using NoMercy.Storage;
+using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Extensions;
 using Serilog.Events;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
@@ -62,11 +78,13 @@ using MediaProcessingSeasonRepository = NoMercy.MediaProcessing.Seasons.SeasonRe
 using MediaProcessingShowRepository = NoMercy.MediaProcessing.Shows.ShowRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
 
+using Microsoft.Extensions.Configuration;
+
 namespace NoMercy.Service.Configuration;
 
 public static partial class ServiceConfiguration
 {
-    private static void ConfigureCoreServices(IServiceCollection services)
+    private static void ConfigureCoreServices(IServiceCollection services, IConfiguration configuration)
     {
         services
             .AddDataProtection()
@@ -94,13 +112,13 @@ public static partial class ServiceConfiguration
         // on the HTTPS restart and on port-conflict retry; a per-container singleton
         // would mean queue workers in the live host wait on a tracker that the static
         // MarkComplete callers (BootOrchestrator, Setup.Start) never reached.
-        services.AddSingleton<NoMercy.NmSystem.Lifecycle.IServerPhaseTracker>(sp =>
-            NoMercy.NmSystem.Lifecycle.ServerPhaseTracker.Shared(
-                sp.GetService<Microsoft.Extensions.Logging.ILogger<NoMercy.NmSystem.Lifecycle.ServerPhaseTracker>>()
+        services.AddSingleton<NmSystem.Lifecycle.IServerPhaseTracker>(sp =>
+            NmSystem.Lifecycle.ServerPhaseTracker.Shared(
+                sp.GetService<ILogger<NmSystem.Lifecycle.ServerPhaseTracker>>()
             )
         );
 
-        services.AddScoped<NoMercy.Encoder.Profiles.BuiltinPresetSeeder>();
+        services.AddScoped<Encoder.Profiles.BuiltinPresetSeeder>();
 
         // Add Memory Cache with size limit to prevent unbounded growth
         services.AddMemoryCache(options =>
@@ -138,9 +156,13 @@ public static partial class ServiceConfiguration
         services.AddSingleton(auditLog);
         EventBusProvider.Configure(eventBus);
 
-        // Add Singleton Services
+        services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+        services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
+        services.AddSingleton<IServerRegistrationService, ServerRegistrationService>();
+        services.AddSingleton<IUserProvisioningService, UserProvisioningService>();
+        services.AddSingleton<IDegradedModeRecovery, DegradedModeRecovery>();
         services.AddSingleton<AppProcessManager>();
-        services.AddSingleton<NoMercy.Helpers.Monitoring.ResourceMonitor>();
+        services.AddSingleton<Helpers.Monitoring.ResourceMonitor>();
 
         // Network discovery (replaces static Networking.Networking IP/address members)
         services.AddSingleton<INetworkDiscovery>(sp =>
@@ -152,7 +174,7 @@ public static partial class ServiceConfiguration
             if (!string.IsNullOrEmpty(StartupOptions.OverrideExternalIp))
                 discovery.ExternalIp = StartupOptions.OverrideExternalIp;
             Start.NetworkDiscovery = discovery;
-            Register.Discovery = discovery;
+            // Register.Discovery = discovery;
             ChromeCast.NetworkDiscovery = discovery;
             return discovery;
         });
@@ -166,9 +188,29 @@ public static partial class ServiceConfiguration
             (NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>()
         ));
         services.AddSingleton<IConnectivityStrategy, StunHolePunchStrategy>();
-        services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(
-            Register.GetTunnelAvailability
+        services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(() =>
+            Task.FromResult(string.Empty) // Register.GetTunnelAvailability
         ));
+
+        // Add Auth services
+        services.AddSingleton<IAuthTokenStore, AuthTokenStore>();
+
+        // Add Configuration POCOs
+        services.Configure<ExternalServicesConfig>(
+            configuration.GetSection("ExternalServices")
+        );
+        services.Configure<ServerConfig>(configuration.GetSection("Server"));
+        services.Configure<ConnectivityConfig>(configuration.GetSection("Connectivity"));
+        services.Configure<WorkerConfig>(configuration.GetSection("Workers"));
+        services.Configure<EncoderResourceConfig>(
+            configuration.GetSection("EncoderResources")
+        );
+        services.Configure<ContentPolicy>(configuration.GetSection("ContentPolicy"));
+
+        // Add runtime status singletons
+        services.AddSingleton<IBootStatus, BootStatus>();
+        services.AddSingleton<IConnectivityStatus, ConnectivityStatus>();
+        services.AddSingleton<IUpdateStatus, UpdateStatus>();
 
         // Connectivity manager (replaces ServerRegistrationService + CloudflareTunnelService)
         services.AddSingleton<IConnectivityManager, ConnectivityManager>();
@@ -251,6 +293,14 @@ public static partial class ServiceConfiguration
         // disposable contexts per call.
         services.AddDbContextFactory<MediaContext>(configureMediaContext);
 
+        services.AddSingleton<IJobDispatcher, JobDispatcher>();
+
+        // Add Provider Clients
+        services.AddScoped<IMovieMetadataProvider, TmdbMovieMetadataProvider>();
+        services.AddScoped<ITvShowMetadataProvider, TmdbTvShowMetadataProvider>();
+        services.AddScoped<ICollectionMetadataProvider, TmdbCollectionMetadataProvider>();
+        services.AddScoped<IPersonMetadataProvider, TmdbPersonMetadataProvider>();
+
         // Add Repositories
         services.AddScoped<HomeRepository>();
         services.AddScoped<MusicRepository>();
@@ -270,14 +320,14 @@ public static partial class ServiceConfiguration
         services.AddScoped<CollectionRepository>();
         services.AddScoped<MediaProcessingCollectionRepository>();
         services.AddScoped<
-            NoMercy.MediaProcessing.Collections.ICollectionRepository,
+            MediaProcessing.Collections.ICollectionRepository,
             MediaProcessingCollectionRepository
         >();
         services.AddScoped<GenreRepository>();
         services.AddScoped<MovieRepository>();
         services.AddScoped<MediaProcessingMovieRepository>();
         services.AddScoped<
-            NoMercy.MediaProcessing.Movies.IMovieRepository,
+            MediaProcessing.Movies.IMovieRepository,
             MediaProcessingMovieRepository
         >();
         services.AddScoped<TvShowRepository>();
@@ -291,97 +341,34 @@ public static partial class ServiceConfiguration
         services.AddScoped<IPersonRepository, MediaProcessingPersonRepository>();
         services.AddScoped<SpecialRepository>();
         services.AddScoped<RecommendationRepository>();
-        services.AddScoped<NoMercy.Data.Repositories.PeopleRepository>();
+        services.AddScoped<PeopleRepository>();
 
         // Read-side interface registrations (Data.Repositories)
-        services.AddScoped<NoMercy.Data.Repositories.ICollectionRepository, CollectionRepository>();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IContentSegmentRepository,
-            NoMercy.Data.Repositories.ContentSegmentRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IDeviceRepository,
-            NoMercy.Data.Repositories.DeviceRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IDriverRepository,
-            NoMercy.Data.Repositories.DriverRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IEncoderRepository,
-            NoMercy.Data.Repositories.EncoderRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IEncodingHistoryRepository,
-            NoMercy.Data.Repositories.EncodingHistoryRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IEncodingPresetRepository,
-            NoMercy.Data.Repositories.EncodingPresetRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IFolderRepository,
-            NoMercy.Data.Repositories.FolderRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IGenreRepository,
-            NoMercy.Data.Repositories.GenreRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IHomeRepository,
-            NoMercy.Data.Repositories.HomeRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.ILanguageRepository,
-            NoMercy.Data.Repositories.LanguageRepository
-        >();
-        services.AddScoped<NoMercy.Data.Repositories.ILibraryRepository, LibraryRepository>();
-        services.AddScoped<DataIMovieRepository, MovieRepository>();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IMusicRepository,
-            NoMercy.Data.Repositories.MusicRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IPeopleRepository,
-            NoMercy.Data.Repositories.PeopleRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IRecommendationRepository,
-            NoMercy.Data.Repositories.RecommendationRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.ISpecialRepository,
-            NoMercy.Data.Repositories.SpecialRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.ITvShowRepository,
-            NoMercy.Data.Repositories.TvShowRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IUserDataRepository,
-            NoMercy.Data.Repositories.UserDataRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IUserRepository,
-            NoMercy.Data.Repositories.UserRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IImageRepository,
-            NoMercy.Data.Repositories.ImageRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IVideoFileRepository,
-            NoMercy.Data.Repositories.VideoFileRepository
-        >();
-        services.AddScoped<NoMercy.Data.Repositories.InboxRepository>();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IInboxRepository,
-            NoMercy.Data.Repositories.InboxRepository
-        >();
-        services.AddScoped<
-            NoMercy.Data.Repositories.IActivityRepository,
-            NoMercy.Data.Repositories.ActivityRepository
-        >();
+        services.AddScoped<Data.Repositories.ICollectionRepository, CollectionRepository>();
+        services.AddScoped<IContentSegmentRepository, ContentSegmentRepository>();
+        services.AddScoped<IDeviceRepository, DeviceRepository>();
+        services.AddScoped<IDriverRepository, DriverRepository>();
+        services.AddScoped<IEncoderRepository, EncoderRepository>();
+        services.AddScoped<IEncodingHistoryRepository, EncodingHistoryRepository>();
+        services.AddScoped<IEncodingPresetRepository, EncodingPresetRepository>();
+        services.AddScoped<IFolderRepository, FolderRepository>();
+        services.AddScoped<IGenreRepository, GenreRepository>();
+        services.AddScoped<IHomeRepository, HomeRepository>();
+        services.AddScoped<ILanguageRepository, LanguageRepository>();
+        services.AddScoped<Data.Repositories.ILibraryRepository, LibraryRepository>();
+        services.AddScoped<Data.Repositories.IMovieRepository, MovieRepository>();
+        services.AddScoped<IMusicRepository, MusicRepository>();
+        services.AddScoped<IPeopleRepository, PeopleRepository>();
+        services.AddScoped<IRecommendationRepository, RecommendationRepository>();
+        services.AddScoped<ISpecialRepository, SpecialRepository>();
+        services.AddScoped<ITvShowRepository, TvShowRepository>();
+        services.AddScoped<IUserDataRepository, UserDataRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IImageRepository, ImageRepository>();
+        services.AddScoped<IVideoFileRepository, VideoFileRepository>();
+        services.AddScoped<InboxRepository>();
+        services.AddScoped<IInboxRepository, InboxRepository>();
+        services.AddScoped<IActivityRepository, ActivityRepository>();
 
         // Add Managers
         // services.AddScoped<EncoderManager>();
@@ -445,11 +432,8 @@ public static partial class ServiceConfiguration
             (sp, _) =>
             {
                 IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
-                NoMercy.Storage.Validation.StoragePathGuard guard = new(
-                    [AppFiles.TranscodePath],
-                    driver
-                );
-                return new NoMercy.Storage.Drivers.Local.LocalStorage(driver, guard);
+                Storage.Validation.StoragePathGuard guard = new([AppFiles.TranscodePath], driver);
+                return new Storage.Drivers.Local.LocalStorage(driver, guard);
             }
         );
 
@@ -480,10 +464,7 @@ public static partial class ServiceConfiguration
 
         // Subtitle acquisition — OpenSubtitlesProvider lives in MediaProcessing so
         // it can reference both NoMercy.Encoder (interface) and NoMercy.Providers (XML-RPC).
-        services.AddSingleton<
-            NoMercy.Encoder.Subtitles.IOpenSubtitlesProvider,
-            OpenSubtitlesProvider
-        >();
+        services.AddSingleton<Encoder.Subtitles.IOpenSubtitlesProvider, OpenSubtitlesProvider>();
 
         services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.AddScoped<ILocalizer, Localizer>();

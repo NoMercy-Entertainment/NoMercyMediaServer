@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Extensions;
 using NoMercy.Database;
@@ -7,13 +18,16 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
+
+using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Repositories;
 
-public class MovieRepository(MediaContext context) : IMovieRepository
+public class MovieRepository(IDbContextFactory<MediaContext> contextFactory) : IMovieRepository
 {
-    public Task<Movie?> GetMovieAsync(
+    public async Task<Movie?> GetMovieAsync(
         Guid userId,
         int id,
         string language,
@@ -21,7 +35,8 @@ public class MovieRepository(MediaContext context) : IMovieRepository
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Movies.AsNoTracking()
             .Where(movie => movie.Id == id)
             .ForUser(userId)
@@ -109,17 +124,22 @@ public class MovieRepository(MediaContext context) : IMovieRepository
                 .FirstOrDefault()
     );
 
-    public Task<Movie?> GetMovieDetailAsync(
+    public async Task<Movie?> GetMovieDetailAsync(
         Guid userId,
         int id,
         string language,
         string country,
         CancellationToken ct = default
-    ) => GetMovieDetailAsyncQuery(context, userId, id, language, country);
-
-    public Task<bool> GetMovieAvailableAsync(Guid userId, int id, CancellationToken ct = default)
+    )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await GetMovieDetailAsyncQuery(context, userId, id, language, country);
+    }
+
+    public async Task<bool> GetMovieAvailableAsync(Guid userId, int id, CancellationToken ct = default)
+    {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Movies.AsNoTracking()
             .ForUser(userId)
             .Where(movie => movie.Id == id)
@@ -134,6 +154,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
             .Movies.AsNoTracking()
             .Where(movie => movie.Id == id)
@@ -154,7 +175,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
             .Include(movie => movie.VideoFiles)
                 .ThenInclude(file =>
                     file.UserData.Where(userData =>
-                        userData.UserId.Equals(userId) && userData.Type == Config.MovieMediaType
+                        userData.UserId.Equals(userId) && userData.Type == MediaTypes.MovieMediaType
                     )
                 )
             .Include(movie =>
@@ -176,6 +197,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         try
         {
+            await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
             MovieUser? movieUser = await context.MovieUser.FirstOrDefaultAsync(
                 mu => mu.MovieId == id && mu.UserId == userId,
                 ct
@@ -199,15 +221,16 @@ public class MovieRepository(MediaContext context) : IMovieRepository
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Logger.App(e.Message, Serilog.Events.LogEventLevel.Error);
             return false;
         }
     }
 
     public async Task AddMovieAsync(int id, CancellationToken ct = default)
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Library? movieLibrary = await context
-            .Libraries.Where(f => f.Type == Config.MovieMediaType)
+            .Libraries.Where(f => f.Type == MediaTypes.MovieMediaType)
             .FirstOrDefaultAsync(ct);
 
         if (movieLibrary == null)
@@ -219,6 +242,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         // SQLite schema uses DeleteBehavior.Restrict globally.
         // Temporarily disable FK enforcement so the movie and all its dependents
         // (video files, user data, genre links, library links) are removed atomically.
@@ -258,6 +282,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Movie? movie = await context
             .Movies.AsNoTracking()
             .FirstOrDefaultAsync(m => m.Id == movieId, ct);
@@ -290,7 +315,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
                             MovieId = movieId,
                             Time = 0,
                             LastPlayedDate = DateTime.UtcNow.ToString("o"),
-                            Type = Config.MovieMediaType,
+                            Type = MediaTypes.MovieMediaType,
                         }
                     );
                 }
@@ -310,9 +335,10 @@ public class MovieRepository(MediaContext context) : IMovieRepository
         return true;
     }
 
-    public Task<Movie?> GetMovieForRescanAsync(int id, CancellationToken ct = default)
+    public async Task<Movie?> GetMovieForRescanAsync(int id, CancellationToken ct = default)
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Movies.AsNoTracking()
             .Include(movie => movie.Library)
                 .ThenInclude(library => library.FolderLibraries)
@@ -320,9 +346,10 @@ public class MovieRepository(MediaContext context) : IMovieRepository
             .FirstOrDefaultAsync(movie => movie.Id == id, ct);
     }
 
-    public Task<Movie?> GetMovieForRefreshAsync(int id, CancellationToken ct = default)
+    public async Task<Movie?> GetMovieForRefreshAsync(int id, CancellationToken ct = default)
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Movies.AsNoTracking()
             .Include(movie => movie.Library)
             .FirstOrDefaultAsync(movie => movie.Id == id, ct);

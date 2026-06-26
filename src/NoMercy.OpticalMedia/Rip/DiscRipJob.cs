@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -236,7 +247,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 }
                 else if (top is not null)
                 {
-                    string pendingPath = System.IO.Path.Combine(
+                    string pendingPath = Path.Combine(
                         OutputDir,
                         $"pending_{res.TitleIndex:D2}.json"
                     );
@@ -248,7 +259,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                         Candidates: identification.Candidates.Take(5).ToArray(),
                         CreatedAt: DateTimeOffset.UtcNow
                     );
-                    await System.IO.File.WriteAllTextAsync(
+                    await File.WriteAllTextAsync(
                         pendingPath,
                         System.Text.Json.JsonSerializer.Serialize(
                             pendingState,
@@ -269,7 +280,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
             // rather than the video-oriented RipOutputPathHelper.
             string folderRelative =
                 Request.DiscType == OpticalDiscType.Cd
-                    ? System.IO.Path.GetFileName(res.OutputPath)
+                    ? Path.GetFileName(res.OutputPath)
                     : RipOutputPathHelper.Build(
                         effectiveRequest,
                         TargetLibraryType!,
@@ -283,14 +294,14 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
                 await folderStorage.CreateDirectoryAsync(parentRelative, CancellationToken.None);
 
             await using (
-                System.IO.FileStream src = new(
+                FileStream src = new(
                     res.OutputPath,
-                    System.IO.FileMode.Open,
-                    System.IO.FileAccess.Read
+                    FileMode.Open,
+                    FileAccess.Read
                 )
             )
             await using (
-                System.IO.Stream dst = await folderStorage.OpenWriteAsync(
+                Stream dst = await folderStorage.OpenWriteAsync(
                     folderRelative,
                     overwrite: true,
                     CancellationToken.None
@@ -368,7 +379,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
 
             try
             {
-                System.IO.File.Delete(res.OutputPath);
+                File.Delete(res.OutputPath);
             }
             catch
             {
@@ -544,7 +555,7 @@ public class DiscRipJob : IShouldQueue, IJobStorageInjector
 
     private static Ulid? ResolvePresetId(
         string? encodingProfileId,
-        IEnumerable<NoMercy.Database.Models.Media.EncodingPresetFolder> presetFolders
+        IEnumerable<Database.Models.Media.EncodingPresetFolder> presetFolders
     )
     {
         if (string.IsNullOrEmpty(encodingProfileId))

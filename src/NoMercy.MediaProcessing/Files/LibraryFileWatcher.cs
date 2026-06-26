@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
@@ -5,6 +16,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.FileWatcher;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
@@ -183,21 +195,21 @@ public class LibraryFileWatcher
 
         switch (library.Type)
         {
-            case Config.MovieMediaType:
-            case Config.TvMediaType:
-            case Config.AnimeMediaType:
+            case MediaTypes.MovieMediaType:
+            case MediaTypes.TvMediaType:
+            case MediaTypes.AnimeMediaType:
                 string[] videoExtensions = [".mp4", ".mkv", ".avi", ".webm", ".mov", ".m3u8"];
                 return videoExtensions.Contains(
                     Path.GetExtension(path),
                     StringComparer.OrdinalIgnoreCase
                 );
-            case Config.MusicMediaType:
+            case MediaTypes.MusicMediaType:
                 string[] audioExtensions = [".mp3", ".flac", ".opus", ".wav", ".m4a"];
                 return audioExtensions.Contains(
                     Path.GetExtension(path),
                     StringComparer.OrdinalIgnoreCase
                 );
-            case Config.InboxMediaType:
+            case MediaTypes.InboxMediaType:
                 string[] inboxExtensions =
                 [
                     ".mp4",

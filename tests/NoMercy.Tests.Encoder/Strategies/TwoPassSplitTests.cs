@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Jobs;
@@ -187,7 +198,7 @@ public class TwoPassSplitTests : IDisposable
             SourceStorage: TestStorageFactory.CreateLocal(),
             DestinationStorage: TestStorageFactory.CreateLocal(),
             Options: passOverride.HasValue
-                ? new NoMercy.Encoder.Pipeline.EncodingOptions
+                ? new EncodingOptions
                 {
                     Pass = passOverride.Value,
                     StatsFilePath = statsFilePath,

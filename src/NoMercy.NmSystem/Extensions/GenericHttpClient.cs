@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Net;
 using Polly;
 using Polly.Retry;
@@ -8,7 +19,7 @@ namespace NoMercy.NmSystem.Extensions;
 
 public class GenericHttpClient
 {
-    private readonly System.Net.Http.HttpClient _client;
+    private readonly HttpClient _client;
     private readonly AsyncPolicyWrap<HttpResponseMessage> _resiliencePolicy;
 
     public GenericHttpClient(string? baseUrl = null, int timeoutSeconds = 5, int retryCount = 3)

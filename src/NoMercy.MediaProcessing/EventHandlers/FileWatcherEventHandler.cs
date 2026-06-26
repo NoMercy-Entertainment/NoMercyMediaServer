@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
@@ -10,6 +21,7 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -51,7 +63,7 @@ public class FileWatcherEventHandler : IDisposable
             MediaScan mediaScan = new(_storageDriver);
             MediaScan scan = mediaScan.EnableFileListing();
 
-            if (@event.LibraryType == Config.MusicMediaType)
+            if (@event.LibraryType == MediaTypes.MusicMediaType)
                 scan.DisableRegexFilter();
 
             ConcurrentBag<MediaFolderExtend> mediaFolders = await scan.Process(@event.FolderPath);
@@ -69,16 +81,16 @@ public class FileWatcherEventHandler : IDisposable
 
             switch (@event.LibraryType)
             {
-                case Config.InboxMediaType:
+                case MediaTypes.InboxMediaType:
                     return;
-                case Config.MovieMediaType:
+                case MediaTypes.MovieMediaType:
                     await HandleMovieFolder(@event, mediaFolder);
                     break;
-                case Config.TvMediaType:
-                case Config.AnimeMediaType:
+                case MediaTypes.TvMediaType:
+                case MediaTypes.AnimeMediaType:
                     await HandleTvFolder(@event, mediaFolder);
                     break;
-                case Config.MusicMediaType:
+                case MediaTypes.MusicMediaType:
                     HandleMusicFolder(@event, mediaFolder);
                     break;
             }

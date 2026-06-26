@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Diagnostics;
 using System.Reflection;
 using InfiniFrame;
@@ -96,8 +107,9 @@ internal class Program
                     string? state = context.Request.Query["state"];
                     string? error = context.Request.Query["error"];
                     string? errorDescription = context.Request.Query["error_description"];
-                    string redirectUri =
-                        $"http://localhost:{context.Request.Host.Port ?? 7625}/sso-callback";
+
+                    int port = context.Request.Host.Port ?? 7625;
+                    string redirectUri = $"http://localhost:{port}/sso-callback";
 
                     if (!string.IsNullOrEmpty(error))
                     {
@@ -118,6 +130,10 @@ internal class Program
                         return;
                     }
 
+                    // Use the DI container from the web app if possible, but this is a middleware.
+                    // For now, keep it simple as this is a separate process.
+                    // Actually, AuthManager might need to be resolved from DI.
+                    
                     bool ok = await AuthManager.TryCompletePkceFromCallbackAsync(
                         code,
                         state,

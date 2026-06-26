@@ -1,8 +1,20 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Helpers.Monitoring;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercyQueue.Core.Interfaces;
 
@@ -154,14 +166,14 @@ public class StorageJob : IShouldQueue
 
                 switch (library)
                 {
-                    case Config.MovieMediaType:
+                    case MediaTypes.MovieMediaType:
                         storage.Data.Movies += size;
                         break;
-                    case Config.TvMediaType:
-                    case Config.AnimeMediaType:
+                    case MediaTypes.TvMediaType:
+                    case MediaTypes.AnimeMediaType:
                         storage.Data.Shows += size;
                         break;
-                    case Config.MusicMediaType:
+                    case MediaTypes.MusicMediaType:
                         storage.Data.Music += size;
                         break;
                 }

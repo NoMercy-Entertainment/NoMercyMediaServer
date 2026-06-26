@@ -1,4 +1,15 @@
-﻿using Microsoft.Extensions.Logging.Abstractions;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
@@ -10,7 +21,6 @@ using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Client.Mocks;
 using NoMercy.Providers.TMDB.Models.Movies;
-using NoMercy.Setup.Server;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Factory;
@@ -30,7 +40,6 @@ public class MovieManagerTests
     {
         // TODO not using the app files and api info.
         AppFiles.CreateAppFolders().Wait();
-        ApiInfo.RequestInfo().Wait();
 
         Mock<JobDispatcher> jobDispatcherMock = new();
         MovieResponseMocks mockDataProvider = new();

@@ -1,5 +1,18 @@
-﻿using System.Diagnostics;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using System.Diagnostics;
 using NoMercy.Database;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercyQueue;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
@@ -24,8 +37,14 @@ using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
-public class MusicEncodeJob : AbstractMusicEncoderJob
+public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 {
+    private IEncodingOrchestrator? _encodingOrchestrator;
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
+    }
     public override string QueueName => "encoder";
     public override int Priority => 3;
 
@@ -109,11 +128,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                         .ToArray()
                 );
 
-                IEncodingOrchestrator orchestrator =
-                    EncoderProvider.ResolveService<IEncodingOrchestrator>()
-                    ?? throw new InvalidOperationException(
-                        "IEncodingOrchestrator is not registered. Did AddNoMercyEncoder() run?"
-                    );
+                IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
                 IStorage folderStorage = StorageFactory.For(
                     folder.Id,
@@ -157,7 +172,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                     await EventBusProvider.Current.PublishAsync(
                         new EncodingStageChangedEvent
                         {
-                            JobId = track.Id,
+                            JobId = track.Id.GetHashCode(),
                             Status = "completed",
                             Title = FoundTrack.Title,
                             Message = "Done",
@@ -184,7 +199,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                     await EventBusProvider.Current.PublishAsync(
                         new EncodingStageChangedEvent
                         {
-                            JobId = track.Id,
+                            JobId = track.Id.GetHashCode(),
                             Status = "failed",
                             Title = FoundTrack.Title,
                             Message = e.Message,

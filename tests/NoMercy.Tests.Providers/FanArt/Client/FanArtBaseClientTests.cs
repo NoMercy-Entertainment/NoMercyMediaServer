@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Reflection;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Setup.Server;
@@ -18,12 +29,12 @@ public class FanArtBaseClientTests : IDisposable
 
     public FanArtBaseClientTests()
     {
-        _originalClientKey = ApiInfo.FanArtClientKey;
+        _originalClientKey = TestApiKeyStore.Instance.FanArtClientKey;
     }
 
     public void Dispose()
     {
-        ApiInfo.FanArtClientKey = _originalClientKey;
+        TestApiKeyStore.Instance.FanArtClientKey = _originalClientKey;
     }
 
     private static HttpClient GetHttpClient(FanArtBaseClient client)
@@ -42,7 +53,7 @@ public class FanArtBaseClientTests : IDisposable
     [Fact]
     public void ParameterlessConstructor_WithPopulatedClientKey_AddsClientKeyHeader()
     {
-        ApiInfo.FanArtClientKey = "test-client-key-123";
+        TestApiKeyStore.Instance.FanArtClientKey = "test-client-key-123";
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(
@@ -68,7 +79,7 @@ public class FanArtBaseClientTests : IDisposable
     [Fact]
     public void ParameterlessConstructor_WithEmptyClientKey_DoesNotAddClientKeyHeader()
     {
-        ApiInfo.FanArtClientKey = string.Empty;
+        TestApiKeyStore.Instance.FanArtClientKey = string.Empty;
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(
@@ -91,7 +102,7 @@ public class FanArtBaseClientTests : IDisposable
     [Fact]
     public void ParameterlessConstructor_WithNullClientKey_DoesNotAddClientKeyHeader()
     {
-        ApiInfo.FanArtClientKey = null!;
+        TestApiKeyStore.Instance.FanArtClientKey = null!;
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(
@@ -114,7 +125,7 @@ public class FanArtBaseClientTests : IDisposable
     [Fact]
     public void GuidConstructor_WithPopulatedClientKey_AddsClientKeyHeader()
     {
-        ApiInfo.FanArtClientKey = "test-client-key-456";
+        TestApiKeyStore.Instance.FanArtClientKey = "test-client-key-456";
         Guid testId = Guid.NewGuid();
 
         using FanArtBaseClient client = (FanArtBaseClient)
@@ -141,7 +152,7 @@ public class FanArtBaseClientTests : IDisposable
     [Fact]
     public void GuidConstructor_WithEmptyClientKey_DoesNotAddClientKeyHeader()
     {
-        ApiInfo.FanArtClientKey = string.Empty;
+        TestApiKeyStore.Instance.FanArtClientKey = string.Empty;
         Guid testId = Guid.NewGuid();
 
         using FanArtBaseClient client = (FanArtBaseClient)
@@ -165,7 +176,7 @@ public class FanArtBaseClientTests : IDisposable
     [Fact]
     public void GuidConstructor_SetsIdProperty()
     {
-        ApiInfo.FanArtClientKey = string.Empty;
+        TestApiKeyStore.Instance.FanArtClientKey = string.Empty;
         Guid testId = Guid.NewGuid();
 
         using FanArtBaseClient client = (FanArtBaseClient)
@@ -190,7 +201,7 @@ public class FanArtBaseClientTests : IDisposable
     [Fact]
     public void Constructor_AlwaysAddsApiKeyHeader()
     {
-        ApiInfo.FanArtClientKey = string.Empty;
+        TestApiKeyStore.Instance.FanArtClientKey = string.Empty;
 
         using FanArtBaseClient client = (FanArtBaseClient)
             Activator.CreateInstance(

@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -10,6 +21,7 @@ using NoMercy.Events.Inbox;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
 using NoMercy.MediaProcessing.Jobs;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -130,7 +142,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
             {
                 Id = libraryId,
                 Title = "Inbox",
-                Type = Config.InboxMediaType,
+                Type = MediaTypes.InboxMediaType,
             }
         );
 
@@ -165,7 +177,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         {
             FolderPath = "/media/movies/Inception (2010)/Inception.mkv",
             LibraryId = Ulid.NewUlid(),
-            LibraryType = Config.MovieMediaType,
+            LibraryType = MediaTypes.MovieMediaType,
         };
 
         await handler.OnFileCreated(@event, CancellationToken.None);
@@ -199,7 +211,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         {
             FolderPath = "/inbox/somefile.mkv",
             LibraryId = Ulid.NewUlid(),
-            LibraryType = Config.InboxMediaType,
+            LibraryType = MediaTypes.InboxMediaType,
         };
 
         await handler.OnFileCreated(@event, CancellationToken.None);
@@ -246,7 +258,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         {
             FolderPath = "/inbox/somefile.mkv",
             LibraryId = libraryId,
-            LibraryType = Config.InboxMediaType,
+            LibraryType = MediaTypes.InboxMediaType,
         };
 
         await handler.OnFileCreated(@event, CancellationToken.None);
@@ -323,7 +335,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
                 {
                     Id = libraryId,
                     Title = "Inbox",
-                    Type = Config.InboxMediaType,
+                    Type = MediaTypes.InboxMediaType,
                 }
             );
             seedContext.Folders.Add(
@@ -420,7 +432,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
             {
                 FolderPath = inboxDir,
                 LibraryId = libraryId,
-                LibraryType = Config.InboxMediaType,
+                LibraryType = MediaTypes.InboxMediaType,
             };
 
             // Act
@@ -497,7 +509,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
         {
             FolderPath = "/inbox/The Matrix (1999).mkv",
             LibraryId = libraryId,
-            LibraryType = Config.InboxMediaType,
+            LibraryType = MediaTypes.InboxMediaType,
         };
 
         // First fire

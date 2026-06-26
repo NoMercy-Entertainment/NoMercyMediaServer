@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
@@ -6,6 +17,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Services;
@@ -62,13 +74,13 @@ public class SetupService
                 image is { TvId: not null, Type: "backdrop" }
             )
             .DistinctBy(image => image.TvId)
-            .Select(image => new ScreensaverDataDto(image, logos, Config.TvMediaType));
+            .Select(image => new ScreensaverDataDto(image, logos, MediaTypes.TvMediaType));
 
         IEnumerable<ScreensaverDataDto> movieCollection = data.Where(image =>
                 image is { MovieId: not null, Type: "backdrop" }
             )
             .DistinctBy(image => image.MovieId)
-            .Select(image => new ScreensaverDataDto(image, logos, Config.MovieMediaType));
+            .Select(image => new ScreensaverDataDto(image, logos, MediaTypes.MovieMediaType));
 
         return new()
         {

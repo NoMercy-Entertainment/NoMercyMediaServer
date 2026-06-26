@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Client.Mocks;
 using NoMercy.Setup.Server;
@@ -67,7 +78,7 @@ public abstract class TmdbTestBase : IDisposable
     protected static void SetupTmdbAuthentication()
     {
         // Set the TMDB token in ApiInfo for all TMDB clients to use
-        ApiInfo.TmdbToken = TmdbApiToken;
+        TestApiKeyStore.Instance.TmdbToken = TmdbApiToken;
     }
 
     /// <summary>

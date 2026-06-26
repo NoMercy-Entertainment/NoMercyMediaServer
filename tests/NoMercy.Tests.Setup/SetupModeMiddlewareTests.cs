@@ -1,4 +1,15 @@
-﻿using Microsoft.AspNetCore.DataProtection;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +19,7 @@ using NoMercy.Database;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Server;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Tests.Setup.Infrastructure;
 
 namespace NoMercy.Tests.Setup;
 
@@ -27,7 +39,7 @@ public class SetupModeMiddlewareTests
         dbContext.Database.EnsureCreated();
 
         AuthManager authManager = new(dbContext, new LocalStorageDriver());
-        return new(state, authManager);
+        return new(state, authManager, new FakeServerRegistrationService());
     }
 
     private static SetupModeMiddleware CreateMiddleware(

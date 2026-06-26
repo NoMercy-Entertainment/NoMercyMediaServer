@@ -1,8 +1,20 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
@@ -50,7 +62,8 @@ public class RecommendationDiagnosticsDto
     public int SampleRecsCount { get; set; }
 }
 
-public class RecommendationRepository(MediaContext context) : IRecommendationRepository
+public class RecommendationRepository(IDbContextFactory<MediaContext> contextFactory)
+    : IRecommendationRepository
 {
     public async Task<List<RecommendationCandidateDto>> GetUnownedMovieRecommendationsAsync(
         MediaContext context,
@@ -109,7 +122,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                                     Poster = first.Poster,
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
-                                    MediaType = Config.MovieMediaType,
+                                    MediaType = MediaTypes.MovieMediaType,
                                     SourceCount = g.Select(r => r.MovieFromId).Distinct().Count(),
                                     SourceIds = g.Select(r => r.MovieFromId!.Value)
                                         .Distinct()
@@ -133,7 +146,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
             .Recommendations.AsNoTracking()
             .Where(r => r.TvFromId != null)
             .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(r => r.TvFrom!.MediaType != Config.AnimeMediaType)
+            .Where(r => r.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
             .Where(r =>
                 !context.Tvs.Any(t =>
                     t.Id == r.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)
@@ -149,7 +162,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Recommendations.AsNoTracking()
             .Where(r => mediaIds.Contains(r.MediaId) && r.TvFromId != null)
-            .Where(r => r.TvFrom!.MediaType != Config.AnimeMediaType)
+            .Where(r => r.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
             .Select(r => new
             {
                 r.MediaId,
@@ -179,7 +192,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                                     Poster = first.Poster,
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
-                                    MediaType = Config.TvMediaType,
+                                    MediaType = MediaTypes.TvMediaType,
                                     SourceCount = g.Select(r => r.TvFromId).Distinct().Count(),
                                     SourceIds = g.Select(r => r.TvFromId!.Value)
                                         .Distinct()
@@ -203,7 +216,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
             .Recommendations.AsNoTracking()
             .Where(r => r.TvFromId != null)
             .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(r => r.TvFrom!.MediaType == Config.AnimeMediaType)
+            .Where(r => r.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
             .Where(r =>
                 !context.Tvs.Any(t =>
                     t.Id == r.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)
@@ -219,7 +232,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Recommendations.AsNoTracking()
             .Where(r => mediaIds.Contains(r.MediaId) && r.TvFromId != null)
-            .Where(r => r.TvFrom!.MediaType == Config.AnimeMediaType)
+            .Where(r => r.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
             .Select(r => new
             {
                 r.MediaId,
@@ -249,7 +262,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                                     Poster = first.Poster,
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
-                                    MediaType = Config.AnimeMediaType,
+                                    MediaType = MediaTypes.AnimeMediaType,
                                     SourceCount = g.Select(r => r.TvFromId).Distinct().Count(),
                                     SourceIds = g.Select(r => r.TvFromId!.Value)
                                         .Distinct()
@@ -317,7 +330,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                                     Poster = first.Poster,
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
-                                    MediaType = Config.MovieMediaType,
+                                    MediaType = MediaTypes.MovieMediaType,
                                     SourceCount = g.Select(s => s.MovieFromId).Distinct().Count(),
                                     SourceIds = g.Select(s => s.MovieFromId!.Value)
                                         .Distinct()
@@ -341,7 +354,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
             .Similar.AsNoTracking()
             .Where(s => s.TvFromId != null)
             .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(s => s.TvFrom!.MediaType != Config.AnimeMediaType)
+            .Where(s => s.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
             .Where(s =>
                 !context.Tvs.Any(t =>
                     t.Id == s.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)
@@ -357,7 +370,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Similar.AsNoTracking()
             .Where(s => mediaIds.Contains(s.MediaId) && s.TvFromId != null)
-            .Where(s => s.TvFrom!.MediaType != Config.AnimeMediaType)
+            .Where(s => s.TvFrom!.MediaType != MediaTypes.AnimeMediaType)
             .Select(s => new
             {
                 s.MediaId,
@@ -387,7 +400,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                                     Poster = first.Poster,
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
-                                    MediaType = Config.TvMediaType,
+                                    MediaType = MediaTypes.TvMediaType,
                                     SourceCount = g.Select(s => s.TvFromId).Distinct().Count(),
                                     SourceIds = g.Select(s => s.TvFromId!.Value)
                                         .Distinct()
@@ -411,7 +424,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
             .Similar.AsNoTracking()
             .Where(s => s.TvFromId != null)
             .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(s => s.TvFrom!.MediaType == Config.AnimeMediaType)
+            .Where(s => s.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
             .Where(s =>
                 !context.Tvs.Any(t =>
                     t.Id == s.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)
@@ -427,7 +440,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context
             .Similar.AsNoTracking()
             .Where(s => mediaIds.Contains(s.MediaId) && s.TvFromId != null)
-            .Where(s => s.TvFrom!.MediaType == Config.AnimeMediaType)
+            .Where(s => s.TvFrom!.MediaType == MediaTypes.AnimeMediaType)
             .Select(s => new
             {
                 s.MediaId,
@@ -457,7 +470,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                                     Poster = first.Poster,
                                     Backdrop = first.Backdrop,
                                     ColorPalette = first._colorPalette.OrEmpty(),
-                                    MediaType = Config.AnimeMediaType,
+                                    MediaType = MediaTypes.AnimeMediaType,
                                     SourceCount = g.Select(s => s.TvFromId).Distinct().Count(),
                                     SourceIds = g.Select(s => s.TvFromId!.Value)
                                         .Distinct()
@@ -514,7 +527,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
             .KeywordTv.AsNoTracking()
             .Where(kt => specificKeywordIds.Contains(kt.KeywordId))
             .Where(kt =>
-                context.Tvs.Any(t => t.Id == kt.TvId && t.MediaType != Config.AnimeMediaType)
+                context.Tvs.Any(t => t.Id == kt.TvId && t.MediaType != MediaTypes.AnimeMediaType)
             )
             .Where(kt =>
                 !context.Tvs.Any(t =>
@@ -597,8 +610,8 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                     Poster = meta.Poster,
                     Backdrop = meta.Backdrop,
                     ColorPalette = meta.Palette.OrEmpty(),
-                    MediaType = Config.TvMediaType,
-                    SourceMediaType = Config.MovieMediaType,
+                    MediaType = MediaTypes.TvMediaType,
+                    SourceMediaType = MediaTypes.MovieMediaType,
                     SourceCount = sourceMovieIds.Count,
                     SourceIds = sourceMovieIds,
                 };
@@ -647,7 +660,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
             .KeywordTv.AsNoTracking()
             .Where(kt => specificKeywordIds.Contains(kt.KeywordId))
             .Where(kt =>
-                context.Tvs.Any(t => t.Id == kt.TvId && t.MediaType == Config.AnimeMediaType)
+                context.Tvs.Any(t => t.Id == kt.TvId && t.MediaType == MediaTypes.AnimeMediaType)
             )
             .Where(kt =>
                 !context.Tvs.Any(t =>
@@ -727,8 +740,8 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                     Poster = meta.Poster,
                     Backdrop = meta.Backdrop,
                     ColorPalette = meta.Palette.OrEmpty(),
-                    MediaType = Config.AnimeMediaType,
-                    SourceMediaType = Config.MovieMediaType,
+                    MediaType = MediaTypes.AnimeMediaType,
+                    SourceMediaType = MediaTypes.MovieMediaType,
                     SourceCount = sourceMovieIds.Count,
                     SourceIds = sourceMovieIds,
                 };
@@ -857,8 +870,8 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                     Poster = meta.Poster,
                     Backdrop = meta.Backdrop,
                     ColorPalette = meta.Palette.OrEmpty(),
-                    MediaType = Config.MovieMediaType,
-                    SourceMediaType = Config.TvMediaType,
+                    MediaType = MediaTypes.MovieMediaType,
+                    SourceMediaType = MediaTypes.TvMediaType,
                     SourceCount = sourceTvIds.Count,
                     SourceIds = sourceTvIds,
                 };
@@ -922,7 +935,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                 Title = m.Title,
                 Poster = m.Poster,
                 ColorPalette = m._colorPalette.OrEmpty(),
-                MediaType = Config.MovieMediaType,
+                MediaType = MediaTypes.MovieMediaType,
                 Rating = m.Rating,
                 TimeWatched = m.TimeWatched,
                 Duration = m.Runtime != null ? m.Runtime * 60 : null,
@@ -942,7 +955,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
         var tvShows = await context
             .Tvs.AsNoTracking()
             .Where(t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(t => t.MediaType != Config.AnimeMediaType)
+            .Where(t => t.MediaType != MediaTypes.AnimeMediaType)
             .Where(t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
             .Select(t => new
             {
@@ -988,7 +1001,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                 Title = t.Title,
                 Poster = t.Poster,
                 ColorPalette = t._colorPalette.OrEmpty(),
-                MediaType = Config.TvMediaType,
+                MediaType = MediaTypes.TvMediaType,
                 Rating = t.Rating,
                 TimeWatched = t.TimeWatched,
                 Duration = t.Duration,
@@ -1008,7 +1021,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
         var animeShows = await context
             .Tvs.AsNoTracking()
             .Where(t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(t => t.MediaType == Config.AnimeMediaType)
+            .Where(t => t.MediaType == MediaTypes.AnimeMediaType)
             .Where(t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
             .Select(t => new
             {
@@ -1054,7 +1067,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                 Title = t.Title,
                 Poster = t.Poster,
                 ColorPalette = t._colorPalette.OrEmpty(),
-                MediaType = Config.AnimeMediaType,
+                MediaType = MediaTypes.AnimeMediaType,
                 Rating = t.Rating,
                 TimeWatched = t.TimeWatched,
                 Duration = t.Duration,
@@ -1365,13 +1378,15 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         int animeByLibraryType = await context
             .Tvs.AsNoTracking()
-            .CountAsync(t => t.Library.Type == Config.AnimeMediaType, ct);
+            .CountAsync(t => t.Library.Type == MediaTypes.AnimeMediaType, ct);
 
         int animeByMediaType = await context
             .Tvs.AsNoTracking()
-            .CountAsync(t => t.MediaType == Config.AnimeMediaType, ct);
+            .CountAsync(t => t.MediaType == MediaTypes.AnimeMediaType, ct);
 
         int totalRecsWithTv = await context
             .Recommendations.AsNoTracking()
@@ -1383,7 +1398,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                 r =>
                     r.TvFromId != null
                     && context.Tvs.Any(t =>
-                        t.Id == r.TvFromId && t.MediaType == Config.AnimeMediaType
+                        t.Id == r.TvFromId && t.MediaType == MediaTypes.AnimeMediaType
                     ),
                 ct
             );
@@ -1398,7 +1413,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
                 s =>
                     s.TvFromId != null
                     && context.Tvs.Any(t =>
-                        t.Id == s.TvFromId && t.MediaType == Config.AnimeMediaType
+                        t.Id == s.TvFromId && t.MediaType == MediaTypes.AnimeMediaType
                     ),
                 ct
             );
@@ -1410,7 +1425,7 @@ public class RecommendationRepository(MediaContext context) : IRecommendationRep
 
         List<int> sampleAnimeIds = await context
             .Tvs.AsNoTracking()
-            .Where(t => t.MediaType == Config.AnimeMediaType)
+            .Where(t => t.MediaType == MediaTypes.AnimeMediaType)
             .OrderBy(t => t.Id)
             .Take(5)
             .Select(t => t.Id)

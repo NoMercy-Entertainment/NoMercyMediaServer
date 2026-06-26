@@ -1,11 +1,22 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 namespace NoMercy.Encoder.Profiles;
 
 using Database;
 using Database.Models.Media;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using V2BuiltinPresets = NoMercy.Encoder.Profiles.BuiltinPresets;
-using V2EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
+using V2BuiltinPresets = BuiltinPresets;
+using V2EncodingProfile = EncodingProfile;
 
 public class BuiltinPresetSeeder(MediaContext context)
 {

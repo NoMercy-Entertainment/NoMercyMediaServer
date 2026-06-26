@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.Helpers;
 
@@ -9,6 +20,9 @@ public static partial class ServiceConfiguration
     {
         TimeSpan defaultTimeout = TimeSpan.FromMinutes(5);
 
+        IServerConfiguration config = services.BuildServiceProvider().GetRequiredService<IServerConfiguration>();
+        string userAgent = config.UserAgent;
+
         services.AddHttpClient(
             HttpClientNames.Tmdb,
             client =>
@@ -16,7 +30,7 @@ public static partial class ServiceConfiguration
                 client.BaseAddress = new("https://api.themoviedb.org/3/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = defaultTimeout;
             }
         );
@@ -26,7 +40,7 @@ public static partial class ServiceConfiguration
             client =>
             {
                 client.BaseAddress = new("https://image.tmdb.org/t/p/");
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.DefaultRequestHeaders.Add("Accept", "image/*");
                 client.Timeout = defaultTimeout;
             }
@@ -39,7 +53,7 @@ public static partial class ServiceConfiguration
                 client.BaseAddress = new("https://api4.thetvdb.com/v4/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = defaultTimeout;
             }
         );
@@ -50,7 +64,7 @@ public static partial class ServiceConfiguration
             {
                 client.BaseAddress = new("https://api4.thetvdb.com/v4/");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 
@@ -75,7 +89,7 @@ public static partial class ServiceConfiguration
                 client.BaseAddress = new("https://api.acoustid.org/v2/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 
@@ -86,7 +100,7 @@ public static partial class ServiceConfiguration
                 client.BaseAddress = new("https://api.opensubtitles.org/xml-rpc");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = defaultTimeout;
             }
         );
@@ -95,7 +109,7 @@ public static partial class ServiceConfiguration
             HttpClientNames.OpenSubtitlesDownload,
             client =>
             {
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = defaultTimeout;
             }
         );
@@ -107,7 +121,7 @@ public static partial class ServiceConfiguration
                 client.BaseAddress = new("https://webservice.fanart.tv/v3/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 
@@ -116,7 +130,7 @@ public static partial class ServiceConfiguration
             client =>
             {
                 client.BaseAddress = new("https://assets.fanart.tv");
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.DefaultRequestHeaders.Add("Accept", "image/*");
             }
         );
@@ -128,7 +142,7 @@ public static partial class ServiceConfiguration
                 client.BaseAddress = new("https://coverartarchive.org/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 
@@ -136,7 +150,7 @@ public static partial class ServiceConfiguration
             HttpClientNames.CoverArtImage,
             client =>
             {
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.DefaultRequestHeaders.Add("Accept", "image/*");
             }
         );
@@ -148,7 +162,7 @@ public static partial class ServiceConfiguration
                 client.BaseAddress = new("https://lrclib.net/api/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
             }
         );
 
@@ -159,7 +173,7 @@ public static partial class ServiceConfiguration
                 client.BaseAddress = new("https://apic-desktop.musixmatch.com/ws/1.1/");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.DefaultRequestHeaders.Add("authority", "apic-desktop.musixmatch.com");
                 client.DefaultRequestHeaders.Add("cookie", "x-mxm-token-guid=");
             }
@@ -171,7 +185,7 @@ public static partial class ServiceConfiguration
             {
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = defaultTimeout;
             }
         );
@@ -181,7 +195,7 @@ public static partial class ServiceConfiguration
             client =>
             {
                 client.BaseAddress = new("https://image.nomercy.tv/");
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.DefaultRequestHeaders.Add("Accept", "image/*");
                 client.Timeout = defaultTimeout;
             }
@@ -192,7 +206,7 @@ public static partial class ServiceConfiguration
             client =>
             {
                 client.BaseAddress = new("https://kitsu.io/api/edge/");
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
             }
         );
 
@@ -200,7 +214,7 @@ public static partial class ServiceConfiguration
             HttpClientNames.General,
             client =>
             {
-                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
                 client.Timeout = defaultTimeout;
             }
         );

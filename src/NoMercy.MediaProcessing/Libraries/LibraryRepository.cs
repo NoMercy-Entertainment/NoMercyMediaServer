@@ -1,8 +1,20 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 
@@ -58,7 +70,7 @@ public class LibraryRepository(MediaContext context, IStorageDriver storageDrive
     {
         IEnumerable<string?> folders = libraryType switch
         {
-            Config.MovieMediaType => await context
+            MediaTypes.MovieMediaType => await context
                 .LibraryMovie.Where(lm => lm.LibraryId == libraryId)
                 .Include(lm => lm.Movie)
                 .Select(lm => lm.Movie.Folder)

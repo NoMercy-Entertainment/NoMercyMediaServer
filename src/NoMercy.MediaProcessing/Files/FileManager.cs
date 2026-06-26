@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,6 +24,7 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 using Serilog.Events;
@@ -72,11 +84,11 @@ public partial class FileManager(
         {
             switch (library.Type)
             {
-                case Config.MovieMediaType:
+                case MediaTypes.MovieMediaType:
                     await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
                     break;
-                case Config.TvMediaType:
-                case Config.AnimeMediaType:
+                case MediaTypes.TvMediaType:
+                case MediaTypes.AnimeMediaType:
                     await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
                     break;
             }
@@ -84,14 +96,14 @@ public partial class FileManager(
 
         switch (library.Type)
         {
-            case Config.MovieMediaType:
+            case MediaTypes.MovieMediaType:
                 await StoreMovie();
                 break;
-            case Config.TvMediaType:
-            case Config.AnimeMediaType:
+            case MediaTypes.TvMediaType:
+            case MediaTypes.AnimeMediaType:
                 await StoreTvShow();
                 break;
-            case Config.MusicMediaType:
+            case MediaTypes.MusicMediaType:
                 await StoreMusic();
                 break;
             default:
@@ -102,15 +114,15 @@ public partial class FileManager(
         // Publish refresh events only after successful commit
         switch (library.Type)
         {
-            case Config.MovieMediaType:
-            case Config.TvMediaType:
-            case Config.AnimeMediaType:
+            case MediaTypes.MovieMediaType:
+            case MediaTypes.TvMediaType:
+            case MediaTypes.AnimeMediaType:
                 if (EventBusProvider.IsConfigured)
                     await EventBusProvider.Current.PublishAsync(
                         new LibraryRefreshEvent { QueryKey = ["libraries", library.Id.ToString()] }
                     );
                 break;
-            case Config.MusicMediaType:
+            case MediaTypes.MusicMediaType:
                 if (EventBusProvider.IsConfigured)
                     await EventBusProvider.Current.PublishAsync(
                         new LibraryRefreshEvent { QueryKey = ["music"] }
@@ -1030,8 +1042,8 @@ public partial class FileManager(
 
         int depth = library.Type switch
         {
-            Config.MovieMediaType => 1,
-            Config.TvMediaType or Config.AnimeMediaType => 2,
+            MediaTypes.MovieMediaType => 1,
+            MediaTypes.TvMediaType or MediaTypes.AnimeMediaType => 2,
             _ => 0,
         };
 
@@ -1052,8 +1064,8 @@ public partial class FileManager(
         List<Folder> folders = [];
         string? folder = library.Type switch
         {
-            Config.MovieMediaType => movie?.Folder?.Replace("/", ""),
-            Config.TvMediaType or Config.AnimeMediaType => show?.Folder?.Replace("/", ""),
+            MediaTypes.MovieMediaType => movie?.Folder?.Replace("/", ""),
+            MediaTypes.TvMediaType or MediaTypes.AnimeMediaType => show?.Folder?.Replace("/", ""),
             _ => "",
         };
 

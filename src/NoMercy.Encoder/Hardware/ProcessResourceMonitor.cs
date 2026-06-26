@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
@@ -173,7 +184,7 @@ public class ProcessResourceMonitor : IResourceMonitor
         try
         {
             // /proc/stat first line: "cpu  user nice system idle iowait irq softirq steal ..."
-            string firstLine = System.IO.File.ReadAllLines("/proc/stat")[0];
+            string firstLine = File.ReadAllLines("/proc/stat")[0];
             string[] parts = firstLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             // parts[0] == "cpu", parts[1..] are tick counts.

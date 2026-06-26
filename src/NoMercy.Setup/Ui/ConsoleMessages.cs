@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Text;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -9,9 +20,9 @@ namespace NoMercy.Setup.Ui;
 
 public abstract class ConsoleMessages
 {
-    private static string[] Colors => ApiInfo.Colors;
+    private static string[] Colors => ApiKeyStore.Current.Colors;
 
-    private static string Quote => ApiInfo.Quote;
+    private static string Quote => ApiKeyStore.Current.Quote;
 
     public static Task ServerRunning()
     {

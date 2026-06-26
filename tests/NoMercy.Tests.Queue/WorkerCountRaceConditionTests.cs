@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Reflection;
 using NoMercyQueue;
 using Xunit;
@@ -35,7 +46,7 @@ public class WorkerCountRaceConditionTests
         string spawnWorkerBody = ExtractMethodBody(source, "void SpawnWorker(");
 
         Assert.Contains("lock (_workersLock)", spawnWorkerBody);
-        Assert.Contains("workerInstances.Add(", spawnWorkerBody);
+        Assert.Contains("WorkerInstances.Add(", spawnWorkerBody);
     }
 
     [Fact]
@@ -51,7 +62,7 @@ public class WorkerCountRaceConditionTests
         );
 
         Assert.Contains("lock (_workersLock)", methodBody);
-        Assert.Contains("workerInstances.Remove(", methodBody);
+        Assert.Contains("WorkerInstances.Remove(", methodBody);
     }
 
     [Fact]

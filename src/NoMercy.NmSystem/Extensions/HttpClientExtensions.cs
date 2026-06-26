@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -10,15 +21,15 @@ public static class HttpClientExtensions
 {
     private static readonly ConcurrentDictionary<string, LookupClient> DnsClients = new();
 
-    public static System.Net.Http.HttpClient WithNoMercyUserAgent(
-        this System.Net.Http.HttpClient client
+    public static HttpClient WithNoMercyUserAgent(
+        this HttpClient client
     )
     {
         client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
         return client;
     }
 
-    public static System.Net.Http.HttpClient WithDns(string? dnsServer = null)
+    public static HttpClient WithDns(string? dnsServer = null)
     {
         string server = dnsServer ?? Config.DnsServer;
         SocketsHttpHandler handler = new()

@@ -1,8 +1,20 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Users;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
@@ -27,7 +39,7 @@ public class CollectionListDto
     public string? CertificationCountry { get; set; }
 }
 
-public class CollectionRepository(MediaContext context) : ICollectionRepository
+public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory) : ICollectionRepository
 {
     public async Task<List<Collection>> GetCollectionsAsync(
         Guid userId,
@@ -37,6 +49,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         List<Collection> collections = await context
             .Collections.AsNoTracking()
             .ForUser(userId)
@@ -74,6 +87,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         return await context
             .Collections.AsNoTracking()
             .ForUser(userId)
@@ -172,6 +186,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         // Query 1: Core collection data — metadata, translations, images
         // Removed: Library.LibraryUsers Include (only needed in WHERE clause, not consumed by DTO)
         // Movie cast/crew split to Query 2 to reduce round-trips
@@ -272,7 +287,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         return collection;
     }
 
-    public Task<List<CollectionListDto>> GetCollectionItemCardsAsync(
+    public async Task<List<CollectionListDto>> GetCollectionItemCardsAsync(
         Guid userId,
         string? language,
         string country,
@@ -281,7 +296,8 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .ForUser(userId)
             .Where(collection =>
@@ -341,7 +357,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
             .ToListAsync(ct);
     }
 
-    public Task<List<Collection>> GetCollectionItems(
+    public async Task<List<Collection>> GetCollectionItems(
         Guid userId,
         string? language,
         string country,
@@ -350,7 +366,8 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .AsSplitQuery()
             .ForUser(userId)
@@ -387,13 +404,14 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
             .ToListAsync(ct);
     }
 
-    public Task<Collection?> GetAvailableCollectionAsync(
+    public async Task<Collection?> GetAvailableCollectionAsync(
         Guid userId,
         int id,
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .AsSplitQuery()
             .Where(collection => collection.Id == id)
@@ -414,7 +432,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
             .FirstOrDefaultAsync(ct);
     }
 
-    public Task<Collection?> GetCollectionPlaylistAsync(
+    public async Task<Collection?> GetCollectionPlaylistAsync(
         Guid userId,
         int id,
         string language,
@@ -422,7 +440,8 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .AsSplitQuery()
             .Where(collection => collection.Id == id)
@@ -468,6 +487,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Collection? collection = await context
             .Collections.AsNoTracking()
             .Where(collection => collection.Id == id)
@@ -509,6 +529,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         Collection? collection = await context
             .Collections.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == collectionId, ct);
@@ -547,7 +568,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
                             CollectionId = collectionId,
                             Time = 0,
                             LastPlayedDate = DateTime.UtcNow.ToString("o"),
-                            Type = Config.CollectionMediaType,
+                            Type = MediaTypes.CollectionMediaType,
                         }
                     );
                 }
@@ -569,6 +590,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         // SQLite schema uses DeleteBehavior.Restrict globally.
         // Temporarily disable FK enforcement so the collection and all its dependents
         // are removed atomically.
@@ -603,9 +625,10 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         }
     }
 
-    public Task<Collection?> GetCollectionForRescanAsync(int id, CancellationToken ct = default)
+    public async Task<Collection?> GetCollectionForRescanAsync(int id, CancellationToken ct = default)
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(collectionMovie => collectionMovie.Movie)
@@ -615,12 +638,13 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
             .FirstOrDefaultAsync(collection => collection.Id == id, ct);
     }
 
-    public Task<Collection?> GetCollectionWithMovieLibrariesAsync(
+    public async Task<Collection?> GetCollectionWithMovieLibrariesAsync(
         int id,
         CancellationToken ct = default
     )
     {
-        return context
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        return await context
             .Collections.AsNoTracking()
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(collectionMovie => collectionMovie.Movie)

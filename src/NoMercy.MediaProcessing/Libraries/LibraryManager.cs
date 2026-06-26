@@ -1,4 +1,15 @@
-﻿using System.Collections.Concurrent;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -11,6 +22,7 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -75,13 +87,13 @@ public class LibraryManager(
                 Logger.App("Scanning " + folder.Path);
                 switch (_library.Type)
                 {
-                    case Config.MusicMediaType:
+                    case MediaTypes.MusicMediaType:
                         int audioCount = await ScanAudioFolder(folder, depth);
                         Interlocked.Add(ref itemsFound, audioCount);
                         break;
-                    case Config.AnimeMediaType:
-                    case Config.TvMediaType:
-                    case Config.MovieMediaType:
+                    case MediaTypes.AnimeMediaType:
+                    case MediaTypes.TvMediaType:
+                    case MediaTypes.MovieMediaType:
                         int videoCount = await ScanVideoFolder(folder, depth);
                         Interlocked.Add(ref itemsFound, videoCount);
                         break;
@@ -152,13 +164,13 @@ public class LibraryManager(
                 Logger.App("Scanning for new items in " + folder.Path);
                 switch (_library.Type)
                 {
-                    case Config.MusicMediaType:
+                    case MediaTypes.MusicMediaType:
                         int audioCount = await ScanNewAudioFolder(folder, depth, existingFolders);
                         Interlocked.Add(ref itemsFound, audioCount);
                         break;
-                    case Config.AnimeMediaType:
-                    case Config.TvMediaType:
-                    case Config.MovieMediaType:
+                    case MediaTypes.AnimeMediaType:
+                    case MediaTypes.TvMediaType:
+                    case MediaTypes.MovieMediaType:
                         int videoCount = await ScanNewVideoFolder(folder, depth, existingFolders);
                         Interlocked.Add(ref itemsFound, videoCount);
                         break;
@@ -374,13 +386,13 @@ public class LibraryManager(
             return;
         switch (_library.Type)
         {
-            case Config.MovieMediaType:
+            case MediaTypes.MovieMediaType:
             {
                 await ProcessMovieFolder(path);
                 break;
             }
-            case Config.AnimeMediaType:
-            case Config.TvMediaType:
+            case MediaTypes.AnimeMediaType:
+            case MediaTypes.TvMediaType:
             {
                 await ProcessTvFolder(path);
                 break;
@@ -451,8 +463,8 @@ public class LibraryManager(
 
         return _library.Type switch
         {
-            Config.MovieMediaType or Config.TvMediaType or Config.AnimeMediaType => 1,
-            Config.MusicMediaType => 2,
+            MediaTypes.MovieMediaType or MediaTypes.TvMediaType or MediaTypes.AnimeMediaType => 1,
+            MediaTypes.MusicMediaType => 2,
             _ => 1,
         };
     }

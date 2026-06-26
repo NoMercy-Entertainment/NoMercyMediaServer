@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
@@ -141,6 +152,64 @@ public static class TestMediaContextFactory
         }
 
         return (new TestDbContextFactory(options), keepAliveConnection);
+    }
+
+    public static (
+        IDbContextFactory<MediaContext> Factory,
+        SqliteConnection Connection
+    ) CreateSeededFactory(string? databaseName = null)
+    {
+        (IDbContextFactory<MediaContext> factory, SqliteConnection connection) = CreateFactory(
+            databaseName
+        );
+        using (MediaContext context = factory.CreateDbContext())
+        {
+            SeedData(context);
+        }
+
+        return (factory, connection);
+    }
+
+    public static (
+        IDbContextFactory<MediaContext> Factory,
+        SqlCaptureInterceptor Interceptor,
+        SqliteConnection Connection
+    ) CreateSeededFactoryWithInterceptor(string? databaseName = null)
+    {
+        string dbName = databaseName ?? Guid.NewGuid().ToString();
+        string connectionString =
+            $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True";
+
+        SqliteConnection keepAliveConnection = new(connectionString);
+        keepAliveConnection.Open();
+        keepAliveConnection.CreateFunction(
+            "normalize_search",
+            (string? input) => input?.NormalizeSearch() ?? string.Empty
+        );
+
+        using (SqliteCommand walCmd = keepAliveConnection.CreateCommand())
+        {
+            walCmd.CommandText = "PRAGMA journal_mode=WAL;";
+            walCmd.ExecuteNonQuery();
+        }
+
+        SqlCaptureInterceptor interceptor = new();
+        DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
+            .UseSqlite(
+                connectionString,
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            )
+            .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
+            .Options;
+
+        using (TestMediaContext initContext = new(options))
+        {
+            initContext.Database.EnsureCreated();
+            SeedData(initContext);
+        }
+
+        interceptor.Clear();
+        return (new TestDbContextFactory(options), interceptor, keepAliveConnection);
     }
 
     public static void SeedData(MediaContext context)

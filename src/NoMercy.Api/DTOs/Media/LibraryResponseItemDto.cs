@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
@@ -5,6 +16,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media;
@@ -76,14 +88,14 @@ public record LibraryResponseItemDto
         Id = movie.Movie.Id.ToString();
         Backdrop = movie.Movie.Backdrop;
         Logo = movie.Movie.Images.FirstOrDefault(media => media.Type == "logo")?.FilePath;
-        MediaType = Config.MovieMediaType;
+        MediaType = MediaTypes.MovieMediaType;
         Year = movie.Movie.ReleaseDate.ParseYear();
         Overview = movie.Movie.Overview;
         ColorPalette = movie.Movie.ColorPalette;
         Poster = movie.Movie.Poster;
         Title = movie.Movie.Title;
         TitleSort = movie.Movie.Title.TitleSort(movie.Movie.ReleaseDate);
-        Type = Config.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         Genres = movie.Movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie)).ToArray();
         VideoId = movie.Movie.Video;
@@ -105,8 +117,8 @@ public record LibraryResponseItemDto
         Title = tv.Tv.Title;
         TitleSort = tv.Tv.Title.TitleSort(tv.Tv.FirstAirDate);
 
-        Type = Config.TvMediaType;
-        MediaType = Config.TvMediaType;
+        Type = MediaTypes.TvMediaType;
+        MediaType = MediaTypes.TvMediaType;
         Link = new($"/tv/{Id}", UriKind.Relative);
         NumberOfItems = tv.Tv.NumberOfEpisodes;
         HaveItems = tv.Tv.Episodes.Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
@@ -124,14 +136,14 @@ public record LibraryResponseItemDto
         Id = movie.Id.ToString();
         Backdrop = movie.Backdrop;
         Logo = movie.Images.FirstOrDefault(media => media.Type == "logo")?.FilePath;
-        MediaType = Config.MovieMediaType;
+        MediaType = MediaTypes.MovieMediaType;
         Year = movie.ReleaseDate.ParseYear();
         Overview = movie.Overview;
         ColorPalette = movie.ColorPalette;
         Poster = movie.Poster;
         Title = movie.Title;
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
-        Type = Config.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
         NumberOfItems = 1;
@@ -156,8 +168,8 @@ public record LibraryResponseItemDto
         Title = tv.Title;
         TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
 
-        Type = Config.TvMediaType;
-        MediaType = Config.TvMediaType;
+        Type = MediaTypes.TvMediaType;
+        MediaType = MediaTypes.TvMediaType;
         Link = new($"/tv/{Id}", UriKind.Relative);
 
         NumberOfItems = tv.NumberOfEpisodes;
@@ -176,14 +188,14 @@ public record LibraryResponseItemDto
         Id = movie.Movie.Id.ToString();
         Backdrop = movie.Movie.Backdrop;
         Logo = movie.Movie.Images.FirstOrDefault(media => media.Type == "logo")?.FilePath;
-        MediaType = Config.MovieMediaType;
+        MediaType = MediaTypes.MovieMediaType;
         Year = movie.Movie.ReleaseDate.ParseYear();
         Overview = movie.Movie.Overview;
         ColorPalette = movie.Movie.ColorPalette;
         Poster = movie.Movie.Poster;
         Title = movie.Movie.Title;
         TitleSort = movie.Movie.Title.TitleSort(movie.Movie.ReleaseDate);
-        Type = Config.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         HaveItems = movie.Movie.VideoFiles.Count(v => v.Folder != null);
         NumberOfItems = 1;

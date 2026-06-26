@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Newtonsoft.Json;
 using NoMercy.Data.DTOs.Specials;
 using NoMercy.Data.Repositories;
@@ -7,6 +18,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media.Components;
@@ -79,7 +91,7 @@ public record CardData
         Logo = movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
-        Type = Config.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
         Link = watch
             ? new($"/movie/{Id}/watch", UriKind.Relative)
             : new($"/movie/{Id}", UriKind.Relative);
@@ -157,7 +169,7 @@ public record CardData
         Year = collection
             .CollectionMovies.MinBy(m => m.Movie.ReleaseDate)
             ?.Movie.ReleaseDate.ParseYear();
-        Type = Config.CollectionMediaType;
+        Type = MediaTypes.CollectionMediaType;
 
         Link = watch
             ? new($"/collection/{Id}/watch", UriKind.Relative)
@@ -195,7 +207,7 @@ public record CardData
         Year =
             special.Items.MinBy(m => m.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
             ?? special.Items.Select(t => t.Episode?.Tv).FirstOrDefault()?.FirstAirDate.ParseYear();
-        Type = Config.SpecialMediaType;
+        Type = MediaTypes.SpecialMediaType;
         Link = watch
             ? new($"/specials/{Id}/watch", UriKind.Relative)
             : new($"/specials/{Id}", UriKind.Relative);
@@ -244,7 +256,7 @@ public record CardData
             Overview = item.Special.Overview;
             Logo = item.Special.Logo;
             Duration = item.VideoFile.Duration?.ToSeconds();
-            Type = Config.SpecialMediaType;
+            Type = MediaTypes.SpecialMediaType;
             Link = new($"/specials/{Id}/watch", UriKind.Relative);
             NumberOfItems = item.Special.Items.Count;
             CreatedAt = item.Special.CreatedAt;
@@ -312,7 +324,7 @@ public record CardData
                     )
                     ?.Movie.ReleaseDate.ParseYear()
                 ?? 0;
-            Type = Config.CollectionMediaType;
+            Type = MediaTypes.CollectionMediaType;
             Link = new($"/collection/{Id}/watch", UriKind.Relative);
             CreatedAt = item.Collection.CreatedAt;
             NumberOfItems = item.Collection.CollectionMovies.Count;
@@ -347,7 +359,7 @@ public record CardData
             Logo = item.Movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
             Duration = item.VideoFile.Duration?.ToSeconds();
             Link = new($"/movie/{Id}/watch", UriKind.Relative);
-            Type = Config.MovieMediaType;
+            Type = MediaTypes.MovieMediaType;
             CreatedAt = item.Movie.CreatedAt;
             NumberOfItems = 1;
             HaveItems = item.Movie.VideoFiles.Count(v => v.Folder != null);
@@ -450,7 +462,7 @@ public record CardData
         TitleSort = dto.TitleSort;
         ColorPalette = dto.ColorPalette;
         Year = dto.FirstMovieYear;
-        Type = Config.CollectionMediaType;
+        Type = MediaTypes.CollectionMediaType;
         Link = watch
             ? new($"/collection/{dto.Id}/watch", UriKind.Relative)
             : new($"/collection/{dto.Id}", UriKind.Relative);
@@ -484,7 +496,7 @@ public record CardData
         Backdrop = movie.Backdrop;
         Logo = movie.Logo;
         Year = movie.ReleaseDate.ParseYear();
-        Type = Config.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
         CreatedAt = movie.CreatedAt;
 
         Link = watch
@@ -520,7 +532,7 @@ public record CardData
         Logo = movie.Logo;
         TitleSort = movie.TitleSort;
         Year = movie.ReleaseDate.ParseYear();
-        Type = Config.MovieMediaType;
+        Type = MediaTypes.MovieMediaType;
         CreatedAt = movie.CreatedAt;
         Link = watch
             ? new($"/movie/{Id}/watch", UriKind.Relative)
@@ -587,7 +599,7 @@ public record CardData
         Backdrop = dto.Backdrop;
         Logo = dto.Logo;
         TitleSort = dto.TitleSort;
-        Type = Config.SpecialMediaType;
+        Type = MediaTypes.SpecialMediaType;
         Link = new($"/specials/{dto.Id}", UriKind.Relative);
         NumberOfItems = dto.NumberOfItems;
         CreatedAt = dto.CreatedAt;

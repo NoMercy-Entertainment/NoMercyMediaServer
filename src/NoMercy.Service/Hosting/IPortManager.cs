@@ -1,0 +1,22 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using Microsoft.AspNetCore.Http;
+
+namespace NoMercy.Service.Hosting;
+
+public interface IPortManager
+{
+    Task EnsurePortAvailable(int port);
+    int FindNextAvailablePort(int startPort);
+    bool IsPortAvailable(int port);
+    Task<bool> HandlePortInUse(int port, IOException ex);
+}

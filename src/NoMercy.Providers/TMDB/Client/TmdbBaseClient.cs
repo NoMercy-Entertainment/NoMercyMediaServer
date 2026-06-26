@@ -1,9 +1,21 @@
-﻿using System.Net;
+﻿// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using System.Net;
 using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
+using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Setup.Server;
 using Serilog.Events;
@@ -24,7 +36,7 @@ public class TmdbBaseClient : IDisposable
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
         _client.BaseAddress ??= _baseUrl;
-        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
+        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiKeyStore.Current.TmdbToken}");
         Language = "en,null";
     }
 
@@ -32,7 +44,7 @@ public class TmdbBaseClient : IDisposable
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
         _client.BaseAddress ??= _baseUrl;
-        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
+        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiKeyStore.Current.TmdbToken}");
         Language = language + ",null";
         Id = id;
     }
@@ -157,6 +169,11 @@ public class TmdbBaseClient : IDisposable
             );
 
         return list;
+    }
+
+    public Task<TmdbTmdbNetworkDetails?> CompanyDetails(int id, bool? priority = false)
+    {
+        return Get<TmdbTmdbNetworkDetails>("company/" + id, priority: priority);
     }
 
     public void Dispose()

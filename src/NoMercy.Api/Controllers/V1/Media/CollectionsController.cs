@@ -1,3 +1,14 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -12,10 +23,12 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -28,7 +41,8 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class CollectionsController(
     ICollectionRepository collectionRepository,
     ILibraryRepository libraryRepository,
-    JobDispatcher jobDispatcher
+    JobDispatcher jobDispatcher,
+    ICollectionMetadataProvider collectionMetadataProvider
 ) : BaseController
 {
     [HttpGet]
@@ -120,8 +134,8 @@ public class CollectionsController(
         )
             return Ok(new CollectionResponseDto { Data = new(collection) });
 
-        TmdbCollectionClient tmdbCollectionsClient = new(id, language: language);
-        TmdbCollectionAppends? collectionAppends = await tmdbCollectionsClient.WithAllAppends(true);
+        TmdbCollectionAppends? collectionAppends =
+            await collectionMetadataProvider.GetCollectionAsync(id, language, ct);
 
         if (collectionAppends is null)
             return NotFoundResponse("Collection not found");
@@ -345,7 +359,7 @@ public class CollectionsController(
             return UnauthorizedResponse("You do not have permission to add tv shows");
 
         Library? library = await libraryRepository.GetLibraryByTypeAsync(
-            Config.MovieMediaType,
+            MediaTypes.MovieMediaType,
             ct: ct
         );
 
