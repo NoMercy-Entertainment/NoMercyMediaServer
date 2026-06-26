@@ -145,11 +145,6 @@ public static class Config
         set => RuntimeServerSettings.Current.PaletteWorkers = value;
     }
 
-    public static readonly ParallelOptions ParallelOptions = new()
-    {
-        MaxDegreeOfParallelism = (int)Math.Floor(Environment.ProcessorCount / 2.0),
-    };
-
     public static bool? AllowAdultContent
     {
         get => RuntimeServerSettings.Current.AllowAdultContent;
