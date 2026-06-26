@@ -7,7 +7,6 @@
   <ItemGroup>
     <InternalsVisibleTo Include="NoMercy.Tests.Setup" />
     <InternalsVisibleTo Include="NoMercy.Tests.Providers" />
-    <InternalsVisibleTo Include="NoMercy.Tests.MediaProcessing" />
   </ItemGroup>
 
   <ItemGroup>

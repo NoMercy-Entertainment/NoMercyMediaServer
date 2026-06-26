@@ -14,6 +14,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using NoMercy.Database;
 using NoMercy.NmSystem.Information;
+using NoMercy.Providers.Helpers;
 using NoMercy.Setup.Server;
 
 namespace NoMercy.Tests.MediaProcessing;
@@ -21,15 +22,13 @@ namespace NoMercy.Tests.MediaProcessing;
 /// <summary>
 /// Runs once per test assembly before any test executes. Prepares the
 /// process-wide state MediaProcessing tests depend on: the ApiKeyStore singleton
-/// (with the shared TMDB read token so MovieManager's real lookups authenticate),
-/// and a freshly created media-database schema so DB-backed tests do not depend
-/// on another test assembly creating the shared schema first.
+/// (so reads of ApiKeyStore.Current succeed), a mock TMDB HTTP handler (so
+/// MovieManager's lookups are served from fixtures with no network or token), and
+/// a freshly created media-database schema so DB-backed tests do not depend on
+/// another test assembly creating the shared schema first.
 /// </summary>
 internal static class MediaProcessingTestInit
 {
-    // TMDB read-only API token shared with the provider tests (TmdbTestBase).
-    private const string TmdbReadToken =
-        "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJlZDNiZjg2MGFkZWYwNTM3NzgzZTRhYmVlODZkNjVhZiIsInN1YiI6IjViNTE5MWQ3MGUwYTI2MjU5OTAwZmY0MyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.QndOAaK4WKspNYRhVxp0yq1-plwoJR7iBcwQSn0NQJA";
 
     [ModuleInitializer]
     internal static void Initialize()
@@ -37,19 +36,20 @@ internal static class MediaProcessingTestInit
         // Ensure test paths regardless of module-initializer ordering.
         Config.IsTest = true;
 
-        // Initialise the process-wide ApiKeyStore with the TMDB token so
-        // MovieManager's real TMDB lookups authenticate instead of returning 401.
-        ApiKeyStore apiKeyStore;
+        // Ensure the process-wide ApiKeyStore singleton exists so TmdbBaseClient's
+        // constructor (which reads ApiKeyStore.Current.TmdbToken) does not throw.
         try
         {
-            apiKeyStore = (ApiKeyStore)ApiKeyStore.Current;
+            _ = ApiKeyStore.Current;
         }
         catch (InvalidOperationException)
         {
-            apiKeyStore = new ApiKeyStore();
+            _ = new ApiKeyStore();
         }
 
-        apiKeyStore.TmdbToken = TmdbReadToken;
+        // Route all TMDB HTTP calls through a mock handler so MovieManager's
+        // real lookups are served from fixtures (no network, no token needed).
+        HttpClientProvider.Initialize(new TmdbMockHttpClientFactory());
 
         // Create a full media-database schema for this assembly's process so
         // MovieManager store tests (Images/Similar/Recommendations) do not hit
