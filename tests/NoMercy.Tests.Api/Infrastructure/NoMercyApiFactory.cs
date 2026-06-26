@@ -60,6 +60,13 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 _dbInitialized = true;
             }
         }
+
+        // Re-seed the process-wide ClaimsPrincipleExtensions user cache from the
+        // database at the start of every test class. Worker/coordinator tests
+        // Reset() that static; with serialized collections a later class would
+        // otherwise inherit an owner-less cache and get spurious 403s.
+        using MediaContext userCacheContext = new();
+        ClaimsPrincipleExtensions.InitializeAsync(userCacheContext).GetAwaiter().GetResult();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
