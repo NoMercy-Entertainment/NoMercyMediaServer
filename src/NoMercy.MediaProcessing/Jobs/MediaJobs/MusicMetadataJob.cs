@@ -62,7 +62,7 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         try
         {
             TadbArtistClient artistClient = new();
-            TadbArtist? result = artistClient.ByMusicBrainzId(MusicBrainzArtist.Id);
+            TadbArtist? result = await artistClient.ByMusicBrainzId(MusicBrainzArtist.Id);
             if (result?.Descriptions is null)
                 return;
 
@@ -115,7 +115,7 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         try
         {
             TadbReleaseGroupClient releaseClient = new();
-            TadbAlbum? result = releaseClient.ByMusicBrainzId(MusicBrainzReleaseGroup.Id);
+            TadbAlbum? result = await releaseClient.ByMusicBrainzId(MusicBrainzReleaseGroup.Id);
             if (result?.Descriptions is null)
                 return;
 

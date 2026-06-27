@@ -15,14 +15,15 @@ namespace NoMercy.Providers.Tadb.Client;
 
 public class TadbArtistClient : TadbBaseClient
 {
-    public TadbArtist? ByMusicBrainzId(Guid id, bool priority = false)
+    public async Task<TadbArtist?> ByMusicBrainzId(Guid id, bool priority = false)
     {
         Dictionary<string, string> queryParams = new() { { "i", id.ToString() } };
 
         try
         {
-            return Get<TadbArtistResponse>("artist-mb.php", queryParams, priority)
-                .Result?.Artists?.FirstOrDefault();
+            return (
+                await Get<TadbArtistResponse>("artist-mb.php", queryParams, priority)
+            )?.Artists?.FirstOrDefault();
         }
         catch (Exception)
         {
