@@ -152,7 +152,7 @@ public static class Shell
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error running command: {ex.Message}");
+            Logger.Error($"Error running command: {ex.Message}");
         }
 
         return "Unknown";

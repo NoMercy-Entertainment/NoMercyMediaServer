@@ -47,7 +47,7 @@ public static class Gpu
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error detecting GPUs on Windows: {ex.Message}");
+            Logger.Error($"Error detecting GPUs on Windows: {ex.Message}");
         }
 #pragma warning restore CA1416
         return vendors;
@@ -102,7 +102,7 @@ public static class Gpu
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error detecting GPUs on Windows: {ex.Message}");
+            Logger.Error($"Error detecting GPUs on Windows: {ex.Message}");
         }
 #pragma warning restore CA1416
 

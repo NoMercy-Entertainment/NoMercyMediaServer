@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using FlexLabs.EntityFrameworkCore.Upsert;
+using NoMercy.NmSystem.SystemCalls;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
@@ -99,7 +100,7 @@ public class VideoPlaybackCommandHandler(
                 break;
             default:
                 // Handle unknown command or log it
-                Console.WriteLine($"Unknown command: {command}");
+                Logger.Warning($"Unknown command: {command}");
                 break;
         }
     }

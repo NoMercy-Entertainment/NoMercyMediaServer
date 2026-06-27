@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.NmSystem.Extensions;
 using Stowage;
 
@@ -103,7 +104,7 @@ internal class StowageWatcher : IDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Fout: {ex.Message}");
+                Logger.Error($"Fout: {ex.Message}");
             }
         }
     }

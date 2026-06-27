@@ -257,7 +257,7 @@ public static class SpecialSeed
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Logger.Error(e);
             }
 
         IEnumerable<SpecialItem> episodes = specialItems.Where(s => s.EpisodeId is not null);
@@ -281,7 +281,7 @@ public static class SpecialSeed
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Logger.Error(e);
             }
 
         Logger.Setup("SpecialItems Upset complete");

@@ -94,7 +94,7 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to run command '{command}': {ex.Message}");
+            Logger.Error($"[ERROR] Failed to run command '{command}': {ex.Message}");
         }
 
         return outputLines;
@@ -157,7 +157,7 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to open Windows optical drive '{drivePath}': {ex.Message}"
             );
             return false;
@@ -187,7 +187,7 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to close Windows optical drive '{drivePath}': {ex.Message}"
             );
             return false;
@@ -213,7 +213,7 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to open Linux optical drive '{drivePath}': {ex.Message}"
             );
             return false;
@@ -229,7 +229,7 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to close Linux optical drive '{drivePath}': {ex.Message}"
             );
             return false;
@@ -249,7 +249,7 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to open macOS optical drive '{drivePath}': {ex.Message}"
             );
             return false;
@@ -265,7 +265,7 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
+            Logger.Error(
                 $"[ERROR] Failed to close macOS optical drive '{drivePath}': {ex.Message}"
             );
             return false;
