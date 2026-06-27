@@ -42,7 +42,7 @@ namespace NoMercy.Providers.Abstractions;
 /// injection, …) may override <see cref="Get{T}"/> entirely while still reusing
 /// the shared <see cref="Client"/>, <see cref="RequestQueue"/> and caching.
 /// </summary>
-public abstract class ExternalApiClient : IDisposable
+public abstract class ExternalApiClient : IExternalProvider
 {
     // One queue per named HttpClient (i.e. per provider family), shared across
     // every concrete client of that family, so the provider-wide concurrency/
