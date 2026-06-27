@@ -66,7 +66,6 @@ src/
 ├── NoMercy.Data/           # Data repositories
 ├── NoMercy.Networking/     # Network discovery, port forwarding, UPnP
 ├── NoMercy.NmSystem/       # System utilities, file operations
-├── NoMercy.Helpers/        # Common utilities
 ├── NoMercy.Setup/          # Application initialization
 ```
 
@@ -136,7 +135,7 @@ Run `dotnet csharpier format` on all changed .cs files before every commit.
 ## Code Style Rules
 
 ### Naming Conventions
-- **Interfaces**: PascalCase with `I` prefix (`IVideoProfile`)
+- **Interfaces**: PascalCase with `I` prefix — interfaces only (`IMovieRepository`); concrete value objects (e.g. `VideoProfile`) carry no prefix
 - **Private fields**: camelCase with `_` prefix (`_mediaService`)
 - **Private static readonly**: PascalCase
 - **Constants**: PascalCase (`private const int MaximumCardsInCarousel = 36;`)
