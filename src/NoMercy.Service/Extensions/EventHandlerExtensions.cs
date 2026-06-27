@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.EventHandlers;
 using NoMercy.Api.Services.Music;
 using NoMercy.Database;
@@ -132,7 +133,7 @@ public static class EventHandlerExtensions
                 eventBus,
                 classifier,
                 routing,
-                () => new MediaContext(),
+                () => sp.GetRequiredService<IDbContextFactory<MediaContext>>().CreateDbContext(),
                 storageFactory
             );
         });

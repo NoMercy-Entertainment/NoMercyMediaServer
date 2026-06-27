@@ -300,91 +300,7 @@ public class MediaContext : DbContext
         // EncodeTaskOutcome.ErrorMessage may hold detailed error text up to 4096 chars.
         modelBuilder.Entity<EncodeTaskOutcome>().Property(o => o.ErrorMessage).HasMaxLength(4096);
 
-        // Filtered indexes for pending color-palette rows (NULL or empty value).
-        // Allows the backfill cursor query to use an index scan instead of a full table scan.
-        modelBuilder
-            .Entity<Movie>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Movies_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Tv>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_TvShows_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Season>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Seasons_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Episode>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Episodes_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Collection>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Collections_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Person>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_People_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Recommendation>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Recommendations_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Similar>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Similar_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Image>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Images_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Artist>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Artists_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Album>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Albums_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Track>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Tracks_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<Playlist>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Playlists_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
-
-        modelBuilder
-            .Entity<ReleaseGroup>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_ReleaseGroups_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+        ConfigureColorPaletteIndexes(modelBuilder);
 
         modelBuilder.Entity<InboxItem>().Property(i => i.CandidatesJson).HasMaxLength(int.MaxValue);
         modelBuilder
@@ -498,4 +414,93 @@ public class MediaContext : DbContext
     public virtual DbSet<EncodeTaskOutcome> EncodeTaskOutcomes { get; init; }
     public virtual DbSet<IncompleteEncode> IncompleteEncodes { get; init; }
     public virtual DbSet<InboxItem> InboxItems { get; init; }
+
+    private static void ConfigureColorPaletteIndexes(ModelBuilder modelBuilder)
+    {
+        // Filtered indexes for pending color-palette rows (NULL or empty value).
+        // Allows the backfill cursor query to use an index scan instead of a full table scan.
+        modelBuilder
+            .Entity<Movie>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Movies_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Tv>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_TvShows_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Season>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Seasons_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Episode>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Episodes_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Collection>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Collections_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Person>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_People_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Recommendation>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Recommendations_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Similar>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Similar_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Image>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Images_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Artist>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Artists_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Album>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Albums_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Track>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Tracks_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<Playlist>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_Playlists_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+
+        modelBuilder
+            .Entity<ReleaseGroup>()
+            .HasIndex(nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName("IX_ReleaseGroups_ColorPalette_pending")
+            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+    }
 }
