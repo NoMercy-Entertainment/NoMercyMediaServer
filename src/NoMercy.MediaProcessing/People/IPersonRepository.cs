@@ -29,8 +29,13 @@ public interface IPersonRepository
     public Task StoreRoles(IEnumerable<Role> roles);
     public Task StoreJobs(IEnumerable<Job> job);
 
-    public Task StoreAggregateCreditsAsync();
-    public Task StoreAggregateCastAsync();
-    public Task StoreAggregateCrewAsync();
+    public Task StoreAggregateCreditsAsync(
+        IEnumerable<Cast> cast,
+        IEnumerable<Crew> crew,
+        Type type
+    );
+    public Task StoreAggregateCastAsync(IEnumerable<Cast> cast, Type type);
+    public Task StoreAggregateCrewAsync(IEnumerable<Crew> crew, Type type);
+    public Task RemoveAggregateCreditsAsync(int tvId);
     List<int> GetIds();
 }

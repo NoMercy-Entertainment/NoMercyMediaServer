@@ -79,11 +79,12 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
 
         List<int> ids = personRepository.GetIds();
 
-        await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.TvShow);
-        Logger.MovieDb($"Show {show.Name}: Cast stored", LogEventLevel.Debug);
-
-        await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.TvShow);
-        Logger.MovieDb($"Show {show.Name}: Crew stored", LogEventLevel.Debug);
+        await personRepository.StoreAggregateCreditsAsync(
+            casts.Where(c => ids.Contains(c.PersonId)),
+            crews.Where(c => ids.Contains(c.PersonId)),
+            Type.TvShow
+        );
+        Logger.MovieDb($"Show {show.Name}: Aggregate credits stored", LogEventLevel.Debug);
 
         foreach (Person person in people)
             jobDispatcher.DispatchColorPaletteJob("person", person.Id.ToString());
@@ -274,12 +275,17 @@ public class PersonManager(IPersonRepository personRepository, JobDispatcher job
 
     public Task Update(string showName, TmdbTvShowAppends show)
     {
-        throw new NotImplementedException();
+        // Re-importing the show's people/credits is an idempotent upsert,
+        // so re-running Store refreshes them in place.
+        return Store(show);
     }
 
-    public Task Remove(string showName, TmdbTvShowAppends show)
+    public async Task Remove(string showName, TmdbTvShowAppends show)
     {
-        throw new NotImplementedException();
+        // Remove this show's cast/crew associations. Shared Person rows are
+        // left intact as they may still be referenced by other titles.
+        await personRepository.RemoveAggregateCreditsAsync(show.Id);
+        Logger.MovieDb($"Show {showName}: People credits removed", LogEventLevel.Debug);
     }
 
     public async Task UpdatePersonAsync(int personId)

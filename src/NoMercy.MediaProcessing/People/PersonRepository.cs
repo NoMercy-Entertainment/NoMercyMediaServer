@@ -351,19 +351,32 @@ public class PersonRepository(MediaContext context) : IPersonRepository
             .RunAsync();
     }
 
-    public Task StoreAggregateCreditsAsync()
+    public async Task StoreAggregateCreditsAsync(
+        IEnumerable<Cast> cast,
+        IEnumerable<Crew> crew,
+        Type type
+    )
     {
-        throw new NotImplementedException();
+        await StoreAggregateCastAsync(cast, type);
+        await StoreAggregateCrewAsync(crew, type);
     }
 
-    public Task StoreAggregateCastAsync()
+    public Task StoreAggregateCastAsync(IEnumerable<Cast> cast, Type type)
     {
-        throw new NotImplementedException();
+        return StoreCast(cast, type);
     }
 
-    public Task StoreAggregateCrewAsync()
+    public Task StoreAggregateCrewAsync(IEnumerable<Crew> crew, Type type)
     {
-        throw new NotImplementedException();
+        return StoreCrew(crew, type);
+    }
+
+    public async Task RemoveAggregateCreditsAsync(int tvId)
+    {
+        // Remove only this show's cast/crew association rows; shared Person
+        // records are preserved for other titles that reference them.
+        await context.Casts.Where(cast => cast.TvId == tvId).ExecuteDeleteAsync();
+        await context.Crews.Where(crew => crew.TvId == tvId).ExecuteDeleteAsync();
     }
 
     public List<int> GetIds()
