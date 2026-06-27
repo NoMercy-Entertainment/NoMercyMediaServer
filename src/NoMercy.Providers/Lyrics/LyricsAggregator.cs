@@ -17,11 +17,12 @@ using NoMercy.Providers.Lrclib.Client;
 using NoMercy.Providers.Lrclib.Models;
 using NoMercy.Providers.MusixMatch.Client;
 using NoMercy.Providers.MusixMatch.Models;
+using NoMercy.Providers.NoMercy.Client;
 using NoMercy.Providers.NoMercy.Models;
 
-namespace NoMercy.Providers.NoMercy.Client;
+namespace NoMercy.Providers.Lyrics;
 
-public static class NoMercyLyricsClient
+public class LyricsAggregator : ILyricsAggregator
 {
     /// <summary>
     /// Resolves lyrics for a track, preferring the free Lrclib service and
@@ -29,7 +30,7 @@ public static class NoMercyLyricsClient
     /// track's title, artist and (for synced lyrics) release length, so a
     /// mismatched song or a wrong-release timing is rejected instead of stored.
     /// </summary>
-    public static async Task<LyricLine[]?> SearchLyrics(Track track)
+    public async Task<LyricLine[]?> SearchLyrics(Track track)
     {
         // `using` so an exception mid-search doesn't leak the HttpClient wrappers.
         using MusixmatchClient musixmatchClient = new();

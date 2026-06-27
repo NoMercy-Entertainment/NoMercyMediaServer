@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
 using NoMercy.Providers.Abstractions;
+using NoMercy.Providers.Lyrics;
 using NoMercy.Providers.MusixMatch.Models;
 using NoMercy.Providers.NoMercy.Client;
 
@@ -26,7 +27,7 @@ namespace NoMercy.Api.Services.Music;
 /// and every caller awaits that single result. Without this each device hits the
 /// rate-limited Lrclib/Musixmatch queues independently, stacking the delay.
 /// </summary>
-public class LyricsResolver(IServiceScopeFactory scopeFactory)
+public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator lyricsAggregator)
 {
     private readonly ConcurrentDictionary<Guid, Lazy<Task<Lyric[]?>>> _inFlight = new();
 
@@ -61,7 +62,7 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory)
             if (track.Lyrics is not null)
                 return track.Lyrics;
 
-            LyricLine[]? lyrics = await NoMercyLyricsClient.SearchLyrics(track);
+            LyricLine[]? lyrics = await lyricsAggregator.SearchLyrics(track);
             if (lyrics is null)
                 return null;
 
