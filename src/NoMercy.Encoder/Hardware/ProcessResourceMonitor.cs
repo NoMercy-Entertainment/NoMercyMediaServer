@@ -11,6 +11,8 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Errors;
 
@@ -105,7 +107,9 @@ public class ProcessResourceMonitor : IResourceMonitor
     /// sampler such as <c>NvmlGpuSampler</c>. The unsupported warning is logged
     /// once at startup (rule <c>hardware.gpu_telemetry_unsupported</c>).
     /// </remarks>
-    public virtual IReadOnlyList<GpuProcessSample> SampleGpu()
+    public virtual Task<IReadOnlyList<GpuProcessSample>> SampleGpuAsync(
+        CancellationToken cancellationToken = default
+    )
     {
         if (!_gpuWarningLogged)
         {
@@ -117,7 +121,7 @@ public class ProcessResourceMonitor : IResourceMonitor
             );
         }
 
-        return [];
+        return Task.FromResult<IReadOnlyList<GpuProcessSample>>([]);
     }
 
     public long GetAvailableMemoryMb()
@@ -320,5 +324,7 @@ public sealed class NullResourceMonitor : IResourceMonitor
 
     public long GetAvailableMemoryMb() => 0;
 
-    public IReadOnlyList<GpuProcessSample> SampleGpu() => [];
+    public Task<IReadOnlyList<GpuProcessSample>> SampleGpuAsync(
+        CancellationToken cancellationToken = default
+    ) => Task.FromResult<IReadOnlyList<GpuProcessSample>>([]);
 }

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -31,24 +32,24 @@ public class ProcessResourceMonitorBranchTests
     // ── SampleGpu shape ──────────────────────────────────────────────────────
 
     [Fact]
-    public void SampleGpu_returns_empty_list_without_vendor_sampler()
+    public async Task SampleGpu_returns_empty_list_without_vendor_sampler()
     {
         ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
 
-        IReadOnlyList<GpuProcessSample> samples = sut.SampleGpu();
+        IReadOnlyList<GpuProcessSample> samples = await sut.SampleGpuAsync();
 
         samples.Should().BeEmpty();
     }
 
     [Fact]
-    public void SampleGpu_logs_unsupported_warning_exactly_once()
+    public async Task SampleGpu_logs_unsupported_warning_exactly_once()
     {
         Mock<ILogger<ProcessResourceMonitor>> logger = new();
         ProcessResourceMonitor sut = new(logger.Object);
 
-        sut.SampleGpu();
-        sut.SampleGpu();
-        sut.SampleGpu();
+        await sut.SampleGpuAsync();
+        await sut.SampleGpuAsync();
+        await sut.SampleGpuAsync();
 
         // The warning is gated by _gpuWarningLogged — three calls, ONE log.
         logger.Verify(
@@ -65,21 +66,21 @@ public class ProcessResourceMonitorBranchTests
     }
 
     [Fact]
-    public void SampleGpu_with_null_logger_does_not_throw()
+    public async Task SampleGpu_with_null_logger_does_not_throw()
     {
         // Constructor default: ILogger? null — the warning path uses ?.LogWarning
         // so it must be a no-op when no logger is wired.
         ProcessResourceMonitor sut = new();
 
-        Action act = () => sut.SampleGpu();
-        act.Should().NotThrow();
+        Func<Task> act = async () => await sut.SampleGpuAsync();
+        await act.Should().NotThrowAsync();
     }
 
     [Fact]
-    public void NullResourceMonitor_SampleGpu_returns_empty_list()
+    public async Task NullResourceMonitor_SampleGpu_returns_empty_list()
     {
         NullResourceMonitor sut = new();
-        sut.SampleGpu().Should().BeEmpty();
+        (await sut.SampleGpuAsync()).Should().BeEmpty();
     }
 
     // ── Concurrent GetCpuUsagePercent ────────────────────────────────────────

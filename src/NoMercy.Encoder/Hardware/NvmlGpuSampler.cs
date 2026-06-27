@@ -20,7 +20,7 @@ public sealed class NvmlGpuSampler : ProcessResourceMonitor
 
     private readonly IProcessRunner _processRunner;
     private readonly ILogger<NvmlGpuSampler> _logger;
-    private readonly Lock _sampleLock = new();
+    private readonly SemaphoreSlim _sampleLock = new(1, 1);
     private DateTime _lastSampleAt = DateTime.MinValue;
     private IReadOnlyList<GpuProcessSample> _lastSamples = [];
 
@@ -31,28 +31,28 @@ public sealed class NvmlGpuSampler : ProcessResourceMonitor
         _logger = logger;
     }
 
-    public override IReadOnlyList<GpuProcessSample> SampleGpu()
+    public override async Task<IReadOnlyList<GpuProcessSample>> SampleGpuAsync(
+        CancellationToken cancellationToken = default
+    )
     {
-        lock (_sampleLock)
+        await _sampleLock.WaitAsync(cancellationToken);
+        try
         {
             if (DateTime.UtcNow - _lastSampleAt < MinSampleInterval)
                 return _lastSamples;
-        }
 
-        IReadOnlyList<GpuProcessSample> fresh = SampleGpuAsync(CancellationToken.None)
-            .GetAwaiter()
-            .GetResult();
-
-        lock (_sampleLock)
-        {
+            IReadOnlyList<GpuProcessSample> fresh = await RunNvidiaSmiAsync(cancellationToken);
             _lastSamples = fresh;
             _lastSampleAt = DateTime.UtcNow;
+            return fresh;
         }
-
-        return fresh;
+        finally
+        {
+            _sampleLock.Release();
+        }
     }
 
-    private async Task<IReadOnlyList<GpuProcessSample>> SampleGpuAsync(
+    private async Task<IReadOnlyList<GpuProcessSample>> RunNvidiaSmiAsync(
         CancellationToken cancellationToken
     )
     {

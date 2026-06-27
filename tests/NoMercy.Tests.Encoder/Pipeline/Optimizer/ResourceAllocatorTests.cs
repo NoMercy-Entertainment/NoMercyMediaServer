@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Threading;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Pipeline.Optimizer;
@@ -122,35 +123,35 @@ public class ResourceAllocatorTests
     }
 
     [Fact]
-    public void AllocateResources_DoesNotThrowForGpuGroups()
+    public async Task AllocateResources_DoesNotThrowForGpuGroups()
     {
         ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
         List<ExecutionGroup> groups = MakeGroups(encodeCount: 2, requiresGpu: true);
 
-        Action act = () => allocator.AllocateResources(groups);
+        Func<Task> act = async () => await allocator.AllocateResourcesAsync(groups);
 
-        act.Should().NotThrow();
+        await act.Should().NotThrowAsync();
     }
 
     [Fact]
-    public void AllocateResources_DoesNotThrowForCpuGroups()
+    public async Task AllocateResources_DoesNotThrowForCpuGroups()
     {
         ResourceAllocator allocator = new(CpuOnly, NullMonitor);
         List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: false);
 
-        Action act = () => allocator.AllocateResources(groups);
+        Func<Task> act = async () => await allocator.AllocateResourcesAsync(groups);
 
-        act.Should().NotThrow();
+        await act.Should().NotThrowAsync();
     }
 
     [Fact]
-    public void AllocateResources_DoesNotThrowForEmptyGroupList()
+    public async Task AllocateResources_DoesNotThrowForEmptyGroupList()
     {
         ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
 
-        Action act = () => allocator.AllocateResources([]);
+        Func<Task> act = async () => await allocator.AllocateResourcesAsync([]);
 
-        act.Should().NotThrow();
+        await act.Should().NotThrowAsync();
     }
 
     // ------------------------------------------------------------------
@@ -158,18 +159,18 @@ public class ResourceAllocatorTests
     // ------------------------------------------------------------------
 
     [Fact]
-    public void AllocateResources_GpuGroup_AssignsDeviceIdFromHardware()
+    public async Task AllocateResources_GpuGroup_AssignsDeviceIdFromHardware()
     {
         ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
         List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: true);
 
-        allocator.AllocateResources(groups);
+        await allocator.AllocateResourcesAsync(groups);
 
         groups[0].DeviceId.Should().Be("RTX 4090");
     }
 
     [Fact]
-    public void AllocateResources_CpuGroup_WithZeroThreads_SetsSoftwareBudget()
+    public async Task AllocateResources_CpuGroup_WithZeroThreads_SetsSoftwareBudget()
     {
         ResourceAllocator allocator = new(CpuOnly, NullMonitor);
         List<ExecutionGroup> groups =
@@ -185,25 +186,25 @@ public class ResourceAllocatorTests
             ),
         ];
 
-        allocator.AllocateResources(groups);
+        await allocator.AllocateResourcesAsync(groups);
 
         groups[0].CpuThreadsRequired.Should().BeGreaterThan(0);
         groups[0].CpuThreadsRequired.Should().BeLessThanOrEqualTo(Environment.ProcessorCount);
     }
 
     [Fact]
-    public void AllocateResources_CpuGroup_WithExistingThreadCount_DoesNotOverwrite()
+    public async Task AllocateResources_CpuGroup_WithExistingThreadCount_DoesNotOverwrite()
     {
         ResourceAllocator allocator = new(CpuOnly, NullMonitor);
         List<ExecutionGroup> groups = MakeGroups(encodeCount: 1, requiresGpu: false);
 
-        allocator.AllocateResources(groups);
+        await allocator.AllocateResourcesAsync(groups);
 
         groups[0].CpuThreadsRequired.Should().Be(4);
     }
 
     [Fact]
-    public void AllocateResources_PicksLeastLoadedGpu_FromSampleData()
+    public async Task AllocateResources_PicksLeastLoadedGpu_FromSampleData()
     {
         IHardwareCapabilities twoGpuHardware = new HardwareCapabilities(
             [
@@ -242,7 +243,7 @@ public class ResourceAllocatorTests
             ),
         ];
 
-        allocator.AllocateResources(groups);
+        await allocator.AllocateResourcesAsync(groups);
 
         groups[0].DeviceId.Should().Be("GPU-1");
     }
@@ -259,5 +260,7 @@ internal sealed class FixedGpuSampleMonitor(IReadOnlyList<GpuProcessSample> samp
 
     public long GetAvailableMemoryMb() => 0;
 
-    public IReadOnlyList<GpuProcessSample> SampleGpu() => samples;
+    public Task<IReadOnlyList<GpuProcessSample>> SampleGpuAsync(
+        CancellationToken cancellationToken = default
+    ) => Task.FromResult(samples);
 }

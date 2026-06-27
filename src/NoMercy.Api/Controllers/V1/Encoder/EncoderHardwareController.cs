@@ -56,7 +56,6 @@ public class EncoderHardwareController(
     [HttpPost("benchmark")]
     public IActionResult StartBenchmark([FromBody] StartBenchmarkRequest? request)
     {
-
         List<VideoCodecType> codecs = [];
 
         if (request?.Codecs is { Length: > 0 } rawCodecs)
@@ -94,7 +93,6 @@ public class EncoderHardwareController(
     [HttpGet("benchmark/{jobId}")]
     public IActionResult GetBenchmark(string jobId)
     {
-
         BenchmarkJobStatus? job = tracker.Get(jobId);
         if (job is null)
             return NotFoundResponse($"No benchmark job with id '{jobId}' found");
@@ -110,7 +108,6 @@ public class EncoderHardwareController(
     [HttpGet("benchmark")]
     public IActionResult ListBenchmarks()
     {
-
         return Ok(new { data = tracker.List() });
     }
 
@@ -121,13 +118,12 @@ public class EncoderHardwareController(
     /// tracked by the process registry.
     /// </summary>
     [HttpGet("utilization")]
-    public IActionResult GetUtilization()
+    public async Task<IActionResult> GetUtilization()
     {
-
         UtilizationSnapshot snap = new(
             CpuUsagePercent: monitor.GetCpuUsagePercent(),
             AvailableMemoryMb: monitor.GetAvailableMemoryMb(),
-            GpuSamples: monitor.SampleGpu(),
+            GpuSamples: await monitor.SampleGpuAsync(),
             ConcurrentNvencSessions: registry.CountConcurrentNvencSessions(),
             Gpus: hardware.Gpus
         );
@@ -144,7 +140,6 @@ public class EncoderHardwareController(
     [HttpGet("/api/v{version:apiVersion}/encoder/capabilities")]
     public IActionResult GetCapabilities()
     {
-
         CapabilityReport? report = probe.GetCachedReport();
         return report is null
             ? Ok(

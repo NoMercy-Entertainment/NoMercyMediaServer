@@ -15,9 +15,11 @@ namespace NoMercy.Encoder.Pipeline.Optimizer;
 
 public class ResourceAllocator(IHardwareCapabilities hardware, IResourceMonitor monitor)
 {
-    public void AllocateResources(List<ExecutionGroup> groups)
+    public async Task AllocateResourcesAsync(List<ExecutionGroup> groups)
     {
-        IReadOnlyList<GpuProcessSample> gpuSamples = hardware.HasGpu ? monitor.SampleGpu() : [];
+        IReadOnlyList<GpuProcessSample> gpuSamples = hardware.HasGpu
+            ? await monitor.SampleGpuAsync()
+            : [];
         int leastLoadedGpuIndex = FindLeastLoadedGpuIndex(gpuSamples);
         int softwareThreadBudget = Math.Max(1, Environment.ProcessorCount / 2);
 
