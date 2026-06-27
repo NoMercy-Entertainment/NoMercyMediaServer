@@ -2,109 +2,85 @@
 
 The flagship media server for encoding, organizing, and streaming personal media.
 
-See `.claude/CLAUDE.md` for the full detailed guide (build commands, architecture, security, dev container, etc.)
+> **Prime directive: leave the code more maintainable than you found it.**
+> Every change is judged on whether the next person — or model — can read it,
+> test it, and safely extend it. Working-but-unmaintainable is a failed change.
 
-## Tech Stack
-- C# / .NET 10, ASP.NET Core, Entity Framework Core (SQLite)
-- SignalR for real-time communication
-- MSBuild / dotnet CLI, solution file: `NoMercy.Server.sln`
-- Centralized package management: `Directory.Packages.props`
-- Testing: xUnit + FluentAssertions + Moq (12 test projects)
+This file is the short, always-read contract: keep it lean and accurate. For
+depth (build/run commands, architecture, SQLite restrictions, security, dev
+container, provider integrations) see **`.claude/CLAUDE.md`**.
 
-## Structure
-```
-src/
-  NoMercy.Service/          # Web host entry point
-  NoMercy.Cli/              # CLI entry point
-  NoMercy.Launcher/         # Desktop launcher
-  NoMercy.Tray/             # System tray (Avalonia)
-  NoMercy.App/              # App entry point
-  NoMercy.Api/              # Controllers, DTOs, Hubs, Middleware
-  NoMercy.Database/         # EF Core models and migrations
-  NoMercy.Data/             # Data access layer
-  NoMercy.Encoder/          # Media encoding/transcoding
-  NoMercy.MediaProcessing/  # Media analysis and processing
-  NoMercy.MediaSources/     # Media source providers
-  NoMercy.Providers/        # External data providers (TMDB, etc.)
-  NoMercy.Networking/       # Network utilities
-  NoMercy.NmSystem/         # System-level operations
-  NoMercy.Helpers/          # Shared utilities
-  NoMercy.Globals/          # Global constants and config
-  NoMercy.Events/           # Event system
-  NoMercy.Plugins/          # Plugin implementations
-  NoMercy.Plugins.Abstractions/  # Plugin interfaces
-  NoMercy.Queue.*/          # Job queue system
-tests/
-  NoMercy.Tests.*/          # Test projects per domain
-```
+## The loop — every commit, no exceptions
 
-## Code Style (strict)
+1. **One slice at a time.** Make the smallest coherent change.
+2. **Build clean: 0 errors AND 0 warnings.** A warning is a failure here.
+3. **`dotnet test` is green.** The suite is fast — use it as your safety net, not an afterthought.
+4. **`dotnet csharpier format`** every changed `.cs` file.
+5. **Commit only when 2–4 all pass.** A commit that isn't build- and test-green never gets made.
 
-### Naming
-- Projects: PascalCase with dot-separated namespaces (`NoMercy.Api`)
-- Classes/Methods/Properties: PascalCase
-- Local variables/parameters: camelCase
-- Private fields: `_camelCase` prefix (e.g. `_mediaService`)
-- Private constants: PascalCase
-- Interfaces: PascalCase with `I` prefix (`IVideoProfile`)
-- One class per file, filename matches class name
+If a change is too big to stay green in one slice, split it.
 
-### Modern C# Features (required)
-- **Target-typed new**: Always use `new()` when the type is evident from the left side
-  ```csharp
-  List<Library> libraries = new();
-  Dictionary<string, object?> result = new() { { "id", id } };
-  ```
-- **Collection expressions**: Use `[]` for empty collections
-  ```csharp
-  List<Movie> movieData = [];
-  ```
-- **File-scoped namespaces**: Always, never block-scoped
-  ```csharp
-  namespace NoMercy.Api.Controllers;
-  ```
-- **Primary constructors**: Prefer for simple DI injection
-  ```csharp
-  public class LibrariesController(
-      LibraryRepository libraryRepository,
-      CollectionRepository collectionRepository)
-      : BaseController
-  ```
-- **Pattern matching**: Use `is not null`, `is { Prop: not null }` patterns
-  ```csharp
-  if (item.Movie is not null) { }
-  .Where(image => image is { TvId: not null, Type: "backdrop" })
-  ```
-- **Null-coalescing/conditional**: Always prefer over explicit null checks
-  ```csharp
-  string name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
-  ```
-- **String interpolation**: Always, never concatenation or string.Format
-  ```csharp
-  string url = $"/swagger/{groupName}/swagger.json";
-  ```
+## Non-negotiable rules (the ones that bite most)
 
-### Explicitly avoid
-- **Do NOT use `var`**: Always use explicit types. The editorconfig enforces this.
-- **Do NOT use primary constructors when constructor has logic**: Use traditional constructor with `_field` assignment.
-- **Do NOT use `g.First()` inside EF Core `GroupBy().Select()`**: SQLite cannot translate APPLY. Fetch flat, group in-memory.
-- **Do NOT nest `.ToList()` inside `.Select()` projections**: Separate query and combine client-side.
-- **Do NOT convert to primary constructors when suppressed**: `resharper_convert_to_primary_constructor_highlighting = none` is set deliberately.
+- **Explicit types — never `var`.** Name the type. The *only* exception is an
+  unnameable anonymous-type projection (`.Select(x => new { ... })`), where C#
+  requires `var`. Nowhere else.
+- **License header** (the SPDX block) at the top of every new file — copy it from any existing `.cs`.
+- **One public type per file**, filename matches the type.
+- **Depend on abstractions, not statics.** Collaborators are injected via the
+  constructor (interface + DI) — not reached through static singletons or `new`d
+  inline. This is the direction the whole codebase is moving; don't grow the static pile.
+- **No business logic in EF models.** Models hold data; behavior lives in services.
+- **No EF Core types in interface contracts.** Repositories take/return domain
+  types and `Task<List<T>>` — never `IQueryable`, `IIncludableQueryable`, or
+  `MediaContext`. A repository owns its context via `IDbContextFactory<MediaContext>`.
+- **`.AsNoTracking()` on every read-only EF query.**
+- **Filesystem I/O goes through the storage facade.** Inject `IStorage`
+  (path-validated; library/encoder/media paths) or `IStorageBackend` (raw FS, for
+  dashboard/picker/drive code that browses outside library roots). Never call
+  `System.IO.File.*` or `System.IO.Directory.*` directly in new code.
+  (`DriveInfo.GetDrives()` and `Environment.GetFolderPath()` are fine.)
+- **Packages** go in `Directory.Packages.props`, never individual `.csproj`.
+- **Schema changes** require EF Core migrations — never hand-edit the schema.
+- **New API endpoints** need test coverage under `tests/`.
 
-### Async
-- All async methods return `Task<T>` or `Task`
-- Async method names end with `Async` suffix
-- Use `await foreach` for streaming data
-- Use `ToListAsync()` for EF Core queries
+## Naming
 
-### JSON serialization
-- Use `[JsonProperty("snake_case")]` for all serialized properties
+- Projects/Classes/Methods/Properties: PascalCase. Locals/params: camelCase.
+- Private fields `_camelCase`; private constants PascalCase.
+- **The `I` prefix is for interfaces only** (`IMovieRepository`, `IUserCache`) —
+  never on concrete classes or value objects. Value objects live in
+  `NoMercy.Database/ValueObjects/` (e.g. `VideoProfile`, `ColorPalette`).
 
-## Rules
-- Add new NuGet packages to `Directory.Packages.props`, not individual `.csproj` files.
-- Database changes require EF Core migrations. Don't modify the database schema manually.
-- All new API endpoints need corresponding test coverage in `tests/`.
-- GitHub release assets use these names: `nomercy-windows-x64.exe`, `nomercy-linux-x64`, `nomercy_VERSION_amd64.deb`, etc. Don't change asset naming without updating `infra/nomercy-packages` and `apps/nomercy-tv` download URLs.
-- Run `dotnet csharpier format` on all changed .cs files before every commit.
-- Run `dotnet test` before committing changes.
-- **Filesystem I/O goes through the storage facade.** New code must inject `IStorage` (path-validated, used for library/encoder/media paths) or `IStorageBackend` (raw FS, no allowlist — for dashboard/picker/drive-list code that browses outside library roots). Never use `System.IO.Directory.*` or `System.IO.File.*` directly in new code. `DriveInfo.GetDrives()` and `Environment.GetFolderPath()` are fine for drive enumeration / home-dir resolution — those aren't covered by the facade. The facade is the seam that lets remote drivers (SMB / NFS / S3 / R2) land without touching consumers.
+## Modern C# (required)
+
+- Target-typed `new()` when the type is on the left: `List<Library> libraries = new();`
+- Collection expressions for empties: `List<Movie> movies = [];`
+- File-scoped namespaces, always.
+- Primary constructors for DI.
+- Pattern matching: `is not null`, `is { Prop: not null }`.
+- Async all the way: return `Task`/`Task<T>`, suffix `Async`, `ToListAsync()` for EF.
+- `[JsonProperty("...")]` on serialized properties — match the casing already used in the file.
+
+## Structure (authoritative list: `ls src/`)
+
+- **Hosts / entry:** `NoMercy.Service` (web host), `NoMercy.Cli`, `NoMercy.App`, `NoMercy.Launcher`
+- **Web:** `NoMercy.Api` (controllers, DTOs, hubs, middleware), `NoMercy.Networking`
+- **Data:** `NoMercy.Database` (EF models, contexts, migrations, `ValueObjects/`),
+  `NoMercy.Data` (repositories + services), `NoMercy.Storage` (filesystem facade)
+- **Domain:** `NoMercy.MediaProcessing`, `NoMercy.Encoder`, `NoMercy.MediaSources`,
+  `NoMercy.OpticalMedia`, `NoMercy.Providers` (TMDB, etc.)
+- **Cross-cutting:** `NoMercy.NmSystem` (system ops), `NoMercy.Authorization`
+  (user cache + policy), `NoMercy.Monitoring`, `NoMercy.Events`, `NoMercy.Setup`, `NoMercy.Resources`
+- **Queue:** `NoMercyQueue`, `NoMercyQueue.Core`, `NoMercyQueue.Sqlite`, `NoMercy.Queue.MediaServer`
+- **Plugins:** `NoMercy.Plugins`, `NoMercy.Plugins.Abstractions`
+- **Tests:** `tests/NoMercy.Tests.*` (xUnit + FluentAssertions + Moq)
+
+Tech stack: C# / .NET 10, ASP.NET Core, EF Core (SQLite), SignalR; solution
+`NoMercy.Server.sln`; central package management in `Directory.Packages.props`.
+
+## Release assets (don't rename casually)
+
+GitHub release assets use fixed names (`nomercy-windows-x64.exe`,
+`nomercy-linux-x64`, `nomercy_VERSION_amd64.deb`, …). Renaming them breaks
+`infra/nomercy-packages` and `apps/nomercy-tv` download URLs — update those too.
