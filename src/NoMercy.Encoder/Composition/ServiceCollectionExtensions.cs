@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -207,6 +208,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ProgressParser>();
         // ProcessThrottle holds the set of suspended pids; must be Singleton so
         // suspend/resume operations across different callers see the same state.
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            services.AddSingleton<IProcessSuspender, WindowsProcessSuspender>();
+        else
+            services.AddSingleton<IProcessSuspender, UnixProcessSuspender>();
         services.AddSingleton<ProcessThrottle>();
         services.AddSingleton<IEncoderProcessRegistry, EncoderProcessRegistry>();
 

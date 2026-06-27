@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 namespace NoMercy.Encoder.Execution;
 
-public class ProcessThrottle(ILogger<ProcessThrottle> logger)
+public class ProcessThrottle(ILogger<ProcessThrottle> logger, IProcessSuspender suspender)
 {
     // Registered as a singleton in DI and called concurrently from every
     // worker thread that wants to suspend/resume its ffmpeg child. The
@@ -37,10 +37,7 @@ public class ProcessThrottle(ILogger<ProcessThrottle> logger)
             if (!_suspendedPids.Add(processId))
                 return;
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                SuspendWindows(processId);
-            else
-                SuspendUnix(processId);
+            suspender.Suspend(processId);
 
             logger.LogDebug("Suspended process {Pid}", processId);
         }
@@ -53,10 +50,7 @@ public class ProcessThrottle(ILogger<ProcessThrottle> logger)
             if (!_suspendedPids.Remove(processId))
                 return;
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                ResumeWindows(processId);
-            else
-                ResumeUnix(processId);
+            suspender.Resume(processId);
 
             logger.LogDebug("Resumed process {Pid}", processId);
         }
@@ -69,68 +63,4 @@ public class ProcessThrottle(ILogger<ProcessThrottle> logger)
             return _suspendedPids.Contains(processId);
         }
     }
-
-    private static void SuspendUnix(int processId)
-    {
-        // SIGSTOP
-        using Process? proc = Process.Start("kill", ["-STOP", processId.ToString()]);
-        proc.WaitForExit(5000);
-    }
-
-    private static void ResumeUnix(int processId)
-    {
-        // SIGCONT
-        using Process? proc = Process.Start("kill", ["-CONT", processId.ToString()]);
-        proc.WaitForExit(5000);
-    }
-
-    [SupportedOSPlatform("windows")]
-    private static void SuspendWindows(int processId)
-    {
-        nint handle = NtOpenProcess(processId);
-        if (handle != nint.Zero)
-        {
-            NtSuspendProcess(handle);
-            NtClose(handle);
-        }
-    }
-
-    [SupportedOSPlatform("windows")]
-    private static void ResumeWindows(int processId)
-    {
-        nint handle = NtOpenProcess(processId);
-        if (handle != nint.Zero)
-        {
-            NtResumeProcess(handle);
-            NtClose(handle);
-        }
-    }
-
-    private static nint NtOpenProcess(int pid)
-    {
-        try
-        {
-            Process process = Process.GetProcessById(pid);
-            return process.Handle;
-        }
-        catch (Exception)
-        {
-            // Process is already gone or we lack permission — caller checks
-            // for IntPtr.Zero. Bare catch promoted to typed Exception so the
-            // intent (swallow ALL failures) is explicit.
-            return nint.Zero;
-        }
-    }
-
-    [SupportedOSPlatform("windows")]
-    [DllImport("ntdll.dll")]
-    private static extern uint NtSuspendProcess(nint processHandle);
-
-    [SupportedOSPlatform("windows")]
-    [DllImport("ntdll.dll")]
-    private static extern uint NtResumeProcess(nint processHandle);
-
-    [SupportedOSPlatform("windows")]
-    [DllImport("ntdll.dll")]
-    private static extern uint NtClose(nint handle);
 }

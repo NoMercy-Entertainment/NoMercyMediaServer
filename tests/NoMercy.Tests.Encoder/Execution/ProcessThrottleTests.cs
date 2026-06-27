@@ -25,7 +25,15 @@ public class ProcessThrottleTests
 {
     private const int FakePid = 999999;
 
-    private ProcessThrottle Build() => new(NullLogger<ProcessThrottle>.Instance);
+    private sealed class NoOpSuspender : IProcessSuspender
+    {
+        public void Suspend(int processId) { }
+
+        public void Resume(int processId) { }
+    }
+
+    private ProcessThrottle Build() =>
+        new(NullLogger<ProcessThrottle>.Instance, new NoOpSuspender());
 
     [Fact]
     public void IsSuspended_InitiallyFalse()
