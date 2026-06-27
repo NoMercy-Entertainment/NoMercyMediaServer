@@ -242,7 +242,7 @@ public class PlanStageAutoLadderTests
 }
 
 /// <summary>
-/// Verifies that <see cref="PlanStage.ExpandAutoLadder"/> routes to the correct
+/// Verifies that <see cref="AutoLadderExpander.Expand"/> routes to the correct
 /// <see cref="IAbrLadderGenerator"/> method depending on whether
 /// <see cref="LadderConfig.AutoConfig"/> is set.
 /// </summary>
