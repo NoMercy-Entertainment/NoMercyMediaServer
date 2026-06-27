@@ -28,7 +28,7 @@ public class HardwareBenchmarkTests
     {
         EncoderInfo encoder = MakeSoftwareH264();
 
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+        string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
             SoftwareTarget(encoder),
             1920,
             1080
@@ -46,7 +46,7 @@ public class HardwareBenchmarkTests
     [Fact]
     public void BuildCalibrationArguments_UsesNullMuxerSoNothingIsWritten()
     {
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+        string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
             SoftwareTarget(MakeSoftwareH264()),
             1280,
             720
@@ -73,7 +73,7 @@ public class HardwareBenchmarkTests
     [Fact]
     public void BuildCalibrationArguments_SelectsMediumPresetForSoftware()
     {
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+        string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
             SoftwareTarget(MakeSoftwareH264()),
             1280,
             720
@@ -101,7 +101,7 @@ public class HardwareBenchmarkTests
             VendorSpecificFlags: new()
         );
 
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+        string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
             HardwareTarget(nvenc, "RTX 4080", vendorIndex: 0),
             1920,
             1080
@@ -129,7 +129,7 @@ public class HardwareBenchmarkTests
             VendorSpecificFlags: new() { ["-usage"] = "transcoding" }
         );
 
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+        string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
             HardwareTarget(amf, "Radeon 7900XT", vendorIndex: 0),
             1280,
             720
@@ -143,7 +143,7 @@ public class HardwareBenchmarkTests
     [Fact]
     public void BuildCalibrationArguments_IncludesProgressPipe()
     {
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+        string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
             SoftwareTarget(MakeSoftwareH264()),
             1920,
             1080
@@ -159,7 +159,7 @@ public class HardwareBenchmarkTests
         // libx264 is a fast encoder — gets the long probe (300 frames over
         // ~10s of source) so the steady-state throughput is what gets
         // measured, not first-second spin-up.
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+        string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
             SoftwareTarget(MakeSoftwareH264()),
             1920,
             1080
@@ -181,7 +181,7 @@ public class HardwareBenchmarkTests
         {
             FfmpegName = "libaom-av1",
         };
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+        string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
             new CalibrationTarget(VideoCodecType.Av1, libaom, Device: null, VendorIndex: 0),
             1920,
             1080
@@ -343,7 +343,7 @@ public class HardwareBenchmarkTests
             VendorSpecificFlags: new()
         );
 
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+        string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
             HardwareTarget(nvenc, "RTX 3060", vendorIndex: 1),
             1920,
             1080
@@ -361,7 +361,7 @@ public class HardwareBenchmarkTests
     [Fact]
     public void BuildCalibrationArguments_Software_DoesNotEmitHwInit()
     {
-        string[] args = HardwareBenchmark.BuildCalibrationArguments(
+        string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
             SoftwareTarget(MakeSoftwareH264()),
             1920,
             1080
