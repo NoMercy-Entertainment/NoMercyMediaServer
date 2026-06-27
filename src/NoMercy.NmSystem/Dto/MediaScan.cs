@@ -170,7 +170,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     ConcurrentBag<MediaFile> files2 =
                         depth - 1 > 0 ? await FilesAsync(directory) : [];
 
-                    string cleanedFolderName = Str.RemoveBracketedString()
+                    string cleanedFolderName = StringExtensions.RemoveBracketedString()
                         .Replace(folderName, string.Empty)
                         .Trim();
                     string cleanedDirectory = Path.Combine(
@@ -264,7 +264,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         return;
                     }
 
-                    string cleanedFolderName = Str.RemoveBracketedString()
+                    string cleanedFolderName = StringExtensions.RemoveBracketedString()
                         .Replace(folderName, string.Empty)
                         .Trim();
                     string cleanedDirectory = Path.Combine(
@@ -354,13 +354,13 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     if (movieFile is not null && (isVideoFile || isAudioFile))
                     {
                         string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-                        string cleanedFileName = Str.RemoveBracketedString()
+                        string cleanedFileName = StringExtensions.RemoveBracketedString()
                             .Replace(fileNameWithoutExtension, string.Empty)
                             .Trim();
 
-                        Match epMatch = Str.MatchEpisodePrefix().Match(cleanedFileName);
+                        Match epMatch = StringExtensions.MatchEpisodePrefix().Match(cleanedFileName);
                         if (!epMatch.Success)
-                            epMatch = Str.MatchSeasonEpisode().Match(cleanedFileName);
+                            epMatch = StringExtensions.MatchSeasonEpisode().Match(cleanedFileName);
 
                         if (epMatch.Success && epMatch.Groups.Count >= 3)
                         {
@@ -371,7 +371,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         }
                         else
                         {
-                            Match wordMatch = Str.MatchEpisodeWord().Match(cleanedFileName);
+                            Match wordMatch = StringExtensions.MatchEpisodeWord().Match(cleanedFileName);
                             if (wordMatch.Success)
                             {
                                 movieFile.Episode = int.Parse(wordMatch.Groups[1].Value);

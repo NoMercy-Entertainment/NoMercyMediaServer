@@ -324,7 +324,7 @@ public partial class FileLogic(
 
             if (!folderStorage.Exists(path))
             {
-                string? match = Str.FindMatchingDirectory(storageDriver, resolvedRoot, folder);
+                string? match = FileNameSanitizer.FindMatchingDirectory(storageDriver, resolvedRoot, folder);
                 if (match != null)
                     path = match;
             }

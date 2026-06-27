@@ -167,7 +167,7 @@ public partial class FileManager(
                 string path = folderStorage.CombinePath(folderRoot, tv.Folder);
                 if (!folderStorage.Exists(path))
                 {
-                    string? match = Str.FindMatchingDirectory(
+                    string? match = FileNameSanitizer.FindMatchingDirectory(
                         storageDriver,
                         folderRoot,
                         tv.Folder.Replace("/", "")
@@ -193,7 +193,7 @@ public partial class FileManager(
                 string path = folderStorage.CombinePath(folderRoot, movie.Folder);
                 if (!folderStorage.Exists(path))
                 {
-                    string? match = Str.FindMatchingDirectory(
+                    string? match = FileNameSanitizer.FindMatchingDirectory(
                         storageDriver,
                         folderRoot,
                         movie.Folder.Replace("/", "")
@@ -1148,7 +1148,7 @@ public partial class FileManager(
     {
         try
         {
-            return Str.FindMatchingDirectory(driver, rootPath, expectedFolderName);
+            return FileNameSanitizer.FindMatchingDirectory(driver, rootPath, expectedFolderName);
         }
         catch (Exception ex)
         {

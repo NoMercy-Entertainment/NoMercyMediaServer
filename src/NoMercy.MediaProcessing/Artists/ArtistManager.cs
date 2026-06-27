@@ -114,7 +114,7 @@ public class ArtistManager(
     {
         Logger.MusicBrainz($"Storing Artist: {artistCredit.Name}", LogEventLevel.Verbose);
         string artistFolder = MakeArtistFolder(artistCredit.Name);
-        string folder = artistFolder.Replace("/", Str.DirectorySeparator);
+        string folder = artistFolder.Replace("/", StringExtensions.DirectorySeparator);
 
         CoverArtImageManagerManager.CoverPalette? coverPalette = await GetCoverArtForArtist(
             artistCredit

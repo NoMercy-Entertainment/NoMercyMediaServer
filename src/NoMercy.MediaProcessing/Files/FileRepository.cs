@@ -424,11 +424,11 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         int? overrideTmdbId = rawFileName.TryGetTmdbHint();
 
-        string cleanedForYear = Str.RemoveBracketedString().Replace(rawFileName, string.Empty);
+        string cleanedForYear = StringExtensions.RemoveBracketedString().Replace(rawFileName, string.Empty);
         string? extractedYear = cleanedForYear.TryGetYear();
 
         string title = entryPath.Replace("v2", "");
-        title = Str.RemoveBracketedString().Replace(title, string.Empty);
+        title = StringExtensions.RemoveBracketedString().Replace(title, string.Empty);
 
         // Filelist runs FOR EVERY FILE the user wants to triage; ffprobe over
         // a non-seekable stdin pipe scans to EOF on container formats whose
@@ -448,7 +448,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         if (parsed.Title == null)
             return true;
 
-        parsed.Title = Str.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
+        parsed.Title = StringExtensions.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
 
         bool seasonExplicit = parsed.Season.HasValue;
 
@@ -457,7 +457,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
         {
-            Regex regex = Str.MatchNumbers();
+            Regex regex = StringExtensions.MatchNumbers();
             Match numberMatch = regex.Match(parsed.Title);
             if (numberMatch.Success)
             {
@@ -562,11 +562,11 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         // Check for a [tmdb-1234] hint baked into the filename, e.g. "[tmdb-553604]Spring (2019).mkv"
         int? overrideTmdbId = rawFileName.TryGetTmdbHint();
 
-        string cleanedForYear = Str.RemoveBracketedString().Replace(rawFileName, string.Empty);
+        string cleanedForYear = StringExtensions.RemoveBracketedString().Replace(rawFileName, string.Empty);
         string? extractedYear = cleanedForYear.TryGetYear();
 
         string title = file.FullName.Replace("v2", "");
-        title = Str.RemoveBracketedString().Replace(title, string.Empty);
+        title = StringExtensions.RemoveBracketedString().Replace(title, string.Empty);
 
         FfProbeData ffprobeData = await FfProbe.CreateAsync(file.FullName);
         MovieFile parsed = ParseVideoFileName(file, title);
@@ -575,7 +575,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         if (parsed.Title == null)
             return true;
 
-        parsed.Title = Str.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
+        parsed.Title = StringExtensions.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
 
         // Track whether the season came from the filename or was defaulted to 1.
         // This controls whether the absolute-index fallback is allowed in ResolveShowEpisodeAsync.
@@ -586,7 +586,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
         {
-            Regex regex = Str.MatchNumbers();
+            Regex regex = StringExtensions.MatchNumbers();
             Match numberMatch = regex.Match(parsed.Title);
             if (numberMatch.Success)
             {
@@ -634,12 +634,12 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         string title
     )
     {
-        string cleanedFileName = Str.RemoveBracketedString()
+        string cleanedFileName = StringExtensions.RemoveBracketedString()
             .Replace(Path.GetFileNameWithoutExtension(fileNameWithExt), string.Empty)
             .Trim();
 
         // S##E## at start of filename (e.g. "S01E01-some.title.mkv")
-        Match epMatch = Str.MatchEpisodePrefix().Match(cleanedFileName);
+        Match epMatch = StringExtensions.MatchEpisodePrefix().Match(cleanedFileName);
         if (epMatch.Success)
         {
             return new(title)
@@ -653,10 +653,10 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         }
 
         // "Episode XX" pattern (e.g. "Blade - Episode 02 - title.mp4")
-        string fileNameNoParens = Str.RemoveParenthesizedString()
+        string fileNameNoParens = StringExtensions.RemoveParenthesizedString()
             .Replace(cleanedFileName, string.Empty)
             .Trim();
-        Match episodeWordMatch = Str.MatchEpisodeWord().Match(fileNameNoParens);
+        Match episodeWordMatch = StringExtensions.MatchEpisodeWord().Match(fileNameNoParens);
         if (episodeWordMatch.Success)
         {
             int episodeNumber = int.Parse(episodeWordMatch.Groups[1].Value);
@@ -664,7 +664,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 .TrimEnd('-', '.', '_', ' ');
 
             // Strip trailing year from title (year is captured separately by TryGetYear)
-            Match yearInEpisodeTitle = Str.MatchYearRegex().Match(showTitle);
+            Match yearInEpisodeTitle = StringExtensions.MatchYearRegex().Match(showTitle);
             if (yearInEpisodeTitle.Success)
                 showTitle = showTitle[..yearInEpisodeTitle.Index].TrimEnd('-', '.', '_', ' ');
 
@@ -682,7 +682,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         }
 
         // S##E#### anywhere in filename (e.g. "One.Piece.S01E1109.Title.mkv")
-        Match seasonEpMatch = Str.MatchSeasonEpisode().Match(cleanedFileName);
+        Match seasonEpMatch = StringExtensions.MatchSeasonEpisode().Match(cleanedFileName);
         if (seasonEpMatch.Success)
         {
             string showTitle = cleanedFileName[..seasonEpMatch.Index]
@@ -692,7 +692,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 .Trim();
 
             // Strip trailing year from title (year is captured separately by TryGetYear)
-            Match yearInSeasonTitle = Str.MatchYearRegex().Match(showTitle);
+            Match yearInSeasonTitle = StringExtensions.MatchYearRegex().Match(showTitle);
             if (yearInSeasonTitle.Success)
                 showTitle = showTitle[..yearInSeasonTitle.Index].TrimEnd('-', '.', '_', ' ');
 
@@ -723,10 +723,10 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         if (string.IsNullOrWhiteSpace(folderName))
             return "";
 
-        string cleaned = Str.RemoveBracketedString().Replace(folderName, string.Empty);
-        cleaned = Str.RemoveParenthesizedString().Replace(cleaned, string.Empty);
+        string cleaned = StringExtensions.RemoveBracketedString().Replace(folderName, string.Empty);
+        cleaned = StringExtensions.RemoveParenthesizedString().Replace(cleaned, string.Empty);
 
-        Match seasonTag = Str.MatchSeasonTag().Match(cleaned);
+        Match seasonTag = StringExtensions.MatchSeasonTag().Match(cleaned);
         if (seasonTag.Success && seasonTag.Index > 0)
             cleaned = cleaned[..seasonTag.Index];
 
@@ -737,7 +737,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             .Trim();
 
         // Strip trailing year from folder-derived title (year is captured separately by TryGetYear)
-        Match yearInFolder = Str.MatchYearRegex().Match(folderTitle);
+        Match yearInFolder = StringExtensions.MatchYearRegex().Match(folderTitle);
         if (yearInFolder.Success)
             folderTitle = folderTitle[..yearInFolder.Index].TrimEnd('-', '.', '_', ' ');
 

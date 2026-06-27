@@ -417,7 +417,7 @@ public class LibraryManager(
         if (paginatedMovieResponse?.Results.Count <= 0)
             return;
 
-        // List<Movie> res = Str.SortByMatchPercentage(paginatedMovieResponse?.Results, m => m.Title, folder.Parsed.Title);
+        // List<Movie> res = FuzzyMatcher.SortByMatchPercentage(paginatedMovieResponse?.Results, m => m.Title, folder.Parsed.Title);
         IEnumerable<TmdbMovie> res = paginatedMovieResponse?.Results ?? [];
         if (res.Count() is 0)
             return;
@@ -441,7 +441,7 @@ public class LibraryManager(
         if (paginatedTvShowResponse?.Results.Count <= 0)
             return;
 
-        // List<TvShow> res = Str.SortByMatchPercentage(paginatedTvShowResponse.Results, m => m.Name, folder.Parsed.Title);
+        // List<TvShow> res = FuzzyMatcher.SortByMatchPercentage(paginatedTvShowResponse.Results, m => m.Name, folder.Parsed.Title);
         IEnumerable<TmdbTvShow> res = paginatedTvShowResponse?.Results ?? [];
         if (!res.Any())
             return;

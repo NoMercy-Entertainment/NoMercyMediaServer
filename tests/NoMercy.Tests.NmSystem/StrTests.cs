@@ -26,13 +26,13 @@ public class StrTests
     [InlineData("anything", "", 0.0)]
     public void MatchPercentage_ScoresSimilarity(string a, string b, double expected)
     {
-        Str.MatchPercentage(a, b).Should().BeApproximately(expected, 0.001);
+        FuzzyMatcher.MatchPercentage(a, b).Should().BeApproximately(expected, 0.001);
     }
 
     [Fact]
     public void MatchPercentage_IsCaseInsensitive()
     {
-        Str.MatchPercentage("Hello", "hello").Should().Be(100.0);
+        FuzzyMatcher.MatchPercentage("Hello", "hello").Should().Be(100.0);
     }
 
     [Theory]

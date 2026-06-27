@@ -78,7 +78,7 @@ public class MovieManager(
 
             if (!folderStorage.Exists(folderName))
             {
-                string? match = Str.FindMatchingDirectory(
+                string? match = FileNameSanitizer.FindMatchingDirectory(
                     storageDriver,
                     folderRoot,
                     baseUrl.Replace("/", "")
