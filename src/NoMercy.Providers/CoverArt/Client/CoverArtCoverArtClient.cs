@@ -46,7 +46,7 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
 
     public Task<CoverArtCovers?> Cover(bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };
@@ -63,7 +63,7 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
 
     public Task<CoverArtCovers?> GroupCover(bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };
