@@ -56,23 +56,22 @@ public class AudioImportJob : AbstractMusicFolderJob
 
     private async Task ImportSingles()
     {
-        Init(
-            out MusicBrainzReleaseClient musicBrainzReleaseClient,
-            out MusicBrainzArtistClient musicBrainzArtistClient,
-            out MusicBrainzRecordingClient musicBrainzRecordingClient,
-            out ReleaseGroupManager releaseGroupManager,
-            out ReleaseManager releaseManager,
-            out ArtistManager artistManager,
-            out RecordingManager recordingManager,
-            out MusicGenreManager musicGenreManager,
-            out Library albumLibrary,
-            out Folder folderLibrary,
-            out Func<
-                IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>
-            > audioFilesFactory,
-            out Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> _,
-            out JobDispatcher jobDispatcher
-        );
+        (
+            MusicBrainzReleaseClient musicBrainzReleaseClient,
+            MusicBrainzArtistClient musicBrainzArtistClient,
+            MusicBrainzRecordingClient musicBrainzRecordingClient,
+            ReleaseGroupManager releaseGroupManager,
+            ReleaseManager releaseManager,
+            ArtistManager artistManager,
+            RecordingManager recordingManager,
+            MusicGenreManager musicGenreManager,
+            Library albumLibrary,
+            Folder folderLibrary,
+            Func<IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>> audioFilesFactory,
+            _,
+            JobDispatcher jobDispatcher
+        ) = Init();
+
         using (musicBrainzReleaseClient)
         using (musicBrainzArtistClient)
         using (musicBrainzRecordingClient)
@@ -190,23 +189,22 @@ public class AudioImportJob : AbstractMusicFolderJob
 
     private async Task ImportRelease()
     {
-        Init(
-            out MusicBrainzReleaseClient musicBrainzReleaseClient,
-            out MusicBrainzArtistClient musicBrainzArtistClient,
-            out MusicBrainzRecordingClient musicBrainzRecordingClient,
-            out ReleaseGroupManager releaseGroupManager,
-            out ReleaseManager releaseManager,
-            out ArtistManager artistManager,
-            out RecordingManager recordingManager,
-            out MusicGenreManager musicGenreManager,
-            out Library albumLibrary,
-            out Folder folderLibrary,
-            out Func<
-                IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>
-            > audioFilesFactory,
-            out Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> releases,
-            out JobDispatcher jobDispatcher
-        );
+        (
+            MusicBrainzReleaseClient musicBrainzReleaseClient,
+            MusicBrainzArtistClient musicBrainzArtistClient,
+            MusicBrainzRecordingClient musicBrainzRecordingClient,
+            ReleaseGroupManager releaseGroupManager,
+            ReleaseManager releaseManager,
+            ArtistManager artistManager,
+            RecordingManager recordingManager,
+            MusicGenreManager musicGenreManager,
+            Library albumLibrary,
+            Folder folderLibrary,
+            Func<IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>> audioFilesFactory,
+            Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> releases,
+            JobDispatcher jobDispatcher
+        ) = Init();
+
         using (musicBrainzReleaseClient)
         using (musicBrainzArtistClient)
         using (musicBrainzRecordingClient)
@@ -472,39 +470,23 @@ public class AudioImportJob : AbstractMusicFolderJob
             await musicGenreManager.Store(musicBrainzGenreDetails);
     }
 
-    private void Init(
-        out MusicBrainzReleaseClient musicBrainzReleaseClient,
-        out MusicBrainzArtistClient musicBrainzArtistClient,
-        out MusicBrainzRecordingClient musicBrainzRecordingClient,
-        out ReleaseGroupManager releaseGroupManager,
-        out ReleaseManager releaseManager,
-        out ArtistManager artistManager,
-        out RecordingManager recordingManager,
-        out MusicGenreManager musicGenreManager,
-        out Library albumLibrary,
-        out Folder folderLibrary,
-        out Func<IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>> audioFilesFactory,
-        out Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> releases,
-        out JobDispatcher jobDispatcher
-    )
+    private AudioImportContext Init()
     {
         _mediaContext = new();
-        jobDispatcher = new();
-
-        musicBrainzReleaseClient = new();
-        musicBrainzArtistClient = new();
-        musicBrainzRecordingClient = new();
-
-        releases = new();
+        JobDispatcher jobDispatcher = new();
+        MusicBrainzReleaseClient musicBrainzReleaseClient = new();
+        MusicBrainzArtistClient musicBrainzArtistClient = new();
+        MusicBrainzRecordingClient musicBrainzRecordingClient = new();
+        Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> releases = new();
 
         ReleaseGroupRepository releaseGroupRepository = new(_mediaContext);
-        releaseGroupManager = new(releaseGroupRepository, jobDispatcher);
+        ReleaseGroupManager releaseGroupManager = new(releaseGroupRepository, jobDispatcher);
 
         MusicGenreRepository musicGenreRepository = new(_mediaContext);
-        musicGenreManager = new(musicGenreRepository);
+        MusicGenreManager musicGenreManager = new(musicGenreRepository);
 
         ReleaseRepository releaseRepository = new(_mediaContext);
-        releaseManager = new(
+        ReleaseManager releaseManager = new(
             releaseRepository,
             musicGenreRepository,
             StorageFactory,
@@ -512,10 +494,15 @@ public class AudioImportJob : AbstractMusicFolderJob
         );
 
         ArtistRepository artistRepository = new(_mediaContext);
-        artistManager = new(artistRepository, musicGenreRepository, jobDispatcher, StorageFactory);
+        ArtistManager artistManager = new(
+            artistRepository,
+            musicGenreRepository,
+            jobDispatcher,
+            StorageFactory
+        );
 
         RecordingRepository recordingRepository = new(_mediaContext);
-        recordingManager = new(
+        RecordingManager recordingManager = new(
             recordingRepository,
             musicGenreRepository,
             artistRepository,
@@ -523,15 +510,30 @@ public class AudioImportJob : AbstractMusicFolderJob
             StorageFactory
         );
 
-        albumLibrary = _mediaContext
+        Library albumLibrary = _mediaContext
             .Libraries.Where(f => f.Id == LibraryId)
             .Include(f => f.FolderLibraries)
                 .ThenInclude(f => f.Folder)
             .First();
+        Folder folderLibrary = albumLibrary.FolderLibraries.First().Folder;
+        Func<IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>> audioFilesFactory =
+            GetAudioFiles;
 
-        folderLibrary = albumLibrary.FolderLibraries.First().Folder;
-
-        audioFilesFactory = GetAudioFiles;
+        return new AudioImportContext(
+            musicBrainzReleaseClient,
+            musicBrainzArtistClient,
+            musicBrainzRecordingClient,
+            releaseGroupManager,
+            releaseManager,
+            artistManager,
+            recordingManager,
+            musicGenreManager,
+            albumLibrary,
+            folderLibrary,
+            audioFilesFactory,
+            releases,
+            jobDispatcher
+        );
     }
 
     private async IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)> GetAudioFiles()
@@ -560,3 +562,19 @@ public class AudioImportJob : AbstractMusicFolderJob
             yield return (mediaFile, audioTagModel);
     }
 }
+
+public record AudioImportContext(
+    MusicBrainzReleaseClient MusicBrainzReleaseClient,
+    MusicBrainzArtistClient MusicBrainzArtistClient,
+    MusicBrainzRecordingClient MusicBrainzRecordingClient,
+    ReleaseGroupManager ReleaseGroupManager,
+    ReleaseManager ReleaseManager,
+    ArtistManager ArtistManager,
+    RecordingManager RecordingManager,
+    MusicGenreManager MusicGenreManager,
+    Library AlbumLibrary,
+    Folder FolderLibrary,
+    Func<IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>> AudioFilesFactory,
+    Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> Releases,
+    JobDispatcher JobDispatcher
+);
