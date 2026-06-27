@@ -20,12 +20,12 @@ using Serilog.Events;
 namespace NoMercy.Providers.Abstractions;
 
 /// <summary>
-/// Shared base for the HTTP provider clients (TMDB, FanArt, CoverArt, Lrclib,
-/// MusixMatch, …). Captures the boilerplate that was duplicated across every
-/// provider base class: a named <see cref="HttpClient"/> from the factory, a
-/// per-provider rate-limited <see cref="Queue"/>, dev-only on-disk caching via
-/// <see cref="CacheController"/>, soft-fail on configurable error statuses, and
-/// IDisposable.
+/// Shared base for the HTTP provider clients (TMDB, TVDB, MusicBrainz, FanArt,
+/// CoverArt, Lrclib, MusixMatch, …). Captures the boilerplate that was
+/// duplicated across every provider base class: a named <see cref="HttpClient"/>
+/// from the factory, a per-provider rate-limited <see cref="Queue"/>, dev-only
+/// on-disk caching via <see cref="CacheController"/>, soft-fail on configurable
+/// error statuses, and IDisposable.
 ///
 /// Transient-failure retries are owned by <see cref="Queue"/> (which retries
 /// 502/503/504/429 with exponential backoff); provider clients deliberately do
@@ -37,7 +37,10 @@ namespace NoMercy.Providers.Abstractions;
 /// their provider-specific log channel, <see cref="AugmentQuery"/> to inject
 /// fixed query parameters, <see cref="AddSecretQuery"/> to inject secrets that
 /// must stay out of cache keys and logs, and <see cref="ShouldSoftFail"/> to
-/// tune which error statuses resolve to null.
+/// tune which error statuses resolve to null. Providers whose request flow is
+/// genuinely different (dynamic auth tokens, per-request headers, language
+/// injection, …) may override <see cref="Get{T}"/> entirely while still reusing
+/// the shared <see cref="Client"/>, <see cref="RequestQueue"/> and caching.
 /// </summary>
 public abstract class ExternalApiClient : IDisposable
 {
@@ -48,6 +51,9 @@ public abstract class ExternalApiClient : IDisposable
 
     protected Guid Id { get; private set; }
     protected readonly HttpClient Client;
+
+    /// <summary>True once <see cref="Dispose"/> has been called.</summary>
+    protected bool Disposed { get; private set; }
 
     protected abstract string HttpClientName { get; }
     protected abstract Uri BaseUrl { get; }
@@ -114,10 +120,11 @@ public abstract class ExternalApiClient : IDisposable
                 )
         );
 
-    protected async Task<T?> Get<T>(
+    protected virtual async Task<T?> Get<T>(
         string url,
         Dictionary<string, string?>? query = null,
-        bool? priority = false
+        bool? priority = false,
+        bool skipCache = false
     )
         where T : class
     {
@@ -128,7 +135,7 @@ public abstract class ExternalApiClient : IDisposable
         // Cache key and log line are built WITHOUT secrets.
         string newUrl = QueryHelpers.AddQueryString(url, effectiveQuery);
 
-        if (CacheController.Read(newUrl, out T? result))
+        if (!skipCache && CacheController.Read(newUrl, out T? result))
             return result;
 
         LogRequest(BaseUrl + newUrl);
@@ -148,7 +155,8 @@ public abstract class ExternalApiClient : IDisposable
                 priority
             );
 
-            await CacheController.Write(newUrl, response);
+            if (!skipCache)
+                await CacheController.Write(newUrl, response);
             return response.FromJson<T>();
         }
         catch (HttpRequestException ex) when (ShouldSoftFail(ex.StatusCode))
@@ -159,5 +167,9 @@ public abstract class ExternalApiClient : IDisposable
         }
     }
 
-    public void Dispose() => GC.SuppressFinalize(this);
+    public void Dispose()
+    {
+        Disposed = true;
+        GC.SuppressFinalize(this);
+    }
 }
