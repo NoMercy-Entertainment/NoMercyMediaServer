@@ -81,6 +81,6 @@ public static class FolderRootsSeed
             }
         }
 
-        await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(dbContext);
+        await UserCache.Current.RefreshFolderIdsAsync(dbContext);
     }
 }

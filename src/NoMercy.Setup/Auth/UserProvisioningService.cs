@@ -50,6 +50,6 @@ public class UserProvisioningService : IUserProvisioningService
             )
             .RunAsync();
 
-        ClaimsPrincipalExtensions.AddUser(user);
+        UserCache.Current.AddUser(user);
     }
 }

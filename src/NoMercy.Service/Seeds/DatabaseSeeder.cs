@@ -322,7 +322,7 @@ public static class DatabaseSeeder
         [
             () => UsersSeed.Init(mediaDbContext, storage, accessToken),
             () => AssignOwnerToUnassignedLibraries(mediaDbContext),
-            () => ClaimsPrincipalExtensions.InitializeAsync(mediaDbContext),
+            () => UserCache.Current.InitializeAsync(mediaDbContext),
         ];
 
         if (ShouldSeedMarvel)

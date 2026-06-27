@@ -93,7 +93,7 @@ public class AccessLogMiddleware
         );
 
         // Skip logging for file access paths (folder ID prefix)
-        bool isFolderPath = ClaimsPrincipalExtensions.FolderIds.Any(x =>
+        bool isFolderPath = UserCache.Current.FolderIds.Any(x =>
             path.StartsWith("/" + x, StringComparison.OrdinalIgnoreCase)
         );
 
@@ -160,13 +160,13 @@ public class AccessLogMiddleware
             return;
         }
 
-        User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = UserCache.Current.Users.FirstOrDefault(x => x.Id.Equals(userId));
         if (user is null)
         {
             // User cache may not be populated yet during startup — try refreshing from DB
             MediaContext mediaContext = context.RequestServices.GetRequiredService<MediaContext>();
-            await ClaimsPrincipalExtensions.RefreshUsersAsync(mediaContext);
-            user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+            await UserCache.Current.RefreshUsersAsync(mediaContext);
+            user = UserCache.Current.Users.FirstOrDefault(x => x.Id.Equals(userId));
         }
 
         if (user is null)

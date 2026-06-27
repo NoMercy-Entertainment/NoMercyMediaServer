@@ -98,7 +98,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
         if (createdUser is null)
             return UnprocessableEntityResponse("User was created but could not be retrieved");
 
-        ClaimsPrincipalExtensions.AddUser(createdUser);
+        UserCacheService.AddUser(createdUser);
 
         return Ok(
             new StatusResponseDto<string>
@@ -126,7 +126,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
 
         await userRepository.DeleteAsync(id);
 
-        ClaimsPrincipalExtensions.RemoveUser(user);
+        UserCacheService.RemoveUser(user);
 
         return Ok(new StatusResponseDto<string> { Status = "success", Message = "User deleted" });
     }
@@ -227,7 +227,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
         User? updatedUser = await userRepository.GetByIdWithLibrariesAsync(id);
 
         if (updatedUser is not null)
-            ClaimsPrincipalExtensions.UpdateUser(updatedUser);
+            UserCacheService.UpdateUser(updatedUser);
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(

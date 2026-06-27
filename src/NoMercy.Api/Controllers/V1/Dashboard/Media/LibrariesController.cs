@@ -334,7 +334,7 @@ public class LibrariesController(
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(refreshContext);
+                await UserCacheService.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)
@@ -643,7 +643,7 @@ public class LibrariesController(
         // Register the folder with the middleware directly so it can serve files immediately
         DynamicStaticFilesMiddleware.AddFolder(pathAsync.Id, pathAsync.DriverId, pathAsync.Path);
         await using MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync();
-        await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(refreshContext);
+        await UserCacheService.RefreshFolderIdsAsync(refreshContext);
 
         if (EventBusProvider.IsConfigured)
         {
@@ -696,7 +696,7 @@ public class LibrariesController(
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(refreshContext);
+                await UserCacheService.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)
@@ -751,7 +751,7 @@ public class LibrariesController(
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(refreshContext);
+                await UserCacheService.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)

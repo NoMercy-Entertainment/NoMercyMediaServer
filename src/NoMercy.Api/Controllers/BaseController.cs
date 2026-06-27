@@ -31,6 +31,9 @@ public class BaseController : Controller
         HttpContext?.RequestServices?.GetService<IMediaAuthorizationPolicy>()
         ?? new MediaAuthorizationPolicy(UserCache.Current);
 
+    protected IUserCache UserCacheService =>
+        HttpContext?.RequestServices?.GetService<IUserCache>() ?? UserCache.Current;
+
     private IActionResult ProblemWithTrace(string title, string detail, int statusCode, string type)
     {
         ProblemDetails problemDetails = new()

@@ -86,7 +86,7 @@ public class MusicHub : ConnectionHub
 
     public async Task StartPlaybackCommand(string? type, Guid? listId, Guid? trackId)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -319,7 +319,7 @@ public class MusicHub : ConnectionHub
     private async Task<List<Device>> MusicDevicesAsync()
     {
         List<Device> connected = Devices();
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return connected;
 
@@ -616,7 +616,7 @@ public class MusicHub : ConnectionHub
 
     public MusicPlayerState? GetStateCommand()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return null;
 
@@ -629,7 +629,7 @@ public class MusicHub : ConnectionHub
 
     public async Task PlaybackCommand(string? command, object? data = null)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -692,7 +692,7 @@ public class MusicHub : ConnectionHub
     // the same position via reference-time (position + (serverNow - timestamp)).
     public async Task ReportPositionCommand(int? positionMs)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -736,7 +736,7 @@ public class MusicHub : ConnectionHub
     /// </param>
     public Task CrossfadeStartCommand(int? fadeDurationMs)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return Task.CompletedTask;
 
@@ -758,7 +758,7 @@ public class MusicHub : ConnectionHub
     /// <param name="newTrackId">The <see cref="Guid"/> of the track that is now playing.</param>
     public async Task CrossfadeCompleteCommand(Guid? newTrackId)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -779,7 +779,7 @@ public class MusicHub : ConnectionHub
 
     public async Task ChangeDeviceCommand(string? deviceId)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -972,7 +972,7 @@ public class MusicHub : ConnectionHub
     // disturbing the active device's playback level.
     public async Task SetDeviceVolumeCommand(string? deviceId, int? volume)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -1041,7 +1041,7 @@ public class MusicHub : ConnectionHub
     {
         await base.OnConnectedAsync();
 
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -1082,7 +1082,7 @@ public class MusicHub : ConnectionHub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user == null)
             return;
 

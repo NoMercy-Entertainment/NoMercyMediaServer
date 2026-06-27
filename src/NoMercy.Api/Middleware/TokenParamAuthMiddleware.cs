@@ -48,7 +48,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
         string url = context.Request.Path;
 
         if (
-            !ClaimsPrincipalExtensions.FolderIds.Any(x => url.StartsWith("/" + x))
+            !UserCache.Current.FolderIds.Any(x => url.StartsWith("/" + x))
             || context.Request.Headers.Authorization.ToString().Contains("Bearer")
         )
         {
@@ -86,7 +86,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
             return;
         }
 
-        User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = UserCache.Current.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user is null)
         {

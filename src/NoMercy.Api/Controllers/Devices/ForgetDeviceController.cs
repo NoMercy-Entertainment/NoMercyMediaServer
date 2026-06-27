@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.WebSockets;
@@ -40,7 +41,7 @@ public sealed class ForgetDeviceController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Forget(string deviceId)
     {
-        User? user = HttpContext.User.User();
+        User? user = HttpContext.RequestServices.GetRequiredService<IUserCache>().GetUser(HttpContext.User.UserId());
         if (user is null)
             return Unauthorized();
         if (!Ulid.TryParse(deviceId, out Ulid id))

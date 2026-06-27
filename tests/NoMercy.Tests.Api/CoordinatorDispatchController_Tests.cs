@@ -49,9 +49,9 @@ public class CoordinatorDispatchController_Tests
         // NoMercyApiFactory.InitializeAsync() replaces _users with DB users
         // whose Id differs from OwnerUserId; ClaimsPrincipalExtensionsTests
         // calls Reset() in Dispose(). Either leaves IsOwner() returning false.
-        ClaimsPrincipalExtensions.Reset();
+        UserCache.Current.Reset();
 
-        ClaimsPrincipalExtensions.AddUser(
+        UserCache.Current.AddUser(
             new()
             {
                 Id = OwnerUserId,

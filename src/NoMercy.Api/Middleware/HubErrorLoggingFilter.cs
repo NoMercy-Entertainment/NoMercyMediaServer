@@ -49,7 +49,7 @@ public class HubErrorLoggingFilter : IHubFilter
             );
             return await next(invocationContext);
         }
-        User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = UserCache.Current.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user == null)
         {

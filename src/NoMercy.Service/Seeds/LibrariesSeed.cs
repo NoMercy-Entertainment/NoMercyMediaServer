@@ -138,7 +138,7 @@ public static class LibrariesSeed
             }
         }
 
-        await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(dbContext);
+        await UserCache.Current.RefreshFolderIdsAsync(dbContext);
 
         List<FolderLibrary> libraryFolders = [];
 

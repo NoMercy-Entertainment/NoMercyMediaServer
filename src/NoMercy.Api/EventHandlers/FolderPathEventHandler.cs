@@ -41,7 +41,7 @@ public class FolderPathEventHandler : IDisposable
             IDbContextFactory<MediaContext>
         >();
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(mediaContext);
+        await UserCache.Current.RefreshFolderIdsAsync(mediaContext);
     }
 
     internal async Task OnFolderPathRemoved(FolderPathRemovedEvent @event, CancellationToken ct)
@@ -53,7 +53,7 @@ public class FolderPathEventHandler : IDisposable
             IDbContextFactory<MediaContext>
         >();
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(mediaContext);
+        await UserCache.Current.RefreshFolderIdsAsync(mediaContext);
     }
 
     public void Dispose()

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Net.WebSockets;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
@@ -45,7 +46,7 @@ public sealed class DeviceBusEndpoint(
             return;
         }
 
-        User? user = HttpContext.User.User();
+        User? user = HttpContext.RequestServices.GetRequiredService<IUserCache>().GetUser(HttpContext.User.UserId());
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;

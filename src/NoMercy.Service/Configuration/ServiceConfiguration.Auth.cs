@@ -48,7 +48,7 @@ public static partial class ServiceConfiguration
                             if (!Guid.TryParse(sub, out Guid userId))
                                 return false;
 
-                            User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(u =>
+                            User? user = UserCache.Current.Users.FirstOrDefault(u =>
                                 u.Id == userId
                             );
                             Logger.App($"User: {user?.Name ?? "Unknown"}");

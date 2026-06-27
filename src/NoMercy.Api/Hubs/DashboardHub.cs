@@ -42,7 +42,7 @@ public class DashboardHub : ConnectionHub
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        if (Context.User.IsModerator())
+        if (AuthPolicy.IsModerator(Context.User))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, "moderators");
         }

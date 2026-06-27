@@ -67,7 +67,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         // Reset() that static; with serialized collections a later class would
         // otherwise inherit an owner-less cache and get spurious 403s.
         using MediaContext userCacheContext = new();
-        ClaimsPrincipalExtensions.InitializeAsync(userCacheContext).GetAwaiter().GetResult();
+        UserCache.Current.InitializeAsync(userCacheContext).GetAwaiter().GetResult();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -202,7 +202,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         SeedMediaData(mediaContext);
 
-        ClaimsPrincipalExtensions.InitializeAsync(mediaContext).GetAwaiter().GetResult();
+        UserCache.Current.InitializeAsync(mediaContext).GetAwaiter().GetResult();
 
         string queueDbPath = Path.Combine(AppFiles.DataPath, "queue.db");
         foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })

@@ -50,7 +50,7 @@ public class RipperHub : ConnectionHub
 
     public override async Task OnConnectedAsync()
     {
-        User user = Context.User.User()!;
+        User user = UserCacheService.GetUser(Context.User.UserId())!;
 
         CurrentDevices.TryAdd(Context.ConnectionId, user.Id);
 
@@ -73,7 +73,7 @@ public class RipperHub : ConnectionHub
     /// </summary>
     public async Task<object?> GetDriveState(string drivePath)
     {
-        if (!Context.User.IsModerator())
+        if (!AuthPolicy.IsModerator(Context.User))
             return null;
 
         DiscDrive? drive = _driveMonitor

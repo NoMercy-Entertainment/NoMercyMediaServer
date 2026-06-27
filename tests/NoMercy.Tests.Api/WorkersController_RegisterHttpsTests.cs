@@ -85,9 +85,9 @@ public class WorkersController_RegisterHttpsTests
     {
         // Reset wipes whatever a prior test left in the static — InitializeAsync
         // from integration fixtures or Reset() from ClaimsPrincipalExtensionsTests.
-        ClaimsPrincipalExtensions.Reset();
+        UserCache.Current.Reset();
 
-        ClaimsPrincipalExtensions.AddUser(
+        UserCache.Current.AddUser(
             new()
             {
                 Id = OwnerUserId,

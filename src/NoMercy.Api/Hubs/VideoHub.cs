@@ -86,7 +86,7 @@ public class VideoHub : ConnectionHub
     {
         Guid userId = Context.User.UserId();
 
-        User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = UserCacheService.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user is null)
             return;
@@ -201,7 +201,7 @@ public class VideoHub : ConnectionHub
         if (!Guid.TryParse(guid, out Guid userId))
             return;
 
-        User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = UserCacheService.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user is null)
             return;
@@ -227,7 +227,7 @@ public class VideoHub : ConnectionHub
 
     public async Task StartPlaybackCommand(string? type, dynamic? listId, int? itemId)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -267,7 +267,7 @@ public class VideoHub : ConnectionHub
         {
             Logger.App($"Invalid playlist type: {ex.Message}");
 
-            User? user2 = Context.User.User();
+            User? user2 = UserCacheService.GetUser(Context.User.UserId());
             if (user2 is not null)
             {
                 ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
@@ -296,7 +296,7 @@ public class VideoHub : ConnectionHub
             Logger.App("Error in StartPlaybackCommand");
             Logger.App(ex);
 
-            User? user2 = Context.User.User();
+            User? user2 = UserCacheService.GetUser(Context.User.UserId());
             if (user2 is not null)
             {
                 ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
@@ -502,7 +502,7 @@ public class VideoHub : ConnectionHub
 
     public VideoPlayerState? GetStateCommand()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return null;
 
@@ -515,7 +515,7 @@ public class VideoHub : ConnectionHub
 
     public async Task PlaybackCommand(string? command, object? data = null)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -550,7 +550,7 @@ public class VideoHub : ConnectionHub
 
     public async Task ChangeDeviceCommand(string? deviceId)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -728,7 +728,7 @@ public class VideoHub : ConnectionHub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user == null)
             return;
 

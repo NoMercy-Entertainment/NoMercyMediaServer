@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,14 @@ public class ConnectionHub : Hub
     protected readonly ConnectedClients ConnectedClients;
     protected readonly IActivityLogger ActivityLogger;
     private string Endpoint { get; set; }
+
+    protected IUserCache UserCacheService =>
+        _httpContextAccessor.HttpContext?.RequestServices?.GetService<IUserCache>()
+        ?? UserCache.Current;
+
+    protected IMediaAuthorizationPolicy AuthPolicy =>
+        _httpContextAccessor.HttpContext?.RequestServices?.GetService<IMediaAuthorizationPolicy>()
+        ?? new MediaAuthorizationPolicy(UserCache.Current);
 
     protected ConnectionHub(
         IHttpContextAccessor httpContextAccessor,
@@ -69,7 +78,7 @@ public class ConnectionHub : Hub
     {
         await base.OnConnectedAsync();
 
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return;
 
@@ -214,7 +223,7 @@ public class ConnectionHub : Hub
 
     public List<Device> Devices()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return [];
 

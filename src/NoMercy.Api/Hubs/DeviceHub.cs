@@ -88,7 +88,7 @@ public sealed class DeviceHub : ConnectionHub
 
     public async Task<List<DeviceListItem>> GetDevices()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return [];
 
@@ -118,7 +118,7 @@ public sealed class DeviceHub : ConnectionHub
 
     public async Task<WakeResult> WakeForMusic(string deviceId)
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return new WakeResult("not_owned");
 
@@ -144,7 +144,7 @@ public sealed class DeviceHub : ConnectionHub
 
     public async Task<List<DeviceDropNoticeDto>> PendingNotices()
     {
-        User? user = Context.User.User();
+        User? user = UserCacheService.GetUser(Context.User.UserId());
         if (user is null)
             return [];
 
