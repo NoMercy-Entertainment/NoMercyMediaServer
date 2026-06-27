@@ -759,7 +759,7 @@ public class PlanStage(
             thumbPlan,
             segmentDuration,
             PreserveDolbyVision: dvDecision.Preserved,
-            Drm: ConvertDrmConfig(profile.Drm),
+            Drm: DrmConfigConverter.Convert(profile.Drm),
             HlsOptions: hlsOptions,
             Layout: layout,
             GenerateChapterThumbs: generateChapterThumbs,
@@ -862,22 +862,5 @@ public class PlanStage(
         {
             Ladder = new LadderConfig { Mode = LadderMode.Manual, Rungs = rungs },
         };
-    }
-
-    private static LegacyDrmConfig? ConvertDrmConfig(DrmConfig? v2Drm)
-    {
-        if (v2Drm is null)
-            return null;
-
-        LegacyDrmMethod method = v2Drm.Scheme.ToLowerInvariant() switch
-        {
-            "aes128" or "aes-128" => LegacyDrmMethod.Aes128,
-            "cenc" => LegacyDrmMethod.Cenc,
-            _ => LegacyDrmMethod.None,
-        };
-
-        string keyUri = v2Drm.Parameters?.GetValueOrDefault("key_uri") ?? string.Empty;
-
-        return new LegacyDrmConfig(Method: method, KeyUri: keyUri);
     }
 }
