@@ -27,17 +27,10 @@ public class LrclibBaseClient : ExternalApiClient
     protected override string HttpClientName => HttpClientNames.Lrclib;
     protected override Uri BaseUrl => new("https://lrclib.net/api/");
 
-    // Lrclib is occasionally flaky; retry transient failures with a fixed delay.
-    protected override int MaxRetries => 10;
-    protected override TimeSpan RetryDelay => TimeSpan.FromSeconds(5);
-
     protected override void LogRequest(string url) => Logger.Lrclib(url, LogEventLevel.Verbose);
 
     // Lrclib returns 404 for tracks with no lyrics — treat only that as "no
-    // result". Anything else is retried (transient) rather than swallowed.
+    // result". Transient failures are retried by the shared Queue, not here.
     protected override bool ShouldSoftFail(HttpStatusCode? status) =>
         status is HttpStatusCode.NotFound;
-
-    protected override void OnRetry(HttpStatusCode? status, int attempt) =>
-        Logger.Lrclib($"Lrclib {status} retry {attempt}/{MaxRetries}", LogEventLevel.Debug);
 }

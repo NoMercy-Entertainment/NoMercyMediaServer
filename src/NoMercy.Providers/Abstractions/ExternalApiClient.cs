@@ -24,17 +24,20 @@ namespace NoMercy.Providers.Abstractions;
 /// MusixMatch, …). Captures the boilerplate that was duplicated across every
 /// provider base class: a named <see cref="HttpClient"/> from the factory, a
 /// per-provider rate-limited <see cref="Queue"/>, dev-only on-disk caching via
-/// <see cref="CacheController"/>, soft-fail on configurable error statuses,
-/// optional retry-with-delay, and IDisposable.
+/// <see cref="CacheController"/>, soft-fail on configurable error statuses, and
+/// IDisposable.
+///
+/// Transient-failure retries are owned by <see cref="Queue"/> (which retries
+/// 502/503/504/429 with exponential backoff); provider clients deliberately do
+/// NOT add their own retry loops on top, to avoid retry amplification.
 ///
 /// Concrete providers supply <see cref="HttpClientName"/>, <see cref="BaseUrl"/>
 /// and (optionally) their concurrency/interval, and may override
 /// <see cref="ConfigureClient"/> for auth headers, <see cref="LogRequest"/> for
 /// their provider-specific log channel, <see cref="AugmentQuery"/> to inject
 /// fixed query parameters, <see cref="AddSecretQuery"/> to inject secrets that
-/// must stay out of cache keys and logs, <see cref="ShouldSoftFail"/> to tune
-/// which error statuses resolve to null, and <see cref="MaxRetries"/>/
-/// <see cref="RetryDelay"/> to opt into retrying transient failures.
+/// must stay out of cache keys and logs, and <see cref="ShouldSoftFail"/> to
+/// tune which error statuses resolve to null.
 /// </summary>
 public abstract class ExternalApiClient : IDisposable
 {
@@ -50,11 +53,6 @@ public abstract class ExternalApiClient : IDisposable
     protected abstract Uri BaseUrl { get; }
     protected virtual int ConcurrentRequests => 1;
     protected virtual int RequestIntervalMs => 1000;
-
-    // Retry policy. Default: no retries (a single attempt). Providers that need
-    // resilience against transient failures opt in by overriding MaxRetries.
-    protected virtual int MaxRetries => 0;
-    protected virtual TimeSpan RetryDelay => TimeSpan.FromSeconds(5);
 
     protected ExternalApiClient()
     {
@@ -94,16 +92,13 @@ public abstract class ExternalApiClient : IDisposable
 
     /// <summary>
     /// Whether an HTTP error status should resolve to "no result" (null) rather
-    /// than be retried/thrown. Default: 404 and 400.
+    /// than be thrown. Default: 404 and 400.
     /// </summary>
     protected virtual bool ShouldSoftFail(HttpStatusCode? status) =>
         status is HttpStatusCode.NotFound or HttpStatusCode.BadRequest;
 
     /// <summary>Hook invoked just before a soft-fail resolves to null. Default: no-op.</summary>
     protected virtual void OnSoftFail(HttpStatusCode? status, string url) { }
-
-    /// <summary>Hook invoked before each retry attempt. Default: no-op.</summary>
-    protected virtual void OnRetry(HttpStatusCode? status, int attempt) { }
 
     protected Queue RequestQueue =>
         Queues.GetOrAdd(
@@ -144,36 +139,23 @@ public abstract class ExternalApiClient : IDisposable
         string requestUrl =
             secretQuery.Count == 0 ? newUrl : QueryHelpers.AddQueryString(newUrl, secretQuery);
 
-        int attempt = 0;
-        while (true)
+        try
         {
-            try
-            {
-                string response = await RequestQueue.Enqueue(
-                    () => Client.GetStringAsync(requestUrl),
-                    newUrl,
-                    priority
-                );
+            // No retry here: Queue.Enqueue already retries transient failures.
+            string response = await RequestQueue.Enqueue(
+                () => Client.GetStringAsync(requestUrl),
+                newUrl,
+                priority
+            );
 
-                await CacheController.Write(newUrl, response);
-                return response.FromJson<T>();
-            }
-            catch (HttpRequestException ex) when (ShouldSoftFail(ex.StatusCode))
-            {
-                // Provider signalled "not found" — soft-fail to null.
-                OnSoftFail(ex.StatusCode, newUrl);
-                return null;
-            }
-            catch (HttpRequestException ex) when (attempt < MaxRetries)
-            {
-                OnRetry(ex.StatusCode, ++attempt);
-                await Task.Delay(RetryDelay);
-            }
-            catch (TaskCanceledException) when (attempt < MaxRetries)
-            {
-                OnRetry(null, ++attempt);
-                await Task.Delay(RetryDelay);
-            }
+            await CacheController.Write(newUrl, response);
+            return response.FromJson<T>();
+        }
+        catch (HttpRequestException ex) when (ShouldSoftFail(ex.StatusCode))
+        {
+            // Provider signalled "not found" — soft-fail to null.
+            OnSoftFail(ex.StatusCode, newUrl);
+            return null;
         }
     }
 
