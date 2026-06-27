@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.DTOs.Music;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
@@ -261,6 +262,33 @@ public class MusicPlaybackService
 
         await UpdatePlaybackState(user, state);
         StartPlaybackTimer(user);
+    }
+
+    public async Task ApplyItemLikeAsync(
+        Guid userId,
+        Guid itemId,
+        bool liked,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (!_stateManager.TryGetValue(userId, out MusicPlayerState? playerState))
+            return;
+
+        if (playerState.CurrentItem is not null && playerState.CurrentItem.Id == itemId)
+            playerState.CurrentItem.Favorite = liked;
+
+        foreach (PlaylistTrackDto track in playerState.Playlist)
+            if (track.Id == itemId)
+                track.Favorite = liked;
+
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+        IUserRepository userRepository =
+            scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        User? user = await userRepository.GetByIdAsync(userId);
+        if (user is null)
+            return;
+
+        await UpdatePlaybackState(user, playerState);
     }
 
     public async Task UpdatePlaybackState(User user, MusicPlayerState? state)

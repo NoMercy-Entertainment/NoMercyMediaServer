@@ -72,10 +72,8 @@ public static class EventHandlerExtensions
         services.AddSingleton<MusicLikeEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            MusicPlayerStateManager stateManager = sp.GetRequiredService<MusicPlayerStateManager>();
             MusicPlaybackService playbackService = sp.GetRequiredService<MusicPlaybackService>();
-            IServiceScopeFactory scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-            return new(eventBus, stateManager, playbackService, scopeFactory);
+            return new(eventBus, playbackService);
         });
 
         services.AddSingleton<SignalRNotificationEventHandler>(sp =>
