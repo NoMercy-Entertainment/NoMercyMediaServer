@@ -29,7 +29,7 @@ public class MusicBrainzRecordingClient : MusicBrainzBaseClient
         bool? priority = false
     )
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["inc"] = string.Join("+", appendices),
             ["fmt"] = "json",
@@ -43,7 +43,7 @@ public class MusicBrainzRecordingClient : MusicBrainzBaseClient
         bool? priority = false
     )
     {
-        Dictionary<string, string>? queryParams = new()
+        Dictionary<string, string?>? queryParams = new()
         {
             ["inc"] = string.Join("+", appendices),
             ["fmt"] = "json",
@@ -68,7 +68,7 @@ public class MusicBrainzRecordingClient : MusicBrainzBaseClient
 
     public Task<MusicBrainzRecordingAppends?> SearchRecordings(string query, bool? priority = false)
     {
-        Dictionary<string, string>? queryParams = new()
+        Dictionary<string, string?>? queryParams = new()
         {
             ["query"] = query,
             ["inc"] = "releases",
@@ -82,7 +82,7 @@ public class MusicBrainzRecordingClient : MusicBrainzBaseClient
         bool? priority = false
     )
     {
-        Dictionary<string, string>? queryParams = new()
+        Dictionary<string, string?>? queryParams = new()
         {
             ["query"] = query,
             ["inc"] = "releases",

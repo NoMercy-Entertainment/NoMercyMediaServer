@@ -22,7 +22,7 @@ public class MusicBrainzReleaseGroupClient : MusicBrainzBaseClient
 
     public Task<MusicBrainzReleaseAppends?> WithAppends(string[] appendices, bool? priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["inc"] = string.Join("+", appendices),
             ["fmt"] = "json",
@@ -41,7 +41,7 @@ public class MusicBrainzReleaseGroupClient : MusicBrainzBaseClient
         bool? priority = false
     )
     {
-        Dictionary<string, string> queryParams = new() { ["query"] = query, ["fmt"] = "json" };
+        Dictionary<string, string?> queryParams = new() { ["query"] = query, ["fmt"] = "json" };
         return Get<MusicBrainzReleaseAppends>("release-group", queryParams, priority);
     }
 }

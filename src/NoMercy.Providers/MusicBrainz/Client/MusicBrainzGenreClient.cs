@@ -23,7 +23,7 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
     public Task<MusicBrainzAllGenres?> FirstPage() =>
         Get<MusicBrainzAllGenres>(
             "genre/all",
-            new Dictionary<string, string>
+            new Dictionary<string, string?>
             {
                 ["limit"] = "100",
                 ["offset"] = "0",
@@ -43,7 +43,7 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
         {
             MusicBrainzAllGenres? page = await Get<MusicBrainzAllGenres>(
                 "genre/all",
-                new Dictionary<string, string>
+                new Dictionary<string, string?>
                 {
                     ["limit"] = pageSize.ToString(),
                     ["offset"] = offset.ToString(),
@@ -75,7 +75,7 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
     {
         MusicBrainzAllGenres? data = await Get<MusicBrainzAllGenres>(
             "genre",
-            new Dictionary<string, string> { ["query"] = query, ["fmt"] = "json" }
+            new Dictionary<string, string?> { ["query"] = query, ["fmt"] = "json" }
         );
 
         return data?.Genres.FirstOrDefault();
