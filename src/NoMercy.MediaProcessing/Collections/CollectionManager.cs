@@ -75,12 +75,14 @@ public class CollectionManager(
 
     public Task UpdateCollectionAsync(int id, Library library)
     {
-        throw new NotImplementedException();
+        // Re-importing refreshes all metadata via idempotent upserts.
+        return Add(id, library);
     }
 
-    public Task RemoveCollectionAsync(int id, Library library)
+    public async Task RemoveCollectionAsync(int id, Library library)
     {
-        throw new NotImplementedException();
+        await collectionRepository.Remove(id);
+        Logger.MovieDb($"Collection: {id}: Removed from Database", LogEventLevel.Debug);
     }
 
     private async Task StoreTranslations(TmdbCollectionAppends collection)

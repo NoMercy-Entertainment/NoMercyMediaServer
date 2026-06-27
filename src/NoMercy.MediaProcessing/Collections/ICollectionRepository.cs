@@ -19,6 +19,7 @@ namespace NoMercy.MediaProcessing.Collections;
 public interface ICollectionRepository
 {
     public Task Store(Collection collection);
+    public Task Remove(int id);
     public Task LinkToLibrary(Library library, Collection collection);
     public Task LinkToMovies(TmdbCollectionAppends collection);
     public Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles);

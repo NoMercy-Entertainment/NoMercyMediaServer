@@ -83,6 +83,36 @@ public class ShowRepository(MediaContext context) : IShowRepository
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.TvToId, tv.Id));
     }
 
+    public async Task Remove(int id)
+    {
+        // SQLite schema uses DeleteBehavior.Restrict globally. Disable FK
+        // enforcement on this pinned connection so the show and all its
+        // dependents are removed atomically, mirroring
+        // Data.Repositories.TvShowRepository.DeleteAsync.
+        bool ownsConnection =
+            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
+        if (ownsConnection)
+            await context.Database.OpenConnectionAsync();
+
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+            try
+            {
+                await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync();
+            }
+            finally
+            {
+                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+            }
+        }
+        finally
+        {
+            if (ownsConnection)
+                await context.Database.CloseConnectionAsync();
+        }
+    }
+
     public Task LinkToLibrary(Library library, Tv tv)
     {
         return context

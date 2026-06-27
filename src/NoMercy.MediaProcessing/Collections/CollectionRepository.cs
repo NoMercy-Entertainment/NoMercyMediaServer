@@ -42,6 +42,36 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
             .RunAsync();
     }
 
+    public async Task Remove(int id)
+    {
+        // SQLite schema uses DeleteBehavior.Restrict globally. Disable FK
+        // enforcement on this pinned connection so the collection and all its
+        // dependents are removed atomically, mirroring
+        // Data.Repositories.CollectionRepository.DeleteAsync.
+        bool ownsConnection =
+            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
+        if (ownsConnection)
+            await context.Database.OpenConnectionAsync();
+
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+            try
+            {
+                await context.Collections.Where(c => c.Id == id).ExecuteDeleteAsync();
+            }
+            finally
+            {
+                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+            }
+        }
+        finally
+        {
+            if (ownsConnection)
+                await context.Database.CloseConnectionAsync();
+        }
+    }
+
     public Task LinkToMovies(TmdbCollectionAppends collection)
     {
         return context

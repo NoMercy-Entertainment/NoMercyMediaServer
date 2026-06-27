@@ -165,12 +165,15 @@ public class ShowManager(
 
     public Task UpdateShowAsync(int id, Library library)
     {
-        throw new NotImplementedException();
+        // Re-importing refreshes all metadata; every write is an idempotent
+        // upsert, so re-running AddShowAsync updates existing rows in place.
+        return AddShowAsync(id, library);
     }
 
-    public Task RemoveShowAsync(int id)
+    public async Task RemoveShowAsync(int id)
     {
-        throw new NotImplementedException();
+        await showRepository.Remove(id);
+        Logger.MovieDb($"Show {id}: Removed from Database", LogEventLevel.Debug);
     }
 
     internal async Task StoreAlternativeTitles(TmdbTvShowAppends show)
