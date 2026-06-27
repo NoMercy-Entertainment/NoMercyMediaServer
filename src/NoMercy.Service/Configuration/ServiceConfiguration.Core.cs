@@ -395,6 +395,7 @@ public static partial class ServiceConfiguration
         services.AddScoped<MovieManager>();
         services.AddScoped<CollectionManager>();
         services.AddScoped<ShowManager>();
+        services.AddScoped<IMediaTypeClassifier, MediaTypeClassifier>();
         services.AddScoped<SeasonManager>();
         services.AddScoped<EpisodeManager>();
         services.AddScoped<PersonManager>();

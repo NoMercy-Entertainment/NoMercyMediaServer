@@ -37,7 +37,13 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
         JobDispatcher jobDispatcher = new();
 
         ShowRepository showRepository = new(context);
-        ShowManager showManager = new(showRepository, jobDispatcher, StorageFactory, StorageDriver);
+        ShowManager showManager = new(
+            showRepository,
+            jobDispatcher,
+            StorageFactory,
+            StorageDriver,
+            new MediaTypeClassifier()
+        );
 
         PersonRepository personRepository = new(context);
         PersonManager personManager = new(personRepository, jobDispatcher);

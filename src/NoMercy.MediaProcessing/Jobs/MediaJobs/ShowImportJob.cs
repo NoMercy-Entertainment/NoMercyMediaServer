@@ -48,7 +48,13 @@ public class ShowImportJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         ShowRepository showRepository = new(context);
-        ShowManager showManager = new(showRepository, jobDispatcher, StorageFactory, StorageDriver);
+        ShowManager showManager = new(
+            showRepository,
+            jobDispatcher,
+            StorageFactory,
+            StorageDriver,
+            new MediaTypeClassifier()
+        );
 
         SeasonRepository seasonRepository = new(context);
         SeasonManager seasonManager = new(seasonRepository, jobDispatcher);

@@ -371,24 +371,6 @@ public class ShowRepository(MediaContext context) : IShowRepository
             .RunAsync();
     }
 
-    public async Task<string> GetMediaTypeAsync(TmdbTvShowAppends show)
-    {
-        bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
-
-        // Kitsu alone isn't enough — require Japanese origin country from TMDB to avoid
-        // false positives on western shows that have Kitsu entries (e.g. co-productions).
-        if (isAnime)
-        {
-            bool hasJapaneseOrigin = show.OriginCountry.Any(c =>
-                string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)
-            );
-            if (!hasJapaneseOrigin)
-                isAnime = false;
-        }
-
-        return isAnime ? "anime" : "tv";
-    }
-
     public Task StoreWatchProviders(List<WatchProvider> watchProviders)
     {
         return context

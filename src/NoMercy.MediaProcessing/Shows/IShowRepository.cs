@@ -45,7 +45,6 @@ public interface IShowRepository
         IEnumerable<CertificationCriteria> certificationCriteria
     );
 
-    Task<string> GetMediaTypeAsync(TmdbTvShowAppends show);
     Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias);
     Task StoreCompanyTvs(List<CompanyTv> companyTvs);
 }

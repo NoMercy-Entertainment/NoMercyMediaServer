@@ -37,7 +37,8 @@ public class ShowManager(
     IShowRepository showRepository,
     JobDispatcher jobDispatcher,
     IStorageFactory storageFactory,
-    IStorageDriver storageDriver
+    IStorageDriver storageDriver,
+    IMediaTypeClassifier mediaTypeClassifier
 ) : BaseManager, IShowManager
 {
     public async Task<TmdbTvShowAppends?> AddShowAsync(
@@ -55,7 +56,7 @@ public class ShowManager(
             return null;
 
         string baseUrl = BaseUrl(showAppends.Name, showAppends.FirstAirDate);
-        string mediaType = await showRepository.GetMediaTypeAsync(showAppends);
+        string mediaType = await mediaTypeClassifier.ClassifyAsync(showAppends);
 
         DateTime folderCreatedAt = DateTime.UtcNow;
 
