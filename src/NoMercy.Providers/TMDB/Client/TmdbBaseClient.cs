@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -12,9 +12,9 @@
 using System.Net;
 using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.Configuration;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -23,46 +23,35 @@ using Serilog.Events;
 
 namespace NoMercy.Providers.TMDB.Client;
 
-public class TmdbBaseClient : IDisposable
+public class TmdbBaseClient : ExternalApiClient
 {
-    private readonly Uri _baseUrl = new("https://api.themoviedb.org/3/");
     private readonly string Language;
-    private bool _disposed;
-
-    public int Id { get; private set; }
-
-    private readonly HttpClient _client;
 
     protected TmdbBaseClient()
     {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
-        _client.BaseAddress ??= _baseUrl;
-        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiKeyStore.Current.TmdbToken}");
         Language = "en,null";
     }
 
     protected TmdbBaseClient(int id, string language = "en-US")
     {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
-        _client.BaseAddress ??= _baseUrl;
-        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiKeyStore.Current.TmdbToken}");
-        Language = language + ",null";
         Id = id;
+        Language = language + ",null";
     }
 
-    private static Queue? _queue;
+    // TMDB identifies entities with integer ids, unlike the Guid-based default.
+    public new int Id { get; private set; }
 
-    protected static Queue GetQueue()
-    {
-        return _queue ??= new(
-            new()
-            {
-                Concurrent = 50,
-                Interval = 1000,
-                Start = true,
-            }
+    protected override string HttpClientName => HttpClientNames.Tmdb;
+    protected override Uri BaseUrl => new("https://api.themoviedb.org/3/");
+    protected override int ConcurrentRequests => 50;
+
+    protected override void ConfigureClient(HttpClient client) =>
+        client.DefaultRequestHeaders.Add(
+            "Authorization",
+            $"Bearer {ApiKeyStore.Current.TmdbToken}"
         );
-    }
+
+    protected override void LogRequest(string url) => Logger.MovieDb(url, LogEventLevel.Verbose);
 
     private static int Max(int available, int wanted, int constraint)
     {
@@ -73,7 +62,7 @@ public class TmdbBaseClient : IDisposable
             : available;
     }
 
-    protected async Task<T?> Get<T>(
+    protected override async Task<T?> Get<T>(
         string url,
         Dictionary<string, string?>? query = null,
         bool? priority = false,
@@ -82,9 +71,7 @@ public class TmdbBaseClient : IDisposable
         where T : class
     {
         query ??= new();
-
         query["language"] = priority is true ? Language : "";
-
         query["include_adult"] = RuntimeServerSettings.Current.ShowAdultContent ? "true" : "false";
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
@@ -92,37 +79,30 @@ public class TmdbBaseClient : IDisposable
         if (!skipCache && CacheController.Read(newUrl, out T? result))
             return result;
 
-        Logger.MovieDb(_baseUrl + newUrl, LogEventLevel.Verbose);
+        LogRequest(BaseUrl + newUrl);
 
         try
         {
-            string response = await GetQueue()
-                .Enqueue(
-                    () =>
-                    {
-                        if (_disposed)
-                        {
-                            throw new ObjectDisposedException(
-                                nameof(TmdbBaseClient),
-                                "Cannot access a disposed TMDB client."
-                            );
-                        }
-                        return _client.GetStringAsync(newUrl);
-                    },
-                    newUrl,
-                    priority
-                );
+            string response = await RequestQueue.Enqueue(
+                () =>
+                {
+                    if (Disposed)
+                        throw new ObjectDisposedException(
+                            nameof(TmdbBaseClient),
+                            "Cannot access a disposed TMDB client."
+                        );
+                    return Client.GetStringAsync(newUrl);
+                },
+                newUrl,
+                priority
+            );
 
             if (!skipCache)
                 await CacheController.Write(newUrl, response);
-
-            T? data = response.FromJson<T>();
-
-            return data;
+            return response.FromJson<T>();
         }
         catch (ObjectDisposedException)
         {
-            // If the client is disposed, return null gracefully
             Logger.MovieDb(
                 $"TMDB client disposed during operation for {newUrl}",
                 LogEventLevel.Debug
@@ -136,9 +116,6 @@ public class TmdbBaseClient : IDisposable
                         or HttpStatusCode.BadRequest
             )
         {
-            // Soft-fail on TMDB "no data" status codes via StatusCode (not
-            // ex.Message.Contains) — message-matching false-positives on URLs
-            // that contain "404" etc. as path segments.
             Logger.MovieDb($"HTTP {ex.StatusCode} for {newUrl}", LogEventLevel.Debug);
             return null;
         }
@@ -148,10 +125,8 @@ public class TmdbBaseClient : IDisposable
         where T : class
     {
         List<T> list = [];
-
         TmdbPaginatedResponse<T>? firstPage = await Get<TmdbPaginatedResponse<T>>(url);
         list.AddRange(firstPage?.Results ?? []);
-
         if (limit > 1)
             await Parallel.ForAsync(
                 2,
@@ -168,21 +143,11 @@ public class TmdbBaseClient : IDisposable
                     }
                 }
             );
-
         return list;
     }
 
     public Task<TmdbTmdbNetworkDetails?> CompanyDetails(int id, bool? priority = false)
     {
         return Get<TmdbTmdbNetworkDetails>("company/" + id, priority: priority);
-    }
-
-    public void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        _disposed = true;
-        GC.SuppressFinalize(this);
     }
 }

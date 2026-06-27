@@ -24,6 +24,16 @@ namespace NoMercy.Providers.NoMercy.Client;
 
 public abstract class NoMercyImageClient : TmdbBaseClient
 {
+    // Image downloads use their own queue rather than the shared TMDB API queue.
+    private static readonly Queue ImageQueue = new(
+        new()
+        {
+            Concurrent = 50,
+            Interval = 1000,
+            Start = true,
+        }
+    );
+
     private static IStorage? _storage;
 
     public static void Initialize(IStorage storage)
@@ -43,7 +53,7 @@ public abstract class NoMercyImageClient : TmdbBaseClient
         Size? maxDecodeSize = null
     )
     {
-        return GetQueue().Enqueue(Task, $"original{path}", true);
+        return ImageQueue.Enqueue(Task, $"original{path}", true);
 
         async Task<Image<Rgba32>?> Task()
         {

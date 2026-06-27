@@ -25,6 +25,17 @@ public abstract class TmdbImageClient : TmdbBaseClient
 {
     public const string ImageBaseUrl = "https://image.tmdb.org/t/p/";
 
+    // Image downloads hit image.tmdb.org (a separate host from the API) and
+    // are throttled by their own queue rather than the shared API queue.
+    private static readonly Queue ImageQueue = new(
+        new()
+        {
+            Concurrent = 50,
+            Interval = 1000,
+            Start = true,
+        }
+    );
+
     private static IStorage? _storage;
 
     public static void Initialize(IStorage storage)
@@ -46,7 +57,7 @@ public abstract class TmdbImageClient : TmdbBaseClient
     {
         try
         {
-            return GetQueue().Enqueue(Task, path, true);
+            return ImageQueue.Enqueue(Task, path, true);
         }
         catch (InvalidImageContentException e)
         {
