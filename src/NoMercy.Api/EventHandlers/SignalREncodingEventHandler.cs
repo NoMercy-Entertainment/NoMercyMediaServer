@@ -8,7 +8,7 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
-
+using NoMercy.Api.DTOs.Encoding;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.Networking.Messaging;
@@ -39,33 +39,35 @@ public class SignalREncodingEventHandler : IDisposable
         await _clientMessenger.SendToAll(
             "EncodingStarted",
             "dashboardHub",
-            new
+            new EncodingStartedDto
             {
-                id = @event.JobId,
-                input_path = @event.InputPath,
-                output_path = @event.OutputPath,
-                profile_name = @event.ProfileName,
-                timestamp = @event.Timestamp,
+                Id = @event.JobId,
+                InputPath = @event.InputPath,
+                OutputPath = @event.OutputPath,
+                ProfileName = @event.ProfileName,
+                Timestamp = @event.Timestamp,
             }
         );
-
         Logger.Socket($"Encoding started: Job={@event.JobId}, Profile={@event.ProfileName}");
     }
 
-    internal async Task OnEncodingProgress(EncodingProgressUpdatedEvent @event, CancellationToken ct)
+    internal async Task OnEncodingProgress(
+        EncodingProgressUpdatedEvent @event,
+        CancellationToken ct
+    )
     {
         await _clientMessenger.SendToAll(
             "EncodingProgress",
             "dashboardHub",
-            new
+            new EncodingProgressDto
             {
-                id = @event.JobId,
-                percentage = @event.Percentage,
-                elapsed = @event.Elapsed.TotalSeconds,
-                estimated = @event.Estimated?.TotalSeconds,
-                fps = @event.Fps,
-                speed = @event.Speed,
-                bitrate_kbps = @event.BitrateKbps,
+                Id = @event.JobId,
+                Percentage = @event.Percentage,
+                Elapsed = @event.Elapsed.TotalSeconds,
+                Estimated = @event.Estimated?.TotalSeconds,
+                Fps = @event.Fps,
+                Speed = @event.Speed,
+                BitrateKbps = @event.BitrateKbps,
             }
         );
     }
@@ -75,15 +77,14 @@ public class SignalREncodingEventHandler : IDisposable
         await _clientMessenger.SendToAll(
             "EncodingCompleted",
             "dashboardHub",
-            new
+            new EncodingCompletedDto
             {
-                id = @event.JobId,
-                output_path = @event.OutputPath,
-                duration = @event.Duration.TotalSeconds,
-                timestamp = @event.Timestamp,
+                Id = @event.JobId,
+                OutputPath = @event.OutputPath,
+                Duration = @event.Duration.TotalSeconds,
+                Timestamp = @event.Timestamp,
             }
         );
-
         Logger.Socket($"Encoding completed: Job={@event.JobId}");
     }
 
@@ -92,16 +93,15 @@ public class SignalREncodingEventHandler : IDisposable
         await _clientMessenger.SendToAll(
             "EncodingFailed",
             "dashboardHub",
-            new
+            new EncodingFailedDto
             {
-                id = @event.JobId,
-                input_path = @event.InputPath,
-                error_message = @event.ErrorMessage,
-                exception_type = @event.ExceptionType,
-                timestamp = @event.Timestamp,
+                Id = @event.JobId,
+                InputPath = @event.InputPath,
+                ErrorMessage = @event.ErrorMessage,
+                ExceptionType = @event.ExceptionType,
+                Timestamp = @event.Timestamp,
             }
         );
-
         Logger.Socket($"Encoding failed: Job={@event.JobId}, Error={@event.ErrorMessage}");
     }
 
@@ -113,19 +113,19 @@ public class SignalREncodingEventHandler : IDisposable
         await _clientMessenger.SendToAll(
             "encoder-progress",
             "dashboardHub",
-            new
+            new EncodingStageChangedDto
             {
-                id = @event.JobId,
-                status = @event.Status,
-                title = @event.Title,
-                message = @event.Message,
-                base_folder = @event.BaseFolder,
-                share_path = @event.ShareBasePath,
-                video_streams = @event.VideoStreams,
-                audio_streams = @event.AudioStreams,
-                subtitle_streams = @event.SubtitleStreams,
-                has_gpu = @event.HasGpu,
-                is_hdr = @event.IsHdr,
+                Id = @event.JobId,
+                Status = @event.Status,
+                Title = @event.Title,
+                Message = @event.Message,
+                BaseFolder = @event.BaseFolder,
+                SharePath = @event.ShareBasePath,
+                VideoStreams = @event.VideoStreams,
+                AudioStreams = @event.AudioStreams,
+                SubtitleStreams = @event.SubtitleStreams,
+                HasGpu = @event.HasGpu,
+                IsHdr = @event.IsHdr,
             }
         );
     }
@@ -144,6 +144,7 @@ public class SignalREncodingEventHandler : IDisposable
         {
             subscription.Dispose();
         }
+
         _subscriptions.Clear();
     }
 }
