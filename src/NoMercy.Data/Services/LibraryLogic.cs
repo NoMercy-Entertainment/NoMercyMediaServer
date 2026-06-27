@@ -57,14 +57,7 @@ public class LibraryLogic(
 
         await ScanFolder();
 
-        await Store();
-
         return true;
-    }
-
-    private async Task Store()
-    {
-        await Task.CompletedTask;
     }
 
     private void GetDepth()
