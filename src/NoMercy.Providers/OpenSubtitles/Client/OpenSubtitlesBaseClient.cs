@@ -13,39 +13,23 @@ using System.Text;
 using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Helpers;
-using HttpClient = System.Net.Http.HttpClient;
 
 namespace NoMercy.Providers.OpenSubtitles.Client;
 
-public class OpenSubtitlesBaseClient : IDisposable
+public class OpenSubtitlesBaseClient : ExternalApiClient
 {
-    private readonly Uri _baseUrl = new("https://api.opensubtitles.org/xml-rpc");
+    protected OpenSubtitlesBaseClient() { }
 
     internal static string? AccessToken { get; set; } = null;
 
-    private readonly HttpClient _client;
+    protected override string HttpClientName => HttpClientNames.OpenSubtitles;
+    protected override Uri BaseUrl => new("https://api.opensubtitles.org/xml-rpc");
 
-    protected OpenSubtitlesBaseClient()
-    {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.OpenSubtitles);
-        _client.BaseAddress ??= _baseUrl;
-    }
-
-    private static Queue? _queue;
-
-    protected static Queue GetQueue()
-    {
-        return _queue ??= new(
-            new()
-            {
-                Concurrent = 1,
-                Interval = 1000,
-                Start = true,
-            }
-        );
-    }
-
+    // OpenSubtitles uses XML-RPC over POST rather than the shared JSON GET flow,
+    // so it provides its own request method while reusing the shared Client,
+    // Queue and caching from the base.
     protected async Task<T2?> Post<T1, T2>(string url, T1 query, bool? priority = false)
         where T1 : class
         where T2 : class
@@ -58,7 +42,7 @@ public class OpenSubtitlesBaseClient : IDisposable
             new Dictionary<string, string?> { { "query", xml } }
         );
 
-        string response = await GetQueue().Enqueue(() => SendAsync(url, xml), newUrl, priority);
+        string response = await RequestQueue.Enqueue(() => SendAsync(url, xml), newUrl, priority);
 
         await CacheController.Write(newUrl, response);
 
@@ -70,14 +54,9 @@ public class OpenSubtitlesBaseClient : IDisposable
     private async Task<string> SendAsync(string url, string xml)
     {
         using StringContent content = new(xml, Encoding.UTF8, "text/xml");
-        using HttpResponseMessage response = await _client.PostAsync(url, content);
+        using HttpResponseMessage response = await Client.PostAsync(url, content);
         // TODO(subtitle-acquisition): handle HTTP 429 — log WARN, return empty, enforce backoff window
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStringAsync();
-    }
-
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
     }
 }
