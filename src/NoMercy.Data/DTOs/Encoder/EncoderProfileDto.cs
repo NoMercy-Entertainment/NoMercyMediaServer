@@ -13,7 +13,7 @@ using Newtonsoft.Json;
 using NoMercy.Database.Models.Media;
 using NoMercy.NmSystem.Extensions;
 
-namespace NoMercy.Data.Logic;
+namespace NoMercy.Data.DTOs.Encoder;
 
 public class EncoderProfileDto
 {

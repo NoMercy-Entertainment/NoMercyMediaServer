@@ -38,7 +38,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
-using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
+using EncoderProfileDto = NoMercy.Data.DTOs.Encoder.EncoderProfileDto;
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;

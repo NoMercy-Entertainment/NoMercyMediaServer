@@ -105,7 +105,7 @@ public record LibrariesResponseItemDto
                     DriverName = folderLibrary.Folder.Driver?.Name ?? string.Empty,
                     EncoderProfiles = folderLibrary
                         .Folder.EncoderProfileFolder.Where(epf => epf.EncoderProfile is not null)
-                        .Select(epf => new Data.Logic.EncoderProfileDto
+                        .Select(epf => new Data.DTOs.Encoder.EncoderProfileDto
                         {
                             Id = epf.EncoderProfile.Id,
                             Name = epf.EncoderProfile.Name,
