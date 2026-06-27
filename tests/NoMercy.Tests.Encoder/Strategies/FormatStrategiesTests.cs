@@ -57,7 +57,15 @@ public class FormatStrategiesTests
         IEncoder encoder = BuildMockEncoder();
         return new()
         {
-            { new MkvStrategy(encoder), OutputFormat.Mkv, EncodeMode.SinglePass },
+            {
+                new MkvStrategy(
+                    encoder,
+                    NullLogger<MkvStrategy>.Instance,
+                    TestStorageFactory.CreateLocal()
+                ),
+                OutputFormat.Mkv,
+                EncodeMode.SinglePass
+            },
             {
                 new Mp4SinglePassStrategy(
                     encoder,
@@ -84,7 +92,11 @@ public class FormatStrategiesTests
         IEncoder encoder = BuildMockEncoder();
         return new()
         {
-            new MkvStrategy(encoder),
+            new MkvStrategy(
+                encoder,
+                NullLogger<MkvStrategy>.Instance,
+                TestStorageFactory.CreateLocal()
+            ),
             new Mp4SinglePassStrategy(
                 encoder,
                 NullLogger<Mp4SinglePassStrategy>.Instance,
