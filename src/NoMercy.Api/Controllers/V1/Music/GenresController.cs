@@ -26,7 +26,7 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [ApiController]
 [ApiVersion(1.0)]
 [Tags("Music Genres")]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/music/genres", Order = 4)]
 public class GenresController : BaseController
 {
@@ -40,8 +40,6 @@ public class GenresController : BaseController
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view genres");
 
         Guid userId = User.UserId();
 
@@ -101,8 +99,6 @@ public class GenresController : BaseController
         [FromQuery] PageRequestDto request
     )
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view genres");
 
         Guid userId = User.UserId();
 
@@ -162,8 +158,6 @@ public class GenresController : BaseController
     public async Task<IActionResult> Show(Guid id)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view albums");
 
         string language = Language();
 

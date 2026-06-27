@@ -28,7 +28,7 @@ namespace NoMercy.Api.Controllers.V1.Music;
 
 [ApiController]
 [Tags(tags: "Music Tracks")]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/music/tracks")]
 public class TracksController : BaseController
 {
@@ -51,8 +51,6 @@ public class TracksController : BaseController
     public async Task<IActionResult> Index()
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view tracks");
 
         string language = Language();
 
@@ -84,8 +82,6 @@ public class TracksController : BaseController
     public async Task<IActionResult> Value(Guid id, [FromBody] LikeRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to like tracks");
 
         Track? track = await _musicRepository.GetTrackWithIncludesAsync(id);
 
@@ -132,8 +128,6 @@ public class TracksController : BaseController
     [Route("{id:guid}/lyrics")]
     public async Task<IActionResult> Lyrics(Guid id)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view lyrics");
 
         Track? track = await _musicRepository.GetTrackWithIncludesAsync(id);
 
@@ -175,8 +169,6 @@ public class TracksController : BaseController
     [Route("{id:guid}/lyrics-offset")]
     public async Task<IActionResult> LyricsOffset(Guid id, [FromBody] PatchLyricsOffsetDto request)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to update lyrics offset");
 
         if (request.Offset is not null && (request.Offset < -30000 || request.Offset > 30000))
             return ValidationProblem("Offset must be between -30000 and 30000 ms");
@@ -233,8 +225,6 @@ public class TracksController : BaseController
     public async Task<IActionResult> Playback(Guid id)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to record playback");
 
         Track? track = await _musicRepository.GetTrackAsync(id);
 

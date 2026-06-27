@@ -24,7 +24,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiController]
 [Tags("Media Genres")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/genres")]
 public class GenresController : BaseController
 {
@@ -43,8 +43,6 @@ public class GenresController : BaseController
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view genres");
 
         string language = Language();
 
@@ -80,8 +78,6 @@ public class GenresController : BaseController
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view genres");
 
         string language = Language();
         string country = Country();

@@ -29,7 +29,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiController]
 [Tags("Media Libraries")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/libraries")]
 public class LibrariesController(
     ILibraryRepository libraryRepository,
@@ -41,8 +41,6 @@ public class LibrariesController(
     public async Task<IActionResult> Libraries(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view libraries");
 
         List<LibrariesResponseItemDto> response = (await libraryRepository.GetLibraries(userId, ct))
             .Select(library => new LibrariesResponseItemDto(library))
@@ -56,8 +54,6 @@ public class LibrariesController(
     public async Task<IActionResult> Mobile(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view libraries");
 
         string language = Language();
         string country = Country();
@@ -276,8 +272,6 @@ public class LibrariesController(
     public async Task<IActionResult> Tv(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view libraries");
 
         string language = Language();
         string country = Country();
@@ -466,8 +460,6 @@ public class LibrariesController(
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view library");
 
         string language = Language();
         string country = Country();
@@ -566,8 +558,6 @@ public class LibrariesController(
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view library");
 
         string language = Language();
         string country = Country();
