@@ -195,11 +195,9 @@ public class ArtistsController : BaseController
 
     [HttpPost]
     [Route("{id:guid}/rescan")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Like(Guid id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to rescan artists");
-
         return Ok(
             new StatusResponseDto<string>
             {
@@ -212,11 +210,9 @@ public class ArtistsController : BaseController
 
     [HttpDelete]
     [Route("{id:guid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Destroy(Guid id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to delete an artist");
-
         bool deleted = await _musicRepository.DeleteArtistAsync(id);
 
         await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music", "artist"] });
@@ -232,11 +228,9 @@ public class ArtistsController : BaseController
 
     [HttpPatch]
     [Route("{id:guid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Edit(Guid id, [FromBody] UpdateMusicMetadataRequestDto request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to edit an artist");
-
         Artist? artist = await _musicRepository.GetArtistForEditAsync(id);
 
         if (artist is null)
@@ -295,11 +289,9 @@ public class ArtistsController : BaseController
     [HttpPost]
     [Route("{id:guid}/cover")]
     [Consumes("multipart/form-data")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Cover(Guid id, IFormFile image)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to upload artist covers");
-
         Artist? artist = await _musicRepository.GetArtistWithLibraryFolderAsync(id);
 
         if (artist is null)

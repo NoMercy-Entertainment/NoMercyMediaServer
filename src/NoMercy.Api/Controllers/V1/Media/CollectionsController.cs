@@ -263,11 +263,9 @@ public class CollectionsController(
     }
 
     [HttpDelete]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to delete movies");
-
         await collectionRepository.DeleteAsync(id, ct);
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
@@ -275,11 +273,9 @@ public class CollectionsController(
 
     [HttpPost]
     [Route("rescan")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to rescan movies");
-
         Collection? collection = await collectionRepository.GetCollectionForRescanAsync(id, ct);
 
         if (collection is null)
@@ -313,11 +309,9 @@ public class CollectionsController(
 
     [HttpPost]
     [Route("refresh")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to refresh movies");
-
         Collection? collection = await collectionRepository.GetCollectionWithMovieLibrariesAsync(
             id,
             ct
@@ -354,11 +348,9 @@ public class CollectionsController(
 
     [HttpPost]
     [Route("add")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Add(int id, CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to add tv shows");
-
         Library? library = await libraryRepository.GetLibraryByTypeAsync(
             MediaTypes.MovieMediaType,
             ct: ct

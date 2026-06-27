@@ -199,11 +199,9 @@ public class AlbumsController : BaseController
 
     [HttpPost]
     [Route("{id:guid}/rescan")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult Rescan(Guid id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to rescan albums");
-
         return Ok(
             new StatusResponseDto<string>
             {
@@ -216,11 +214,9 @@ public class AlbumsController : BaseController
 
     [HttpPatch]
     [Route("{id:guid}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Edit(Guid id, [FromBody] CreatePlaylistRequestDto request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to edit an album");
-
         Album? album = await _musicRepository.GetAlbumForEditAsync(id);
 
         if (album is null)
@@ -277,11 +273,9 @@ public class AlbumsController : BaseController
     [HttpPost]
     [Route("{id:guid}/cover")]
     [Consumes("multipart/form-data")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Cover(Guid id, IFormFile image)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to upload album covers");
-
         Album? album = await _musicRepository.GetAlbumWithLibraryFolderAsync(id);
 
         if (album is null)

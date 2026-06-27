@@ -33,15 +33,13 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
     /// <c>type</c> (Intro / Outro / Recap / Credits) to narrow.
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> List(
         [FromQuery] int pageSize = 100,
         [FromQuery] int pageIndex = 0,
         [FromQuery] ContentSegmentType? type = null
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to list content segments");
-
         pageSize = Math.Clamp(pageSize, 1, 500);
         if (pageIndex < 0)
             pageIndex = 0;
@@ -66,32 +64,26 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
 
     [HttpGet("episode/{episodeId:int}")]
     [ResponseCache(Duration = 60)]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetByEpisode(int episodeId)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view content segments");
-
         List<ContentSegment> segments = await repository.GetForEpisodeAsync(episodeId);
         return Ok(new { data = segments });
     }
 
     [HttpGet("movie/{movieId:int}")]
     [ResponseCache(Duration = 60)]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetByMovie(int movieId)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view content segments");
-
         List<ContentSegment> segments = await repository.GetForMovieAsync(movieId);
         return Ok(new { data = segments });
     }
 
     [HttpPost]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Create([FromBody] CreateContentSegmentRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to create content segments");
-
         if (request.EndSeconds <= request.StartSeconds)
             return BadRequestResponse("end_seconds must be greater than start_seconds");
 
@@ -117,14 +109,12 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Update(
         string id,
         [FromBody] UpdateContentSegmentRequest request
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to update content segments");
-
         if (!Ulid.TryParse(id, out Ulid segmentId))
             return BadRequestResponse("Invalid segment id");
 
@@ -153,11 +143,9 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to delete content segments");
-
         if (!Ulid.TryParse(id, out Ulid segmentId))
             return BadRequestResponse("Invalid segment id");
 

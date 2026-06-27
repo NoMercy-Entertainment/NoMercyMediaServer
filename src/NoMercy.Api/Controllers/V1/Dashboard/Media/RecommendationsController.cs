@@ -34,14 +34,12 @@ public class RecommendationsController(
 ) : BaseController
 {
     [HttpGet("movies")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetMovieRecommendations(
         [FromQuery] int take = 200,
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view recommendations");
-
         Guid userId = User.UserId();
 
         List<RecommendationDto> recommendations =
@@ -62,14 +60,12 @@ public class RecommendationsController(
     }
 
     [HttpGet("tv")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetTvRecommendations(
         [FromQuery] int take = 200,
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view recommendations");
-
         Guid userId = User.UserId();
 
         List<RecommendationDto> recommendations =
@@ -90,14 +86,12 @@ public class RecommendationsController(
     }
 
     [HttpGet("anime")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetAnimeRecommendations(
         [FromQuery] int take = 200,
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view recommendations");
-
         Guid userId = User.UserId();
 
         List<RecommendationDto> recommendations =
@@ -118,11 +112,9 @@ public class RecommendationsController(
     }
 
     [HttpGet("diagnostics")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> GetDiagnostics(CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view diagnostics");
-
         RecommendationDiagnosticsDto diagnostics =
             await recommendationRepository.GetDiagnosticsAsync(ct);
 
@@ -143,15 +135,13 @@ public class RecommendationsController(
     }
 
     [HttpGet("{type}/{id:int}")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetRecommendationDetail(
         string type,
         int id,
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view recommendations");
-
         if (type is not ("movie" or "tv" or "anime"))
             return BadRequestResponse("Type must be 'movie', 'tv', or 'anime'");
 

@@ -81,11 +81,9 @@ public class TvShowsController(
     }
 
     [HttpDelete]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> DeleteTv(int id, CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to delete shows");
-
         await tvShowRepository.DeleteAsync(id, ct);
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Show deleted" });
@@ -207,11 +205,9 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("rescan")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to rescan tv shows");
-
         Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id, ct);
 
         if (tv is null)
@@ -239,15 +235,13 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("refresh")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(
         int id,
         [FromQuery] Ulid? libraryId = null,
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to refresh tv shows");
-
         Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id, ct);
 
         if (tv is null)
@@ -307,15 +301,13 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("add")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Add(
         int id,
         [FromQuery] Ulid? libraryId = null,
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to add tv shows");
-
         Library? library;
 
         if (libraryId is not null)

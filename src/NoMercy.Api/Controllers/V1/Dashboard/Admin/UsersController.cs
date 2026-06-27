@@ -36,11 +36,9 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 public class UsersController(IUserRepository userRepository) : BaseController
 {
     [HttpGet]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Index()
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("You do not have permission to view users");
-
         List<User> users = await userRepository.GetAllWithLibrariesAsync();
 
         return Ok(
@@ -52,11 +50,9 @@ public class UsersController(IUserRepository userRepository) : BaseController
     }
 
     [HttpPost]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Store([FromBody] UserRequest request)
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("You do not have permission to create a user");
-
         Guid userId = User.UserId();
         User? hasPermission = await userRepository.GetByIdAsync(userId);
 
@@ -110,11 +106,9 @@ public class UsersController(IUserRepository userRepository) : BaseController
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Destroy(Guid id)
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("You do not have permission to delete a user");
-
         User? user = await userRepository.GetByIdWithLibrariesAsync(id);
 
         if (user is null)
@@ -132,11 +126,9 @@ public class UsersController(IUserRepository userRepository) : BaseController
 
     [HttpGet]
     [Route("permissions")]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> PermissionS()
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("You do not have permission to view user permissions");
-
         List<User> users = await userRepository.GetAllWithLibrariesAsync();
 
         return Ok(
@@ -174,11 +166,9 @@ public class UsersController(IUserRepository userRepository) : BaseController
 
     [HttpGet]
     [Route("{id:guid}/permissions")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> UserPermissions(Guid id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view user permissions");
-
         if (User.IsSelf(id))
             return UnauthorizedResponse("You do not have permission to edit your own permissions");
 

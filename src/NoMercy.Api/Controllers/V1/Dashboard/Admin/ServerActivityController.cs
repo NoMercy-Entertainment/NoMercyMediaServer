@@ -30,11 +30,9 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 public class ServerActivityController(IActivityRepository activityRepository) : BaseController
 {
     [HttpGet]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Index([FromQuery] ServerActivityRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view activity");
-
         int take = request.Take ?? 50;
         int skip = request.Skip ?? 0;
 
@@ -76,23 +74,19 @@ public class ServerActivityController(IActivityRepository activityRepository) : 
     }
 
     [HttpPost]
+    [Authorize(Policy = "MediaAccess")]
     public IActionResult Create()
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to create activity");
-
         return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpDelete]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Destroy(
         [FromQuery] ActivityCategory? category,
         [FromQuery] DateTime? before
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to delete activity");
-
         int deleted = await activityRepository.DeleteAsync(category, before);
         return Ok(new StatusResponseDto<object> { Status = "ok", Data = new { deleted } });
     }

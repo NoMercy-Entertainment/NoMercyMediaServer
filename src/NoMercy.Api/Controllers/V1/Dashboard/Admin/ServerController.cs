@@ -81,11 +81,9 @@ public class ServerController(
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
     [HttpGet]
+    [Authorize(Policy = "Moderator")]
     public IActionResult Index()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to access the dashboard");
-
         return Ok();
     }
 
@@ -125,21 +123,17 @@ public class ServerController(
 
     [HttpPost]
     [Route("start")]
+    [Authorize(Policy = "MediaAccess")]
     public IActionResult StartServer()
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to start the server");
-
         return StatusCode(StatusCodes.Status501NotImplemented);
     }
 
     [HttpPost]
     [Route("stop")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult StopServer()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to stop the server");
-
         ApplicationLifetime.StopApplication();
         return Content("Done");
     }
@@ -152,13 +146,9 @@ public class ServerController(
 
     [HttpPost]
     [Route("invalidate")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Invalidate([FromBody] InvalidateRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse(
-                "You do not have permission to invalidate the library cache"
-            );
-
         await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = request.QueryKey });
 
         return Content("Done");
@@ -166,11 +156,9 @@ public class ServerController(
 
     [HttpPost]
     [Route("restart")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult RestartServer()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to restart the server");
-
         return StatusCode(StatusCodes.Status501NotImplemented);
     }
 
@@ -182,22 +170,18 @@ public class ServerController(
 
     [HttpPost]
     [Route("shutdown")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult Shutdown()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to shutdown the server");
-
         ApplicationLifetime.StopApplication();
         return Content("Done");
     }
 
     [HttpPost]
     [Route("loglevel")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult LogLevel(LogEventLevel level)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to set the log level");
-
         Logger.SetLogLevel(level);
 
         return Content("Log level set to " + level);
@@ -205,11 +189,9 @@ public class ServerController(
 
     [HttpPost]
     [Route("addfiles")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> AddFiles([FromBody] AddFilesRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to add files");
-
         Library? library = await libraryRepository.GetLibraryByIdLiteAsync(request.LibraryId);
 
         if (library == null)
@@ -282,11 +264,9 @@ public class ServerController(
 
     [HttpPost]
     [Route("directorytree")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult DirectoryTree([FromBody] PathRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view folders");
-
         try
         {
             List<DirectoryTree> array = fileRepository.GetDirectoryTree(request.Folder);
@@ -306,11 +286,9 @@ public class ServerController(
 
     [HttpPost]
     [Route("filelist")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> FileList([FromBody] FileListRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view files");
-
         System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
         Logger.App(
             $"[FileList] folder={request.Folder} type={request.Type} driver={request.DriverId}",
@@ -400,11 +378,9 @@ public class ServerController(
     [HttpGet]
     [Route("info")]
     [ResponseCache(NoStore = true)]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> ServerInfo()
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view server information");
-
         bool setupComplete = await libraryRepository.HasCompletedSetupAsync();
 
         return Ok(
@@ -508,11 +484,9 @@ public class ServerController(
     [HttpGet]
     [Route("resources")]
     [ResponseCache(NoStore = true)]
+    [Authorize(Policy = "Moderator")]
     public IActionResult Resources()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view server resources");
-
         Resource? resource;
         try
         {
@@ -541,11 +515,9 @@ public class ServerController(
     [HttpGet]
     [Route("paths")]
     [ResponseCache(Duration = 3600)]
+    [Authorize(Policy = "Moderator")]
     public IActionResult ServerPaths()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view server paths");
-
         List<ServerPathsDto> list =
         [
             new() { Key = "Cache", Value = AppFiles.CachePath },
@@ -559,11 +531,9 @@ public class ServerController(
 
     [HttpGet]
     [Route("/files/${depth:int}/${path:required}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Files(string path, int depth)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view files");
-
         MediaScan mediaScan = new(storageDriver);
 
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
@@ -577,11 +547,9 @@ public class ServerController(
 
     [HttpPatch]
     [Route("workers/{worker}/{count:int:min(0)}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> UpdateWorkers(string worker, int count)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to update workers");
-
         if (await queueRunner.SetWorkerCount(worker, count, User.UserId()))
             return Ok($"{worker} worker count set to {count}");
 
@@ -590,11 +558,9 @@ public class ServerController(
 
     [HttpGet]
     [Route("storage")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult Storage()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view server paths");
-
         // StorageJob storageJob = new(StorageMonitor.Storage);
         // JobDispatcher.Dispatch(storageJob, "data", 1000);
 
@@ -603,11 +569,9 @@ public class ServerController(
 
     [HttpPost]
     [Route("wallpaper")]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> SetWallpaper([FromBody] WallpaperRequest request)
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("You do not have permission to set wallpaper");
-
         if (!wallpaperService.IsSupported)
             return BadRequestResponse("Wallpaper setting is not supported on this platform");
 
@@ -662,11 +626,9 @@ public class ServerController(
 
     [HttpPost]
     [Route("changeIp")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ChangeIp([FromBody] ChangeIpRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to change the IP address");
-
         if (string.IsNullOrEmpty(request.Ip))
             return BadRequestResponse("New IP address is required");
 

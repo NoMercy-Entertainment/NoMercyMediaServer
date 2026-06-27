@@ -46,11 +46,9 @@ public class ConfigurationController(
 ) : BaseController
 {
     [HttpGet]
+    [Authorize(Policy = "Moderator")]
     public IActionResult Index()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view configuration");
-
         return Ok(
             new ConfigDto
             {
@@ -113,20 +111,16 @@ public class ConfigurationController(
     }
 
     [HttpPost]
+    [Authorize(Policy = "Moderator")]
     public IActionResult Store()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to store configuration");
-
         return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpPatch]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Update([FromBody] ConfigDtoData request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to update configuration");
-
         Guid userId = User.UserId();
         List<(string key, object? oldVal, object? newVal)> changes = [];
 
@@ -337,11 +331,9 @@ public class ConfigurationController(
     [HttpGet]
     [Route("languages")]
     [ResponseCache(Duration = 3600)]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Languages()
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view languages");
-
         List<Language> languages = await languageRepository.GetLanguagesAsync();
 
         return Ok(
@@ -360,11 +352,9 @@ public class ConfigurationController(
     [HttpGet]
     [Route("countries")]
     [ResponseCache(Duration = 3600)]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Countries()
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view countries");
-
         List<Country> countries = await languageRepository.GetCountriesAsync();
 
         return Ok(

@@ -86,11 +86,9 @@ public class MoviesController(
     }
 
     [HttpDelete]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to delete movies");
-
         await movieRepository.DeleteAsync(id, ct);
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
@@ -205,11 +203,9 @@ public class MoviesController(
 
     [HttpPost]
     [Route("rescan")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to rescan movies");
-
         Movie? movie = await movieRepository.GetMovieForRescanAsync(id, ct);
 
         if (movie is null)
@@ -237,11 +233,9 @@ public class MoviesController(
 
     [HttpPost]
     [Route("refresh")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to refresh movies");
-
         Movie? movie = await movieRepository.GetMovieForRefreshAsync(id, ct);
 
         if (movie is null)
@@ -269,15 +263,13 @@ public class MoviesController(
 
     [HttpPost]
     [Route("add")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Add(
         int id,
         [FromQuery] Ulid? libraryId = null,
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to add movies");
-
         Library? library;
 
         if (libraryId is not null)

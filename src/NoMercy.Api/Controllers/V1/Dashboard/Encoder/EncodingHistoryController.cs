@@ -34,14 +34,12 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
     /// <param name="pageSize">Rows per page (1–500, default 50).</param>
     /// <param name="pageIndex">Zero-based page index (default 0).</param>
     [HttpGet]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Index(
         [FromQuery] int pageSize = 50,
         [FromQuery] int pageIndex = 0
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view encoding history");
-
         pageSize = Math.Clamp(pageSize, 1, 500);
         if (pageIndex < 0)
             pageIndex = 0;
@@ -88,11 +86,9 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
     /// </summary>
     [HttpGet("stats")]
     [ResponseCache(Duration = 30)]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Stats()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view encoding history");
-
         EncodingHistoryStats stats = await historyRepository.GetAggregateStatsAsync();
         return Ok(stats);
     }
@@ -102,11 +98,9 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
     /// the dashboard; the encoded output on disk is untouched.
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to delete encoding history");
-
         if (!Ulid.TryParse(id, out Ulid entryId))
             return BadRequestResponse("Invalid history id");
 
@@ -120,11 +114,9 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
     /// full history is a coarse change.
     /// </summary>
     [HttpPost("purge")]
+    [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Purge([FromBody] PurgeHistoryRequest request)
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("Only the server owner can bulk-purge encoding history");
-
         int removed = request.OlderThanDays.HasValue
             ? await historyRepository.DeleteOlderThanAsync(
                 DateTime.UtcNow.AddDays(-Math.Max(0, request.OlderThanDays.Value))

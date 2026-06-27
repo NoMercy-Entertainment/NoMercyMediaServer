@@ -55,11 +55,9 @@ public class SetupController(
     [HttpGet]
     [Route("server-info")]
     [ResponseCache(NoStore = true, Duration = 0)]
+    [Authorize(Policy = "MediaAccess")]
     public IActionResult ServerInfo()
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view server information");
-
         bool setupComplete =
             context.Libraries.Any() && context.Folders.Any() && context.EncoderProfiles.Any();
 
@@ -89,11 +87,9 @@ public class SetupController(
 
     [HttpGet]
     [Route("permissions")]
+    [Authorize(Policy = "MediaAccess")]
     public IActionResult Permissions()
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have access to this server");
-
         return Ok(
             new
             {
@@ -124,11 +120,9 @@ public class SetupController(
 
     [HttpGet]
     [Route("screensaver")]
+    [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Screensaver()
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view screensaver");
-
         ScreensaverDto result = await homeService.GetSetupScreensaverContent(User.UserId());
 
         return Ok(result);

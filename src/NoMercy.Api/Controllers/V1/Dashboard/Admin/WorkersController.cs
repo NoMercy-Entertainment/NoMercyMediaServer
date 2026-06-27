@@ -52,11 +52,9 @@ public class WorkersController(
 ) : BaseController
 {
     [HttpGet]
+    [Authorize(Policy = "Owner")]
     public IActionResult List()
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("Only the server owner can list workers");
-
         // Full health snapshot (includes cooled-down workers) so operators
         // can see which workers are benched and why. The dispatcher uses a
         // narrower GetActiveWorkers() that hides cooldowns, but the dashboard
@@ -243,11 +241,9 @@ public class WorkersController(
     /// latest progress snapshot. Empty when no remote tasks are running.
     /// </summary>
     [HttpGet("tasks/progress")]
+    [Authorize(Policy = "Owner")]
     public IActionResult ListActiveTaskProgress()
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("Only the server owner can view task progress");
-
         IReadOnlyList<TaskProgressSnapshot> snapshots = progressStore.GetAll();
 
         return Ok(
@@ -275,11 +271,9 @@ public class WorkersController(
     }
 
     [HttpDelete("{workerId}")]
+    [Authorize(Policy = "Owner")]
     public IActionResult Unregister(string workerId)
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("Only the server owner can unregister workers");
-
         bool removed = registry.Unregister(workerId);
         if (!removed)
             return NotFoundResponse($"Worker '{workerId}' is not registered");
