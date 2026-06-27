@@ -21,7 +21,7 @@ public class FanArtMusicClient : FanArtBaseClient
 
     public Task<FanArtArtistDetails?> Artist(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };
@@ -31,7 +31,7 @@ public class FanArtMusicClient : FanArtBaseClient
 
     public Task<FanArtAlbum?> Album(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };
@@ -41,7 +41,7 @@ public class FanArtMusicClient : FanArtBaseClient
 
     public Task<FanArtLabel?> Label(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };
@@ -51,7 +51,7 @@ public class FanArtMusicClient : FanArtBaseClient
 
     public Task<FanArtLatest[]?> Latest(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };

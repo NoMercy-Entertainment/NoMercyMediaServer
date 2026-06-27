@@ -21,7 +21,7 @@ public class FanArtMovieClient : FanArtBaseClient
 
     public Task<FanArtMovie?> Movie(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };
@@ -31,7 +31,7 @@ public class FanArtMovieClient : FanArtBaseClient
 
     public Task<FanArtLatest[]?> Latest(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             //
         };
