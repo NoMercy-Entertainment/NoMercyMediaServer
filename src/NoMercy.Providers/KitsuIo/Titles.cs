@@ -11,13 +11,19 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Providers.Other;
+namespace NoMercy.Providers.KitsuIo;
 
-public class KitsuIoLinks
+public class Titles
 {
-    [JsonProperty("first")]
-    public Uri First { get; set; } = default!;
+    [JsonProperty("en")]
+    public string? En { get; set; }
 
-    [JsonProperty("last")]
-    public Uri Last { get; set; } = default!;
+    [JsonProperty("en_jp")]
+    public string? EnJp { get; set; }
+
+    [JsonProperty("ja_jp")]
+    public string? JaJp { get; set; }
+
+    [JsonProperty("th_th")]
+    public string? ThTh { get; set; }
 }

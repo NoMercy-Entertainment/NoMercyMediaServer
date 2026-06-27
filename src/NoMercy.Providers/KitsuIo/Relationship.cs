@@ -11,16 +11,10 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Providers.Other;
+namespace NoMercy.Providers.KitsuIo;
 
-public class KitsuAnime
+public class Relationship
 {
-    [JsonProperty("data")]
-    public Data[] Data { get; set; } = [];
-
-    [JsonProperty("meta")]
-    public KitsuIoMeta Meta { get; set; } = new();
-
     [JsonProperty("links")]
-    public KitsuIoLinks Links { get; set; } = new();
+    public RelationshipLinks Links { get; set; } = new();
 }

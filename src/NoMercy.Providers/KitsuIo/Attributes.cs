@@ -11,7 +11,7 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Providers.Other;
+namespace NoMercy.Providers.KitsuIo;
 
 public class Attributes
 {

@@ -11,22 +11,13 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Providers.Other;
+namespace NoMercy.Providers.KitsuIo;
 
-public class CoverImage
+public class RelationshipLinks
 {
-    [JsonProperty("tiny")]
-    public Uri? Tiny { get; set; }
+    [JsonProperty("self")]
+    public Uri Self { get; set; } = default!;
 
-    [JsonProperty("large")]
-    public Uri? Large { get; set; }
-
-    [JsonProperty("small")]
-    public Uri? Small { get; set; }
-
-    [JsonProperty("original")]
-    public Uri? Original { get; set; }
-
-    [JsonProperty("meta")]
-    public CoverImageMeta? Meta { get; set; }
+    [JsonProperty("related")]
+    public Uri Related { get; set; } = default!;
 }

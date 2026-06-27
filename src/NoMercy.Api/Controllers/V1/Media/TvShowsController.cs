@@ -24,7 +24,7 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Other;
+using NoMercy.Providers.KitsuIo;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.TV;
 using NoMercyQueue.Core.Interfaces;
@@ -267,7 +267,7 @@ public class TvShowsController(
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
-            bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
+            bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
             // Require Japanese origin to avoid false positives on western co-productions
             if (
@@ -323,7 +323,7 @@ public class TvShowsController(
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
-            bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
+            bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
             if (
                 isAnime

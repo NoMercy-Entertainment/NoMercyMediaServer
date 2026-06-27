@@ -11,13 +11,10 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Providers.Other;
+namespace NoMercy.Providers.KitsuIo;
 
-public class Large
+public class CoverImageMeta
 {
-    [JsonProperty("width")]
-    public int? Width { get; set; }
-
-    [JsonProperty("height")]
-    public int? Height { get; set; }
+    [JsonProperty("dimensions")]
+    public Dimensions? Dimensions { get; set; }
 }

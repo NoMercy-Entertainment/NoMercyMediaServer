@@ -11,25 +11,13 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Providers.Other;
+namespace NoMercy.Providers.KitsuIo;
 
-public class PosterImage
+public class KitsuIoLinks
 {
-    [JsonProperty("tiny")]
-    public Uri? Tiny { get; set; }
+    [JsonProperty("first")]
+    public Uri First { get; set; } = default!;
 
-    [JsonProperty("large")]
-    public Uri? Large { get; set; }
-
-    [JsonProperty("small")]
-    public Uri? Small { get; set; }
-
-    [JsonProperty("medium")]
-    public Uri? Medium { get; set; }
-
-    [JsonProperty("original")]
-    public Uri? Original { get; set; }
-
-    [JsonProperty("meta")]
-    public CoverImageMeta? Meta { get; set; }
+    [JsonProperty("last")]
+    public Uri Last { get; set; } = default!;
 }

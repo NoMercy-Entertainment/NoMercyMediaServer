@@ -11,13 +11,10 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Providers.Other;
+namespace NoMercy.Providers.KitsuIo;
 
-public class RelationshipLinks
+public class Links
 {
     [JsonProperty("self")]
     public Uri Self { get; set; } = default!;
-
-    [JsonProperty("related")]
-    public Uri Related { get; set; } = default!;
 }

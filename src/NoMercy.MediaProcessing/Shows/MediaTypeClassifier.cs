@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.Other;
+using NoMercy.Providers.KitsuIo;
 using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.MediaProcessing.Shows;
@@ -18,7 +18,7 @@ public class MediaTypeClassifier : IMediaTypeClassifier
 {
     public async Task<string> ClassifyAsync(TmdbTvShowAppends show)
     {
-        bool isAnime = await KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear());
+        bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
         // Kitsu alone isn't enough — require Japanese origin country from TMDB to
         // avoid false positives on western shows that have Kitsu entries

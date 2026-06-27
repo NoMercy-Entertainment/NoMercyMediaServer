@@ -11,19 +11,16 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Providers.Other;
+namespace NoMercy.Providers.KitsuIo;
 
-public class Titles
+public class KitsuAnime
 {
-    [JsonProperty("en")]
-    public string? En { get; set; }
+    [JsonProperty("data")]
+    public Data[] Data { get; set; } = [];
 
-    [JsonProperty("en_jp")]
-    public string? EnJp { get; set; }
+    [JsonProperty("meta")]
+    public KitsuIoMeta Meta { get; set; } = new();
 
-    [JsonProperty("ja_jp")]
-    public string? JaJp { get; set; }
-
-    [JsonProperty("th_th")]
-    public string? ThTh { get; set; }
+    [JsonProperty("links")]
+    public KitsuIoLinks Links { get; set; } = new();
 }

@@ -14,9 +14,9 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using Serilog.Events;
 
-namespace NoMercy.Providers.Other;
+namespace NoMercy.Providers.KitsuIo;
 
-public static class KitsuIo
+public static class KitsuIoClient
 {
     public static async Task<bool> IsAnime(string title, int year)
     {

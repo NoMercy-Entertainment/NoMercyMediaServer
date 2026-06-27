@@ -11,10 +11,10 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Providers.Other;
+namespace NoMercy.Providers.KitsuIo;
 
-public class Relationship
+public class KitsuIoMeta
 {
-    [JsonProperty("links")]
-    public RelationshipLinks Links { get; set; } = new();
+    [JsonProperty("count")]
+    public int Count { get; set; }
 }
