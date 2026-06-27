@@ -14,9 +14,8 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
-using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Authorization;
+using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;

@@ -25,7 +25,6 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Startup;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
-using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.EventHandlers;

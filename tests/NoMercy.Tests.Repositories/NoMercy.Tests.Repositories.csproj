@@ -29,6 +29,6 @@
     <ProjectReference Include="..\..\src\NoMercy.Api\NoMercy.Api.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Data\NoMercy.Data.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Database\NoMercy.Database.csproj" />
-    <ProjectReference Include="..\..\src\NoMercy.Helpers\NoMercy.Helpers.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
   </ItemGroup>
 </Project>

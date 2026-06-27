@@ -10,19 +10,18 @@
 // -----------------------------------------------------------------------------
 
 using System.Net.WebSockets;
-using Microsoft.Extensions.DependencyInjection;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercy.Api.Services.Music;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 
 namespace NoMercy.Api.WebSockets;
 
@@ -46,7 +45,9 @@ public sealed class DeviceBusEndpoint(
             return;
         }
 
-        User? user = HttpContext.RequestServices.GetRequiredService<IUserCache>().GetUser(HttpContext.User.UserId());
+        User? user = HttpContext
+            .RequestServices.GetRequiredService<IUserCache>()
+            .GetUser(HttpContext.User.UserId());
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;

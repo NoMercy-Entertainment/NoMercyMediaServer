@@ -11,10 +11,9 @@
 
 using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.NmSystem.Information;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 

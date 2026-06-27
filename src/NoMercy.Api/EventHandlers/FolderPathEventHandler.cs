@@ -12,11 +12,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.Middleware;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 
 namespace NoMercy.Api.EventHandlers;
 

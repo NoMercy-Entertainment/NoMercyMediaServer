@@ -21,12 +21,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Inbox;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Inbox;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;

@@ -9,18 +9,16 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Domain;
@@ -30,6 +28,7 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -64,7 +63,11 @@ public class MoviesController(
 
         try
         {
-            TmdbMovieAppends? movieAppends = await movieMetadataProvider.GetMovieAsync(id, language, ct);
+            TmdbMovieAppends? movieAppends = await movieMetadataProvider.GetMovieAsync(
+                id,
+                language,
+                ct
+            );
 
             if (movieAppends is null)
                 return NotFoundResponse("Movie not found");
@@ -132,7 +135,12 @@ public class MoviesController(
 
         IEnumerable<VideoPlaylistResponseDto> playlist = (
             await movieRepository.GetMoviePlaylistAsync(userId, id, language, country, ct)
-        ).Select(movie => new VideoPlaylistResponseDto(movie, MediaTypes.MovieMediaType, id, country));
+        ).Select(movie => new VideoPlaylistResponseDto(
+            movie,
+            MediaTypes.MovieMediaType,
+            id,
+            country
+        ));
 
         if (!playlist.Any())
             return NotFoundResponse("Movie not found");

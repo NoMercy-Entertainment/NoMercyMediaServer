@@ -75,7 +75,6 @@
     <ProjectReference Include="..\NoMercy.Authorization\NoMercy.Authorization.csproj" />
     <ProjectReference Include="..\NoMercy.Data\NoMercy.Data.csproj" />
     <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj" />
-    <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
     <ProjectReference Include="..\NoMercy.Monitoring\NoMercy.Monitoring.csproj" />
     <ProjectReference Include="..\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj" />
     <ProjectReference Include="..\NoMercy.MediaSources\NoMercy.MediaSources.csproj" />
@@ -85,6 +84,7 @@
     <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
     <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj" />
     <ProjectReference Include="..\NoMercy.Queue.MediaServer\NoMercy.Queue.MediaServer.csproj" />
+    <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
   </ItemGroup>
 
   <ItemGroup>

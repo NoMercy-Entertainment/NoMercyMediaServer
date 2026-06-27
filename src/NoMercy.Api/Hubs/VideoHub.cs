@@ -17,19 +17,18 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Services.Video;
 using NoMercy.Api.WebSockets;
+using NoMercy.Authorization;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.Networking;
 using NoMercy.Networking.Cast;
 using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
@@ -691,7 +690,9 @@ public class VideoHub : ConnectionHub
     private string ResolveServerUrl()
     {
         string? external = _networkDiscovery?.ExternalAddress;
-        return string.IsNullOrEmpty(external) ? ExternalServicesConfig.Current.ApiBaseUrl : external;
+        return string.IsNullOrEmpty(external)
+            ? ExternalServicesConfig.Current.ApiBaseUrl
+            : external;
     }
 
     private string ResolveSenderLocale()

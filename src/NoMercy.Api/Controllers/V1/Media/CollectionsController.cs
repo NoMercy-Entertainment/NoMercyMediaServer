@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -17,21 +16,21 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 

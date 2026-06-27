@@ -10,14 +10,13 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.WebSockets;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 
 namespace NoMercy.Api.Controllers.Devices;
 
@@ -41,7 +40,9 @@ public sealed class ForgetDeviceController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Forget(string deviceId)
     {
-        User? user = HttpContext.RequestServices.GetRequiredService<IUserCache>().GetUser(HttpContext.User.UserId());
+        User? user = HttpContext
+            .RequestServices.GetRequiredService<IUserCache>()
+            .GetUser(HttpContext.User.UserId());
         if (user is null)
             return Unauthorized();
         if (!Ulid.TryParse(deviceId, out Ulid id))

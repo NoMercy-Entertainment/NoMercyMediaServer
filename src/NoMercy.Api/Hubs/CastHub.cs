@@ -10,19 +10,18 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.AspNetCore.Http;
-using NoMercy.NmSystem.Auth;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Authorization;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.Networking;
 using NoMercy.Networking.Cast;
 using NoMercy.Networking.Messaging;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.SystemCalls;
 using Sharpcaster.Models.ChromecastStatus;
 using Sharpcaster.Models.Media;
@@ -41,7 +40,8 @@ public class CastHub : ConnectionHub
         ConnectedClients connectedClients,
         IClientMessenger clientMessenger,
         IActivityLogger activityLogger,
-        IAuthTokenStore authTokenStore)
+        IAuthTokenStore authTokenStore
+    )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _authTokenStore = authTokenStore;

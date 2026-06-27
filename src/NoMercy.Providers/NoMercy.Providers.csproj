@@ -41,7 +41,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />
-    <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
     <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
     <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
     <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj" />

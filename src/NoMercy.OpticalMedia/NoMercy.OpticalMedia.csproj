@@ -15,7 +15,6 @@
     <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj" />
     <ProjectReference Include="..\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj" />
     <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj" />
-    <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
     <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
     <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj" />
     <ProjectReference Include="..\NoMercy.Storage\NoMercy.Storage.csproj" />
@@ -27,9 +26,6 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="TagLibSharp" />
-    <PackageReference
-      Include="System.Management"
-      Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))"
-    />
+    <PackageReference Include="System.Management" Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))" />
   </ItemGroup>
 </Project>

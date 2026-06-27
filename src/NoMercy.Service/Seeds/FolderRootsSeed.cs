@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Authorization;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;

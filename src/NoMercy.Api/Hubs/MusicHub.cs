@@ -15,18 +15,17 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
 using NoMercy.Api.WebSockets;
+using NoMercy.Authorization;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.Networking;
 using NoMercy.Networking.Cast;
 using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
@@ -1208,7 +1207,9 @@ public class MusicHub : ConnectionHub
         // the rare case Discovery isn't ready yet — receiver will get a working
         // URL on the next launch once Connectivity stabilizes.
         string? external = _networkDiscovery?.ExternalAddress;
-        return string.IsNullOrEmpty(external) ? ExternalServicesConfig.Current.ApiBaseUrl : external;
+        return string.IsNullOrEmpty(external)
+            ? ExternalServicesConfig.Current.ApiBaseUrl
+            : external;
     }
 
     private string ResolveSenderLocale()

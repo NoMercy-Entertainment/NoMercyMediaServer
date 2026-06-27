@@ -17,11 +17,10 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Services;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Music;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 

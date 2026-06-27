@@ -14,7 +14,6 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Authorization;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;

@@ -16,13 +16,12 @@ using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Music;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music;

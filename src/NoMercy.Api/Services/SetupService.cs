@@ -11,14 +11,14 @@
 
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Services;

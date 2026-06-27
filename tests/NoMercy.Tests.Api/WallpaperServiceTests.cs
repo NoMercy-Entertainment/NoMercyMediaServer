@@ -12,7 +12,6 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.DependencyInjection;
-using NoMercy.Helpers;
 using NoMercy.NmSystem.Wallpaper;
 using Xunit;
 

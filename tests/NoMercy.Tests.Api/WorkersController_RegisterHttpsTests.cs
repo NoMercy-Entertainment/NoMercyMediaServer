@@ -17,7 +17,6 @@ using Moq;
 using NoMercy.Api.Controllers.V1.Dashboard.Admin;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Authorization;
 using Xunit;
 

@@ -16,9 +16,8 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.Services;
-using NoMercy.Data.Repositories;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Authorization;
+using NoMercy.Data.Repositories;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 

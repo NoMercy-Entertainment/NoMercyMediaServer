@@ -17,12 +17,11 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;

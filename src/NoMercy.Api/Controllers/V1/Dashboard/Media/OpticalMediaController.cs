@@ -14,13 +14,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Events;
 using NoMercy.Events.FileWatcher;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
@@ -453,11 +452,7 @@ public class OpticalMediaController(
 
         await using (FileStream src = new(request.RipOutputPath, FileMode.Open, FileAccess.Read))
         await using (
-            Stream dst = await folderStorage.OpenWriteAsync(
-                folderRelative,
-                overwrite: true,
-                ct
-            )
+            Stream dst = await folderStorage.OpenWriteAsync(folderRelative, overwrite: true, ct)
         )
         {
             await src.CopyToAsync(dst, ct);

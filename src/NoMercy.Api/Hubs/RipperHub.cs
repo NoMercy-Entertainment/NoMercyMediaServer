@@ -12,11 +12,10 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Authorization;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
@@ -116,10 +115,7 @@ public class RipperHub : ConnectionHub
 
         try
         {
-            DiscInfo info = await source.ProbeAsync(
-                drive,
-                CancellationToken.None
-            );
+            DiscInfo info = await source.ProbeAsync(drive, CancellationToken.None);
             return new
             {
                 path = drive.Path.TrimEnd(Path.DirectorySeparatorChar),

@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using MimeMapping;
-using NoMercy.Helpers;
 using NoMercy.NmSystem.Images;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -89,11 +88,19 @@ public class ImageController(IStorage storage, IImageService imageService) : Bas
 
             string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
             if (storage.Exists(cachedImagePath))
-                return PhysicalFile(cachedImagePath, imageService.Parse(request.Type ?? "png").DefaultMimeType);
+                return PhysicalFile(
+                    cachedImagePath,
+                    imageService.Parse(request.Type ?? "png").DefaultMimeType
+                );
 
             try
             {
-                (byte[] magickImage, string mimeType) = imageService.ResizeMagickNet(filePath, request.Width, request.AspectRatio, request.Type);
+                (byte[] magickImage, string mimeType) = imageService.ResizeMagickNet(
+                    filePath,
+                    request.Width,
+                    request.AspectRatio,
+                    request.Type
+                );
                 await storage.WriteAsync(cachedImagePath, magickImage, CancellationToken.None);
 
                 return File(magickImage, mimeType);

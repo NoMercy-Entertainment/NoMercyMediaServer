@@ -17,14 +17,13 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Authorization;
 using NoMercy.Data.Logic;
 using NoMercy.Data.Repositories;
 using NoMercy.Data.Requests;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 

@@ -11,7 +11,6 @@
 
 using System.Security;
 using AniDB;
-using NoMercy.Helpers;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;

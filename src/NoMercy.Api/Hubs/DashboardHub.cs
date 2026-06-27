@@ -12,10 +12,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.WebSockets;
+using NoMercy.Authorization;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;

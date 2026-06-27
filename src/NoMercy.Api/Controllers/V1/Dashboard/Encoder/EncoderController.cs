@@ -15,12 +15,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Authorization;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 

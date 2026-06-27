@@ -33,7 +33,6 @@ using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Authorization;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Information;

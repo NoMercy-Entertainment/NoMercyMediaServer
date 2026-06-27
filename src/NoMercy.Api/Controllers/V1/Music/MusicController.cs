@@ -17,9 +17,8 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
-using NoMercy.Data.Repositories;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Authorization;
+using NoMercy.Data.Repositories;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music;

@@ -12,7 +12,6 @@
 using System.Reflection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Authorization;
 using NoMercy.Tests.Repositories.Infrastructure;
 

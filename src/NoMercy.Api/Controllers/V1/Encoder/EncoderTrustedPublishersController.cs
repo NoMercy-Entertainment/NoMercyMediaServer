@@ -15,12 +15,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
 

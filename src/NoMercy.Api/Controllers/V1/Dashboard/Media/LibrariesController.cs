@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -18,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.Middleware;
+using NoMercy.Authorization;
 using NoMercy.Data.DTOs;
 using NoMercy.Data.Repositories;
 using NoMercy.Data.Requests;
@@ -29,8 +29,6 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Library;
-using NoMercy.Helpers.Extensions;
-using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -41,6 +39,7 @@ using NoMercy.Storage;
 using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
+using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 

@@ -17,7 +17,6 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.Database.Models.Users;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Authorization;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
