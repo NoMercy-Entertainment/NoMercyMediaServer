@@ -8,12 +8,10 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
-
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 
@@ -43,9 +41,8 @@ namespace NoMercy.Api.Controllers.V1.Worker;
 public class WorkerExecutionController(
     LocalWorkerDispatcher localDispatcher,
     ITaskSerializer serializer,
-    ISourceFetcher sourceFetcher,
-    EncoderOptions encoderOptions,
-    ILogger<WorkerExecutionController> logger
+    IWorkerInputResolver inputResolver,
+    EncoderOptions encoderOptions
 ) : BaseController
 {
     [HttpPost("tasks")]
@@ -71,50 +68,30 @@ public class WorkerExecutionController(
             return BadRequest(new { error = "Empty request body" });
 
         byte[] signingKey = encoderOptions.GetDistributedEncodingSigningKey();
-        EncodeTask? task = serializer.Deserialize(payload, signingKey);
+        WorkerInputResolution resolution = await inputResolver.ResolveAsync(
+            payload,
+            signingKey,
+            ct
+        );
 
-        if (task is null)
-        {
-            logger.LogWarning(
-                "Worker rejected task payload — signature invalid, expired, or malformed"
-            );
+        if (resolution.Task is null)
             return Unauthorized(new { error = "Task payload failed HMAC verification or expired" });
-        }
 
-        logger.LogInformation("Worker executing task {TaskId} ({Type})", task.TaskId, task.Type);
+        EncodeTask task = resolution.Task;
 
-        // Pull the source locally if the worker can't see the original
-        // path on its own filesystem. Shared-storage installs return the
-        // path unchanged; WAN workers stream from the coordinator.
-        EncodeTask effectiveTask = task;
-        try
+        if (resolution.SourceFetchFailed)
         {
-            string localSourcePath = await sourceFetcher.EnsureLocalAsync(task, ct);
-            if (
-                !string.IsNullOrEmpty(localSourcePath)
-                && !string.Equals(localSourcePath, task.InputPath, StringComparison.Ordinal)
-            )
-            {
-                effectiveTask = RewriteInputPath(task, localSourcePath);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Source fetch failed for task {TaskId}", task.TaskId);
             DispatchResult failedFetch = new(
                 TaskId: task.TaskId,
                 Success: false,
                 OutputPath: task.OutputPath,
                 Duration: TimeSpan.Zero,
-                Error: $"Source fetch failed: {ex.Message}"
+                Error: $"Source fetch failed: {resolution.SourceFetchError}"
             );
             return Content(serializer.SerializeResult(failedFetch, signingKey), "application/json");
         }
 
+        EncodeTask effectiveTask = resolution.EffectiveTask ?? task;
         try
         {
             DispatchResult[] results = await localDispatcher.DispatchAsync([effectiveTask], ct);
@@ -128,7 +105,6 @@ public class WorkerExecutionController(
                         Duration: TimeSpan.Zero,
                         Error: "Local dispatcher returned no result"
                     );
-
             string signedResponse = serializer.SerializeResult(result, signingKey);
             return Content(signedResponse, "application/json");
         }
@@ -136,32 +112,7 @@ public class WorkerExecutionController(
         {
             // Always release the cached source — the encode is either done
             // or failed. Next retry will re-fetch if needed.
-            await sourceFetcher.ReleaseAsync(task);
+            await inputResolver.ReleaseAsync(task);
         }
-    }
-
-    /// <summary>
-    /// Rewrites the task's command arguments to swap the original input
-    /// path for the local cached path. Finds the original InputPath
-    /// verbatim in the argument list and replaces it — safe because
-    /// EncodeTask construction upstream embeds the same string in both
-    /// Command.Arguments and task.InputPath.
-    /// </summary>
-    private static EncodeTask RewriteInputPath(EncodeTask task, string localPath)
-    {
-        if (string.IsNullOrEmpty(task.InputPath))
-            return task;
-
-        string[] newArgs = task
-            .Command.Arguments.Select(arg =>
-                string.Equals(arg, task.InputPath, StringComparison.Ordinal) ? localPath : arg
-            )
-            .ToArray();
-
-        return task with
-        {
-            Command = task.Command with { Arguments = newArgs },
-            InputPath = localPath,
-        };
     }
 }

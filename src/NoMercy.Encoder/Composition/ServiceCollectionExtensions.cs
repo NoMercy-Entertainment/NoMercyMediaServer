@@ -400,6 +400,11 @@ public static class ServiceCollectionExtensions
         // install uses shared storage and no fetching is needed.
         services.AddTransient<ISourceFetcher, HttpSourceFetcher>();
 
+        // Resolves signed worker payloads into dispatch-ready tasks
+        // (HMAC verification + local source fetch), lifted out of the
+        // transport controller for testability.
+        services.AddTransient<IWorkerInputResolver, WorkerInputResolver>();
+
         // Per-task progress: workers push to the coordinator via
         // HttpTaskProgressSink (only actually pushes when CoordinatorUrl
         // is set). Coordinator-side InMemoryTaskProgressStore holds the
