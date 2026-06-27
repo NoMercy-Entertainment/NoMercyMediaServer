@@ -50,13 +50,9 @@ public class WorkerExecutionController(
     public async Task<IActionResult> ExecuteTask(CancellationToken ct)
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return StatusCode(
-                StatusCodes.Status503ServiceUnavailable,
-                new
-                {
-                    error = "Distributed encoding is not enabled on this worker. "
-                        + "Set DistributedEncodingSigningKey in EncoderOptions and restart.",
-                }
+            return ServiceUnavailableResponse(
+                "Distributed encoding is not enabled on this worker. "
+                    + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
             );
 
         // Read the raw body — the payload is a signed JSON envelope.
@@ -65,7 +61,7 @@ public class WorkerExecutionController(
             payload = await reader.ReadToEndAsync(ct);
 
         if (string.IsNullOrWhiteSpace(payload))
-            return BadRequest(new { error = "Empty request body" });
+            return BadRequestResponse("Empty request body");
 
         byte[] signingKey = encoderOptions.GetDistributedEncodingSigningKey();
         WorkerInputResolution resolution = await inputResolver.ResolveAsync(
@@ -75,7 +71,7 @@ public class WorkerExecutionController(
         );
 
         if (resolution.Task is null)
-            return Unauthorized(new { error = "Task payload failed HMAC verification or expired" });
+            return UnauthenticatedResponse("Task payload failed HMAC verification or expired");
 
         EncodeTask task = resolution.Task;
 

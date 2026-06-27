@@ -23,7 +23,7 @@ namespace NoMercy.Api.Controllers.Devices;
 [ApiController]
 [Authorize]
 [Route("api/devices/{deviceId}/forget")]
-public sealed class ForgetDeviceController : ControllerBase
+public sealed class ForgetDeviceController : BaseController
 {
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly DeviceBusRegistry _registry;
@@ -44,14 +44,14 @@ public sealed class ForgetDeviceController : ControllerBase
             .RequestServices.GetRequiredService<IUserCache>()
             .GetUser(HttpContext.User.UserId());
         if (user is null)
-            return Unauthorized();
+            return UnauthenticatedResponse("Authentication required.");
         if (!Ulid.TryParse(deviceId, out Ulid id))
-            return BadRequest();
+            return BadRequestResponse("Invalid device id.");
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
         Device? device = await ctx.Devices.FindAsync(id);
         if (device is null || device.OwnerUserId != user.Id)
-            return NotFound();
+            return NotFoundResponse("Device not found.");
 
         Guid ownerUserId = device.OwnerUserId!.Value;
 

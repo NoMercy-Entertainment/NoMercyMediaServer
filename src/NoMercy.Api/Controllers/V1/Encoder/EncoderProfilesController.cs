@@ -349,10 +349,7 @@ public class EncoderProfilesController(
             return Ok(parseResult.EarlyResponse);
 
         // PreviewEngine was removed in V2 migration — V2 preview not yet implemented.
-        return StatusCode(
-            501,
-            new { error = "Encode preview not yet implemented for V2 profiles." }
-        );
+        return NotImplementedResponse("Encode preview not yet implemented for V2 profiles.");
     }
 
     /// <summary>

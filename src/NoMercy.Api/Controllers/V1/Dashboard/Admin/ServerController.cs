@@ -126,7 +126,7 @@ public class ServerController(
     [Authorize(Policy = "MediaAccess")]
     public IActionResult StartServer()
     {
-        return StatusCode(StatusCodes.Status501NotImplemented);
+        return NotImplementedResponse("Starting the server via the API is not implemented.");
     }
 
     [HttpPost]
@@ -159,7 +159,7 @@ public class ServerController(
     [Authorize(Policy = "Moderator")]
     public IActionResult RestartServer()
     {
-        return StatusCode(StatusCodes.Status501NotImplemented);
+        return NotImplementedResponse("Restarting the server via the API is not implemented.");
     }
 
     [HttpGet("update/check")]
@@ -440,7 +440,7 @@ public class ServerController(
             string? token = authTokenStore.AccessToken;
             if (string.IsNullOrEmpty(token))
             {
-                return StatusCode(503, new { message = "Re-authentication in progress" });
+                return ServiceUnavailableResponse("Re-authentication in progress");
             }
 
             client.DefaultRequestHeaders.Authorization = new("Bearer", token);

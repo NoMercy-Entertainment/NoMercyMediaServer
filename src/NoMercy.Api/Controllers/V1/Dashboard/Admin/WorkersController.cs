@@ -95,13 +95,9 @@ public class WorkersController(
     public IActionResult Register([FromBody] RegisterWorkerRequest request)
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return StatusCode(
-                StatusCodes.Status503ServiceUnavailable,
-                new
-                {
-                    error = "Distributed encoding is not enabled on this server. "
-                        + "Set DistributedEncodingSigningKey in EncoderOptions and restart.",
-                }
+            return ServiceUnavailableResponse(
+                "Distributed encoding is not enabled on this server. "
+                    + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
             );
 
         if (!AuthPolicy.IsOwner(User))
@@ -159,7 +155,7 @@ public class WorkersController(
     public IActionResult Heartbeat(string workerId, [FromBody] HeartbeatRequest? request)
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return ServiceUnavailableResponse("Distributed encoding is not enabled on this server.");
 
         if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can send heartbeats");
@@ -214,7 +210,7 @@ public class WorkersController(
     )
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return ServiceUnavailableResponse("Distributed encoding is not enabled on this server.");
 
         progressStore.Update(
             taskId,
