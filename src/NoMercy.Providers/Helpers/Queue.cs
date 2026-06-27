@@ -47,7 +47,7 @@ public class Queue(QueueOptions options)
 
         _state = State.Running;
         Start?.Invoke(this, EventArgs.Empty);
-        RunTasks();
+        _ = Task.Run(RunTasksAsync, CancellationToken.None);
     }
 
     private void StopQueue()
@@ -68,7 +68,7 @@ public class Queue(QueueOptions options)
         End?.Invoke(this, EventArgs.Empty);
     }
 
-    private async void RunTasks()
+    private async Task RunTasksAsync()
     {
         while (ShouldRun)
             try
