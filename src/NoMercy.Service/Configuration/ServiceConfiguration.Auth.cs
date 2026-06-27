@@ -12,12 +12,14 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.Database.Models.Users;
 using NoMercy.Authorization;
+using NoMercy.Service.Authorization;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -56,6 +58,37 @@ public static partial class ServiceConfiguration
                     );
                 }
             );
+
+        // Permission policies backed by IMediaAuthorizationPolicy so endpoints can
+        // declare [Authorize(Policy = ...)] instead of imperative permission checks.
+        services
+            .AddAuthorizationBuilder()
+            .AddPolicy(
+                "Owner",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.AddRequirements(new OwnerRequirement());
+                }
+            )
+            .AddPolicy(
+                "Moderator",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.AddRequirements(new ModeratorRequirement());
+                }
+            )
+            .AddPolicy(
+                "MediaAccess",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.AddRequirements(new MediaAccessRequirement());
+                }
+            );
+
+        services.AddScoped<IAuthorizationHandler, MediaAuthorizationHandler>();
 
         // Eagerly load cached signing key so it's available before auth init completes
         OfflineJwksCache.LoadCachedPublicKey();
