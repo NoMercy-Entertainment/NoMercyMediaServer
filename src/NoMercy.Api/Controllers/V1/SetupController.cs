@@ -43,7 +43,7 @@ public class SetupController(
     public async Task<IActionResult> Libraries()
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view libraries");
 
         List<LibrariesResponseItemDto> response = (await setupService.GetSetupLibraries(userId))
@@ -58,7 +58,7 @@ public class SetupController(
     [ResponseCache(NoStore = true, Duration = 0)]
     public IActionResult ServerInfo()
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view server information");
 
         bool setupComplete =
@@ -92,15 +92,15 @@ public class SetupController(
     [Route("permissions")]
     public IActionResult Permissions()
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have access to this server");
 
         return Ok(
             new
             {
-                owner = User.IsOwner(),
-                manager = User.IsModerator(),
-                allowed = User.IsAllowed(),
+                owner = AuthPolicy.IsOwner(User),
+                manager = AuthPolicy.IsModerator(User),
+                allowed = AuthPolicy.IsAllowed(User),
             }
         );
     }
@@ -109,7 +109,7 @@ public class SetupController(
     public async Task<IActionResult> Index()
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view playlists");
 
         List<Playlist> playlistItems = await setupService.GetSetupPlaylistsAsync(userId);
@@ -127,7 +127,7 @@ public class SetupController(
     [Route("screensaver")]
     public async Task<IActionResult> Screensaver()
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view screensaver");
 
         ScreensaverDto result = await homeService.GetSetupScreensaverContent(User.UserId());

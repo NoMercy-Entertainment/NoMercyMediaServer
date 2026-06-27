@@ -68,7 +68,7 @@ public class EncoderContentAnalysisController(
     [HttpPost("crop/{videoFileId}")]
     public async Task<IActionResult> DetectCrop(string videoFileId, CancellationToken ct)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can probe crop detection");
 
         if (!Ulid.TryParse(videoFileId, out Ulid fileId))
@@ -120,7 +120,7 @@ public class EncoderContentAnalysisController(
     [HttpPost("intro/{seasonId:int}")]
     public async Task<IActionResult> DetectIntroForSeason(int seasonId, CancellationToken ct)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can probe intro detection");
 
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
@@ -324,7 +324,7 @@ public class EncoderContentAnalysisController(
         CancellationToken ct
     )
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can probe OCR");
 
         if (ocrEngine is null)
@@ -388,7 +388,7 @@ public class EncoderContentAnalysisController(
         CancellationToken ct
     )
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can probe Whisper transcription");
 
         if (whisperTranscriber is null)
@@ -471,7 +471,7 @@ public class EncoderContentAnalysisController(
         CancellationToken ct
     )
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can edit content segments");
 
         if (!Ulid.TryParse(segmentId, out Ulid id))

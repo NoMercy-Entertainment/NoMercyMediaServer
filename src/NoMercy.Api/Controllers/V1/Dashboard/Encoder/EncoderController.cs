@@ -35,7 +35,7 @@ public class EncoderController(IEncoderRepository encoderRepository, CodecRegist
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view encoder profiles");
 
         List<EncoderProfile> encoderProfiles = await encoderRepository.GetEncoderProfilesAsync();
@@ -72,7 +72,7 @@ public class EncoderController(IEncoderRepository encoderRepository, CodecRegist
     [Route("{id:ulid}")]
     public async Task<IActionResult> Destroy(Ulid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to remove encoder profiles");
 
         EncoderProfile? profile = await encoderRepository.GetEncoderProfileByIdAsync(id);
@@ -89,7 +89,7 @@ public class EncoderController(IEncoderRepository encoderRepository, CodecRegist
     [Route("containers")]
     public IActionResult Containers()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view encoder profiles");
 
         ContainerDto[] containers =
@@ -106,7 +106,7 @@ public class EncoderController(IEncoderRepository encoderRepository, CodecRegist
     [Route("framesizes")]
     public IActionResult FrameSizes()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view encoder profiles");
 
         VideoQualityDto[] frameSizes =

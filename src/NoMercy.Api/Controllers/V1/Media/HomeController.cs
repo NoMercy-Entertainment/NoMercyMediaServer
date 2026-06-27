@@ -64,7 +64,7 @@ public class HomeController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view home");
 
         Guid userId = User.UserId();
@@ -169,7 +169,7 @@ public class HomeController : BaseController
     [ResponseCache(NoStore = true)]
     public async Task<IActionResult> Home(CancellationToken ct = default)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view continue watching");
 
         ComponentResponse result = await _homeService.GetHomeData(
@@ -187,7 +187,7 @@ public class HomeController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view home card");
 
         ComponentResponse result = await _homeService.GetHomeCard(
@@ -203,7 +203,7 @@ public class HomeController : BaseController
     [HttpGet("home/tv")]
     public async Task<IActionResult> HomeTv(CancellationToken ct = default)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view home tv");
 
         ComponentResponse result = await _homeService.GetHomeTvContent(
@@ -221,7 +221,7 @@ public class HomeController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view continue watching");
 
         ComponentResponse result = await _homeService.GetHomeContinueContent(
@@ -242,7 +242,7 @@ public class HomeController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         string infoJsonPath = _transcodeStorage.CombinePath(trailerId, "info.json");
@@ -285,7 +285,7 @@ public class HomeController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         string language = Language();
@@ -450,7 +450,7 @@ public class HomeController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         if (!await _transcodeStorage.ExistsAsync(trailerId, ct))

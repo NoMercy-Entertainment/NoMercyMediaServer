@@ -59,7 +59,7 @@ public class ContentAnalysisController(
     [HttpGet("crop/{videoFileId}")]
     public async Task<IActionResult> DetectCrop(string videoFileId, CancellationToken ct)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can probe crop detection");
 
         if (!Ulid.TryParse(videoFileId, out Ulid fileId))
@@ -113,7 +113,7 @@ public class ContentAnalysisController(
         CancellationToken ct
     )
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can probe OCR");
 
         if (ocrEngine is null)
@@ -174,7 +174,7 @@ public class ContentAnalysisController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can probe transcription");
 
         if (whisperTranscriber is null)
@@ -238,7 +238,7 @@ public class ContentAnalysisController(
     [HttpPost("intro/{seasonId:int}")]
     public async Task<IActionResult> DetectIntroForSeason(int seasonId, CancellationToken ct)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can probe intro detection");
 
         List<Episode> encoded = await videoFileRepository.GetEncodedEpisodesForSeasonAsync(

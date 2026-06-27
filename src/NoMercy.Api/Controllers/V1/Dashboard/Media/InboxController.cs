@@ -42,7 +42,7 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? status)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view the inbox");
 
         List<InboxItem> items = await inboxRepository.GetAllAsync(
@@ -56,7 +56,7 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
     [HttpGet("{id:ulid}")]
     public async Task<IActionResult> Show(Ulid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view inbox items");
 
         InboxItem? item = await inboxRepository.GetByIdAsync(id, HttpContext.RequestAborted);
@@ -74,7 +74,7 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
         [FromQuery] string query
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to search for matches");
 
         if (string.IsNullOrWhiteSpace(type))
@@ -120,7 +120,7 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
     [HttpPost("{id:ulid}/assign")]
     public async Task<IActionResult> Assign(Ulid id, [FromBody] InboxAssignRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to assign inbox items");
 
         InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id, HttpContext.RequestAborted);
@@ -186,7 +186,7 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
     [HttpPost("{id:ulid}/dismiss")]
     public async Task<IActionResult> Dismiss(Ulid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to dismiss inbox items");
 
         InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id, HttpContext.RequestAborted);
@@ -211,7 +211,7 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
     [HttpDelete("{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete inbox items");
 
         InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id, HttpContext.RequestAborted);

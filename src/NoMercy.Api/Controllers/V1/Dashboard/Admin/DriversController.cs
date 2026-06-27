@@ -45,7 +45,7 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view drivers");
 
         List<Driver> drivers = await driverRepository.GetAllDriversAsync();
@@ -63,7 +63,7 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
     [Route("types")]
     public IActionResult GetTypes()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view driver types");
 
         return Ok(DriverTypeMetadata.All);
@@ -77,7 +77,7 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
     [Route("{id:ulid}")]
     public async Task<IActionResult> Show(Ulid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view drivers");
 
         Driver? driver = await driverRepository.GetDriverByIdAsync(id);
@@ -96,7 +96,7 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
     [Route("system-local")]
     public IActionResult GetSystemLocalId()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view driver info");
 
         return Ok(new { id = Driver.SystemLocalDriverId.ToString() });
@@ -110,7 +110,7 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateDriverRequestDto request)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to create drivers");
 
         string normalizedType = (request.Type ?? string.Empty).Trim().ToLowerInvariant();
@@ -188,7 +188,7 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
     [Route("{id:ulid}")]
     public async Task<IActionResult> Update(Ulid id, [FromBody] UpdateDriverRequestDto request)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to update drivers");
 
         Driver? driver = await driverRepository.GetDriverByIdAsync(id);
@@ -316,7 +316,7 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
         [FromBody] DriverCredentialsDto request
     )
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to update driver credentials");
 
         Driver? driver = await driverRepository.GetDriverByIdAsync(id);
@@ -367,7 +367,7 @@ public class DriversController(IDriverRepository driverRepository, IStorageFacto
     [Route("{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to delete drivers");
 
         if (id == Driver.SystemLocalDriverId)

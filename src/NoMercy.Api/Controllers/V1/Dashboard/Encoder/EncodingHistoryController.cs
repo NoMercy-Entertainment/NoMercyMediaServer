@@ -40,7 +40,7 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
         [FromQuery] int pageIndex = 0
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view encoding history");
 
         pageSize = Math.Clamp(pageSize, 1, 500);
@@ -91,7 +91,7 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
     [ResponseCache(Duration = 30)]
     public async Task<IActionResult> Stats()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view encoding history");
 
         EncodingHistoryStats stats = await historyRepository.GetAggregateStatsAsync();
@@ -105,7 +105,7 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete encoding history");
 
         if (!Ulid.TryParse(id, out Ulid entryId))
@@ -123,7 +123,7 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
     [HttpPost("purge")]
     public async Task<IActionResult> Purge([FromBody] PurgeHistoryRequest request)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can bulk-purge encoding history");
 
         int removed = request.OlderThanDays.HasValue

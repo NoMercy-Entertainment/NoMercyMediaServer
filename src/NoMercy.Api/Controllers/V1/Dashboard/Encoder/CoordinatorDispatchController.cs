@@ -54,7 +54,7 @@ public class CoordinatorDispatchController(
         CancellationToken ct
     )
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can dispatch encode jobs");
 
         if (request.Tasks is not { Count: > 0 })
@@ -102,7 +102,7 @@ public class CoordinatorDispatchController(
     [HttpGet("{taskId}/status")]
     public IActionResult GetTaskStatus(string taskId)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can view task status");
 
         TaskProgressSnapshot? snapshot = progressStore

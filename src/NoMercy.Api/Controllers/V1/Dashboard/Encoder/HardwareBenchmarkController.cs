@@ -29,7 +29,7 @@ public class HardwareBenchmarkController(IHardwareBenchmark benchmark) : BaseCon
     [HttpGet]
     public IActionResult GetCachedIndex()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view hardware benchmarks");
 
         SpeedIndex index = benchmark.GetCachedIndex();
@@ -66,7 +66,7 @@ public class HardwareBenchmarkController(IHardwareBenchmark benchmark) : BaseCon
     [HttpPost("run")]
     public async Task<IActionResult> RunBenchmark(CancellationToken ct)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse(
                 "Only the server owner can trigger a hardware benchmark run"
             );

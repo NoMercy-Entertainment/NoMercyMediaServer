@@ -40,7 +40,7 @@ public class RecommendationsController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view recommendations");
 
         Guid userId = User.UserId();
@@ -68,7 +68,7 @@ public class RecommendationsController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view recommendations");
 
         Guid userId = User.UserId();
@@ -96,7 +96,7 @@ public class RecommendationsController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view recommendations");
 
         Guid userId = User.UserId();
@@ -121,7 +121,7 @@ public class RecommendationsController(
     [HttpGet("diagnostics")]
     public async Task<IActionResult> GetDiagnostics(CancellationToken ct = default)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view diagnostics");
 
         RecommendationDiagnosticsDto diagnostics =
@@ -150,7 +150,7 @@ public class RecommendationsController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view recommendations");
 
         if (type is not ("movie" or "tv" or "anime"))

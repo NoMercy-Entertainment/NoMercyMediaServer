@@ -51,7 +51,7 @@ public class MoviesController(
     public async Task<IActionResult> Movie(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view movies");
 
         string language = Language();
@@ -85,7 +85,7 @@ public class MoviesController(
     [HttpDelete]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to delete movies");
 
         await movieRepository.DeleteAsync(id, ct);
@@ -98,7 +98,7 @@ public class MoviesController(
     public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view movies");
 
         string language = Language();
@@ -124,7 +124,7 @@ public class MoviesController(
     public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view movies");
 
         string language = Language();
@@ -149,7 +149,7 @@ public class MoviesController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to like movies");
 
         bool success = await movieRepository.LikeMovieAsync(id, userId, request.Value, ct);
@@ -176,7 +176,7 @@ public class MoviesController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to manage watch list");
 
         bool success = await movieRepository.AddToWatchListAsync(id, userId, request.Add, ct);
@@ -199,7 +199,7 @@ public class MoviesController(
     [Route("rescan")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to rescan movies");
 
         Movie? movie = await movieRepository.GetMovieForRescanAsync(id, ct);
@@ -231,7 +231,7 @@ public class MoviesController(
     [Route("refresh")]
     public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to refresh movies");
 
         Movie? movie = await movieRepository.GetMovieForRefreshAsync(id, ct);
@@ -267,7 +267,7 @@ public class MoviesController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to add movies");
 
         Library? library;

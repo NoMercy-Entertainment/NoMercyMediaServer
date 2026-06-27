@@ -41,7 +41,7 @@ public class UserDataController(
     public IActionResult Index()
     {
         // Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse("You do not have permission to view user data");
 
         return Ok(new PlaceholderResponse { Data = [] });
@@ -53,7 +53,7 @@ public class UserDataController(
     public async Task<IActionResult> ContinueWatching()
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse("You do not have permission to view continue watching");
 
         string language = Language();
@@ -80,7 +80,7 @@ public class UserDataController(
     public async Task<IActionResult> RemoveContinue(FavoriteRequest body)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse(
                 "You do not have permission to remove continue watching"
             );
@@ -112,7 +112,7 @@ public class UserDataController(
     public async Task<IActionResult> Watched([FromQuery] FavoriteRequest body)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse("You do not have permission to view watched");
 
         if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))
@@ -138,7 +138,7 @@ public class UserDataController(
     public async Task<IActionResult> Favorites([FromQuery] FavoriteRequest body)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthenticatedResponse("You do not have permission to view favorites");
 
         if (!TryParseFavoriteIds(body, out int? intId, out Ulid? ulidId))

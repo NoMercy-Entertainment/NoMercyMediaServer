@@ -42,7 +42,7 @@ public class LibrariesController(
     public async Task<IActionResult> Libraries(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view libraries");
 
         List<LibrariesResponseItemDto> response = (await libraryRepository.GetLibraries(userId, ct))
@@ -57,7 +57,7 @@ public class LibrariesController(
     public async Task<IActionResult> Mobile(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view libraries");
 
         string language = Language();
@@ -277,7 +277,7 @@ public class LibrariesController(
     public async Task<IActionResult> Tv(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view libraries");
 
         string language = Language();
@@ -467,7 +467,7 @@ public class LibrariesController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view library");
 
         string language = Language();
@@ -567,7 +567,7 @@ public class LibrariesController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view library");
 
         string language = Language();

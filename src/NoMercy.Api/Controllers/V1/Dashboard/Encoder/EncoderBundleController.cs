@@ -43,7 +43,7 @@ public class EncoderBundleController(
     [HttpGet("bundle-orphans")]
     public async Task<IActionResult> BundleOrphans(CancellationToken ct)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse(
                 "You do not have permission to view encoder bundle orphans"
             );

@@ -34,7 +34,7 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("ls")]
     public IActionResult List([FromBody] DirectoryListRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view folders");
 
         try
@@ -67,7 +67,7 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("home")]
     public IActionResult Home([FromBody] DirectoryListRequest? request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view folders");
 
         bool withEmpty = request?.WithEmpty ?? false;
@@ -99,7 +99,7 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("roots")]
     public IActionResult Roots([FromBody] DirectoryListRequest? request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view folders");
 
         bool withEmpty = request?.WithEmpty ?? false;
@@ -129,7 +129,7 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("mkdir")]
     public IActionResult Mkdir([FromBody] MkdirRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to create folders");
 
         try

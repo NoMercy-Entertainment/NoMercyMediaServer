@@ -62,7 +62,7 @@ public class ArtistsController : BaseController
     public async Task<IActionResult> Index(string letter, [FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view artists");
 
         // Lolomo with the "all" marker (`_`) returns one carousel per first-letter
@@ -135,7 +135,7 @@ public class ArtistsController : BaseController
     public async Task<IActionResult> Show(Guid id)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view artists");
 
         Artist? artist = await _musicRepository.GetArtistAsync(userId, id);
@@ -160,7 +160,7 @@ public class ArtistsController : BaseController
     public async Task<IActionResult> Like(Guid id, [FromBody] LikeRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to like artists");
 
         Artist? artist = await _musicRepository.GetArtistByIdAsync(id);
@@ -198,7 +198,7 @@ public class ArtistsController : BaseController
     [Route("{id:guid}/rescan")]
     public async Task<IActionResult> Like(Guid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to rescan artists");
 
         return Ok(
@@ -215,7 +215,7 @@ public class ArtistsController : BaseController
     [Route("{id:guid}")]
     public async Task<IActionResult> Destroy(Guid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete an artist");
 
         bool deleted = await _musicRepository.DeleteArtistAsync(id);
@@ -235,7 +235,7 @@ public class ArtistsController : BaseController
     [Route("{id:guid}")]
     public async Task<IActionResult> Edit(Guid id, [FromBody] UpdateMusicMetadataRequestDto request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to edit an artist");
 
         Artist? artist = await _musicRepository.GetArtistForEditAsync(id);
@@ -298,7 +298,7 @@ public class ArtistsController : BaseController
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Cover(Guid id, IFormFile image)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to upload artist covers");
 
         Artist? artist = await _musicRepository.GetArtistWithLibraryFolderAsync(id);

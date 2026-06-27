@@ -49,7 +49,7 @@ public class ConfigurationController(
     [HttpGet]
     public IActionResult Index()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view configuration");
 
         return Ok(
@@ -116,7 +116,7 @@ public class ConfigurationController(
     [HttpPost]
     public IActionResult Store()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to store configuration");
 
         return Ok(new PlaceholderResponse { Data = [] });
@@ -125,7 +125,7 @@ public class ConfigurationController(
     [HttpPatch]
     public async Task<IActionResult> Update([FromBody] ConfigDtoData request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to update configuration");
 
         Guid userId = User.UserId();
@@ -340,7 +340,7 @@ public class ConfigurationController(
     [ResponseCache(Duration = 3600)]
     public async Task<IActionResult> Languages()
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view languages");
 
         List<Language> languages = await languageRepository.GetLanguagesAsync();
@@ -363,7 +363,7 @@ public class ConfigurationController(
     [ResponseCache(Duration = 3600)]
     public async Task<IActionResult> Countries()
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view countries");
 
         List<Country> countries = await languageRepository.GetCountriesAsync();

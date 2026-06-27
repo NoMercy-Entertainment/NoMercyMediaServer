@@ -41,7 +41,7 @@ public class GenresController : BaseController
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view genres");
 
         Guid userId = User.UserId();
@@ -102,7 +102,7 @@ public class GenresController : BaseController
         [FromQuery] PageRequestDto request
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view genres");
 
         Guid userId = User.UserId();
@@ -163,7 +163,7 @@ public class GenresController : BaseController
     public async Task<IActionResult> Show(Guid id)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view albums");
 
         string language = Language();

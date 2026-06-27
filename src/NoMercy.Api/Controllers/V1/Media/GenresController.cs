@@ -44,7 +44,7 @@ public class GenresController : BaseController
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view genres");
 
         string language = Language();
@@ -81,7 +81,7 @@ public class GenresController : BaseController
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view genres");
 
         string language = Language();

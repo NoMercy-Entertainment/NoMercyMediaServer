@@ -33,7 +33,7 @@ public class ServerActivityController(IActivityRepository activityRepository) : 
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] ServerActivityRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view activity");
 
         int take = request.Take ?? 50;
@@ -79,7 +79,7 @@ public class ServerActivityController(IActivityRepository activityRepository) : 
     [HttpPost]
     public IActionResult Create()
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to create activity");
 
         return Ok(new PlaceholderResponse { Data = [] });
@@ -91,7 +91,7 @@ public class ServerActivityController(IActivityRepository activityRepository) : 
         [FromQuery] DateTime? before
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete activity");
 
         int deleted = await activityRepository.DeleteAsync(category, before);

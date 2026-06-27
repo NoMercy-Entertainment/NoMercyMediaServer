@@ -59,7 +59,7 @@ public class LiveTranscodeController(
     [HttpGet("sessions")]
     public IActionResult ListSessions()
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view live sessions");
 
         IReadOnlyList<LiveSessionSnapshot> snapshots = streamingService.GetActiveSessions();
@@ -90,7 +90,7 @@ public class LiveTranscodeController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to stream media");
 
         if (string.IsNullOrWhiteSpace(request.VideoFileId))
@@ -231,7 +231,7 @@ public class LiveTranscodeController(
     [HttpGet("sessions/{sessionId}/playlist.m3u8")]
     public IActionResult GetPlaylist(string sessionId)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to stream media");
 
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
@@ -257,7 +257,7 @@ public class LiveTranscodeController(
     [HttpGet("sessions/{sessionId}/segment/{index:int}.ts")]
     public IActionResult GetSegment(string sessionId, int index)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to stream media");
 
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
@@ -279,7 +279,7 @@ public class LiveTranscodeController(
     [HttpPost("sessions/{sessionId}/position")]
     public IActionResult ReportPosition(string sessionId, [FromBody] ReportPositionRequest request)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to stream media");
 
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
@@ -300,7 +300,7 @@ public class LiveTranscodeController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to stream media");
 
         if (string.IsNullOrWhiteSpace(request.QualityId))
@@ -349,7 +349,7 @@ public class LiveTranscodeController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to stream media");
 
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
@@ -378,7 +378,7 @@ public class LiveTranscodeController(
     [HttpDelete("sessions/{sessionId}")]
     public async Task<IActionResult> EndSession(string sessionId)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to stream media");
 
         await PushIfTransportAsync(

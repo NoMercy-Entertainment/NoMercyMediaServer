@@ -55,7 +55,7 @@ public class WorkersController(
     [HttpGet]
     public IActionResult List()
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can list workers");
 
         // Full health snapshot (includes cooled-down workers) so operators
@@ -107,7 +107,7 @@ public class WorkersController(
                 }
             );
 
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can register workers");
 
         if (string.IsNullOrWhiteSpace(request.WorkerId))
@@ -164,7 +164,7 @@ public class WorkersController(
         if (!encoderOptions.IsDistributedEncodingEnabled)
             return StatusCode(StatusCodes.Status503ServiceUnavailable);
 
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can send heartbeats");
 
         bool accepted = registry.Heartbeat(workerId);
@@ -246,7 +246,7 @@ public class WorkersController(
     [HttpGet("tasks/progress")]
     public IActionResult ListActiveTaskProgress()
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can view task progress");
 
         IReadOnlyList<TaskProgressSnapshot> snapshots = progressStore.GetAll();
@@ -278,7 +278,7 @@ public class WorkersController(
     [HttpDelete("{workerId}")]
     public IActionResult Unregister(string workerId)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can unregister workers");
 
         bool removed = registry.Unregister(workerId);

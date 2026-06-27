@@ -40,7 +40,7 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
         [FromQuery] ContentSegmentType? type = null
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to list content segments");
 
         pageSize = Math.Clamp(pageSize, 1, 500);
@@ -69,7 +69,7 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
     [ResponseCache(Duration = 60)]
     public async Task<IActionResult> GetByEpisode(int episodeId)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view content segments");
 
         List<ContentSegment> segments = await repository.GetForEpisodeAsync(episodeId);
@@ -80,7 +80,7 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
     [ResponseCache(Duration = 60)]
     public async Task<IActionResult> GetByMovie(int movieId)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view content segments");
 
         List<ContentSegment> segments = await repository.GetForMovieAsync(movieId);
@@ -90,7 +90,7 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateContentSegmentRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to create content segments");
 
         if (request.EndSeconds <= request.StartSeconds)
@@ -123,7 +123,7 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
         [FromBody] UpdateContentSegmentRequest request
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to update content segments");
 
         if (!Ulid.TryParse(id, out Ulid segmentId))
@@ -156,7 +156,7 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete content segments");
 
         if (!Ulid.TryParse(id, out Ulid segmentId))

@@ -50,7 +50,7 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to perform searches");
 
         string country = Country();
@@ -155,7 +155,7 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to perform searches");
 
         string normalizedQuery = request.Query.NormalizeSearch();
@@ -196,7 +196,7 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to perform searches");
 
         string country = Country();
@@ -213,7 +213,7 @@ public class SearchController : BaseController
         CancellationToken ct = default
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to perform searches");
 
         string country = Country();

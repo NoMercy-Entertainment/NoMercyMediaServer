@@ -39,7 +39,7 @@ public class EncoderOcrLanguagesController(ITesseractModelManager modelManager) 
     [HttpGet("languages")]
     public IActionResult GetLanguages()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view OCR language models");
 
         return Ok(
@@ -59,7 +59,7 @@ public class EncoderOcrLanguagesController(ITesseractModelManager modelManager) 
     [HttpPost("languages/{code}/download")]
     public async Task<IActionResult> DownloadLanguage(string code, CancellationToken ct)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse(
                 "Only the server owner can download Tesseract language models"
             );

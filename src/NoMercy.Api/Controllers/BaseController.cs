@@ -12,7 +12,9 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Authorization;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.NmSystem.Extensions;
 
@@ -20,6 +22,15 @@ namespace NoMercy.Api.Controllers;
 
 public class BaseController : Controller
 {
+    // Media authorization policy resolved from the request's DI container.
+    // Replaces the former static ClaimsPrincipal authorization extensions.
+    // Resolved from the request's DI container; falls back to a policy over the
+    // shared user cache when there is no HttpContext (e.g. unit-constructed
+    // controllers in tests). Both paths read the same UserCache singleton.
+    protected IMediaAuthorizationPolicy AuthPolicy =>
+        HttpContext?.RequestServices?.GetService<IMediaAuthorizationPolicy>()
+        ?? new MediaAuthorizationPolicy(UserCache.Current);
+
     private IActionResult ProblemWithTrace(string title, string detail, int statusCode, string type)
     {
         ProblemDetails problemDetails = new()

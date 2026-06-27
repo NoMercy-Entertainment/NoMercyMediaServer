@@ -51,7 +51,7 @@ public class TvShowsController(
     public async Task<IActionResult> Tv(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         string language = Language();
@@ -84,7 +84,7 @@ public class TvShowsController(
     [HttpDelete]
     public async Task<IActionResult> DeleteTv(int id, CancellationToken ct = default)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to delete shows");
 
         await tvShowRepository.DeleteAsync(id, ct);
@@ -97,7 +97,7 @@ public class TvShowsController(
     public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         bool available = await tvShowRepository.GetTvAvailableAsync(userId, id, ct);
@@ -120,7 +120,7 @@ public class TvShowsController(
     public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         string language = Language();
@@ -160,7 +160,7 @@ public class TvShowsController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to like tv shows");
 
         bool success = await tvShowRepository.LikeAsync(id, userId, request.Value, ct);
@@ -187,7 +187,7 @@ public class TvShowsController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to manage watch list");
 
         bool success = await tvShowRepository.AddToWatchListAsync(id, userId, request.Add, ct);
@@ -210,7 +210,7 @@ public class TvShowsController(
     [Route("rescan")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to rescan tv shows");
 
         Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id, ct);
@@ -246,7 +246,7 @@ public class TvShowsController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to refresh tv shows");
 
         Tv? tv = await tvShowRepository.GetTvWithLibraryAsync(id, ct);
@@ -314,7 +314,7 @@ public class TvShowsController(
         CancellationToken ct = default
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to add tv shows");
 
         Library? library;
@@ -377,7 +377,7 @@ public class TvShowsController(
     public async Task<IActionResult> Missing(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view library");
         string language = Language();
 

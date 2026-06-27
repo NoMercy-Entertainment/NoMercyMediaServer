@@ -40,7 +40,7 @@ public class PeopleController(
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view people");
 
         string language = Language();
@@ -59,7 +59,7 @@ public class PeopleController(
     [ResponseCache(Duration = 300)]
     public async Task<IActionResult> Show(int id)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view a person");
 
         string country = Country();

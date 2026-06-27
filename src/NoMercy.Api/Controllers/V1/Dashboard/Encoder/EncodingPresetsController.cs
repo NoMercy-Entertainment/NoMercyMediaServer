@@ -43,7 +43,7 @@ public class EncodingPresetsController(
         [FromQuery] string? tag = null
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view presets");
 
         pageSize = Math.Clamp(pageSize, 1, 500);
@@ -72,7 +72,7 @@ public class EncodingPresetsController(
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view presets");
 
         if (!Ulid.TryParse(id, out Ulid presetId))
@@ -89,7 +89,7 @@ public class EncodingPresetsController(
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreatePresetRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to create presets");
 
         if (string.IsNullOrWhiteSpace(request.Name))
@@ -120,7 +120,7 @@ public class EncodingPresetsController(
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(string id, [FromBody] UpdatePresetRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to update presets");
 
         if (!Ulid.TryParse(id, out Ulid presetId))
@@ -183,7 +183,7 @@ public class EncodingPresetsController(
     [HttpGet("tags")]
     public async Task<IActionResult> ListAllTags()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view presets");
 
         IReadOnlyList<string> tags = await presetRepository.GetAllTagsAsync();
@@ -194,7 +194,7 @@ public class EncodingPresetsController(
     [HttpPost("{id}/clone")]
     public async Task<IActionResult> Clone(string id, [FromBody] ClonePresetRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to clone presets");
 
         if (!Ulid.TryParse(id, out Ulid presetId))
@@ -245,7 +245,7 @@ public class EncodingPresetsController(
     [HttpGet("{id}/resolve")]
     public async Task<IActionResult> Resolve(string id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view presets");
 
         if (!Ulid.TryParse(id, out Ulid presetId))
@@ -276,7 +276,7 @@ public class EncodingPresetsController(
     [HttpGet("{id}/export")]
     public async Task<IActionResult> Export(string id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to export presets");
 
         if (!Ulid.TryParse(id, out Ulid presetId))
@@ -301,7 +301,7 @@ public class EncodingPresetsController(
     [HttpPost("import")]
     public async Task<IActionResult> Import([FromBody] PresetExport import)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to import presets");
 
         if (string.IsNullOrWhiteSpace(import.Name))
@@ -340,7 +340,7 @@ public class EncodingPresetsController(
         CancellationToken ct
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to import presets");
 
         if (string.IsNullOrWhiteSpace(request.Url))
@@ -416,7 +416,7 @@ public class EncodingPresetsController(
     [HttpPost("validate")]
     public IActionResult Validate([FromBody] ValidatePresetRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to validate presets");
 
         if (string.IsNullOrWhiteSpace(request.ProfileJson))
@@ -517,7 +517,7 @@ public class EncodingPresetsController(
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete presets");
 
         if (!Ulid.TryParse(id, out Ulid presetId))

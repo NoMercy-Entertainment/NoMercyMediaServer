@@ -42,7 +42,7 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse(
                 "You do not have permission to view trusted publisher keys"
             );
@@ -63,7 +63,7 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] AddTrustedPublisherRequest request)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to add trusted publisher keys");
 
         // --- Validate base64 decodes to exactly 32 bytes (Ed25519 key length) ---
@@ -145,7 +145,7 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
     [HttpDelete("{fingerprint}")]
     public async Task<IActionResult> Delete(string fingerprint)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse(
                 "You do not have permission to remove trusted publisher keys"
             );

@@ -41,7 +41,7 @@ public class DevicesController(
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view devices");
 
         List<Device> devices = await deviceRepository.GetDevices().ToListAsync();
@@ -81,7 +81,7 @@ public class DevicesController(
     [HttpPost]
     public IActionResult Create()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to create devices");
 
         return Ok(new PlaceholderResponse { Data = [] });
@@ -90,7 +90,7 @@ public class DevicesController(
     [HttpDelete]
     public async Task<IActionResult> Destroy()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to clear activity logs");
 
         await deviceRepository.DeleteAllActivityLogsAsync();
@@ -101,7 +101,7 @@ public class DevicesController(
     [HttpDelete("offline")]
     public async Task<IActionResult> DestroyOffline()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete devices");
 
         List<Device> all = await deviceRepository.GetAllAsync();
@@ -141,7 +141,7 @@ public class DevicesController(
     [HttpDelete("{id}")]
     public async Task<IActionResult> DestroyOne(string id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete devices");
 
         if (!Ulid.TryParse(id, out Ulid deviceId))

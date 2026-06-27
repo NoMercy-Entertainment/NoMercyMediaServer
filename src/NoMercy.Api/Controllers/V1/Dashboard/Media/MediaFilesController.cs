@@ -42,7 +42,7 @@ public class MediaFilesController(IFileRepository fileRepository) : BaseControll
         CancellationToken ct = default
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to search media files");
 
         // Hard ceiling on `limit` — clients shouldn't be able to pull the whole

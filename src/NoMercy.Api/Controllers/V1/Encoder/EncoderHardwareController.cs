@@ -57,7 +57,7 @@ public class EncoderHardwareController(
     [HttpPost("benchmark")]
     public IActionResult StartBenchmark([FromBody] StartBenchmarkRequest? request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse(
                 "You do not have permission to trigger a hardware benchmark"
             );
@@ -99,7 +99,7 @@ public class EncoderHardwareController(
     [HttpGet("benchmark/{jobId}")]
     public IActionResult GetBenchmark(string jobId)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse(
                 "You do not have permission to view hardware benchmark status"
             );
@@ -119,7 +119,7 @@ public class EncoderHardwareController(
     [HttpGet("benchmark")]
     public IActionResult ListBenchmarks()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse(
                 "You do not have permission to list hardware benchmark jobs"
             );
@@ -136,7 +136,7 @@ public class EncoderHardwareController(
     [HttpGet("utilization")]
     public IActionResult GetUtilization()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view hardware utilization");
 
         UtilizationSnapshot snap = new(
@@ -159,7 +159,7 @@ public class EncoderHardwareController(
     [HttpGet("/api/v{version:apiVersion}/encoder/capabilities")]
     public IActionResult GetCapabilities()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view encoder capabilities");
 
         CapabilityReport? report = probe.GetCachedReport();

@@ -44,7 +44,7 @@ public class MusicController : BaseController
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view music");
 
         // Run 3 groups of 3 queries in parallel using separate DbContext instances
@@ -170,7 +170,7 @@ public class MusicController : BaseController
     public async Task<IActionResult> Favorites()
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view music");
 
         TopMusicItemDto? topArtist = await _musicRepository.GetTopArtistAsync(userId);
@@ -214,7 +214,7 @@ public class MusicController : BaseController
     public async Task<IActionResult> FavoriteArtists([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view music");
 
         List<ArtistCardDto> favoriteArtists = await _musicRepository.GetFavoriteArtistCardsAsync(
@@ -242,7 +242,7 @@ public class MusicController : BaseController
     public async Task<IActionResult> FavoriteAlbums([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view music");
 
         List<AlbumCardDto> favoriteAlbums = await _musicRepository.GetFavoriteAlbumCardsAsync(
@@ -270,7 +270,7 @@ public class MusicController : BaseController
     public async Task<IActionResult> Playlists([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view music");
 
         List<PlaylistCardDto> playlists = await _musicRepository.GetPlaylistCardsAsync(userId);
@@ -306,7 +306,7 @@ public class MusicController : BaseController
     [Route("search")]
     public async Task<IActionResult> Search([FromQuery] SearchQueryRequest request)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to search music");
 
         Guid userId = User.UserId();
@@ -435,7 +435,7 @@ public class MusicController : BaseController
     [Route("search/{query}/{Type}")]
     public IActionResult TypeSearch(string query, string type)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to search music");
 
         return Ok(new PlaceholderResponse { Data = [] });

@@ -53,7 +53,7 @@ public class PlaylistsController : BaseController
     public async Task<IActionResult> Index()
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view playlists");
 
         List<PlaylistCardDto> playlistCards = await _musicRepository.GetPlaylistCardsAsync(userId);
@@ -70,7 +70,7 @@ public class PlaylistsController : BaseController
     public async Task<IActionResult> Show(Guid id)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view playlists");
 
         Playlist? playlist = await _musicRepository.GetPlaylistAsync(userId, id);
@@ -93,7 +93,7 @@ public class PlaylistsController : BaseController
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreatePlaylistRequestDto request)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to create a playlist");
 
         Guid userId = User.UserId();
@@ -155,7 +155,7 @@ public class PlaylistsController : BaseController
     [Route("{id:guid}")]
     public async Task<IActionResult> Edit(Guid id, [FromBody] CreatePlaylistRequestDto request)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to edit a playlist");
 
         Playlist? playlist = await _musicRepository.GetPlaylistForEditAsync(id);
@@ -219,7 +219,7 @@ public class PlaylistsController : BaseController
     [Route("{id:guid}")]
     public async Task<IActionResult> Destroy(Guid id)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to delete a playlist");
 
         int result = await _musicRepository.DeletePlaylistAsync(id, User.UserId());
@@ -242,7 +242,7 @@ public class PlaylistsController : BaseController
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Cover(Guid id, IFormFile image)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to upload playlist covers");
 
         Playlist? playlist = await _musicRepository.GetPlaylistForCoverAsync(id, User.UserId());
@@ -295,7 +295,7 @@ public class PlaylistsController : BaseController
         [FromBody] CreatePlaylistTrackRequestDto request
     )
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to edit a playlist");
 
         int result = await _musicRepository.AddPlaylistTrackAsync(id, request.Id);
@@ -319,7 +319,7 @@ public class PlaylistsController : BaseController
     [Route("{id:guid}/tracks/{trackId:guid}")]
     public async Task<IActionResult> AddTrack(Guid id, Guid trackId)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to edit a playlist");
 
         int result = await _musicRepository.RemovePlaylistTrackAsync(id, trackId, User.UserId());

@@ -35,7 +35,7 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [HttpGet]
     public IActionResult Index()
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to view plugins");
 
         IReadOnlyList<PluginInfo> plugins = pluginManager.GetInstalledPlugins();
@@ -51,7 +51,7 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [HttpGet("{id:guid}")]
     public IActionResult Show(Guid id)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to view plugins");
 
         PluginInfo? plugin = pluginManager.GetInstalledPlugins().FirstOrDefault(p => p.Id == id);
@@ -64,7 +64,7 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [HttpPost("{id:guid}/enable")]
     public async Task<IActionResult> Enable(Guid id)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to manage plugins");
 
         try
@@ -88,7 +88,7 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [HttpPost("{id:guid}/disable")]
     public async Task<IActionResult> Disable(Guid id)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to manage plugins");
 
         try
@@ -112,7 +112,7 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Uninstall(Guid id)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to manage plugins");
 
         try
@@ -137,7 +137,7 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [Route("credentials")]
     public IActionResult Credentials()
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to view credentials");
 
         UserPass? aniDb = CredentialManager.Credential("AniDb");
@@ -159,7 +159,7 @@ public class PluginController(IPluginManager pluginManager) : BaseController
     [Route("credentials")]
     public IActionResult Credentials([FromBody] AniDbCredentialsRequestDto requestDto)
     {
-        if (!User.IsOwner())
+        if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("You do not have permission to set credentials");
 
         UserPass? aniDb = CredentialManager.Credential(requestDto.Key);

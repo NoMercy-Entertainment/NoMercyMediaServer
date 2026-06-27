@@ -56,7 +56,7 @@ public class CollectionsController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
@@ -116,7 +116,7 @@ public class CollectionsController(
     public async Task<IActionResult> Collection(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
@@ -150,7 +150,7 @@ public class CollectionsController(
     public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view collections");
 
         Collection? collection = await collectionRepository.GetAvailableCollectionAsync(userId, id);
@@ -177,7 +177,7 @@ public class CollectionsController(
     public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
@@ -217,7 +217,7 @@ public class CollectionsController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to like collections");
 
         bool success = await collectionRepository.LikeAsync(id, userId, request.Value, ct);
@@ -244,7 +244,7 @@ public class CollectionsController(
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to manage watch list");
 
         bool success = await collectionRepository.AddToWatchListAsync(id, userId, request.Add);
@@ -266,7 +266,7 @@ public class CollectionsController(
     [HttpDelete]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to delete movies");
 
         await collectionRepository.DeleteAsync(id, ct);
@@ -278,7 +278,7 @@ public class CollectionsController(
     [Route("rescan")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to rescan movies");
 
         Collection? collection = await collectionRepository.GetCollectionForRescanAsync(id, ct);
@@ -316,7 +316,7 @@ public class CollectionsController(
     [Route("refresh")]
     public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to refresh movies");
 
         Collection? collection = await collectionRepository.GetCollectionWithMovieLibrariesAsync(
@@ -357,7 +357,7 @@ public class CollectionsController(
     [Route("add")]
     public async Task<IActionResult> Add(int id, CancellationToken ct = default)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to add tv shows");
 
         Library? library = await libraryRepository.GetLibraryByTypeAsync(

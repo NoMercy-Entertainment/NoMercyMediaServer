@@ -52,7 +52,7 @@ public class StorageBrowserController(
     [Route("probe")]
     public async Task<IActionResult> Probe([FromBody] StorageProbeRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to probe storage.");
 
         if (string.IsNullOrWhiteSpace(request.Type))
@@ -133,7 +133,7 @@ public class StorageBrowserController(
     [Route("list")]
     public async Task<IActionResult> List([FromBody] StorageListRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to browse storage.");
 
         if (string.IsNullOrWhiteSpace(request.DriverId))
@@ -214,7 +214,7 @@ public class StorageBrowserController(
     [Route("mkdir")]
     public async Task<IActionResult> Mkdir([FromBody] StorageMkdirRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to create directories.");
 
         if (string.IsNullOrWhiteSpace(request.DriverId))

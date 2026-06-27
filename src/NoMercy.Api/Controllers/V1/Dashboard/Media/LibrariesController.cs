@@ -66,7 +66,7 @@ public class LibrariesController(
     {
         Guid userId = User.UserId();
 
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view libraries");
 
         IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
@@ -84,7 +84,7 @@ public class LibrariesController(
     {
         Guid userId = User.UserId();
 
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to create a new library");
 
         try
@@ -151,7 +151,7 @@ public class LibrariesController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Update(Ulid id, [FromBody] LibraryUpdateRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to update the library");
 
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
@@ -312,7 +312,7 @@ public class LibrariesController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete the library");
 
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
@@ -385,7 +385,7 @@ public class LibrariesController(
     [Route("sort")]
     public async Task<IActionResult> Sort(Ulid id, [FromBody] LibrarySortRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to sort the libraries");
 
         List<Library> libraries = await libraryRepository.GetAllLibrariesAsync();
@@ -423,7 +423,7 @@ public class LibrariesController(
     [Route("rescan")]
     public async Task<IActionResult> Rescan()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to rescan all libraries");
 
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
@@ -457,7 +457,7 @@ public class LibrariesController(
     [Route("{id:ulid}/rescan")]
     public async Task<IActionResult> Rescan(Ulid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to refresh the library");
 
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
@@ -489,7 +489,7 @@ public class LibrariesController(
     [Route("refresh")]
     public async Task<IActionResult> RefreshAll()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to refresh all libraries");
 
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
@@ -518,7 +518,7 @@ public class LibrariesController(
     [Route("{id:ulid}/refresh")]
     public async Task<IActionResult> Refresh(Ulid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to refresh the library");
 
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
@@ -542,7 +542,7 @@ public class LibrariesController(
     [Route("scan-new")]
     public async Task<IActionResult> ScanNewAll()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to scan all libraries");
 
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
@@ -568,7 +568,7 @@ public class LibrariesController(
     [Route("{id:ulid}/scan-new")]
     public async Task<IActionResult> ScanNew(Ulid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to scan the library");
 
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
@@ -592,7 +592,7 @@ public class LibrariesController(
     [Route("{id:ulid}/folders")]
     public async Task<IActionResult> AddFolder(Ulid id, [FromBody] FolderRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse(
                 "You do not have permission to add a new folder to the library"
             );
@@ -676,7 +676,7 @@ public class LibrariesController(
         [FromBody] FolderRequest request
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to update the library folder");
 
         Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
@@ -733,7 +733,7 @@ public class LibrariesController(
     [Route("{id:ulid}/folders/{folderId:ulid}")]
     public async Task<IActionResult> DeleteFolder(Ulid id, Ulid folderId)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete the library folder");
 
         Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
@@ -791,7 +791,7 @@ public class LibrariesController(
         [FromBody] ProfilesRequest request
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse(
                 "You do not have permission to add a new encoder profile to the folder"
             );
@@ -836,7 +836,7 @@ public class LibrariesController(
         Ulid encoderProfileId
     )
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to delete the encoder profile");
 
         EncoderProfile? encoderProfile = await encoderRepository.GetEncoderProfileByIdAsync(
@@ -869,7 +869,7 @@ public class LibrariesController(
     [Route("move")]
     public async Task<IActionResult> Move([FromBody] MoveRequest request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to move the library");
 
         Folder? folder = await folderRepository.GetFolderByIdAsync(request.FolderId);

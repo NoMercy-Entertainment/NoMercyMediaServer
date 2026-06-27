@@ -40,7 +40,7 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view specials");
 
         string language = Language();
@@ -94,7 +94,7 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     public async Task<IActionResult> Show(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view a special");
 
         string country = Country();
@@ -135,7 +135,7 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     public async Task<IActionResult> Available(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view a special");
 
         Special? special = await specialRepository.GetSpecialAvailableAsync(userId, id);
@@ -165,7 +165,7 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     public async Task<IActionResult> Watch(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to view a special");
 
         string language = Language();
@@ -213,7 +213,7 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to like a special");
 
         Special? special = await specialRepository.LikeSpecialAsync(id, userId, request.Value, ct);
@@ -244,7 +244,7 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     )
     {
         Guid userId = User.UserId();
-        if (!User.IsAllowed())
+        if (!AuthPolicy.IsAllowed(User))
             return UnauthorizedResponse("You do not have permission to manage watch list");
 
         bool success = await specialRepository.AddToWatchListAsync(id, userId, request.Add, ct);

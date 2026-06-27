@@ -43,7 +43,7 @@ public class FolderDriverController(
     [Route("drivers")]
     public IActionResult GetDriverTypes()
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view driver types");
 
         return Ok(DriverTypeMetadata.All);
@@ -58,7 +58,7 @@ public class FolderDriverController(
     [Route("{id:ulid}/driver")]
     public async Task<IActionResult> GetDriver(Ulid id)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view folder driver");
 
         Folder? folder = await folderRepository.GetFolderByIdAsync(id);
@@ -89,7 +89,7 @@ public class FolderDriverController(
     [Route("{id:ulid}/driver")]
     public async Task<IActionResult> AssignDriver(Ulid id, [FromBody] FolderDriverAssignDto request)
     {
-        if (!User.IsModerator())
+        if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to update folder driver");
 
         if (string.IsNullOrWhiteSpace(request.DriverId))
