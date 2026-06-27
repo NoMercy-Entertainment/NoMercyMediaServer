@@ -33,7 +33,7 @@ using NoMercy.Storage;
 using NoMercyQueue;
 using Serilog.Events;
 
-namespace NoMercy.Data.Logic;
+namespace NoMercy.Data.Services;
 
 public partial class MusicLogic : IAsyncDisposable
 {

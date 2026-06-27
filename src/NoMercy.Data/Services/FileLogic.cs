@@ -26,7 +26,7 @@ using NoMercy.Storage;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
-namespace NoMercy.Data.Logic;
+namespace NoMercy.Data.Services;
 
 public partial class FileLogic(
     int id,

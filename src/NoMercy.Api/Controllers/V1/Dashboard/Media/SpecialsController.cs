@@ -18,7 +18,7 @@ using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Authorization;
-using NoMercy.Data.Logic;
+using NoMercy.Data.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Data.Requests;
 using NoMercy.Database;

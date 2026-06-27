@@ -11,7 +11,7 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Data.Logic;
+namespace NoMercy.Data.DTOs.Specials;
 
 public class SpecialDto
 {
