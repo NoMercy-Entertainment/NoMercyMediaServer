@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -9,102 +9,38 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Net;
 using System.Net.Http.Headers;
-using Microsoft.AspNetCore.WebUtilities;
-using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Helpers;
 using NoMercy.Setup.Server;
 using Serilog.Events;
 
 namespace NoMercy.Providers.Tadb.Client;
 
-public class TadbBaseClient : IDisposable
+public class TadbBaseClient : ExternalApiClient
 {
-    private readonly Uri _baseUrl = new("https://www.theaudiodb.com/api/v1/json/");
-
-    private readonly HttpClient _client;
-
-    protected TadbBaseClient()
-    {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.Tadb);
-        _client.BaseAddress = _baseUrl;
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer",
-            ApiKeyStore.Current.TadbKey
-        );
-    }
+    protected TadbBaseClient() { }
 
     protected TadbBaseClient(int id)
     {
-        _client = HttpClientProvider.CreateClient(HttpClientNames.Tadb);
-        _client.BaseAddress = _baseUrl;
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer",
-            ApiKeyStore.Current.TadbKey
-        );
         Id = id;
     }
 
-    private static Queue? _queue;
+    // Tadb identifies entities with integer ids, unlike the Guid-based default.
+    public new int Id { get; private set; }
 
-    private static Queue GetQueue()
-    {
-        return _queue ??= new(
-            new()
-            {
-                Concurrent = 2,
-                Interval = 1000,
-                Start = true,
-            }
+    protected override string HttpClientName => HttpClientNames.Tadb;
+    protected override Uri BaseUrl => new("https://www.theaudiodb.com/api/v1/json/");
+    protected override int ConcurrentRequests => 2;
+
+    // The API key travels as a Bearer header (not a URL path segment) so it
+    // never lands in cache filenames or access logs.
+    protected override void ConfigureClient(HttpClient client) =>
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            ApiKeyStore.Current.TadbKey
         );
-    }
 
-    private static int Max(int available, int wanted, int constraint)
-    {
-        return wanted < available
-            ? wanted > constraint
-                ? constraint
-                : wanted
-            : available;
-    }
-
-    public int Id { get; private set; }
-
-    protected async Task<T?> Get<T>(
-        string url,
-        Dictionary<string, string>? query = null,
-        bool? priority = false
-    )
-        where T : class
-    {
-        query ??= new();
-
-        string newUrl = QueryHelpers.AddQueryString(url, query!);
-
-        if (CacheController.Read(newUrl, out T? result))
-            return result;
-
-        Logger.AudioDb(_baseUrl + newUrl, LogEventLevel.Verbose);
-
-        try
-        {
-            string response = await GetQueue()
-                .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
-
-            await CacheController.Write(newUrl, response);
-            return response.FromJson<T>();
-        }
-        catch (HttpRequestException ex)
-            when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
-        {
-            return null;
-        }
-    }
-
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
-    }
+    protected override void LogRequest(string url) => Logger.AudioDb(url, LogEventLevel.Verbose);
 }

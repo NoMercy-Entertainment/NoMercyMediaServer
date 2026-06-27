@@ -17,7 +17,7 @@ public class TadbReleaseGroupClient : TadbBaseClient
 {
     public async Task<TadbAlbum?> ByMusicBrainzId(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new() { { "i", id.ToString() } };
+        Dictionary<string, string?> queryParams = new() { { "i", id.ToString() } };
 
         try
         {

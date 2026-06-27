@@ -17,7 +17,7 @@ public class TadbArtistClient : TadbBaseClient
 {
     public async Task<TadbArtist?> ByMusicBrainzId(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new() { { "i", id.ToString() } };
+        Dictionary<string, string?> queryParams = new() { { "i", id.ToString() } };
 
         try
         {
