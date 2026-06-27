@@ -22,7 +22,6 @@ namespace NoMercy.NmSystem.Extensions;
 
 public static class FileNameSanitizer
 {
-
     private static string _cleanFileName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))

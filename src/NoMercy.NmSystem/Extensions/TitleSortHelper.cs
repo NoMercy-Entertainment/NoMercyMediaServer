@@ -22,7 +22,6 @@ namespace NoMercy.NmSystem.Extensions;
 
 public static class TitleSortHelper
 {
-
     private static string _parseTitleSort(string? value = null, DateTime? date = null)
     {
         if (string.IsNullOrWhiteSpace(value))

@@ -22,7 +22,6 @@ namespace NoMercy.NmSystem.Extensions;
 
 public static class FuzzyMatcher
 {
-
     public static double MatchPercentage(string strA, string strB)
     {
         if (string.IsNullOrEmpty(strA) || string.IsNullOrEmpty(strB))

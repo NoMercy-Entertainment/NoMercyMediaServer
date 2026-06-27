@@ -18,9 +18,9 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 using Serilog.Events;
@@ -324,7 +324,11 @@ public partial class FileLogic(
 
             if (!folderStorage.Exists(path))
             {
-                string? match = FileNameSanitizer.FindMatchingDirectory(storageDriver, resolvedRoot, folder);
+                string? match = FileNameSanitizer.FindMatchingDirectory(
+                    storageDriver,
+                    resolvedRoot,
+                    folder
+                );
                 if (match != null)
                     path = match;
             }

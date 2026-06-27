@@ -424,7 +424,9 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         int? overrideTmdbId = rawFileName.TryGetTmdbHint();
 
-        string cleanedForYear = StringExtensions.RemoveBracketedString().Replace(rawFileName, string.Empty);
+        string cleanedForYear = StringExtensions
+            .RemoveBracketedString()
+            .Replace(rawFileName, string.Empty);
         string? extractedYear = cleanedForYear.TryGetYear();
 
         string title = entryPath.Replace("v2", "");
@@ -448,7 +450,9 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         if (parsed.Title == null)
             return true;
 
-        parsed.Title = StringExtensions.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
+        parsed.Title = StringExtensions
+            .RemoveParenthesizedString()
+            .Replace(parsed.Title, string.Empty);
 
         bool seasonExplicit = parsed.Season.HasValue;
 
@@ -562,7 +566,9 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         // Check for a [tmdb-1234] hint baked into the filename, e.g. "[tmdb-553604]Spring (2019).mkv"
         int? overrideTmdbId = rawFileName.TryGetTmdbHint();
 
-        string cleanedForYear = StringExtensions.RemoveBracketedString().Replace(rawFileName, string.Empty);
+        string cleanedForYear = StringExtensions
+            .RemoveBracketedString()
+            .Replace(rawFileName, string.Empty);
         string? extractedYear = cleanedForYear.TryGetYear();
 
         string title = file.FullName.Replace("v2", "");
@@ -575,7 +581,9 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         if (parsed.Title == null)
             return true;
 
-        parsed.Title = StringExtensions.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
+        parsed.Title = StringExtensions
+            .RemoveParenthesizedString()
+            .Replace(parsed.Title, string.Empty);
 
         // Track whether the season came from the filename or was defaulted to 1.
         // This controls whether the absolute-index fallback is allowed in ResolveShowEpisodeAsync.
@@ -634,7 +642,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         string title
     )
     {
-        string cleanedFileName = StringExtensions.RemoveBracketedString()
+        string cleanedFileName = StringExtensions
+            .RemoveBracketedString()
             .Replace(Path.GetFileNameWithoutExtension(fileNameWithExt), string.Empty)
             .Trim();
 
@@ -653,7 +662,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         }
 
         // "Episode XX" pattern (e.g. "Blade - Episode 02 - title.mp4")
-        string fileNameNoParens = StringExtensions.RemoveParenthesizedString()
+        string fileNameNoParens = StringExtensions
+            .RemoveParenthesizedString()
             .Replace(cleanedFileName, string.Empty)
             .Trim();
         Match episodeWordMatch = StringExtensions.MatchEpisodeWord().Match(fileNameNoParens);
