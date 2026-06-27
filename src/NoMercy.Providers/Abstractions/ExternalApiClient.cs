@@ -44,10 +44,12 @@ namespace NoMercy.Providers.Abstractions;
 /// </summary>
 public abstract class ExternalApiClient : IDisposable
 {
-    // One queue per concrete provider type, shared across all instances of that
-    // type, so the provider-wide concurrency/interval limit is preserved (the
-    // old per-provider 'static Queue' semantics).
-    private static readonly ConcurrentDictionary<Type, Queue> Queues = new();
+    // One queue per named HttpClient (i.e. per provider family), shared across
+    // every concrete client of that family, so the provider-wide concurrency/
+    // interval rate limit is preserved — matching the old per-provider
+    // 'static Queue' semantics. Keying by concrete type would instead give each
+    // sub-client its own queue and multiply the request rate.
+    private static readonly ConcurrentDictionary<string, Queue> Queues = new();
 
     protected Guid Id { get; private set; }
     protected readonly HttpClient Client;
@@ -108,7 +110,7 @@ public abstract class ExternalApiClient : IDisposable
 
     protected Queue RequestQueue =>
         Queues.GetOrAdd(
-            GetType(),
+            HttpClientName,
             _ =>
                 new(
                     new()
