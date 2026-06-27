@@ -21,7 +21,7 @@ namespace NoMercy.Providers.FanArt.Client;
 
 public class FanArtBaseClient : IDisposable
 {
-    private readonly Uri _baseUrl = new("http://webservice.fanart.tv/v3/");
+    private readonly Uri _baseUrl = new("https://webservice.fanart.tv/v3/");
 
     protected Guid Id { get; private set; }
     private readonly HttpClient _client;

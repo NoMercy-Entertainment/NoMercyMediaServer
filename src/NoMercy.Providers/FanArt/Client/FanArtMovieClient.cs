@@ -17,10 +17,7 @@ namespace NoMercy.Providers.FanArt.Client;
 
 public class FanArtMovieClient : FanArtBaseClient
 {
-    public FanArtMovieClient()
-    {
-        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
-    }
+    public FanArtMovieClient() { }
 
     public Task<FanArtMovie?> Movie(Guid id, bool priority = false)
     {

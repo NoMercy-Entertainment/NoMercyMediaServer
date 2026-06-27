@@ -37,16 +37,10 @@ public class FanArtImageClient : FanArtBaseClient
             "FanArtImageClient has not been initialized. Call FanArtImageClient.Initialize() at startup."
         );
 
-    public FanArtImageClient()
-    {
-        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
-    }
+    public FanArtImageClient() { }
 
     public FanArtImageClient(Guid id)
-        : base(id)
-    {
-        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
-    }
+        : base(id) { }
 
     public Task<CoverArtCovers?> Cover(bool priority = false)
     {

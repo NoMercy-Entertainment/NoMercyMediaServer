@@ -17,10 +17,7 @@ namespace NoMercy.Providers.FanArt.Client;
 
 public class FanArtMusicClient : FanArtBaseClient
 {
-    public FanArtMusicClient()
-    {
-        Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
-    }
+    public FanArtMusicClient() { }
 
     public Task<FanArtArtistDetails?> Artist(Guid id, bool priority = false)
     {
