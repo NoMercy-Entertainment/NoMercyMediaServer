@@ -16,7 +16,7 @@ namespace NoMercy.Providers.Abstractions;
 /// <summary>
 /// Provider-neutral timed lyric line. Mirrors the wire shape (and JSON property
 /// names) the player expects, so any lyric source maps onto a single DTO instead
-/// of leaking a provider-specific type (previously MusixMatchFormattedLyric)
+/// of leaking a provider-specific type (previously a provider-specific lyric type)
 /// across the codebase.
 /// </summary>
 public class LyricLine

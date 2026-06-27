@@ -36,6 +36,6 @@ public class FanArtMovieClient : FanArtBaseClient
             //
         };
 
-        return Get<FanArtLatest[]>("movies/latest" + id, queryParams, priority);
+        return Get<FanArtLatest[]>("movies/latest", queryParams, priority);
     }
 }
