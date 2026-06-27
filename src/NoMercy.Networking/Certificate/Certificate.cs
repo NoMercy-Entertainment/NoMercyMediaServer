@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -244,7 +245,7 @@ public static class Certificate
             }
 
             using HttpClient client = DnsHttpClient.WithDns();
-            client.BaseAddress = new(Config.ApiServerBaseUrl);
+            client.BaseAddress = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
             client.Timeout = TimeSpan.FromMinutes(10);
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Authorization = new("Bearer", token);

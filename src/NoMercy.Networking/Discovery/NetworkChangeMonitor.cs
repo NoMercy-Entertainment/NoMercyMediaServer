@@ -182,8 +182,8 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                 return;
             }
 
-            GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-            authClient.SetDefaultHeaders(Config.UserAgent, token);
+            GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
+            authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, token);
             string response = await authClient.SendAndReadAsync(
                 HttpMethod.Post,
                 "ping",

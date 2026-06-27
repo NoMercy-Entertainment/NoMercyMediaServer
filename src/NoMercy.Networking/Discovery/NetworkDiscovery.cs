@@ -455,8 +455,8 @@ public class NetworkDiscovery : INetworkDiscovery
         {
             try
             {
-                GenericHttpClient apiClient = new(Config.ApiBaseUrl);
-                apiClient.SetDefaultHeaders(Config.UserAgent, apiToken);
+                GenericHttpClient apiClient = new(ExternalServicesConfig.Current.ApiBaseUrl);
+                apiClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, apiToken);
                 using HttpResponseMessage response = await apiClient.SendAsync(
                     HttpMethod.Get,
                     "v1/ip"
@@ -538,8 +538,8 @@ public class NetworkDiscovery : INetworkDiscovery
                 }
             );
             httpClient.Timeout = TimeSpan.FromSeconds(5);
-            httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            string ip = await httpClient.GetStringAsync($"{Config.ApiBaseUrl}v1/ip");
+            httpClient.DefaultRequestHeaders.Add("User-Agent", ExternalServicesConfig.Current.UserAgent);
+            string ip = await httpClient.GetStringAsync($"{ExternalServicesConfig.Current.ApiBaseUrl}v1/ip");
             ip = ip.Replace("\"", "").Trim();
             if (!string.IsNullOrEmpty(ip) && ip.Contains(':'))
                 return ip;

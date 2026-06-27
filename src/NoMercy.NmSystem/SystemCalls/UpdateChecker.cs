@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.Storage.Drivers.Local;
@@ -31,7 +32,7 @@ public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
 
     static UpdateChecker()
     {
-        HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        HttpClient.DefaultRequestHeaders.Add("User-Agent", ExternalServicesConfig.Current.UserAgent);
     }
 
     public async Task<bool> IsUpdateAvailableAsync()

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.NmSystem.Configuration;
 using NoMercy.Providers.OpenSubtitles.Models;
 
 namespace NoMercy.Providers.OpenSubtitles.Client;
@@ -29,7 +30,7 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                 {
                     Value = new()
                     {
-                        // String = Config.UserAgent
+                        // String = ExternalServicesConfig.Current.UserAgent
                         String = "VLSub",
                     },
                 },

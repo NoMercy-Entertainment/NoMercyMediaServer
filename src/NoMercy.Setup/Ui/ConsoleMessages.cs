@@ -36,12 +36,12 @@ public abstract class ConsoleMessages
             ? $"{_("#00a10d")}".Pastel("#00a10d")
                 + "      "
                 + "  visit:".Pastel("#cccccc")
-                + $"  {Config.AppBaseUrl}   ".Pastel("#ffffff")
+                + $"  {ExternalServicesConfig.Current.AppBaseUrl}   ".Pastel("#ffffff")
                 + $"{_("#00a10d")}".Pastel("#00a10d")
             : $"{_("#00a10d")}".Pastel("#00a10d")
                 + "      "
                 + "  visit:".Pastel("#cccccc")
-                + $"  {Config.AppBaseUrl}       ".Pastel("#ffffff")
+                + $"  {ExternalServicesConfig.Current.AppBaseUrl}       ".Pastel("#ffffff")
                 + $"{_("#00a10d")}".Pastel("#00a10d");
 
         Logger.WriteBanner([

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Reflection;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using Xunit;
 
@@ -27,38 +28,38 @@ public class ConfigEnvironmentVariableTests
     {
         // TokenClientSecret property should no longer exist — the Keycloak client
         // is now a public client using PKCE, so no client secret is needed.
-        PropertyInfo? prop = typeof(Config).GetProperty("TokenClientSecret");
+        PropertyInfo? prop = typeof(ExternalServicesConfig).GetProperty("TokenClientSecret");
         Assert.Null(prop);
     }
 
     [Fact]
     public void AuthBaseUrl_HasDefault()
     {
-        Assert.False(string.IsNullOrEmpty(Config.AuthBaseUrl));
+        Assert.False(string.IsNullOrEmpty(ExternalServicesConfig.Current.AuthBaseUrl));
     }
 
     [Fact]
     public void ApiBaseUrl_HasDefault()
     {
-        Assert.False(string.IsNullOrEmpty(Config.ApiBaseUrl));
+        Assert.False(string.IsNullOrEmpty(ExternalServicesConfig.Current.ApiBaseUrl));
     }
 
     [Fact]
     public void AppBaseUrl_HasDefault()
     {
-        Assert.False(string.IsNullOrEmpty(Config.AppBaseUrl));
+        Assert.False(string.IsNullOrEmpty(ExternalServicesConfig.Current.AppBaseUrl));
     }
 
     [Fact]
     public void ApiServerBaseUrl_DerivedFromApiBaseUrl()
     {
-        Assert.Contains("v1/server/", Config.ApiServerBaseUrl);
+        Assert.Contains("v1/server/", ExternalServicesConfig.Current.ApiServerBaseUrl);
     }
 
     [Fact]
     public void AuthBaseDevUrl_Removed()
     {
-        PropertyInfo? devUrlProp = typeof(Config).GetProperty("AuthBaseDevUrl");
+        PropertyInfo? devUrlProp = typeof(ExternalServicesConfig).GetProperty("AuthBaseDevUrl");
         Assert.Null(devUrlProp);
     }
 }

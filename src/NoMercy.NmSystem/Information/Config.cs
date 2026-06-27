@@ -16,26 +16,6 @@ namespace NoMercy.NmSystem.Information;
 
 public static class Config
 {
-    private const string DefaultAuthBaseUrl = "https://auth.nomercy.tv/realms/NoMercyTV/";
-    private const string DefaultAppBaseUrl = "https://app.nomercy.tv/";
-    private const string DefaultApiBaseUrl = "https://api.nomercy.tv/";
-
-    public static string AuthBaseUrl { get; set; } =
-        Environment.GetEnvironmentVariable("NOMERCY_AUTH_URL") ?? DefaultAuthBaseUrl;
-
-    public static readonly string TokenClientId = "nomercy-server";
-
-    public static string AppBaseUrl { get; set; } =
-        Environment.GetEnvironmentVariable("NOMERCY_APP_URL") ?? DefaultAppBaseUrl;
-
-    public static string ApiBaseUrl { get; set; } =
-        Environment.GetEnvironmentVariable("NOMERCY_API_URL") ?? DefaultApiBaseUrl;
-
-    public static string ApiServerBaseUrl { get; set; } = $"{ApiBaseUrl}v1/server/";
-
-    public static string UserAgent =>
-        $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
-
     public static string ManagementPipeName
     {
         get => field ?? "NoMercyManagement";

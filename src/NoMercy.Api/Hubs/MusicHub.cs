@@ -25,6 +25,7 @@ using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
@@ -1206,7 +1207,7 @@ public class MusicHub : ConnectionHub
         // the rare case Discovery isn't ready yet — receiver will get a working
         // URL on the next launch once Connectivity stabilizes.
         string? external = _networkDiscovery?.ExternalAddress;
-        return string.IsNullOrEmpty(external) ? Config.ApiBaseUrl : external;
+        return string.IsNullOrEmpty(external) ? ExternalServicesConfig.Current.ApiBaseUrl : external;
     }
 
     private string ResolveSenderLocale()

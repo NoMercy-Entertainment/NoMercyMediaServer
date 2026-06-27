@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.AspNetCore.WebUtilities;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -27,7 +28,7 @@ public class BaseClient : IDisposable
     protected virtual int ConcurrentRequests => 1;
     protected virtual int Interval => 1000;
     protected virtual Dictionary<string, string?> QueryParams => new();
-    protected virtual string UserAgent => Config.UserAgent;
+    protected virtual string UserAgent => ExternalServicesConfig.Current.UserAgent;
 
     protected BaseClient()
     {

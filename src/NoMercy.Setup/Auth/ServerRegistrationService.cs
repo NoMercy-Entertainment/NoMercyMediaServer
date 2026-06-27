@@ -101,8 +101,8 @@ public class ServerRegistrationService : IServerRegistrationService
             try
             {
                 Dictionary<string, string> serverData = await GetServerInfo();
-                GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-                authClient.SetDefaultHeaders(Config.UserAgent, _authTokenStore.AccessToken);
+                GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
+                authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, _authTokenStore.AccessToken);
                 string response = await authClient.SendAndReadAsync(
                     HttpMethod.Post,
                     "register",
@@ -165,8 +165,8 @@ public class ServerRegistrationService : IServerRegistrationService
 
         Logger.Register("Assigning Server, this takes a moment...");
 
-        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-        authClient.SetDefaultHeaders(Config.UserAgent, _authTokenStore.AccessToken);
+        GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
+        authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, _authTokenStore.AccessToken);
 
         string response = await authClient.SendAndReadAsync(
             HttpMethod.Post,
@@ -204,8 +204,8 @@ public class ServerRegistrationService : IServerRegistrationService
         {
             Dictionary<string, string> serverData = await GetServerInfo();
 
-            GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-            authClient.SetDefaultHeaders(Config.UserAgent, _authTokenStore.AccessToken);
+            GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
+            authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, _authTokenStore.AccessToken);
 
             string response = await authClient.SendAndReadAsync(
                 HttpMethod.Post,

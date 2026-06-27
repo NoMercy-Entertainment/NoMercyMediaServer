@@ -18,6 +18,7 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
@@ -64,16 +65,16 @@ public static partial class ServiceConfiguration
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.Authority = Config.AuthBaseUrl;
-                options.RequireHttpsMetadata = Config.AuthBaseUrl.StartsWith(
+                options.Authority = ExternalServicesConfig.Current.AuthBaseUrl;
+                options.RequireHttpsMetadata = ExternalServicesConfig.Current.AuthBaseUrl.StartsWith(
                     "https://",
                     StringComparison.OrdinalIgnoreCase
                 );
-                options.Audience = Config.TokenClientId;
+                options.Audience = ExternalServicesConfig.Current.TokenClientId;
 
                 // Enable offline token validation via cached signing keys
                 options.TokenValidationParameters.ValidateIssuerSigningKey = true;
-                options.TokenValidationParameters.ValidIssuer = Config.AuthBaseUrl;
+                options.TokenValidationParameters.ValidIssuer = ExternalServicesConfig.Current.AuthBaseUrl;
 
                 // Explicitly enforce audience validation. options.Audience already sets
                 // ValidAudience; this line makes the intent unambiguous and guards against

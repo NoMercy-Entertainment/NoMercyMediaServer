@@ -28,6 +28,7 @@ using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
@@ -689,7 +690,7 @@ public class VideoHub : ConnectionHub
     private string ResolveServerUrl()
     {
         string? external = _networkDiscovery?.ExternalAddress;
-        return string.IsNullOrEmpty(external) ? Config.ApiBaseUrl : external;
+        return string.IsNullOrEmpty(external) ? ExternalServicesConfig.Current.ApiBaseUrl : external;
     }
 
     private string ResolveSenderLocale()

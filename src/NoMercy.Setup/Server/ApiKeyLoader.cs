@@ -14,6 +14,7 @@ using NoMercy.NmSystem.Auth;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -92,8 +93,8 @@ public class ApiKeyLoader : IApiKeyLoader
         {
             _logger.LogInformation("Requesting server info");
 
-            GenericHttpClient apiClient = new(Config.ApiBaseUrl);
-            apiClient.SetDefaultHeaders(Config.UserAgent, _authTokenStore.AccessToken);
+            GenericHttpClient apiClient = new(ExternalServicesConfig.Current.ApiBaseUrl);
+            apiClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, _authTokenStore.AccessToken);
 
             string content = await apiClient.SendAndReadAsync(HttpMethod.Get, "v1/info");
 

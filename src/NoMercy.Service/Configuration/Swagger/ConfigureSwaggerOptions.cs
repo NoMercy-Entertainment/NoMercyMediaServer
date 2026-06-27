@@ -12,6 +12,7 @@
 using Asp.Versioning.ApiExplorer;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -44,7 +45,7 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
                 {
                     Implicit = new()
                     {
-                        AuthorizationUrl = new($"{Config.AuthBaseUrl}protocol/openid-connect/auth"),
+                        AuthorizationUrl = new($"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth"),
                         Scopes = new Dictionary<string, string>
                         {
                             { "openid", "openid" },

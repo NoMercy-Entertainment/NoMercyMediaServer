@@ -194,8 +194,8 @@ public class SetupEndpoints
             phase = _state.CurrentPhase.ToString(),
             error = _state.ErrorMessage,
             server_port = RuntimeServerSettings.Current.InternalServerPort,
-            auth_base_url = Config.AuthBaseUrl.OrEmpty(),
-            client_id = Config.TokenClientId.OrEmpty(),
+            auth_base_url = ExternalServicesConfig.Current.AuthBaseUrl.OrEmpty(),
+            client_id = ExternalServicesConfig.Current.TokenClientId.OrEmpty(),
             code_challenge = codeChallenge,
             pkce_state = pkceState,
             is_first_boot = !Certificate.HasValidCertificate(),
@@ -370,17 +370,17 @@ public class SetupEndpoints
 
         try
         {
-            if (string.IsNullOrEmpty(Config.TokenClientId))
+            if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
                 throw new InvalidOperationException("Auth configuration not available");
 
             List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildAuthorizationCodeBody(
-                Config.TokenClientId,
+                ExternalServicesConfig.Current.TokenClientId,
                 body.Code,
                 redirectUri,
                 currentCodeVerifier
             );
 
-            string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             using SystemHttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -508,17 +508,17 @@ public class SetupEndpoints
 
         try
         {
-            if (string.IsNullOrEmpty(Config.TokenClientId))
+            if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
                 throw new InvalidOperationException("Auth configuration not available");
 
             List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildAuthorizationCodeBody(
-                Config.TokenClientId,
+                ExternalServicesConfig.Current.TokenClientId,
                 code,
                 redirectUri,
                 currentCodeVerifier
             );
 
-            string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             using SystemHttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -618,7 +618,7 @@ public class SetupEndpoints
 
         context.Response.ContentType = "application/json";
 
-        if (string.IsNullOrEmpty(Config.TokenClientId))
+        if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
         {
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             await WriteJsonResponse(
@@ -631,9 +631,9 @@ public class SetupEndpoints
         try
         {
             List<KeyValuePair<string, string>> deviceCodeBody =
-                AuthManager.BuildDeviceCodeRequestBody(Config.TokenClientId);
+                AuthManager.BuildDeviceCodeRequestBody(ExternalServicesConfig.Current.TokenClientId);
 
-            string deviceCodeEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/auth/device";
+            string deviceCodeEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth/device";
 
             using SystemHttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -846,7 +846,7 @@ public class SetupEndpoints
 
     private async Task PollDeviceGrant(DeviceAuthResponse deviceData)
     {
-        if (string.IsNullOrEmpty(Config.TokenClientId))
+        if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
             return;
 
         // Don't transition to Authenticating here — that hides the login UI.
@@ -857,11 +857,11 @@ public class SetupEndpoints
             return;
 
         List<KeyValuePair<string, string>> tokenBody = AuthManager.BuildDeviceTokenBody(
-            Config.TokenClientId,
+            ExternalServicesConfig.Current.TokenClientId,
             deviceData.DeviceCode
         );
 
-        string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+        string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
         DateTime expiresAt = DateTime.UtcNow.AddSeconds(deviceData.ExpiresIn);
 
         using SystemHttpClient httpClient = new();

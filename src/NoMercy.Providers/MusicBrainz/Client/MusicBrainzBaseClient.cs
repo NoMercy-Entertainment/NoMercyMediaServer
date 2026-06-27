@@ -11,6 +11,7 @@
 
 using System.Net;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -49,7 +50,7 @@ public class MusicBrainzBaseClient : IDisposable
     {
         if (client.DefaultRequestHeaders.UserAgent.Count > 0)
             return;
-        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", Config.UserAgent);
+        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", ExternalServicesConfig.Current.UserAgent);
     }
 
     private static Queue? _queue;

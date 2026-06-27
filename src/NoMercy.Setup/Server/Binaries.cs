@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FileSystem;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -68,7 +69,7 @@ public class Binaries
             // instead of pinning the setup phase forever.
             Timeout = TimeSpan.FromMinutes(10),
         };
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", ExternalServicesConfig.Current.UserAgent);
     }
 
     /// <summary>

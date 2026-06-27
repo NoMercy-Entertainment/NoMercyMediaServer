@@ -13,6 +13,7 @@ using System.IdentityModel.Tokens.Jwt;
 using NoMercy.NmSystem.Auth;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
@@ -104,13 +105,13 @@ public class CastSessionTokenService(AuthManager authManager, IAuthTokenStore au
 
     private async Task<AuthResponse?> RequestTokenExchangeAsync(Guid userId)
     {
-        string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+        string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
         string requestingClientId = ResolveRequestingClientId(authTokenStore.AccessToken!);
 
         if (!IssuerMatchesConfiguredRealm(authTokenStore.AccessToken!))
         {
             Logger.Auth(
-                $"CastSessionTokenService: subject token issuer doesn't match configured realm {Config.AuthBaseUrl} — re-auth required against the active realm before cast tokens can be minted",
+                $"CastSessionTokenService: subject token issuer doesn't match configured realm {ExternalServicesConfig.Current.AuthBaseUrl} — re-auth required against the active realm before cast tokens can be minted",
                 LogEventLevel.Warning
             );
             return null;
@@ -185,7 +186,7 @@ public class CastSessionTokenService(AuthManager authManager, IAuthTokenStore au
             JwtSecurityTokenHandler handler = new();
             JwtSecurityToken jwt = handler.ReadJwtToken(accessToken);
             string issuer = jwt.Issuer ?? string.Empty;
-            string configured = Config.AuthBaseUrl.TrimEnd('/');
+            string configured = ExternalServicesConfig.Current.AuthBaseUrl.TrimEnd('/');
             return issuer.TrimEnd('/').Equals(configured, StringComparison.OrdinalIgnoreCase);
         }
         catch

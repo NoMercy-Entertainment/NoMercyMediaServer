@@ -137,11 +137,11 @@ public class StartupOptions
         {
             Config.IsDev = true;
 
-            Config.AppBaseUrl = "https://app-dev.nomercy.tv/";
-            Config.ApiBaseUrl = "https://api-dev.nomercy.tv/";
-            Config.ApiServerBaseUrl = $"{Config.ApiBaseUrl}v1/server/";
+            ExternalServicesConfig.Current.AppBaseUrl = "https://app-dev.nomercy.tv/";
+            ExternalServicesConfig.Current.ApiBaseUrl = "https://api-dev.nomercy.tv/";
+            ExternalServicesConfig.Current.ApiServerBaseUrl = $"{ExternalServicesConfig.Current.ApiBaseUrl}v1/server/";
 
-            Config.AuthBaseUrl = "https://auth-dev.nomercy.tv/realms/NoMercyTV/";
+            ExternalServicesConfig.Current.AuthBaseUrl = "https://auth-dev.nomercy.tv/realms/NoMercyTV/";
 
             Logger.App("Running in development mode.");
         }

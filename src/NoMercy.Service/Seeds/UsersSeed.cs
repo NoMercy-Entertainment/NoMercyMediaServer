@@ -15,6 +15,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -52,8 +53,8 @@ public static class UsersSeed
                 return;
             }
 
-            GenericHttpClient authClient = new(Config.ApiServerBaseUrl, 10, 0);
-            authClient.SetDefaultHeaders(Config.UserAgent, token);
+            GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl, 10, 0);
+            authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, token);
             string response = await authClient.SendAndReadAsync(
                 HttpMethod.Get,
                 "server-users",

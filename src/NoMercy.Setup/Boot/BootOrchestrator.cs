@@ -14,6 +14,7 @@ using NoMercy.NmSystem.Auth;
 using NoMercy.Database;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
@@ -160,11 +161,11 @@ public class BootOrchestrator
 
         try
         {
-            string deviceEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/auth/device";
+            string deviceEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth/device";
 
             using HttpClient client = new();
             List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceCodeRequestBody(
-                Config.TokenClientId
+                ExternalServicesConfig.Current.TokenClientId
             );
 
             using HttpResponseMessage response = await client.PostAsync(
@@ -217,7 +218,7 @@ public class BootOrchestrator
     /// </summary>
     private async Task CheckKeycloakReachabilityAsync()
     {
-        string wellKnown = $"{Config.AuthBaseUrl}.well-known/openid-configuration";
+        string wellKnown = $"{ExternalServicesConfig.Current.AuthBaseUrl}.well-known/openid-configuration";
 
         try
         {
@@ -229,7 +230,7 @@ public class BootOrchestrator
 
             if (response.IsSuccessStatusCode)
             {
-                Logger.Setup($"Keycloak reachable at {Config.AuthBaseUrl}");
+                Logger.Setup($"Keycloak reachable at {ExternalServicesConfig.Current.AuthBaseUrl}");
             }
             else
             {
@@ -253,7 +254,7 @@ public class BootOrchestrator
             else
             {
                 Logger.Setup(
-                    $"BOOT FAILURE: Keycloak unreachable at {Config.AuthBaseUrl} and no cached JWKS key found. "
+                    $"BOOT FAILURE: Keycloak unreachable at {ExternalServicesConfig.Current.AuthBaseUrl} and no cached JWKS key found. "
                         + $"Cause: {ex.Message}. "
                         + $"The server cannot validate JWTs. Complete setup at /setup or ensure Keycloak is reachable before restarting.",
                     LogEventLevel.Error
@@ -321,7 +322,7 @@ public class BootOrchestrator
 
     private async Task PollDeviceGrant(string deviceCode, int interval, CancellationToken ct)
     {
-        string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+        string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
         while (!ct.IsCancellationRequested && !_setupState.IsAuthenticated)
         {
@@ -331,7 +332,7 @@ public class BootOrchestrator
             {
                 using HttpClient client = new();
                 List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceTokenBody(
-                    Config.TokenClientId,
+                    ExternalServicesConfig.Current.TokenClientId,
                     deviceCode
                 );
 

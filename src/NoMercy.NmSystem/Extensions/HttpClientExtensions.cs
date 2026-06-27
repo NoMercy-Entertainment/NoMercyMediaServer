@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using DnsClient;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.NmSystem.Extensions;
@@ -25,7 +26,7 @@ public static class HttpClientExtensions
 
     public static HttpClient WithNoMercyUserAgent(this HttpClient client)
     {
-        client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(ExternalServicesConfig.Current.UserAgent);
         return client;
     }
 

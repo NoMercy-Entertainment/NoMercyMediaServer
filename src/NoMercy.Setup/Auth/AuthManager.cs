@@ -20,6 +20,7 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
@@ -75,7 +76,7 @@ public class AuthManager
         if (!TokenIssuerMatchesConfiguredRealm(accessToken))
         {
             Logger.Auth(
-                $"Cached token issuer doesn't match configured realm {Config.AuthBaseUrl} — discarding and requiring re-auth",
+                $"Cached token issuer doesn't match configured realm {ExternalServicesConfig.Current.AuthBaseUrl} — discarding and requiring re-auth",
                 LogEventLevel.Warning
             );
             await UpsertSecureValue("auth_access_token", string.Empty);
@@ -288,17 +289,17 @@ public class AuthManager
 
         try
         {
-            if (string.IsNullOrEmpty(Config.TokenClientId))
+            if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
                 throw new InvalidOperationException("Auth configuration not available");
 
             List<KeyValuePair<string, string>> body = BuildAuthorizationCodeBody(
-                Config.TokenClientId,
+                ExternalServicesConfig.Current.TokenClientId,
                 code,
                 redirectUri,
                 _pendingCodeVerifier
             );
 
-            string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             using HttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -358,7 +359,7 @@ public class AuthManager
 
     private async Task<bool> TryRefreshToken(string refreshToken)
     {
-        if (string.IsNullOrEmpty(Config.TokenClientId))
+        if (string.IsNullOrEmpty(ExternalServicesConfig.Current.TokenClientId))
         {
             Logger.Auth("TokenClientId not configured — cannot refresh", LogEventLevel.Warning);
             return false;
@@ -366,10 +367,10 @@ public class AuthManager
 
         try
         {
-            string tokenEndpoint = $"{Config.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             List<KeyValuePair<string, string>> body = BuildRefreshTokenBody(
-                Config.TokenClientId,
+                ExternalServicesConfig.Current.TokenClientId,
                 refreshToken
             );
 
@@ -421,7 +422,7 @@ public class AuthManager
             JwtSecurityTokenHandler handler = new();
             JwtSecurityToken jwt = handler.ReadJwtToken(accessToken);
             string issuer = (jwt.Issuer ?? string.Empty).TrimEnd('/');
-            string configured = Config.AuthBaseUrl.TrimEnd('/');
+            string configured = ExternalServicesConfig.Current.AuthBaseUrl.TrimEnd('/');
             return issuer.Equals(configured, StringComparison.OrdinalIgnoreCase);
         }
         catch

@@ -34,6 +34,7 @@ using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
@@ -458,7 +459,7 @@ public class ServerController(
             await appContext.SaveChangesAsync();
 
             HttpClient client = httpClientFactory.CreateClient(HttpClientNames.General);
-            client.BaseAddress = new(Config.ApiServerBaseUrl);
+            client.BaseAddress = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
 
             string? token = authTokenStore.AccessToken;
             if (string.IsNullOrEmpty(token))
