@@ -85,21 +85,7 @@ public partial class VideoHub : ConnectionHub
         _networkDiscovery = networkDiscovery;
     }
 
-
-
     private static readonly ConcurrentDictionary<Guid, Device> CurrentDevice = new();
-
-
-
-
-
-
-
-
-
-
-
-
 
     // ── Cast-receiver helpers (Phase 0) ──────────────────────────────────────
 

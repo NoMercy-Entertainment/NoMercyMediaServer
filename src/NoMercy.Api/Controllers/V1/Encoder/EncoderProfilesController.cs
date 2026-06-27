@@ -62,7 +62,6 @@ public class EncoderProfilesController(
         [FromQuery] string? tag = null
     )
     {
-
         pageSize = Math.Clamp(pageSize, 1, 500);
         if (pageIndex < 0)
             pageIndex = 0;
@@ -91,7 +90,6 @@ public class EncoderProfilesController(
     [HttpGet("{id:ulid}")]
     public async Task<IActionResult> Get(Ulid id, CancellationToken ct)
     {
-
         EncodingPreset? preset = await mediaContext
             .EncodingPresets.AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == id, ct);
@@ -120,7 +118,6 @@ public class EncoderProfilesController(
     [HttpGet("{id:ulid}/resolved")]
     public IActionResult GetResolved(Ulid id)
     {
-
         DbPresetLookup lookup = new(mediaContext);
         V2EncodingProfile resolved;
         try
@@ -146,7 +143,6 @@ public class EncoderProfilesController(
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateEncoderProfileRequest request)
     {
-
         EncoderProfileService.CreateResult result = await encoderProfileService.CreateAsync(
             request.Name,
             request.ProfileJson,
@@ -173,7 +169,6 @@ public class EncoderProfilesController(
     [HttpGet("tags")]
     public async Task<IActionResult> Tags()
     {
-
         IReadOnlyList<string> tags = await presetRepository.GetAllTagsAsync();
         return Ok(new { data = tags });
     }
@@ -192,7 +187,6 @@ public class EncoderProfilesController(
         [FromServices] INamePresetResolver presetResolver
     )
     {
-
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid profile id");
 
@@ -231,7 +225,6 @@ public class EncoderProfilesController(
     [HttpDelete("{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id, CancellationToken ct)
     {
-
         EncodingPreset? row = await mediaContext.EncodingPresets.FirstOrDefaultAsync(
             p => p.Id == id,
             ct
@@ -269,7 +262,6 @@ public class EncoderProfilesController(
     [HttpPost("validate")]
     public IActionResult Validate([FromBody] ValidateEncoderProfileRequest request)
     {
-
         if (string.IsNullOrWhiteSpace(request.ProfileJson))
         {
             ValidationEnvelope empty = ValidationEnvelope.FromRules([
@@ -337,7 +329,6 @@ public class EncoderProfilesController(
         CancellationToken ct
     )
     {
-
         EncoderProfileService.PreviewParseResult parseResult =
             encoderProfileService.ParseProfileForPreview(
                 id,
@@ -365,7 +356,6 @@ public class EncoderProfilesController(
         CancellationToken ct
     )
     {
-
         EncodingPreset? row = await mediaContext.EncodingPresets.FirstOrDefaultAsync(
             p => p.Id == id,
             ct
@@ -410,7 +400,6 @@ public class EncoderProfilesController(
         CancellationToken ct
     )
     {
-
         EncodingPreset? parent = await mediaContext
             .EncodingPresets.AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == parentId, ct);
@@ -453,7 +442,6 @@ public class EncoderProfilesController(
         CancellationToken ct = default
     )
     {
-
         EncoderProfileService.ImportResult result = await encoderProfileService.ImportAsync(
             request.ProfileJson,
             request.Url,
@@ -487,7 +475,6 @@ public class EncoderProfilesController(
     [HttpGet("{id}/export")]
     public async Task<IActionResult> Export(string id)
     {
-
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid profile id");
 

@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using NoMercy.Networking.Cast;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -19,6 +18,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using NoMercy.Networking.Cast;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
@@ -106,10 +106,12 @@ public sealed class ServerBootstrapper
         // filesystem check that doesn't require DI. BootOrchestrator (resolved below)
         // will own the real needsSetupMode determination via token validation.
         bool hasCert;
-        await using (ServiceProvider certPresenceProvider = new ServiceCollection()
-            .AddHttpClient()
-            .AddSingleton<ICertificateService, CertificateService>()
-            .BuildServiceProvider())
+        await using (
+            ServiceProvider certPresenceProvider = new ServiceCollection()
+                .AddHttpClient()
+                .AddSingleton<ICertificateService, CertificateService>()
+                .BuildServiceProvider()
+        )
         {
             hasCert = certPresenceProvider
                 .GetRequiredService<ICertificateService>()

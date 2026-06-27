@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
-using NoMercy.NmSystem.Auth;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -20,6 +19,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;

@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
-using NoMercy.NmSystem.Auth;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Timers;
@@ -18,6 +17,7 @@ using Newtonsoft.Json;
 using NoMercy.Events;
 using NoMercy.Events.Cast;
 using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Sharpcaster;
@@ -37,15 +37,14 @@ public class ChromeCastService : IChromeCastService
         _networkDiscovery = networkDiscovery;
     }
 
-
     private readonly ChromecastLocator Locator = new();
-    private IEnumerable<ChromecastReceiver> _chromecastReceivers =
-        new List<ChromecastReceiver>();
+    private IEnumerable<ChromecastReceiver> _chromecastReceivers = new List<ChromecastReceiver>();
 
     // Synthesized entries survive mDNS rescans (which replace _chromecastReceivers
     // wholesale). Without this, two TVs alternate wiping each other every ping.
-    private readonly ConcurrentDictionary<string, ChromecastReceiver> _synthesizedReceivers =
-        new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ChromecastReceiver> _synthesizedReceivers = new(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     private readonly SemaphoreSlim _rediscoveryGate = new(1, 1);
     private DateTime _lastRediscoveryUtc = DateTime.MinValue;
@@ -271,11 +270,10 @@ public class ChromeCastService : IChromeCastService
     // of Sharpcaster's TimerElapsed and swallows synchronously — no
     // async-void chain ever starts. Real fix is to vendor-fork Sharpcaster
     // and try/catch its TimerElapsed body.
-    private readonly FieldInfo? _timerOnIntervalElapsedField =
-        typeof(System.Timers.Timer).GetField(
-            "_onIntervalElapsed",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
+    private readonly FieldInfo? _timerOnIntervalElapsedField = typeof(System.Timers.Timer).GetField(
+        "_onIntervalElapsed",
+        BindingFlags.NonPublic | BindingFlags.Instance
+    );
 
     private void DisableSharpcasterHeartbeat(ChromecastClient client)
     {
@@ -659,11 +657,7 @@ public class ChromeCastService : IChromeCastService
         }
     }
 
-    private string BuildLaunchJson(
-        int requestId,
-        object? customData,
-        bool useAndroidReceiver
-    )
+    private string BuildLaunchJson(int requestId, object? customData, bool useAndroidReceiver)
     {
         // Newtonsoft.Json honours [JsonProperty("snake_case")] on
         // LaunchCustomData so the receiver sees access_token / refresh_token /

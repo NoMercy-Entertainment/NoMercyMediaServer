@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using I18N.DotNet;
-using NoMercy.Networking.Certificate;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -41,6 +40,7 @@ using NoMercy.MediaProcessing.Shows;
 using NoMercy.MediaProcessing.Subtitles;
 using NoMercy.Monitoring;
 using NoMercy.Networking.Cast;
+using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Connectivity.Strategies;
 using NoMercy.Networking.Devices;
@@ -198,9 +198,7 @@ public static partial class ServiceConfiguration
             Start.ChromeCast = chromeCast;
             return chromeCast;
         });
-        services.AddSingleton<IChromeCastService>(sp =>
-            sp.GetRequiredService<ChromeCastService>()
-        );
+        services.AddSingleton<IChromeCastService>(sp => sp.GetRequiredService<ChromeCastService>());
 
         // Certificate service (instance singleton). Renewal uses the cert-renewal named
         // client whose primary handler resolves DNS via DnsClient.
@@ -211,7 +209,9 @@ public static partial class ServiceConfiguration
             );
         services.AddSingleton<ICertificateService>(sp =>
         {
-            CertificateService certificateService = new(sp.GetRequiredService<IHttpClientFactory>());
+            CertificateService certificateService = new(
+                sp.GetRequiredService<IHttpClientFactory>()
+            );
             Start.Certificate = certificateService;
             return certificateService;
         });

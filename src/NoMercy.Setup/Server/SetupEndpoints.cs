@@ -380,7 +380,8 @@ public class SetupEndpoints
                 currentCodeVerifier
             );
 
-            string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             using SystemHttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -518,7 +519,8 @@ public class SetupEndpoints
                 currentCodeVerifier
             );
 
-            string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             using SystemHttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -631,9 +633,12 @@ public class SetupEndpoints
         try
         {
             List<KeyValuePair<string, string>> deviceCodeBody =
-                AuthManager.BuildDeviceCodeRequestBody(ExternalServicesConfig.Current.TokenClientId);
+                AuthManager.BuildDeviceCodeRequestBody(
+                    ExternalServicesConfig.Current.TokenClientId
+                );
 
-            string deviceCodeEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth/device";
+            string deviceCodeEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth/device";
 
             using SystemHttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -861,7 +866,8 @@ public class SetupEndpoints
             deviceData.DeviceCode
         );
 
-        string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
+        string tokenEndpoint =
+            $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
         DateTime expiresAt = DateTime.UtcNow.AddSeconds(deviceData.ExpiresIn);
 
         using SystemHttpClient httpClient = new();

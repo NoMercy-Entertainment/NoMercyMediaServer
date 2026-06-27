@@ -10,15 +10,15 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Users;
-using NoMercy.Authorization;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
@@ -182,17 +182,17 @@ public class ConnectionHub : Hub
     private static void AlignClientWithPersistedDevice(Client client, Device? device)
     {
         // Align the in-memory client's PK with the persisted Devices.Id. The
-                // Client base class assigns a fresh Ulid at construction; the upsert
-                // matches on the DeviceId fingerprint and preserves the existing PK,
-                // so client.Id and device.Id diverge. Subsequent ActivityLog writes
-                // use device.Id from the in-memory map and FK-fail because the random
-                // Ulid never made it into the Devices table.
-                if (device is not null)
-                    client.Id = device.Id;
+        // Client base class assigns a fresh Ulid at construction; the upsert
+        // matches on the DeviceId fingerprint and preserves the existing PK,
+        // so client.Id and device.Id diverge. Subsequent ActivityLog writes
+        // use device.Id from the in-memory map and FK-fail because the random
+        // Ulid never made it into the Devices table.
+        if (device is not null)
+            client.Id = device.Id;
 
-                client.CustomName = device?.CustomName;
-                client.VolumePercent = device?.VolumePercent;
-                client.IsActive = true;
+        client.CustomName = device?.CustomName;
+        client.VolumePercent = device?.VolumePercent;
+        client.IsActive = true;
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

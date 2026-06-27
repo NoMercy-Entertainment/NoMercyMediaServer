@@ -11,10 +11,10 @@
 
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Users;
-using NoMercy.Authorization;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
@@ -105,7 +105,10 @@ public class ServerRegistrationService : IServerRegistrationService
             {
                 Dictionary<string, string> serverData = await GetServerInfo();
                 GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
-                authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, _authTokenStore.AccessToken);
+                authClient.SetDefaultHeaders(
+                    ExternalServicesConfig.Current.UserAgent,
+                    _authTokenStore.AccessToken
+                );
                 string response = await authClient.SendAndReadAsync(
                     HttpMethod.Post,
                     "register",
@@ -169,7 +172,10 @@ public class ServerRegistrationService : IServerRegistrationService
         Logger.Register("Assigning Server, this takes a moment...");
 
         GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
-        authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, _authTokenStore.AccessToken);
+        authClient.SetDefaultHeaders(
+            ExternalServicesConfig.Current.UserAgent,
+            _authTokenStore.AccessToken
+        );
 
         string response = await authClient.SendAndReadAsync(
             HttpMethod.Post,
@@ -208,7 +214,10 @@ public class ServerRegistrationService : IServerRegistrationService
             Dictionary<string, string> serverData = await GetServerInfo();
 
             GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
-            authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, _authTokenStore.AccessToken);
+            authClient.SetDefaultHeaders(
+                ExternalServicesConfig.Current.UserAgent,
+                _authTokenStore.AccessToken
+            );
 
             string response = await authClient.SendAndReadAsync(
                 HttpMethod.Post,

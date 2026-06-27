@@ -155,7 +155,9 @@ public class WorkersController(
     public IActionResult Heartbeat(string workerId, [FromBody] HeartbeatRequest? request)
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return ServiceUnavailableResponse("Distributed encoding is not enabled on this server.");
+            return ServiceUnavailableResponse(
+                "Distributed encoding is not enabled on this server."
+            );
 
         if (!AuthPolicy.IsOwner(User))
             return UnauthorizedResponse("Only the server owner can send heartbeats");
@@ -210,7 +212,9 @@ public class WorkersController(
     )
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return ServiceUnavailableResponse("Distributed encoding is not enabled on this server.");
+            return ServiceUnavailableResponse(
+                "Distributed encoding is not enabled on this server."
+            );
 
         progressStore.Update(
             taskId,

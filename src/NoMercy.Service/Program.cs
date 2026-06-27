@@ -32,7 +32,6 @@ using NoMercy.Setup.Ui;
 using NoMercy.Storage;
 using NoMercyQueue;
 
-
 namespace NoMercy.Service;
 
 public static class Program

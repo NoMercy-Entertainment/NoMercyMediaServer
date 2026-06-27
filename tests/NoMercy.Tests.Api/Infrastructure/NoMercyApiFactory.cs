@@ -9,10 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Security;
-using NoMercy.Networking.Certificate;
 using Asp.Versioning;
-using NoMercy.NmSystem.Auth;
 using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
@@ -26,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
@@ -35,9 +33,11 @@ using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
-using NoMercy.Authorization;
+using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Messaging;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Security;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Service;
 using NoMercy.Setup.Auth;
@@ -589,7 +589,11 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         AppDbContext testAppContext = new();
         testAppContext.Database.EnsureCreated();
 
-        AuthManager testAuthManager = new(testAppContext, new LocalStorageDriver(), new AuthTokenStore());
+        AuthManager testAuthManager = new(
+            testAppContext,
+            new LocalStorageDriver(),
+            new AuthTokenStore()
+        );
         services.AddSingleton(testAuthManager);
         IServerRegistrationService registrationService = Mock.Of<IServerRegistrationService>();
         services.AddSingleton(
@@ -601,8 +605,10 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 testAuthManager,
                 Mock.Of<IApiKeyLoader>(),
                 Mock.Of<IDegradedModeRecovery>(),
-                registrationService
-            , new AuthTokenStore(), new CertificateService(null!))
+                registrationService,
+                new AuthTokenStore(),
+                new CertificateService(null!)
+            )
         );
     }
 

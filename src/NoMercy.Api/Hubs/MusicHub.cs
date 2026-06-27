@@ -87,27 +87,11 @@ public partial class MusicHub : ConnectionHub
         return CommandLocks.GetOrAdd(userId, _ => new(1, 1));
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
     // Rebuilds the per-device volume map carried on every broadcast so a
     // controller can render a slider per device and each device can read its
     // own level. Scoped to the caller's user so one user never sees another's
     // devices. Never-set volumes coalesce to the same safe default the scoped
     // volume_percentage field uses.
-
-
-
-
 
     // Back-compat: position in whole seconds. Quantizes to 1000ms, which is a
     // dominant source of cross-device drift. New clients call ReportPositionCommand.
@@ -121,9 +105,6 @@ public partial class MusicHub : ConnectionHub
     // it can convert its local clock to the shared server clock. Every device
     // using the same offset-corrected clock computes the same playback position
     // regardless of its own wall-clock skew.
-
-
-
 
     // Back-compat entry point: targets the active device (null deviceId).
     // Old clients invoke this with a single argument; SignalR is strict about

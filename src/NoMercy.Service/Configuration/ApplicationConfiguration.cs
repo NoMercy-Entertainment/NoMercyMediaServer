@@ -10,16 +10,16 @@
 // -----------------------------------------------------------------------------
 
 using Asp.Versioning.ApiExplorer;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Jobs.ChangesJobs;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Configuration;
@@ -327,9 +327,7 @@ public static class ApplicationConfiguration
             // ASP.NET Core middleware pipeline (IApplicationBuilder.Use*) and cannot be
             // made async without refactoring the entire startup chain. This is startup-only,
             // before any requests are served, so blocking here is safe.
-            UserCache.Current.RefreshFolderIdsAsync(mediaContext)
-                .GetAwaiter()
-                .GetResult();
+            UserCache.Current.RefreshFolderIdsAsync(mediaContext).GetAwaiter().GetResult();
         }
         catch (SqliteException)
         {

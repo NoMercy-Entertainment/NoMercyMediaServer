@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -19,6 +18,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Configuration;
@@ -84,7 +84,8 @@ public static class WebHostFactory
 
         builder.WebHost.ConfigureKestrel(kestrelOptions =>
         {
-            ICertificateService certificateService = kestrelOptions.ApplicationServices.GetRequiredService<ICertificateService>();
+            ICertificateService certificateService =
+                kestrelOptions.ApplicationServices.GetRequiredService<ICertificateService>();
             certificateService.KestrelConfig(kestrelOptions);
 
             // Main server endpoints.

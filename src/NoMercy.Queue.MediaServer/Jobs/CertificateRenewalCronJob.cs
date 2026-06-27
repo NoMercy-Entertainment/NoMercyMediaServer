@@ -10,8 +10,8 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.Logging;
-using NoMercy.NmSystem.Auth;
 using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Auth;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
@@ -27,8 +27,11 @@ public class CertificateRenewalCronJob : ICronJobExecutor
     private readonly IAuthTokenStore _authTokenStore;
     private readonly ICertificateService _certificateService;
 
-    public CertificateRenewalCronJob(ILogger<CertificateRenewalCronJob> logger,
-        IAuthTokenStore authTokenStore, ICertificateService certificateService)
+    public CertificateRenewalCronJob(
+        ILogger<CertificateRenewalCronJob> logger,
+        IAuthTokenStore authTokenStore,
+        ICertificateService certificateService
+    )
     {
         _authTokenStore = authTokenStore;
         _certificateService = certificateService;

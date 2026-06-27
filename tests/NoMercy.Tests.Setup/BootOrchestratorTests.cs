@@ -9,13 +9,13 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Security;
-using NoMercy.Networking.Certificate;
 using Microsoft.AspNetCore.DataProtection;
-using NoMercy.NmSystem.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
+using NoMercy.Networking.Certificate;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Security;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
@@ -54,7 +54,8 @@ public class BootOrchestratorTests : IDisposable
             new FakeDegradedModeRecovery(),
             new FakeServerRegistrationService(),
             new AuthTokenStore(),
-            new CertificateService(null!));
+            new CertificateService(null!)
+        );
     }
 
     public void Dispose()

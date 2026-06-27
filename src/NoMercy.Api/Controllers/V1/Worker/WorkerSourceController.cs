@@ -68,7 +68,9 @@ public class WorkerSourceController(
     )
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
-            return ServiceUnavailableResponse("Distributed encoding is not enabled on this server.");
+            return ServiceUnavailableResponse(
+                "Distributed encoding is not enabled on this server."
+            );
 
         if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(sig))
             return BadRequestResponse("path and sig query parameters are required");
