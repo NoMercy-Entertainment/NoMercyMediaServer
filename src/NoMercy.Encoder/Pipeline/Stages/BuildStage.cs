@@ -385,7 +385,7 @@ public class BuildStage(
             List<FfmpegCommand> bitmapSubCommands = [];
             if (input.Plan.OutputPlan.SubtitleOutputs.Length > 0 && context.MediaInfo is not null)
             {
-                AddTextSubtitleOutputs(
+                SubtitleCommandBuilder.AddTextSubtitleOutputs(
                     builder,
                     input.Plan.OutputPlan,
                     context.MediaInfo,
@@ -395,7 +395,7 @@ public class BuildStage(
                     effectiveStorage
                 );
 
-                bitmapSubCommands = BuildBitmapSubtitleCommands(
+                bitmapSubCommands = SubtitleCommandBuilder.BuildBitmapSubtitleCommands(
                     options.FfmpegPath,
                     input.InputPath,
                     input.Plan.OutputPlan,
@@ -512,130 +512,6 @@ public class BuildStage(
         OutputPlan newOutputPlan = input.Plan.OutputPlan with { VideoOutputs = encryptedVideos };
         ExecutionPlan newPlan = input.Plan with { OutputPlan = newOutputPlan };
         return input with { Plan = newPlan };
-    }
-
-    /// <summary>
-    /// Adds text subtitle outputs (WebVTT, ASS) to the main FFmpeg command builder.
-    /// Bitmap subtitles are handled separately via BuildBitmapSubtitleCommands.
-    /// </summary>
-    private static void AddTextSubtitleOutputs(
-        FfmpegCommandBuilder builder,
-        OutputPlan plan,
-        MediaInfo mediaInfo,
-        string outputDirectory,
-        string mediaTitle,
-        ISubtitleExtractor subtitleExtractor,
-        IStorage storage
-    )
-    {
-        foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
-        {
-            if (subPlan.Policy == SubtitlePolicy.BurnIn)
-                continue;
-
-            if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
-                continue;
-
-            if (subPlan.SourceIndex >= mediaInfo.SubtitleStreams.Count)
-                continue;
-
-            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[subPlan.SourceIndex];
-
-            // Only text subtitles in the main command
-            if (!stream.IsTextBased)
-                continue;
-
-            SubtitleOutputInfo info = subtitleExtractor.ResolveOutput(
-                subPlan,
-                stream,
-                outputDirectory,
-                mediaTitle
-            );
-
-            // Ensure subtitle directory exists (storage-relative parent of OutputPath).
-            string? parentDir = storage.GetParent(info.OutputPath);
-            if (parentDir is not null)
-                storage.CreateDirectory(storage.CombinePath(outputDirectory, parentDir));
-
-            // FFmpeg gets the relative path (CWD = output directory)
-            builder.AddOutput(
-                new(
-                    FilePath: info.OutputPath,
-                    SubtitleCodec: info.FfmpegCodec,
-                    MapStreams: [$"0:s:{info.SourceIndex}"]
-                )
-            );
-        }
-    }
-
-    /// <summary>
-    /// Builds separate FFmpeg commands for bitmap subtitle extraction.
-    /// Bitmap subs (dvd_subtitle, PGS) can't be muxed to .sub+.idx in a multi-output command.
-    /// They're extracted as MKS (Matroska subtitle container) which preserves the original format.
-    /// </summary>
-    private static List<FfmpegCommand> BuildBitmapSubtitleCommands(
-        string ffmpegPath,
-        string inputPath,
-        OutputPlan plan,
-        MediaInfo mediaInfo,
-        string outputDirectory,
-        string mediaTitle,
-        ISubtitleExtractor subtitleExtractor,
-        IStorage storage
-    )
-    {
-        List<FfmpegCommand> commands = [];
-
-        foreach (SubtitleOutputPlan subPlan in plan.SubtitleOutputs)
-        {
-            if (subPlan.Policy == SubtitlePolicy.BurnIn)
-                continue;
-
-            if (subPlan.Action is not (StreamAction.Extract or StreamAction.Copy))
-                continue;
-
-            if (subPlan.SourceIndex >= mediaInfo.SubtitleStreams.Count)
-                continue;
-
-            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[subPlan.SourceIndex];
-
-            // Only bitmap subtitles here
-            if (stream.IsTextBased)
-                continue;
-
-            SubtitleOutputInfo info = subtitleExtractor.ResolveOutput(
-                subPlan,
-                stream,
-                outputDirectory,
-                mediaTitle
-            );
-
-            // Ensure subtitle directory exists (storage-relative parent of OutputPath).
-            string? parentDir = storage.GetParent(info.OutputPath);
-            if (parentDir is not null)
-                storage.CreateDirectory(storage.CombinePath(outputDirectory, parentDir));
-
-            // Use MKS (Matroska) container for bitmap subs.
-            // Must specify -f matroska explicitly — FFmpeg doesn't auto-detect .mks.
-            string outputPath = Path.ChangeExtension(info.OutputPath, ".mks");
-
-            FfmpegCommand cmd = new FfmpegCommandBuilder()
-                .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
-                .AddInput(new(inputPath))
-                .AddOutput(
-                    new(
-                        FilePath: outputPath,
-                        SubtitleCodec: "copy",
-                        MapStreams: [$"0:s:{info.SourceIndex}"],
-                        ExtraFlags: new() { ["-f"] = "matroska" }
-                    )
-                )
-                .Build(ffmpegPath, outputDirectory);
-
-            commands.Add(cmd);
-        }
-
-        return commands;
     }
 
     /// <summary>
