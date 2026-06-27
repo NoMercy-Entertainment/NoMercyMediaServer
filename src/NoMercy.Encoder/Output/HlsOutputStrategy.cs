@@ -12,6 +12,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Pipeline;
@@ -195,7 +196,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         // These are the real values — not estimates from profile settings.
         HlsVariantAnalyzer analyzer = new(storage);
         List<string> measuredVariantPaths = [];
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics = [];
+        Dictionary<string, VariantMetrics> videoMetrics = [];
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
             Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
@@ -215,7 +216,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             videoMetrics[video.MapLabel] = analyzer.Measure(variantPath);
         }
 
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics = [];
+        Dictionary<string, VariantMetrics> audioMetrics = [];
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
         {
             if (audio.Action is not (StreamAction.Copy or StreamAction.Transcode))

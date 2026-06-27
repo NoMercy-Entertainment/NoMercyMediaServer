@@ -22,8 +22,6 @@ namespace NoMercy.Encoder.Output;
 /// </summary>
 public class HlsVariantAnalyzer(IStorage storage) : IHlsVariantAnalyzer
 {
-    public record VariantMetrics(int PeakBandwidth, int AverageBandwidth);
-
     /// <summary>
     /// Measures the actual bandwidth of an HLS variant by reading segment file sizes
     /// and durations from the playlist. Returns peak and average bitrate in bits/sec.

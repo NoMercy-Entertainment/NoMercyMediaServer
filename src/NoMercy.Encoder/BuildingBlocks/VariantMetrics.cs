@@ -9,16 +9,12 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Encoder.Output;
-
 namespace NoMercy.Encoder.BuildingBlocks;
 
-public interface IPlaylistGenerator
-{
-    string GenerateMasterPlaylist(
-        OutputPlan plan,
-        string mediaTitle,
-        Dictionary<string, VariantMetrics> videoMetrics,
-        Dictionary<string, VariantMetrics> audioMetrics
-    );
-}
+/// <summary>
+/// Measured bitrate metrics (peak + average, bits/sec) for a single HLS
+/// variant playlist. Promoted out of HlsVariantAnalyzer so the
+/// IHlsVariantAnalyzer / IPlaylistGenerator interfaces no longer depend on a
+/// concrete implementation's nested type.
+/// </summary>
+public record VariantMetrics(int PeakBandwidth, int AverageBandwidth);

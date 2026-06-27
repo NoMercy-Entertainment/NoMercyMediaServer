@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Analysis;
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
@@ -23,15 +24,9 @@ namespace NoMercy.Tests.Encoder.Output;
 /// </summary>
 public class HlsChapterDateRangeTests
 {
-    private static readonly Dictionary<
-        string,
-        HlsVariantAnalyzer.VariantMetrics
-    > EmptyVideoMetrics = [];
+    private static readonly Dictionary<string, VariantMetrics> EmptyVideoMetrics = [];
 
-    private static readonly Dictionary<
-        string,
-        HlsVariantAnalyzer.VariantMetrics
-    > EmptyAudioMetrics = [];
+    private static readonly Dictionary<string, VariantMetrics> EmptyAudioMetrics = [];
 
     private static readonly IReadOnlyList<ChapterInfo> ThreeChapters =
     [

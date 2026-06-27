@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
@@ -457,13 +458,10 @@ public class PlaylistGeneratorSubtitleVariantTests
             ),
         ];
 
-        System.Globalization.CultureInfo previous = Thread
-            .CurrentThread
-            .CurrentCulture;
+        System.Globalization.CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture =
-                new System.Globalization.CultureInfo(culture);
+            Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo(culture);
 
             string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(
                 sub,
@@ -544,16 +542,14 @@ public class PlaylistGeneratorSubtitleVariantTests
 
     private static string Generate(OutputPlan plan)
     {
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics =
-            plan.VideoOutputs.ToDictionary(
-                v => v.MapLabel,
-                _ => new HlsVariantAnalyzer.VariantMetrics(5_000_000, 4_500_000)
-            );
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics =
-            plan.AudioOutputs.ToDictionary(
-                a => a.MapLabel,
-                _ => new HlsVariantAnalyzer.VariantMetrics(192_000, 180_000)
-            );
+        Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
+            v => v.MapLabel,
+            _ => new VariantMetrics(5_000_000, 4_500_000)
+        );
+        Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
+            a => a.MapLabel,
+            _ => new VariantMetrics(192_000, 180_000)
+        );
 
         PlaylistGenerator generator = new();
         return generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);

@@ -52,8 +52,8 @@ public class PlaylistGenerator : IPlaylistGenerator
     public string GenerateMasterPlaylist(
         OutputPlan plan,
         string mediaTitle,
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> videoMetrics,
-        Dictionary<string, HlsVariantAnalyzer.VariantMetrics> audioMetrics
+        Dictionary<string, VariantMetrics> videoMetrics,
+        Dictionary<string, VariantMetrics> audioMetrics
     )
     {
         HlsPlanOptions hlsOptions = plan.HlsOptions ?? new HlsPlanOptions();
@@ -104,10 +104,7 @@ public class PlaylistGenerator : IPlaylistGenerator
             // analyzer returns zero bandwidth when the playlist or its
             // segments are missing on disk — listing those in the master
             // makes hls.js / VLC bail on the first variant fetch.
-            HlsVariantAnalyzer.VariantMetrics audMetrics = audioMetrics.GetValueOrDefault(
-                audio.MapLabel,
-                new(0, 0)
-            );
+            VariantMetrics audMetrics = audioMetrics.GetValueOrDefault(audio.MapLabel, new(0, 0));
             if (audMetrics.PeakBandwidth == 0)
                 continue;
 
@@ -176,10 +173,7 @@ public class PlaylistGenerator : IPlaylistGenerator
 
             // Use measured bandwidth. Apple requires BANDWIDTH = peak, AVERAGE-BANDWIDTH = average.
             // Combine video + audio bandwidth for the STREAM-INF (Apple spec section 4.10).
-            HlsVariantAnalyzer.VariantMetrics vidMetrics = videoMetrics.GetValueOrDefault(
-                video.MapLabel,
-                new(0, 0)
-            );
+            VariantMetrics vidMetrics = videoMetrics.GetValueOrDefault(video.MapLabel, new(0, 0));
 
             // Skip video variants whose segments never materialised — bundle
             // got cancelled / failed / didn't publish. Listing them in the
@@ -189,7 +183,7 @@ public class PlaylistGenerator : IPlaylistGenerator
             if (vidMetrics.PeakBandwidth == 0)
                 continue;
 
-            HlsVariantAnalyzer.VariantMetrics audMetrics =
+            VariantMetrics audMetrics =
                 plan.AudioOutputs.Length > 0
                     ? audioMetrics.GetValueOrDefault(plan.AudioOutputs[0].MapLabel, new(0, 0))
                     : new(0, 0);
