@@ -776,7 +776,7 @@ public class QueryOutputTests : IDisposable
         _interceptor.Clear();
 
         // Execute the query to capture all split queries
-        await repository.GetDevices().ToListAsync();
+        await repository.GetDevices();
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);

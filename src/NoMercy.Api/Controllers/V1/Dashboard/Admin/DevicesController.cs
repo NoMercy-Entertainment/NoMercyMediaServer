@@ -43,7 +43,7 @@ public class DevicesController(
         if (!AuthPolicy.IsModerator(User))
             return UnauthorizedResponse("You do not have permission to view devices");
 
-        List<Device> devices = await deviceRepository.GetDevices().ToListAsync();
+        List<Device> devices = await deviceRepository.GetDevices();
 
         DevicesDto[] devicesDtos = devices
             .Select(x => new DevicesDto

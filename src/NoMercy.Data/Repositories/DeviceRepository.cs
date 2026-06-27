@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 
@@ -18,9 +17,9 @@ namespace NoMercy.Data.Repositories;
 
 public class DeviceRepository(MediaContext context) : IDeviceRepository
 {
-    public IIncludableQueryable<Device, ICollection<ActivityLog>> GetDevices()
+    public async Task<List<Device>> GetDevices()
     {
-        return context.Devices.Include(device => device.ActivityLogs);
+        return await context.Devices.Include(device => device.ActivityLogs).ToListAsync();
     }
 
     public async Task AddDeviceAsync(Device device)
