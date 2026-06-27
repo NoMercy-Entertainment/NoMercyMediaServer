@@ -53,11 +53,6 @@ public class FolderRepository(MediaContext context) : IFolderRepository
             .ToListAsync();
     }
 
-    public Task<int> GetFolderLibraryByIdAsync(int id, FolderLibrary folderLibrary)
-    {
-        throw new NotImplementedException();
-    }
-
     public Task<List<Folder>> GetFoldersByLibraryIdAsync(Ulid libraryId)
     {
         return context
