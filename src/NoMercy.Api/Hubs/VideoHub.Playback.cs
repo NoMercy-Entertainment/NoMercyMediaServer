@@ -565,7 +565,7 @@ public partial class VideoHub
             {
                 try
                 {
-                    string? receiverName = await ChromeCast.FindReceiverNameByIpAsync(targetIp);
+                    string? receiverName = await _chromeCast.FindReceiverNameByIpAsync(targetIp);
                     if (string.IsNullOrEmpty(receiverName))
                     {
                         Logger.Socket(
@@ -593,8 +593,8 @@ public partial class VideoHub
                     }
 
                     bool apkOnline = _busRegistry.IsOnline(targetUlid);
-                    await ChromeCast.SelectChromecast(receiverName);
-                    await ChromeCast.LaunchAndroidReceiver(
+                    await _chromeCast.SelectChromecast(receiverName);
+                    await _chromeCast.LaunchAndroidReceiver(
                         receiverName,
                         launchData,
                         useAndroidReceiver: apkOnline

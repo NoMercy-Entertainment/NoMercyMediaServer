@@ -34,18 +34,22 @@ public class CastHub : ConnectionHub
 
     private readonly IAuthTokenStore _authTokenStore;
 
+    private readonly IChromeCastService _chromeCast;
+
     public CastHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
         IClientMessenger clientMessenger,
         IActivityLogger activityLogger,
-        IAuthTokenStore authTokenStore
+        IAuthTokenStore authTokenStore,
+        IChromeCastService chromeCast
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _authTokenStore = authTokenStore;
         _clientMessenger = clientMessenger;
+        _chromeCast = chromeCast;
     }
 
     public class TimeData
@@ -212,42 +216,42 @@ public class CastHub : ConnectionHub
 
     public string[] GetChromeCasts()
     {
-        return ChromeCast.GetChromeCasts();
+        return _chromeCast.GetChromeCasts();
     }
 
     public async Task SelectChromecast(string name)
     {
-        await ChromeCast.SelectChromecast(name);
+        await _chromeCast.SelectChromecast(name);
     }
 
     public async Task Launch()
     {
-        await ChromeCast.Launch();
+        await _chromeCast.Launch();
     }
 
     public async Task CastPlaylist(string value)
     {
-        await ChromeCast.CastPlaylist(value, accessToken: _authTokenStore.AccessToken);
+        await _chromeCast.CastPlaylist(value, accessToken: _authTokenStore.AccessToken);
     }
 
     public ChromecastStatus? GetChromecastStatus()
     {
-        return ChromeCast.GetChromecastStatus();
+        return _chromeCast.GetChromecastStatus();
     }
 
     public MediaStatus? GetMediaStatus()
     {
-        return ChromeCast.GetMediaStatus();
+        return _chromeCast.GetMediaStatus();
     }
 
     public async Task Stop()
     {
-        await ChromeCast.Stop();
+        await _chromeCast.Stop();
     }
 
     public async Task Disconnect()
     {
-        await ChromeCast.Disconnect();
+        await _chromeCast.Disconnect();
     }
 
     public async Task Play()

@@ -29,6 +29,7 @@ namespace NoMercy.Setup.Boot;
 public class Start
 {
     public static INetworkDiscovery? NetworkDiscovery { get; set; }
+    public static IChromeCastService? ChromeCast { get; set; }
 
     public static bool IsDegradedMode { get; internal set; }
 
@@ -96,7 +97,11 @@ public class Start
             ),
             new(
                 "ChromeCast",
-                ChromeCast.Init,
+                async () =>
+                {
+                    if (ChromeCast is not null)
+                        await ChromeCast.Init();
+                },
                 CanDefer: true,
                 Phase: 3,
                 DependsOn: ["NetworkProbe"]

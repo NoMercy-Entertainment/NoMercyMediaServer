@@ -116,9 +116,9 @@ public partial class MusicHub
             {
                 try
                 {
-                    string? receiverName = await ChromeCast.FindReceiverNameByIpAsync(ip);
+                    string? receiverName = await _chromeCast.FindReceiverNameByIpAsync(ip);
                     if (!string.IsNullOrEmpty(receiverName))
-                        await ChromeCast.SelectChromecast(receiverName);
+                        await _chromeCast.SelectChromecast(receiverName);
                 }
                 catch
                 {
@@ -249,7 +249,7 @@ public partial class MusicHub
             {
                 try
                 {
-                    string? receiverName = await ChromeCast.FindReceiverNameByIpAsync(targetIp);
+                    string? receiverName = await _chromeCast.FindReceiverNameByIpAsync(targetIp);
                     if (string.IsNullOrEmpty(receiverName))
                     {
                         Logger.Socket(
@@ -285,8 +285,8 @@ public partial class MusicHub
                     // receiver hangs on its splash. Going straight to Web
                     // Receiver preserves customData.
                     bool apkOnline = _busRegistry.IsOnline(targetUlid);
-                    await ChromeCast.SelectChromecast(receiverName);
-                    await ChromeCast.LaunchAndroidReceiver(
+                    await _chromeCast.SelectChromecast(receiverName);
+                    await _chromeCast.LaunchAndroidReceiver(
                         receiverName,
                         launchData,
                         useAndroidReceiver: apkOnline

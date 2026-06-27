@@ -51,6 +51,8 @@ public partial class VideoHub : ConnectionHub
 
     private readonly IDbContextFactory<MediaContext> _contextFactory;
 
+    private readonly IChromeCastService _chromeCast;
+
     public VideoHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
@@ -64,6 +66,7 @@ public partial class VideoHub : ConnectionHub
         IActivityLogger activityLogger,
         CastSessionTokenService castTokenService,
         DeviceBusRegistry busRegistry,
+        IChromeCastService chromeCast,
         INetworkDiscovery? networkDiscovery = null
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
@@ -78,6 +81,7 @@ public partial class VideoHub : ConnectionHub
         _commandHandler = commandHandler;
         _castTokenService = castTokenService;
         _busRegistry = busRegistry;
+        _chromeCast = chromeCast;
         _networkDiscovery = networkDiscovery;
     }
 

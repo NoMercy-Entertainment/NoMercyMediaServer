@@ -46,6 +46,8 @@ public partial class MusicHub : ConnectionHub
     private readonly CastSessionTokenService _castTokenService;
     private readonly INetworkDiscovery? _networkDiscovery;
 
+    private readonly IChromeCastService _chromeCast;
+
     public MusicHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
@@ -59,6 +61,7 @@ public partial class MusicHub : ConnectionHub
         IActivityLogger activityLogger,
         DeviceBusRegistry busRegistry,
         CastSessionTokenService castTokenService,
+        IChromeCastService chromeCast,
         INetworkDiscovery? networkDiscovery = null
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
@@ -72,6 +75,7 @@ public partial class MusicHub : ConnectionHub
         _commandHandler = commandHandler;
         _busRegistry = busRegistry;
         _castTokenService = castTokenService;
+        _chromeCast = chromeCast;
         _networkDiscovery = networkDiscovery;
     }
 

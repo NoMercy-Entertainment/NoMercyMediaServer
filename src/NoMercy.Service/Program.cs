@@ -67,7 +67,7 @@ public static class Program
         // patterns, GC'd before await) raise here. Marking them observed
         // keeps them from escalating to UnhandledException. async-void
         // chains aren't covered by this — those are handled defensively
-        // at the source (see ChromeCast.NeutralizeTimer).
+        // at the source (see ChromeCastService.NeutralizeTimer).
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
             Logger.App("UnobservedTaskException " + e.Exception);

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using NoMercy.Networking.Cast;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -197,6 +198,8 @@ public sealed class ServerBootstrapper
         // post-startup concerns belong here.
         _ = Task.Run(async () =>
         {
+            // Eagerly resolve the cast service so its boot handle (Start.ChromeCast) is populated.
+            _ = app.Services.GetService<IChromeCastService>();
             INetworkDiscovery? networkDiscovery = app.Services.GetService<INetworkDiscovery>();
             if (networkDiscovery is not null)
             {

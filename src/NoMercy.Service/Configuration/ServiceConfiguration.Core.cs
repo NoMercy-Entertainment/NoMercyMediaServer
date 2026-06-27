@@ -187,9 +187,19 @@ public static partial class ServiceConfiguration
                 discovery.ExternalIp = StartupOptions.OverrideExternalIp;
             Start.NetworkDiscovery = discovery;
             // Register.Discovery = discovery;
-            ChromeCast.NetworkDiscovery = discovery;
             return discovery;
         });
+
+        // Cast pipeline (instance service sharing the injected INetworkDiscovery)
+        services.AddSingleton<ChromeCastService>(sp =>
+        {
+            ChromeCastService chromeCast = new(sp.GetRequiredService<INetworkDiscovery>());
+            Start.ChromeCast = chromeCast;
+            return chromeCast;
+        });
+        services.AddSingleton<IChromeCastService>(sp =>
+            sp.GetRequiredService<ChromeCastService>()
+        );
 
         // Client messaging (replaces static Networking.Networking.SendTo/SendToAll)
         services.AddSingleton<ConnectedClients>();
@@ -258,7 +268,6 @@ public static partial class ServiceConfiguration
         );
 
         services.AddSingleton<StorageMonitor>();
-        services.AddSingleton<ChromeCast>();
 
         // Optical-disc detection + scanning + ripping (NoMercy.OpticalMedia)
         services.AddNoMercyOpticalMedia();
