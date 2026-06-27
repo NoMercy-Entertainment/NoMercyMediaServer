@@ -59,8 +59,7 @@ public class ChromeCast
 
     // Tracks which receiver was most recently selected (for compat callers that
     // call SelectChromecast then Launch/CastPlaylist without passing a name).
-    [ThreadStatic]
-    private static string? _lastSelectedName;
+    private static volatile string? _lastSelectedName;
 
     public static async Task Init()
     {
