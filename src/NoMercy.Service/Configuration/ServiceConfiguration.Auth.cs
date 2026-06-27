@@ -14,6 +14,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -89,6 +90,10 @@ public static partial class ServiceConfiguration
             );
 
         services.AddScoped<IAuthorizationHandler, MediaAuthorizationHandler>();
+        services.AddSingleton<
+            IAuthorizationMiddlewareResultHandler,
+            ProblemDetailsAuthorizationResultHandler
+        >();
 
         // Eagerly load cached signing key so it's available before auth init completes
         OfflineJwksCache.LoadCachedPublicKey();

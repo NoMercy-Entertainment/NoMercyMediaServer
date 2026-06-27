@@ -21,16 +21,13 @@ namespace NoMercy.Api.Controllers.V1.Streaming;
 [ApiController]
 [Tags("Streaming")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/streaming/live")]
 public class LiveTranscodeController(ILiveTranscodeService service) : BaseController
 {
     [HttpGet("sessions")]
     public IActionResult ListSessions()
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view live sessions");
-
         return Ok(service.ListSessions());
     }
 
@@ -41,18 +38,12 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to stream media");
-
         return MapResult(await service.StartSessionAsync(User.UserId(), request, deviceId, ct));
     }
 
     [HttpGet("sessions/{sessionId}/playlist.m3u8")]
     public IActionResult GetPlaylist(string sessionId)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to stream media");
-
         LiveResult result = service.GetPlaylist(sessionId);
         if (result.Kind != LiveResultKind.Ok)
             return MapResult(result);
@@ -63,9 +54,6 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
     [HttpGet("sessions/{sessionId}/segment/{index:int}.ts")]
     public IActionResult GetSegment(string sessionId, int index)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to stream media");
-
         LiveResult result = service.GetSegment(sessionId, index);
         if (result.Kind != LiveResultKind.Ok)
             return MapResult(result);
@@ -77,9 +65,6 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
     [HttpPost("sessions/{sessionId}/position")]
     public IActionResult ReportPosition(string sessionId, [FromBody] ReportPositionRequest request)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to stream media");
-
         return MapResult(service.ReportPosition(sessionId, request));
     }
 
@@ -90,9 +75,6 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to stream media");
-
         return MapResult(await service.ChangeQualityAsync(sessionId, request, ct));
     }
 
@@ -103,18 +85,12 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to stream media");
-
         return MapResult(await service.SeekAsync(sessionId, request, ct));
     }
 
     [HttpDelete("sessions/{sessionId}")]
     public async Task<IActionResult> EndSession(string sessionId)
     {
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to stream media");
-
         await service.EndSessionAsync(sessionId, HttpContext.RequestAborted);
         return NoContent();
     }
