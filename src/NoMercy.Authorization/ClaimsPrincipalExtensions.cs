@@ -10,15 +10,16 @@
 // -----------------------------------------------------------------------------
 
 using System.Security.Claims;
-using NoMercy.Database;
-using NoMercy.Database.Models.Users;
 
 namespace NoMercy.Authorization;
 
+/// <summary>
+/// Stateless reads of identity claims off a <see cref="ClaimsPrincipal"/>.
+/// User-cache and authorization-policy concerns live in IUserCache and
+/// IMediaAuthorizationPolicy respectively.
+/// </summary>
 public static class ClaimsPrincipalExtensions
 {
-    // ---- Stateless claim readers (genuine extension methods) ----
-
     public static Guid UserId(this ClaimsPrincipal? principal)
     {
         string? userId = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -44,42 +45,4 @@ public static class ClaimsPrincipalExtensions
 
     public static bool IsSelf(this ClaimsPrincipal? principal, Guid userId) =>
         principal.UserId().Equals(userId);
-
-    // ---- TRANSITIONAL delegators ----
-    // Preserve the original static API while consumers migrate to the injected
-    // IUserCache / IMediaAuthorizationPolicy. They route through UserCache.Current
-    // (the same instance registered in DI) so there is one source of truth.
-    // Removed once all call sites use the injected services.
-
-    private static readonly MediaAuthorizationPolicy Policy = new(UserCache.Current);
-
-    public static bool IsOwner(this ClaimsPrincipal? principal) => Policy.IsOwner(principal);
-
-    public static bool IsModerator(this ClaimsPrincipal? principal) => Policy.IsModerator(principal);
-
-    public static bool IsAllowed(this ClaimsPrincipal? principal) => Policy.IsAllowed(principal);
-
-    public static User? User(this ClaimsPrincipal? principal) =>
-        UserCache.Current.GetUser(principal.UserId());
-
-    public static List<User> Users => [.. UserCache.Current.Users];
-
-    public static List<Ulid> FolderIds => [.. UserCache.Current.FolderIds];
-
-    public static Task InitializeAsync(MediaContext context) =>
-        UserCache.Current.InitializeAsync(context);
-
-    public static Task RefreshUsersAsync(MediaContext context) =>
-        UserCache.Current.RefreshUsersAsync(context);
-
-    public static Task RefreshFolderIdsAsync(MediaContext context) =>
-        UserCache.Current.RefreshFolderIdsAsync(context);
-
-    public static void AddUser(User user) => UserCache.Current.AddUser(user);
-
-    public static void RemoveUser(User user) => UserCache.Current.RemoveUser(user);
-
-    public static void UpdateUser(User user) => UserCache.Current.UpdateUser(user);
-
-    public static void Reset() => UserCache.Current.Reset();
 }

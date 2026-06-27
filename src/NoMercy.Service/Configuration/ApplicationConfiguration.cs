@@ -327,8 +327,7 @@ public static class ApplicationConfiguration
             // ASP.NET Core middleware pipeline (IApplicationBuilder.Use*) and cannot be
             // made async without refactoring the entire startup chain. This is startup-only,
             // before any requests are served, so blocking here is safe.
-            ClaimsPrincipalExtensions
-                .RefreshFolderIdsAsync(mediaContext)
+            UserCache.Current.RefreshFolderIdsAsync(mediaContext)
                 .GetAwaiter()
                 .GetResult();
         }
