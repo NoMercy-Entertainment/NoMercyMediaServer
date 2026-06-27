@@ -22,7 +22,7 @@ using Image = SixLabors.ImageSharp.Image;
 
 namespace NoMercy.Providers.NoMercy.Client;
 
-public abstract class NoMercyImageClient : TmdbBaseClient
+public abstract class NoMercyImageClient
 {
     // Image downloads use their own queue rather than the shared TMDB API queue.
     private static readonly Queue ImageQueue = new(

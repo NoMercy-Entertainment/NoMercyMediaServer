@@ -21,7 +21,7 @@ using Image = SixLabors.ImageSharp.Image;
 
 namespace NoMercy.Providers.TMDB.Client;
 
-public abstract class TmdbImageClient : TmdbBaseClient
+public abstract class TmdbImageClient
 {
     public const string ImageBaseUrl = "https://image.tmdb.org/t/p/";
 
