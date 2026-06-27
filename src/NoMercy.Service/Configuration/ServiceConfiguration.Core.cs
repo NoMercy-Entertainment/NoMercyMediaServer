@@ -408,6 +408,7 @@ public static partial class ServiceConfiguration
         services.AddScoped<EncoderProfileService>();
         services.AddScoped<HomeService>();
         services.AddScoped<RecommendationService>();
+        services.AddScoped<ILiveTranscodeService, LiveTranscodeService>();
         services.AddScoped<SetupService>();
 
         // Palette pipeline — contract-based DI, dispatched by EntityType
