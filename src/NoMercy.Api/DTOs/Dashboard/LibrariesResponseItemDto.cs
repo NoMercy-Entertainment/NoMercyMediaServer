@@ -50,7 +50,7 @@ public record LibrariesResponseItemDto
     public int? Order { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("pagination")]
     public string Pagination { get; set; } = "auto";

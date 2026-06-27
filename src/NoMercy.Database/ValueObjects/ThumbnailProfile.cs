@@ -9,21 +9,10 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Newtonsoft.Json;
-
 namespace NoMercy.Database;
 
-public class IVideoTrack
+public class ThumbnailProfile
 {
-    [JsonProperty("file")]
-    public string File { get; set; } = null!;
-
-    [JsonProperty("kind")]
-    public string Kind { get; set; } = null!;
-
-    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
-    public string? Label { get; set; }
-
-    [JsonProperty("language", NullValueHandling = NullValueHandling.Ignore)]
-    public string? Language { get; set; }
+    public int Width { get; set; } = 320;
+    public int IntervalSeconds { get; set; } = 10;
 }

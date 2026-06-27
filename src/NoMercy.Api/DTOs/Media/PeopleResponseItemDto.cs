@@ -35,7 +35,7 @@ public record PeopleResponseItemDto
     public DateTime? Birthday { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("deathday")]
     public DateTime? DeathDay { get; set; }

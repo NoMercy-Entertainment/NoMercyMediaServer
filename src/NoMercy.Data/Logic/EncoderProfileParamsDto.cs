@@ -39,10 +39,10 @@ public class EncoderProfileParamsDto
 
     public EncoderProfileParamsDto(EncoderProfile argEncoderProfile)
     {
-        IVideoProfile[] videoProfiles = argEncoderProfile.VideoProfiles;
+        VideoProfile[] videoProfiles = argEncoderProfile.VideoProfiles;
         if (videoProfiles.Length > 0)
         {
-            IVideoProfile video = videoProfiles[0];
+            VideoProfile video = videoProfiles[0];
             Width = video.Width;
             Crf = video.Crf;
             Preset = video.Preset;
@@ -50,7 +50,7 @@ public class EncoderProfileParamsDto
             Codec = video.Codec;
         }
 
-        IAudioProfile[] audioProfiles = argEncoderProfile.AudioProfiles;
+        AudioProfile[] audioProfiles = argEncoderProfile.AudioProfiles;
         if (audioProfiles.Length > 0)
             Audio = audioProfiles[0].Codec;
     }

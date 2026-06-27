@@ -18,7 +18,7 @@ namespace NoMercy.Api.DTOs.Music;
 public record MusicSearchResponseItemDto
 {
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("cover")]
     public string? Cover { get; set; }

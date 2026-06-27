@@ -13,8 +13,8 @@ using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Collections;
 
@@ -50,7 +50,7 @@ public record CollectionResponseItemDto
     public int Duration { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("collection")]
     public CollectionMovieDto[] Collection { get; set; } = [];

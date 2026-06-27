@@ -11,8 +11,12 @@
 
 namespace NoMercy.Database;
 
-public class IThumbnailProfile
+public class SubtitleProfile
 {
-    public int Width { get; set; } = 320;
-    public int IntervalSeconds { get; set; } = 10;
+    public string Codec { get; set; } = string.Empty;
+    public string SegmentName { get; set; } = string.Empty;
+    public string PlaylistName { get; set; } = string.Empty;
+    public string[] AllowedLanguages { get; set; } = [];
+    public string[] Opts { get; set; } = [];
+    public (string key, string Val)[] CustomArguments { get; set; } = [];
 }

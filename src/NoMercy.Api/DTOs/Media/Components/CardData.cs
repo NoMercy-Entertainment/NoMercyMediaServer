@@ -17,8 +17,8 @@ using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media.Components;
@@ -68,7 +68,7 @@ public record CardData
     public string? Logo { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("have_items")]
     public int? HaveItems { get; set; }
@@ -505,7 +505,7 @@ public record CardData
         NumberOfItems = 1;
         HaveItems = movie.VideoFileCount;
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(movie.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(movie.ColorPalette);
 
         if (movie.CertificationRating != null)
         {
@@ -540,7 +540,7 @@ public record CardData
         NumberOfItems = 1;
         HaveItems = movie.VideoFileCount;
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(movie.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(movie.ColorPalette);
 
         if (movie.CertificationRating != null)
         {
@@ -575,7 +575,7 @@ public record CardData
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.EpisodesWithVideo;
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(tv.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(tv.ColorPalette);
 
         if (tv.CertificationRating != null)
         {
@@ -605,7 +605,7 @@ public record CardData
         CreatedAt = dto.CreatedAt;
         HaveItems = dto.HaveMovies + dto.HaveEpisodes;
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(dto.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(dto.ColorPalette);
 
         if (dto.CertificationRating != null)
         {
@@ -654,7 +654,7 @@ public record CardData
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.EpisodesWithVideo;
 
-        ColorPalette = IColorPalettes.FromJsonOrNull(tv.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(tv.ColorPalette);
 
         if (tv.CertificationRating != null)
         {

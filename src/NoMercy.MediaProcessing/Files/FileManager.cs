@@ -368,7 +368,7 @@ public partial class FileManager(
 
         List<Subtitle> subtitles = GetSubtitles(storage, hostFolder);
 
-        List<IVideoTrack> tracks = GetExtraFiles(storage, hostFolder);
+        List<VideoTrack> tracks = GetExtraFiles(storage, hostFolder);
 
         Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
 
@@ -419,7 +419,7 @@ public partial class FileManager(
         string fileName,
         string baseFolder,
         string hostFolder,
-        List<IVideoTrack> extraFiles
+        List<VideoTrack> extraFiles
     )
     {
         List<IVideo> video = GetVideoHashList(storage, hostFolder);
@@ -428,7 +428,7 @@ public partial class FileManager(
         List<IFont> fonts = GetFontHashList(storage, hostFolder);
         List<IPreview> previews = GetPreviewHashList(storage, hostFolder, extraFiles);
 
-        IVideoTrack? chaptersFile = extraFiles.FirstOrDefault(file => file.Kind == "chapters");
+        VideoTrack? chaptersFile = extraFiles.FirstOrDefault(file => file.Kind == "chapters");
 
         List<IChapter> chapters = chaptersFile?.File is not null
             ? await GetChapterHashListAsync(
@@ -643,7 +643,7 @@ public partial class FileManager(
     private List<IPreview> GetPreviewHashList(
         IStorage storage,
         string hostFolder,
-        List<IVideoTrack> extraFiles
+        List<VideoTrack> extraFiles
     )
     {
         IEnumerable<IPreview> sprites = extraFiles
@@ -887,11 +887,11 @@ public partial class FileManager(
         IStorage storage,
         string hostFolder,
         string key,
-        IEnumerable<IVideoTrack> extraFiles
+        IEnumerable<VideoTrack> extraFiles
     )
         where T : class
     {
-        IVideoTrack? item = extraFiles.FirstOrDefault(file => file.Kind == key);
+        VideoTrack? item = extraFiles.FirstOrDefault(file => file.Kind == key);
         if (item == null)
             return null;
 
@@ -907,9 +907,9 @@ public partial class FileManager(
             } as T;
     }
 
-    private static List<IVideoTrack> GetExtraFiles(IStorage storage, string hostFolder)
+    private static List<VideoTrack> GetExtraFiles(IStorage storage, string hostFolder)
     {
-        List<IVideoTrack> tracks = [];
+        List<VideoTrack> tracks = [];
 
         IReadOnlyList<StorageEntry> files = storage.List(hostFolder, null, recursive: false);
 

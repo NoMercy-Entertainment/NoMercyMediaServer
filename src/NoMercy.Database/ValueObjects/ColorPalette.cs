@@ -13,7 +13,7 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database;
 
-public class IColorPalettes
+public class ColorPalette
 {
     [JsonProperty("poster", NullValueHandling = NullValueHandling.Ignore)]
     public PaletteColors? Poster { get; set; }
@@ -39,13 +39,13 @@ public class IColorPalettes
     /// takes a card render down. Use this everywhere instead of calling
     /// <see cref="JsonConvert.DeserializeObject{T}(string)"/> directly.
     /// </summary>
-    public static IColorPalettes? FromJsonOrNull(string? json)
+    public static ColorPalette? FromJsonOrNull(string? json)
     {
         if (string.IsNullOrEmpty(json))
             return null;
         try
         {
-            return JsonConvert.DeserializeObject<IColorPalettes>(json);
+            return JsonConvert.DeserializeObject<ColorPalette>(json);
         }
         catch (JsonException)
         {

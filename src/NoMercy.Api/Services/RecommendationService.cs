@@ -17,8 +17,8 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -350,7 +350,7 @@ public class RecommendationService
                 Overview = c.Overview,
                 Poster = c.Poster,
                 Backdrop = c.Backdrop,
-                ColorPalette = IColorPalettes.FromJsonOrNull(c.ColorPalette),
+                ColorPalette = ColorPalette.FromJsonOrNull(c.ColorPalette),
                 Type = c.MediaType,
                 Score = ScoreCandidate(c, profile, combinedGenreMap),
                 SourceCount = c.SourceCount,
@@ -455,7 +455,7 @@ public class RecommendationService
         string? rawPalette = isMovie
             ? sourceMoviesTask.Result.ColorPalette
             : sourceTvsTask.Result.ColorPalette;
-        IColorPalettes? colorPalette = IColorPalettes.FromJsonOrNull(rawPalette);
+        ColorPalette? colorPalette = ColorPalette.FromJsonOrNull(rawPalette);
 
         if (isMovie)
         {

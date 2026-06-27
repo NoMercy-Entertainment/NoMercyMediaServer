@@ -38,7 +38,7 @@ public record TrackRowData
     public string Link { get; set; } = null!;
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("date")]
     public string? Date { get; set; }
@@ -151,7 +151,7 @@ public record TrackRowData
         Id = track.Id.ToString();
         Name = track.Name;
         string? colorPaletteStr = track.AlbumColorPalette ?? track.ArtistColorPalette;
-        ColorPalette = IColorPalettes.FromJsonOrNull(colorPaletteStr);
+        ColorPalette = ColorPalette.FromJsonOrNull(colorPaletteStr);
         string? cover = track.AlbumCover ?? track.ArtistCover;
         Cover = cover is not null ? $"/images/music{cover}" : null;
         Path = $"/{track.FolderId}{track.Folder}{track.Filename}";

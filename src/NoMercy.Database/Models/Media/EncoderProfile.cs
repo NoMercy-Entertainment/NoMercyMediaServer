@@ -40,11 +40,11 @@ public class EncoderProfile : Timestamps
     public string _videoProfiles { get; set; } = string.Empty;
 
     [NotMapped]
-    public IVideoProfile[] VideoProfiles
+    public VideoProfile[] VideoProfiles
     {
         get =>
             _videoProfiles != string.Empty
-                ? JsonConvert.DeserializeObject<IVideoProfile[]>(_videoProfiles)!
+                ? JsonConvert.DeserializeObject<VideoProfile[]>(_videoProfiles)!
                 : [];
         set => _videoProfiles = JsonConvert.SerializeObject(value);
     }
@@ -56,11 +56,11 @@ public class EncoderProfile : Timestamps
     public string _audioProfiles { get; set; } = string.Empty;
 
     [NotMapped]
-    public IAudioProfile[] AudioProfiles
+    public AudioProfile[] AudioProfiles
     {
         get =>
             _audioProfiles != string.Empty
-                ? JsonConvert.DeserializeObject<IAudioProfile[]>(_audioProfiles)!
+                ? JsonConvert.DeserializeObject<AudioProfile[]>(_audioProfiles)!
                 : [];
         set => _audioProfiles = JsonConvert.SerializeObject(value);
     }
@@ -72,11 +72,11 @@ public class EncoderProfile : Timestamps
     public string _subtitleProfiles { get; set; } = string.Empty;
 
     [NotMapped]
-    public ISubtitleProfile[] SubtitleProfiles
+    public SubtitleProfile[] SubtitleProfiles
     {
         get =>
             _subtitleProfiles != string.Empty
-                ? JsonConvert.DeserializeObject<ISubtitleProfile[]>(_subtitleProfiles)!
+                ? JsonConvert.DeserializeObject<SubtitleProfile[]>(_subtitleProfiles)!
                 : [];
         set => _subtitleProfiles = JsonConvert.SerializeObject(value);
     }
@@ -88,11 +88,11 @@ public class EncoderProfile : Timestamps
     public string _thumbnailProfile { get; set; } = string.Empty;
 
     [NotMapped]
-    public IThumbnailProfile? Thumbnails
+    public ThumbnailProfile? Thumbnails
     {
         get =>
             _thumbnailProfile != string.Empty
-                ? JsonConvert.DeserializeObject<IThumbnailProfile>(_thumbnailProfile)
+                ? JsonConvert.DeserializeObject<ThumbnailProfile>(_thumbnailProfile)
                 : null;
         set =>
             _thumbnailProfile = value is not null

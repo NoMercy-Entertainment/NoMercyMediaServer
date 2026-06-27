@@ -42,7 +42,7 @@ public record MusicCardData
     public string? Logo { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }
@@ -146,7 +146,7 @@ public record MusicCardData
         Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
         Type = "artist";
         Link = $"/music/artist/{artist.Id}";
-        ColorPalette = IColorPalettes.FromJsonOrNull(artist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
         Disambiguation = artist.Disambiguation;
         Description = artist.Description;
         Tracks = artist.TrackCount;
@@ -160,7 +160,7 @@ public record MusicCardData
         Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
         Type = "album";
         Link = $"/music/album/{album.Id}";
-        ColorPalette = IColorPalettes.FromJsonOrNull(album.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(album.ColorPalette);
         Year = album.Year;
         Tracks = album.TrackCount;
         LibraryId = album.LibraryId.ToString();
@@ -173,7 +173,7 @@ public record MusicCardData
         Cover = playlist.Cover is not null ? $"/images/music{playlist.Cover}" : null;
         Type = "playlist";
         Link = $"/music/playlist/{playlist.Id}";
-        ColorPalette = IColorPalettes.FromJsonOrNull(playlist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(playlist.ColorPalette);
         Tracks = playlist.TrackCount;
     }
 
@@ -208,7 +208,7 @@ public record MusicHomeCardData
     public string? Cover { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("disambiguation")]
     public string? Disambiguation { get; set; }

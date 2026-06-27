@@ -41,7 +41,7 @@ public record SpecialItemDto
     public string? Overview { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("poster")]
     public string? Poster { get; set; }

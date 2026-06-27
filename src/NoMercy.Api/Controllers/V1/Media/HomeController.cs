@@ -318,7 +318,7 @@ public class HomeController : BaseController
                     PlaylistId = trailerInfo.Id!,
                     Tracks = trailerInfo
                         .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
-                        .Select(t => new IVideoTrack
+                        .Select(t => new VideoTrack
                         {
                             Label = t.Value.First(s => s.Ext == "vtt").Name,
                             File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
@@ -420,7 +420,7 @@ public class HomeController : BaseController
                 PlaylistId = trailerInfo.Id!,
                 Tracks = trailerInfo
                     .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
-                    .Select(t => new IVideoTrack
+                    .Select(t => new VideoTrack
                     {
                         Label = t.Value.First(s => s.Ext == "vtt").Name,
                         File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",

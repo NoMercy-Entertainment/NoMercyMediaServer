@@ -31,7 +31,7 @@ public record ReleaseGroupDto
     public string? Cover { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("library_id")]
     public Ulid? LibraryId { get; set; }

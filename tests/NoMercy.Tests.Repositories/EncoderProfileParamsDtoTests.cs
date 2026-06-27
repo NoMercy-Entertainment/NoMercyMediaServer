@@ -26,7 +26,7 @@ public class EncoderProfileParamsDtoTests
             Name = "Test Profile",
             VideoProfiles =
             [
-                new IVideoProfile
+                new VideoProfile
                 {
                     Width = 1920,
                     Crf = 21,
@@ -35,7 +35,7 @@ public class EncoderProfileParamsDtoTests
                     Codec = "h264",
                 },
             ],
-            AudioProfiles = [new IAudioProfile { Codec = "aac" }],
+            AudioProfiles = [new AudioProfile { Codec = "aac" }],
         };
 
         EncoderProfileParamsDto dto = new(profile);

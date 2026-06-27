@@ -37,7 +37,7 @@ public record TopResultCardData
     public string? Cover { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("artists")]
     public IEnumerable<TopResultArtist> Artists { get; set; } = [];
@@ -138,7 +138,7 @@ public record TopResultCardData
         string? cover = track.AlbumCover ?? track.ArtistCover;
         Cover = cover is not null ? $"/images/music{cover}" : null;
         string? colorPaletteStr = track.AlbumColorPalette ?? track.ArtistColorPalette;
-        ColorPalette = IColorPalettes.FromJsonOrNull(colorPaletteStr);
+        ColorPalette = ColorPalette.FromJsonOrNull(colorPaletteStr);
         Artists = track.Artists.Select(at => new TopResultArtist
         {
             Id = at.Id.ToString(),
@@ -188,7 +188,7 @@ public record TopResultCardData
         Type = "artist";
         Link = $"/music/artist/{artist.Id}";
         Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
-        ColorPalette = IColorPalettes.FromJsonOrNull(artist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
     }
 
     public TopResultCardData(AlbumCardDto album)
@@ -198,7 +198,7 @@ public record TopResultCardData
         Type = "album";
         Link = $"/music/album/{album.Id}";
         Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
-        ColorPalette = IColorPalettes.FromJsonOrNull(album.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(album.ColorPalette);
     }
 }
 

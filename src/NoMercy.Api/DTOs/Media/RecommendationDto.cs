@@ -30,7 +30,7 @@ public record RecommendationDto
     public string? Poster { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
@@ -80,7 +80,7 @@ public record RecommendationDetailDto
     public string? Logo { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("media_type")]
     public string MediaType { get; set; } = string.Empty;
@@ -134,7 +134,7 @@ public record RecommendationDetailSourceDto
     public int? Year { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("link")]
     public Uri Link => new($"/{MediaType}/{Id}", UriKind.Relative);

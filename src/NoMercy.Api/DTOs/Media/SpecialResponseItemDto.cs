@@ -49,7 +49,7 @@ public record SpecialResponseItemDto
     public string MediaType { get; set; } = string.Empty;
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("collection")]
     public IEnumerable<SpecialItemDto>? Special { get; set; }
@@ -303,7 +303,7 @@ public record SpecialResponseItemDto
         Type = "specials";
         MediaType = "specials";
         Link = new($"/specials/{Id}", UriKind.Relative);
-        ColorPalette = IColorPalettes.FromJsonOrNull(detail.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(detail.ColorPalette);
         Backdrops = backdrops;
         Posters = posters;
         Cast = cast;

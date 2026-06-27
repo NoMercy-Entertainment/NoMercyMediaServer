@@ -9,25 +9,21 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using Newtonsoft.Json;
 
 namespace NoMercy.Database;
 
-public class ColorPaletteTimeStamps : Timestamps
+public class VideoTrack
 {
-    [Column("ColorPalette")]
-    [StringLength(1024)]
-    [JsonProperty("color_palette")]
-    [JsonIgnore]
-    // ReSharper disable once InconsistentNaming
-    public string? _colorPalette { get; set; } = "";
+    [JsonProperty("file")]
+    public string File { get; set; } = null!;
 
-    [NotMapped]
-    public ColorPalette? ColorPalette
-    {
-        get => ColorPalette.FromJsonOrNull(_colorPalette);
-        set => _colorPalette = JsonConvert.SerializeObject(value);
-    }
+    [JsonProperty("kind")]
+    public string Kind { get; set; } = null!;
+
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Label { get; set; }
+
+    [JsonProperty("language", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Language { get; set; }
 }

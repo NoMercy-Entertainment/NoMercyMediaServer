@@ -25,7 +25,7 @@ public record DirectorDto
     public string Name { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     public DirectorDto(Crew crew)
     {

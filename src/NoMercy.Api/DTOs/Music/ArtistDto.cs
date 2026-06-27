@@ -37,7 +37,7 @@ public class ArtistDto
     public string? Cover { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("link")]
     public Uri Link { get; set; }

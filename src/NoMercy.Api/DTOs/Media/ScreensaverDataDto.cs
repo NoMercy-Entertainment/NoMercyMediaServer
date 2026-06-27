@@ -26,7 +26,7 @@ public record ScreensaverDataDto
     public string? Src { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("meta")]
     public MetaDto? Meta { get; set; }

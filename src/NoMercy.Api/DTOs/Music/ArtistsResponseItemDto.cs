@@ -19,7 +19,7 @@ namespace NoMercy.Api.DTOs.Music;
 public record ArtistsResponseItemDto
 {
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("cover")]
     public string? Cover { get; set; }
@@ -84,7 +84,7 @@ public record ArtistsResponseItemDto
 
     public ArtistsResponseItemDto(ArtistCardDto artist)
     {
-        ColorPalette = IColorPalettes.FromJsonOrNull(artist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
         Cover = artist.Cover ?? artist.ThumbImagePath;
         Cover = !string.IsNullOrEmpty(Cover)
             ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()

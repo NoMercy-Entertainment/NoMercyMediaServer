@@ -58,7 +58,7 @@ public record GenreCardData
     public string? Logo { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("content_ratings")]
     public IEnumerable<ContentRating> ContentRatings { get; set; } = [];

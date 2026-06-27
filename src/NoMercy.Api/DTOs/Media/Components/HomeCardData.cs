@@ -53,7 +53,7 @@ public record HomeCardData
     public string? Logo { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("have_items")]
     public int? HaveItems { get; set; }

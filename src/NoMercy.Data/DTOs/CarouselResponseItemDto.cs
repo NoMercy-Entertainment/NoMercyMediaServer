@@ -20,7 +20,7 @@ namespace NoMercy.Data.DTOs;
 public record CarouselResponseItemDto
 {
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("cover")]
     public string? Cover { get; set; }
@@ -179,7 +179,7 @@ public record CarouselResponseItemDto
 
     public CarouselResponseItemDto(ArtistCardDto artist)
     {
-        ColorPalette = IColorPalettes.FromJsonOrNull(artist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(artist.ColorPalette);
         Cover = artist.Cover ?? artist.ThumbImagePath;
         Cover = Cover is not null
             ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
@@ -197,7 +197,7 @@ public record CarouselResponseItemDto
 
     public CarouselResponseItemDto(AlbumCardDto album)
     {
-        ColorPalette = IColorPalettes.FromJsonOrNull(album.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(album.ColorPalette);
         Cover = album.Cover is not null
             ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
             : null;
@@ -214,7 +214,7 @@ public record CarouselResponseItemDto
 
     public CarouselResponseItemDto(PlaylistCardDto playlist)
     {
-        ColorPalette = IColorPalettes.FromJsonOrNull(playlist.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(playlist.ColorPalette);
         Cover = playlist.Cover is not null
             ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString()
             : null;

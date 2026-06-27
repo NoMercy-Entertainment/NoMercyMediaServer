@@ -19,7 +19,7 @@ namespace NoMercy.Api.DTOs.Media;
 public record CarouselResponseItemDto
 {
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("cover")]
     public string? Cover { get; set; }

@@ -12,8 +12,8 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.People;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.People;
 
@@ -112,7 +112,7 @@ public record KnownForDto
     public int? EpisodeCount { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("link")]
     public Uri Link { get; set; } = null!;

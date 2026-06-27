@@ -25,7 +25,7 @@ public record TopMusicDto
     public string Name { get; set; } = string.Empty;
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("type")]
     public string Type { get; set; } = "albums";
@@ -84,7 +84,7 @@ public record TopMusicDto
     {
         Id = item.Id;
         Name = item.Name;
-        ColorPalette = IColorPalettes.FromJsonOrNull(item.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(item.ColorPalette);
         Type = item.Type;
         Link = item.Type switch
         {

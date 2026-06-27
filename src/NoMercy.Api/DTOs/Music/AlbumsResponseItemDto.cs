@@ -20,7 +20,7 @@ namespace NoMercy.Api.DTOs.Music;
 public record AlbumsResponseItemDto
 {
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
@@ -97,10 +97,10 @@ public record AlbumsResponseItemDto
         Cover = !string.IsNullOrEmpty(album.Cover)
             ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
             : null;
-        ColorPalette = IColorPalettes.FromJsonOrNull(album.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(album.ColorPalette);
         if (ColorPalette is not null)
         {
-            IColorPalettes? bgPalette = IColorPalettes.FromJsonOrNull(
+            ColorPalette? bgPalette = ColorPalette.FromJsonOrNull(
                 album.BackgroundImageColorPalette
             );
             ColorPalette.Backdrop = bgPalette?.Image;

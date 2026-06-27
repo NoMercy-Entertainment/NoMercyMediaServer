@@ -15,8 +15,8 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.DTOs.Media;
@@ -51,7 +51,7 @@ public record LibraryResponseItemDto
     public string? Overview { get; set; }
 
     [JsonProperty("color_palette")]
-    public IColorPalettes? ColorPalette { get; set; }
+    public ColorPalette? ColorPalette { get; set; }
 
     [JsonProperty("poster")]
     public string? Poster { get; set; }
