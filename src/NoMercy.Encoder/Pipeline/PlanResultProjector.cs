@@ -26,13 +26,13 @@ namespace NoMercy.Encoder.Pipeline;
 /// empty / null today. Phase 3 will enrich <see cref="ExecutionPlan"/> with
 /// hardware-binding information and update the mapping here.</para>
 /// </summary>
-public static class PlanResultProjector
+public class PlanResultProjector : IPlanResultProjector
 {
     /// <summary>
     /// Build a <see cref="PlanResult"/> from the plan produced by
     /// <see cref="PlanStage"/> and the current <see cref="EncodingContext"/>.
     /// </summary>
-    public static PlanResult FromExecutionPlan(ExecutionPlan plan, EncodingContext context)
+    public PlanResult FromExecutionPlan(ExecutionPlan plan, EncodingContext context)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(context);

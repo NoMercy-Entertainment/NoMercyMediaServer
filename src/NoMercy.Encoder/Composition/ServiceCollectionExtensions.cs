@@ -293,6 +293,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IPlanStage>(sp => sp.GetRequiredService<PlanStage>());
         services.AddTransient<BuildStage>();
         services.AddTransient<IBuildStage>(sp => sp.GetRequiredService<BuildStage>());
+        services.AddSingleton<IPlanResultProjector, PlanResultProjector>();
         services.AddTransient<ExecuteStage>();
         services.AddTransient<IExecutionStage>(sp => sp.GetRequiredService<ExecuteStage>());
         services.AddTransient<FinalizeStage>();
