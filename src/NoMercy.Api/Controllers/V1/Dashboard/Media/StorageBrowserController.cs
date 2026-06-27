@@ -26,7 +26,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [ApiController]
 [Tags("Dashboard Storage Browser")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/storage", Order = 10)]
 public class StorageBrowserController(
     ILogger<StorageBrowserController> logger,
@@ -51,8 +51,6 @@ public class StorageBrowserController(
     [Route("probe")]
     public async Task<IActionResult> Probe([FromBody] StorageProbeRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to probe storage.");
 
         if (string.IsNullOrWhiteSpace(request.Type))
             return BadRequestResponse("type is required.");
@@ -132,8 +130,6 @@ public class StorageBrowserController(
     [Route("list")]
     public async Task<IActionResult> List([FromBody] StorageListRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to browse storage.");
 
         if (string.IsNullOrWhiteSpace(request.DriverId))
             return BadRequestResponse("driver_id is required.");
@@ -213,8 +209,6 @@ public class StorageBrowserController(
     [Route("mkdir")]
     public async Task<IActionResult> Mkdir([FromBody] StorageMkdirRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to create directories.");
 
         if (string.IsNullOrWhiteSpace(request.DriverId))
             return BadRequestResponse("driver_id is required.");

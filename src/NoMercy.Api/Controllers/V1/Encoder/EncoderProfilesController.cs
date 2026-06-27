@@ -41,7 +41,7 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 [ApiController]
 [Tags("Encoder Profiles")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/encoder/profiles")]
 public class EncoderProfilesController(
     IProfileValidator profileValidator,
@@ -62,8 +62,6 @@ public class EncoderProfilesController(
         [FromQuery] string? tag = null
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view profiles");
 
         pageSize = Math.Clamp(pageSize, 1, 500);
         if (pageIndex < 0)
@@ -93,8 +91,6 @@ public class EncoderProfilesController(
     [HttpGet("{id:ulid}")]
     public async Task<IActionResult> Get(Ulid id, CancellationToken ct)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view profiles");
 
         EncodingPreset? preset = await mediaContext
             .EncodingPresets.AsNoTracking()
@@ -124,8 +120,6 @@ public class EncoderProfilesController(
     [HttpGet("{id:ulid}/resolved")]
     public IActionResult GetResolved(Ulid id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view profiles");
 
         DbPresetLookup lookup = new(mediaContext);
         V2EncodingProfile resolved;
@@ -152,8 +146,6 @@ public class EncoderProfilesController(
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateEncoderProfileRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to create profiles");
 
         EncoderProfileService.CreateResult result = await encoderProfileService.CreateAsync(
             request.Name,
@@ -181,8 +173,6 @@ public class EncoderProfilesController(
     [HttpGet("tags")]
     public async Task<IActionResult> Tags()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view profiles");
 
         IReadOnlyList<string> tags = await presetRepository.GetAllTagsAsync();
         return Ok(new { data = tags });
@@ -202,8 +192,6 @@ public class EncoderProfilesController(
         [FromServices] INamePresetResolver presetResolver
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view profiles");
 
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid profile id");
@@ -243,8 +231,6 @@ public class EncoderProfilesController(
     [HttpDelete("{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id, CancellationToken ct)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to delete profiles");
 
         EncodingPreset? row = await mediaContext.EncodingPresets.FirstOrDefaultAsync(
             p => p.Id == id,
@@ -283,8 +269,6 @@ public class EncoderProfilesController(
     [HttpPost("validate")]
     public IActionResult Validate([FromBody] ValidateEncoderProfileRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to validate profiles");
 
         if (string.IsNullOrWhiteSpace(request.ProfileJson))
         {
@@ -353,8 +337,6 @@ public class EncoderProfilesController(
         CancellationToken ct
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to preview encodes");
 
         EncoderProfileService.PreviewParseResult parseResult =
             encoderProfileService.ParseProfileForPreview(
@@ -386,8 +368,6 @@ public class EncoderProfilesController(
         CancellationToken ct
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to update profiles");
 
         EncodingPreset? row = await mediaContext.EncodingPresets.FirstOrDefaultAsync(
             p => p.Id == id,
@@ -433,8 +413,6 @@ public class EncoderProfilesController(
         CancellationToken ct
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to clone profiles");
 
         EncodingPreset? parent = await mediaContext
             .EncodingPresets.AsNoTracking()
@@ -478,8 +456,6 @@ public class EncoderProfilesController(
         CancellationToken ct = default
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to import profiles");
 
         EncoderProfileService.ImportResult result = await encoderProfileService.ImportAsync(
             request.ProfileJson,
@@ -514,8 +490,6 @@ public class EncoderProfilesController(
     [HttpGet("{id}/export")]
     public async Task<IActionResult> Export(string id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to export profiles");
 
         if (!Ulid.TryParse(id, out Ulid presetId))
             return BadRequestResponse("Invalid profile id");

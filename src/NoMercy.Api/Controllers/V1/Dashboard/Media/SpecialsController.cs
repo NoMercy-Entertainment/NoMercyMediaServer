@@ -32,7 +32,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [ApiController]
 [Tags(tags: "Dashboard Specials")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/specials", Order = 11)]
 public class SpecialsController(
     // TODO: remove mediaContext once LibraryLogic accepts IDbContextFactory instead of MediaContext
@@ -45,8 +45,6 @@ public class SpecialsController(
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view specials");
 
         List<Special> specials = await specialRepository.GetAllSpecialsAdminAsync();
 
@@ -62,8 +60,6 @@ public class SpecialsController(
     public async Task<IActionResult> Store()
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to create a new special");
 
         try
         {
@@ -89,8 +85,6 @@ public class SpecialsController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Show(Ulid id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view the special");
 
         Special? special = await specialRepository.GetSpecialByIdAsync(id);
 
@@ -112,8 +106,6 @@ public class SpecialsController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Update(Ulid id, [FromBody] SpecialUpdateRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to update the special");
 
         try
         {
@@ -148,8 +140,6 @@ public class SpecialsController(
     [Route("{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to delete the special");
 
         try
         {
@@ -177,8 +167,6 @@ public class SpecialsController(
     [Route("sort")]
     public async Task<IActionResult> Sort(Ulid id, [FromBody] LibrarySortRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to sort the specials");
 
         List<Special> specials = await specialRepository.GetAllSpecialsSortableAsync();
 
@@ -199,8 +187,6 @@ public class SpecialsController(
     [Route("rescan")]
     public async Task<IActionResult> RescanAll()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to rescan all specials");
 
         List<Special> specialsList = await specialRepository.GetAllSpecialsForRescanAsync();
 
@@ -223,8 +209,6 @@ public class SpecialsController(
     [Route("{id:ulid}/rescan")]
     public async Task<IActionResult> Rescan(Ulid id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to rescan the special");
 
         // BLOCKER: LibraryLogic requires a raw MediaContext until it is refactored
         // to accept IDbContextFactory. Remove mediaContext from the ctor at that point.
@@ -248,8 +232,6 @@ public class SpecialsController(
     [Route("{id:ulid}/items")]
     public async Task<IActionResult> GetItems(Ulid id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view special items");
 
         List<SpecialItem> items = await specialRepository.GetSpecialItemsAdminAsync(id);
 
@@ -307,8 +289,6 @@ public class SpecialsController(
         [FromBody] SpecialItemsUpdateRequest request
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to update special items");
 
         List<SpecialItemReplacement> replacements = request
             .Items.Select(item => new SpecialItemReplacement(
@@ -336,8 +316,6 @@ public class SpecialsController(
     [Route("search")]
     public async Task<IActionResult> Search([FromQuery] string q, CancellationToken ct = default)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to search");
 
         if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
             return Ok(Array.Empty<SpecialSearchResultDto>());

@@ -31,7 +31,7 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 [ApiController]
 [Tags("Encoder Trusted Publishers")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Owner")]
 [Route("api/v{version:apiVersion}/encoder/trusted-publishers")]
 public class EncoderTrustedPublishersController(MediaContext mediaContext) : BaseController
 {
@@ -41,10 +41,6 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse(
-                "You do not have permission to view trusted publisher keys"
-            );
 
         IReadOnlyList<TrustedPublisherKey> keys = await mediaContext
             .TrustedPublisherKeys.AsNoTracking()
@@ -62,8 +58,6 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] AddTrustedPublisherRequest request)
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("You do not have permission to add trusted publisher keys");
 
         // --- Validate base64 decodes to exactly 32 bytes (Ed25519 key length) ---
         byte[] publicKeyBytes;
@@ -144,10 +138,6 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
     [HttpDelete("{fingerprint}")]
     public async Task<IActionResult> Delete(string fingerprint)
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse(
-                "You do not have permission to remove trusted publisher keys"
-            );
 
         TrustedPublisherKey? existing = await mediaContext.TrustedPublisherKeys.FirstOrDefaultAsync(
             k => k.Fingerprint == fingerprint

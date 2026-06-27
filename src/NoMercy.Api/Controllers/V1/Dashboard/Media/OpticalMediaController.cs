@@ -37,7 +37,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [ApiController]
 [Tags("Dashboard Optical")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/optical")]
 public class OpticalMediaController(
     DiscSourceFactory discSourceFactory,
@@ -57,8 +57,6 @@ public class OpticalMediaController(
     [HttpGet("drives")]
     public IActionResult GetOpticalDrives()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view optical drives");
 
         IEnumerable<object> drives = driveMonitor
             .GetDrives()
@@ -77,8 +75,6 @@ public class OpticalMediaController(
     [HttpGet("{drivePath}")]
     public async Task<IActionResult> GetDriveContents(string drivePath, CancellationToken ct)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view drive contents");
 
         DiscDrive? drive = FindDrive(drivePath);
         if (drive is null)
@@ -127,8 +123,6 @@ public class OpticalMediaController(
     [HttpPost("{drivePath}/process")]
     public IActionResult ProcessMedia(string drivePath)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to process media");
 
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
@@ -143,8 +137,6 @@ public class OpticalMediaController(
     [HttpPost("{drivePath}/open")]
     public IActionResult OpenDrive(string drivePath)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to open drive");
 
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
@@ -160,8 +152,6 @@ public class OpticalMediaController(
     [HttpPost("{drivePath}/close")]
     public IActionResult CloseDrive(string drivePath)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to close drive");
 
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
@@ -181,8 +171,6 @@ public class OpticalMediaController(
         CancellationToken ct
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to play media");
 
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
@@ -242,8 +230,6 @@ public class OpticalMediaController(
     [HttpPost("{drivePath}/stop")]
     public async Task<IActionResult> StopMedia(string drivePath, CancellationToken ct)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to stop media");
 
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
@@ -272,8 +258,6 @@ public class OpticalMediaController(
     [HttpGet("{drivePath}/probe")]
     public async Task<IActionResult> ProbeDisc(string drivePath, CancellationToken ct)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to probe optical drives");
 
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
@@ -323,8 +307,6 @@ public class OpticalMediaController(
     [HttpPost("{drivePath}/resolve")]
     public async Task<IActionResult> ResolveDisc(string drivePath, CancellationToken ct)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to resolve disc metadata");
 
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
@@ -378,8 +360,6 @@ public class OpticalMediaController(
         CancellationToken ct
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to confirm disc metadata");
 
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");
@@ -504,8 +484,6 @@ public class OpticalMediaController(
         CancellationToken ct
     )
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to rip optical drives");
 
         if (string.IsNullOrWhiteSpace(drivePath))
             return BadRequestResponse("Drive path is required");

@@ -29,7 +29,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [ApiController]
 [Tags("Dashboard Server Devices")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/devices", Order = 10)]
 public class DevicesController(
     IDeviceRepository deviceRepository,
@@ -40,8 +40,6 @@ public class DevicesController(
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view devices");
 
         List<Device> devices = await deviceRepository.GetDevices();
 
@@ -80,8 +78,6 @@ public class DevicesController(
     [HttpPost]
     public IActionResult Create()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to create devices");
 
         return Ok(new PlaceholderResponse { Data = [] });
     }
@@ -89,8 +85,6 @@ public class DevicesController(
     [HttpDelete]
     public async Task<IActionResult> Destroy()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to clear activity logs");
 
         await deviceRepository.DeleteAllActivityLogsAsync();
 
@@ -100,8 +94,6 @@ public class DevicesController(
     [HttpDelete("offline")]
     public async Task<IActionResult> DestroyOffline()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to delete devices");
 
         List<Device> all = await deviceRepository.GetAllAsync();
 
@@ -140,8 +132,6 @@ public class DevicesController(
     [HttpDelete("{id}")]
     public async Task<IActionResult> DestroyOne(string id)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to delete devices");
 
         if (!Ulid.TryParse(id, out Ulid deviceId))
             return BadRequestResponse("Invalid device id");

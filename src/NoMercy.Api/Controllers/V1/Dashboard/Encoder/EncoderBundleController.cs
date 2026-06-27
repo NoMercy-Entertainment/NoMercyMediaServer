@@ -24,7 +24,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 [ApiController]
 [Tags("Dashboard Encoder Bundles")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Owner")]
 [Route("api/v{version:apiVersion}/dashboard/encoder")]
 public class EncoderBundleController(
     IBundleGarbageCollector bundleGarbageCollector,
@@ -42,10 +42,6 @@ public class EncoderBundleController(
     [HttpGet("bundle-orphans")]
     public async Task<IActionResult> BundleOrphans(CancellationToken ct)
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse(
-                "You do not have permission to view encoder bundle orphans"
-            );
 
         List<Folder> folders = await folderRepository.GetAllFoldersAsync(ct);
 

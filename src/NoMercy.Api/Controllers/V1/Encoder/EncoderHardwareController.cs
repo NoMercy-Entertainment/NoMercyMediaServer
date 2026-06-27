@@ -38,7 +38,7 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 [ApiController]
 [Tags("Encoder Hardware")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/encoder/hardware")]
 public class EncoderHardwareController(
     IBenchmarkJobTracker tracker,
@@ -56,10 +56,6 @@ public class EncoderHardwareController(
     [HttpPost("benchmark")]
     public IActionResult StartBenchmark([FromBody] StartBenchmarkRequest? request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse(
-                "You do not have permission to trigger a hardware benchmark"
-            );
 
         List<VideoCodecType> codecs = [];
 
@@ -98,10 +94,6 @@ public class EncoderHardwareController(
     [HttpGet("benchmark/{jobId}")]
     public IActionResult GetBenchmark(string jobId)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse(
-                "You do not have permission to view hardware benchmark status"
-            );
 
         BenchmarkJobStatus? job = tracker.Get(jobId);
         if (job is null)
@@ -118,10 +110,6 @@ public class EncoderHardwareController(
     [HttpGet("benchmark")]
     public IActionResult ListBenchmarks()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse(
-                "You do not have permission to list hardware benchmark jobs"
-            );
 
         return Ok(new { data = tracker.List() });
     }
@@ -135,8 +123,6 @@ public class EncoderHardwareController(
     [HttpGet("utilization")]
     public IActionResult GetUtilization()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view hardware utilization");
 
         UtilizationSnapshot snap = new(
             CpuUsagePercent: monitor.GetCpuUsagePercent(),
@@ -158,8 +144,6 @@ public class EncoderHardwareController(
     [HttpGet("/api/v{version:apiVersion}/encoder/capabilities")]
     public IActionResult GetCapabilities()
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view encoder capabilities");
 
         CapabilityReport? report = probe.GetCachedReport();
         return report is null

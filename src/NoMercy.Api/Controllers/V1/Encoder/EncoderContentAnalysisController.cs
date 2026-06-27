@@ -44,7 +44,7 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 [ApiController]
 [Tags("Encoder Content Analysis")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Owner")]
 [Route("api/v{version:apiVersion}/encoder/content-analysis")]
 public class EncoderContentAnalysisController(
     ICropDetector cropDetector,
@@ -67,8 +67,6 @@ public class EncoderContentAnalysisController(
     [HttpPost("crop/{videoFileId}")]
     public async Task<IActionResult> DetectCrop(string videoFileId, CancellationToken ct)
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("Only the server owner can probe crop detection");
 
         if (!Ulid.TryParse(videoFileId, out Ulid fileId))
             return BadRequestResponse("Invalid video file id");
@@ -119,8 +117,6 @@ public class EncoderContentAnalysisController(
     [HttpPost("intro/{seasonId:int}")]
     public async Task<IActionResult> DetectIntroForSeason(int seasonId, CancellationToken ct)
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("Only the server owner can probe intro detection");
 
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         List<Episode> episodes = await context
@@ -323,8 +319,6 @@ public class EncoderContentAnalysisController(
         CancellationToken ct
     )
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("Only the server owner can probe OCR");
 
         if (ocrEngine is null)
             return NotImplementedResponse("Subtitle OCR engine is not registered on this build");
@@ -387,8 +381,6 @@ public class EncoderContentAnalysisController(
         CancellationToken ct
     )
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("Only the server owner can probe Whisper transcription");
 
         if (whisperTranscriber is null)
             return NotImplementedResponse("Whisper transcriber is not registered on this build");
@@ -470,8 +462,6 @@ public class EncoderContentAnalysisController(
         CancellationToken ct
     )
     {
-        if (!AuthPolicy.IsOwner(User))
-            return UnauthorizedResponse("Only the server owner can edit content segments");
 
         if (!Ulid.TryParse(segmentId, out Ulid id))
             return BadRequestResponse("Invalid segment id");

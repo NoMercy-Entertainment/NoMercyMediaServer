@@ -25,7 +25,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Filesystem;
 [ApiController]
 [Tags("Dashboard Filesystem")]
 [ApiVersion(1.0)]
-[Authorize]
+[Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/filesystem")]
 public class FilesystemController(FilesystemRepository filesystem) : BaseController
 {
@@ -33,8 +33,6 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("ls")]
     public IActionResult List([FromBody] DirectoryListRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view folders");
 
         try
         {
@@ -66,8 +64,6 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("home")]
     public IActionResult Home([FromBody] DirectoryListRequest? request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view folders");
 
         bool withEmpty = request?.WithEmpty ?? false;
 
@@ -98,8 +94,6 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("roots")]
     public IActionResult Roots([FromBody] DirectoryListRequest? request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to view folders");
 
         bool withEmpty = request?.WithEmpty ?? false;
 
@@ -128,8 +122,6 @@ public class FilesystemController(FilesystemRepository filesystem) : BaseControl
     [Route("mkdir")]
     public IActionResult Mkdir([FromBody] MkdirRequest request)
     {
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to create folders");
 
         try
         {
