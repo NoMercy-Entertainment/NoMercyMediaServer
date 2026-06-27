@@ -167,10 +167,10 @@ public class ResourceBudget : IResourceBudget
         token switch
         {
             "nvenc" => GpuEncoderTokens.NvencNames,
-            "amf" => ["h264_amf", "hevc_amf", "av1_amf"],
-            "qsv" => ["h264_qsv", "hevc_qsv", "av1_qsv", "vp9_qsv"],
-            "vaapi" => ["h264_vaapi", "hevc_vaapi", "av1_vaapi", "vp9_vaapi"],
-            "videotoolbox" => ["h264_videotoolbox", "hevc_videotoolbox"],
+            "amf" => GpuEncoderTokens.AmfNames,
+            "qsv" => GpuEncoderTokens.QsvNames,
+            "vaapi" => GpuEncoderTokens.VaapiNames,
+            "videotoolbox" => GpuEncoderTokens.VideotoolboxNames,
             _ => [],
         };
 

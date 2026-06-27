@@ -25,6 +25,34 @@ public static class GpuEncoderTokens
         "av1_nvenc",
     ];
 
+    /// <summary>FfmpegName values for AMD AMF encoders.</summary>
+    public static readonly IReadOnlyList<string> AmfNames = ["h264_amf", "hevc_amf", "av1_amf"];
+
+    /// <summary>FfmpegName values for Intel Quick Sync (QSV) encoders.</summary>
+    public static readonly IReadOnlyList<string> QsvNames =
+    [
+        "h264_qsv",
+        "hevc_qsv",
+        "av1_qsv",
+        "vp9_qsv",
+    ];
+
+    /// <summary>FfmpegName values for VA-API encoders.</summary>
+    public static readonly IReadOnlyList<string> VaapiNames =
+    [
+        "h264_vaapi",
+        "hevc_vaapi",
+        "av1_vaapi",
+        "vp9_vaapi",
+    ];
+
+    /// <summary>FfmpegName values for Apple VideoToolbox encoders.</summary>
+    public static readonly IReadOnlyList<string> VideotoolboxNames =
+    [
+        "h264_videotoolbox",
+        "hevc_videotoolbox",
+    ];
+
     /// <summary>Hardware-acceleration vendor tokens that mark an encoder/GPU as GPU-backed.</summary>
     public static readonly IReadOnlyList<string> VendorPrefixes =
     [
