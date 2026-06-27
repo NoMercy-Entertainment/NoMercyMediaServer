@@ -11,19 +11,16 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Helpers.Monitoring;
+namespace NoMercy.Monitoring;
 
-public class Resource
+public class Cpu
 {
-    [JsonProperty("cpu")]
-    public Cpu Cpu { get; set; } = new();
+    [JsonProperty("total")]
+    public double Total { get; set; }
 
-    // ReSharper disable once InconsistentNaming
-    internal Dictionary<string, Gpu> _gpu { get; set; } = [];
+    [JsonProperty("max")]
+    public double Max { get; set; }
 
-    [JsonProperty("memory")]
-    public Memory Memory { get; set; } = new();
-
-    [JsonProperty("gpu")]
-    public List<Gpu> Gpu => _gpu.Values.ToList();
+    [JsonProperty("core")]
+    public List<Core> Core { get; set; } = [];
 }

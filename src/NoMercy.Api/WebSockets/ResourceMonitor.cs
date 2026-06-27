@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Helpers.Monitoring;
+using NoMercy.Monitoring;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -81,7 +81,7 @@ public static class ResourceMonitor
             DateTime time = DateTime.Now;
             try
             {
-                Resource resourceData = Helpers.Monitoring.ResourceMonitor.Monitor();
+                Resource resourceData = Monitoring.ResourceMonitor.Monitor();
                 if (_clientMessenger != null)
                     await _clientMessenger.SendToAll(
                         "ResourceUpdate",

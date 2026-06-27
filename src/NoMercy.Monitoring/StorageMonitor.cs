@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 
-namespace NoMercy.Helpers.Monitoring;
+namespace NoMercy.Monitoring;
 
 public class StorageMonitor
 {

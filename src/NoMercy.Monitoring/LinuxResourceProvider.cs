@@ -12,7 +12,7 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 
-namespace NoMercy.Helpers.Monitoring;
+namespace NoMercy.Monitoring;
 
 [SupportedOSPlatform("linux")]
 internal sealed class LinuxResourceProvider : IResourceProvider

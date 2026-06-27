@@ -13,6 +13,7 @@
     <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
     <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />
     <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
+    <ProjectReference Include="..\NoMercy.Monitoring\NoMercy.Monitoring.csproj" />
     <ProjectReference Include="..\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj" />
     <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj" />
     <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj" />

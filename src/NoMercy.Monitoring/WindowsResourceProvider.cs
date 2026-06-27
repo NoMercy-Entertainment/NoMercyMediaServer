@@ -15,7 +15,7 @@ using System.Runtime.Versioning;
 using SharpGen.Runtime;
 using Vortice.DXGI;
 
-namespace NoMercy.Helpers.Monitoring;
+namespace NoMercy.Monitoring;
 
 [SupportedOSPlatform("windows")]
 internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable

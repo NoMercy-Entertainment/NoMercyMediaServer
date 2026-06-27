@@ -9,13 +9,21 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Helpers.Monitoring;
+using Newtonsoft.Json;
 
-public class ResourceMonitorDto
+namespace NoMercy.Monitoring;
+
+public class Resource
 {
-    public string Name { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty;
-    public float Total { get; set; }
-    public float Available { get; set; }
-    public float Percentage => Available / Total * 100;
+    [JsonProperty("cpu")]
+    public Cpu Cpu { get; set; } = new();
+
+    // ReSharper disable once InconsistentNaming
+    internal Dictionary<string, Gpu> _gpu { get; set; } = [];
+
+    [JsonProperty("memory")]
+    public Memory Memory { get; set; } = new();
+
+    [JsonProperty("gpu")]
+    public List<Gpu> Gpu => _gpu.Values.ToList();
 }

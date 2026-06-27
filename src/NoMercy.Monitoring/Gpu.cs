@@ -11,7 +11,7 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Helpers.Monitoring;
+namespace NoMercy.Monitoring;
 
 public class Gpu
 {

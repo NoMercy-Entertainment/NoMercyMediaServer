@@ -20,7 +20,7 @@ using NoMercy.Api.DTOs.Management;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Encoder.LiveTranscode;
-using NoMercy.Helpers.Monitoring;
+using NoMercy.Monitoring;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;

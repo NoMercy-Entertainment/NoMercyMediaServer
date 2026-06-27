@@ -25,7 +25,7 @@ using NoMercy.Encoder.Startup;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
 using NoMercy.Helpers;
-using NoMercy.Helpers.Monitoring;
+using NoMercy.Monitoring;
 using NoMercy.Helpers.Wallpaper;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Episodes;
@@ -164,7 +164,7 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IUserProvisioningService, UserProvisioningService>();
         services.AddSingleton<IDegradedModeRecovery, DegradedModeRecovery>();
         services.AddSingleton<AppProcessManager>();
-        services.AddSingleton<Helpers.Monitoring.ResourceMonitor>();
+        services.AddSingleton<Monitoring.ResourceMonitor>();
 
         // Network discovery (replaces static Networking.Networking IP/address members)
         services.AddSingleton<INetworkDiscovery>(sp =>

@@ -95,6 +95,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Tests.OpticalMedia"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Tests.NmSystem", "tests\NoMercy.Tests.NmSystem\NoMercy.Tests.NmSystem.csproj", "{EED86CDF-5F47-487A-AE98-1685B581872E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Monitoring", "src\NoMercy.Monitoring\NoMercy.Monitoring.csproj", "{0F79DCF9-1095-4477-A5C6-518F2402CE42}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -633,6 +635,18 @@ Global
 		{EED86CDF-5F47-487A-AE98-1685B581872E}.Release|x64.Build.0 = Release|Any CPU
 		{EED86CDF-5F47-487A-AE98-1685B581872E}.Release|x86.ActiveCfg = Release|Any CPU
 		{EED86CDF-5F47-487A-AE98-1685B581872E}.Release|x86.Build.0 = Release|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Debug|x64.Build.0 = Debug|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Debug|x86.Build.0 = Debug|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Release|x64.ActiveCfg = Release|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Release|x64.Build.0 = Release|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Release|x86.ActiveCfg = Release|Any CPU
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -682,6 +696,7 @@ Global
 		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
 		{CF4E7401-3043-44BC-8A2A-59F6918ABB9D} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
 		{EED86CDF-5F47-487A-AE98-1685B581872E} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
+		{0F79DCF9-1095-4477-A5C6-518F2402CE42} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {22D7A0A2-2627-4892-8844-22A1F8DFF0C3}

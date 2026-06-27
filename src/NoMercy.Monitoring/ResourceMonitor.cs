@@ -12,7 +12,7 @@
 using System.Runtime.Versioning;
 using NoMercy.NmSystem.SystemCalls;
 
-namespace NoMercy.Helpers.Monitoring;
+namespace NoMercy.Monitoring;
 
 public class ResourceMonitor
 {

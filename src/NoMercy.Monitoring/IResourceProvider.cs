@@ -9,21 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Newtonsoft.Json;
+namespace NoMercy.Monitoring;
 
-namespace NoMercy.Helpers.Monitoring;
-
-public class Memory
+internal interface IResourceProvider
 {
-    [JsonProperty("available")]
-    public double Available { get; set; }
-
-    [JsonProperty("use")]
-    public double Use { get; set; }
-
-    [JsonProperty("total")]
-    public double Total { get; set; }
-
-    [JsonProperty("percentage")]
-    public double Percentage => Use / (Available + Use) * 100;
+    Resource Collect();
 }
