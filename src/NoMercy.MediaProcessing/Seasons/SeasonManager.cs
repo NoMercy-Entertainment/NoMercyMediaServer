@@ -87,7 +87,20 @@ public class SeasonManager(ISeasonRepository seasonRepository, JobDispatcher job
 
     public Task UpdateSeasonAsync(string showName, TmdbSeasonAppends season)
     {
-        throw new NotImplementedException();
+        // Refresh the existing season's metadata in place; the show link (TvId)
+        // is left untouched because a season update never re-parents a season.
+        return seasonRepository.UpdateAsync(
+            new Season
+            {
+                Id = season.Id,
+                Title = season.Name,
+                AirDate = season.AirDate,
+                EpisodeCount = season.Episodes.Length,
+                Overview = season.Overview,
+                Poster = season.PosterPath,
+                SeasonNumber = season.SeasonNumber,
+            }
+        );
     }
 
     public async Task RemoveSeasonAsync(string showName, TmdbSeasonAppends season)

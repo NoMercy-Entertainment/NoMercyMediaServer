@@ -40,6 +40,23 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
             .RunAsync();
     }
 
+    public Task UpdateAsync(Season season)
+    {
+        // Refresh an existing season's metadata in place. TvId is intentionally
+        // excluded so the foreign-key link to its show is never altered.
+        return context
+            .Seasons.Where(s => s.Id == season.Id)
+            .ExecuteUpdateAsync(setters =>
+                setters
+                    .SetProperty(s => s.Title, season.Title)
+                    .SetProperty(s => s.AirDate, season.AirDate)
+                    .SetProperty(s => s.EpisodeCount, season.EpisodeCount)
+                    .SetProperty(s => s.Overview, season.Overview)
+                    .SetProperty(s => s.Poster, season.Poster)
+                    .SetProperty(s => s.SeasonNumber, season.SeasonNumber)
+            );
+    }
+
     public Task StoreTranslationsAsync(IEnumerable<Translation> translations)
     {
         return context

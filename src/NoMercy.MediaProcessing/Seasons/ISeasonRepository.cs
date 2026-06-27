@@ -17,6 +17,7 @@ namespace NoMercy.MediaProcessing.Seasons;
 public interface ISeasonRepository
 {
     public Task StoreAsync(IEnumerable<Season> seasons);
+    public Task UpdateAsync(Season season);
     public Task StoreTranslationsAsync(IEnumerable<Translation> translations);
     public Task StoreImagesAsync(IEnumerable<Image> images);
 
