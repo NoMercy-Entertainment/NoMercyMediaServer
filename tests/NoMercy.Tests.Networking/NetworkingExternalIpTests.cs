@@ -107,7 +107,8 @@ public class NetworkingExternalIpTests
         NetworkDiscovery discovery = new(
             new LocalStorageDriver(),
             new AuthTokenStore(),
-            new ConnectivityStatus()
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
         );
         string original = discovery.ExternalIp;
 

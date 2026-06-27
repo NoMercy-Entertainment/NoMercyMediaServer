@@ -135,7 +135,8 @@ public class DegradedModeStartupTests
         NetworkDiscovery discovery = new(
             new LocalStorageDriver(),
             new AuthTokenStore(),
-            new ConnectivityStatus()
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
         );
         string ip = discovery.InternalIp;
 
@@ -151,7 +152,8 @@ public class DegradedModeStartupTests
         NetworkDiscovery discovery = new(
             new LocalStorageDriver(),
             new AuthTokenStore(),
-            new ConnectivityStatus()
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
         );
         string ip = discovery.InternalIp;
 
@@ -169,7 +171,8 @@ public class DegradedModeStartupTests
         NetworkDiscovery discovery = new(
             new LocalStorageDriver(),
             new AuthTokenStore(),
-            new ConnectivityStatus()
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
         );
 
         Assert.True(
@@ -187,7 +190,8 @@ public class DegradedModeStartupTests
         NetworkDiscovery discovery = new(
             new LocalStorageDriver(),
             new AuthTokenStore(),
-            new ConnectivityStatus()
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
         )
         {
             InternalIp = discovered,
@@ -202,7 +206,8 @@ public class DegradedModeStartupTests
         NetworkDiscovery discovery = new(
             new LocalStorageDriver(),
             new AuthTokenStore(),
-            new ConnectivityStatus()
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
         )
         {
             InternalIp = "192.168.1.50",
@@ -350,7 +355,8 @@ public class CloudflareFallbackTests
         NetworkDiscovery discovery = new(
             new LocalStorageDriver(),
             new AuthTokenStore(),
-            new ConnectivityStatus()
+            new ConnectivityStatus(),
+            new NetworkProbeConfig()
         );
         string ip = discovery.ExternalIp;
         Assert.NotNull(ip);
@@ -422,7 +428,8 @@ public class CloudflareFallbackTests
             NetworkDiscovery discovery = new(
                 new LocalStorageDriver(),
                 new AuthTokenStore(),
-                new ConnectivityStatus()
+                new ConnectivityStatus(),
+                new NetworkProbeConfig()
             );
             await discovery.DiscoverExternalIpAsync();
         }

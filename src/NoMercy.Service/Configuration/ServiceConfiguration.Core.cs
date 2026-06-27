@@ -174,13 +174,18 @@ public static partial class ServiceConfiguration
         services.AddSingleton<Monitoring.ResourceMonitor>();
 
         // Network discovery (replaces static Networking.Networking IP/address members)
+        NetworkProbeConfig networkProbeConfig =
+            configuration.GetSection("NetworkProbe").Get<NetworkProbeConfig>() ?? new();
+        NetworkProbe.ProbeTargets = networkProbeConfig.ProbeTargets;
+
         services.AddSingleton<INetworkDiscovery>(sp =>
         {
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
             NetworkDiscovery discovery = new(
                 storageDriver,
                 sp.GetRequiredService<IAuthTokenStore>(),
-                sp.GetRequiredService<IConnectivityStatus>()
+                sp.GetRequiredService<IConnectivityStatus>(),
+                networkProbeConfig
             );
             if (!string.IsNullOrEmpty(StartupOptions.OverrideInternalIp))
                 discovery.InternalIp = StartupOptions.OverrideInternalIp;
@@ -240,6 +245,7 @@ public static partial class ServiceConfiguration
         services.Configure<ExternalServicesConfig>(configuration.GetSection("ExternalServices"));
         services.Configure<ServerConfig>(configuration.GetSection("Server"));
         services.Configure<ConnectivityConfig>(configuration.GetSection("Connectivity"));
+        services.Configure<NetworkProbeConfig>(configuration.GetSection("NetworkProbe"));
         services.Configure<WorkerConfig>(configuration.GetSection("Workers"));
         services.Configure<EncoderResourceConfig>(configuration.GetSection("EncoderResources"));
         services.Configure<ContentPolicy>(configuration.GetSection("ContentPolicy"));

@@ -36,16 +36,19 @@ public class NetworkDiscovery : INetworkDiscovery
 
     private readonly IAuthTokenStore _authTokenStore;
     private readonly IConnectivityStatus _connectivityStatus;
+    private readonly NetworkProbeConfig _networkProbeConfig;
 
     public NetworkDiscovery(
         IStorageDriver driver,
         IAuthTokenStore authTokenStore,
-        IConnectivityStatus connectivityStatus
+        IConnectivityStatus connectivityStatus,
+        NetworkProbeConfig networkProbeConfig
     )
     {
         _authTokenStore = authTokenStore;
         _connectivityStatus = connectivityStatus;
         _driver = driver;
+        _networkProbeConfig = networkProbeConfig;
     }
 
     public string InternalIp
@@ -310,14 +313,17 @@ public class NetworkDiscovery : INetworkDiscovery
         }
     }
 
-    private static string GetInternalIp()
+    private string GetInternalIp()
     {
         // Prefer the UDP socket method — it returns the IP of the interface that would
         // route to the internet, which is always the real LAN adapter, never Docker/WSL.
         try
         {
             using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
-            socket.Connect("8.8.8.8", 65530);
+            socket.Connect(
+                _networkProbeConfig.LocalIpDiscoveryIpv4,
+                _networkProbeConfig.LocalIpDiscoveryPort
+            );
             IPAddress? address = (socket.LocalEndPoint as IPEndPoint)?.Address;
             if (
                 address is not null
@@ -416,7 +422,7 @@ public class NetworkDiscovery : INetworkDiscovery
         return false;
     }
 
-    private static string? GetInternalIpV6()
+    private string? GetInternalIpV6()
     {
         try
         {
@@ -452,7 +458,10 @@ public class NetworkDiscovery : INetworkDiscovery
         try
         {
             using Socket socket = new(AddressFamily.InterNetworkV6, SocketType.Dgram, 0);
-            socket.Connect("2001:4860:4860::8888", 65530);
+            socket.Connect(
+                _networkProbeConfig.LocalIpDiscoveryIpv6,
+                _networkProbeConfig.LocalIpDiscoveryPort
+            );
             IPEndPoint? endpoint = socket.LocalEndPoint as IPEndPoint;
             if (endpoint?.Address is not null && !endpoint.Address.IsIPv6LinkLocal)
                 return endpoint.Address.ToString();
@@ -565,8 +574,13 @@ public class NetworkDiscovery : INetworkDiscovery
                 }
             );
             httpClient.Timeout = TimeSpan.FromSeconds(5);
-            httpClient.DefaultRequestHeaders.Add("User-Agent", ExternalServicesConfig.Current.UserAgent);
-            string ip = await httpClient.GetStringAsync($"{ExternalServicesConfig.Current.ApiBaseUrl}v1/ip");
+            httpClient.DefaultRequestHeaders.Add(
+                "User-Agent",
+                ExternalServicesConfig.Current.UserAgent
+            );
+            string ip = await httpClient.GetStringAsync(
+                $"{ExternalServicesConfig.Current.ApiBaseUrl}v1/ip"
+            );
             ip = ip.Replace("\"", "").Trim();
             if (!string.IsNullOrEmpty(ip) && ip.Contains(':'))
                 return ip;
