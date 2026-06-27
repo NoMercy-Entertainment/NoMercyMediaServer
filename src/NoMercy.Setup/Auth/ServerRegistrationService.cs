@@ -42,16 +42,19 @@ public class ServerRegistrationService : IServerRegistrationService
     private static readonly TimeSpan FailureCooldown = TimeSpan.FromSeconds(60);
 
     private readonly IAuthTokenStore _authTokenStore;
+    private readonly ICertificateService _certificateService;
 
     public ServerRegistrationService(
         IAuthTokenStore authTokenStore,
         IDbContextFactory<AppDbContext> appDbContextFactory,
         IUserProvisioningService userProvisioningService,
         IConnectivityStatus connectivityStatus,
+        ICertificateService certificateService,
         INetworkDiscovery? networkDiscovery = null
     )
     {
         _authTokenStore = authTokenStore;
+        _certificateService = certificateService;
         _appDbContextFactory = appDbContextFactory;
         _userProvisioningService = userProvisioningService;
         _connectivityStatus = connectivityStatus;
@@ -79,7 +82,7 @@ public class ServerRegistrationService : IServerRegistrationService
         {
             await RegisterServer(maxRetries);
             await AssignServerWithRetry(maxRetries);
-            await Certificate.RenewSslCertificate(_authTokenStore.AccessToken);
+            await _certificateService.RenewSslCertificate(_authTokenStore.AccessToken);
         }
         catch
         {

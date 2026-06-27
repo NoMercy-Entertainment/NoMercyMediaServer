@@ -57,7 +57,7 @@ public class CertificateAvailabilityTests : IDisposable
         // indicate no valid certificate is present.
         try
         {
-            bool result = Certificate.HasValidCertificate();
+            bool result = new CertificateService(null!).HasValidCertificate();
             Assert.False(result, "No certificate should be present in the test environment");
         }
         catch (SqliteException)
@@ -154,7 +154,7 @@ public class HttpToHttpsTransitionTests
         bool hasCert = false;
         try
         {
-            hasCert = Certificate.HasValidCertificate();
+            hasCert = new CertificateService(null!).HasValidCertificate();
         }
         catch (SqliteException)
         {

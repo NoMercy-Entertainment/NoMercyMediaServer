@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Asp.Versioning.ApiExplorer;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.Sqlite;
@@ -118,7 +119,7 @@ public static class ApplicationConfiguration
         app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
         app.UseMiddleware<EncoderRuntimeExceptionMiddleware>();
 
-        if (Certificate.HasValidCertificate())
+        if (app.ApplicationServices.GetRequiredService<ICertificateService>().HasValidCertificate())
         {
             app.UseHsts();
             app.UseWhen(

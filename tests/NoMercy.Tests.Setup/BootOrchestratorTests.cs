@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.NmSystem.Security;
+using NoMercy.Networking.Certificate;
 using Microsoft.AspNetCore.DataProtection;
 using NoMercy.NmSystem.Auth;
 using Microsoft.EntityFrameworkCore;
@@ -51,8 +52,9 @@ public class BootOrchestratorTests : IDisposable
             _authManager,
             new FakeApiKeyLoader(),
             new FakeDegradedModeRecovery(),
-            new FakeServerRegistrationService()
-        , new AuthTokenStore());
+            new FakeServerRegistrationService(),
+            new AuthTokenStore(),
+            new CertificateService(null!));
     }
 
     public void Dispose()

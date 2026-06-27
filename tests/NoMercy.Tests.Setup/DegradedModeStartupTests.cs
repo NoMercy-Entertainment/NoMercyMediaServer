@@ -365,7 +365,7 @@ public class CloudflareFallbackTests
         // Both outcomes correctly indicate no valid certificate is present.
         try
         {
-            bool result = Certificate.HasValidCertificate();
+            bool result = new CertificateService(null!).HasValidCertificate();
             Assert.False(result, "No certificate should be present in the test environment");
         }
         catch (SqliteException)
@@ -385,7 +385,7 @@ public class CloudflareFallbackTests
         // All are acceptable in an isolated test environment.
         try
         {
-            await Certificate.RenewSslCertificate(null, maxRetries: 1);
+            await new CertificateService(null!).RenewSslCertificate(null, maxRetries: 1);
         }
         catch (SqliteException)
         {
@@ -398,7 +398,7 @@ public class CloudflareFallbackTests
             bool hasCert = false;
             try
             {
-                hasCert = Certificate.HasValidCertificate();
+                hasCert = new CertificateService(null!).HasValidCertificate();
             }
             catch (SqliteException)
             {

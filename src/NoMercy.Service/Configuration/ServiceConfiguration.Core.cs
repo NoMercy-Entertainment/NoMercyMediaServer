@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using I18N.DotNet;
+using NoMercy.Networking.Certificate;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -200,6 +201,20 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IChromeCastService>(sp =>
             sp.GetRequiredService<ChromeCastService>()
         );
+
+        // Certificate service (instance singleton). Renewal uses the cert-renewal named
+        // client whose primary handler resolves DNS via DnsClient.
+        services
+            .AddHttpClient("cert-renewal")
+            .ConfigurePrimaryHttpMessageHandler(() =>
+                NoMercy.NmSystem.Extensions.HttpClientExtensions.CreateDnsHandler()
+            );
+        services.AddSingleton<ICertificateService>(sp =>
+        {
+            CertificateService certificateService = new(sp.GetRequiredService<IHttpClientFactory>());
+            Start.Certificate = certificateService;
+            return certificateService;
+        });
 
         // Client messaging (replaces static Networking.Networking.SendTo/SendToAll)
         services.AddSingleton<ConnectedClients>();

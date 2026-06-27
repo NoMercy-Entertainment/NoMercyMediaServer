@@ -35,6 +35,7 @@ public class BootOrchestrator
     private readonly IServerRegistrationService _serverRegistrationService;
 
     private readonly IAuthTokenStore _authTokenStore;
+    private readonly ICertificateService _certificateService;
 
     public BootOrchestrator(
         SetupState setupState,
@@ -42,10 +43,12 @@ public class BootOrchestrator
         IApiKeyLoader apiKeyLoader,
         IDegradedModeRecovery degradedModeRecovery,
         IServerRegistrationService serverRegistrationService,
-        IAuthTokenStore authTokenStore
+        IAuthTokenStore authTokenStore,
+        ICertificateService certificateService
     )
     {
         _authTokenStore = authTokenStore;
+        _certificateService = certificateService;
         _setupState = setupState;
         _authManager = authManager;
         _apiKeyLoader = apiKeyLoader;
@@ -72,7 +75,7 @@ public class BootOrchestrator
         // Load SSL certificate into memory cache (from DB or legacy PEM files)
         try
         {
-            Certificate.LoadFromDb();
+            _certificateService.LoadFromDb();
         }
         catch (Exception ex)
         {
@@ -90,7 +93,7 @@ public class BootOrchestrator
                 NmSystem.Lifecycle.BootStage.Auth
             );
 
-            bool isRegistered = Certificate.HasValidCertificate();
+            bool isRegistered = _certificateService.HasValidCertificate();
             _setupState.DetermineInitialPhase(hasValidToken: true, isRegistered: isRegistered);
 
             if (isRegistered)
@@ -279,7 +282,7 @@ public class BootOrchestrator
             _setupState.TransitionTo(SetupPhase.Registered);
             _setupState.SetPhaseDetail("Acquiring SSL certificate...");
 
-            bool hasCert = Certificate.HasValidCertificate();
+            bool hasCert = _certificateService.HasValidCertificate();
 
             if (hasCert)
                 _setupState.TransitionTo(SetupPhase.CertificateAcquired);

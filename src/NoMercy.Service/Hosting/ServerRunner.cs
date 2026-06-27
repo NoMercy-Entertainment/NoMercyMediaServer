@@ -168,7 +168,7 @@ public class ServerRunner : IServerRunner
         }
 
         // Setup completed — certificate should now be available
-        if (!Certificate.HasValidCertificate())
+        if (!Start.Certificate!.HasValidCertificate())
         {
             _logger.LogInformation(
                 "Setup completed but certificate not found — continuing on HTTP"

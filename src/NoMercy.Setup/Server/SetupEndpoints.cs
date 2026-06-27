@@ -198,7 +198,7 @@ public class SetupEndpoints
             client_id = ExternalServicesConfig.Current.TokenClientId.OrEmpty(),
             code_challenge = codeChallenge,
             pkce_state = pkceState,
-            is_first_boot = !Certificate.HasValidCertificate(),
+            is_first_boot = !Start.Certificate!.HasValidCertificate(),
         };
 
         await WriteJsonResponse(context.Response, response);
@@ -816,7 +816,7 @@ public class SetupEndpoints
             );
             _terminalUi?.SetStatus("Securing your connection...");
 
-            if (Certificate.HasValidCertificate())
+            if (Start.Certificate!.HasValidCertificate())
             {
                 string serverUrl =
                     $"https://{Info.DeviceId}.nomercy.tv:{RuntimeServerSettings.Current.ExternalServerPort}";

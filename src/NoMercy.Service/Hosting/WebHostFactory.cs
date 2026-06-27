@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -83,7 +84,8 @@ public static class WebHostFactory
 
         builder.WebHost.ConfigureKestrel(kestrelOptions =>
         {
-            Certificate.KestrelConfig(kestrelOptions);
+            ICertificateService certificateService = kestrelOptions.ApplicationServices.GetRequiredService<ICertificateService>();
+            certificateService.KestrelConfig(kestrelOptions);
 
             // Main server endpoints.
             // forceHttp = true during setup/auth, so we never need HTTPS to handle the
@@ -102,7 +104,7 @@ public static class WebHostFactory
                         else
                         {
                             listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
-                            Certificate.ConfigureHttpsListener(listenOptions);
+                            certificateService.ConfigureHttpsListener(listenOptions);
                         }
                     }
                 );

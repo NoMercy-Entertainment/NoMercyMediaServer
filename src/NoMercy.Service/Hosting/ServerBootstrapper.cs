@@ -105,9 +105,22 @@ public sealed class ServerBootstrapper
         // Use certificate presence for the initial forceHttp decision — this is a
         // filesystem check that doesn't require DI. BootOrchestrator (resolved below)
         // will own the real needsSetupMode determination via token validation.
-        bool hasCert = Certificate.HasValidCertificate();
+        bool hasCert;
+        await using (ServiceProvider certPresenceProvider = new ServiceCollection()
+            .AddHttpClient()
+            .AddSingleton<ICertificateService, CertificateService>()
+            .BuildServiceProvider())
+        {
+            hasCert = certPresenceProvider
+                .GetRequiredService<ICertificateService>()
+                .HasValidCertificate();
+        }
 
         WebApplication app = WebHostFactory.Create(options, forceHttp: !hasCert);
+
+        // Resolve the cert service once so its boot handle (Start.Certificate) is set
+        // before any runtime consumer (ServerRunner, SetupEndpoints) needs it.
+        _ = app.Services.GetRequiredService<ICertificateService>();
 
         IShutdownCoordinator shutdownCoordinator =
             app.Services.GetRequiredService<IShutdownCoordinator>();
@@ -170,7 +183,7 @@ public sealed class ServerBootstrapper
         }
 
         // Load SSL cert from database now that TokenStore is initialized by BootOrchestrator
-        Certificate.LoadFromDb();
+        Start.Certificate!.LoadFromDb();
 
         // Auth completed — seed auth-dependent data (users, library assignment, claims)
         if (!needsSetupMode)

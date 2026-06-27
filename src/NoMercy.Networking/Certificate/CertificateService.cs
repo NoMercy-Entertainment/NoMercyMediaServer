@@ -27,20 +27,26 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using Serilog.Events;
-using DnsHttpClient = NoMercy.NmSystem.Extensions.HttpClientExtensions;
 
 namespace NoMercy.Networking.Certificate;
 
-public static class Certificate
+public sealed class CertificateService : ICertificateService
 {
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public CertificateService(IHttpClientFactory httpClientFactory)
+    {
+        _httpClientFactory = httpClientFactory;
+    }
+
     // LOCAL-ONLY: Certificate runs before StorageProvider is initialized (startup phase 1-3).
     // DI is not available here; replacing this would require threading IStorageDriver
     // through every startup call site including Program.cs and BootOrchestrator.
-    private static readonly IStorageDriver _driver = new LocalStorageDriver();
-    private static X509Certificate2? _cachedCertificate;
-    private static readonly object _certLock = new();
+    private readonly IStorageDriver _driver = new LocalStorageDriver();
+    private X509Certificate2? _cachedCertificate;
+    private readonly object _certLock = new();
 
-    public static void LoadFromDb()
+    public void LoadFromDb()
     {
         using AppDbContext db = new();
         string? certPem = db
@@ -81,7 +87,7 @@ public static class Certificate
         Logger.Setup("Loaded SSL certificate into memory cache");
     }
 
-    private static void UpsertConfig(AppDbContext db, string key, string value)
+    private void UpsertConfig(AppDbContext db, string key, string value)
     {
         Configuration? existing = db.Configuration.FirstOrDefault(c => c.Key == key);
         if (existing != null)
@@ -94,7 +100,7 @@ public static class Certificate
         }
     }
 
-    public static bool HasValidCertificate()
+    public bool HasValidCertificate()
     {
         lock (_certLock)
         {
@@ -120,7 +126,7 @@ public static class Certificate
 #pragma warning restore CS0618
     }
 
-    public static void KestrelConfig(KestrelServerOptions options)
+    public void KestrelConfig(KestrelServerOptions options)
     {
         options.AddServerHeader = false;
         options.Limits.MaxRequestBodySize = 100L * 1024 * 1024 * 1024; // 100GB — 4K remux support
@@ -129,7 +135,7 @@ public static class Certificate
         options.Limits.MaxConcurrentUpgradedConnections = 500; // WebSocket/SignalR
     }
 
-    public static void ConfigureHttpsListener(ListenOptions listenOptions)
+    public void ConfigureHttpsListener(ListenOptions listenOptions)
     {
         if (HasValidCertificate())
         {
@@ -143,7 +149,7 @@ public static class Certificate
         }
     }
 
-    private static HttpsConnectionAdapterOptions HttpsConnectionAdapterOptions()
+    private HttpsConnectionAdapterOptions HttpsConnectionAdapterOptions()
     {
         return new()
         {
@@ -160,7 +166,7 @@ public static class Certificate
     }
 
     // Kept as fallback — Task 17 will remove this once DB-only path is stable.
-    private static X509Certificate2 CombinePublicAndPrivateCerts()
+    private X509Certificate2 CombinePublicAndPrivateCerts()
     {
 #pragma warning disable CS0618 // Obsolete
         if (!_driver.FileExists(AppFiles.CertFile))
@@ -192,7 +198,7 @@ public static class Certificate
     // browsers start showing warnings for Let's Encrypt's 90-day certs).
     private const int RenewalThresholdDays = 13;
 
-    private static bool ValidateSslCertificate()
+    private bool ValidateSslCertificate()
     {
         lock (_certLock)
         {
@@ -218,7 +224,7 @@ public static class Certificate
 
     private const int CertRetryDelaySeconds = 10;
 
-    public static async Task RenewSslCertificate(string? accessToken, int maxRetries = 30)
+    public async Task RenewSslCertificate(string? accessToken, int maxRetries = 30)
     {
         if (ValidateSslCertificate())
         {
@@ -244,7 +250,7 @@ public static class Certificate
                 return;
             }
 
-            using HttpClient client = DnsHttpClient.WithDns();
+            HttpClient client = _httpClientFactory.CreateClient("cert-renewal");
             client.BaseAddress = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
             client.Timeout = TimeSpan.FromMinutes(10);
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
@@ -304,7 +310,7 @@ public static class Certificate
         }
     }
 
-    private static async Task<CertificateDto?> FetchCertificate(
+    private async Task<CertificateDto?> FetchCertificate(
         HttpClient client,
         string serverUrl,
         bool hasExistingCert
@@ -397,7 +403,7 @@ public static class Certificate
         return new();
     }
 
-    private static async Task WriteTextAsync(string path, string content)
+    private async Task WriteTextAsync(string path, string content)
     {
         await using Stream stream = _driver.OpenWrite(path, overwrite: true);
         await using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
@@ -426,7 +432,7 @@ public static class Certificate
     /// the body is missing — the caller decides how to phrase the no-message
     /// case.
     /// </summary>
-    private static string ExtractApiMessage(string body)
+    private string ExtractApiMessage(string body)
     {
         if (string.IsNullOrWhiteSpace(body))
             return string.Empty;

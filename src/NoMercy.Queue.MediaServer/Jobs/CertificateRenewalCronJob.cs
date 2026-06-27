@@ -25,11 +25,13 @@ public class CertificateRenewalCronJob : ICronJobExecutor
     public string JobName => "Daily Certificate Renewal";
 
     private readonly IAuthTokenStore _authTokenStore;
+    private readonly ICertificateService _certificateService;
 
     public CertificateRenewalCronJob(ILogger<CertificateRenewalCronJob> logger,
-        IAuthTokenStore authTokenStore)
+        IAuthTokenStore authTokenStore, ICertificateService certificateService)
     {
         _authTokenStore = authTokenStore;
+        _certificateService = certificateService;
         _logger = logger;
     }
 
@@ -37,7 +39,7 @@ public class CertificateRenewalCronJob : ICronJobExecutor
     {
         _logger.LogInformation("Starting certificate renewal job");
 
-        await Certificate.RenewSslCertificate(_authTokenStore.AccessToken);
+        await _certificateService.RenewSslCertificate(_authTokenStore.AccessToken);
 
         _logger.LogInformation("Certificate renewal job completed");
     }

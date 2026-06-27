@@ -24,10 +24,12 @@ namespace NoMercy.Service.Hosting;
 public class PortManager : IPortManager
 {
     private readonly ILogger<PortManager> _logger;
+    private readonly ICertificateService _certificateService;
 
-    public PortManager(ILogger<PortManager> logger)
+    public PortManager(ILogger<PortManager> logger, ICertificateService certificateService)
     {
         _logger = logger;
+        _certificateService = certificateService;
     }
 
     public async Task EnsurePortAvailable(int port)
@@ -49,7 +51,7 @@ public class PortManager : IPortManager
 
         if (blockingPid <= 0)
         {
-            if (Certificate.HasValidCertificate())
+            if (_certificateService.HasValidCertificate())
             {
                 _logger.LogError(
                     "Port {Port} is in use by an unknown process. "
@@ -93,7 +95,7 @@ public class PortManager : IPortManager
         }
         else
         {
-            bool isRegistered = Certificate.HasValidCertificate();
+            bool isRegistered = _certificateService.HasValidCertificate();
 
             if (isRegistered)
             {

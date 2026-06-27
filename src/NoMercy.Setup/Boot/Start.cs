@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Networking.Cast;
+using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Lifecycle;
@@ -30,6 +31,7 @@ public class Start
 {
     public static INetworkDiscovery? NetworkDiscovery { get; set; }
     public static IChromeCastService? ChromeCast { get; set; }
+    public static ICertificateService? Certificate { get; set; }
 
     public static bool IsDegradedMode { get; internal set; }
 

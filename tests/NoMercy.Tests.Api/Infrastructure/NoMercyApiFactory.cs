@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.NmSystem.Security;
+using NoMercy.Networking.Certificate;
 using Asp.Versioning;
 using NoMercy.NmSystem.Auth;
 using Asp.Versioning.ApiExplorer;
@@ -601,7 +602,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 Mock.Of<IApiKeyLoader>(),
                 Mock.Of<IDegradedModeRecovery>(),
                 registrationService
-            , new AuthTokenStore())
+            , new AuthTokenStore(), new CertificateService(null!))
         );
     }
 

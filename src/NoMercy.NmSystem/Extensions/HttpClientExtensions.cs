@@ -30,10 +30,10 @@ public static class HttpClientExtensions
         return client;
     }
 
-    public static HttpClient WithDns(string? dnsServer = null)
+    public static SocketsHttpHandler CreateDnsHandler(string? dnsServer = null)
     {
         string server = dnsServer ?? DefaultDnsServer;
-        SocketsHttpHandler handler = new()
+        return new SocketsHttpHandler
         {
             ConnectCallback = async (context, token) =>
             {
@@ -52,7 +52,6 @@ public static class HttpClientExtensions
                     IPAddress? address = result.Answers.ARecords().FirstOrDefault()?.Address;
                     if (address == null)
                         throw new SocketException((int)SocketError.HostNotFound);
-
                     hostEntry = new() { AddressList = [address] };
                 }
                 else
@@ -62,7 +61,6 @@ public static class HttpClientExtensions
 
                 IPEndPoint endpoint = new(hostEntry.AddressList[0], context.DnsEndPoint.Port);
                 Socket socket = new(SocketType.Stream, ProtocolType.Tcp);
-
                 try
                 {
                     await socket.ConnectAsync(endpoint, token);
@@ -75,7 +73,7 @@ public static class HttpClientExtensions
                 }
             },
         };
-
-        return new(handler);
     }
+
+    public static HttpClient WithDns(string? dnsServer = null) => new(CreateDnsHandler(dnsServer));
 }
