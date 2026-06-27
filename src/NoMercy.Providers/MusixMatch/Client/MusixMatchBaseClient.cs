@@ -61,13 +61,18 @@ public class MusixMatchBaseClient : IDisposable
     )
         where T : class
     {
-        query.Add("format", "json");
-        query.Add("namespace", "lyrics_richsynched");
-        query.Add("subtitle_format", "mxm");
-        query.Add("app_id", "web-desktop-app-v1.0");
-        query.Add("usertoken", ApiKeyStore.Current.MusixmatchKey);
+        // Copy the caller-supplied dictionary before adding our parameters so the
+        // caller's instance is not mutated as a side effect of this call.
+        Dictionary<string, string?> merged = new(query)
+        {
+            { "format", "json" },
+            { "namespace", "lyrics_richsynched" },
+            { "subtitle_format", "mxm" },
+            { "app_id", "web-desktop-app-v1.0" },
+            { "usertoken", ApiKeyStore.Current.MusixmatchKey },
+        };
 
-        string newUrl = QueryHelpers.AddQueryString(url, query);
+        string newUrl = QueryHelpers.AddQueryString(url, merged);
 
         if (CacheController.Read(newUrl, out T? result))
             return result;
