@@ -24,12 +24,12 @@ using NoMercy.Encoder.Progress;
 namespace NoMercy.Encoder.Pipeline;
 
 public class Encoder(
-    AnalyzeStage analyzeStage,
-    ValidateStage validateStage,
-    PlanStage planStage,
-    BuildStage buildStage,
-    ExecuteStage executeStage,
-    FinalizeStage finalizeStage,
+    IAnalysisStage analyzeStage,
+    IValidationStage validateStage,
+    IPlanStage planStage,
+    IBuildStage buildStage,
+    IExecutionStage executeStage,
+    IFinalizeStage finalizeStage,
     ILogger<Encoder> logger,
     IProfileOverride? profileOverride = null
 ) : IEncoder
