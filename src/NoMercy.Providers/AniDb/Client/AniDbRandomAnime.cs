@@ -19,7 +19,7 @@ namespace NoMercy.Providers.AniDb.Client;
 
 public static class AniDbRandomAnime
 {
-    public static Task<AniDBAnimeItem> GetRandomAnime()
+    public static async Task<AniDBAnimeItem> GetRandomAnime(CancellationToken ct = default)
     {
         AniDBClient client = AniDbBaseClient.Client();
         TaskCompletionSource<AniDBAnimeItem> tcs = new();
@@ -44,6 +44,10 @@ public static class AniDbRandomAnime
             2
         );
 
-        return tcs.Task;
+        // Guard against the AniDB UDP callback never firing: time out after 10s
+        // (linked to the caller's token) instead of awaiting the task forever.
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        return await tcs.Task.WaitAsync(cts.Token);
     }
 }
