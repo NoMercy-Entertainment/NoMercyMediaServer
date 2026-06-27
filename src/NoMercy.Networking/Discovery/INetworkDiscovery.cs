@@ -38,4 +38,10 @@ public interface INetworkDiscovery
     /// bypassing the one-shot completion gate (throttled internally).
     /// </summary>
     Task ForceRediscoveryAsync();
+
+    /// <summary>
+    /// True when the configured external server port is reachable from the public
+    /// internet (used by the port-forward connectivity strategy).
+    /// </summary>
+    Task<bool> IsPortOpenAsync();
 }

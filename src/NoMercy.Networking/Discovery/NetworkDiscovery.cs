@@ -659,6 +659,10 @@ public class NetworkDiscovery : INetworkDiscovery
 
     private static bool CheckIpv6()
     {
+        // IPv6 discovery is intentionally disabled: the server advertises IPv4 plus
+        // the external domain only. Enabling it requires verified dual-stack STUN/UPnP
+        // support and AAAA handling on the API side, neither of which is implemented yet.
+        // TODO: re-enable once dual-stack connectivity is supported end-to-end.
         return false;
     }
 }

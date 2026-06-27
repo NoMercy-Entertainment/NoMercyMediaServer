@@ -19,7 +19,7 @@ using Serilog.Events;
 namespace NoMercy.Networking.Connectivity.Strategies;
 
 public class PortForwardStrategy(
-    NetworkDiscovery networkDiscovery,
+    INetworkDiscovery networkDiscovery,
     IConnectivityStatus connectivityStatus
 ) : IConnectivityStrategy
 {
