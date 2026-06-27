@@ -137,8 +137,12 @@ public abstract class ExternalApiClient : IDisposable
         // Cache key and log line are built WITHOUT secrets.
         string newUrl = QueryHelpers.AddQueryString(url, effectiveQuery);
 
-        if (!skipCache && CacheController.Read(newUrl, out T? result))
-            return result;
+        if (!skipCache)
+        {
+            (bool found, T? result) = await CacheController.ReadAsync<T>(newUrl);
+            if (found)
+                return result;
+        }
 
         LogRequest(BaseUrl + newUrl);
 

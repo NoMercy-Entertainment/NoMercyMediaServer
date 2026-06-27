@@ -76,8 +76,12 @@ public class TmdbBaseClient : ExternalApiClient
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (!skipCache && CacheController.Read(newUrl, out T? result))
-            return result;
+        if (!skipCache)
+        {
+            (bool found, T? result) = await CacheController.ReadAsync<T>(newUrl);
+            if (found)
+                return result;
+        }
 
         LogRequest(BaseUrl + newUrl);
 

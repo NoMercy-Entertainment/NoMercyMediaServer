@@ -79,7 +79,8 @@ public class BaseClient : IDisposable
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (CacheController.Read(newUrl, out T? result))
+        (bool found, T? result) = await CacheController.ReadAsync<T>(newUrl);
+        if (found)
             return result;
 
         Logger.Http(newUrl, LogEventLevel.Verbose);

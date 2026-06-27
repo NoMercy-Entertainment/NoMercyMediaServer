@@ -86,18 +86,17 @@ public static class CacheController
         return Convert.ToHexString(hashBytes);
     }
 
-    public static bool Read<T>(string url, out T? value, bool xml = false)
+    public static async Task<(bool Found, T? Value)> ReadAsync<T>(string url, bool xml = false)
         where T : class?
     {
         if (!Config.IsDev)
         {
-            value = default;
-            return false;
+            return (false, default);
         }
 
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
         SemaphoreSlim fileLock = GetLock(fullname);
-        fileLock.Wait();
+        await fileLock.WaitAsync();
 
         try
         {
@@ -105,16 +104,14 @@ public static class CacheController
 
             if (!storage.Exists(fullname))
             {
-                value = default;
-                return false;
+                return (false, default);
             }
 
             // invalidate cache after 1 day of last write time
             if (storage.LastModified(fullname) < DateTimeOffset.UtcNow.AddDays(-1))
             {
                 storage.Delete(fullname);
-                value = default;
-                return false;
+                return (false, default);
             }
 
             T? data;
@@ -125,24 +122,20 @@ public static class CacheController
             }
             catch (Exception)
             {
-                value = default;
-                return false;
+                return (false, default);
             }
 
             if (data == null)
             {
-                value = default;
-                return true;
+                return (true, default);
             }
 
             if (data is { } item)
             {
-                value = item;
-                return true;
+                return (true, item);
             }
 
-            value = default;
-            return false;
+            return (false, default);
         }
         finally
         {

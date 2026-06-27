@@ -47,7 +47,8 @@ public class AcoustIdBaseClient : ExternalApiClient
         query ??= new();
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (CacheController.Read(newUrl, out T? cached) && HasRecordings(cached))
+        (bool found, T? cached) = await CacheController.ReadAsync<T>(newUrl);
+        if (found && HasRecordings(cached))
             return cached;
 
         LogRequest(BaseUrl + newUrl);
