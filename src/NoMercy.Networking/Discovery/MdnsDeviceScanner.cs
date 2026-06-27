@@ -131,6 +131,9 @@ public sealed class MdnsDeviceScanner : IDisposable
 
     public void Dispose()
     {
+        // Defensive: unsubscribe regardless of whether the stopping token fired,
+        // so the handler is not left registered on a disposed discovery object.
+        _discovery.ServiceInstanceDiscovered -= OnInstanceDiscovered;
         _multicast.Dispose();
         _discovery.Dispose();
     }
