@@ -331,7 +331,7 @@ public class AudioImportJob : AbstractMusicFolderJob
     {
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = query }
+                new LibraryRefreshedEvent { QueryKey = query }
             );
     }
 

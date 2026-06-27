@@ -25,7 +25,7 @@ public class SignalRPlaybackEventHandler : IDisposable
     {
         _clientMessenger = clientMessenger;
         _subscriptions.Add(eventBus.Subscribe<PlaybackStartedEvent>(OnPlaybackStarted));
-        _subscriptions.Add(eventBus.Subscribe<PlaybackProgressEvent>(OnPlaybackProgress));
+        _subscriptions.Add(eventBus.Subscribe<PlaybackProgressUpdatedEvent>(OnPlaybackProgress));
         _subscriptions.Add(eventBus.Subscribe<PlaybackCompletedEvent>(OnPlaybackCompleted));
     }
 
@@ -50,7 +50,7 @@ public class SignalRPlaybackEventHandler : IDisposable
         );
     }
 
-    internal async Task OnPlaybackProgress(PlaybackProgressEvent @event, CancellationToken ct)
+    internal async Task OnPlaybackProgress(PlaybackProgressUpdatedEvent @event, CancellationToken ct)
     {
         // Progress events are high-frequency; broadcast but don't log to avoid noise
         await _clientMessenger.SendToAll(

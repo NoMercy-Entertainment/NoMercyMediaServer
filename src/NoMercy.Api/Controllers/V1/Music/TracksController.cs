@@ -95,18 +95,18 @@ public class TracksController : BaseController
         await _musicRepository.LikeTrackAsync(userId, track, request.Value);
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent
+            new LibraryRefreshedEvent
             {
                 QueryKey = ["music", "album", track.AlbumTrack.FirstOrDefault()?.Album.Id],
             }
         );
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent
+            new LibraryRefreshedEvent
             {
                 QueryKey = ["music", "artist", track.ArtistTrack.FirstOrDefault()?.Artist.Id],
             }
         );
-        await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music", "tracks"] });
+        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music", "tracks"] });
 
         await _eventBus.PublishAsync(
             new MusicItemLikedEvent

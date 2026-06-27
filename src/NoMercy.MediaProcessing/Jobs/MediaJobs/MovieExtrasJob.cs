@@ -60,7 +60,7 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
             );
     }
 }

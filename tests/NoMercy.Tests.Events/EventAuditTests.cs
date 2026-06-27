@@ -27,14 +27,14 @@ public class EventAuditTests
     {
         EventAuditLog auditLog = new();
 
-        LibraryRefreshEvent evt = new() { QueryKey = ["music", "album", Guid.NewGuid()] };
+        LibraryRefreshedEvent evt = new() { QueryKey = ["music", "album", Guid.NewGuid()] };
 
-        auditLog.Record(evt, "LibraryRefreshEvent");
+        auditLog.Record(evt, "LibraryRefreshedEvent");
 
         auditLog.Count.Should().Be(1);
         IReadOnlyList<EventAuditEntry> entries = auditLog.GetEntries();
         entries.Should().HaveCount(1);
-        entries[0].EventType.Should().Be("LibraryRefreshEvent");
+        entries[0].EventType.Should().Be("LibraryRefreshedEvent");
         entries[0].EventId.Should().Be(evt.EventId);
         entries[0].Source.Should().Be("LibraryRefresh");
         entries[0].Timestamp.Should().Be(evt.Timestamp);
@@ -46,7 +46,7 @@ public class EventAuditTests
     {
         EventAuditLog auditLog = new(new() { Enabled = false });
 
-        auditLog.Record(new LibraryRefreshEvent { QueryKey = ["test"] }, "LibraryRefreshEvent");
+        auditLog.Record(new LibraryRefreshedEvent { QueryKey = ["test"] }, "LibraryRefreshedEvent");
 
         auditLog.Count.Should().Be(0);
         auditLog.GetEntries().Should().BeEmpty();
@@ -55,16 +55,16 @@ public class EventAuditTests
     [Fact]
     public void AuditLog_ExcludedEventTypesAreSkipped()
     {
-        EventAuditLog auditLog = new(new() { ExcludedEventTypes = ["EncodingProgressEvent"] });
+        EventAuditLog auditLog = new(new() { ExcludedEventTypes = ["EncodingProgressUpdatedEvent"] });
 
         auditLog.Record(
-            new EncodingProgressEvent
+            new EncodingProgressUpdatedEvent
             {
                 JobId = 1,
                 Percentage = 50,
                 Elapsed = TimeSpan.FromMinutes(1),
             },
-            "EncodingProgressEvent"
+            "EncodingProgressUpdatedEvent"
         );
 
         auditLog.Record(
@@ -90,8 +90,8 @@ public class EventAuditTests
         for (int i = 0; i < 15; i++)
         {
             auditLog.Record(
-                new LibraryRefreshEvent { QueryKey = ["test", i.ToString()] },
-                "LibraryRefreshEvent"
+                new LibraryRefreshedEvent { QueryKey = ["test", i.ToString()] },
+                "LibraryRefreshedEvent"
             );
         }
 
@@ -107,7 +107,7 @@ public class EventAuditTests
 
         for (int i = 0; i < 5; i++)
         {
-            auditLog.Record(new LibraryRefreshEvent { QueryKey = ["test"] }, "LibraryRefreshEvent");
+            auditLog.Record(new LibraryRefreshedEvent { QueryKey = ["test"] }, "LibraryRefreshedEvent");
         }
 
         auditLog.Count.Should().Be(5);
@@ -121,7 +121,7 @@ public class EventAuditTests
     {
         EventAuditLog auditLog = new();
 
-        auditLog.Record(new LibraryRefreshEvent { QueryKey = ["music"] }, "LibraryRefreshEvent");
+        auditLog.Record(new LibraryRefreshedEvent { QueryKey = ["music"] }, "LibraryRefreshedEvent");
 
         auditLog.Record(
             new EncodingStartedEvent
@@ -135,11 +135,11 @@ public class EventAuditTests
         );
 
         auditLog.Record(
-            new LibraryRefreshEvent { QueryKey = ["libraries"] },
-            "LibraryRefreshEvent"
+            new LibraryRefreshedEvent { QueryKey = ["libraries"] },
+            "LibraryRefreshedEvent"
         );
 
-        IReadOnlyList<EventAuditEntry> refreshEntries = auditLog.GetEntries("LibraryRefreshEvent");
+        IReadOnlyList<EventAuditEntry> refreshEntries = auditLog.GetEntries("LibraryRefreshedEvent");
         refreshEntries.Should().HaveCount(2);
 
         IReadOnlyList<EventAuditEntry> encodingEntries = auditLog.GetEntries(
@@ -154,7 +154,7 @@ public class EventAuditTests
         EventAuditLog auditLog = new();
         DateTime before = DateTime.UtcNow.AddSeconds(-1);
 
-        auditLog.Record(new LibraryRefreshEvent { QueryKey = ["test"] }, "LibraryRefreshEvent");
+        auditLog.Record(new LibraryRefreshedEvent { QueryKey = ["test"] }, "LibraryRefreshedEvent");
 
         DateTime after = DateTime.UtcNow.AddSeconds(1);
 
@@ -176,7 +176,7 @@ public class EventAuditTests
         AuditingEventBusDecorator decorator = new(innerBus, auditLog);
 
         List<IEvent> received = [];
-        decorator.Subscribe<LibraryRefreshEvent>(
+        decorator.Subscribe<LibraryRefreshedEvent>(
             (evt, _) =>
             {
                 received.Add(evt);
@@ -185,7 +185,7 @@ public class EventAuditTests
         );
 
         await decorator.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "album", Guid.NewGuid()] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "album", Guid.NewGuid()] }
         );
 
         auditLog.Count.Should().Be(1);
@@ -247,11 +247,11 @@ public class EventAuditTests
                     for (int j = 0; j < 100; j++)
                     {
                         auditLog.Record(
-                            new LibraryRefreshEvent
+                            new LibraryRefreshedEvent
                             {
                                 QueryKey = ["test", i.ToString(), j.ToString()],
                             },
-                            "LibraryRefreshEvent"
+                            "LibraryRefreshedEvent"
                         );
                     }
                 })

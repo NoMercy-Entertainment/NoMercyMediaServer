@@ -61,15 +61,15 @@ public class FileRescanJob : AbstractMediaJob
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = [type, Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = [type, Id.ToString()] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["libraries", LibraryId.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["libraries", LibraryId.ToString()] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["home"] }
+                new LibraryRefreshedEvent { QueryKey = ["home"] }
             );
 
             await EventBusProvider.Current.PublishAsync(

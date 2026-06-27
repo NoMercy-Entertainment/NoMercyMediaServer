@@ -145,7 +145,7 @@ public class PlaylistsController : BaseController
 
         Playlist? playlist = await _musicRepository.GetPlaylistByNameAsync(request.Name, userId);
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music-playlists"] });
+        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music-playlists"] });
 
         return Ok(new StatusResponseDto<Playlist?> { Data = playlist, Status = "ok" });
     }
@@ -200,7 +200,7 @@ public class PlaylistsController : BaseController
         );
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "playlists", id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
         );
 
         return Ok(
@@ -223,7 +223,7 @@ public class PlaylistsController : BaseController
 
         int result = await _musicRepository.DeletePlaylistAsync(id, User.UserId());
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music-playlists"] });
+        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music-playlists"] });
 
         return Ok(
             new StatusResponseDto<string>
@@ -268,7 +268,7 @@ public class PlaylistsController : BaseController
         await _musicRepository.UpdatePlaylistCoverAsync(id, User.UserId(), cover, colorPalette);
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "playlists", playlist.Id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", playlist.Id] }
         );
 
         playlist._colorPalette = colorPalette;
@@ -300,7 +300,7 @@ public class PlaylistsController : BaseController
         int result = await _musicRepository.AddPlaylistTrackAsync(id, request.Id);
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "playlists", id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
         );
 
         return Ok(
@@ -327,7 +327,7 @@ public class PlaylistsController : BaseController
             return NotFoundResponse("Track not found in playlist");
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "playlists", id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
         );
 
         return Ok(

@@ -97,7 +97,7 @@ public class ArtistManager(
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", artistCredit.MusicBrainzArtist.Id.ToString()],
                 }
@@ -175,7 +175,7 @@ public class ArtistManager(
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", artistCredit.Id.ToString()],
                 }
@@ -253,7 +253,7 @@ public class ArtistManager(
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", artistCredit.Id.ToString()],
                 }

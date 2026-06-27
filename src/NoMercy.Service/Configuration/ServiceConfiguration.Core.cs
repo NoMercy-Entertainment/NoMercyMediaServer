@@ -141,9 +141,9 @@ public static partial class ServiceConfiguration
             // log every ~500ms during an encode without adding signal.
             excludedEventTypes:
             [
-                "EncoderProgressBroadcastEvent",
-                "EncodingProgressEvent",
-                "PlaybackProgressEvent",
+                "EncodingProgressBroadcastedEvent",
+                "EncodingProgressUpdatedEvent",
+                "PlaybackProgressUpdatedEvent",
             ]
         );
         EventAuditLog auditLog = new(
@@ -152,7 +152,7 @@ public static partial class ServiceConfiguration
                 Enabled = true,
                 MaxEntries = 10_000,
                 CompactionPercentage = 0.25,
-                ExcludedEventTypes = ["EncodingProgressEvent", "PlaybackProgressEvent"],
+                ExcludedEventTypes = ["EncodingProgressUpdatedEvent", "PlaybackProgressUpdatedEvent"],
             }
         );
         AuditingEventBusDecorator eventBus = new(loggingBus, auditLog);

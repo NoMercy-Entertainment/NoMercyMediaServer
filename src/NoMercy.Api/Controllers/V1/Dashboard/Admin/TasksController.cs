@@ -265,7 +265,7 @@ public class TasksController(
             foreach (QueueJobDto dto in queueJobs.Where(dto => dto.Status == "running"))
             {
                 _ = EventBusProvider.Current.PublishAsync(
-                    new EncoderProgressBroadcastEvent
+                    new EncodingProgressBroadcastedEvent
                     {
                         ProgressData = new
                         {

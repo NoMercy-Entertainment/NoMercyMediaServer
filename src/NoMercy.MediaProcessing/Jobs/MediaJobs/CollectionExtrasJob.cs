@@ -55,7 +55,7 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["collection", Storage.Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["collection", Storage.Id.ToString()] }
             );
     }
 }

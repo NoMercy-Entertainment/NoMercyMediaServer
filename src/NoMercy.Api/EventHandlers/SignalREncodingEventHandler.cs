@@ -25,12 +25,12 @@ public class SignalREncodingEventHandler : IDisposable
     {
         _clientMessenger = clientMessenger;
         _subscriptions.Add(eventBus.Subscribe<EncodingStartedEvent>(OnEncodingStarted));
-        _subscriptions.Add(eventBus.Subscribe<EncodingProgressEvent>(OnEncodingProgress));
+        _subscriptions.Add(eventBus.Subscribe<EncodingProgressUpdatedEvent>(OnEncodingProgress));
         _subscriptions.Add(eventBus.Subscribe<EncodingCompletedEvent>(OnEncodingCompleted));
         _subscriptions.Add(eventBus.Subscribe<EncodingFailedEvent>(OnEncodingFailed));
         _subscriptions.Add(eventBus.Subscribe<EncodingStageChangedEvent>(OnEncodingStageChanged));
         _subscriptions.Add(
-            eventBus.Subscribe<EncoderProgressBroadcastEvent>(OnEncoderProgressBroadcast)
+            eventBus.Subscribe<EncodingProgressBroadcastedEvent>(OnEncoderProgressBroadcast)
         );
     }
 
@@ -52,7 +52,7 @@ public class SignalREncodingEventHandler : IDisposable
         Logger.Socket($"Encoding started: Job={@event.JobId}, Profile={@event.ProfileName}");
     }
 
-    internal async Task OnEncodingProgress(EncodingProgressEvent @event, CancellationToken ct)
+    internal async Task OnEncodingProgress(EncodingProgressUpdatedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
             "EncodingProgress",
@@ -131,7 +131,7 @@ public class SignalREncodingEventHandler : IDisposable
     }
 
     internal async Task OnEncoderProgressBroadcast(
-        EncoderProgressBroadcastEvent @event,
+        EncodingProgressBroadcastedEvent @event,
         CancellationToken ct
     )
     {

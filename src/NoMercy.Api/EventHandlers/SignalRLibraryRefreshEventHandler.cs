@@ -24,10 +24,10 @@ public class SignalRLibraryRefreshEventHandler : IDisposable
     public SignalRLibraryRefreshEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
     {
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(eventBus.Subscribe<LibraryRefreshEvent>(OnLibraryRefresh));
+        _subscriptions.Add(eventBus.Subscribe<LibraryRefreshedEvent>(OnLibraryRefresh));
     }
 
-    internal async Task OnLibraryRefresh(LibraryRefreshEvent @event, CancellationToken ct)
+    internal async Task OnLibraryRefresh(LibraryRefreshedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
             "RefreshLibrary",

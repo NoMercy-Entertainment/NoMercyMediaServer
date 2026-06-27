@@ -146,7 +146,7 @@ public class PluginManager : IPluginManager, IDisposable
                 PluginLifecycle.Transition(loaded.Info, PluginStatus.Malfunctioned);
 
                 await _eventBus.PublishAsync(
-                    new PluginErrorEvent
+                    new PluginErrorOccurredEvent
                     {
                         PluginId = pluginId.ToString(),
                         PluginName = loaded.Info.Name,
@@ -311,7 +311,7 @@ public class PluginManager : IPluginManager, IDisposable
                 );
 
                 await _eventBus.PublishAsync(
-                    new PluginErrorEvent
+                    new PluginErrorOccurredEvent
                     {
                         PluginId = manifest.Id.ToString(),
                         PluginName = manifest.Name,
@@ -394,7 +394,7 @@ public class PluginManager : IPluginManager, IDisposable
                             foundPlugin = true;
 
                             await _eventBus.PublishAsync(
-                                new PluginErrorEvent
+                                new PluginErrorOccurredEvent
                                 {
                                     PluginId = manifest.Id.ToString(),
                                     PluginName = manifest.Name,
@@ -454,7 +454,7 @@ public class PluginManager : IPluginManager, IDisposable
                 );
 
                 await _eventBus.PublishAsync(
-                    new PluginErrorEvent
+                    new PluginErrorOccurredEvent
                     {
                         PluginId = manifest.Id.ToString(),
                         PluginName = manifest.Name,
@@ -475,7 +475,7 @@ public class PluginManager : IPluginManager, IDisposable
                 );
 
                 await _eventBus.PublishAsync(
-                    new PluginErrorEvent
+                    new PluginErrorOccurredEvent
                     {
                         PluginId = manifest.Id.ToString(),
                         PluginName = manifest.Name,
@@ -499,7 +499,7 @@ public class PluginManager : IPluginManager, IDisposable
             );
 
             await _eventBus.PublishAsync(
-                new PluginErrorEvent
+                new PluginErrorOccurredEvent
                 {
                     PluginId = Guid.Empty.ToString(),
                     PluginName = pluginName,
@@ -534,7 +534,7 @@ public class PluginManager : IPluginManager, IDisposable
             );
 
             await _eventBus.PublishAsync(
-                new PluginErrorEvent
+                new PluginErrorOccurredEvent
                 {
                     PluginId = Guid.Empty.ToString(),
                     PluginName = Path.GetFileNameWithoutExtension(assemblyPath),
@@ -625,7 +625,7 @@ public class PluginManager : IPluginManager, IDisposable
                     _loadedPlugins[instance.Id] = loaded;
 
                     await _eventBus.PublishAsync(
-                        new PluginErrorEvent
+                        new PluginErrorOccurredEvent
                         {
                             PluginId = instance.Id.ToString(),
                             PluginName = instance.Name,
@@ -657,7 +657,7 @@ public class PluginManager : IPluginManager, IDisposable
             );
 
             await _eventBus.PublishAsync(
-                new PluginErrorEvent
+                new PluginErrorOccurredEvent
                 {
                     PluginId = Guid.Empty.ToString(),
                     PluginName = assemblyName,
@@ -680,7 +680,7 @@ public class PluginManager : IPluginManager, IDisposable
             );
 
             await _eventBus.PublishAsync(
-                new PluginErrorEvent
+                new PluginErrorOccurredEvent
                 {
                     PluginId = Guid.Empty.ToString(),
                     PluginName = assemblyName,

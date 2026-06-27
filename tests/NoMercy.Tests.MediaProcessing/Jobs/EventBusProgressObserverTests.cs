@@ -76,16 +76,16 @@ public class EventBusProgressObserverTests
         IEventBus? previous = GetCurrentInstance();
         try
         {
-            EncoderProgressBroadcastEvent? captured = null;
+            EncodingProgressBroadcastedEvent? captured = null;
             Mock<IEventBus> mockBus = new();
             mockBus
                 .Setup(b =>
                     b.PublishAsync(
-                        It.IsAny<EncoderProgressBroadcastEvent>(),
+                        It.IsAny<EncodingProgressBroadcastedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Callback<EncoderProgressBroadcastEvent, CancellationToken>((e, _) => captured = e)
+                .Callback<EncodingProgressBroadcastedEvent, CancellationToken>((e, _) => captured = e)
                 .Returns(Task.CompletedTask);
 
             EventBusProvider.Configure(mockBus.Object);
@@ -96,7 +96,7 @@ public class EventBusProgressObserverTests
             mockBus.Verify(
                 b =>
                     b.PublishAsync(
-                        It.IsAny<EncoderProgressBroadcastEvent>(),
+                        It.IsAny<EncodingProgressBroadcastedEvent>(),
                         It.IsAny<CancellationToken>()
                     ),
                 Times.Once
@@ -120,16 +120,16 @@ public class EventBusProgressObserverTests
         IEventBus? previous = GetCurrentInstance();
         try
         {
-            EncoderProgressBroadcastEvent? captured = null;
+            EncodingProgressBroadcastedEvent? captured = null;
             Mock<IEventBus> mockBus = new();
             mockBus
                 .Setup(b =>
                     b.PublishAsync(
-                        It.IsAny<EncoderProgressBroadcastEvent>(),
+                        It.IsAny<EncodingProgressBroadcastedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Callback<EncoderProgressBroadcastEvent, CancellationToken>((e, _) => captured = e)
+                .Callback<EncodingProgressBroadcastedEvent, CancellationToken>((e, _) => captured = e)
                 .Returns(Task.CompletedTask);
 
             EventBusProvider.Configure(mockBus.Object);
@@ -147,7 +147,7 @@ public class EventBusProgressObserverTests
             mockBus.Verify(
                 b =>
                     b.PublishAsync(
-                        It.IsAny<EncoderProgressBroadcastEvent>(),
+                        It.IsAny<EncodingProgressBroadcastedEvent>(),
                         It.IsAny<CancellationToken>()
                     ),
                 Times.Once

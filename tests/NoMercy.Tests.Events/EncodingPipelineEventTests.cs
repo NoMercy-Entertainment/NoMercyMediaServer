@@ -31,7 +31,7 @@ public class EncodingPipelineEventTests
                 return Task.CompletedTask;
             }
         );
-        bus.Subscribe<EncodingProgressEvent>(
+        bus.Subscribe<EncodingProgressUpdatedEvent>(
             (evt, _) =>
             {
                 received.Add(evt);
@@ -57,7 +57,7 @@ public class EncodingPipelineEventTests
         );
 
         await bus.PublishAsync(
-            new EncodingProgressEvent
+            new EncodingProgressUpdatedEvent
             {
                 JobId = 42,
                 Percentage = 25.0,
@@ -67,7 +67,7 @@ public class EncodingPipelineEventTests
         );
 
         await bus.PublishAsync(
-            new EncodingProgressEvent
+            new EncodingProgressUpdatedEvent
             {
                 JobId = 42,
                 Percentage = 75.0,
@@ -87,8 +87,8 @@ public class EncodingPipelineEventTests
 
         received.Should().HaveCount(4);
         received[0].Should().BeOfType<EncodingStartedEvent>();
-        received[1].Should().BeOfType<EncodingProgressEvent>();
-        received[2].Should().BeOfType<EncodingProgressEvent>();
+        received[1].Should().BeOfType<EncodingProgressUpdatedEvent>();
+        received[2].Should().BeOfType<EncodingProgressUpdatedEvent>();
         received[3].Should().BeOfType<EncodingCompletedEvent>();
 
         EncodingStartedEvent started = (EncodingStartedEvent)received[0];
@@ -96,11 +96,11 @@ public class EncodingPipelineEventTests
         started.InputPath.Should().Be("/input/video.mkv");
         started.ProfileName.Should().Be("HLS-1080p");
 
-        EncodingProgressEvent progress1 = (EncodingProgressEvent)received[1];
+        EncodingProgressUpdatedEvent progress1 = (EncodingProgressUpdatedEvent)received[1];
         progress1.Percentage.Should().Be(25.0);
         progress1.Estimated.Should().Be(TimeSpan.FromMinutes(15));
 
-        EncodingProgressEvent progress2 = (EncodingProgressEvent)received[2];
+        EncodingProgressUpdatedEvent progress2 = (EncodingProgressUpdatedEvent)received[2];
         progress2.Percentage.Should().Be(75.0);
 
         EncodingCompletedEvent completed = (EncodingCompletedEvent)received[3];
@@ -162,9 +162,9 @@ public class EncodingPipelineEventTests
     public async Task EncodingProgressEvent_WorksWithGuidHashCodeAsJobId()
     {
         InMemoryEventBus bus = new();
-        EncodingProgressEvent? receivedEvent = null;
+        EncodingProgressUpdatedEvent? receivedEvent = null;
 
-        bus.Subscribe<EncodingProgressEvent>(
+        bus.Subscribe<EncodingProgressUpdatedEvent>(
             (evt, _) =>
             {
                 receivedEvent = evt;
@@ -176,7 +176,7 @@ public class EncodingPipelineEventTests
         int jobId = trackId.GetHashCode();
 
         await bus.PublishAsync(
-            new EncodingProgressEvent
+            new EncodingProgressUpdatedEvent
             {
                 JobId = jobId,
                 Percentage = 50.0,
@@ -248,7 +248,7 @@ public class EncodingPipelineEventTests
             ProfileName = "p",
         };
 
-        EncodingProgressEvent progress = new()
+        EncodingProgressUpdatedEvent progress = new()
         {
             JobId = 1,
             Percentage = 50.0,
@@ -286,7 +286,7 @@ public class EncodingPipelineEventTests
                 OutputPath = "/o",
                 ProfileName = "p",
             },
-            new EncodingProgressEvent
+            new EncodingProgressUpdatedEvent
             {
                 JobId = 1,
                 Percentage = 0,

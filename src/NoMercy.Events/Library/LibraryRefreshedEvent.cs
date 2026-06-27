@@ -9,15 +9,11 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Events.Playback;
+namespace NoMercy.Events.Library;
 
-public sealed class PlaybackProgressEvent : EventBase
+public sealed class LibraryRefreshedEvent : EventBase
 {
-    public override string Source => "Playback";
+    public override string Source => "LibraryRefresh";
 
-    public required Guid UserId { get; init; }
-    public required int MediaId { get; init; }
-    public string? MediaIdentifier { get; init; }
-    public required TimeSpan Position { get; init; }
-    public required TimeSpan Duration { get; init; }
+    public required dynamic?[] QueryKey { get; init; }
 }

@@ -132,7 +132,7 @@ public class FileWatcherEventHandler : IDisposable
             if (videoFilesDeleted > 0 && EventBusProvider.IsConfigured)
             {
                 await EventBusProvider.Current.PublishAsync(
-                    new LibraryRefreshEvent { QueryKey = ["base", "libraries"] }
+                    new LibraryRefreshedEvent { QueryKey = ["base", "libraries"] }
                 );
             }
         }
@@ -177,7 +177,7 @@ public class FileWatcherEventHandler : IDisposable
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
-                        new LibraryRefreshEvent { QueryKey = ["base", "libraries"] }
+                        new LibraryRefreshedEvent { QueryKey = ["base", "libraries"] }
                     );
                 }
             }

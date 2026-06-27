@@ -71,15 +71,15 @@ public class CollectionImportJob : AbstractMediaJob
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["libraries", LibraryId.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["libraries", LibraryId.ToString()] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["collection"] }
+                new LibraryRefreshedEvent { QueryKey = ["collection"] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["collection", Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["collection", Id.ToString()] }
             );
         }
     }

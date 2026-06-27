@@ -9,14 +9,11 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Events.Plugins;
+namespace NoMercy.Events.Encoding;
 
-public sealed class PluginErrorEvent : EventBase
+public sealed class EncodingProgressBroadcastedEvent : EventBase
 {
-    public override string Source => "PluginManager";
+    public override string Source => "Encoder";
 
-    public required string PluginId { get; init; }
-    public required string PluginName { get; init; }
-    public required string ErrorMessage { get; init; }
-    public string? ExceptionType { get; init; }
+    public required object ProgressData { get; init; }
 }

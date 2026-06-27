@@ -159,7 +159,7 @@ public class ServerController(
                 "You do not have permission to invalidate the library cache"
             );
 
-        await eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = request.QueryKey });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = request.QueryKey });
 
         return Content("Done");
     }

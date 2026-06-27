@@ -119,13 +119,13 @@ public partial class FileManager(
             case MediaTypes.AnimeMediaType:
                 if (EventBusProvider.IsConfigured)
                     await EventBusProvider.Current.PublishAsync(
-                        new LibraryRefreshEvent { QueryKey = ["libraries", library.Id.ToString()] }
+                        new LibraryRefreshedEvent { QueryKey = ["libraries", library.Id.ToString()] }
                     );
                 break;
             case MediaTypes.MusicMediaType:
                 if (EventBusProvider.IsConfigured)
                     await EventBusProvider.Current.PublishAsync(
-                        new LibraryRefreshEvent { QueryKey = ["music"] }
+                        new LibraryRefreshedEvent { QueryKey = ["music"] }
                     );
                 break;
         }

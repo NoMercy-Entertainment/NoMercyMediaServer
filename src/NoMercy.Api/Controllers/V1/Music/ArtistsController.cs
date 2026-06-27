@@ -170,7 +170,7 @@ public class ArtistsController : BaseController
         await _musicRepository.LikeArtistAsync(userId, artist, request.Value);
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "artist", artist.Id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "artist", artist.Id] }
         );
 
         await _eventBus.PublishAsync(
@@ -219,7 +219,7 @@ public class ArtistsController : BaseController
 
         bool deleted = await _musicRepository.DeleteArtistAsync(id);
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music", "artist"] });
+        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music", "artist"] });
 
         return Ok(
             new StatusResponseDto<string>
@@ -280,7 +280,7 @@ public class ArtistsController : BaseController
         );
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "artist", id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "artist", id] }
         );
 
         return Ok(
@@ -345,7 +345,7 @@ public class ArtistsController : BaseController
         await _musicRepository.UpdateArtistCoverAsync(id, cover, colorPalette);
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "artist", artist.Id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "artist", artist.Id] }
         );
 
         artist._colorPalette = colorPalette;

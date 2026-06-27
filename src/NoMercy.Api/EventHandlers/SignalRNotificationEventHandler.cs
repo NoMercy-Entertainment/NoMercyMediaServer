@@ -24,10 +24,10 @@ public class SignalRNotificationEventHandler : IDisposable
     public SignalRNotificationEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
     {
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(eventBus.Subscribe<UserNotificationEvent>(OnUserNotification));
+        _subscriptions.Add(eventBus.Subscribe<UserNotifiedEvent>(OnUserNotification));
     }
 
-    internal async Task OnUserNotification(UserNotificationEvent @event, CancellationToken ct)
+    internal async Task OnUserNotification(UserNotifiedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
             "Notify",

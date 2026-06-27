@@ -267,7 +267,7 @@ public class LoggingEventBusDecoratorTests
             }
         );
         await decorator.PublishAsync(
-            new PlaybackProgressEvent
+            new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = 1,
@@ -292,7 +292,7 @@ public class LoggingEventBusDecoratorTests
                 ProfileName = "x264",
             }
         );
-        await decorator.PublishAsync(new EncodingProgressEvent { JobId = 1, Percentage = 50 });
+        await decorator.PublishAsync(new EncodingProgressUpdatedEvent { JobId = 1, Percentage = 50 });
         await decorator.PublishAsync(
             new EncodingCompletedEvent
             {

@@ -101,7 +101,7 @@ public class UserDataController(
 
         await userDataRepository.DeleteUserDataAsync(userData);
 
-        await eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["continue-watching"] });
+        await eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["continue-watching"] });
 
         return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Item removed" });
     }

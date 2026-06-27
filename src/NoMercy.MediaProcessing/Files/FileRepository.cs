@@ -983,7 +983,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
-                        new UserNotificationEvent
+                        new UserNotifiedEvent
                         {
                             Title = "Movie not found",
                             Message = $"Movie {movie.Title} not found in library, adding now",
@@ -1030,7 +1030,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new UserNotificationEvent
+                new UserNotifiedEvent
                 {
                     Title = "Show not found",
                     Message = $"Show {showName} not found in library, adding now",

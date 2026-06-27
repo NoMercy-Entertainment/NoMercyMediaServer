@@ -11,9 +11,15 @@
 
 namespace NoMercy.Events.Encoding;
 
-public sealed class EncoderProgressBroadcastEvent : EventBase
+public sealed class EncodingProgressUpdatedEvent : EventBase
 {
     public override string Source => "Encoder";
 
-    public required object ProgressData { get; init; }
+    public required int JobId { get; init; }
+    public required double Percentage { get; init; }
+    public TimeSpan Elapsed { get; init; }
+    public TimeSpan? Estimated { get; init; }
+    public double? Fps { get; init; }
+    public double? Speed { get; init; }
+    public int? BitrateKbps { get; init; }
 }

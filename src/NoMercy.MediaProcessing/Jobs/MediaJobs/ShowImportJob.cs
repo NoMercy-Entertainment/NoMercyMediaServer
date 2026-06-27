@@ -113,12 +113,12 @@ public class ShowImportJob : AbstractMediaJob
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent { QueryKey = ["base", "info", Id.ToString()] }
+                new LibraryRefreshedEvent { QueryKey = ["base", "info", Id.ToString()] }
             );
 
             if (wasEmpty)
                 await EventBusProvider.Current.PublishAsync(
-                    new LibraryRefreshEvent { QueryKey = ["libraries"] }
+                    new LibraryRefreshedEvent { QueryKey = ["libraries"] }
                 );
         }
     }

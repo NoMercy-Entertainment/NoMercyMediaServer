@@ -314,7 +314,7 @@ public class MusicPlaybackService
         int duration = state.CurrentItem.Duration.ToMilliSeconds();
 
         await bus.PublishAsync(
-            new PlaybackProgressEvent
+            new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = 0,

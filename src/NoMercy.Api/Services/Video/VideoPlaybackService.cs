@@ -216,7 +216,7 @@ public class VideoPlaybackService
         int duration = state.CurrentItem.Duration.ToMilliSeconds();
 
         await bus.PublishAsync(
-            new PlaybackProgressEvent
+            new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = state.CurrentItem.TmdbId,

@@ -11,7 +11,7 @@
 
 namespace NoMercy.Events.Media;
 
-public sealed class UserNotificationEvent : EventBase
+public sealed class UserNotifiedEvent : EventBase
 {
     public override string Source => "Media";
 

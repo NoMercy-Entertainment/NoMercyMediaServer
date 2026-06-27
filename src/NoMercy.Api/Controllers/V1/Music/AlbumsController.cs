@@ -174,7 +174,7 @@ public class AlbumsController : BaseController
         await _musicRepository.LikeAlbumAsync(userId, album, request.Value);
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshEvent { QueryKey = ["music", "album", album.Id] }
+            new LibraryRefreshedEvent { QueryKey = ["music", "album", album.Id] }
         );
 
         await _eventBus.PublishAsync(
@@ -263,7 +263,7 @@ public class AlbumsController : BaseController
             colorPalette
         );
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music", "album", id] });
+        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music", "album", id] });
 
         return Ok(
             new StatusResponseDto<string>

@@ -107,13 +107,13 @@ public class FindMediaFilesJob : IShouldQueue
 
             if (EventBusProvider.IsConfigured)
                 await EventBusProvider.Current.PublishAsync(
-                    new LibraryRefreshEvent { QueryKey = ["libraries", library.Id.ToString()] }
+                    new LibraryRefreshedEvent { QueryKey = ["libraries", library.Id.ToString()] }
                 );
         }
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey =
                     [

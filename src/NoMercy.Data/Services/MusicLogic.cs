@@ -499,7 +499,7 @@ public partial class MusicLogic : IAsyncDisposable
 
             if (EventBusProvider.IsConfigured)
                 await EventBusProvider.Current.PublishAsync(
-                    new LibraryRefreshEvent
+                    new LibraryRefreshedEvent
                     {
                         QueryKey = ["music", "album", musicBrainzRelease.Id.ToString()],
                     }
@@ -593,7 +593,7 @@ public partial class MusicLogic : IAsyncDisposable
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshEvent
+                new LibraryRefreshedEvent
                 {
                     QueryKey = ["music", "artist", musicBrainzArtist.Id.ToString()],
                 }
