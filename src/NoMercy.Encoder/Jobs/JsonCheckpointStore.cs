@@ -24,7 +24,7 @@ namespace NoMercy.Encoder.Jobs;
 public class JsonCheckpointStore(IStorage storage, ILogger<JsonCheckpointStore> logger)
     : ICheckpointStore
 {
-    private const string FileName = ".checkpoint.json";
+    private const string FileName = CheckpointFileNames.FileName;
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {

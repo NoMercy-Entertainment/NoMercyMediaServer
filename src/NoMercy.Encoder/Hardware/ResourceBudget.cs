@@ -166,7 +166,7 @@ public class ResourceBudget : IResourceBudget
     private static IEnumerable<string> EncoderNamesForVendor(string token) =>
         token switch
         {
-            "nvenc" => ["h264_nvenc", "hevc_nvenc", "av1_nvenc"],
+            "nvenc" => GpuEncoderTokens.NvencNames,
             "amf" => ["h264_amf", "hevc_amf", "av1_amf"],
             "qsv" => ["h264_qsv", "hevc_qsv", "av1_qsv", "vp9_qsv"],
             "vaapi" => ["h264_vaapi", "hevc_vaapi", "av1_vaapi", "vp9_vaapi"],

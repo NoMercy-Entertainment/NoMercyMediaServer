@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using NoMercy.Encoder.Hardware;
 
 namespace NoMercy.Encoder.Execution;
 
@@ -24,7 +25,7 @@ public class EncoderProcessRegistry : IEncoderProcessRegistry
 
     private readonly object _lock = new();
 
-    private static readonly string[] NvencCodecFlags = ["h264_nvenc", "hevc_nvenc", "av1_nvenc"];
+    private static readonly IReadOnlyList<string> NvencCodecFlags = GpuEncoderTokens.NvencNames;
 
     public void Register(int jobId, int processId)
     {

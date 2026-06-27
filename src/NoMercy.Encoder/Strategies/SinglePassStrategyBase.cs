@@ -12,6 +12,7 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Decomposition;
+using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Progress;
@@ -86,7 +87,10 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
                     .Where(entry =>
                         !preserveCheckpoint
                         || !Path.GetFileName(entry.Path)
-                            .Equals(".checkpoint.json", StringComparison.OrdinalIgnoreCase)
+                            .Equals(
+                                CheckpointFileNames.FileName,
+                                StringComparison.OrdinalIgnoreCase
+                            )
                     )
             )
             {
