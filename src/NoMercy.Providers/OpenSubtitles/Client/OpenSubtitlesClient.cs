@@ -56,7 +56,17 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                 {
                     Param =
                     [
-                        new() { Value = new() { String = AccessToken! } },
+                        new()
+                        {
+                            Value = new()
+                            {
+                                String =
+                                    AccessToken
+                                    ?? throw new InvalidOperationException(
+                                        "Login() must be called before accessing the API"
+                                    ),
+                            },
+                        },
                         new()
                         {
                             Value = new()
@@ -107,7 +117,17 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                 {
                     Param =
                     [
-                        new() { Value = new() { String = AccessToken! } },
+                        new()
+                        {
+                            Value = new()
+                            {
+                                String =
+                                    AccessToken
+                                    ?? throw new InvalidOperationException(
+                                        "Login() must be called before accessing the API"
+                                    ),
+                            },
+                        },
                         new()
                         {
                             Value = new()
