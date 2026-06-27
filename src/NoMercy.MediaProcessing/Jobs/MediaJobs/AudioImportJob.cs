@@ -327,7 +327,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         _mediaContext = null;
     }
 
-    private static async Task SendRefresh(dynamic[] query)
+    private static async Task SendRefresh(object?[] query)
     {
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(

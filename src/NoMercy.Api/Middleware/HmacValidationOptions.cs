@@ -8,12 +8,9 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
+namespace NoMercy.Api.Middleware;
 
-namespace NoMercy.Events.Library;
-
-public sealed class LibraryRefreshedEvent : EventBase
+public class HmacValidationOptions
 {
-    public override string Source => "LibraryRefresh";
-
-    public required object?[] QueryKey { get; init; }
+    public string[] ProtectedPrefixes { get; set; } = ["/api/v1/distribution/", "/api/v1/worker/"];
 }

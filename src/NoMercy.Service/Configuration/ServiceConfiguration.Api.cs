@@ -40,6 +40,7 @@ public static partial class ServiceConfiguration
                 options.SerializerSettings.Converters.Add(new StringEnumConverter());
             });
 
+        services.Configure<HmacValidationOptions>(_ => { });
         services.Configure<RouteOptions>(options =>
         {
             options.ConstraintMap.Add("ulid", typeof(UlidRouteConstraint));
