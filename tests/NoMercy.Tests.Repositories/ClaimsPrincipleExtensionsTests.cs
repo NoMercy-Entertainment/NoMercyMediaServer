@@ -13,48 +13,49 @@ using System.Reflection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Collection("ClaimsPrincipleExtensions")]
-public class ClaimsPrincipleExtensionsTests : IDisposable
+[Collection("ClaimsPrincipalExtensions")]
+public class ClaimsPrincipalExtensionsTests : IDisposable
 {
     private readonly MediaContext _context;
 
-    public ClaimsPrincipleExtensionsTests()
+    public ClaimsPrincipalExtensionsTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
     }
 
     public void Dispose()
     {
-        ClaimsPrincipleExtensions.Reset();
+        ClaimsPrincipalExtensions.Reset();
         _context.Dispose();
     }
 
     [Fact]
     public async Task Initialize_LoadsUsersFromContext()
     {
-        await ClaimsPrincipleExtensions.InitializeAsync(_context);
+        await ClaimsPrincipalExtensions.InitializeAsync(_context);
 
-        Assert.Single(ClaimsPrincipleExtensions.Users);
-        Assert.Equal(SeedConstants.UserId, ClaimsPrincipleExtensions.Users[0].Id);
+        Assert.Single(ClaimsPrincipalExtensions.Users);
+        Assert.Equal(SeedConstants.UserId, ClaimsPrincipalExtensions.Users[0].Id);
     }
 
     [Fact]
     public async Task Initialize_LoadsFolderIdsFromContext()
     {
-        await ClaimsPrincipleExtensions.InitializeAsync(_context);
+        await ClaimsPrincipalExtensions.InitializeAsync(_context);
 
-        Assert.Single(ClaimsPrincipleExtensions.FolderIds);
-        Assert.Equal(SeedConstants.MovieFolderId, ClaimsPrincipleExtensions.FolderIds[0]);
+        Assert.Single(ClaimsPrincipalExtensions.FolderIds);
+        Assert.Equal(SeedConstants.MovieFolderId, ClaimsPrincipalExtensions.FolderIds[0]);
     }
 
     [Fact]
     public async Task NewUserCreatedAfterStartup_IsAccessibleViaAddUser()
     {
-        await ClaimsPrincipleExtensions.InitializeAsync(_context);
+        await ClaimsPrincipalExtensions.InitializeAsync(_context);
 
         Guid newUserId = Guid.NewGuid();
         User newUser = new()
@@ -67,27 +68,27 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
             Manage = false,
         };
 
-        ClaimsPrincipleExtensions.AddUser(newUser);
+        ClaimsPrincipalExtensions.AddUser(newUser);
 
-        Assert.Equal(2, ClaimsPrincipleExtensions.Users.Count);
-        Assert.Contains(ClaimsPrincipleExtensions.Users, u => u.Id == newUserId);
+        Assert.Equal(2, ClaimsPrincipalExtensions.Users.Count);
+        Assert.Contains(ClaimsPrincipalExtensions.Users, u => u.Id == newUserId);
     }
 
     [Fact]
     public async Task DeletedUser_IsRemovedFromList()
     {
-        await ClaimsPrincipleExtensions.InitializeAsync(_context);
+        await ClaimsPrincipalExtensions.InitializeAsync(_context);
 
-        User existingUser = ClaimsPrincipleExtensions.Users.First();
-        ClaimsPrincipleExtensions.RemoveUser(existingUser);
+        User existingUser = ClaimsPrincipalExtensions.Users.First();
+        ClaimsPrincipalExtensions.RemoveUser(existingUser);
 
-        Assert.Empty(ClaimsPrincipleExtensions.Users);
+        Assert.Empty(ClaimsPrincipalExtensions.Users);
     }
 
     [Fact]
     public async Task RefreshUsers_ReloadsFromDatabase()
     {
-        await ClaimsPrincipleExtensions.InitializeAsync(_context);
+        await ClaimsPrincipalExtensions.InitializeAsync(_context);
 
         Guid newUserId = Guid.NewGuid();
         _context.Users.Add(
@@ -103,16 +104,16 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
-        await ClaimsPrincipleExtensions.RefreshUsersAsync(_context);
+        await ClaimsPrincipalExtensions.RefreshUsersAsync(_context);
 
-        Assert.Equal(2, ClaimsPrincipleExtensions.Users.Count);
-        Assert.Contains(ClaimsPrincipleExtensions.Users, u => u.Id == newUserId);
+        Assert.Equal(2, ClaimsPrincipalExtensions.Users.Count);
+        Assert.Contains(ClaimsPrincipalExtensions.Users, u => u.Id == newUserId);
     }
 
     [Fact]
     public async Task UpdateUser_ReplacesExistingUserInList()
     {
-        await ClaimsPrincipleExtensions.InitializeAsync(_context);
+        await ClaimsPrincipalExtensions.InitializeAsync(_context);
 
         User updatedUser = new()
         {
@@ -124,17 +125,17 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
             Manage = true,
         };
 
-        ClaimsPrincipleExtensions.UpdateUser(updatedUser);
+        ClaimsPrincipalExtensions.UpdateUser(updatedUser);
 
-        Assert.Single(ClaimsPrincipleExtensions.Users);
-        Assert.Equal("Updated User", ClaimsPrincipleExtensions.Users[0].Name);
-        Assert.Equal("updated@nomercy.tv", ClaimsPrincipleExtensions.Users[0].Email);
+        Assert.Single(ClaimsPrincipalExtensions.Users);
+        Assert.Equal("Updated User", ClaimsPrincipalExtensions.Users[0].Name);
+        Assert.Equal("updated@nomercy.tv", ClaimsPrincipalExtensions.Users[0].Email);
     }
 
     [Fact]
     public async Task Initialize_ClearsPreviousData()
     {
-        ClaimsPrincipleExtensions.AddUser(
+        ClaimsPrincipalExtensions.AddUser(
             new()
             {
                 Id = Guid.NewGuid(),
@@ -146,16 +147,16 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
             }
         );
 
-        await ClaimsPrincipleExtensions.InitializeAsync(_context);
+        await ClaimsPrincipalExtensions.InitializeAsync(_context);
 
-        Assert.Single(ClaimsPrincipleExtensions.Users);
-        Assert.Equal(SeedConstants.UserId, ClaimsPrincipleExtensions.Users[0].Id);
+        Assert.Single(ClaimsPrincipalExtensions.Users);
+        Assert.Equal(SeedConstants.UserId, ClaimsPrincipalExtensions.Users[0].Id);
     }
 
     [Fact]
     public void NoStaticMediaContext_FieldDoesNotExist()
     {
-        FieldInfo? field = typeof(ClaimsPrincipleExtensions).GetField(
+        FieldInfo? field = typeof(ClaimsPrincipalExtensions).GetField(
             "MediaContext",
             BindingFlags.NonPublic | BindingFlags.Static
         );

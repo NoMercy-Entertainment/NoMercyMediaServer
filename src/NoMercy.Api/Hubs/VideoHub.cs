@@ -21,6 +21,7 @@ using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Networking;
 using NoMercy.Networking.Cast;
 using NoMercy.Networking.Discovery;
@@ -85,7 +86,7 @@ public class VideoHub : ConnectionHub
     {
         Guid userId = Context.User.UserId();
 
-        User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user is null)
             return;
@@ -200,7 +201,7 @@ public class VideoHub : ConnectionHub
         if (!Guid.TryParse(guid, out Guid userId))
             return;
 
-        User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user is null)
             return;

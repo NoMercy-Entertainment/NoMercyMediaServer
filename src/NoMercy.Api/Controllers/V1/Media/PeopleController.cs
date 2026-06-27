@@ -17,6 +17,7 @@ using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.People;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.People;

@@ -22,6 +22,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;

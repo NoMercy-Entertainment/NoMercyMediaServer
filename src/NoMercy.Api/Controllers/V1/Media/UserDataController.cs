@@ -20,6 +20,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;

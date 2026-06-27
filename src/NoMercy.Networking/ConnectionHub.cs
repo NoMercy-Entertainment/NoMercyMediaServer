@@ -18,6 +18,7 @@ using NoMercy.Database;
 using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;

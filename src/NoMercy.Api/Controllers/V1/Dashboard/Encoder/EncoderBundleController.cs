@@ -17,6 +17,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;

@@ -18,6 +18,7 @@ using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 

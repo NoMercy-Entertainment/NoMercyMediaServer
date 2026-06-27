@@ -20,6 +20,7 @@ using NoMercy.Encoder.Distribution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 

@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
 

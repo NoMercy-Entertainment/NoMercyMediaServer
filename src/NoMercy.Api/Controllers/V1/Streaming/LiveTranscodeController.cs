@@ -25,6 +25,7 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Encoder.LiveTranscode.Protocol;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Resources;
 using NoMercy.Storage;
 using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;

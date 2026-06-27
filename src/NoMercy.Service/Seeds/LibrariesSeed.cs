@@ -14,6 +14,7 @@ using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -137,7 +138,7 @@ public static class LibrariesSeed
             }
         }
 
-        await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);
+        await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(dbContext);
 
         List<FolderLibrary> libraryFolders = [];
 

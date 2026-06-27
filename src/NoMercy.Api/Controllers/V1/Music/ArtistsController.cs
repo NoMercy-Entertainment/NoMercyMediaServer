@@ -24,6 +24,7 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Music;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;

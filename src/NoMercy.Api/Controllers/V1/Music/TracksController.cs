@@ -22,6 +22,7 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Music;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music;

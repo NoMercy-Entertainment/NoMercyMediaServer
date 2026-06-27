@@ -20,6 +20,7 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Codecs.Definitions;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 

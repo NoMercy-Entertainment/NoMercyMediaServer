@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;
@@ -47,7 +48,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
         string url = context.Request.Path;
 
         if (
-            !ClaimsPrincipleExtensions.FolderIds.Any(x => url.StartsWith("/" + x))
+            !ClaimsPrincipalExtensions.FolderIds.Any(x => url.StartsWith("/" + x))
             || context.Request.Headers.Authorization.ToString().Contains("Bearer")
         )
         {
@@ -85,7 +86,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
             return;
         }
 
-        User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
         if (user is null)
         {

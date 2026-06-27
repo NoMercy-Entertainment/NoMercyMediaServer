@@ -28,6 +28,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Storage;
 using ContentSegment = NoMercy.Database.Models.Media.ContentSegment;
 using ContentSegmentType = NoMercy.Database.Models.Media.ContentSegmentType;

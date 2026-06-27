@@ -16,6 +16,7 @@ using NoMercy.Api.WebSockets;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 
 namespace NoMercy.Api.Controllers.Devices;
 

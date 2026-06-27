@@ -19,6 +19,7 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Startup;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Resources;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;

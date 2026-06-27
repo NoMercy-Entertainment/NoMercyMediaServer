@@ -21,6 +21,7 @@ using NoMercy.Encoder.ContentAnalysis;
 using NoMercy.Encoder.ContentAnalysis.Fingerprinting;
 using NoMercy.Encoder.Subtitles;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Storage;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Analysis;

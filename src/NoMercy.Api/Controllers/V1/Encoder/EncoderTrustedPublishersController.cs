@@ -20,6 +20,7 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 
 namespace NoMercy.Api.Controllers.V1.Encoder;
 

@@ -22,6 +22,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
@@ -321,7 +322,7 @@ public static class DatabaseSeeder
         [
             () => UsersSeed.Init(mediaDbContext, storage, accessToken),
             () => AssignOwnerToUnassignedLibraries(mediaDbContext),
-            () => ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext),
+            () => ClaimsPrincipalExtensions.InitializeAsync(mediaDbContext),
         ];
 
         if (ShouldSeedMarvel)

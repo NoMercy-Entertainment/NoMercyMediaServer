@@ -23,6 +23,7 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using V2EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using V2IPresetLookup = NoMercy.Encoder.Profiles.IPresetLookup;
 using V2PresetResolver = NoMercy.Encoder.Profiles.PresetResolver;

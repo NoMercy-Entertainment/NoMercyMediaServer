@@ -25,6 +25,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Monitoring;
 using NoMercy.NmSystem.Wallpaper;
 using NoMercy.MediaProcessing.Files;

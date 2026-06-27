@@ -17,6 +17,7 @@ using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 

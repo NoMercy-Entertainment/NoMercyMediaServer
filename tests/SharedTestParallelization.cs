@@ -10,7 +10,7 @@
 // -----------------------------------------------------------------------------
 
 // Serialize xUnit test collections across every test assembly. The suite
-// exercises process-global mutable statics (ClaimsPrincipleExtensions._users,
+// exercises process-global mutable statics (ClaimsPrincipalExtensions._users,
 // HttpClientProvider._factory, the ApiKeyStore singleton, QueueRunner.Current,
 // Encoder service statics, ...). With collection parallelism one class can
 // mutate/Reset such a static while another reads it, yielding intermittent

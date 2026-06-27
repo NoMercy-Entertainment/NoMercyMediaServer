@@ -19,6 +19,7 @@ using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Jobs.ChangesJobs;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Configuration;
@@ -326,7 +327,7 @@ public static class ApplicationConfiguration
             // ASP.NET Core middleware pipeline (IApplicationBuilder.Use*) and cannot be
             // made async without refactoring the entire startup chain. This is startup-only,
             // before any requests are served, so blocking here is safe.
-            ClaimsPrincipleExtensions
+            ClaimsPrincipalExtensions
                 .RefreshFolderIdsAsync(mediaContext)
                 .GetAwaiter()
                 .GetResult();

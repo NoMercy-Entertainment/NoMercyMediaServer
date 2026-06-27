@@ -18,6 +18,7 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -47,7 +48,7 @@ public static partial class ServiceConfiguration
                             if (!Guid.TryParse(sub, out Guid userId))
                                 return false;
 
-                            User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(u =>
+                            User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(u =>
                                 u.Id == userId
                             );
                             Logger.App($"User: {user?.Name ?? "Unknown"}");

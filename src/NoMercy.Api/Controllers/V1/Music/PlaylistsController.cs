@@ -23,6 +23,7 @@ using NoMercy.Database.Models.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;

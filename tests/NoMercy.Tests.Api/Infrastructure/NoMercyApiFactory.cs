@@ -34,6 +34,7 @@ using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Information;
 using NoMercy.Plugins.Abstractions;
@@ -61,12 +62,12 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             }
         }
 
-        // Re-seed the process-wide ClaimsPrincipleExtensions user cache from the
+        // Re-seed the process-wide ClaimsPrincipalExtensions user cache from the
         // database at the start of every test class. Worker/coordinator tests
         // Reset() that static; with serialized collections a later class would
         // otherwise inherit an owner-less cache and get spurious 403s.
         using MediaContext userCacheContext = new();
-        ClaimsPrincipleExtensions.InitializeAsync(userCacheContext).GetAwaiter().GetResult();
+        ClaimsPrincipalExtensions.InitializeAsync(userCacheContext).GetAwaiter().GetResult();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -201,7 +202,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         SeedMediaData(mediaContext);
 
-        ClaimsPrincipleExtensions.InitializeAsync(mediaContext).GetAwaiter().GetResult();
+        ClaimsPrincipalExtensions.InitializeAsync(mediaContext).GetAwaiter().GetResult();
 
         string queueDbPath = Path.Combine(AppFiles.DataPath, "queue.db");
         foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })

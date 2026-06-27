@@ -19,6 +19,7 @@ using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music;

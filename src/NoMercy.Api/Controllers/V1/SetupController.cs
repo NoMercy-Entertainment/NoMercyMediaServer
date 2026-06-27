@@ -21,6 +21,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Music;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 

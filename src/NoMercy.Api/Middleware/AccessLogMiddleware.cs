@@ -18,6 +18,7 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;
@@ -92,7 +93,7 @@ public class AccessLogMiddleware
         );
 
         // Skip logging for file access paths (folder ID prefix)
-        bool isFolderPath = ClaimsPrincipleExtensions.FolderIds.Any(x =>
+        bool isFolderPath = ClaimsPrincipalExtensions.FolderIds.Any(x =>
             path.StartsWith("/" + x, StringComparison.OrdinalIgnoreCase)
         );
 
@@ -159,13 +160,13 @@ public class AccessLogMiddleware
             return;
         }
 
-        User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        User? user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
         if (user is null)
         {
             // User cache may not be populated yet during startup — try refreshing from DB
             MediaContext mediaContext = context.RequestServices.GetRequiredService<MediaContext>();
-            await ClaimsPrincipleExtensions.RefreshUsersAsync(mediaContext);
-            user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+            await ClaimsPrincipalExtensions.RefreshUsersAsync(mediaContext);
+            user = ClaimsPrincipalExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
         }
 
         if (user is null)

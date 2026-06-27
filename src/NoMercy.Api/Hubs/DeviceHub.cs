@@ -21,6 +21,7 @@ using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Devices;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Networking;
 using NoMercy.Networking.Devices;
 using NoMercy.Networking.Http;

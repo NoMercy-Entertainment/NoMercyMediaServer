@@ -21,6 +21,7 @@ using NoMercy.Api.Services.Music;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 
 namespace NoMercy.Api.WebSockets;
 

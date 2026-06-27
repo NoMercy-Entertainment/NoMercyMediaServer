@@ -33,6 +33,7 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;

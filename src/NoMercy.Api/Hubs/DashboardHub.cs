@@ -15,6 +15,7 @@ using NoMercy.Api.WebSockets;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;

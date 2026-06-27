@@ -21,6 +21,7 @@ using NoMercy.Api.WebSockets;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 

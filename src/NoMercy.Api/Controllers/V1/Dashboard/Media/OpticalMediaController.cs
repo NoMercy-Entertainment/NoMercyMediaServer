@@ -20,6 +20,7 @@ using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Events;
 using NoMercy.Events.FileWatcher;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;

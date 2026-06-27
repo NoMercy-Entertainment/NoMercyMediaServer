@@ -30,6 +30,7 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -333,7 +334,7 @@ public class LibrariesController(
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(refreshContext);
+                await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)
@@ -642,7 +643,7 @@ public class LibrariesController(
         // Register the folder with the middleware directly so it can serve files immediately
         DynamicStaticFilesMiddleware.AddFolder(pathAsync.Id, pathAsync.DriverId, pathAsync.Path);
         await using MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync();
-        await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(refreshContext);
+        await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(refreshContext);
 
         if (EventBusProvider.IsConfigured)
         {
@@ -695,7 +696,7 @@ public class LibrariesController(
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(refreshContext);
+                await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)
@@ -750,7 +751,7 @@ public class LibrariesController(
                 MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync()
             )
             {
-                await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(refreshContext);
+                await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(refreshContext);
             }
 
             if (EventBusProvider.IsConfigured)

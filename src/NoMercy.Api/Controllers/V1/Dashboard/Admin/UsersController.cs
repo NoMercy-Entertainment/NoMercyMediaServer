@@ -25,6 +25,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Users;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
@@ -97,7 +98,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
         if (createdUser is null)
             return UnprocessableEntityResponse("User was created but could not be retrieved");
 
-        ClaimsPrincipleExtensions.AddUser(createdUser);
+        ClaimsPrincipalExtensions.AddUser(createdUser);
 
         return Ok(
             new StatusResponseDto<string>
@@ -125,7 +126,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
 
         await userRepository.DeleteAsync(id);
 
-        ClaimsPrincipleExtensions.RemoveUser(user);
+        ClaimsPrincipalExtensions.RemoveUser(user);
 
         return Ok(new StatusResponseDto<string> { Status = "success", Message = "User deleted" });
     }
@@ -226,7 +227,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
         User? updatedUser = await userRepository.GetByIdWithLibrariesAsync(id);
 
         if (updatedUser is not null)
-            ClaimsPrincipleExtensions.UpdateUser(updatedUser);
+            ClaimsPrincipalExtensions.UpdateUser(updatedUser);
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(

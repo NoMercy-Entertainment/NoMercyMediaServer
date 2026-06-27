@@ -16,6 +16,7 @@ using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 
 namespace NoMercy.Api.EventHandlers;
 
@@ -40,7 +41,7 @@ public class FolderPathEventHandler : IDisposable
             IDbContextFactory<MediaContext>
         >();
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(mediaContext);
+        await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(mediaContext);
     }
 
     internal async Task OnFolderPathRemoved(FolderPathRemovedEvent @event, CancellationToken ct)
@@ -52,7 +53,7 @@ public class FolderPathEventHandler : IDisposable
             IDbContextFactory<MediaContext>
         >();
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(mediaContext);
+        await ClaimsPrincipalExtensions.RefreshFolderIdsAsync(mediaContext);
     }
 
     public void Dispose()

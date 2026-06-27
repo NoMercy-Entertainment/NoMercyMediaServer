@@ -23,6 +23,7 @@ using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;

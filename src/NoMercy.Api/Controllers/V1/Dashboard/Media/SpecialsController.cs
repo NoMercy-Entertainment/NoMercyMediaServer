@@ -24,6 +24,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 

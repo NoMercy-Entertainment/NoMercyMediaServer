@@ -19,6 +19,7 @@ using NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Distribution;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using Xunit;
 
 namespace NoMercy.Tests.Api;
@@ -34,7 +35,7 @@ namespace NoMercy.Tests.Api;
 public class CoordinatorDispatchController_Tests
 {
     // Shared owner GUID across all Tests.Api fixtures that seed
-    // ClaimsPrincipleExtensions._users. Owner property returns the FIRST
+    // ClaimsPrincipalExtensions._users. Owner property returns the FIRST
     // u.Owner==true user, so all fixtures must agree on the same id —
     // otherwise test execution order can desync principal NameIdentifier
     // from the resolved Owner.Id and IsOwner() flips to false.
@@ -46,11 +47,11 @@ public class CoordinatorDispatchController_Tests
     {
         // Reset wipes whatever a prior test left in the process-wide static.
         // NoMercyApiFactory.InitializeAsync() replaces _users with DB users
-        // whose Id differs from OwnerUserId; ClaimsPrincipleExtensionsTests
+        // whose Id differs from OwnerUserId; ClaimsPrincipalExtensionsTests
         // calls Reset() in Dispose(). Either leaves IsOwner() returning false.
-        ClaimsPrincipleExtensions.Reset();
+        ClaimsPrincipalExtensions.Reset();
 
-        ClaimsPrincipleExtensions.AddUser(
+        ClaimsPrincipalExtensions.AddUser(
             new()
             {
                 Id = OwnerUserId,

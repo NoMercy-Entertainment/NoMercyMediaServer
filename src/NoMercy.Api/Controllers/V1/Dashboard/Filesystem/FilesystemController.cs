@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.SystemCalls;

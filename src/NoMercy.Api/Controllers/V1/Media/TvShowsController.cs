@@ -21,6 +21,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;

@@ -26,6 +26,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Inbox;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Authorization;
 using NoMercy.MediaProcessing.Inbox;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;

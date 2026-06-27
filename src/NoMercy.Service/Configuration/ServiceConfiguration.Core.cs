@@ -48,6 +48,7 @@ using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Images;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
@@ -222,6 +223,9 @@ public static partial class ServiceConfiguration
         services.AddSingleton(_ => RuntimeServerSettings.Current);
 
         services.AddSingleton<IImageService, ImageService>();
+
+        services.AddSingleton<IUserCache>(UserCache.Current);
+        services.AddSingleton<IMediaAuthorizationPolicy, MediaAuthorizationPolicy>();
 
         // Update checker + periodic background check
         services.AddSingleton<IUpdateChecker, UpdateChecker>();
