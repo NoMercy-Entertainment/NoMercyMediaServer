@@ -17,7 +17,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 
-namespace NoMercy.Helpers;
+namespace NoMercy.NmSystem.Auth;
 
 public static class CredentialManager
 {

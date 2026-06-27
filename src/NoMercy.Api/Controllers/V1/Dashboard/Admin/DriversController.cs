@@ -20,6 +20,7 @@ using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Storage;
 using NoMercy.Helpers;
+using NoMercy.NmSystem.Auth;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;

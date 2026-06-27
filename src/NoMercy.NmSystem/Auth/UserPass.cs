@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Helpers;
+namespace NoMercy.NmSystem.Auth;
 
 public class UserPass
 {

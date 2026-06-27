@@ -11,7 +11,7 @@
 
 using NoMercy.Storage;
 
-namespace NoMercy.Helpers;
+namespace NoMercy.NmSystem.Auth;
 
 /// <summary>
 /// <see cref="ICredentialResolver"/> backed by <see cref="CredentialManager"/>.
