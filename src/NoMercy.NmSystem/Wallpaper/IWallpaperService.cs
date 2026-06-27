@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Helpers.Wallpaper;
+namespace NoMercy.NmSystem.Wallpaper;
 
 public interface IWallpaperService
 {

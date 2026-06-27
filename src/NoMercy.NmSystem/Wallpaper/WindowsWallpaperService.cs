@@ -14,7 +14,7 @@ using System.Runtime.Versioning;
 using Microsoft.Win32;
 using NoMercy.NmSystem.Extensions;
 
-namespace NoMercy.Helpers.Wallpaper;
+namespace NoMercy.NmSystem.Wallpaper;
 
 [SupportedOSPlatform("windows")]
 public class WindowsWallpaperService : IWallpaperService

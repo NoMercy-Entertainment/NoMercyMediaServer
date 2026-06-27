@@ -12,7 +12,7 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 
-namespace NoMercy.Helpers.Wallpaper;
+namespace NoMercy.NmSystem.Wallpaper;
 
 [SupportedOSPlatform("linux")]
 public class LinuxWallpaperService : IWallpaperService

@@ -9,15 +9,14 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Helpers.Wallpaper;
+namespace NoMercy.NmSystem.Wallpaper;
 
-public class NullWallpaperService : IWallpaperService
+public enum WallpaperStyle
 {
-    public bool IsSupported => false;
-
-    public void Set(string imagePath, WallpaperStyle style, string hexColor) { }
-
-    public void SetSilent(string imagePath, WallpaperStyle style, string hexColor) { }
-
-    public void Restore() { }
+    Fill,
+    Fit,
+    Stretch,
+    Tile,
+    Center,
+    Span,
 }

@@ -12,7 +12,7 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 
-namespace NoMercy.Helpers.Wallpaper;
+namespace NoMercy.NmSystem.Wallpaper;
 
 [SupportedOSPlatform("macos")]
 public class MacWallpaperService : IWallpaperService

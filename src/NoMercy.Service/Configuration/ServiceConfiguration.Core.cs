@@ -26,7 +26,7 @@ using NoMercy.Events;
 using NoMercy.Events.Audit;
 using NoMercy.Helpers;
 using NoMercy.Monitoring;
-using NoMercy.Helpers.Wallpaper;
+using NoMercy.NmSystem.Wallpaper;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.EventHandlers;
