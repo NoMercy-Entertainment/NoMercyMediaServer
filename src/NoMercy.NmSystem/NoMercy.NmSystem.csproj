@@ -30,6 +30,8 @@
     <PackageReference Include="Serilog.Formatting.Compact" />
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="HeyRed.ImageSharp.Heif" />
+    <PackageReference Include="LibHeif.Native" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="SecureStore" />
     <PackageReference Include="System.Management" />

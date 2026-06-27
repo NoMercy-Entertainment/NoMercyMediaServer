@@ -11,11 +11,8 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
-using SixLabors.ImageSharp.Formats;
 
-namespace NoMercy.Helpers;
+namespace NoMercy.Api.Controllers.File;
 
 public class ImageConvertArguments
 {
@@ -27,25 +24,6 @@ public class ImageConvertArguments
 
     [JsonProperty("quality")]
     public int Quality { get; set; } = 100;
-
-    public IImageFormat Format
-    {
-        get
-        {
-            IImageFormat result;
-            try
-            {
-                result = Images.Parse(Type ?? "png");
-            }
-            catch (Exception e)
-            {
-                result = Images.Parse("png");
-                Logger.App(e.Message, LogEventLevel.Error);
-            }
-
-            return result;
-        }
-    }
 
     [FromQuery(Name = "aspect_ratio")]
     [JsonProperty("aspect_ratio")]

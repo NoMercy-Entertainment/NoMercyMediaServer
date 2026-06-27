@@ -48,6 +48,7 @@ using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Images;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
@@ -219,6 +220,8 @@ public static partial class ServiceConfiguration
         // Runtime server settings (DB-hydrated, dashboard-mutable). DI hands out
         // the same static Current instance the Config facade and boot path use.
         services.AddSingleton(_ => RuntimeServerSettings.Current);
+
+        services.AddSingleton<IImageService, ImageService>();
 
         // Update checker + periodic background check
         services.AddSingleton<IUpdateChecker, UpdateChecker>();
