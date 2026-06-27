@@ -13,6 +13,8 @@ namespace NoMercy.Storage.Drivers.Local;
 
 public sealed class LocalStorageDriver : IStorageDriver
 {
+    public string BackendLabel => "Local";
+
     public char DirectorySeparator => Path.DirectorySeparatorChar;
 
     public string CombinePath(string parent, string child) => Path.Combine(parent, child);

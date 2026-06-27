@@ -27,6 +27,8 @@ namespace NoMercy.Storage.Drivers.Nfs;
 /// </summary>
 public sealed class NfsStorageDriver : IStorageDriver, IDisposable
 {
+    public string BackendLabel => "NFS";
+
     // NFS4 servers reap idle client state after ~90s by default
     // (CB_PATH_DOWN / NFS4ERR_EXPIRED). Keep-alive at 30s leaves headroom for
     // packet loss and clock skew. NFS3 has no lease state so the ping is a

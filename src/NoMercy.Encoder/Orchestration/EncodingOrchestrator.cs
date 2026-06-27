@@ -680,13 +680,7 @@ public class EncodingOrchestrator(
                 : "Publishing artifacts to local";
         }
 
-        string backendLabel = dest.Driver switch
-        {
-            NfsStorageDriver => "NFS",
-            S3StorageDriver => "S3",
-            WebDavStorageDriver => "WebDAV",
-            _ => dest.Driver.GetType().Name,
-        };
+        string backendLabel = dest.Driver.BackendLabel;
 
         return $"Publishing artifacts to {backendLabel}";
     }

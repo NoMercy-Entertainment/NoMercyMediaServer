@@ -21,6 +21,8 @@ namespace NoMercy.Storage.Drivers.WebDav;
 /// </summary>
 public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
 {
+    public string BackendLabel => "WebDAV";
+
     private readonly IWebDavClient _client;
     private readonly string _baseUrl;
 

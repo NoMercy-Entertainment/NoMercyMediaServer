@@ -30,6 +30,8 @@ namespace NoMercy.Storage.Drivers.S3;
 /// </summary>
 public sealed class S3StorageDriver : IStorageDriver, IDisposable
 {
+    public string BackendLabel => "S3";
+
     // SDK client kept only for CopyObject / server-side operations.
     private readonly IAmazonS3? _client;
 
