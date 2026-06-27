@@ -56,6 +56,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.NmSystem.Wallpaper;
 using NoMercy.OpticalMedia.Composition;
 using NoMercy.Plugins;
+using NoMercy.Providers.AniDb.Client;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Queue.MediaServer;
 using NoMercy.Service.Extensions;
@@ -166,6 +167,7 @@ public static partial class ServiceConfiguration
         EventBusProvider.Configure(eventBus);
 
         services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+        services.AddSingleton<IAniDbService, AniDbService>();
         services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
         services.AddSingleton<IServerRegistrationService, ServerRegistrationService>();
         services.AddSingleton<IUserProvisioningService, UserProvisioningService>();
