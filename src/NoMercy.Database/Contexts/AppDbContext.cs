@@ -11,6 +11,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Security;
 
 namespace NoMercy.Database;
 

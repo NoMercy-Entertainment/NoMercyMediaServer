@@ -10,12 +10,13 @@
 // -----------------------------------------------------------------------------
 
 using Newtonsoft.Json;
-using NoMercy.NmSystem.Auth;
 using NoMercy.Database;
 using NoMercy.Networking.Certificate;
-using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.Security;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Dto;
@@ -41,7 +42,8 @@ public class BootOrchestrator
         IApiKeyLoader apiKeyLoader,
         IDegradedModeRecovery degradedModeRecovery,
         IServerRegistrationService serverRegistrationService,
-        IAuthTokenStore authTokenStore)
+        IAuthTokenStore authTokenStore
+    )
     {
         _authTokenStore = authTokenStore;
         _setupState = setupState;
@@ -161,7 +163,8 @@ public class BootOrchestrator
 
         try
         {
-            string deviceEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth/device";
+            string deviceEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth/device";
 
             using HttpClient client = new();
             List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceCodeRequestBody(
@@ -218,7 +221,8 @@ public class BootOrchestrator
     /// </summary>
     private async Task CheckKeycloakReachabilityAsync()
     {
-        string wellKnown = $"{ExternalServicesConfig.Current.AuthBaseUrl}.well-known/openid-configuration";
+        string wellKnown =
+            $"{ExternalServicesConfig.Current.AuthBaseUrl}.well-known/openid-configuration";
 
         try
         {
@@ -322,7 +326,8 @@ public class BootOrchestrator
 
     private async Task PollDeviceGrant(string deviceCode, int interval, CancellationToken ct)
     {
-        string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
+        string tokenEndpoint =
+            $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
         while (!ct.IsCancellationRequested && !_setupState.IsAuthenticated)
         {

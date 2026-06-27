@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.NmSystem.Security;
 using Asp.Versioning;
 using NoMercy.NmSystem.Auth;
 using Asp.Versioning.ApiExplorer;

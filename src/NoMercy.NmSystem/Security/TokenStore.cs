@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.NmSystem.Information;
 
-namespace NoMercy.Database;
+namespace NoMercy.NmSystem.Security;
 
 public static class TokenStore
 {

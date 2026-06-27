@@ -38,6 +38,8 @@
     <PackageReference Include="DnsClient" />
     <PackageReference Include="TagLibSharp" />
     <PackageReference Include="Ulid" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
   <ItemGroup>
