@@ -35,7 +35,7 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
             ["fingerprint"] = fingerprintData.Fingerprint,
         };
 
-        return Get<AcoustIdFingerprint>(
+        return GetFingerprint<AcoustIdFingerprint>(
             "lookup?meta=" + string.Join("+", appendices),
             queryParams,
             priority
