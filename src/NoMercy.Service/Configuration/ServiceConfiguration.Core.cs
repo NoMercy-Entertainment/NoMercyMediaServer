@@ -227,6 +227,7 @@ public static partial class ServiceConfiguration
 
         services.AddSingleton<IUserCache>(UserCache.Current);
         services.AddSingleton<IFfProbeService>(FfProbeService.Current);
+        services.AddSingleton<IStartupManager>(StartupManager.Current);
         services.AddSingleton<IMediaAuthorizationPolicy, MediaAuthorizationPolicy>();
 
         // Update checker + periodic background check

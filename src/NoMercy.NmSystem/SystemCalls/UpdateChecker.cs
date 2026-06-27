@@ -32,7 +32,10 @@ public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
 
     static UpdateChecker()
     {
-        HttpClient.DefaultRequestHeaders.Add("User-Agent", ExternalServicesConfig.Current.UserAgent);
+        HttpClient.DefaultRequestHeaders.Add(
+            "User-Agent",
+            ExternalServicesConfig.Current.UserAgent
+        );
     }
 
     public async Task<bool> IsUpdateAvailableAsync()

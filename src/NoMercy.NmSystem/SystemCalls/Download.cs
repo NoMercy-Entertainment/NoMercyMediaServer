@@ -9,8 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.Storage;
 using Serilog.Events;
@@ -23,7 +23,10 @@ public static class Download
 
     static Download()
     {
-        HttpClient.DefaultRequestHeaders.Add("User-Agent", ExternalServicesConfig.Current.UserAgent);
+        HttpClient.DefaultRequestHeaders.Add(
+            "User-Agent",
+            ExternalServicesConfig.Current.UserAgent
+        );
     }
 
     public static async Task<string> DownloadFile(
