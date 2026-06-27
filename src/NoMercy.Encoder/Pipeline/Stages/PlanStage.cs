@@ -655,44 +655,7 @@ public class PlanStage(
 
         SubtitleOutputPlan[] subtitlePlan = SubtitlePlanBuilder.Build(profile, media);
 
-        ThumbnailOutputPlan? thumbPlan = null;
-        if (media.VideoStreams.Count > 0)
-        {
-            // Explicit profile.Thumbnails wins. Otherwise fall back to
-            // HlsDerivatives: when GenerateSpriteVtt is on (the default for HLS),
-            // build a ThumbnailOutput from SpriteVttThumbnailWidth +
-            // SpriteVttIntervalSeconds so sprites land for every HLS preset
-            // without each author having to also set the legacy Thumbnails field.
-            // Null HlsDerivatives (V1-backfilled presets) gets treated as a
-            // fresh HlsDerivatives() so the sprite-on defaults still apply.
-            ThumbnailOutput? thumbConfig = profile.Thumbnails;
-            if (thumbConfig is null)
-            {
-                HlsDerivatives derivatives = profile.HlsDerivatives ?? new HlsDerivatives();
-                if (derivatives.GenerateSpriteVtt)
-                {
-                    thumbConfig = new ThumbnailOutput(
-                        Width: derivatives.SpriteVttThumbnailWidth,
-                        IntervalSeconds: derivatives.SpriteVttIntervalSeconds
-                    );
-                }
-            }
-
-            if (thumbConfig is not null)
-            {
-                int thumbHeight = (int)(
-                    2
-                    * Math.Round(
-                        (double)thumbConfig.Width
-                            * media.VideoStreams[0].Height
-                            / media.VideoStreams[0].Width
-                            / 2
-                    )
-                );
-
-                thumbPlan = new(thumbConfig.Width, thumbHeight, thumbConfig.IntervalSeconds);
-            }
-        }
+        ThumbnailOutputPlan? thumbPlan = ThumbnailPlanBuilder.Build(profile, media);
 
         // Clamp segment duration to input length for very short files.
         int segmentDuration = profile.SegmentDurationSeconds;
