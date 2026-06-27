@@ -675,7 +675,11 @@ public class PlanStage(
                 DownmixMode downmixMode = audioProfile.Downmix?.Mode ?? DownmixMode.Auto;
                 string? customPanMatrix = audioProfile.Downmix?.CustomPanMatrix;
 
-                string? audioFilter = BuildAudioFilter(loudnessMode, downmixMode, customPanMatrix);
+                string? audioFilter = AudioFilterBuilder.BuildAudioFilter(
+                    loudnessMode,
+                    downmixMode,
+                    customPanMatrix
+                );
 
                 audioPlans.Add(
                     new(
@@ -1006,56 +1010,6 @@ public class PlanStage(
             Ladder = new LadderConfig { Mode = LadderMode.Manual, Rungs = rungs },
         };
     }
-
-    /// <summary>
-    /// Builds a single FFmpeg audio-filter chain: <c>pan=</c> (when an explicit
-    /// downmix matrix is requested) chained with <c>loudnorm</c> (when a
-    /// loudness target is requested). Pan runs first because loudnorm expects
-    /// the final channel layout. Returns null when neither filter is needed.
-    /// </summary>
-    internal static string? BuildAudioFilter(
-        LoudnessMode loudness,
-        DownmixMode downmix,
-        string? customPanMatrix
-    )
-    {
-        string? pan = BuildPanFilter(downmix, customPanMatrix);
-        string? loudnorm = BuildLoudnormFilter(loudness);
-
-        return (pan, loudnorm) switch
-        {
-            (null, null) => null,
-            (not null, null) => pan,
-            (null, not null) => loudnorm,
-            _ => $"{pan},{loudnorm}",
-        };
-    }
-
-    private static string? BuildPanFilter(DownmixMode mode, string? customPanMatrix) =>
-        mode switch
-        {
-            // ITU-R BS.775 5.1 → stereo. Center folded at -3 dB, surrounds at -3 dB.
-            DownmixMode.StereoItuR128 =>
-                "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR",
-            // Simple equal-weight sum; safe for any input channel layout.
-            DownmixMode.Mono => "pan=mono|c0<0.5*FL+0.5*FR+0.5*FC+0.25*BL+0.25*BR+0.25*SL+0.25*SR",
-            DownmixMode.Custom => string.IsNullOrWhiteSpace(customPanMatrix)
-                ? null
-                : $"pan={customPanMatrix}",
-            _ => null,
-        };
-
-    private static string? BuildLoudnormFilter(LoudnessMode loudness) =>
-        loudness switch
-        {
-            // EBU R128 streaming target: -16 LUFS integrated, -1.5 dBTP true peak, 11 LU LRA.
-            LoudnessMode.EbuR128 => "loudnorm=I=-16:TP=-1.5:LRA=11",
-            // ReplayGain target: -18 LUFS integrated, same peak + range as R128.
-            LoudnessMode.ReplayGain => "loudnorm=I=-18:TP=-1.5:LRA=11",
-            // Custom loudnorm left to CustomArguments on the profile; no auto filter here.
-            LoudnessMode.Custom => null,
-            _ => null,
-        };
 
     private static LegacyDrmConfig? ConvertDrmConfig(DrmConfig? v2Drm)
     {

@@ -96,7 +96,11 @@ public class PlanStageDownmixTests
     [Fact]
     public void BuildAudioFilter_DownmixAuto_Unchanged()
     {
-        string? filter = PlanStage.BuildAudioFilter(LoudnessMode.None, DownmixMode.Auto, null);
+        string? filter = AudioFilterBuilder.BuildAudioFilter(
+            LoudnessMode.None,
+            DownmixMode.Auto,
+            null
+        );
 
         filter.Should().BeNull();
     }
@@ -104,7 +108,7 @@ public class PlanStageDownmixTests
     [Fact]
     public void BuildAudioFilter_StereoItuR128_EmitsPanWithBs775Coefficients()
     {
-        string? filter = PlanStage.BuildAudioFilter(
+        string? filter = AudioFilterBuilder.BuildAudioFilter(
             LoudnessMode.None,
             DownmixMode.StereoItuR128,
             null
@@ -118,7 +122,11 @@ public class PlanStageDownmixTests
     [Fact]
     public void BuildAudioFilter_Mono_EmitsPanMonoMatrix()
     {
-        string? filter = PlanStage.BuildAudioFilter(LoudnessMode.None, DownmixMode.Mono, null);
+        string? filter = AudioFilterBuilder.BuildAudioFilter(
+            LoudnessMode.None,
+            DownmixMode.Mono,
+            null
+        );
 
         filter.Should().StartWith("pan=mono|c0<");
         filter.Should().Contain("FL");
@@ -128,7 +136,7 @@ public class PlanStageDownmixTests
     [Fact]
     public void BuildAudioFilter_CustomMatrix_WrapsPanPrefix()
     {
-        string? filter = PlanStage.BuildAudioFilter(
+        string? filter = AudioFilterBuilder.BuildAudioFilter(
             LoudnessMode.None,
             DownmixMode.Custom,
             "stereo|FL<1.0*FL|FR<1.0*FR"
@@ -140,7 +148,11 @@ public class PlanStageDownmixTests
     [Fact]
     public void BuildAudioFilter_CustomWithoutMatrix_ReturnsNull()
     {
-        string? filter = PlanStage.BuildAudioFilter(LoudnessMode.None, DownmixMode.Custom, "   ");
+        string? filter = AudioFilterBuilder.BuildAudioFilter(
+            LoudnessMode.None,
+            DownmixMode.Custom,
+            "   "
+        );
 
         filter.Should().BeNull();
     }
@@ -151,7 +163,7 @@ public class PlanStageDownmixTests
         // Pan filter must run before loudnorm so the normalizer sees the final
         // channel layout — otherwise loudnorm measures the multichannel signal
         // and under-normalizes the downmix.
-        string? filter = PlanStage.BuildAudioFilter(
+        string? filter = AudioFilterBuilder.BuildAudioFilter(
             LoudnessMode.EbuR128,
             DownmixMode.StereoItuR128,
             null
@@ -168,7 +180,11 @@ public class PlanStageDownmixTests
     [Fact]
     public void BuildAudioFilter_LoudnormOnly_NoPanPrefix()
     {
-        string? filter = PlanStage.BuildAudioFilter(LoudnessMode.EbuR128, DownmixMode.Auto, null);
+        string? filter = AudioFilterBuilder.BuildAudioFilter(
+            LoudnessMode.EbuR128,
+            DownmixMode.Auto,
+            null
+        );
 
         filter.Should().Be("loudnorm=I=-16:TP=-1.5:LRA=11");
     }
