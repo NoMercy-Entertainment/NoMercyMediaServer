@@ -109,6 +109,33 @@ public class NetworkDiscovery : INetworkDiscovery
 
     private bool _discoveryCompleted;
     private readonly SemaphoreSlim _discoverySemaphore = new(1, 1);
+    private DateTime _lastRediscovery = DateTime.MinValue;
+    private static readonly TimeSpan MinRediscoveryInterval = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Forces a fresh external-IP / NAT discovery, bypassing the one-shot completion
+    /// gate that <see cref="DiscoverExternalIpAsync"/> sets on first run. Throttled to
+    /// <see cref="MinRediscoveryInterval"/> so a burst of OS network-change events
+    /// (DHCP renew, VPN toggle, adapter flap) cannot trigger a discovery storm.
+    /// </summary>
+    public async Task ForceRediscoveryAsync()
+    {
+        await _discoverySemaphore.WaitAsync();
+        try
+        {
+            if (DateTime.UtcNow - _lastRediscovery < MinRediscoveryInterval)
+                return;
+
+            _discoveryCompleted = false;
+            _lastRediscovery = DateTime.UtcNow;
+        }
+        finally
+        {
+            _discoverySemaphore.Release();
+        }
+
+        await DiscoverExternalIpAsync();
+    }
 
     public async Task DiscoverExternalIpAsync()
     {

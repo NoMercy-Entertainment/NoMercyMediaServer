@@ -50,6 +50,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     public Task StartAsync(CancellationToken cancellationToken)
     {
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
+        NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
         Logger.Setup("Network change monitor started", LogEventLevel.Debug);
         return Task.CompletedTask;
     }
@@ -71,8 +72,8 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
             Logger.Setup($"Network address changed: {oldIp} → {newIp}");
             _networkDiscovery.InternalIp = newIp;
 
-            // Re-discover external IP
-            await _networkDiscovery.DiscoverExternalIpAsync();
+            // Re-discover external IP (force past the one-shot completion gate)
+            await _networkDiscovery.ForceRediscoveryAsync();
 
             // Re-evaluate connectivity strategies
             await _connectivityManager.EvaluateAsync(CancellationToken.None);
@@ -87,6 +88,28 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         finally
         {
             _reevaluationLock.Release();
+        }
+    }
+
+    private async void OnNetworkAvailabilityChanged(
+        object? sender,
+        NetworkAvailabilityEventArgs e
+    )
+    {
+        if (!e.IsAvailable)
+            return;
+
+        try
+        {
+            await _networkDiscovery.ForceRediscoveryAsync();
+            await _connectivityManager.EvaluateAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup(
+                $"Network availability change handling failed: {ex.Message}",
+                LogEventLevel.Warning
+            );
         }
     }
 
@@ -206,12 +229,14 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     public Task StopAsync(CancellationToken cancellationToken)
     {
         NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
+        NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
         return Task.CompletedTask;
     }
 
     public void Dispose()
     {
         NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
+        NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
         _reevaluationLock.Dispose();
         GC.SuppressFinalize(this);
     }
