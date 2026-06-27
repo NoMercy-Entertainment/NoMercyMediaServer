@@ -67,7 +67,14 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                 StartInfo = new()
                 {
                     FileName = AppFiles.CloudflareDPath,
-                    Arguments = $"tunnel run --token {_connectivityStatus.CloudflareTunnelToken}",
+                    Arguments = "tunnel run",
+                    // Pass the tunnel token via environment variable rather than the
+                    // command line so it is not exposed in /proc/<pid>/cmdline or via
+                    // WMI Win32_Process.CommandLine. cloudflared reads TUNNEL_TOKEN.
+                    Environment =
+                    {
+                        ["TUNNEL_TOKEN"] = _connectivityStatus.CloudflareTunnelToken,
+                    },
                     UseShellExecute = false,
                     WorkingDirectory = AppFiles.DependenciesPath,
                     RedirectStandardOutput = true,
