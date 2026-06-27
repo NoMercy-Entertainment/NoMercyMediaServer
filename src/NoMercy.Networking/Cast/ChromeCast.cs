@@ -69,10 +69,21 @@ public class ChromeCastService : IChromeCastService
 
     public async Task Init()
     {
-        _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
+        // Serialize with the on-demand rediscovery path (FindReceiverNameByIpAsync)
+        // so a boot-time scan and a cache-miss rescan cannot race on _chromecastReceivers.
+        await _rediscoveryGate.WaitAsync();
+        try
+        {
+            _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
+            _lastRediscoveryUtc = DateTime.UtcNow;
 
-        foreach (ChromecastReceiver chromecast in _chromecastReceivers)
-            Logger.Ping($"Found chromecast: {chromecast.Name}");
+            foreach (ChromecastReceiver chromecast in _chromecastReceivers)
+                Logger.Ping($"Found chromecast: {chromecast.Name}");
+        }
+        finally
+        {
+            _rediscoveryGate.Release();
+        }
     }
 
     public string[] GetChromeCasts()

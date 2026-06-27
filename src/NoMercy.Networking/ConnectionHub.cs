@@ -162,18 +162,7 @@ public class ConnectionHub : Hub
             x.DeviceId == client.DeviceId
         );
 
-        // Align the in-memory client's PK with the persisted Devices.Id. The
-        // Client base class assigns a fresh Ulid at construction; the upsert
-        // matches on the DeviceId fingerprint and preserves the existing PK,
-        // so client.Id and device.Id diverge. Subsequent ActivityLog writes
-        // use device.Id from the in-memory map and FK-fail because the random
-        // Ulid never made it into the Devices table.
-        if (device is not null)
-            client.Id = device.Id;
-
-        client.CustomName = device?.CustomName;
-        client.VolumePercent = device?.VolumePercent;
-        client.IsActive = true;
+        AlignClientWithPersistedDevice(client, device);
 
         if (device is not null)
         {
@@ -188,6 +177,22 @@ public class ConnectionHub : Hub
         ConnectedClients.Clients.TryAdd(Context.ConnectionId, client);
 
         await Clients.All.SendAsync("ConnectedDevicesState", Devices());
+    }
+
+    private static void AlignClientWithPersistedDevice(Client client, Device? device)
+    {
+        // Align the in-memory client's PK with the persisted Devices.Id. The
+                // Client base class assigns a fresh Ulid at construction; the upsert
+                // matches on the DeviceId fingerprint and preserves the existing PK,
+                // so client.Id and device.Id diverge. Subsequent ActivityLog writes
+                // use device.Id from the in-memory map and FK-fail because the random
+                // Ulid never made it into the Devices table.
+                if (device is not null)
+                    client.Id = device.Id;
+
+                client.CustomName = device?.CustomName;
+                client.VolumePercent = device?.VolumePercent;
+                client.IsActive = true;
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
