@@ -31,14 +31,21 @@ public class MusixMatchBaseClient : ExternalApiClient
 
     protected override void LogRequest(string url) => Logger.MusixMatch(url, LogEventLevel.Verbose);
 
-    // MusixMatch requires a fixed set of parameters plus the rolling user token
-    // on every call; inject them here so concrete clients only supply the query.
+    // Fixed, non-secret parameters required on every call. Safe to log/cache.
     protected override void AugmentQuery(Dictionary<string, string?> query)
     {
         query["format"] = "json";
         query["namespace"] = "lyrics_richsynched";
         query["subtitle_format"] = "mxm";
         query["app_id"] = "web-desktop-app-v1.0";
+    }
+
+    // The rolling user token is a secret: MusixMatch's API only accepts it as a
+    // query parameter (it is not honoured as a header), so it is injected at
+    // request time and deliberately kept out of cache filenames and the request
+    // log, which previously leaked it on every call.
+    protected override void AddSecretQuery(Dictionary<string, string?> query)
+    {
         query["usertoken"] = ApiKeyStore.Current.MusixmatchKey;
     }
 

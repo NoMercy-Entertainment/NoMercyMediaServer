@@ -31,8 +31,9 @@ namespace NoMercy.Providers.Abstractions;
 /// and (optionally) their concurrency/interval, and may override
 /// <see cref="ConfigureClient"/> for auth headers, <see cref="LogRequest"/> for
 /// their provider-specific log channel, <see cref="AugmentQuery"/> to inject
-/// fixed/secret query parameters, <see cref="ShouldSoftFail"/> to tune which
-/// error statuses resolve to null, and <see cref="MaxRetries"/>/
+/// fixed query parameters, <see cref="AddSecretQuery"/> to inject secrets that
+/// must stay out of cache keys and logs, <see cref="ShouldSoftFail"/> to tune
+/// which error statuses resolve to null, and <see cref="MaxRetries"/>/
 /// <see cref="RetryDelay"/> to opt into retrying transient failures.
 /// </summary>
 public abstract class ExternalApiClient : IDisposable
@@ -75,12 +76,21 @@ public abstract class ExternalApiClient : IDisposable
     protected virtual void LogRequest(string url) => Logger.Http(url, LogEventLevel.Verbose);
 
     /// <summary>
-    /// Per-provider hook to inject query parameters (api keys, fixed format
+    /// Per-provider hook to inject non-secret query parameters (fixed format
     /// flags, …) into a private copy of the caller's query before the URL is
-    /// built. Default: no-op. The dictionary is already a copy, so
-    /// implementations may mutate it freely.
+    /// built. These parameters DO appear in the cache key and the request log.
+    /// Default: no-op. The dictionary is already a copy, so implementations may
+    /// mutate it freely.
     /// </summary>
     protected virtual void AugmentQuery(Dictionary<string, string?> query) { }
+
+    /// <summary>
+    /// Per-provider hook to inject secret query parameters (api keys / tokens)
+    /// that must be sent to the upstream API but kept OUT of cache filenames and
+    /// request logs. These are appended to the outgoing request URL only, after
+    /// the cache key and log line have been computed. Default: no-op.
+    /// </summary>
+    protected virtual void AddSecretQuery(Dictionary<string, string?> query) { }
 
     /// <summary>
     /// Whether an HTTP error status should resolve to "no result" (null) rather
@@ -119,6 +129,8 @@ public abstract class ExternalApiClient : IDisposable
         // Copy so AugmentQuery / our own additions never mutate the caller's dict.
         Dictionary<string, string?> effectiveQuery = query is null ? new() : new(query);
         AugmentQuery(effectiveQuery);
+
+        // Cache key and log line are built WITHOUT secrets.
         string newUrl = QueryHelpers.AddQueryString(url, effectiveQuery);
 
         if (CacheController.Read(newUrl, out T? result))
@@ -126,13 +138,19 @@ public abstract class ExternalApiClient : IDisposable
 
         LogRequest(BaseUrl + newUrl);
 
+        // Secrets are appended to the outgoing request URL only.
+        Dictionary<string, string?> secretQuery = new();
+        AddSecretQuery(secretQuery);
+        string requestUrl =
+            secretQuery.Count == 0 ? newUrl : QueryHelpers.AddQueryString(newUrl, secretQuery);
+
         int attempt = 0;
         while (true)
         {
             try
             {
                 string response = await RequestQueue.Enqueue(
-                    () => Client.GetStringAsync(newUrl),
+                    () => Client.GetStringAsync(requestUrl),
                     newUrl,
                     priority
                 );

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -21,9 +22,7 @@ namespace NoMercy.Providers.Tadb.Client;
 
 public class TadbBaseClient : IDisposable
 {
-    private readonly Uri _baseUrl = new(
-        $"https://www.theaudiodb.com/api/v1/json/{ApiKeyStore.Current.TadbKey}/"
-    );
+    private readonly Uri _baseUrl = new("https://www.theaudiodb.com/api/v1/json/");
 
     private readonly HttpClient _client;
 
@@ -31,12 +30,20 @@ public class TadbBaseClient : IDisposable
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.Tadb);
         _client.BaseAddress = _baseUrl;
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            ApiKeyStore.Current.TadbKey
+        );
     }
 
     protected TadbBaseClient(int id)
     {
         _client = HttpClientProvider.CreateClient(HttpClientNames.Tadb);
         _client.BaseAddress = _baseUrl;
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            ApiKeyStore.Current.TadbKey
+        );
         Id = id;
     }
 
