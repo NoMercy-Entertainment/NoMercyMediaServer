@@ -9,6 +9,12 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Database.Models.Libraries;
+
 namespace NoMercy.MediaProcessing.Files;
 
-public interface IFileManager { }
+public interface IFileManager
+{
+    Task FindFiles(int id, Library library);
+    Task MoveToLibraryFolder(int id, Folder folder);
+}

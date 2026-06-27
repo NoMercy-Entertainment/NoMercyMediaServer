@@ -19,9 +19,9 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -240,7 +240,27 @@ public class FileWatcherEventHandler : IDisposable
             return;
         }
 
-        TmdbMovie movie = response.Results.First();
+        TmdbMovie? movie = response.Results.MaxBy(result =>
+            ScoreCandidate(
+                result.Title,
+                result.ReleaseDate,
+                mediaFolder.Parsed.Title,
+                mediaFolder.Parsed.Year
+            )
+        );
+        if (
+            movie is null
+            || FuzzyMatcher.MatchPercentage(movie.Title, mediaFolder.Parsed.Title)
+                < MinMatchConfidence
+        )
+        {
+            Logger.System(
+                $"FileWatcher: No confident TMDB match for movie '{mediaFolder.Parsed.Title}'",
+                LogEventLevel.Warning
+            );
+            return;
+        }
+
         Logger.System(
             $"FileWatcher: Movie '{movie.Title}' found on TMDB (ID: {movie.Id}), dispatching job"
         );
@@ -279,7 +299,27 @@ public class FileWatcherEventHandler : IDisposable
             return;
         }
 
-        TmdbTvShow show = response.Results.First();
+        TmdbTvShow? show = response.Results.MaxBy(result =>
+            ScoreCandidate(
+                result.Name,
+                result.FirstAirDate,
+                mediaFolder.Parsed.Title,
+                mediaFolder.Parsed.Year
+            )
+        );
+        if (
+            show is null
+            || FuzzyMatcher.MatchPercentage(show.Name, mediaFolder.Parsed.Title)
+                < MinMatchConfidence
+        )
+        {
+            Logger.System(
+                $"FileWatcher: No confident TMDB match for TV show '{mediaFolder.Parsed.Title}'",
+                LogEventLevel.Warning
+            );
+            return;
+        }
+
         Logger.System(
             $"FileWatcher: TV Show '{show.Name}' found on TMDB (ID: {show.Id}), dispatching job"
         );
@@ -319,6 +359,21 @@ public class FileWatcherEventHandler : IDisposable
             folderLibrary.FolderId,
             directoryPath
         );
+    }
+
+    private const double MinMatchConfidence = 50.0;
+
+    private static double ScoreCandidate(
+        string candidateTitle,
+        DateTime? candidateDate,
+        string parsedTitle,
+        string? parsedYear
+    )
+    {
+        double score = FuzzyMatcher.MatchPercentage(candidateTitle, parsedTitle);
+        if (int.TryParse(parsedYear, out int year) && candidateDate?.Year == year)
+            score += 25;
+        return score;
     }
 
     public void Dispose()
