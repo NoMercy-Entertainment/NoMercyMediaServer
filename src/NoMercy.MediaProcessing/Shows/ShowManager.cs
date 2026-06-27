@@ -145,15 +145,9 @@ public class ShowManager(
             LogEventLevel.Debug
         );
 
-        ShowManager showManager = new(
-            showRepository,
-            jobDispatcher,
-            storageFactory!,
-            storageDriver
-        );
-        await showManager.StoreGenres(showAppends);
-        await showManager.StoreContentRatings(showAppends);
-        await showManager.StoreTranslations(showAppends);
+        await StoreGenres(showAppends);
+        await StoreContentRatings(showAppends);
+        await StoreTranslations(showAppends);
 
         Logger.MovieDb($"Show {showAppends.Name}: Added to Library {library.Title}");
 
