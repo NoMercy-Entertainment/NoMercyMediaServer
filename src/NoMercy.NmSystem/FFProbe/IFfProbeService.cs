@@ -14,16 +14,13 @@ using NoMercy.Storage;
 
 namespace NoMercy.NmSystem.FFProbe;
 
-// Thin static facade over the injectable FfProbeService for ambient call sites.
-// Prefer injecting IFfProbeService where a DI scope is available.
-public static class FfProbe
+public interface IFfProbeService
 {
-    public static Task<FfProbeData> CreateAsync(string file, CancellationToken ct = default) =>
-        FfProbeService.Current.CreateAsync(file, ct);
+    Task<FfProbeData> CreateAsync(string file, CancellationToken ct = default);
 
-    public static Task<FfProbeData> CreateAsync(
+    Task<FfProbeData> CreateAsync(
         IStorageDriver driver,
         string file,
         CancellationToken ct = default
-    ) => FfProbeService.Current.CreateAsync(driver, file, ct);
+    );
 }

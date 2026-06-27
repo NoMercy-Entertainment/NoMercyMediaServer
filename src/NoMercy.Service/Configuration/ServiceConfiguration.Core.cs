@@ -13,6 +13,7 @@ using I18N.DotNet;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using NoMercy.NmSystem.FFProbe;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Services;
 using NoMercy.Api.WebSockets;
@@ -225,6 +226,7 @@ public static partial class ServiceConfiguration
         services.AddSingleton<IImageService, ImageService>();
 
         services.AddSingleton<IUserCache>(UserCache.Current);
+        services.AddSingleton<IFfProbeService>(FfProbeService.Current);
         services.AddSingleton<IMediaAuthorizationPolicy, MediaAuthorizationPolicy>();
 
         // Update checker + periodic background check
