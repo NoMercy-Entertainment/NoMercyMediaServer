@@ -95,8 +95,9 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
         // collaborator rows in a separate flat query and reattach them.
         List<Guid> trackIds = artist.ArtistTrack.Select(at => at.TrackId).Distinct().ToList();
 
-        if (trackIds.Count <= 0) return artist;
-        
+        if (trackIds.Count <= 0)
+            return artist;
+
         List<ArtistTrack> collabs = await mediaContext
             .ArtistTrack.AsNoTracking()
             .Where(at => trackIds.Contains(at.TrackId))
@@ -114,12 +115,15 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
                 at.Track.ArtistTrack = list;
             }
         }
-        
 
         return artist;
     }
 
-    public async Task<List<Artist>> GetArtists(Guid userId, string letter, CancellationToken ct = default)
+    public async Task<List<Artist>> GetArtists(
+        Guid userId,
+        string letter,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -201,7 +205,11 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<List<Album>> GetAlbums(Guid userId, string letter, CancellationToken ct = default)
+    public async Task<List<Album>> GetAlbums(
+        Guid userId,
+        string letter,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -401,7 +409,11 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
             .ToListAsync(ct);
     }
 
-    public async Task<Playlist?> GetPlaylistAsync(Guid userId, Guid id, CancellationToken ct = default)
+    public async Task<Playlist?> GetPlaylistAsync(
+        Guid userId,
+        Guid id,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -476,7 +488,10 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
             .ToListAsync(ct);
     }
 
-    public async Task<List<AlbumTrack>> GetFavoriteAlbumAsync(Guid userId, CancellationToken ct = default)
+    public async Task<List<AlbumTrack>> GetFavoriteAlbumAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -507,7 +522,10 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
             .ToListAsync(ct);
     }
 
-    public async Task<List<ArtistUser>> GetFavoriteArtists(Guid userId, CancellationToken ct = default)
+    public async Task<List<ArtistUser>> GetFavoriteArtists(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -521,7 +539,10 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
             .ToListAsync(ct);
     }
 
-    public async Task<List<AlbumUser>> GetFavoriteAlbums(Guid userId, CancellationToken ct = default)
+    public async Task<List<AlbumUser>> GetFavoriteAlbums(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -537,7 +558,10 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
 
     #region Collection Operations (for CollectionsController)
 
-    public async Task<List<TrackUser>> GetFavoriteTracks(Guid userId, CancellationToken ct = default)
+    public async Task<List<TrackUser>> GetFavoriteTracks(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -705,7 +729,8 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
-            .PlaylistTrack.Include(pt => pt.Track)
+            .PlaylistTrack.AsNoTracking()
+            .Include(pt => pt.Track)
                 .ThenInclude(track => track.Images)
             .Include(pt => pt.Playlist)
                 .ThenInclude(playlist => playlist.Tracks)
@@ -1227,7 +1252,10 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
 
     #region Projection Methods — Top Music (Favorites)
 
-    public async Task<TopMusicItemDto?> GetTopArtistAsync(Guid userId, CancellationToken ct = default)
+    public async Task<TopMusicItemDto?> GetTopArtistAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -1253,7 +1281,10 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<TopMusicItemDto?> GetTopAlbumAsync(Guid userId, CancellationToken ct = default)
+    public async Task<TopMusicItemDto?> GetTopAlbumAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -1279,7 +1310,10 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<TopMusicItemDto?> GetTopPlaylistAsync(Guid userId, CancellationToken ct = default)
+    public async Task<TopMusicItemDto?> GetTopPlaylistAsync(
+        Guid userId,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -1737,7 +1771,9 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
     public async Task<Album?> GetAlbumByIdAsync(Guid id, CancellationToken ct = default)
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        return await mediaContext.Albums.AsNoTracking().FirstOrDefaultAsync(album => album.Id == id, ct);
+        return await mediaContext
+            .Albums.AsNoTracking()
+            .FirstOrDefaultAsync(album => album.Id == id, ct);
     }
 
     public async Task<Artist?> GetArtistForEditAsync(Guid id, CancellationToken ct = default)
@@ -1748,7 +1784,10 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
             .FirstOrDefaultAsync(artist => artist.Id == id, ct);
     }
 
-    public async Task<Artist?> GetArtistWithLibraryFolderAsync(Guid id, CancellationToken ct = default)
+    public async Task<Artist?> GetArtistWithLibraryFolderAsync(
+        Guid id,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -1761,10 +1800,15 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
     public async Task<Album?> GetAlbumForEditAsync(Guid id, CancellationToken ct = default)
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        return await mediaContext.Albums.AsNoTracking().FirstOrDefaultAsync(album => album.Id == id, ct);
+        return await mediaContext
+            .Albums.AsNoTracking()
+            .FirstOrDefaultAsync(album => album.Id == id, ct);
     }
 
-    public async Task<Album?> GetAlbumWithLibraryFolderAsync(Guid id, CancellationToken ct = default)
+    public async Task<Album?> GetAlbumWithLibraryFolderAsync(
+        Guid id,
+        CancellationToken ct = default
+    )
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
@@ -1810,7 +1854,8 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
     {
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
         return await mediaContext
-            .Playlists.Include(playlist => playlist.Tracks)
+            .Playlists.AsNoTracking()
+            .Include(playlist => playlist.Tracks)
                 .ThenInclude(playlistTrack => playlistTrack.Track)
             .FirstOrDefaultAsync(
                 playlist => playlist.Name == name && playlist.UserId == userId,
@@ -2036,12 +2081,7 @@ public class MusicRepository(IDbContextFactory<MediaContext> contextFactory) : I
 
         await Task.WhenAll(artistsTask, albumsTask, playlistsTask, tracksTask);
 
-        return new(
-            artistsTask.Result,
-            albumsTask.Result,
-            playlistsTask.Result,
-            tracksTask.Result
-        );
+        return new(artistsTask.Result, albumsTask.Result, playlistsTask.Result, tracksTask.Result);
     }
 
     #endregion

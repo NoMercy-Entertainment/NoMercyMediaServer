@@ -19,12 +19,14 @@ public class EncoderRepository(MediaContext context) : IEncoderRepository
 {
     public Task<List<EncoderProfile>> GetEncoderProfilesAsync()
     {
-        return context.EncoderProfiles.ToListAsync();
+        return context.EncoderProfiles.AsNoTracking().ToListAsync();
     }
 
     public Task<EncoderProfile?> GetEncoderProfileByIdAsync(Ulid id)
     {
-        return context.EncoderProfiles.FirstOrDefaultAsync(profile => profile.Id == id);
+        return context
+            .EncoderProfiles.AsNoTracking()
+            .FirstOrDefaultAsync(profile => profile.Id == id);
     }
 
     public Task AddEncoderProfileAsync(EncoderProfile profile)
