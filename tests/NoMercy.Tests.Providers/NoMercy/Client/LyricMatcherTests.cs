@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Providers.MusixMatch.Models;
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.NoMercy.Client;
 using NoMercy.Providers.NoMercy.Models;
 
@@ -23,7 +23,7 @@ namespace NoMercy.Tests.Providers.NoMercy.Client;
 [Trait("Category", "Unit")]
 public class LyricMatcherTests
 {
-    private static MusixMatchFormattedLyric[] SyncedLines() =>
+    private static LyricLine[] SyncedLines() =>
         [
             new()
             {
@@ -37,7 +37,7 @@ public class LyricMatcherTests
             },
         ];
 
-    private static MusixMatchFormattedLyric[] PlainLines() =>
+    private static LyricLine[] PlainLines() =>
         [
             new()
             {
