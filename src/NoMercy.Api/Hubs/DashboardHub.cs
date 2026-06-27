@@ -25,17 +25,23 @@ namespace NoMercy.Api.Hubs;
 public class DashboardHub : ConnectionHub
 {
     private readonly IClientMessenger _clientMessenger;
+    private readonly ILogBroadcastService _logBroadcastService;
+    private readonly IResourceMonitorService _resourceMonitorService;
 
     public DashboardHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
         IClientMessenger clientMessenger,
+        ILogBroadcastService logBroadcastService,
+        IResourceMonitorService resourceMonitorService,
         IActivityLogger activityLogger
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
         _clientMessenger = clientMessenger;
+        _logBroadcastService = logBroadcastService;
+        _resourceMonitorService = resourceMonitorService;
     }
 
     public override async Task OnConnectedAsync()
@@ -47,7 +53,7 @@ public class DashboardHub : ConnectionHub
         }
 
         Logger.Socket("Dashboard client connected", LogEventLevel.Debug);
-        LogBroadcaster.StartBroadcasting(_clientMessenger);
+        _logBroadcastService.Start();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -61,15 +67,15 @@ public class DashboardHub : ConnectionHub
 
     public void StartResources()
     {
-        ResourceMonitor.StartBroadcasting(_clientMessenger);
+        _resourceMonitorService.Start();
     }
 
     public void StopResources()
     {
         if (ConnectedClients.Clients.Values.All(x => x.Endpoint != "/dashboardHub"))
         {
-            ResourceMonitor.StopBroadcasting();
-            LogBroadcaster.StopBroadcasting();
+            _resourceMonitorService.Stop();
+            _logBroadcastService.Stop();
         }
     }
 }

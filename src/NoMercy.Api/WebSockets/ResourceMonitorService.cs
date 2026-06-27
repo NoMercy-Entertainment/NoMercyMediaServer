@@ -8,7 +8,6 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
-
 using NoMercy.Monitoring;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
@@ -16,22 +15,21 @@ using Serilog.Events;
 
 namespace NoMercy.Api.WebSockets;
 
-public static class ResourceMonitor
+public class ResourceMonitorService(IClientMessenger clientMessenger) : IResourceMonitorService
 {
-    private static readonly Lock Sync = new();
-    private static bool _broadcasting;
-    private static CancellationTokenSource? _cancellationTokenSource;
-    private static IClientMessenger? _clientMessenger;
+    private readonly Lock _sync = new();
+    private bool _broadcasting;
+    private CancellationTokenSource? _cancellationTokenSource;
 
-    public static void StartBroadcasting(IClientMessenger clientMessenger)
+    public int ActiveSubscribers => _broadcasting ? 1 : 0;
+
+    public void Start()
     {
-        lock (Sync)
+        lock (_sync)
         {
             if (_broadcasting)
                 return;
-            _clientMessenger = clientMessenger;
             _broadcasting = true;
-            // Replace any leaked CTS from a previous Start/Stop cycle.
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = new();
         }
@@ -54,9 +52,9 @@ public static class ResourceMonitor
         });
     }
 
-    public static void StopBroadcasting()
+    public void Stop()
     {
-        lock (Sync)
+        lock (_sync)
         {
             if (!_broadcasting)
                 return;
@@ -74,7 +72,7 @@ public static class ResourceMonitor
         }
     }
 
-    private static async Task BroadcastLoop(CancellationToken cancellationToken)
+    private async Task BroadcastLoop(CancellationToken cancellationToken)
     {
         while (_broadcasting && !cancellationToken.IsCancellationRequested)
         {
@@ -82,13 +80,7 @@ public static class ResourceMonitor
             try
             {
                 Resource resourceData = Monitoring.ResourceMonitor.Monitor();
-                if (_clientMessenger != null)
-                    await _clientMessenger.SendToAll(
-                        "ResourceUpdate",
-                        "dashboardHub",
-                        resourceData
-                    );
-
+                await clientMessenger.SendToAll("ResourceUpdate", "dashboardHub", resourceData);
                 int delay = 1000 - (int)(DateTime.Now - time).TotalMilliseconds;
                 if (delay > 0)
                     await Task.Delay(delay, cancellationToken);

@@ -152,7 +152,11 @@ public static partial class ServiceConfiguration
                 Enabled = true,
                 MaxEntries = 10_000,
                 CompactionPercentage = 0.25,
-                ExcludedEventTypes = ["EncodingProgressUpdatedEvent", "PlaybackProgressUpdatedEvent"],
+                ExcludedEventTypes =
+                [
+                    "EncodingProgressUpdatedEvent",
+                    "PlaybackProgressUpdatedEvent",
+                ],
             }
         );
         AuditingEventBusDecorator eventBus = new(loggingBus, auditLog);
@@ -190,6 +194,8 @@ public static partial class ServiceConfiguration
         // Client messaging (replaces static Networking.Networking.SendTo/SendToAll)
         services.AddSingleton<ConnectedClients>();
         services.AddSingleton<IClientMessenger, ClientMessenger>();
+        services.AddSingleton<ILogBroadcastService, LogBroadcastService>();
+        services.AddSingleton<IResourceMonitorService, ResourceMonitorService>();
 
         // Connectivity strategies (ordered by priority)
         services.AddSingleton<IConnectivityStrategy>(sp => new PortForwardStrategy(

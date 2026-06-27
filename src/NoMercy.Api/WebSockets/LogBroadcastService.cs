@@ -8,47 +8,44 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
-
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.WebSockets;
 
-public static class LogBroadcaster
+public class LogBroadcastService(IClientMessenger clientMessenger) : ILogBroadcastService
 {
-    private static readonly Lock Sync = new();
-    private static bool _broadcasting;
-    private static IClientMessenger? _clientMessenger;
+    private readonly Lock _sync = new();
+    private bool _broadcasting;
 
-    public static void StartBroadcasting(IClientMessenger clientMessenger)
+    public int ActiveSubscribers => _broadcasting ? 1 : 0;
+
+    public void Start()
     {
-        lock (Sync)
+        lock (_sync)
         {
             if (_broadcasting)
                 return;
-            _clientMessenger = clientMessenger;
             _broadcasting = true;
             Logger.LogEmitted += OnLogEmitted;
         }
     }
 
-    public static void StopBroadcasting()
+    public void Stop()
     {
-        lock (Sync)
+        lock (_sync)
         {
             if (!_broadcasting)
                 return;
             _broadcasting = false;
             Logger.LogEmitted -= OnLogEmitted;
-            _clientMessenger = null;
         }
     }
 
-    private static void OnLogEmitted(LogEntry entry)
+    private void OnLogEmitted(LogEntry entry)
     {
-        // Fire-and-forget: Logger.LogEmitted is a sync Action<> delegate and cannot be awaited.
-        // Log broadcasting is best-effort — a missed entry is not a failure.
-        _ = _clientMessenger?.SendToAll("NewLog", "dashboardHub", entry);
+        // Fire-and-forget: Logger.LogEmitted is a sync delegate; broadcasting is best-effort.
+        _ = clientMessenger.SendToAll("NewLog", "dashboardHub", entry);
     }
 }
