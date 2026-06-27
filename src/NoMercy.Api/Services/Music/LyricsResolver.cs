@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Music;
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.MusixMatch.Models;
 using NoMercy.Providers.NoMercy.Client;
 
@@ -60,7 +61,7 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory)
             if (track.Lyrics is not null)
                 return track.Lyrics;
 
-            MusixMatchFormattedLyric[]? lyrics = await NoMercyLyricsClient.SearchLyrics(track);
+            LyricLine[]? lyrics = await NoMercyLyricsClient.SearchLyrics(track);
             if (lyrics is null)
                 return null;
 

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.MusixMatch.Models;
 using NoMercy.Providers.NoMercy.Models;
 
@@ -38,6 +39,20 @@ public static class MusixMatchLyricMapper
             ?.Message
             ?.Body
             ?.MusixMatchMusixMatchTrack;
+        LyricLine[] mappedLines = lines
+            .Select(line => new LyricLine
+            {
+                Text = line.Text,
+                Time = new LyricLine.LineTime
+                {
+                    Total = line.Time.Total,
+                    Minutes = line.Time.Minutes,
+                    Seconds = line.Time.Seconds,
+                    Hundredths = line.Time.Hundredths,
+                },
+            })
+            .ToArray();
+
         bool hasSynced = lines.Any(line => line.Time.Total > 0);
 
         return new(
@@ -45,7 +60,7 @@ public static class MusixMatchLyricMapper
             track?.ArtistName ?? string.Empty,
             track is { TrackLength: > 0 } ? (int)track.TrackLength : null,
             hasSynced,
-            lines
+            mappedLines
         );
     }
 }
