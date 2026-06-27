@@ -13,8 +13,8 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Domain;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
@@ -66,11 +66,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     : IRecommendationRepository
 {
     public async Task<List<RecommendationCandidateDto>> GetUnownedMovieRecommendationsAsync(
-        MediaContext context,
         Guid userId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         // Step 1: Group server-side for IDs only (avoids SQL APPLY)
         // Use NOT EXISTS against Movies table instead of ToId==null (ToId may not be set for older data)
         List<int> mediaIds = await context
@@ -137,11 +138,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<RecommendationCandidateDto>> GetUnownedTvRecommendationsAsync(
-        MediaContext context,
         Guid userId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         List<int> mediaIds = await context
             .Recommendations.AsNoTracking()
             .Where(r => r.TvFromId != null)
@@ -207,11 +209,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<RecommendationCandidateDto>> GetUnownedAnimeRecommendationsAsync(
-        MediaContext context,
         Guid userId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         List<int> mediaIds = await context
             .Recommendations.AsNoTracking()
             .Where(r => r.TvFromId != null)
@@ -277,11 +280,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<RecommendationCandidateDto>> GetUnownedMovieSimilarAsync(
-        MediaContext context,
         Guid userId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         List<int> mediaIds = await context
             .Similar.AsNoTracking()
             .Where(s => s.MovieFromId != null)
@@ -345,11 +349,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<RecommendationCandidateDto>> GetUnownedTvSimilarAsync(
-        MediaContext context,
         Guid userId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         List<int> mediaIds = await context
             .Similar.AsNoTracking()
             .Where(s => s.TvFromId != null)
@@ -415,11 +420,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<RecommendationCandidateDto>> GetUnownedAnimeSimilarAsync(
-        MediaContext context,
         Guid userId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         List<int> mediaIds = await context
             .Similar.AsNoTracking()
             .Where(s => s.TvFromId != null)
@@ -485,7 +491,6 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<RecommendationCandidateDto>> GetKeywordCrossTypeTvCandidatesAsync(
-        MediaContext context,
         Guid userId,
         Dictionary<int, List<int>> movieKeywordMap,
         int minSharedKeywords = 3,
@@ -494,6 +499,8 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         if (movieKeywordMap.Count == 0)
             return [];
 
@@ -620,7 +627,6 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<RecommendationCandidateDto>> GetKeywordCrossTypeAnimeCandidatesAsync(
-        MediaContext context,
         Guid userId,
         Dictionary<int, List<int>> movieKeywordMap,
         int minSharedKeywords = 3,
@@ -629,6 +635,8 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         if (movieKeywordMap.Count == 0)
             return [];
 
@@ -750,7 +758,6 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<RecommendationCandidateDto>> GetKeywordCrossTypeMovieCandidatesAsync(
-        MediaContext context,
         Guid userId,
         Dictionary<int, List<int>> tvKeywordMap,
         int minSharedKeywords = 3,
@@ -759,6 +766,8 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         if (tvKeywordMap.Count == 0)
             return [];
 
@@ -880,11 +889,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<UserAffinitySourceDto>> GetUserMovieAffinityDataAsync(
-        MediaContext context,
         Guid userId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         // Fetch flat data without nested collection projections to avoid SQL APPLY
         var movies = await context
             .Movies.AsNoTracking()
@@ -947,11 +957,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<UserAffinitySourceDto>> GetUserTvAffinityDataAsync(
-        MediaContext context,
         Guid userId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         var tvShows = await context
             .Tvs.AsNoTracking()
             .Where(t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
@@ -1013,11 +1024,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<UserAffinitySourceDto>> GetUserAnimeAffinityDataAsync(
-        MediaContext context,
         Guid userId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         var animeShows = await context
             .Tvs.AsNoTracking()
             .Where(t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
@@ -1079,11 +1091,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<Dictionary<int, List<int>>> GetGenresForMovieIdsAsync(
-        MediaContext context,
         List<int> movieIds,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         if (movieIds.Count == 0)
             return new();
 
@@ -1095,11 +1108,12 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<Dictionary<int, List<int>>> GetGenresForTvIdsAsync(
-        MediaContext context,
         List<int> tvIds,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         if (tvIds.Count == 0)
             return new();
 
@@ -1111,12 +1125,13 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<(List<Movie> Movies, string? ColorPalette)> GetSourceMoviesForMediaAsync(
-        MediaContext context,
         Guid userId,
         int mediaId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         // Get distinct source movie IDs and grab color palette from the same query
         var recRows = await context
             .Recommendations.AsNoTracking()
@@ -1158,12 +1173,13 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<(List<Tv> TvShows, string? ColorPalette)> GetSourceTvShowsForMediaAsync(
-        MediaContext context,
         Guid userId,
         int mediaId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         var recRows = await context
             .Recommendations.AsNoTracking()
             .Where(r => r.MediaId == mediaId && r.TvFromId != null)
@@ -1205,13 +1221,14 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<Movie>> GetKeywordMovieSourcesForMovieAsync(
-        MediaContext context,
         Guid userId,
         int movieId,
         HashSet<int> excludeIds,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         List<int> targetKeywordIds = await context
             .KeywordMovie.AsNoTracking()
             .Where(km => km.MovieId == movieId)
@@ -1248,13 +1265,14 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<Tv>> GetKeywordTvSourcesForTvAsync(
-        MediaContext context,
         Guid userId,
         int tvId,
         HashSet<int> excludeIds,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         List<int> targetKeywordIds = await context
             .KeywordTv.AsNoTracking()
             .Where(kt => kt.TvId == tvId)
@@ -1292,12 +1310,13 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<Movie>> GetCrossTypeMovieSourcesForTvAsync(
-        MediaContext context,
         Guid userId,
         int tvId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         List<int> tvKeywordIds = await context
             .KeywordTv.AsNoTracking()
             .Where(kt => kt.TvId == tvId)
@@ -1333,12 +1352,13 @@ public class RecommendationRepository(IDbContextFactory<MediaContext> contextFac
     }
 
     public async Task<List<Tv>> GetCrossTypeTvSourcesForMovieAsync(
-        MediaContext context,
         Guid userId,
         int movieId,
         CancellationToken ct = default
     )
     {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
         List<int> movieKeywordIds = await context
             .KeywordMovie.AsNoTracking()
             .Where(km => km.MovieId == movieId)
