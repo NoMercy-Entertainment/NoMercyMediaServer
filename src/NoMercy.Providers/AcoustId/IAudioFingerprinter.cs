@@ -8,7 +8,16 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
+namespace NoMercy.Providers.AcoustId;
 
-namespace NoMercy.MediaProcessing.Common;
+/// <summary>
+/// Audio fingerprinting seam. The concrete chromaprint-backed implementation is
+/// delivered in Slice 14; domain services depend on this abstraction so they can
+/// request fingerprints without binding to the fpcalc/FFmpeg integration.
+/// </summary>
+public interface IAudioFingerprinter
+{
+    Task<AudioFingerprint?> FingerprintAsync(string filePath, CancellationToken ct);
+}
 
-public class BaseService { }
+public record AudioFingerprint(string Fingerprint, int DurationSeconds);

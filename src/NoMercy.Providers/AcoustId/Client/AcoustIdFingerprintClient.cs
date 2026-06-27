@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using AcoustID;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Setup.Server;
 
@@ -50,6 +51,7 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
         // Fingerprinting requires chromaprint/fpcalc to extract audio fingerprint + FFmpeg for duration.
         // The V1 encoder bundled this; V3 encoder doesn't expose fingerprinting directly.
         // Return null until a dedicated fingerprint service is wired up via DI.
+        Logger.Warning($"AcoustId lookup called but chromaprint is not configured. File: {file}");
         await Task.CompletedTask;
         return null;
     }

@@ -70,6 +70,36 @@ public class MovieRepository(MediaContext context) : IMovieRepository
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.MovieToId, movie.Id));
     }
 
+    public async Task Remove(int id)
+    {
+        // SQLite schema uses DeleteBehavior.Restrict globally. Disable FK
+        // enforcement on this connection so the movie and all its dependents
+        // are removed atomically, mirroring
+        // Data.Repositories.MovieRepository.DeleteAsync.
+        bool ownsConnection =
+            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
+        if (ownsConnection)
+            await context.Database.OpenConnectionAsync();
+
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+            try
+            {
+                await context.Movies.Where(movie => movie.Id == id).ExecuteDeleteAsync();
+            }
+            finally
+            {
+                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+            }
+        }
+        finally
+        {
+            if (ownsConnection)
+                await context.Database.CloseConnectionAsync();
+        }
+    }
+
     public Task LinkToLibrary(Library library, Movie movie)
     {
         return context

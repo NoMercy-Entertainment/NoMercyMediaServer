@@ -153,12 +153,17 @@ public class MovieManager(
 
     public Task Update(int id, Library library)
     {
-        throw new NotImplementedException();
+        // Re-importing refreshes all metadata. Every write in Add is an
+        // idempotent upsert, so re-running it updates the existing records
+        // in place rather than creating duplicates.
+        return Add(id, library);
     }
 
-    public Task Remove(int id, Library library)
+    public async Task Remove(int id, Library library)
     {
-        throw new NotImplementedException();
+        Logger.MovieDb($"Movie: {id}: Removing from Library {library.Title}");
+        await movieRepository.Remove(id);
+        Logger.MovieDb($"Movie: {id}: Removed from Database", LogEventLevel.Debug);
     }
 
     public async Task StoreAlternativeTitles(TmdbMovieAppends movie)

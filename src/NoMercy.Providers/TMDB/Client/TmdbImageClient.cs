@@ -23,6 +23,8 @@ namespace NoMercy.Providers.TMDB.Client;
 
 public abstract class TmdbImageClient : TmdbBaseClient
 {
+    public const string ImageBaseUrl = "https://image.tmdb.org/t/p/";
+
     private static IStorage? _storage;
 
     public static void Initialize(IStorage storage)
