@@ -31,7 +31,7 @@ public partial class LrclibClient : LrclibBaseClient
         bool priority = false
     )
     {
-        Dictionary<string, string> additionalArguments = new()
+        Dictionary<string, string?> additionalArguments = new()
         {
             { "artist_name", string.Join(",", artists) },
             { "track_name", trackName },
@@ -70,7 +70,7 @@ public partial class LrclibClient : LrclibBaseClient
         bool priority = false
     )
     {
-        Dictionary<string, string> additionalArguments = new() { { "track_name", trackName } };
+        Dictionary<string, string?> additionalArguments = new() { { "track_name", trackName } };
         string artistName = string.Join(",", artists);
         if (!string.IsNullOrEmpty(artistName))
             additionalArguments.Add("artist_name", artistName);
