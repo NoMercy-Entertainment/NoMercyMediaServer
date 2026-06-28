@@ -50,12 +50,9 @@ public class ActivityLogRetentionCronJob : ICronJobExecutor
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(
             cancellationToken
         );
-        List<ActivityLog> stale = await ctx
+        int deleted = await ctx
             .ActivityLogs.Where(x => x.CreatedAt < cutoff)
-            .ToListAsync(cancellationToken);
-
-        ctx.ActivityLogs.RemoveRange(stale);
-        int deleted = await ctx.SaveChangesAsync(cancellationToken);
+            .ExecuteDeleteAsync(cancellationToken);
 
         _logger.LogInformation("Activity retention sweep complete; removed {Count} rows", deleted);
     }
