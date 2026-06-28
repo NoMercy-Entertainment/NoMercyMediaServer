@@ -26,7 +26,7 @@ internal static class PluginCommand
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
                 List<PluginResponse>? plugins = await client.GetAsync<List<PluginResponse>>(
-                    "/manage/plugins",
+                    ApiRoutes.Plugins,
                     ct
                 );
 

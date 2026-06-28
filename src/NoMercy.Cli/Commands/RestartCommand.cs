@@ -24,7 +24,7 @@ internal static class RestartCommand
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
-                bool ok = await client.PostAsync("/manage/restart", null, ct);
+                bool ok = await client.PostAsync(ApiRoutes.Restart, null, ct);
 
                 if (ok)
                 {

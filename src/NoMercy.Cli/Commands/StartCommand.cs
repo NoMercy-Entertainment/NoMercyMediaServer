@@ -79,7 +79,7 @@ internal static class StartCommand
         try
         {
             using CliClient client = new(pipe);
-            StatusResponse? status = await client.GetAsync<StatusResponse>("/manage/status", ct);
+            StatusResponse? status = await client.GetAsync<StatusResponse>(ApiRoutes.Status, ct);
             return status is not null;
         }
         catch

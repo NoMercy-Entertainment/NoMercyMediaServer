@@ -68,7 +68,7 @@ internal static partial class LogsCommand
                 // Fetch initial batch
                 string query = BuildQuery(tail, level, type);
                 List<LogEntryResponse>? logs = await client.GetAsync<List<LogEntryResponse>>(
-                    $"/manage/logs{query}",
+                    $"{ApiRoutes.Logs}{query}",
                     ct
                 );
 
@@ -89,7 +89,7 @@ internal static partial class LogsCommand
                 try
                 {
                     using HttpResponseMessage response = await ipc.GetStreamAsync(
-                        "/manage/logs/stream?backfill=0",
+                        $"{ApiRoutes.LogsStream}?backfill=0",
                         ct
                     );
 

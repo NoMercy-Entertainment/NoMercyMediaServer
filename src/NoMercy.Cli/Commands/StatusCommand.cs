@@ -26,7 +26,7 @@ internal static class StatusCommand
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
                 StatusResponse? status = await client.GetAsync<StatusResponse>(
-                    "/manage/status",
+                    ApiRoutes.Status,
                     ct
                 );
 

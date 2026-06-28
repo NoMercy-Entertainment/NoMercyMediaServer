@@ -26,7 +26,7 @@ internal static class QueueCommand
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
                 QueueStatusResponse? queue = await client.GetAsync<QueueStatusResponse>(
-                    "/manage/queue",
+                    ApiRoutes.Queue,
                     ct
                 );
 

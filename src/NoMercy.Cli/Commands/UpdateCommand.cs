@@ -31,7 +31,7 @@ internal static class UpdateCommand
                 // Step 1: Trigger download
                 Console.WriteLine("Downloading update...");
                 UpdateResponse? downloadResponse = await client.PostAsync<UpdateResponse>(
-                    "/manage/update",
+                    ApiRoutes.Update,
                     null,
                     ct
                 );
@@ -48,7 +48,7 @@ internal static class UpdateCommand
 
                 // Step 2: Stop the server
                 Console.WriteLine("Stopping server...");
-                bool stopped = await client.PostAsync("/manage/stop", null, ct);
+                bool stopped = await client.PostAsync(ApiRoutes.Stop, null, ct);
                 if (!stopped)
                 {
                     await Console.Error.WriteLineAsync("Failed to send stop command.");

@@ -28,7 +28,7 @@ internal static class ConfigCommand
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
                 ConfigResponse? config = await client.GetAsync<ConfigResponse>(
-                    "/manage/config",
+                    ApiRoutes.Config,
                     ct
                 );
 
@@ -76,7 +76,7 @@ internal static class ConfigCommand
                 string json = JsonConvert.SerializeObject(payload);
                 StringContent content = new(json, Encoding.UTF8, "application/json");
 
-                bool ok = await client.PutAsync("/manage/config", content, ct);
+                bool ok = await client.PutAsync(ApiRoutes.Config, content, ct);
 
                 if (ok)
                 {

@@ -27,7 +27,7 @@ internal static class AutoStartCommand
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
                 AutoStartResponse? response = await client.GetAsync<AutoStartResponse>(
-                    "/manage/autostart",
+                    ApiRoutes.AutoStart,
                     ct
                 );
 
@@ -81,7 +81,7 @@ internal static class AutoStartCommand
         string json = JsonConvert.SerializeObject(new { enabled });
         StringContent content = new(json, Encoding.UTF8, "application/json");
 
-        bool ok = await client.PostAsync("/manage/autostart", content, ct);
+        bool ok = await client.PostAsync(ApiRoutes.AutoStart, content, ct);
 
         if (ok)
         {

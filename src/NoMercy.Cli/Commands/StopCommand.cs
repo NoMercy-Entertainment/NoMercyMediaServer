@@ -24,7 +24,7 @@ internal static class StopCommand
             {
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
-                bool ok = await client.PostAsync("/manage/stop", null, ct);
+                bool ok = await client.PostAsync(ApiRoutes.Stop, null, ct);
 
                 if (ok)
                 {

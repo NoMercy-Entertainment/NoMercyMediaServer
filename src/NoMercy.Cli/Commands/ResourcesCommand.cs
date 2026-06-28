@@ -26,7 +26,7 @@ internal static class ResourcesCommand
                 string? pipe = parseResult.GetValue(pipeOption);
                 using CliClient client = new(pipe);
                 ResourcesResponse? resources = await client.GetAsync<ResourcesResponse>(
-                    "/manage/resources",
+                    ApiRoutes.Resources,
                     ct
                 );
 
