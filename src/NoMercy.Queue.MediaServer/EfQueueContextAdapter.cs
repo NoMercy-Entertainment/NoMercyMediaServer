@@ -370,6 +370,11 @@ public class EfQueueContextAdapter : IQueueContext
         });
     }
 
+    // No-op: this adapter persists eagerly inside each Execute(...) unit of work
+    // (every mutating method opens a scoped DbContext and calls SaveChanges before
+    // returning), so there is no deferred change set to flush here. The method is
+    // retained to satisfy IQueueContext, whose callers invoke SaveChanges() after
+    // mutations assuming deferred persistence.
     public void SaveChanges() { }
 
     public void Dispose() { }
