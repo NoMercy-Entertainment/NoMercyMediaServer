@@ -252,7 +252,7 @@ public class WebDavStorageDriverFactoryTests
         Mock<ICredentialResolver> credResolver = new();
         credResolver.Setup(r => r.Resolve(It.IsAny<string>())).Returns(("alice", "s3cr3t"));
 
-        StorageFactory factory = new(
+        StorageFactory factory = new StorageFactory(
             new LocalStorageDriver(),
             NullLogger<StorageFactory>.Instance,
             driverResolver.Object,

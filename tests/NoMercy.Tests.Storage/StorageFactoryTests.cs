@@ -47,6 +47,18 @@ public class StorageFactoryTests
         );
     }
 
+    [Fact]
+    public void DefaultBuilders_CoverAllBuiltInDriverTypes_WithoutKeyCollisions()
+    {
+        List<string> keys = StorageFactory
+            .DefaultBuilders(BackendMock().Object, NullLogger<StorageFactory>.Instance, null)
+            .SelectMany(builder => builder.SupportedTypes)
+            .ToList();
+
+        keys.Should().BeEquivalentTo(["local", "nfs", "s3", "r2", "webdav"]);
+        keys.Should().OnlyHaveUniqueItems();
+    }
+
     // Helper: credential resolver stub that always returns a fixed key pair.
     private static ICredentialResolver StubCredentials(
         string accessKey = "test-access-key",
