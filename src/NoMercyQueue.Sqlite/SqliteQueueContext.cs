@@ -167,8 +167,7 @@ public class SqliteQueueContext : IQueueContext
 
     public bool IsParentFailed(int parentJobId)
     {
-        string parentPayloadPrefix = $"\"Id\":{parentJobId},";
-        return _context.FailedJobs.AsNoTracking().Any(f => f.Payload.Contains(parentPayloadPrefix));
+        return _context.FailedJobs.AsNoTracking().Any(f => f.ParentJobId == parentJobId);
     }
 
     public void AddFailedJob(FailedJobModel failedJob)
@@ -181,6 +180,7 @@ public class SqliteQueueContext : IQueueContext
             Payload = failedJob.Payload,
             Exception = failedJob.Exception,
             FailedAt = failedJob.FailedAt,
+            ParentJobId = failedJob.ParentJobId,
         };
         _context.FailedJobs.Add(entity);
     }
@@ -216,6 +216,7 @@ public class SqliteQueueContext : IQueueContext
                 Payload = j.Payload,
                 Exception = j.Exception,
                 FailedAt = j.FailedAt,
+                ParentJobId = j.ParentJobId,
             })
             .ToList();
     }
@@ -330,6 +331,7 @@ public class SqliteQueueContext : IQueueContext
             Payload = entity.Payload,
             Exception = entity.Exception,
             FailedAt = entity.FailedAt,
+            ParentJobId = entity.ParentJobId,
         };
     }
 

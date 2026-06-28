@@ -235,6 +235,7 @@ public class EfQueueContextAdapter : IQueueContext
                 Payload = failedJob.Payload,
                 Exception = failedJob.Exception,
                 FailedAt = failedJob.FailedAt,
+                ParentJobId = failedJob.ParentJobId,
             };
             context.FailedJobs.Add(entity);
             context.SaveChanges();
@@ -284,6 +285,7 @@ public class EfQueueContextAdapter : IQueueContext
                         Payload = j.Payload,
                         Exception = j.Exception,
                         FailedAt = j.FailedAt,
+                        ParentJobId = j.ParentJobId,
                     })
                     .ToList();
         });
@@ -383,10 +385,7 @@ public class EfQueueContextAdapter : IQueueContext
     {
         return Execute(context =>
         {
-            string parentPayloadPrefix = $"\"Id\":{parentJobId},";
-            return context
-                .FailedJobs.AsNoTracking()
-                .Any(f => f.Payload.Contains(parentPayloadPrefix));
+            return context.FailedJobs.AsNoTracking().Any(f => f.ParentJobId == parentJobId);
         });
     }
 
@@ -418,6 +417,7 @@ public class EfQueueContextAdapter : IQueueContext
             Payload = entity.Payload,
             Exception = entity.Exception,
             FailedAt = entity.FailedAt,
+            ParentJobId = entity.ParentJobId,
         };
     }
 

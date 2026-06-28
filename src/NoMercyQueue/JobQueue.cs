@@ -89,6 +89,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                         Connection = "default",
                         Queue = job.Queue,
                         Payload = job.Payload,
+                        ParentJobId = job.Id,
                         Exception =
                             $"{{\"Message\":\"Skipped: parent job {job.ParentJobId} failed\"}}",
                         FailedAt = DateTime.UtcNow,
@@ -139,6 +140,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                         Connection = "default",
                         Queue = queueJob.Queue,
                         Payload = queueJob.Payload,
+                        ParentJobId = queueJob.Id,
                         Exception = JsonConvert.SerializeObject(
                             exception.InnerException ?? exception
                         ),
