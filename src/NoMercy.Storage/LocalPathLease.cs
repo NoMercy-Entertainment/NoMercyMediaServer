@@ -17,7 +17,7 @@ namespace NoMercy.Storage;
 /// no-op dispose. Future remote drivers (SMB / NFS / S3 / R2) will
 /// stage the remote object into a temp file and clean it up on dispose.
 /// </summary>
-public sealed class LocalPathLease : IAsyncDisposable
+public sealed class LocalPathLease : IDisposable, IAsyncDisposable
 {
     private readonly Func<ValueTask>? _onDispose;
     private bool _disposed;
@@ -28,6 +28,16 @@ public sealed class LocalPathLease : IAsyncDisposable
     {
         Path = path ?? throw new ArgumentNullException(nameof(path));
         _onDispose = onDispose;
+    }
+
+    /// <summary>
+    /// Synchronous disposal for callers that use <c>using</c> rather than
+    /// <c>await using</c>. Bridges to <see cref="DisposeAsync"/> so the
+    /// underlying cleanup runs regardless of which disposal pattern is used.
+    /// </summary>
+    public void Dispose()
+    {
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 
     public async ValueTask DisposeAsync()
