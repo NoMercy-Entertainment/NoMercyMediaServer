@@ -448,7 +448,7 @@ public class PluginRepositoryTests : IDisposable
     }
 
     [Fact]
-    public void Constructor_LoadsPersistedRepositories()
+    public async Task CreateAsync_LoadsPersistedRepositories()
     {
         string configDir = Path.Combine(_tempDir, "configurations");
         Directory.CreateDirectory(configDir);
@@ -465,7 +465,14 @@ public class PluginRepositoryTests : IDisposable
         string json = JsonSerializer.Serialize(repos);
         File.WriteAllText(Path.Combine(configDir, "repositories.json"), json);
 
-        PluginRepository repo = MakeRepo();
+        IStorageDriver driver = TestStorageHelper.CreateBackend();
+        IStorage storage = new LocalStorage(driver, new StoragePathGuard([_tempDir], driver));
+        PluginRepository repo = await PluginRepository.CreateAsync(
+            new HttpClient(),
+            NullLogger.Instance,
+            _tempDir,
+            storage
+        );
 
         IReadOnlyList<PluginRepositoryInfo> loaded = repo.GetRepositories();
         loaded.Should().ContainSingle();

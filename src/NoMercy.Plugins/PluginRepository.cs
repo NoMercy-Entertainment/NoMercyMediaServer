@@ -54,7 +54,25 @@ public class PluginRepository : IPluginRepository
         }
 
         _repositoriesFilePath = Path.Combine(configDir, "repositories.json");
-        LoadRepositoriesFromDisk();
+    }
+
+    /// <summary>
+    /// Creates a repository and asynchronously loads any persisted repository
+    /// list from disk. Prefer this over the constructor: the previous ctor read
+    /// the file sync-over-async (.GetAwaiter().GetResult()), which can deadlock
+    /// during DI resolution under a synchronization context.
+    /// </summary>
+    public static async Task<PluginRepository> CreateAsync(
+        HttpClient httpClient,
+        ILogger logger,
+        string pluginsPath,
+        IStorage storage,
+        CancellationToken ct = default
+    )
+    {
+        PluginRepository repository = new(httpClient, logger, pluginsPath, storage);
+        await repository.LoadRepositoriesFromDiskAsync(ct);
+        return repository;
     }
 
     public IReadOnlyList<PluginRepositoryInfo> GetRepositories()
@@ -87,11 +105,11 @@ public class PluginRepository : IPluginRepository
             );
         }
 
-        SaveRepositoriesToDisk();
+        await SaveRepositoriesToDiskAsync(ct);
         await RefreshRepositoryAsync(name, url, ct);
     }
 
-    public Task RemoveRepositoryAsync(string name, CancellationToken ct = default)
+    public async Task RemoveRepositoryAsync(string name, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
@@ -104,8 +122,7 @@ public class PluginRepository : IPluginRepository
             }
         }
 
-        SaveRepositoriesToDisk();
-        return Task.CompletedTask;
+        await SaveRepositoriesToDiskAsync(ct);
     }
 
     public async Task RefreshAsync(CancellationToken ct = default)
@@ -217,7 +234,7 @@ public class PluginRepository : IPluginRepository
         }
     }
 
-    private void LoadRepositoriesFromDisk()
+    private async Task LoadRepositoriesFromDiskAsync(CancellationToken ct)
     {
         if (!_storage.Exists(_repositoriesFilePath))
         {
@@ -226,10 +243,7 @@ public class PluginRepository : IPluginRepository
 
         try
         {
-            string json = _storage
-                .ReadAllTextAsync(_repositoriesFilePath, CancellationToken.None)
-                .GetAwaiter()
-                .GetResult();
+            string json = await _storage.ReadAllTextAsync(_repositoriesFilePath, ct);
             List<PluginRepositoryInfo>? repos = JsonSerializer.Deserialize<
                 List<PluginRepositoryInfo>
             >(json, JsonOptions);
@@ -248,15 +262,12 @@ public class PluginRepository : IPluginRepository
         }
     }
 
-    private void SaveRepositoriesToDisk()
+    private async Task SaveRepositoriesToDiskAsync(CancellationToken ct)
     {
         try
         {
             string json = JsonSerializer.Serialize(_repositories, JsonOptions);
-            _storage
-                .WriteAllTextAsync(_repositoriesFilePath, json, CancellationToken.None)
-                .GetAwaiter()
-                .GetResult();
+            await _storage.WriteAllTextAsync(_repositoriesFilePath, json, ct);
         }
         catch (Exception ex)
         {
