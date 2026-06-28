@@ -57,9 +57,7 @@ public class SafePluginIdentityTests
 
     private sealed class WellBehavedPlugin : IPlugin
     {
-        public static readonly Guid FixedId = Guid.Parse(
-            "11111111-1111-1111-1111-111111111111"
-        );
+        public static readonly Guid FixedId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
         public string Name => "Well Behaved";
         public string Description => "A normal plugin";

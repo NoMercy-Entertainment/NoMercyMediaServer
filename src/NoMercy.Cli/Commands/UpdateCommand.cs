@@ -57,11 +57,7 @@ internal static class UpdateCommand
 
                 // Step 3: Wait for exit
                 Console.WriteLine("Waiting for server to exit...");
-                bool exited = await WaitForServerExitAsync(
-                    client,
-                    TimeSpan.FromSeconds(30),
-                    ct
-                );
+                bool exited = await WaitForServerExitAsync(client, TimeSpan.FromSeconds(30), ct);
                 if (!exited)
                 {
                     await Console.Error.WriteLineAsync(

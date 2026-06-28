@@ -67,7 +67,6 @@ public class PluginManager : IPluginManager, IDisposable
         );
     }
 
-
     public IReadOnlyList<PluginInfo> GetInstalledPlugins()
     {
         return _registry.Values.Select(lp => lp.Info).ToList().AsReadOnly();
@@ -115,6 +114,7 @@ public class PluginManager : IPluginManager, IDisposable
     {
         return _lifecycle.UninstallPluginAsync(pluginId, ct);
     }
+
     public async Task LoadPluginsFromDirectoryAsync(CancellationToken ct = default)
     {
         if (!_storage.Exists(_pluginsPath))
@@ -205,10 +205,7 @@ public class PluginManager : IPluginManager, IDisposable
         return results;
     }
 
-    internal Task LoadPluginFromManifestAsync(
-        string manifestPath,
-        CancellationToken ct = default
-    )
+    internal Task LoadPluginFromManifestAsync(string manifestPath, CancellationToken ct = default)
     {
         return _loader.LoadPluginFromManifestAsync(manifestPath, ct);
     }

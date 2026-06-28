@@ -374,10 +374,7 @@ internal sealed class PluginLoader(
                     // The failure may itself be a throwing property getter, so
                     // read the plugin's identity defensively — building the error
                     // record must never re-enter a faulty getter and throw again.
-                    SafePluginIdentity identity = SafePluginIdentity.Read(
-                        instance,
-                        pluginType
-                    );
+                    SafePluginIdentity identity = SafePluginIdentity.Read(instance, pluginType);
 
                     _logger.LogError(
                         ex,

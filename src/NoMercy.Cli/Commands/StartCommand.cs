@@ -74,7 +74,11 @@ internal static class StartCommand
         return command;
     }
 
-    private static async Task<bool> IsServerRunning(ICliClientFactory clientFactory, string? pipe, CancellationToken ct)
+    private static async Task<bool> IsServerRunning(
+        ICliClientFactory clientFactory,
+        string? pipe,
+        CancellationToken ct
+    )
     {
         try
         {
