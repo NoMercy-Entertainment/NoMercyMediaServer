@@ -138,17 +138,14 @@ public sealed class LocalStorage : IStorage
             : SearchOption.TopDirectoryOnly;
         string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
 
-        foreach (string entry in _driver.EnumerateFileSystemEntries(safe, effectivePattern, option))
+        foreach (StorageEntryInfo info in _driver.EnumerateEntries(safe, effectivePattern, option))
         {
             ct.ThrowIfCancellationRequested();
-            bool isDir = _driver.DirectoryExists(entry);
-            long size = isDir ? 0L : _driver.GetFileSize(entry);
-            DateTime utc = _driver.GetLastWriteTimeUtc(entry);
             yield return new StorageEntry(
-                ToScopeRelative(entry),
-                isDir,
-                size,
-                new DateTimeOffset(utc, TimeSpan.Zero)
+                ToScopeRelative(info.Path),
+                info.IsDirectory,
+                info.Size,
+                new DateTimeOffset(info.LastWriteUtc, TimeSpan.Zero)
             );
             await Task.Yield();
         }

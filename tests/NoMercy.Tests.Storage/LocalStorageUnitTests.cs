@@ -196,6 +196,44 @@ public class LocalStorageUnitTests
     }
 
     [Fact]
+    public void EnumerateEntries_returns_one_pass_metadata_for_real_directory()
+    {
+        LocalStorageDriver driver = new();
+        string root = Path.Combine(Path.GetTempPath(), $"nm-ee-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "a.txt"), "hello");
+            Directory.CreateDirectory(Path.Combine(root, "sub"));
+
+            List<StorageEntryInfo> entries = driver
+                .EnumerateEntries(root, "*", SearchOption.TopDirectoryOnly)
+                .ToList();
+
+            entries.Should().HaveCount(2);
+            StorageEntryInfo file = entries.Single(e => !e.IsDirectory);
+            file.Path.Should().EndWith("a.txt");
+            file.Size.Should().Be(5);
+            StorageEntryInfo dir = entries.Single(e => e.IsDirectory);
+            dir.Path.Should().EndWith("sub");
+            dir.Size.Should().Be(0);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void EnumerateEntries_returns_empty_for_missing_directory()
+    {
+        LocalStorageDriver driver = new();
+        string missing = Path.Combine(Path.GetTempPath(), $"nm-missing-{Guid.NewGuid():N}");
+
+        driver.EnumerateEntries(missing, "*", SearchOption.TopDirectoryOnly).Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task ListAsync_yields_entries_with_correct_metadata()
     {
         Mock<IStorageDriver> driver = new(MockBehavior.Loose);
@@ -210,20 +248,21 @@ public class LocalStorageUnitTests
                 .Setup(b => b.GetFullPath(It.IsAny<string>()))
                 .Returns<string>(p => Path.GetFullPath(p));
             driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
+            driver.Setup(b => b.DirectoryExists(root)).Returns(true);
             driver
                 .Setup(b =>
-                    b.EnumerateFileSystemEntries(
+                    b.EnumerateEntries(
                         It.IsAny<string>(),
                         It.IsAny<string>(),
                         It.IsAny<SearchOption>()
                     )
                 )
-                .Returns([fileA, subDir]);
-            driver.Setup(b => b.DirectoryExists(fileA)).Returns(false);
-            driver.Setup(b => b.DirectoryExists(subDir)).Returns(true);
-            driver.Setup(b => b.DirectoryExists(root)).Returns(true);
-            driver.Setup(b => b.GetFileSize(fileA)).Returns(99);
-            driver.Setup(b => b.GetLastWriteTimeUtc(It.IsAny<string>())).Returns(DateTime.UtcNow);
+                .Returns(
+                    [
+                        new StorageEntryInfo(fileA, false, 99, DateTime.UtcNow),
+                        new StorageEntryInfo(subDir, true, 0, DateTime.UtcNow),
+                    ]
+                );
 
             StoragePathGuard guard = new([root], driver.Object);
             LocalStorage storage = new(driver.Object, guard);
