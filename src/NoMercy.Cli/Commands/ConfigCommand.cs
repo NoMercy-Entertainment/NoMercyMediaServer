@@ -18,7 +18,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class ConfigCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command getCmd = new("get") { Description = "Show current configuration" };
 
@@ -26,7 +26,7 @@ internal static class ConfigCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
                 ConfigResponse? config = await client.GetAsync<ConfigResponse>(
                     ApiRoutes.Config,
                     ct
@@ -67,7 +67,7 @@ internal static class ConfigCommand
                 string key = parseResult.GetValue(keyArg)!;
                 string val = parseResult.GetValue(valArg)!;
 
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
 
                 Dictionary<string, object> payload = new()
                 {

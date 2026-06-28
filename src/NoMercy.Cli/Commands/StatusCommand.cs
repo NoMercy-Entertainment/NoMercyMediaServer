@@ -16,7 +16,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class StatusCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command command = new("status") { Description = "Show server status" };
 
@@ -24,7 +24,7 @@ internal static class StatusCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
                 StatusResponse? status = await client.GetAsync<StatusResponse>(
                     ApiRoutes.Status,
                     ct

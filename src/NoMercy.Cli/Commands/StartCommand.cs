@@ -19,7 +19,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class StartCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command command = new("start") { Description = "Start the server" };
 
@@ -35,7 +35,7 @@ internal static class StartCommand
                 string? pipe = parseResult.GetValue(pipeOption);
                 bool dev = parseResult.GetValue(devOption);
 
-                if (await IsServerRunning(pipe, ct))
+                if (await IsServerRunning(clientFactory, pipe, ct))
                 {
                     Console.WriteLine("Server is already running.");
                     return (int)ExitCode.Success;
@@ -74,11 +74,11 @@ internal static class StartCommand
         return command;
     }
 
-    private static async Task<bool> IsServerRunning(string? pipe, CancellationToken ct)
+    private static async Task<bool> IsServerRunning(ICliClientFactory clientFactory, string? pipe, CancellationToken ct)
     {
         try
         {
-            using CliClient client = new(pipe);
+            using ICliClient client = clientFactory.Create(pipe);
             StatusResponse? status = await client.GetAsync<StatusResponse>(ApiRoutes.Status, ct);
             return status is not null;
         }

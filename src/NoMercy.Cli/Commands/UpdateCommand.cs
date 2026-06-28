@@ -18,7 +18,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class UpdateCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command command = new("update") { Description = "Download and stage a server update" };
 
@@ -26,7 +26,7 @@ internal static class UpdateCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
 
                 // Step 1: Trigger download
                 Console.WriteLine("Downloading update...");
@@ -95,7 +95,7 @@ internal static class UpdateCommand
     }
 
     private static async Task<bool> WaitForServerExitAsync(
-        CliClient client,
+        ICliClient client,
         TimeSpan timeout,
         CancellationToken ct
     )
@@ -130,7 +130,7 @@ internal static class UpdateCommand
     // unsuccessful HTTP response is treated as "still running" so a transient
     // error can never trigger a premature swap.
     private static async Task<bool> HasServerStoppedRespondingAsync(
-        CliClient client,
+        ICliClient client,
         CancellationToken ct
     )
     {

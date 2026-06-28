@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.CommandLine;
+using NoMercy.Cli;
 using NoMercy.Cli.Commands;
 using Xunit;
 
@@ -26,13 +27,15 @@ public class CommandStructureTests
         Option<string?> pipeOption = new("--pipe", "-p");
         _root.Options.Add(pipeOption);
 
-        _root.Subcommands.Add(StatusCommand.Create(pipeOption));
-        _root.Subcommands.Add(LogsCommand.Create(pipeOption));
-        _root.Subcommands.Add(StopCommand.Create(pipeOption));
-        _root.Subcommands.Add(RestartCommand.Create(pipeOption));
-        _root.Subcommands.Add(ConfigCommand.Create(pipeOption));
-        _root.Subcommands.Add(PluginCommand.Create(pipeOption));
-        _root.Subcommands.Add(QueueCommand.Create(pipeOption));
+        ICliClientFactory clientFactory = new CliClientFactory();
+
+        _root.Subcommands.Add(StatusCommand.Create(pipeOption, clientFactory));
+        _root.Subcommands.Add(LogsCommand.Create(pipeOption, clientFactory));
+        _root.Subcommands.Add(StopCommand.Create(pipeOption, clientFactory));
+        _root.Subcommands.Add(RestartCommand.Create(pipeOption, clientFactory));
+        _root.Subcommands.Add(ConfigCommand.Create(pipeOption, clientFactory));
+        _root.Subcommands.Add(PluginCommand.Create(pipeOption, clientFactory));
+        _root.Subcommands.Add(QueueCommand.Create(pipeOption, clientFactory));
     }
 
     [Fact]

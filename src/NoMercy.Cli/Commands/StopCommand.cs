@@ -15,7 +15,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class StopCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command command = new("stop") { Description = "Stop the server" };
 
@@ -23,7 +23,7 @@ internal static class StopCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
                 bool ok = await client.PostAsync(ApiRoutes.Stop, null, ct);
 
                 if (ok)

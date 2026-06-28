@@ -16,7 +16,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class ResourcesCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command command = new("resources") { Description = "Show server resource usage" };
 
@@ -24,7 +24,7 @@ internal static class ResourcesCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
                 ResourcesResponse? resources = await client.GetAsync<ResourcesResponse>(
                     ApiRoutes.Resources,
                     ct

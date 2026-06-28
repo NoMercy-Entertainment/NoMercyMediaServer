@@ -27,7 +27,7 @@ internal static partial class LogsCommand
     [GeneratedRegex(@"(\x1b|\\u001[bB])\[[0-9;]*[A-Za-z]")]
     private static partial Regex AnsiEscapeRegex();
 
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Option<int> tailOption = new("--tail", "-n")
         {
@@ -63,7 +63,7 @@ internal static partial class LogsCommand
                 string? level = parseResult.GetValue(levelOption);
                 string? type = parseResult.GetValue(typeOption);
 
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
 
                 // Fetch initial batch
                 string query = BuildQuery(tail, level, type);

@@ -16,7 +16,7 @@ namespace NoMercy.Cli.Commands;
 
 internal static class PluginCommand
 {
-    public static Command Create(Option<string?> pipeOption)
+    public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
         Command listCmd = new("list") { Description = "List installed plugins" };
 
@@ -24,7 +24,7 @@ internal static class PluginCommand
             async (parseResult, ct) =>
             {
                 string? pipe = parseResult.GetValue(pipeOption);
-                using CliClient client = new(pipe);
+                using ICliClient client = clientFactory.Create(pipe);
                 List<PluginResponse>? plugins = await client.GetAsync<List<PluginResponse>>(
                     ApiRoutes.Plugins,
                     ct
