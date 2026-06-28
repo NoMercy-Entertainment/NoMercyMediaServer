@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using NoMercy.Storage.Common;
 using NoMercy.Storage.Drivers.Nfs.Interop;
 
 namespace NoMercy.Storage.Drivers.Nfs;
@@ -1383,7 +1384,7 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
                 string virtualPath = virtualDir.TrimEnd('/') + "/" + name;
                 string childNfsPath = nfsDir.TrimEnd('/') + "/" + name;
 
-                if (MatchesPattern(name, searchPattern))
+                if (StoragePatternMatcher.Matches(name, searchPattern))
                     results.Add(virtualPath);
 
                 if (option == SearchOption.AllDirectories)
@@ -1401,28 +1402,5 @@ public sealed class NfsStorageDriver : IStorageDriver, IDisposable
         {
             _libNfs.CloseDir(_nfs, dir);
         }
-    }
-
-    private static bool MatchesPattern(string name, string pattern)
-    {
-        if (pattern == "*" || string.IsNullOrEmpty(pattern))
-            return true;
-
-        string regexPattern =
-            "^"
-            + string.Concat(
-                pattern.Select(c =>
-                    c switch
-                    {
-                        '*' => ".*",
-                        '?' => ".",
-                        '.' => "\\.",
-                        _ => Regex.Escape(c.ToString()),
-                    }
-                )
-            )
-            + "$";
-
-        return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
     }
 }

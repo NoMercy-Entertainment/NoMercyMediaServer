@@ -11,6 +11,7 @@
 
 using System.Net;
 using System.Text.RegularExpressions;
+using NoMercy.Storage.Common;
 using WebDav;
 
 namespace NoMercy.Storage.Drivers.WebDav;
@@ -319,7 +320,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             if (resource.IsCollection)
             {
                 string relPath = MakeRelative(resource.Uri).TrimEnd('/');
-                if (MatchesPattern(entryName, searchPattern))
+                if (StoragePatternMatcher.Matches(entryName, searchPattern))
                     yield return new StorageEntryInfo(
                         relPath,
                         IsDirectory: true,
@@ -342,7 +343,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             }
             else
             {
-                if (MatchesPattern(entryName, searchPattern))
+                if (StoragePatternMatcher.Matches(entryName, searchPattern))
                     yield return new StorageEntryInfo(
                         MakeRelative(resource.Uri),
                         IsDirectory: false,
@@ -504,7 +505,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             {
                 // Strip trailing slash so consumers get a consistent basename via LastIndexOf('/').
                 string relPath = MakeRelative(resource.Uri).TrimEnd('/');
-                if (MatchesPattern(entryName, searchPattern))
+                if (StoragePatternMatcher.Matches(entryName, searchPattern))
                     yield return relPath;
 
                 if (recursive)
@@ -515,7 +516,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             }
             else
             {
-                if (MatchesPattern(entryName, searchPattern))
+                if (StoragePatternMatcher.Matches(entryName, searchPattern))
                     yield return MakeRelative(resource.Uri);
             }
         }
@@ -538,29 +539,6 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         string trimmed = uri.TrimEnd('/');
         int lastSlash = trimmed.LastIndexOf('/');
         return lastSlash >= 0 ? trimmed.Substring(lastSlash + 1) : trimmed;
-    }
-
-    private static bool MatchesPattern(string name, string pattern)
-    {
-        if (pattern == "*" || string.IsNullOrEmpty(pattern))
-            return true;
-
-        string regexPattern =
-            "^"
-            + string.Concat(
-                pattern.Select(c =>
-                    c switch
-                    {
-                        '*' => ".*",
-                        '?' => ".",
-                        '.' => "\\.",
-                        _ => Regex.Escape(c.ToString()),
-                    }
-                )
-            )
-            + "$";
-
-        return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
     }
 
     // -----------------------------------------------------------------------

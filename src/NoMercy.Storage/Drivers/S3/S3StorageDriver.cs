@@ -16,6 +16,7 @@ using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
+using NoMercy.Storage.Common;
 
 namespace NoMercy.Storage.Drivers.S3;
 
@@ -541,7 +542,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 string fileName = relPath.Contains('/')
                     ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                     : relPath;
-                if (MatchesPattern(fileName, searchPattern))
+                if (StoragePatternMatcher.Matches(fileName, searchPattern))
                     results.Add(relPath);
             }
 
@@ -553,7 +554,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     string dirName = relPath.Contains('/')
                         ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                         : relPath;
-                    if (MatchesPattern(dirName, searchPattern))
+                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(relPath);
                 }
             }
@@ -597,7 +598,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                     : relPath;
 
-                if (MatchesPattern(fileName, searchPattern))
+                if (StoragePatternMatcher.Matches(fileName, searchPattern))
                     results.Add(relPath);
             }
 
@@ -610,7 +611,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                         ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                         : relPath;
 
-                    if (MatchesPattern(dirName, searchPattern))
+                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(relPath);
                 }
             }
@@ -682,7 +683,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                     : relPath;
 
-                if (!MatchesPattern(fileName, searchPattern))
+                if (!StoragePatternMatcher.Matches(fileName, searchPattern))
                     continue;
 
                 results.Add(
@@ -706,7 +707,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                         ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                         : relPath;
 
-                    if (MatchesPattern(dirName, searchPattern))
+                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(
                             new StorageEntryInfo(
                                 relPath,
@@ -748,7 +749,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 string fileName = relPath.Contains('/')
                     ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                     : relPath;
-                if (MatchesPattern(fileName, searchPattern))
+                if (StoragePatternMatcher.Matches(fileName, searchPattern))
                     results.Add(
                         new StorageEntryInfo(
                             relPath,
@@ -767,7 +768,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     string dirName = relPath.Contains('/')
                         ? relPath.Substring(relPath.LastIndexOf('/') + 1)
                         : relPath;
-                    if (MatchesPattern(dirName, searchPattern))
+                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(
                             new StorageEntryInfo(
                                 relPath,
@@ -1153,31 +1154,4 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     // -----------------------------------------------------------------------
     // Pattern matching (glob → regex)
     // -----------------------------------------------------------------------
-
-    private static bool MatchesPattern(string name, string pattern)
-    {
-        if (pattern == "*" || string.IsNullOrEmpty(pattern))
-            return true;
-
-        string regexPattern =
-            "^"
-            + string.Concat(
-                pattern.Select(c =>
-                    c switch
-                    {
-                        '*' => ".*",
-                        '?' => ".",
-                        '.' => "\\.",
-                        _ => System.Text.RegularExpressions.Regex.Escape(c.ToString()),
-                    }
-                )
-            )
-            + "$";
-
-        return System.Text.RegularExpressions.Regex.IsMatch(
-            name,
-            regexPattern,
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase
-        );
-    }
 }
