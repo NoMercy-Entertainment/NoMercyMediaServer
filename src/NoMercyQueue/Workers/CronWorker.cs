@@ -29,6 +29,7 @@ public class CronWorker : BackgroundService
     private readonly List<CronJobModel> _codeDefinedJobs = [];
     private readonly Dictionary<string, CancellationTokenSource> _jobCancellationTokens = new();
     private readonly Dictionary<string, Task> _jobTasks = new();
+    private readonly IEnumerable<CronJobRegistration> _registrations;
 
     private static readonly TaskCompletionSource<bool> QueueWorkersReadyTcs = new();
     private static readonly TaskCompletionSource<bool> DatabaseReadyTcs = new();
@@ -62,12 +63,14 @@ public class CronWorker : BackgroundService
     public CronWorker(
         IServiceProvider serviceProvider,
         ILogger<CronWorker> logger,
-        IQueueContext queueContext
+        IQueueContext queueContext,
+        IEnumerable<CronJobRegistration>? registrations = null
     )
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _queueContext = queueContext;
+        _registrations = registrations ?? [];
     }
 
     public void RegisterJob<T>(
@@ -312,8 +315,37 @@ public class CronWorker : BackgroundService
         }
     }
 
+    private void RegisterDescriptor(CronJobRegistration registration)
+    {
+        _registeredJobs[registration.JobType] = registration.ExecutorType;
+
+        using IServiceScope scope = _serviceProvider.CreateScope();
+        ICronJobExecutor executor = (ICronJobExecutor)
+            scope.ServiceProvider.GetRequiredService(registration.ExecutorType);
+
+        string cronExpression = registration.CronExpression ?? executor.CronExpression;
+        DateTime now = DateTime.UtcNow;
+
+        CronJobModel job = new()
+        {
+            Name = executor.JobName,
+            CronExpression = cronExpression,
+            JobType = registration.JobType,
+            Parameters = null,
+            IsEnabled = true,
+            NextRun = CronService.GetNextOccurrence(cronExpression, now),
+            CreatedAt = now,
+        };
+
+        _codeDefinedJobs.Add(job);
+        StartJobWorker(job);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        foreach (CronJobRegistration registration in _registrations)
+            RegisterDescriptor(registration);
+
         _logger.LogDebug(
             "Cron Worker started with {JobCount} registered jobs",
             _codeDefinedJobs.Count

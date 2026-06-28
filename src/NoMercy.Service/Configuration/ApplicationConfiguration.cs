@@ -70,29 +70,6 @@ public static class ApplicationConfiguration
         ConfigureDynamicStaticFiles(app);
         ConfigureEndpoints(app);
         SwaggerConfiguration.UseSwaggerUi(app, provider);
-        ConfigureCronJobs(app);
-    }
-
-    private static void ConfigureCronJobs(IApplicationBuilder app)
-    {
-        CronWorker cronWorker = app.ApplicationServices.GetRequiredService<CronWorker>();
-        cronWorker.RegisterJobWithSchedule<CertificateRenewalCronJob>(
-            "certificate-renewal",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<ActivityLogRetentionCronJob>(
-            "activity-log-retention",
-            app.ApplicationServices
-        );
-        cronWorker.RegisterJobWithSchedule<TmdbChangesCronJob>(
-            "tmdb-changes-sync",
-            app.ApplicationServices
-        );
-
-        cronWorker.RegisterJobWithSchedule<DeviceDropRuleCronJob>(
-            "device-drop-rule-job",
-            app.ApplicationServices
-        );
     }
 
     private static void ConfigureLocalization(IApplicationBuilder app)

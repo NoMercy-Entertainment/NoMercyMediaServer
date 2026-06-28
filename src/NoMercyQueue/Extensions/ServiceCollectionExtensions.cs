@@ -11,6 +11,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 using NoMercyQueue.Workers;
 
 namespace NoMercyQueue.Extensions;
@@ -34,6 +35,18 @@ public static class ServiceCollectionExtensions
         where T : class, ICronJobExecutor
     {
         services.AddScoped<T>();
+        return services;
+    }
+
+    public static IServiceCollection AddCronJob<T>(
+        this IServiceCollection services,
+        string jobType,
+        string? cronExpression = null
+    )
+        where T : class, ICronJobExecutor
+    {
+        services.AddScoped<T>();
+        services.AddSingleton(new CronJobRegistration(typeof(T), jobType, cronExpression));
         return services;
     }
 
