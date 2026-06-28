@@ -31,7 +31,7 @@ public interface ILiveTranscodeService
 
     LiveResult GetPlaylist(string sessionId);
 
-    LiveResult GetSegment(string sessionId, int index);
+    LiveResult GetSegment(string sessionId, string epoch, int index);
 
     LiveResult ReportPosition(string sessionId, ReportPositionRequest request);
 

@@ -22,6 +22,7 @@ public enum LiveResultKind
     Ok,
     BadRequest,
     NotFound,
+    Gone,
     ServiceUnavailable,
     InternalError,
     EncoderError,
@@ -52,6 +53,9 @@ public sealed record LiveResult
 
     public static LiveResult NotFound(string message) =>
         new() { Kind = LiveResultKind.NotFound, Message = message };
+
+    public static LiveResult Gone(string message) =>
+        new() { Kind = LiveResultKind.Gone, Message = message };
 
     public static LiveResult ServiceUnavailable(string message) =>
         new() { Kind = LiveResultKind.ServiceUnavailable, Message = message };

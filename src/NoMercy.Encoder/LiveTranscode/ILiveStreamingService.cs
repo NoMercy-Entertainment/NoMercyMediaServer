@@ -39,6 +39,14 @@ public interface ILiveStreamingService
 
     Task RemoveAsync(string sessionId);
 
+    /// <summary>
+    /// True when <paramref name="sessionId"/> was registered earlier and has
+    /// since been removed (ended, evicted, or expired) within the tombstone
+    /// window. Lets the API layer answer 410 Gone for a once-valid session
+    /// rather than 404 Not Found for one that never existed.
+    /// </summary>
+    bool WasRecentlyRemoved(string sessionId);
+
     IReadOnlyCollection<string> ActiveSessionIds { get; }
 
     /// <summary>

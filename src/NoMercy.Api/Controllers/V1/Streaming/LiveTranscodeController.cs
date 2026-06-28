@@ -51,10 +51,10 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
         return Content((string)result.Payload!, "application/vnd.apple.mpegurl");
     }
 
-    [HttpGet("sessions/{sessionId}/segment/{index:int}.ts")]
-    public IActionResult GetSegment(string sessionId, int index)
+    [HttpGet("sessions/{sessionId}/segment/{epoch}/{index:int}.ts")]
+    public IActionResult GetSegment(string sessionId, string epoch, int index)
     {
-        LiveResult result = service.GetSegment(sessionId, index);
+        LiveResult result = service.GetSegment(sessionId, epoch, index);
         if (result.Kind != LiveResultKind.Ok)
             return MapResult(result);
 
@@ -101,9 +101,13 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
             LiveResultKind.Ok => Ok(result.Payload),
             LiveResultKind.BadRequest => BadRequestResponse(result.Message!),
             LiveResultKind.NotFound => NotFoundResponse(result.Message!),
+            LiveResultKind.Gone => GoneResponse(result.Message!),
             LiveResultKind.ServiceUnavailable => ServiceUnavailableResponse(result.Message!),
             LiveResultKind.InternalError => InternalServerErrorResponse(result.Message!),
-            LiveResultKind.EncoderError => StatusCode(result.EncoderStatusCode, result.EncoderShape),
+            LiveResultKind.EncoderError => StatusCode(
+                result.EncoderStatusCode,
+                result.EncoderShape
+            ),
             _ => InternalServerErrorResponse("Unexpected result"),
         };
 }

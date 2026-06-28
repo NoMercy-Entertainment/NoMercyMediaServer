@@ -96,7 +96,12 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
 
         // Filter by client capabilities
         IEnumerable<LiveQuality> allowed = candidates.Where(q =>
-            q.Width <= client.MaxWidth && q.Height <= client.MaxHeight
+            q.Width <= client.MaxWidth
+            && q.Height <= client.MaxHeight
+            && (
+                client.SupportedVideoCodecs.Length == 0
+                || client.SupportedVideoCodecs.Contains(q.Codec)
+            )
         );
 
         // Pick highest CanRealtime quality
@@ -129,13 +134,18 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
             VideoCodecType.Av1,
         ];
 
-        foreach (VideoCodecType codec in preferred)
+        // Only consider codecs the client explicitly listed as supported.
+        if (client.SupportedVideoCodecs.Length > 0)
         {
-            if (client.SupportedVideoCodecs.Contains(codec))
-                return codec;
+            foreach (VideoCodecType codec in preferred)
+            {
+                if (client.SupportedVideoCodecs.Contains(codec))
+                    return codec;
+            }
         }
 
-        // Fallback to H264 — almost universally supported
+        // Explicit fallback — empty list or no intersection. H264 is almost
+        // universally supported.
         return VideoCodecType.H264;
     }
 

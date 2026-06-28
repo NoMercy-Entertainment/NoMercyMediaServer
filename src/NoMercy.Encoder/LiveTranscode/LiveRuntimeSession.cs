@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using System.Globalization;
 using NoMercy.Encoder.Analysis;
 
 namespace NoMercy.Encoder.LiveTranscode;
@@ -21,6 +22,7 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     private int _highestIndex = -1;
     private int _isComplete;
     private long _lastAccessTicks = DateTime.UtcNow.Ticks;
+    private int _epoch;
 
     public ILiveSession Session { get; }
     public TimeSpan TargetSegmentDuration { get; }
@@ -38,6 +40,14 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     /// alongside <see cref="CachedMediaInfo"/> for the same reason.
     /// </summary>
     public ClientCapabilities? ClientCapabilities { get; internal set; }
+
+    /// <summary>
+    /// Monotonic generation counter for the segment buffer. Incremented on every
+    /// buffer reset (seek or quality change) so clients can tell — via the epoch
+    /// embedded in segment URLs — that indices from a previous generation are now
+    /// stale and must be discarded.
+    /// </summary>
+    public string CurrentEpoch => Volatile.Read(ref _epoch).ToString(CultureInfo.InvariantCulture);
 
     internal Task? DrainerTask { get; set; }
 
@@ -102,6 +112,9 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     {
         _segments.Clear();
         Volatile.Write(ref _highestIndex, -1);
+        // Bump the generation so segment URLs minted before this reset (e.g. a
+        // pre-seek playlist the client cached) are recognised as stale.
+        Interlocked.Increment(ref _epoch);
     }
 
     public async ValueTask DisposeAsync()

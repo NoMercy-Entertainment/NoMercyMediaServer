@@ -45,7 +45,8 @@ public class LiveSession : ILiveSession
     public CancellationToken RunnerCancellation => _runnerCts.Token;
 
     public string SessionId { get; }
-    public LiveSessionState State => (LiveSessionState)Volatile.Read(ref _state);
+    public LiveSessionState State =>
+        (LiveSessionState)Interlocked.CompareExchange(ref _state, 0, 0);
     public LiveQuality CurrentQuality { get; private set; }
     public double CurrentSpeed => _currentSpeed;
     public TimeSpan TranscodedPosition => _transcodedPosition;
@@ -77,7 +78,7 @@ public class LiveSession : ILiveSession
         _segmentChannel.Writer.TryWrite(segment);
     }
 
-    internal void SetState(LiveSessionState state) => Volatile.Write(ref _state, (int)state);
+    internal void SetState(LiveSessionState state) => Interlocked.Exchange(ref _state, (int)state);
 
     internal void SetSpeed(double speed) => _currentSpeed = speed;
 
@@ -92,7 +93,7 @@ public class LiveSession : ILiveSession
         await _seekLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            Volatile.Write(ref _state, (int)LiveSessionState.Seeking);
+            SetState(LiveSessionState.Seeking);
 
             // Tear down existing runner
             CancellationTokenSource oldCts = _runnerCts;
@@ -121,7 +122,7 @@ public class LiveSession : ILiveSession
             // Spawn new runner if a factory is wired up
             if (_runnerFactory is not null)
             {
-                Volatile.Write(ref _state, (int)LiveSessionState.Transcoding);
+                SetState(LiveSessionState.Transcoding);
 
                 _ = Task.Run(
                     () => _runnerFactory(position, _runnerCts.Token),
@@ -172,7 +173,7 @@ public class LiveSession : ILiveSession
             // Spawn new runner if a factory is wired up
             if (_runnerFactory is not null)
             {
-                Volatile.Write(ref _state, (int)LiveSessionState.Transcoding);
+                SetState(LiveSessionState.Transcoding);
 
                 // Keep same playback position — quality change doesn't rewind
                 TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
@@ -255,7 +256,7 @@ public class LiveSession : ILiveSession
             // Already disposed
         }
 
-        Volatile.Write(ref _state, (int)LiveSessionState.Ended);
+        SetState(LiveSessionState.Ended);
         _segmentChannel.Writer.TryComplete();
 
         _seekLock.Dispose();

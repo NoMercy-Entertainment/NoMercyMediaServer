@@ -206,11 +206,11 @@ public class LiveTranscodeService(
     public LiveResult GetPlaylist(string sessionId)
     {
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return LiveResult.NotFound("Live session not found");
+            return SessionGoneOrNotFound(sessionId);
 
         runtime.TouchLastAccess();
         string segmentUrlTemplate =
-            $"/api/v1/streaming/live/sessions/{sessionId}/segment/{{index}}.ts";
+            $"/api/v1/streaming/live/sessions/{sessionId}/segment/{runtime.CurrentEpoch}/{{index}}.ts";
         LivePlaylistRequest request = new(
             SessionId: sessionId,
             Segments: runtime.SnapshotSegments(),
@@ -222,10 +222,13 @@ public class LiveTranscodeService(
         return LiveResult.Ok(playlist);
     }
 
-    public LiveResult GetSegment(string sessionId, int index)
+    public LiveResult GetSegment(string sessionId, string epoch, int index)
     {
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return LiveResult.NotFound("Live session not found");
+            return SessionGoneOrNotFound(sessionId);
+
+        if (runtime.CurrentEpoch != epoch)
+            return LiveResult.Gone("Segment is from a stale seek epoch");
 
         if (!runtime.TryGetSegment(index, out Segment segment))
             return LiveResult.NotFound($"Segment {index} is not ready yet");
@@ -241,7 +244,7 @@ public class LiveTranscodeService(
     public LiveResult ReportPosition(string sessionId, ReportPositionRequest request)
     {
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return LiveResult.NotFound("Live session not found");
+            return SessionGoneOrNotFound(sessionId);
 
         double clampedSeconds = Math.Max(0, request.TimeSeconds);
         runtime.Session.ReportPlaybackPosition(TimeSpan.FromSeconds(clampedSeconds));
@@ -259,7 +262,7 @@ public class LiveTranscodeService(
             return LiveResult.BadRequest("quality_id is required");
 
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return LiveResult.NotFound("Live session not found");
+            return SessionGoneOrNotFound(sessionId);
 
         if (runtime.CachedMediaInfo is null || runtime.ClientCapabilities is null)
             return LiveResult.ServiceUnavailable(
@@ -285,7 +288,8 @@ public class LiveTranscodeService(
                 sessionId,
                 new QualityChangedMessage(
                     NewQuality: newQuality,
-                    Reason: QualityChangeReason.UserRequested
+                    Reason: QualityChangeReason.UserRequested,
+                    SeekEpoch: runtime.CurrentEpoch
                 ),
                 ct
             )
@@ -301,7 +305,7 @@ public class LiveTranscodeService(
     )
     {
         if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return LiveResult.NotFound("Live session not found");
+            return SessionGoneOrNotFound(sessionId);
 
         double clampedSeconds = Math.Max(0, request.PositionSeconds);
         await runtime.Session.SeekAsync(TimeSpan.FromSeconds(clampedSeconds), ct);
@@ -312,7 +316,8 @@ public class LiveTranscodeService(
                 sessionId,
                 new SeekCompletedMessage(
                     NewPositionSeconds: clampedSeconds,
-                    FirstSegmentIndex: firstSegmentIndex
+                    FirstSegmentIndex: firstSegmentIndex,
+                    SeekEpoch: runtime.CurrentEpoch
                 ),
                 ct
             )
@@ -330,9 +335,16 @@ public class LiveTranscodeService(
             )
             .ConfigureAwait(false);
 
+        // LiveStreamingService.RemoveAsync now owns the complete teardown
+        // (runtime disposal + session-manager removal + tombstone) atomically,
+        // so callers no longer need a separate RemoveSession call.
         await streamingService.RemoveAsync(sessionId);
-        sessionManager.RemoveSession(sessionId);
     }
+
+    private LiveResult SessionGoneOrNotFound(string sessionId) =>
+        streamingService.WasRecentlyRemoved(sessionId)
+            ? LiveResult.Gone("Live session has ended or expired")
+            : LiveResult.NotFound("Live session not found");
 
     private async Task PushIfTransportAsync(string sessionId, object message, CancellationToken ct)
     {
