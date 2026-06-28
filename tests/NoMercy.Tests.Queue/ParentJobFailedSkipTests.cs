@@ -46,8 +46,8 @@ public class ParentJobFailedSkipTests : IDisposable
     [Fact]
     public void ReserveJob_WhenParentInFailedJobs_SkipsChildAndMovesToFailed()
     {
-        // Arrange: persist a parent failure. The payload contains "Id":1, to
-        // match the IsParentFailed string-search pattern.
+        // Arrange: persist a parent failure. The FailedJob records the failed
+        // parent job id in ParentJobId so descendant jobs can detect it.
         const int parentJobId = 1;
         _context.FailedJobs.Add(
             new FailedJob
@@ -56,6 +56,7 @@ public class ParentJobFailedSkipTests : IDisposable
                 Payload = $"{{\"Id\":{parentJobId},\"Type\":\"VideoEncodeJob\"}}",
                 Exception = "{\"Message\":\"disk full\"}",
                 FailedAt = DateTime.UtcNow,
+                ParentJobId = parentJobId,
             }
         );
         _context.SaveChanges();

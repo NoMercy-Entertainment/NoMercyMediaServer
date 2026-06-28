@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using FluentAssertions;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -20,13 +21,24 @@ using Xunit;
 
 namespace NoMercy.Tests.Queue;
 
-public class ActivityLogRetentionCronJobTests
+public class ActivityLogRetentionCronJobTests : IDisposable
 {
-    private static IDbContextFactory<MediaContext> CreateFactory(string? db = null)
+    private readonly List<SqliteConnection> _connections = [];
+
+    private IDbContextFactory<MediaContext> CreateFactory()
     {
+        SqliteConnection connection = new("DataSource=:memory:;Foreign Keys=False");
+        connection.Open();
+        _connections.Add(connection);
+
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseInMemoryDatabase(db ?? $"retention-{Guid.NewGuid()}")
+            .UseSqlite(connection)
             .Options;
+
+        using (MediaContext init = new(options))
+        {
+            init.Database.EnsureCreated();
+        }
 
         Mock<IDbContextFactory<MediaContext>> mock = new();
         mock.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
@@ -34,10 +46,20 @@ public class ActivityLogRetentionCronJobTests
         return mock.Object;
     }
 
+    public void Dispose()
+    {
+        foreach (SqliteConnection connection in _connections)
+        {
+            connection.Dispose();
+        }
+    }
+
     [Fact]
     public async Task Deletes_rows_older_than_retention_window()
     {
         IDbContextFactory<MediaContext> factory = CreateFactory();
+        Guid staleUser = Guid.NewGuid();
+        Guid freshUser = Guid.NewGuid();
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.ActivityLogs.AddRange(
@@ -45,20 +67,31 @@ public class ActivityLogRetentionCronJobTests
                 {
                     Category = ActivityCategory.Connection,
                     Time = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow.AddDays(-31),
                     DeviceId = Ulid.NewUlid(),
-                    UserId = Guid.NewGuid(),
+                    UserId = staleUser,
                 },
                 new ActivityLog
                 {
                     Category = ActivityCategory.Connection,
                     Time = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow.AddDays(-1),
                     DeviceId = Ulid.NewUlid(),
-                    UserId = Guid.NewGuid(),
+                    UserId = freshUser,
                 }
             );
             await seed.SaveChangesAsync();
+
+            // CreatedAt is stamped by SQLite's CURRENT_TIMESTAMP on insert, so the
+            // retention-relevant timestamps are set explicitly via a direct UPDATE.
+            await seed
+                .ActivityLogs.Where(x => x.UserId == staleUser)
+                .ExecuteUpdateAsync(s =>
+                    s.SetProperty(x => x.CreatedAt, DateTime.UtcNow.AddDays(-31))
+                );
+            await seed
+                .ActivityLogs.Where(x => x.UserId == freshUser)
+                .ExecuteUpdateAsync(s =>
+                    s.SetProperty(x => x.CreatedAt, DateTime.UtcNow.AddDays(-1))
+                );
         }
 
         ActivityLogRetentionCronJob job = new(
@@ -77,6 +110,7 @@ public class ActivityLogRetentionCronJobTests
     public async Task Respects_configurable_retention_days()
     {
         IDbContextFactory<MediaContext> factory = CreateFactory();
+        Guid user = Guid.NewGuid();
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.ActivityLogs.Add(
@@ -84,12 +118,19 @@ public class ActivityLogRetentionCronJobTests
                 {
                     Category = ActivityCategory.Connection,
                     Time = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow.AddDays(-8),
                     DeviceId = Ulid.NewUlid(),
-                    UserId = Guid.NewGuid(),
+                    UserId = user,
                 }
             );
             await seed.SaveChangesAsync();
+
+            // CreatedAt is stamped by SQLite's CURRENT_TIMESTAMP on insert, so the
+            // retention-relevant timestamp is set explicitly via a direct UPDATE.
+            await seed
+                .ActivityLogs.Where(x => x.UserId == user)
+                .ExecuteUpdateAsync(s =>
+                    s.SetProperty(x => x.CreatedAt, DateTime.UtcNow.AddDays(-8))
+                );
         }
 
         ActivityLogRetentionCronJob job = new(

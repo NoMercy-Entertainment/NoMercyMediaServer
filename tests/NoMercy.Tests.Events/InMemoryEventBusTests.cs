@@ -214,15 +214,24 @@ public class InMemoryEventBusTests
     }
 
     [Fact]
-    public async Task PublishAsync_HandlerThrows_PropagatesException()
+    public async Task PublishAsync_HandlerThrows_IsIsolatedAndOtherHandlersStillRun()
     {
         InMemoryEventBus bus = new();
+        List<string> ran = [];
 
         bus.Subscribe<TestEvent>((_, _) => throw new InvalidOperationException("handler error"));
+        bus.Subscribe<TestEvent>(
+            (_, _) =>
+            {
+                ran.Add("second");
+                return Task.CompletedTask;
+            }
+        );
 
         Func<Task> act = () => bus.PublishAsync(new TestEvent());
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("handler error");
+        await act.Should().NotThrowAsync();
+        ran.Should().Equal("second");
     }
 
     [Fact]
