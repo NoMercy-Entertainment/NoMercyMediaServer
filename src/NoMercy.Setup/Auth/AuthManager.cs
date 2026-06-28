@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Diagnostics;
-using NoMercy.NmSystem.Auth;
 using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -19,8 +18,9 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
-using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
@@ -32,6 +32,11 @@ namespace NoMercy.Setup.Auth;
 public class AuthManager
 {
     private readonly AppDbContext _appContext;
+
+    // Serialises read-then-write upserts: _appContext is a non-thread-safe EF
+    // DbContext and concurrent callers (PKCE callback + refresh timer) could
+    // otherwise both miss the existing row and insert a duplicate key.
+    private readonly SemaphoreSlim _upsertLock = new(1, 1);
     private readonly IStorageDriver _driver;
 
     private readonly object _authReadyLock = new();
@@ -42,7 +47,11 @@ public class AuthManager
 
     private readonly IAuthTokenStore _authTokenStore;
 
-    public AuthManager(AppDbContext appContext, IStorageDriver driver, IAuthTokenStore authTokenStore)
+    public AuthManager(
+        AppDbContext appContext,
+        IStorageDriver driver,
+        IAuthTokenStore authTokenStore
+    )
     {
         _authTokenStore = authTokenStore;
         _appContext = appContext;
@@ -99,12 +108,22 @@ public class AuthManager
 
         if (!string.IsNullOrEmpty(refreshToken))
         {
-            Logger.Auth("Token expired — attempting refresh");
-            bool refreshed = await TryRefreshToken(refreshToken);
-            if (refreshed)
+            Logger.Auth("Token expired — attempting refresh with retries");
+            int[] delays = [1, 3, 5]; // seconds — a brief Keycloak hiccup at boot
+            // must not force a full re-auth when the refresh token is still valid.
+            for (int attempt = 0; attempt < delays.Length; attempt++)
             {
-                SignalAuthReady();
-                return true;
+                bool refreshed = await TryRefreshToken(refreshToken);
+                if (refreshed)
+                {
+                    SignalAuthReady();
+                    return true;
+                }
+
+                Logger.Auth(
+                    $"Refresh attempt {attempt + 1} failed, waiting {delays[attempt]}s before retry..."
+                );
+                await Task.Delay(TimeSpan.FromSeconds(delays[attempt]));
             }
         }
 
@@ -299,7 +318,8 @@ public class AuthManager
                 _pendingCodeVerifier
             );
 
-            string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             using HttpClient httpClient = new();
             httpClient.WithNoMercyUserAgent();
@@ -367,7 +387,8 @@ public class AuthManager
 
         try
         {
-            string tokenEndpoint = $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
+            string tokenEndpoint =
+                $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
             List<KeyValuePair<string, string>> body = BuildRefreshTokenBody(
                 ExternalServicesConfig.Current.TokenClientId,
@@ -483,28 +504,36 @@ public class AuthManager
 
     private async Task UpsertSecureValue(string key, string value)
     {
-        Configuration? existing = await _appContext.Configuration.FirstOrDefaultAsync(c =>
-            c.Key == key
-        );
-
-        if (existing is not null)
+        await _upsertLock.WaitAsync();
+        try
         {
-            existing.SecureValue = value;
-            _appContext.Configuration.Update(existing);
-        }
-        else
-        {
-            _appContext.Configuration.Add(
-                new()
-                {
-                    Key = key,
-                    Value = string.Empty,
-                    SecureValue = value,
-                }
+            Configuration? existing = await _appContext.Configuration.FirstOrDefaultAsync(c =>
+                c.Key == key
             );
-        }
 
-        await _appContext.SaveChangesAsync();
+            if (existing is not null)
+            {
+                existing.SecureValue = value;
+                _appContext.Configuration.Update(existing);
+            }
+            else
+            {
+                _appContext.Configuration.Add(
+                    new()
+                    {
+                        Key = key,
+                        Value = string.Empty,
+                        SecureValue = value,
+                    }
+                );
+            }
+
+            await _appContext.SaveChangesAsync();
+        }
+        finally
+        {
+            _upsertLock.Release();
+        }
     }
 
     private static DateTime ParseExpiresAt(string? accessToken, string? metadataJson)
