@@ -25,6 +25,9 @@ using NoMercy.MediaProcessing.Releases;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.AcoustId;
+using NoMercy.Providers.AcoustId.Client;
+using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
@@ -51,6 +54,42 @@ public class AudioImportJob : AbstractMusicFolderJob
         else
         {
             await ImportRelease();
+        }
+    }
+
+    // Identify a file with no embedded MusicBrainz id by acoustic fingerprint:
+    // fingerprint via the injected IAudioFingerprinter, look it up against
+    // AcoustId, and return the first MusicBrainz release id found (null on any
+    // failure, so the caller skips the file rather than crashing the import).
+    private async Task<Guid?> TryDiscoverReleaseIdAsync(MediaFile mediaFile)
+    {
+        try
+        {
+            using AcoustIdFingerprintClient client = new(AudioFingerprinter);
+            AcoustIdFingerprint? result = await client.Lookup(mediaFile.Path);
+            if (result is null)
+                return null;
+
+            foreach (AcoustIdFingerprintResult fingerprintResult in result.Results)
+            {
+                foreach (
+                    AcoustIdFingerprintRecording? recording in fingerprintResult.Recordings ?? []
+                )
+                {
+                    Guid? releaseId = recording
+                        ?.Releases?.FirstOrDefault(release => release.Id != Guid.Empty)
+                        ?.Id;
+                    if (releaseId is not null && releaseId != Guid.Empty)
+                        return releaseId;
+                }
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Logger.App($"Fingerprint lookup failed for {mediaFile.Path}: {ex.Message}");
+            return null;
         }
     }
 
@@ -94,7 +133,17 @@ public class AudioImportJob : AbstractMusicFolderJob
                     audioTag.MusicBrainz?.ReleaseId is null
                     || audioTag.MusicBrainz.ReleaseId == Guid.Empty
                 )
-                    continue;
+                {
+                    // No MusicBrainz id in the file tags — fall back to acoustic
+                    // fingerprinting to identify the release. Skip the file only if
+                    // fingerprinting also fails to find a match.
+                    Guid? discoveredReleaseId = await TryDiscoverReleaseIdAsync(mediaFile);
+                    if (discoveredReleaseId is null)
+                        continue;
+
+                    audioTag.MusicBrainz ??= new AudioTagModel.MusicBrainzDto();
+                    audioTag.MusicBrainz.ReleaseId = discoveredReleaseId.Value;
+                }
 
                 MusicBrainzReleaseAppends? releaseAppends =
                     await musicBrainzReleaseClient.WithAllAppends(audioTag.MusicBrainz.ReleaseId);

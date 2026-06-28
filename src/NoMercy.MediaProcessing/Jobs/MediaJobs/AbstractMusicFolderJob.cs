@@ -15,6 +15,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using NoMercy.Providers.AcoustId;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -38,6 +39,9 @@ public abstract class AbstractMusicFolderJob : IShouldQueue, IJobStorageInjector
     [JsonIgnore]
     public IStorageDriver StorageDriver { get; set; } = null!;
 
+    [JsonIgnore]
+    public IAudioFingerprinter AudioFingerprinter { get; set; } = null!;
+
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
@@ -47,6 +51,7 @@ public abstract class AbstractMusicFolderJob : IShouldQueue, IJobStorageInjector
     {
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
         StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
+        AudioFingerprinter = serviceProvider.GetRequiredService<IAudioFingerprinter>();
     }
 
     public void Dispose() { }
