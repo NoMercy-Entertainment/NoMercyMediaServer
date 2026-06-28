@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercyQueue;
+using NoMercyQueue.Core;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Queue.MediaServer.Jobs;

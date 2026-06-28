@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Auth;
 using NoMercyQueue;
+using NoMercyQueue.Core;
 using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Queue.MediaServer.Jobs;

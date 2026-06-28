@@ -11,6 +11,7 @@
 
 using NCrontab;
 using NoMercyQueue;
+using NoMercyQueue.Core;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
