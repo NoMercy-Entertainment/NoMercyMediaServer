@@ -12,9 +12,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Lifecycle;
-using NoMercy.Resources;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
+using NoMercyQueue.Core.Resources;
 using BootStage = NoMercy.NmSystem.Lifecycle.BootStage;
 using Exception = System.Exception;
 

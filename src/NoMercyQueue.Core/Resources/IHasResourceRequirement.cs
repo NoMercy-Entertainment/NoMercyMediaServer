@@ -9,11 +9,14 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Resources;
+namespace NoMercyQueue.Core.Resources;
 
 /// <summary>
-/// Declares the hardware resources required to run one encode task.
-/// <see cref="GpuDeviceKey"/> is the canonical name string from
-/// <c>GpuDevice.Name</c>; null means CPU-only.
+/// Implemented by queue jobs that carry an explicit <see cref="ResourceRequirement"/>.
+/// <see cref="QueueWorker"/> reads this before executing the job to gate dispatch
+/// against the in-flight resource budget.
 /// </summary>
-public record ResourceRequirement(string? GpuDeviceKey, int GpuSlots, int CpuThreads);
+public interface IHasResourceRequirement
+{
+    ResourceRequirement? ResourceRequirement { get; }
+}

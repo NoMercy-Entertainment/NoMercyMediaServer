@@ -21,6 +21,7 @@ using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Encoder.LiveTranscode.Protocol;
 using NoMercy.Resources;
 using NoMercy.Storage;
+using NoMercyQueue.Core.Resources;
 using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
 
 namespace NoMercy.Api.Services;
@@ -261,7 +262,9 @@ public class LiveTranscodeService(
             return LiveResult.NotFound("Live session not found");
 
         if (runtime.CachedMediaInfo is null || runtime.ClientCapabilities is null)
-            return LiveResult.ServiceUnavailable("Session context not available for quality change");
+            return LiveResult.ServiceUnavailable(
+                "Session context not available for quality change"
+            );
 
         LiveQuality[] available = qualitySelector.GetAvailableQualities(
             runtime.CachedMediaInfo,

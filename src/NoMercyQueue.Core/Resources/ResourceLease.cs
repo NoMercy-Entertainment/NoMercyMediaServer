@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Resources;
+namespace NoMercyQueue.Core.Resources;
 
 /// <summary>
 /// An active hold on hardware resources granted by <see cref="IResourceBudget"/>.

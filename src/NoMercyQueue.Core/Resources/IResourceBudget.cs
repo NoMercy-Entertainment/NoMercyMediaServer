@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-namespace NoMercy.Resources;
+namespace NoMercyQueue.Core.Resources;
 
 /// <summary>
 /// Tracks available encoder capacity and gates dispatch so the system

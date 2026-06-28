@@ -12,9 +12,9 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NoMercy.Resources;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
+using NoMercyQueue.Core.Resources;
 using NoMercyQueue.Workers;
 
 namespace NoMercyQueue;

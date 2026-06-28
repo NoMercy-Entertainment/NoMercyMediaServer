@@ -8,6 +8,7 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
-
-// Shared record lives in NoMercy.Resources.
+global using IHasResourceRequirement = NoMercyQueue.Core.Resources.IHasResourceRequirement;
+global using IResourceBudget = NoMercyQueue.Core.Resources.IResourceBudget;
 global using ResourceLease = NoMercyQueue.Core.Resources.ResourceLease;
+global using ResourceRequirement = NoMercyQueue.Core.Resources.ResourceRequirement;

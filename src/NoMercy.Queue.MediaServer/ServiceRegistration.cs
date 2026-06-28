@@ -19,6 +19,7 @@ using NoMercy.Resources;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
+using NoMercyQueue.Core.Resources;
 
 namespace NoMercy.Queue.MediaServer;
 

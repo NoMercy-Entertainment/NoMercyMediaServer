@@ -33,6 +33,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercyQueue;
+using NoMercyQueue.Core.Resources;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;

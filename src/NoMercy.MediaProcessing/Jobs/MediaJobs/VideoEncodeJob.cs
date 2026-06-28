@@ -41,6 +41,7 @@ using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Resources;
 using Serilog.Events;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using QueueJobDispatcher = NoMercyQueue.JobDispatcher;
