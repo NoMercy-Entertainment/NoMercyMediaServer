@@ -84,7 +84,7 @@ public class S3UploadStreamMultipartTests
             await stream.WriteAsync(data);
         }
 
-        Assert.Single(handler.Calls.Where(c => c.Method == "POST" && c.Query.Contains("uploads=")));
+        Assert.Single(handler.Calls, c => c.Method == "POST" && c.Query.Contains("uploads="));
 
         List<(string Method, string Query, long Length)> parts = handler
             .Calls.Where(c => c.Method == "PUT" && c.Query.Contains("partNumber="))
@@ -94,9 +94,7 @@ public class S3UploadStreamMultipartTests
         Assert.Equal(10L * 1024 * 1024, parts[1].Length);
         Assert.Equal(5L * 1024 * 1024, parts[2].Length);
 
-        Assert.Single(
-            handler.Calls.Where(c => c.Method == "POST" && c.Query.Contains("uploadId="))
-        );
+        Assert.Single(handler.Calls, c => c.Method == "POST" && c.Query.Contains("uploadId="));
     }
 
     [Fact]
