@@ -118,6 +118,7 @@ public class TmdbBaseClient : ExternalApiClient
                     is HttpStatusCode.NotFound
                         or HttpStatusCode.UnprocessableEntity
                         or HttpStatusCode.BadRequest
+                        or HttpStatusCode.Forbidden
             )
         {
             Logger.MovieDb($"HTTP {ex.StatusCode} for {newUrl}", LogEventLevel.Debug);
