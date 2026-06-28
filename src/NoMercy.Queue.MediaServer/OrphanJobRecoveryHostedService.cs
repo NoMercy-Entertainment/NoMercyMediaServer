@@ -32,7 +32,7 @@ namespace NoMercy.Queue.MediaServer;
 public class OrphanJobRecoveryHostedService(
     IServiceScopeFactory scopeFactory,
     ILogger<OrphanJobRecoveryHostedService> logger
-) : IHostedService
+) : BackgroundService
 {
     private static readonly TimeSpan OrphanCutoff = TimeSpan.FromSeconds(30);
     private const string InterruptedReason = "job.interrupted_no_checkpoint";
@@ -43,8 +43,12 @@ public class OrphanJobRecoveryHostedService(
         QueueNames.EncoderCpu,
     ];
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        // Run off the startup path so a slow/large recovery sweep never blocks
+        // the host from coming up.
+        await Task.Yield();
+
         try
         {
             using IServiceScope scope = scopeFactory.CreateScope();
@@ -126,6 +130,4 @@ public class OrphanJobRecoveryHostedService(
 
         return;
     }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

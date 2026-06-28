@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -33,6 +35,12 @@ public class InboxClassifierEventHandler : IDisposable
     private readonly IStorageFactory _storageFactory;
     private readonly List<IDisposable> _subscriptions = [];
 
+    // Content-hash dedup keyed by (size, first-64KB MD5). Catches hard links and
+    // duplicate copies that the SourcePath check misses. Per-process lifetime.
+    private readonly ConcurrentDictionary<FileContentFingerprint, string> _seenContent = new();
+
+    private readonly record struct FileContentFingerprint(long SizeBytes, string HashPrefix);
+
     public InboxClassifierEventHandler(
         IEventBus eventBus,
         InboxClassifier classifier,
@@ -47,6 +55,30 @@ public class InboxClassifierEventHandler : IDisposable
         _contextFactory = contextFactory;
         _storageFactory = storageFactory;
         _subscriptions.Add(eventBus.Subscribe<FileCreatedEvent>(OnFileCreated));
+    }
+
+    private static async Task<FileContentFingerprint?> TryComputeFingerprintAsync(
+        IStorage storage,
+        string path,
+        long sizeBytes,
+        CancellationToken ct
+    )
+    {
+        try
+        {
+            await using Stream stream = storage.OpenRead(path);
+            int len = (int)Math.Min(65536, sizeBytes <= 0 ? 65536 : sizeBytes);
+            byte[] buffer = new byte[len];
+            int read = await stream.ReadAsync(buffer.AsMemory(0, len), ct);
+            string hash = Convert.ToHexString(MD5.HashData(buffer.AsSpan(0, read)));
+            return new FileContentFingerprint(sizeBytes, hash);
+        }
+        catch
+        {
+            // Can't fingerprint (directory, transient IO, permissions) — let the
+            // item proceed rather than risk dropping a real file.
+            return null;
+        }
     }
 
     internal async Task OnFileCreated(FileCreatedEvent @event, CancellationToken ct)
@@ -115,6 +147,20 @@ public class InboxClassifierEventHandler : IDisposable
 
             if (tracked.Contains(childPath))
                 continue;
+
+            FileContentFingerprint? fingerprint = await TryComputeFingerprintAsync(
+                storage,
+                childPath,
+                child.SizeBytes,
+                ct
+            );
+            if (fingerprint is { } fp && !_seenContent.TryAdd(fp, childPath))
+            {
+                Logger.System(
+                    $"InboxClassifier: skipping {childPath} — duplicate content already seen at {_seenContent[fp]}"
+                );
+                continue;
+            }
 
             Logger.System($"InboxClassifier: Classifying inbox child {childPath}");
 

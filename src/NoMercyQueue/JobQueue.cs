@@ -22,7 +22,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     private const int BaseRetryDelayMs = 2000;
     private const int MaxJitterMs = 500;
 
-    private static readonly object _writeLock = new();
+    private readonly object _writeLock = new();
 
     /// <summary>
     /// Signalled once per <see cref="Enqueue"/> call so idle workers wake
