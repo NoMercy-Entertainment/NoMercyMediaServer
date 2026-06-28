@@ -14,7 +14,7 @@ using WebDav;
 namespace NoMercy.Storage.Drivers.WebDav;
 
 /// <summary>
-/// Write-only stream that buffers data in memory and PUTs it to a WebDAV
+/// Write-only stream that buffers data on disk and PUTs it to a WebDAV
 /// server on <see cref="Dispose"/>. Mirrors <c>S3UploadStream</c>'s shape.
 /// </summary>
 internal sealed class WebDavUploadStream : Stream
@@ -22,7 +22,7 @@ internal sealed class WebDavUploadStream : Stream
     private readonly IWebDavClient _client;
     private readonly string _uri;
     private readonly bool _overwrite;
-    private readonly MemoryStream _buffer = new();
+    private readonly FileStream _buffer;
     private bool _disposed;
 
     internal WebDavUploadStream(IWebDavClient client, string uri, bool overwrite)
@@ -30,6 +30,22 @@ internal sealed class WebDavUploadStream : Stream
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _uri = uri ?? throw new ArgumentNullException(nameof(uri));
         _overwrite = overwrite;
+
+        // Buffer the body on disk instead of a MemoryStream: a multi-GB media
+        // upload would otherwise allocate the whole file on the managed heap
+        // (and exceed the single-array size limit). A temp FileStream keeps the
+        // body off the heap while remaining seekable, so PutFile still sends a
+        // Content-Length (WebDAV servers commonly reject chunked PUTs).
+        // DeleteOnClose removes the temp file when the stream is disposed.
+        string tempPath = Path.Combine(Path.GetTempPath(), $"nm-webdav-{Guid.NewGuid():N}.tmp");
+        _buffer = new FileStream(
+            tempPath,
+            FileMode.CreateNew,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            bufferSize: 81920,
+            FileOptions.DeleteOnClose | FileOptions.Asynchronous
+        );
     }
 
     public override bool CanRead => false;
