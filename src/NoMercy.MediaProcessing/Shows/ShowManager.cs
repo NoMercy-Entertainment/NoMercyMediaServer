@@ -50,7 +50,10 @@ public class ShowManager(
         Logger.MovieDb($"Show {id}: Adding to Library {library.Title}");
 
         using TmdbTvClient showClient = new(id);
-        TmdbTvShowAppends? showAppends = await showClient.WithAllAppends(priority);
+        TmdbTvShowAppends? showAppends = await MetadataRetry.FetchAsync(
+            () => showClient.WithAllAppends(priority),
+            $"TMDB tv {id}"
+        );
 
         if (showAppends == null)
             return null;

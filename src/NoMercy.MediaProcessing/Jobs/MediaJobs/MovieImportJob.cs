@@ -19,6 +19,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Media;
+using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -63,7 +64,16 @@ public class MovieImportJob : AbstractMediaJob
 
         TmdbMovieAppends? movieAppends = await movieManager.Add(Id, movieLibrary);
         if (movieAppends == null)
+        {
+            await ImportFailureRecorder.RecordAsync(
+                context,
+                "MovieImportJob",
+                Id.ToString(),
+                LibraryId,
+                "TMDB movie metadata fetch returned no result after retries."
+            );
             return;
+        }
 
         if (EventBusProvider.IsConfigured)
         {

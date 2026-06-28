@@ -44,7 +44,10 @@ public class MovieManager(
         Logger.MovieDb($"Movie: {id}: Adding to Library {library.Title}");
 
         using TmdbMovieClient movieClient = new(id);
-        TmdbMovieAppends? movieAppends = await movieClient.WithAllAppends();
+        TmdbMovieAppends? movieAppends = await MetadataRetry.FetchAsync(
+            () => movieClient.WithAllAppends(),
+            $"TMDB movie {id}"
+        );
 
         if (movieAppends == null)
             return null;

@@ -16,6 +16,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Artists;
+using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.MediaProcessing.MusicGenres;
@@ -294,7 +295,17 @@ public class AudioImportJob : AbstractMusicFolderJob
                 .FirstOrDefault()
                 .Value.ReleaseAppends;
             if (release is null)
+            {
+                await using MediaContext failureContext = new();
+                await ImportFailureRecorder.RecordAsync(
+                    failureContext,
+                    "AudioImportJob",
+                    InputFolder,
+                    LibraryId,
+                    "MusicBrainz release could not be resolved for this folder."
+                );
                 return;
+            }
 
             // Second pass: collect only files that match the chosen release
             List<(MediaFile MediaFile, AudioTagModel AudioTag)> matchingFiles = [];

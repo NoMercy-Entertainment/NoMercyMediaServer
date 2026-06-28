@@ -21,6 +21,7 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Media;
+using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
@@ -72,7 +73,16 @@ public class ShowImportJob : AbstractMediaJob
 
         TmdbTvShowAppends? show = await showManager.AddShowAsync(Id, tvLibrary, HighPriority);
         if (show == null)
+        {
+            await ImportFailureRecorder.RecordAsync(
+                context,
+                "ShowImportJob",
+                Id.ToString(),
+                LibraryId,
+                "TMDB show metadata fetch returned no result after retries."
+            );
             return;
+        }
 
         if (EventBusProvider.IsConfigured)
         {

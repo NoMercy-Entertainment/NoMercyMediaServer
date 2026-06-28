@@ -352,6 +352,7 @@ public class MediaContext : DbContext
     public virtual DbSet<LanguageLibrary> LanguageLibrary { get; init; }
     public virtual DbSet<Language> Languages { get; init; }
     public virtual DbSet<Library> Libraries { get; init; }
+    public virtual DbSet<ImportFailure> ImportFailures { get; init; }
     public virtual DbSet<LibraryMovie> LibraryMovie { get; init; }
     public virtual DbSet<LibraryTv> LibraryTv { get; init; }
     public virtual DbSet<LibraryTrack> LibraryTrack { get; init; }

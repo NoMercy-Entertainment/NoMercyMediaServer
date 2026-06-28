@@ -611,4 +611,30 @@ public class LibrariesController(
 
         return Ok(ComponentResponse.From(response));
     }
+
+    /// Dead-letter review: media items that failed to import after all retries.
+    /// Pass ?resolved=false to see only outstanding failures.
+    [HttpGet]
+    [Route("{libraryId}/import-failures")]
+    public async Task<IActionResult> ImportFailures(
+        Ulid libraryId,
+        [FromQuery] bool? resolved = null,
+        CancellationToken ct = default
+    )
+    {
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<ImportFailure> query = context.ImportFailures.Where(f =>
+            f.LibraryId == libraryId
+        );
+
+        if (resolved is not null)
+            query = query.Where(f => f.Resolved == resolved);
+
+        List<ImportFailure> failures = await query
+            .OrderByDescending(f => f.LastAttemptAt)
+            .ToListAsync(ct);
+
+        return Ok(new { data = failures });
+    }
 }
