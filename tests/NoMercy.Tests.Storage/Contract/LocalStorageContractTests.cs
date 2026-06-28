@@ -88,7 +88,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
     // LocalStorage-specific: absolute path MUST throw StoragePathNotAllowedException
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public override async Task Exists_absolute_path_is_rejected_or_returns_false()
     {
@@ -115,7 +115,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
     // LocalStorage-specific: ".." traversal MUST throw StoragePathNotAllowedException
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public override async Task Exists_dotdot_traversal_throws()
     {
@@ -138,7 +138,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
     // Rule 6 contract: StorageEntry.Path from List* is scope-relative
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task List_entries_are_scope_relative_and_round_trip_into_Exists()
     {
@@ -191,7 +191,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public async Task List_sync_entries_are_scope_relative_and_round_trip_into_Exists()
     {
@@ -242,7 +242,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
     // GetFullPath contract
     // -----------------------------------------------------------------------
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public void GetFullPath_scope_relative_returns_os_absolute_under_root()
     {
@@ -267,7 +267,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Unit")]
     public void GetFullPath_dotdot_traversal_throws()
     {

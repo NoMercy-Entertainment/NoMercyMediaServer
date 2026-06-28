@@ -290,7 +290,7 @@ public sealed class WebDavStorageContractTests(WebDavContractFixture fixture)
     // "foo//bar.bin" and "foo/bar.bin" are different URLs on WebDAV.
     // This test is expected to FAIL until the driver normalises paths.
     // Named distinctly to avoid xUnit1024 (test method name conflict with base class).
-    [Fact]
+    [SkippableFact]
     [Trait("Category", "Integration")]
     public async Task WebDav_double_slash_is_known_failure_requires_driver_normalisation()
     {
