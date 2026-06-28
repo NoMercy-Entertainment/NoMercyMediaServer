@@ -17,6 +17,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests for TmdbBaseClient functionality
 /// Tests the base HTTP client behavior and common functionality
 /// </summary>
+[Collection("TmdbApi")]
 public class TmdbBaseClientTests : TmdbTestBase
 {
     private class TestableBaseClient : TmdbBaseClient

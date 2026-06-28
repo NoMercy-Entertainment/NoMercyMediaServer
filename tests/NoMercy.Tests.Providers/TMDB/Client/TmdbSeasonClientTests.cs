@@ -18,6 +18,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 [Trait("Category", "Unit")]
 [Trait("Provider", "TMDB")]
 [Trait("Client", "TmdbSeasonClient")]
+[Collection("TmdbApi")]
 public class TmdbSeasonClientTests : TmdbTestBase
 {
     private const int InvalidTvShowId = 999999999;

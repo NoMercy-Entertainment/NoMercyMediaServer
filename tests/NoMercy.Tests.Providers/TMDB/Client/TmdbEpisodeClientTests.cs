@@ -18,6 +18,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests episode details, credits, images, and related metadata
 /// </summary>
 [Trait("Category", "Unit")]
+[Collection("TmdbApi")]
 public class TmdbEpisodeClientTests : TmdbTestBase
 {
     #region Constructor Tests

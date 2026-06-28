@@ -23,6 +23,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 ///     Tests TV show data retrieval and metadata functionality
 /// </summary>
 [Trait("Category", "Unit")]
+[Collection("TmdbApi")]
 public class TmdbTvClientTests : TmdbTestBase
 {
     #region Alternative Titles Tests

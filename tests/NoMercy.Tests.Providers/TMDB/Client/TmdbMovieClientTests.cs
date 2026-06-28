@@ -19,6 +19,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Unit tests for TmdbMovieClient class
 /// Tests all methods with both valid and invalid data scenarios
 /// </summary>
+[Collection("TmdbApi")]
 public class TmdbMovieClientTests : TmdbTestBase
 {
     [Fact]

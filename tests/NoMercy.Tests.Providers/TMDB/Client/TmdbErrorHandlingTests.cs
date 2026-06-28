@@ -19,6 +19,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests for error handling and edge cases in TMDB clients
 /// Verifies robust behavior under failure conditions
 /// </summary>
+[Collection("TmdbApi")]
 public class TmdbErrorHandlingTests : TmdbTestBase
 {
     [Fact]

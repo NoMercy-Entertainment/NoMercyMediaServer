@@ -18,6 +18,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests person details, credits, images, and related metadata
 /// </summary>
 [Trait("Category", "Unit")]
+[Collection("TmdbApi")]
 public class TmdbPersonClientTests : TmdbTestBase
 {
     #region Constructor Tests

@@ -24,6 +24,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests all search functionality including movies, TV shows, people, multi-search, collections, networks, and keywords
 /// </summary>
 [Trait("Category", "Unit")]
+[Collection("TmdbApi")]
 public class TmdbSearchClientTests : TmdbTestBase
 {
     #region Constructor Tests
