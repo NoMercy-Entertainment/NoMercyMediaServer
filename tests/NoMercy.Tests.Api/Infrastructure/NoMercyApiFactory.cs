@@ -39,6 +39,7 @@ using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Security;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Providers.AcoustId;
 using NoMercy.Service;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
@@ -87,6 +88,14 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             // shared instance so controllers and tests operate on the same dictionary.
             services.RemoveAll<ConnectedClients>();
             services.AddSingleton(SharedConnectedClients);
+
+            // ServerController depends on IAudioFingerprinter. The real
+            // ChromaprintFingerprinter needs the native fpcalc/chromaprint
+            // library, which the test host doesn't provide, so register a
+            // no-op stand-in — the dashboard endpoints under test only need
+            // the controller to construct, not to fingerprint audio.
+            services.RemoveAll<IAudioFingerprinter>();
+            services.AddTransient<IAudioFingerprinter>(_ => Mock.Of<IAudioFingerprinter>());
         });
     }
 
