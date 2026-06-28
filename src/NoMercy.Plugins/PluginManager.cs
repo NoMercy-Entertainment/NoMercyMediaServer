@@ -29,6 +29,7 @@ public class PluginManager : IPluginManager, IDisposable
     private readonly IStorageDriver _driver;
     private readonly IPluginRegistry _registry;
     private readonly PluginLoader _loader;
+    private readonly PluginLifecycleManager _lifecycle;
 
     public PluginManager(
         IEventBus eventBus,
@@ -54,6 +55,15 @@ public class PluginManager : IPluginManager, IDisposable
             _pluginsPath,
             _storage,
             _registry
+        );
+        _lifecycle = new PluginLifecycleManager(
+            _eventBus,
+            _serviceProvider,
+            _logger,
+            _pluginsPath,
+            _storage,
+            _registry,
+            _loader
         );
     }
 
@@ -91,127 +101,20 @@ public class PluginManager : IPluginManager, IDisposable
         await LoadPluginAssemblyAsync(destPath, ct);
     }
 
-    public async Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default)
+    public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
-        {
-            throw new InvalidOperationException($"Plugin {pluginId} is not installed.");
-        }
-
-        if (loaded.Info.Status == PluginStatus.Active)
-        {
-            return;
-        }
-
-        if (loaded.Instance is null && loaded.Info.AssemblyPath is not null)
-        {
-            await LoadPluginAssemblyAsync(loaded.Info.AssemblyPath, ct);
-            return;
-        }
-
-        if (loaded.Instance is not null)
-        {
-            try
-            {
-                string dataFolder = Path.Combine(_pluginsPath, "data", pluginId.ToString("N"));
-                if (!_storage.Exists(dataFolder))
-                {
-                    _storage.CreateDirectory(dataFolder);
-                }
-
-                PluginContext context = new(
-                    _eventBus,
-                    _serviceProvider,
-                    _logger,
-                    dataFolder,
-                    _storage
-                );
-                loaded.Instance.Initialize(context);
-                PluginLifecycle.Transition(loaded.Info, PluginStatus.Active);
-
-                await _eventBus.PublishAsync(
-                    new PluginLoadedEvent
-                    {
-                        PluginId = pluginId.ToString(),
-                        PluginName = loaded.Info.Name,
-                        Version = loaded.Info.Version.ToString(),
-                    },
-                    ct
-                );
-            }
-            catch (InvalidOperationException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                PluginLifecycle.Transition(loaded.Info, PluginStatus.Malfunctioned);
-
-                await _eventBus.PublishAsync(
-                    new PluginErrorOccurredEvent
-                    {
-                        PluginId = pluginId.ToString(),
-                        PluginName = loaded.Info.Name,
-                        ErrorMessage = ex.Message,
-                        ExceptionType = ex.GetType().Name,
-                    },
-                    ct
-                );
-            }
-        }
+        return _lifecycle.EnablePluginAsync(pluginId, ct);
     }
 
     public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
-        {
-            throw new InvalidOperationException($"Plugin {pluginId} is not installed.");
-        }
-
-        if (loaded.Info.Status == PluginStatus.Disabled)
-        {
-            return Task.CompletedTask;
-        }
-
-        loaded.Instance?.Dispose();
-        PluginLifecycle.Transition(loaded.Info, PluginStatus.Disabled);
-
-        return Task.CompletedTask;
+        return _lifecycle.DisablePluginAsync(pluginId, ct);
     }
 
     public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        if (!_registry.TryRemove(pluginId, out LoadedPlugin? loaded))
-        {
-            throw new InvalidOperationException($"Plugin {pluginId} is not installed.");
-        }
-
-        loaded.Instance?.Dispose();
-        loaded.LoadContext?.Unload();
-        PluginLifecycle.Transition(loaded.Info, PluginStatus.Deleted);
-
-        if (loaded.Info.AssemblyPath is not null)
-        {
-            string? pluginDir = Path.GetDirectoryName(loaded.Info.AssemblyPath);
-            if (pluginDir is not null && _storage.Exists(pluginDir))
-            {
-                try
-                {
-                    _storage.DeleteDirectory(pluginDir, recursive: true);
-                }
-                catch (IOException)
-                {
-                    _logger.LogWarning(
-                        "Could not delete plugin directory {PluginDir}. Files may be locked.",
-                        pluginDir
-                    );
-                }
-            }
-        }
-
-        return Task.CompletedTask;
+        return _lifecycle.UninstallPluginAsync(pluginId, ct);
     }
-
     public async Task LoadPluginsFromDirectoryAsync(CancellationToken ct = default)
     {
         if (!_storage.Exists(_pluginsPath))
