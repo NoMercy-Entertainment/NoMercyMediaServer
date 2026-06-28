@@ -37,6 +37,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.NmSystem.Wallpaper;
+using NoMercy.Providers.AcoustId;
 using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
 using NoMercyQueue;
@@ -75,7 +76,8 @@ public class ServerController(
     ILibraryRepository libraryRepository,
     IFolderRepository folderRepository,
     IImageRepository imageRepository,
-    IAuthTokenStore authTokenStore
+    IAuthTokenStore authTokenStore,
+    IAudioFingerprinter audioFingerprinter
 ) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
@@ -316,7 +318,8 @@ public class ServerController(
 
             List<FileItem> fileList = await FileRepository.GetMusicBrainzReleasesInDirectory(
                 request.Folder,
-                effectiveDriver
+                effectiveDriver,
+                audioFingerprinter
             );
 
             Logger.App(

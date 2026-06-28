@@ -32,6 +32,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FFProbe;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.AcoustId;
 using NoMercy.Providers.AcoustId.Client;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Client;
@@ -1311,7 +1312,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
     public static async Task<List<FileItem>> GetMusicBrainzReleasesInDirectory(
         string folder,
-        IStorageDriver storageDriver
+        IStorageDriver storageDriver,
+        IAudioFingerprinter audioFingerprinter
     )
     {
         PrevSearchQueries.Clear();
@@ -1338,7 +1340,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 mediaFiles,
                 musicBrainzReleaseClient,
                 lookupReleaseIds,
-                musicBrainzRecordingClient
+                musicBrainzRecordingClient,
+                audioFingerprinter
             );
 
         releases = await FetchReleaseAppends(lookupReleaseIds, musicBrainzReleaseClient, releases);
@@ -1353,7 +1356,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         ConcurrentBag<MediaFile> mediaFiles,
         MusicBrainzReleaseClient musicBrainzReleaseClient,
         List<Guid> lookupReleaseIds,
-        MusicBrainzRecordingClient musicBrainzRecordingClient
+        MusicBrainzRecordingClient musicBrainzRecordingClient,
+        IAudioFingerprinter audioFingerprinter
     )
     {
         string prevMusicBrainzReleaseId = string.Empty;
@@ -1388,7 +1392,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                             musicBrainzReleaseClient,
                             mediaFile,
                             lockObject,
-                            releases
+                            releases,
+                            audioFingerprinter
                         ) ?? prevMusicBrainzReleaseId;
                 }
             }
@@ -1401,11 +1406,12 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         MusicBrainzReleaseClient musicBrainzReleaseClient,
         MediaFile mediaFile,
         object lockObject,
-        List<MusicBrainzReleaseAppends> releases
+        List<MusicBrainzReleaseAppends> releases,
+        IAudioFingerprinter audioFingerprinter
     )
     {
         string prevMusicBrainzReleaseId;
-        AcoustIdFingerprintClient acoustIdFingerprintClient = new();
+        AcoustIdFingerprintClient acoustIdFingerprintClient = new(audioFingerprinter);
         AcoustIdFingerprint? acoustIds = await acoustIdFingerprintClient.Lookup(mediaFile.Path);
         if (acoustIds == null)
             return null;
