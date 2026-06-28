@@ -25,6 +25,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FFProbe;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.AcoustId;
 using NoMercy.Providers.AcoustId.Client;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Client;
@@ -39,6 +40,7 @@ public partial class MusicLogic : IAsyncDisposable
 {
     private readonly MediaContext _mediaContext;
     private readonly IStorageFactory _storageFactory;
+    private readonly IAudioFingerprinter _audioFingerprinter;
     private AcoustIdFingerprint? FingerPrint { get; set; }
     private ConcurrentBag<MediaFile>? Files { get; set; }
     private MediaFolderExtend ListPath { get; set; }
@@ -53,11 +55,13 @@ public partial class MusicLogic : IAsyncDisposable
         Library library,
         MediaFolderExtend listPath,
         MediaContext mediaContext,
-        IStorageFactory storageFactory
+        IStorageFactory storageFactory,
+        IAudioFingerprinter audioFingerprinter
     )
     {
         _mediaContext = mediaContext;
         _storageFactory = storageFactory;
+        _audioFingerprinter = audioFingerprinter;
         Library = library;
         ListPath = listPath;
 
@@ -233,7 +237,7 @@ public partial class MusicLogic : IAsyncDisposable
 
         try
         {
-            AcoustIdFingerprintClient acoustIdFingerprintClient = new();
+            AcoustIdFingerprintClient acoustIdFingerprintClient = new(_audioFingerprinter);
             FingerPrint = await acoustIdFingerprintClient.Lookup(file.Path);
             acoustIdFingerprintClient.Dispose();
             if (FingerPrint is null)
