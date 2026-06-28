@@ -43,7 +43,7 @@ public class OrphanJobRecoveryHostedService(
         QueueNames.EncoderCpu,
     ];
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -58,7 +58,7 @@ public class OrphanJobRecoveryHostedService(
             if (orphans.Count == 0)
             {
                 logger.LogDebug("Orphan recovery: no orphan jobs found");
-                return Task.CompletedTask;
+                return;
             }
 
             int failed = 0;
@@ -71,10 +71,10 @@ public class OrphanJobRecoveryHostedService(
 
                 if (isEncoderJob && checkpointLookup is not null)
                 {
-                    bool hasCheckpoint = checkpointLookup
-                        .HasCheckpointAsync(orphan.Payload, cancellationToken)
-                        .GetAwaiter()
-                        .GetResult();
+                    bool hasCheckpoint = await checkpointLookup.HasCheckpointAsync(
+                        orphan.Payload,
+                        cancellationToken
+                    );
 
                     if (hasCheckpoint)
                     {
@@ -124,7 +124,7 @@ public class OrphanJobRecoveryHostedService(
             logger.LogError(ex, "Orphan recovery failed; continuing startup");
         }
 
-        return Task.CompletedTask;
+        return;
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
