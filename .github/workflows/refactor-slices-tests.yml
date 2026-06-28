@@ -13,9 +13,10 @@ name: 'Refactor Slices Tests (temporary)'
 # Delete this file once refactor/slices lands on master.
 
 on:
-  push:
-    branches:
-      - refactor/slices
+  # Manual-only to avoid spending CI minutes on every push: the refactor
+  # test projects are run locally on each change. Trigger this from the
+  # Actions tab (workflow_dispatch), or temporarily re-add the push trigger,
+  # only when a change can be validated solely in CI.
   workflow_dispatch:
 
 jobs:
