@@ -27,7 +27,7 @@ public class PluginManager : IPluginManager, IDisposable
     private readonly string _pluginsPath;
     private readonly IStorage _storage;
     private readonly IStorageDriver _driver;
-    private readonly ConcurrentDictionary<Guid, LoadedPlugin> _loadedPlugins = new();
+    private readonly IPluginRegistry _registry;
 
     public PluginManager(
         IEventBus eventBus,
@@ -45,6 +45,7 @@ public class PluginManager : IPluginManager, IDisposable
         _pluginsPath = pluginsPath ?? throw new ArgumentNullException(nameof(pluginsPath));
         _driver = driver ?? throw new ArgumentNullException(nameof(driver));
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+        _registry = new PluginRegistry();
     }
 
     // AssemblyLoadContext and AssemblyDependencyResolver are raw filesystem APIs and need a
@@ -58,7 +59,7 @@ public class PluginManager : IPluginManager, IDisposable
 
     public IReadOnlyList<PluginInfo> GetInstalledPlugins()
     {
-        return _loadedPlugins.Values.Select(lp => lp.Info).ToList().AsReadOnly();
+        return _registry.Values.Select(lp => lp.Info).ToList().AsReadOnly();
     }
 
     public async Task InstallPluginAsync(string packagePath, CancellationToken ct = default)
@@ -91,7 +92,7 @@ public class PluginManager : IPluginManager, IDisposable
 
     public async Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        if (!_loadedPlugins.TryGetValue(pluginId, out LoadedPlugin? loaded))
+        if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
         {
             throw new InvalidOperationException($"Plugin {pluginId} is not installed.");
         }
@@ -161,7 +162,7 @@ public class PluginManager : IPluginManager, IDisposable
 
     public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        if (!_loadedPlugins.TryGetValue(pluginId, out LoadedPlugin? loaded))
+        if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
         {
             throw new InvalidOperationException($"Plugin {pluginId} is not installed.");
         }
@@ -179,7 +180,7 @@ public class PluginManager : IPluginManager, IDisposable
 
     public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default)
     {
-        if (!_loadedPlugins.TryRemove(pluginId, out LoadedPlugin? loaded))
+        if (!_registry.TryRemove(pluginId, out LoadedPlugin? loaded))
         {
             throw new InvalidOperationException($"Plugin {pluginId} is not installed.");
         }
@@ -282,7 +283,7 @@ public class PluginManager : IPluginManager, IDisposable
         await LoadPluginsFromDirectoryAsync(ct);
 
         List<PluginLoadResult> results = [];
-        foreach (LoadedPlugin loaded in _loadedPlugins.Values)
+        foreach (LoadedPlugin loaded in _registry.Values)
         {
             if (loaded.Instance is not null && loaded.Info.Status == PluginStatus.Active)
             {
@@ -404,7 +405,7 @@ public class PluginManager : IPluginManager, IDisposable
                             );
 
                             LoadedPlugin errorLoaded = new(errorInfo, null, loadContext);
-                            _loadedPlugins[manifest.Id] = errorLoaded;
+                            _registry[manifest.Id] = errorLoaded;
                             foundPlugin = true;
 
                             await _eventBus.PublishAsync(
@@ -432,7 +433,7 @@ public class PluginManager : IPluginManager, IDisposable
                     IPlugin? storedInstance =
                         initialStatus == PluginStatus.Active ? instance : null;
                     LoadedPlugin loaded = new(info, storedInstance, loadContext);
-                    _loadedPlugins[manifest.Id] = loaded;
+                    _registry[manifest.Id] = loaded;
                     foundPlugin = true;
 
                     if (initialStatus == PluginStatus.Active)
@@ -618,7 +619,7 @@ public class PluginManager : IPluginManager, IDisposable
                     };
 
                     LoadedPlugin loaded = new(info, instance, loadContext);
-                    _loadedPlugins[instance.Id] = loaded;
+                    _registry[instance.Id] = loaded;
 
                     await _eventBus.PublishAsync(
                         new PluginLoadedEvent
@@ -677,7 +678,7 @@ public class PluginManager : IPluginManager, IDisposable
                     LoadedPlugin loaded = new(info, null, loadContext);
                     if (identity.Id != Guid.Empty)
                     {
-                        _loadedPlugins[identity.Id] = loaded;
+                        _registry[identity.Id] = loaded;
                     }
 
                     await _eventBus.PublishAsync(
@@ -752,7 +753,7 @@ public class PluginManager : IPluginManager, IDisposable
 
     public IPlugin? GetPluginInstance(Guid pluginId)
     {
-        if (_loadedPlugins.TryGetValue(pluginId, out LoadedPlugin? loaded))
+        if (_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
         {
             return loaded.Instance;
         }
@@ -763,7 +764,7 @@ public class PluginManager : IPluginManager, IDisposable
     public IEnumerable<T> GetPluginsOfType<T>()
         where T : IPlugin
     {
-        return _loadedPlugins
+        return _registry
             .Values.Where(lp => lp.Instance is T && lp.Info.Status == PluginStatus.Active)
             .Select(lp => (T)lp.Instance!)
             .ToList();
@@ -771,7 +772,7 @@ public class PluginManager : IPluginManager, IDisposable
 
     public IEnumerable<IPluginServiceRegistrator> GetServiceRegistrators()
     {
-        return _loadedPlugins
+        return _registry
             .Values.Where(lp =>
                 lp.Instance is IPluginServiceRegistrator && lp.Info.Status == PluginStatus.Active
             )
@@ -781,23 +782,12 @@ public class PluginManager : IPluginManager, IDisposable
 
     public void Dispose()
     {
-        foreach (LoadedPlugin loaded in _loadedPlugins.Values)
+        foreach (LoadedPlugin loaded in _registry.Values)
         {
             loaded.Instance?.Dispose();
             loaded.LoadContext?.Unload();
         }
 
-        _loadedPlugins.Clear();
-    }
-
-    internal sealed class LoadedPlugin(
-        PluginInfo info,
-        IPlugin? instance,
-        PluginLoadContext? loadContext
-    )
-    {
-        public PluginInfo Info { get; } = info;
-        public IPlugin? Instance { get; } = instance;
-        public PluginLoadContext? LoadContext { get; } = loadContext;
+        _registry.Clear();
     }
 }
