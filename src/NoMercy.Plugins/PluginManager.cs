@@ -357,7 +357,7 @@ public class PluginManager : IPluginManager, IDisposable
 
                 foreach (Type pluginType in pluginTypes)
                 {
-                    IPlugin? instance = Activator.CreateInstance(pluginType) as IPlugin;
+                    IPlugin? instance = PluginInstanceFactory.Create(_serviceProvider, pluginType);
                     if (instance is null)
                     {
                         continue;
@@ -581,7 +581,7 @@ public class PluginManager : IPluginManager, IDisposable
                 IPlugin? instance = null;
                 try
                 {
-                    instance = Activator.CreateInstance(pluginType) as IPlugin;
+                    instance = PluginInstanceFactory.Create(_serviceProvider, pluginType);
                     if (instance is null)
                     {
                         continue;
