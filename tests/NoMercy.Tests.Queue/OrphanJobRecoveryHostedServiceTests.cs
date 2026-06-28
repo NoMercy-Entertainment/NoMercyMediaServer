@@ -55,6 +55,8 @@ public class OrphanJobRecoveryHostedServiceTests
         context.AddJob(orphan);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Empty(context.Jobs);
         Assert.Single(context.FailedJobs);
@@ -82,6 +84,8 @@ public class OrphanJobRecoveryHostedServiceTests
         context.AddJob(orphan);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Single(context.Jobs);
         Assert.Empty(context.FailedJobs);
@@ -103,6 +107,8 @@ public class OrphanJobRecoveryHostedServiceTests
         context.AddJob(reserved);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Single(context.Jobs);
         Assert.Empty(context.FailedJobs);
@@ -124,6 +130,8 @@ public class OrphanJobRecoveryHostedServiceTests
         context.AddJob(pending);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Single(context.Jobs);
         Assert.Empty(context.FailedJobs);

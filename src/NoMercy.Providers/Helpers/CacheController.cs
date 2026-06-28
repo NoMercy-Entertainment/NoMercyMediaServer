@@ -89,6 +89,11 @@ public static class CacheController
     public static async Task<(bool Found, T? Value)> ReadAsync<T>(string url, bool xml = false)
         where T : class?
     {
+        // No cache configured (e.g. unit tests that never call Initialize) —
+        // behave as a cache miss rather than throwing.
+        if (_storage is null)
+            return (false, default);
+
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
         SemaphoreSlim fileLock = GetLock(fullname);
         await fileLock.WaitAsync();
@@ -140,6 +145,10 @@ public static class CacheController
 
     public static async Task Write(string url, string data)
     {
+        // No cache configured (uninitialized) — skip silently instead of throwing.
+        if (_storage is null)
+            return;
+
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
         SemaphoreSlim fileLock = GetLock(fullname);
 

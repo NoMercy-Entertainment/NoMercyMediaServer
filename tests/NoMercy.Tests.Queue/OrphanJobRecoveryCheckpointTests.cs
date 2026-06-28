@@ -78,6 +78,8 @@ public class OrphanJobRecoveryCheckpointTests
         context.AddJob(orphan);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         // Job stays in queue with Attempts=0, ready for resume.
         Assert.Single(context.Jobs);
@@ -110,6 +112,8 @@ public class OrphanJobRecoveryCheckpointTests
         context.AddJob(orphan);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Single(context.Jobs);
         Assert.Empty(context.FailedJobs);
@@ -142,6 +146,8 @@ public class OrphanJobRecoveryCheckpointTests
         context.AddJob(orphan);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Empty(context.Jobs);
         Assert.Single(context.FailedJobs);
@@ -174,6 +180,8 @@ public class OrphanJobRecoveryCheckpointTests
         context.AddJob(orphan);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         // Library orphan with Attempts>0 always fails — lookup is not consulted.
         Assert.Empty(context.Jobs);
@@ -205,6 +213,8 @@ public class OrphanJobRecoveryCheckpointTests
         context.AddJob(orphan);
 
         await service.StartAsync(CancellationToken.None);
+        if (service.ExecuteTask is not null)
+            await service.ExecuteTask;
 
         Assert.Empty(context.Jobs);
         Assert.Single(context.FailedJobs);
