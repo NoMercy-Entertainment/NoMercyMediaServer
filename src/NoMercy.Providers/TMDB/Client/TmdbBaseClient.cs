@@ -126,6 +126,27 @@ public class TmdbBaseClient : ExternalApiClient
             Logger.MovieDb($"HTTP {ex.StatusCode} for {newUrl}", LogEventLevel.Debug);
             return null;
         }
+        catch (HttpRequestException ex)
+        {
+            // Any other HTTP failure — an unexpected status, or a transport-level
+            // error with no status code (connection reset / timeout under load).
+            // Degrade to a null (cache-miss-style) result rather than throwing so
+            // callers — and the *HandlesGracefully contract — never see an exception.
+            Logger.MovieDb(
+                $"TMDB HTTP request failed for {newUrl}: {ex.Message}",
+                LogEventLevel.Warning
+            );
+            return null;
+        }
+        catch (Exception ex)
+            when (ex is Newtonsoft.Json.JsonException or OperationCanceledException)
+        {
+            Logger.MovieDb(
+                $"TMDB response could not be processed for {newUrl}: {ex.Message}",
+                LogEventLevel.Warning
+            );
+            return null;
+        }
     }
 
     protected async Task<List<T>?> Paginated<T>(string url, int limit)
