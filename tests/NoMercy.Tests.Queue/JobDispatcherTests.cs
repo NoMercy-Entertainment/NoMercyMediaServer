@@ -213,6 +213,29 @@ public class JobDispatcherTests
         // Assert
         Assert.IsAssignableFrom<IJobDispatcher>(dispatcher);
     }
+
+    [Fact]
+    public void DispatchChild_EnqueuesChildWithParentLinkageAndGroupTag()
+    {
+        (JobDispatcher dispatcher, TestQueueContextAdapter adapter) = CreateDispatcher();
+        TestJob testJob = new() { Message = "child work" };
+
+        dispatcher.DispatchChild(
+            testJob,
+            onQueue: "encoder-child",
+            priority: 7,
+            parentJobId: 42,
+            groupTag: "group-abc"
+        );
+
+        Assert.Single(adapter.Jobs);
+        QueueJobModel child = adapter.Jobs[0];
+        Assert.Equal("encoder-child", child.Queue);
+        Assert.Equal(7, child.Priority);
+        Assert.Equal(42, child.ParentJobId!.Value);
+        Assert.Equal("group-abc", child.GroupTag);
+        Assert.Contains("child work", child.Payload);
+    }
 }
 
 public class PriorityTestJob : IShouldQueue
