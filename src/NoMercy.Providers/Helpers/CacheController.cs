@@ -89,11 +89,6 @@ public static class CacheController
     public static async Task<(bool Found, T? Value)> ReadAsync<T>(string url, bool xml = false)
         where T : class?
     {
-        if (!Config.IsDev)
-        {
-            return (false, default);
-        }
-
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
         SemaphoreSlim fileLock = GetLock(fullname);
         await fileLock.WaitAsync();
@@ -145,9 +140,6 @@ public static class CacheController
 
     public static async Task Write(string url, string data)
     {
-        if (!Config.IsDev)
-            return;
-
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
         SemaphoreSlim fileLock = GetLock(fullname);
 
