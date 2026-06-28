@@ -232,24 +232,38 @@ public class PluginManager : IPluginManager, IDisposable
                 continue;
             }
 
-            string manifestPath = Path.Combine(pluginDir, "plugin.json");
-            if (_storage.Exists(manifestPath))
+            try
             {
-                await LoadPluginFromManifestAsync(manifestPath, ct);
-                continue;
-            }
-
-            IReadOnlyList<StorageEntry> dllEntries = _storage.List(
-                pluginDir,
-                "*.dll",
-                recursive: false
-            );
-            foreach (StorageEntry dllEntry in dllEntries)
-            {
-                if (!dllEntry.IsDirectory)
+                string manifestPath = Path.Combine(pluginDir, "plugin.json");
+                if (_storage.Exists(manifestPath))
                 {
-                    await LoadPluginAssemblyAsync(dllEntry.Path, ct);
+                    await LoadPluginFromManifestAsync(manifestPath, ct);
+                    continue;
                 }
+
+                IReadOnlyList<StorageEntry> dllEntries = _storage.List(
+                    pluginDir,
+                    "*.dll",
+                    recursive: false
+                );
+                foreach (StorageEntry dllEntry in dllEntries)
+                {
+                    if (!dllEntry.IsDirectory)
+                    {
+                        await LoadPluginAssemblyAsync(dllEntry.Path, ct);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Defense in depth: the load helpers already isolate their own
+                // failures, but an unexpected throw must not stop the remaining
+                // plugin directories from being scanned.
+                _logger.LogError(
+                    ex,
+                    "Unexpected failure while loading plugin directory {PluginDir}; skipping it.",
+                    pluginDir
+                );
             }
         }
     }
@@ -560,28 +574,37 @@ public class PluginManager : IPluginManager, IDisposable
 
             foreach (Type pluginType in pluginTypes)
             {
-                IPlugin? instance = Activator.CreateInstance(pluginType) as IPlugin;
-                if (instance is null)
-                {
-                    continue;
-                }
-
-                string dataFolder = Path.Combine(_pluginsPath, "data", instance.Id.ToString("N"));
-                if (!_storage.Exists(dataFolder))
-                {
-                    _storage.CreateDirectory(dataFolder);
-                }
-
-                PluginContext context = new(
-                    _eventBus,
-                    _serviceProvider,
-                    _logger,
-                    dataFolder,
-                    _storage
-                );
-
+                // Isolate each plugin type: a single malfunctioning plugin —
+                // including one whose constructor or Id/Name/etc. getters throw —
+                // must never abort loading of the other plugin types discovered
+                // in this assembly.
+                IPlugin? instance = null;
                 try
                 {
+                    instance = Activator.CreateInstance(pluginType) as IPlugin;
+                    if (instance is null)
+                    {
+                        continue;
+                    }
+
+                    string dataFolder = Path.Combine(
+                        _pluginsPath,
+                        "data",
+                        instance.Id.ToString("N")
+                    );
+                    if (!_storage.Exists(dataFolder))
+                    {
+                        _storage.CreateDirectory(dataFolder);
+                    }
+
+                    PluginContext context = new(
+                        _eventBus,
+                        _serviceProvider,
+                        _logger,
+                        dataFolder,
+                        _storage
+                    );
+
                     instance.Initialize(context);
 
                     PluginInfo info = new()
@@ -609,26 +632,59 @@ public class PluginManager : IPluginManager, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    instance.Dispose();
+                    // The failure may itself be a throwing property getter, so
+                    // read the plugin's identity defensively — building the error
+                    // record must never re-enter a faulty getter and throw again.
+                    SafePluginIdentity identity = SafePluginIdentity.Read(
+                        instance,
+                        pluginType
+                    );
+
+                    _logger.LogError(
+                        ex,
+                        "Plugin {PluginName} in assembly {AssemblyPath} failed to load and was marked malfunctioned: {Error}",
+                        identity.Name,
+                        assemblyPath,
+                        ex.Message
+                    );
+
+                    if (instance is not null)
+                    {
+                        try
+                        {
+                            instance.Dispose();
+                        }
+                        catch (Exception disposeEx)
+                        {
+                            _logger.LogWarning(
+                                disposeEx,
+                                "Plugin {PluginName} threw while being disposed after a load failure.",
+                                identity.Name
+                            );
+                        }
+                    }
 
                     PluginInfo info = new()
                     {
-                        Id = instance.Id,
-                        Name = instance.Name,
-                        Description = instance.Description,
-                        Version = instance.Version,
+                        Id = identity.Id,
+                        Name = identity.Name,
+                        Description = identity.Description,
+                        Version = identity.Version,
                         Status = PluginStatus.Malfunctioned,
                         AssemblyPath = assemblyPath,
                     };
 
                     LoadedPlugin loaded = new(info, null, loadContext);
-                    _loadedPlugins[instance.Id] = loaded;
+                    if (identity.Id != Guid.Empty)
+                    {
+                        _loadedPlugins[identity.Id] = loaded;
+                    }
 
                     await _eventBus.PublishAsync(
                         new PluginErrorOccurredEvent
                         {
-                            PluginId = instance.Id.ToString(),
-                            PluginName = instance.Name,
+                            PluginId = identity.Id.ToString(),
+                            PluginName = identity.Name,
                             ErrorMessage = ex.Message,
                             ExceptionType = ex.GetType().Name,
                         },
