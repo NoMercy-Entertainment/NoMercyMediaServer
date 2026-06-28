@@ -88,7 +88,15 @@ public class LocalizationMiddleware
                     int qIdx = p.IndexOf(";q=", StringComparison.OrdinalIgnoreCase);
                     string lang = (qIdx >= 0 ? p[..qIdx] : p).ToString().Trim();
                     double weight =
-                        qIdx >= 0 && double.TryParse(p[(qIdx + 3)..], out double q) ? q : 1.0;
+                        qIdx >= 0
+                        && double.TryParse(
+                            p[(qIdx + 3)..],
+                            System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out double q
+                        )
+                            ? q
+                            : 1.0;
                     return (lang, weight);
                 })
                 .Where(x => x.lang != "*")

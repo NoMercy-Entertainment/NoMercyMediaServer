@@ -174,6 +174,7 @@ public class Queue(QueueOptions options)
                                             or HttpStatusCode.ServiceUnavailable
                                             or HttpStatusCode.GatewayTimeout
                                             or HttpStatusCode.TooManyRequests
+                                            or HttpStatusCode.Forbidden
                                 )
                             {
                                 int delay = (int)Math.Pow(2, attempt + 1) * 1000;
