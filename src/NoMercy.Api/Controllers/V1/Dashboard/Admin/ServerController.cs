@@ -65,6 +65,7 @@ public class ServerController(
     IHostApplicationLifetime appLifetime,
     AppDbContext appContext,
     FileRepository fileRepository,
+    IFileListService fileListService,
     IJobDispatcher jobDispatcher,
     QueueRunner queueRunner,
     IEventBus eventBus,
@@ -337,12 +338,12 @@ public class ServerController(
         else
         {
             List<FileItem> fileList = resolvedStorage is not null
-                ? await fileRepository.GetFilesInDirectory(
+                ? await fileListService.GetFilesInDirectory(
                     request.Folder,
                     request.Type,
                     resolvedStorage
                 )
-                : await fileRepository.GetFilesInDirectory(request.Folder, request.Type);
+                : await fileListService.GetFilesInDirectory(request.Folder, request.Type);
 
             Logger.App(
                 $"[FileList] returned {fileList.Count} entries in {sw.ElapsedMilliseconds}ms",

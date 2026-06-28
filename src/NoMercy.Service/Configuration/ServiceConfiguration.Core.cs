@@ -374,6 +374,14 @@ public static partial class ServiceConfiguration
         services.AddScoped<DriverRepository>();
         services.AddScoped<MediaProcessingFileRepository>();
         services.AddScoped<IFileRepository, MediaProcessingFileRepository>();
+        services.AddScoped<
+            NoMercy.MediaProcessing.Files.IMediaIdentificationService,
+            NoMercy.MediaProcessing.Files.MediaIdentificationService
+        >();
+        services.AddScoped<
+            NoMercy.MediaProcessing.Files.IFileListService,
+            NoMercy.MediaProcessing.Files.FileListService
+        >();
         services.AddScoped<FilesystemRepository>();
         services.AddScoped<LanguageRepository>();
         services.AddScoped<CollectionRepository>();
