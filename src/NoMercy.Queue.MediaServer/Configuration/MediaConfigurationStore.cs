@@ -16,18 +16,19 @@ using DbConfiguration = NoMercy.Database.Models.Common.Configuration;
 
 namespace NoMercy.Queue.MediaServer.Configuration;
 
-public class MediaConfigurationStore : IConfigurationStore
+public class MediaConfigurationStore(IDbContextFactory<AppDbContext> contextFactory)
+    : IConfigurationStore
 {
     public string? GetValue(string key)
     {
-        using AppDbContext context = new();
+        using AppDbContext context = contextFactory.CreateDbContext();
         DbConfiguration? config = context.Configuration.FirstOrDefault(c => c.Key == key);
         return config?.Value;
     }
 
     public void SetValue(string key, string value)
     {
-        using AppDbContext context = new();
+        using AppDbContext context = contextFactory.CreateDbContext();
         DbConfiguration? existing = context.Configuration.FirstOrDefault(c => c.Key == key);
         if (existing is not null)
         {
@@ -42,7 +43,7 @@ public class MediaConfigurationStore : IConfigurationStore
 
     public async Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
     {
-        await using AppDbContext context = new();
+        await using AppDbContext context = await contextFactory.CreateDbContextAsync();
         DbConfiguration? existing = await context.Configuration.FirstOrDefaultAsync(c =>
             c.Key == key
         );
@@ -67,7 +68,7 @@ public class MediaConfigurationStore : IConfigurationStore
 
     public bool HasKey(string key)
     {
-        using AppDbContext context = new();
+        using AppDbContext context = contextFactory.CreateDbContext();
         return context.Configuration.Any(c => c.Key == key);
     }
 }

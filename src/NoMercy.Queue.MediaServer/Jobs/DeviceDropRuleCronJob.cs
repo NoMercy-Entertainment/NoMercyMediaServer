@@ -21,7 +21,7 @@ namespace NoMercy.Queue.MediaServer.Jobs;
 
 public class DeviceDropRuleCronJob : ICronJobExecutor
 {
-    private readonly MediaContext _context;
+    private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly ILogger<DeviceDropRuleCronJob> _logger;
 
     private static readonly TimeSpan GraceWindow = TimeSpan.FromHours(1);
@@ -31,9 +31,12 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
     public string CronExpression => new CronExpressionBuilder().Hourly();
     public string JobName => "Hourly Device Drop-Rule Job";
 
-    public DeviceDropRuleCronJob(MediaContext context, ILogger<DeviceDropRuleCronJob> logger)
+    public DeviceDropRuleCronJob(
+        IDbContextFactory<MediaContext> contextFactory,
+        ILogger<DeviceDropRuleCronJob> logger
+    )
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _logger = logger;
     }
 
@@ -61,7 +64,11 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
     {
         DateTime now = DateTime.UtcNow;
 
-        List<Device> candidates = await _context
+        await using MediaContext context = await _contextFactory.CreateDbContextAsync(
+            cancellationToken
+        );
+
+        List<Device> candidates = await context
             .Devices.Where(d => d.Fingerprint != null && d.OwnerUserId != null)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -98,7 +105,7 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
             // and compare DateTime <= DateTime, which translates cleanly.
             DateTime efuseCutoff = now - EFuseWindow;
 
-            bool slotReclaimed = await _context
+            bool slotReclaimed = await context
                 .Devices.Where(o =>
                     o.LanIp == lanIp
                     && o.Fingerprint != fingerprint
@@ -128,7 +135,7 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
             })
             .ToList();
 
-        List<Device> tracked = await _context
+        List<Device> tracked = await context
             .Devices.Where(d => dropIds.Contains(d.Id))
             .ToListAsync(cancellationToken);
 
@@ -140,7 +147,7 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
 
         foreach ((Ulid _, Guid userId, string name, string reason) in notices)
         {
-            _context.DeviceDropNotices.Add(
+            context.DeviceDropNotices.Add(
                 new DeviceDropNotice
                 {
                     UserId = userId,
@@ -150,7 +157,7 @@ public class DeviceDropRuleCronJob : ICronJobExecutor
             );
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Dropped {Count} devices from registry", toDrop.Count);
     }
