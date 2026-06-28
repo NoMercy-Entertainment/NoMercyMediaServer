@@ -9,6 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace NoMercy.Plugins.Abstractions;
 
 public interface IEncoderPlugin : IPlugin
@@ -17,4 +20,10 @@ public interface IEncoderPlugin : IPlugin
     // opt out (the configured profile stands). The first plugin returning non-null
     // wins.
     EncodingProfile? GetProfile(MediaInfo info);
+
+    // Async variant with cancellation support. The default implementation wraps
+    // the synchronous GetProfile so existing plugins keep working unchanged;
+    // plugins that perform real I/O should override this instead.
+    Task<EncodingProfile?> GetProfileAsync(MediaInfo info, CancellationToken ct = default) =>
+        Task.FromResult(GetProfile(info));
 }
