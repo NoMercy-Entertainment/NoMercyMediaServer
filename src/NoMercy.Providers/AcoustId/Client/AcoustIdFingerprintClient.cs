@@ -17,8 +17,11 @@ namespace NoMercy.Providers.AcoustId.Client;
 
 public class AcoustIdFingerprintClient : AcoustIdBaseClient
 {
-    public AcoustIdFingerprintClient()
+    private readonly IAudioFingerprinter? _fingerprinter;
+
+    public AcoustIdFingerprintClient(IAudioFingerprinter? fingerprinter = null)
     {
+        _fingerprinter = fingerprinter;
         Configuration.ClientKey = ApiKeyStore.Current.AcousticIdKey;
     }
 
@@ -42,8 +45,43 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
         );
     }
 
-    public ValueTask<AcoustIdFingerprint?> Lookup(string? file, bool? priority = false) =>
-        throw new NotSupportedException(
-            "AcoustId fingerprint lookup requires IAudioFingerprinter — see Slice 14."
+    // Fingerprint the file (chromaprint via IAudioFingerprinter), then look the
+    // fingerprint up against AcoustId. Returns null when the file cannot be
+    // fingerprinted or AcoustId has no matching recordings.
+    public async ValueTask<AcoustIdFingerprint?> Lookup(string? file, bool? priority = false)
+    {
+        if (string.IsNullOrWhiteSpace(file))
+        {
+            return null;
+        }
+
+        if (_fingerprinter is null)
+        {
+            throw new InvalidOperationException(
+                "AcoustIdFingerprintClient was constructed without an IAudioFingerprinter; "
+                    + "fingerprint lookup by file requires one."
+            );
+        }
+
+        AudioFingerprint? fingerprint = await _fingerprinter.FingerprintAsync(
+            file,
+            CancellationToken.None
         );
+        if (fingerprint is null || string.IsNullOrWhiteSpace(fingerprint.Fingerprint))
+        {
+            return null;
+        }
+
+        FingerPrintData fingerprintData = new()
+        {
+            Fingerprint = fingerprint.Fingerprint,
+            Duration = fingerprint.DurationSeconds,
+        };
+
+        return await WithFingerprint(
+            ["recordings", "releases", "releasegroups"],
+            fingerprintData,
+            priority
+        );
+    }
 }
