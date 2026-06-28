@@ -38,7 +38,8 @@ jobs:
           for proj in \
             tests/NoMercy.Tests.Queue/NoMercy.Tests.Queue.csproj \
             tests/NoMercy.Tests.Storage/NoMercy.Tests.Storage.csproj \
-            tests/NoMercy.Tests.Events/NoMercy.Tests.Events.csproj ; do
+            tests/NoMercy.Tests.Events/NoMercy.Tests.Events.csproj \
+            tests/NoMercy.Tests.Plugins/NoMercy.Tests.Plugins.csproj ; do
             echo "::group::$proj"
             dotnet test "$proj" \
               --configuration Debug \
