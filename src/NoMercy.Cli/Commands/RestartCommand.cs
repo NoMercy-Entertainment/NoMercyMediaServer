@@ -29,10 +29,10 @@ internal static class RestartCommand
                 if (ok)
                 {
                     Console.WriteLine("Server restart requested.");
-                    return 0;
+                    return (int)ExitCode.Success;
                 }
 
-                return 1;
+                return (int)ExitCode.ServerError;
             }
         );
 

@@ -34,11 +34,11 @@ internal static class AutoStartCommand
                 if (response is null)
                 {
                     await Console.Error.WriteLineAsync("Could not retrieve autostart status.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 Console.WriteLine($"Autostart:    {(response.Enabled ? "enabled" : "disabled")}");
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 
@@ -86,10 +86,10 @@ internal static class AutoStartCommand
         if (ok)
         {
             Console.WriteLine($"Autostart {(enabled ? "enabled" : "disabled")}.");
-            return 0;
+            return (int)ExitCode.Success;
         }
 
-        return 1;
+        return (int)ExitCode.ServerError;
     }
 
     private class AutoStartResponse

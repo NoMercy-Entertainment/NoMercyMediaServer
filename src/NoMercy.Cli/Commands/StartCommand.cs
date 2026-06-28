@@ -38,7 +38,7 @@ internal static class StartCommand
                 if (await IsServerRunning(pipe, ct))
                 {
                     Console.WriteLine("Server is already running.");
-                    return 0;
+                    return (int)ExitCode.Success;
                 }
 
                 ProcessStartInfo? startInfo = FindServerStartInfo(dev);
@@ -46,7 +46,7 @@ internal static class StartCommand
                 if (startInfo is null)
                 {
                     await Console.Error.WriteLineAsync("Could not find server executable.");
-                    return 1;
+                    return (int)ExitCode.ConfigurationError;
                 }
 
                 try
@@ -57,16 +57,16 @@ internal static class StartCommand
                     if (started)
                     {
                         Console.WriteLine("Server started.");
-                        return 0;
+                        return (int)ExitCode.Success;
                     }
 
                     await Console.Error.WriteLineAsync("Failed to start server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
                 catch (Exception e)
                 {
                     await Console.Error.WriteLineAsync($"Failed to start server: {e.Message}");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
             }
         );

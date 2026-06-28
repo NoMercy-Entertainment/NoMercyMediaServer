@@ -33,7 +33,7 @@ internal static class StatusCommand
                 if (status is null)
                 {
                     await Console.Error.WriteLineAsync("Could not connect to server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 TimeSpan uptime = TimeSpan.FromSeconds(status.UptimeSeconds);
@@ -48,7 +48,7 @@ internal static class StatusCommand
                 if (status.IsDev)
                     Console.WriteLine("Mode:         Development");
 
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 

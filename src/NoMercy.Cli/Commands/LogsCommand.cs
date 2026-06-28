@@ -75,14 +75,14 @@ internal static partial class LogsCommand
                 if (logs is null)
                 {
                     await Console.Error.WriteLineAsync("Could not connect to server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 foreach (LogEntryResponse entry in logs)
                     PrintEntry(entry);
 
                 if (!follow)
-                    return 0;
+                    return (int)ExitCode.Success;
 
                 // Stream via SSE
                 using IpcClient ipc = new(pipe);
@@ -158,10 +158,10 @@ internal static partial class LogsCommand
                 catch (Exception ex)
                 {
                     await Console.Error.WriteLineAsync($"Stream disconnected: {ex.Message}");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 

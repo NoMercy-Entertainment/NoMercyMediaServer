@@ -41,7 +41,7 @@ internal static class UpdateCommand
                     await Console.Error.WriteLineAsync(
                         downloadResponse?.Message ?? "Failed to download update."
                     );
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 Console.WriteLine(downloadResponse.Message);
@@ -52,7 +52,7 @@ internal static class UpdateCommand
                 if (!stopped)
                 {
                     await Console.Error.WriteLineAsync("Failed to send stop command.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 // Step 3: Wait for exit
@@ -77,7 +77,7 @@ internal static class UpdateCommand
                 if (!File.Exists(tempPath))
                 {
                     await Console.Error.WriteLineAsync("No staged update file found.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 if (File.Exists(currentPath))
@@ -87,7 +87,7 @@ internal static class UpdateCommand
                 await FilePermissions.SetExecutionPermissions(currentPath);
 
                 Console.WriteLine("Update applied. Start the server to use the new version.");
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 

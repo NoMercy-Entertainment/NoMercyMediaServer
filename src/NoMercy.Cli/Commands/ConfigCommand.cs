@@ -35,7 +35,7 @@ internal static class ConfigCommand
                 if (config is null)
                 {
                     await Console.Error.WriteLineAsync("Could not connect to server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 Console.WriteLine($"Server Name:      {config.ServerName}");
@@ -49,7 +49,7 @@ internal static class ConfigCommand
                 Console.WriteLine($"File Workers:     {config.FileWorkers}");
                 Console.WriteLine($"Request Workers:  {config.RequestWorkers}");
                 Console.WriteLine($"Swagger:          {config.Swagger}");
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 
@@ -81,10 +81,10 @@ internal static class ConfigCommand
                 if (ok)
                 {
                     Console.WriteLine($"Configuration updated: {key} = {val}");
-                    return 0;
+                    return (int)ExitCode.Success;
                 }
 
-                return 1;
+                return (int)ExitCode.ServerError;
             }
         );
 

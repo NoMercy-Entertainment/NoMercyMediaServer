@@ -33,7 +33,7 @@ internal static class QueueCommand
                 if (queue is null)
                 {
                     await Console.Error.WriteLineAsync("Could not connect to server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 Console.WriteLine($"Pending Jobs:  {queue.PendingJobs}");
@@ -50,7 +50,7 @@ internal static class QueueCommand
                     }
                 }
 
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 

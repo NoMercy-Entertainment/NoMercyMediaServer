@@ -33,7 +33,7 @@ internal static class ResourcesCommand
                 if (resources is null)
                 {
                     await Console.Error.WriteLineAsync("Could not retrieve resource information.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 Console.WriteLine(
@@ -67,7 +67,7 @@ internal static class ResourcesCommand
                     }
                 }
 
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 

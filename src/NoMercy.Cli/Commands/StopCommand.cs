@@ -29,10 +29,10 @@ internal static class StopCommand
                 if (ok)
                 {
                     Console.WriteLine("Server is shutting down.");
-                    return 0;
+                    return (int)ExitCode.Success;
                 }
 
-                return 1;
+                return (int)ExitCode.ServerError;
             }
         );
 

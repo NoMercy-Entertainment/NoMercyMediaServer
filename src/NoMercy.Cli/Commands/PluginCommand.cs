@@ -33,13 +33,13 @@ internal static class PluginCommand
                 if (plugins is null)
                 {
                     await Console.Error.WriteLineAsync("Could not connect to server.");
-                    return 1;
+                    return (int)ExitCode.ServerError;
                 }
 
                 if (plugins.Count == 0)
                 {
                     Console.WriteLine("No plugins installed.");
-                    return 0;
+                    return (int)ExitCode.Success;
                 }
 
                 Console.WriteLine($"{"Name", -25} {"Version", -12} {"Status", -10} {"Author"}");
@@ -49,7 +49,7 @@ internal static class PluginCommand
                     Console.WriteLine($"{p.Name, -25} {p.Version, -12} {p.Status, -10} {p.Author}");
                 }
 
-                return 0;
+                return (int)ExitCode.Success;
             }
         );
 
