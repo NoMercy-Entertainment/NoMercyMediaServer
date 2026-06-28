@@ -811,7 +811,8 @@ public class SetupEndpoints
 
             if (Start.NetworkDiscovery is not null)
                 await Start.NetworkDiscovery.DiscoverExternalIpAsync();
-            await _serverRegistrationService.Init();
+            using CancellationTokenSource registrationTimeoutCts = new(TimeSpan.FromMinutes(2));
+            await _serverRegistrationService.Init().WaitAsync(registrationTimeoutCts.Token);
 
             _state.TransitionTo(SetupPhase.Registered);
             _terminalUi?.ShowProgress("Registered", "Setting up your server address...");
@@ -835,6 +836,15 @@ public class SetupEndpoints
             {
                 _state.SetError("Registration completed but certificate was not acquired");
             }
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.Setup(
+                "Post-auth registration timed out (registration_timeout)",
+                LogEventLevel.Error
+            );
+            _state.SetError("Registration timed out. Please check your connection and try again.");
+            _state.TransitionTo(SetupPhase.Authenticated);
         }
         catch (Exception ex)
         {

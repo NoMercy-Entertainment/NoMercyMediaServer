@@ -14,8 +14,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.DTOs.Common;
-using NoMercy.Authorization;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers;
@@ -39,7 +39,7 @@ public class BaseController : Controller
         ProblemDetails problemDetails = new()
         {
             Type = type,
-            Title = title,
+            Title = title.Localize(),
             Detail = detail.Localize(),
             Instance = HttpContext.Request.Path,
             Status = statusCode,
