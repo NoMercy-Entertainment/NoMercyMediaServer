@@ -1,0 +1,50 @@
+name: 'Refactor Slices Tests (temporary)'
+
+# TEMPORARY validation workflow for the refactor/slices branch.
+#
+# The architectural refactor (slices 9-19) adds unit tests that do not yet carry
+# a Category trait, so they are excluded by the fast `test` workflow's
+# "(Category=Unit|...)" filter and would otherwise only run on master. This
+# workflow runs the refactor-touched test projects on every push to
+# refactor/slices with no positive Category filter (Integration is still
+# excluded so it never needs ffmpeg / a live S3 / WebDAV / DB), giving real
+# execution of the mocked driver/queue tests until the branch merges.
+#
+# Delete this file once refactor/slices lands on master.
+
+on:
+  push:
+    branches:
+      - refactor/slices
+  workflow_dispatch:
+
+jobs:
+  refactor-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: Setup .NET Environment
+        uses: ./.github/actions/setup-dotnet
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Run refactor-targeted test projects
+        run: |
+          set -e
+          for proj in \
+            tests/NoMercy.Tests.Queue/NoMercy.Tests.Queue.csproj \
+            tests/NoMercy.Tests.Storage/NoMercy.Tests.Storage.csproj \
+            tests/NoMercy.Tests.Events/NoMercy.Tests.Events.csproj ; do
+            echo "::group::$proj"
+            dotnet test "$proj" \
+              --configuration Debug \
+              --verbosity minimal \
+              --logger trx \
+              --blame-hang-timeout 5m \
+              --filter "Category!=Integration"
+            echo "::endgroup::"
+          done
