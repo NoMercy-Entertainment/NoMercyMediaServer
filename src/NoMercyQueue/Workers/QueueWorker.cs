@@ -20,17 +20,6 @@ using Exception = System.Exception;
 
 namespace NoMercyQueue.Workers;
 
-/// <summary>
-/// Names of queues whose jobs participate in resource-budget gating.
-/// Workers on these queues check <see cref="IResourceBudget"/> before
-/// running a job and re-queue it when the budget is saturated.
-/// </summary>
-internal static class ResourceAwareQueues
-{
-    internal static bool IsResourceAware(string queueName) =>
-        queueName is "encoder-gpu" or "encoder-cpu";
-}
-
 public class QueueWorker(
     JobQueue queue,
     string name = "default",
@@ -39,7 +28,8 @@ public class QueueWorker(
     IServiceScopeFactory? scopeFactory = null,
     IServerReadinessGate? readinessGate = null,
     IServerPhaseTracker? phaseTracker = null,
-    IResourceBudget? resourceBudget = null
+    IResourceBudget? resourceBudget = null,
+    IReadOnlySet<string>? resourceAwareQueues = null
 )
 {
     private static readonly TimeSpan BudgetRetryDelay = TimeSpan.FromSeconds(5);
@@ -126,7 +116,7 @@ public class QueueWorker(
                 // again after a short delay.
                 ResourceLease? lease = null;
 
-                if (resourceBudget is not null && ResourceAwareQueues.IsResourceAware(name))
+                if (resourceBudget is not null && resourceAwareQueues?.Contains(name) == true)
                 {
                     if (!TryAcquireBudget(job, out lease))
                     {

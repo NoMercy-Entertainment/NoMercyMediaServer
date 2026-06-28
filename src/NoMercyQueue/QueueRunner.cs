@@ -49,6 +49,7 @@ public class QueueRunner
     private readonly IServiceScopeFactory? _scopeFactory;
     private readonly NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? _phaseTracker;
     private readonly IResourceBudget? _resourceBudget;
+    private readonly IReadOnlySet<string> _resourceAwareQueues;
 
     /// <summary>
     /// Static accessor for non-DI code paths (jobs, logic classes).
@@ -70,13 +71,15 @@ public class QueueRunner
         IConfigurationStore? configurationStore = null,
         IServiceScopeFactory? scopeFactory = null,
         NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker = null,
-        IResourceBudget? resourceBudget = null
+        IResourceBudget? resourceBudget = null,
+        IReadOnlySet<string>? resourceAwareQueues = null
     )
     {
         _configurationStore = configurationStore;
         _scopeFactory = scopeFactory;
         _phaseTracker = phaseTracker;
         _resourceBudget = resourceBudget;
+        _resourceAwareQueues = resourceAwareQueues ?? new HashSet<string>();
         _logger = loggerFactory.CreateLogger<QueueRunner>();
         _jobQueue = new(
             queueContext,
@@ -189,9 +192,7 @@ public class QueueRunner
 
     private void SpawnWorker(string name)
     {
-        IResourceBudget? budget = ResourceAwareQueues.IsResourceAware(name)
-            ? _resourceBudget
-            : null;
+        IResourceBudget? budget = _resourceAwareQueues.Contains(name) ? _resourceBudget : null;
 
         QueueWorker queueWorkerInstance = new(
             _jobQueue,
@@ -199,7 +200,8 @@ public class QueueRunner
             this,
             scopeFactory: _scopeFactory,
             phaseTracker: _phaseTracker,
-            resourceBudget: budget
+            resourceBudget: budget,
+            resourceAwareQueues: _resourceAwareQueues
         );
 
         queueWorkerInstance.WorkCompleted += QueueWorkerCompleted(name, queueWorkerInstance);

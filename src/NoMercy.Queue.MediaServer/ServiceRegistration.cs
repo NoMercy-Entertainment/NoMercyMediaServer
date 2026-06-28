@@ -68,6 +68,12 @@ public static class ServiceRegistration
                     [rs.PaletteWorkers.Key] = rs.PaletteWorkers.Value,
                 },
             };
+            IReadOnlySet<string> resourceAwareQueues = new HashSet<string>
+            {
+                rs.GpuEncoderWorkers.Key,
+                rs.CpuEncoderWorkers.Key,
+            };
+
             return new(
                 queueContext,
                 configuration,
@@ -75,7 +81,8 @@ public static class ServiceRegistration
                 configStore,
                 scopeFactory,
                 phaseTracker,
-                resourceBudget
+                resourceBudget,
+                resourceAwareQueues
             );
         });
         services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
