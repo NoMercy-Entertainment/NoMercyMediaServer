@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercyQueue.Core;
+
 namespace NoMercy.NmSystem.Configuration;
 
 // Process-wide mutable runtime server settings: hydrated from the database
@@ -26,29 +28,32 @@ public class RuntimeServerSettings
 
     public int StunPort => InternalServerPort + 1;
 
-    public KeyValuePair<string, int> LibraryWorkers { get; set; } = new("library", 1);
+    public KeyValuePair<string, int> LibraryWorkers { get; set; } = new(QueueNames.Library, 1);
 
-    public KeyValuePair<string, int> ImportWorkers { get; set; } = new("import", 2);
+    public KeyValuePair<string, int> ImportWorkers { get; set; } = new(QueueNames.Import, 2);
 
-    public KeyValuePair<string, int> ExtrasWorkers { get; set; } = new("extras", 4);
+    public KeyValuePair<string, int> ExtrasWorkers { get; set; } = new(QueueNames.Extras, 4);
 
-    public KeyValuePair<string, int> EncoderWorkers { get; set; } = new("encoder", 1);
+    public KeyValuePair<string, int> EncoderWorkers { get; set; } = new(QueueNames.Encoder, 1);
 
-    public KeyValuePair<string, int> EncoderTaskWorkers { get; set; } = new("encoder-task", 0);
+    public KeyValuePair<string, int> EncoderTaskWorkers { get; set; } =
+        new(QueueNames.EncoderTask, 0);
 
-    public KeyValuePair<string, int> GpuEncoderWorkers { get; set; } = new("encoder-gpu", 1);
+    public KeyValuePair<string, int> GpuEncoderWorkers { get; set; } =
+        new(QueueNames.EncoderGpu, 1);
 
-    public KeyValuePair<string, int> CpuEncoderWorkers { get; set; } = new("encoder-cpu", 1);
+    public KeyValuePair<string, int> CpuEncoderWorkers { get; set; } =
+        new(QueueNames.EncoderCpu, 1);
 
-    public KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);
+    public KeyValuePair<string, int> CronWorkers { get; set; } = new(QueueNames.Cron, 1);
 
-    public KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 3);
+    public KeyValuePair<string, int> ImageWorkers { get; set; } = new(QueueNames.Image, 3);
 
-    public KeyValuePair<string, int> FileWorkers { get; set; } = new("file", 2);
+    public KeyValuePair<string, int> FileWorkers { get; set; } = new(QueueNames.File, 2);
 
-    public KeyValuePair<string, int> MusicWorkers { get; set; } = new("music", 2);
+    public KeyValuePair<string, int> MusicWorkers { get; set; } = new(QueueNames.Music, 2);
 
-    public KeyValuePair<string, int> PaletteWorkers { get; set; } = new("palette", 1);
+    public KeyValuePair<string, int> PaletteWorkers { get; set; } = new(QueueNames.Palette, 1);
 
     public bool Swagger { get; set; } = true;
 

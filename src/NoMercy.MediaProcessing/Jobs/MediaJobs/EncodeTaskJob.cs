@@ -33,6 +33,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercyQueue;
+using NoMercyQueue.Core;
 using NoMercyQueue.Core.Resources;
 using Serilog.Events;
 
@@ -61,7 +62,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
     }
 
     public override string QueueName =>
-        Task.Resources?.GpuDeviceKey is not null ? "encoder-gpu" : "encoder-cpu";
+        Task.Resources?.GpuDeviceKey is not null ? QueueNames.EncoderGpu : QueueNames.EncoderCpu;
 
     public override int Priority => 4;
 

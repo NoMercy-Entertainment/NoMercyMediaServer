@@ -12,6 +12,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NoMercyQueue.Core;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 
@@ -35,7 +36,12 @@ public class OrphanJobRecoveryHostedService(
 {
     private static readonly TimeSpan OrphanCutoff = TimeSpan.FromSeconds(30);
     private const string InterruptedReason = "job.interrupted_no_checkpoint";
-    private static readonly string[] EncoderQueues = ["encoder", "encoder-gpu", "encoder-cpu"];
+    private static readonly string[] EncoderQueues =
+    [
+        QueueNames.Encoder,
+        QueueNames.EncoderGpu,
+        QueueNames.EncoderCpu,
+    ];
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
