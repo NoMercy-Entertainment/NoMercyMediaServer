@@ -57,7 +57,18 @@ internal static class UpdateCommand
 
                 // Step 3: Wait for exit
                 Console.WriteLine("Waiting for server to exit...");
-                await WaitForServerExitAsync(TimeSpan.FromSeconds(30), ct);
+                bool exited = await WaitForServerExitAsync(
+                    client,
+                    TimeSpan.FromSeconds(30),
+                    ct
+                );
+                if (!exited)
+                {
+                    await Console.Error.WriteLineAsync(
+                        "Warning: the server did not confirm it had stopped within 30s; "
+                            + "applying the update anyway."
+                    );
+                }
 
                 // Step 4: Apply the file swap
                 string tempPath = AppFiles.ServerTempExePath;
@@ -83,21 +94,58 @@ internal static class UpdateCommand
         return command;
     }
 
-    private static async Task WaitForServerExitAsync(TimeSpan timeout, CancellationToken ct)
+    private static async Task<bool> WaitForServerExitAsync(
+        CliClient client,
+        TimeSpan timeout,
+        CancellationToken ct
+    )
     {
         using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(timeout);
 
-        while (!cts.Token.IsCancellationRequested)
+        while (true)
         {
+            if (await HasServerStoppedRespondingAsync(client, cts.Token))
+            {
+                return true;
+            }
+
             try
             {
                 await Task.Delay(500, cts.Token);
             }
             catch (OperationCanceledException)
             {
-                return;
+                // Re-throw a genuine caller cancellation; a fired timeout simply
+                // means the server never confirmed that it stopped.
+                ct.ThrowIfCancellationRequested();
+                return false;
             }
+        }
+    }
+
+    // Returns true only when the server's management endpoint is provably
+    // unreachable (connection refused / pipe closed), which means the process
+    // has exited and the file swap is safe. Any successful or merely
+    // unsuccessful HTTP response is treated as "still running" so a transient
+    // error can never trigger a premature swap.
+    private static async Task<bool> HasServerStoppedRespondingAsync(
+        CliClient client,
+        CancellationToken ct
+    )
+    {
+        try
+        {
+            await client.GetRawAsync(ApiRoutes.Status, ct);
+            return false;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch
+        {
+            return true;
         }
     }
 
