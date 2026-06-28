@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NoMercy.Providers\NoMercy.Providers.csproj" />
+    <ProjectReference Include="..\NoMercy.Tests.Common\NoMercy.Tests.Common.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Database\NoMercy.Database.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Storage\NoMercy.Storage.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
