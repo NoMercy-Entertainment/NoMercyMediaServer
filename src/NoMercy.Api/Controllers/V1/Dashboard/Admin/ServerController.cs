@@ -263,7 +263,7 @@ public class ServerController(
         }
         catch (Exception e)
         {
-            Logger.App(e, LogEventLevel.Error);
+            logger.LogError(e, "Failed to add file to library");
             return BadRequestResponse(e.Message);
         }
     }

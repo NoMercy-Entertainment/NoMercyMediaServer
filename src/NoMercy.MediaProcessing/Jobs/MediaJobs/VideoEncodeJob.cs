@@ -242,7 +242,7 @@ public class VideoEncodeJob : AbstractEncoderJob, IJobIdReceiver, IJobStorageInj
             }
             catch (Exception ex)
             {
-                Logger.Encoder(ex, LogEventLevel.Error);
+                Log.LogError(ex, "Video encode task failed");
 
                 if (EventBusProvider.IsConfigured)
                 {

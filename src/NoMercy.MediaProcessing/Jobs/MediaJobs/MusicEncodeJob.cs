@@ -192,7 +192,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             }
             catch (Exception e)
             {
-                Logger.Encoder(e, LogEventLevel.Error);
+                Log.LogError(e, "Music encode task failed");
 
                 if (EventBusProvider.IsConfigured)
                 {
