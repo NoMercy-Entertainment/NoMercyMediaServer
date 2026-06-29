@@ -161,3 +161,42 @@ Server/Management/Image/Filesystem/Configuration/UserData ; middleware
 HubErrorLoggingFilter/EncoderRuntimeException) ; EventHandlers ; Services
 (Encoder/Recommendation/VideoPlayback). SKIP LogController, LogBroadcastService,
 WebSockets/ResourceMonitorService (management-API consumers).
+
+### Reusable transformer: scripts/migrate_logger.py  (committed de4db3a7)
+String/char/verbatim/interpolation-aware paren matcher — correctly handles
+multi-line calls, mixed levels, and parens INSIDE interpolated strings
+(e.g. `$"(id={x})"`). Rewrites `Logger.<Category>(...)` → `<expr>.Log<Level>(...)`,
+stripping a trailing `LogEventLevel.X` arg (else uses the category default level).
+Management-API members (LogEmitted/GetLogs/SetLogLevel/LogTypes/LogType/WriteBanner/
+GetColor/Write) are NOT in the category set, so they're left untouched.
+- Dry report:  `python3 scripts/migrate_logger.py --dry <expr> <file>...`
+- Apply:       `python3 scripts/migrate_logger.py --apply <expr> <file>...`
+- In apply mode it SKIPS calls whose sole remaining arg is a bare identifier
+  (`[IDENT-ARG]`, almost always an exception) — fix those by hand as
+  `<expr>.LogError(e, e.Message)`.
+- Import in a driver via `from migrate_logger import rewrite` (has an
+  `if __name__=='__main__'` guard now — importing does NOT run main()).
+- Driver does the ctor plumbing (add `ILogger<T>` first param; field `_logger`
+  for classic ctors, param `logger` for primary ctors), then `rewrite`, then
+  manual ident fixes. ALWAYS verify residual with regex `\bLogger\.` (NOT the
+  substring "Logger." — that false-positives on `activityLogger.`).
+
+### IMPORTANT: skip files that call the log-management API in the mechanical pass
+ServerController calls `Logger.SetLogLevel(level)` → DEFERRED (mixes management
+API with emit calls; can't fully convert until SetLogLevel is re-provided on the
+new provider). Same family: LogController, LogBroadcastService, WebSockets/
+ResourceMonitorService. Verify each file has no `\bLogger\.(SetLogLevel|GetLogs|
+LogEmitted|LogTypes|LogType|WriteBanner|GetColor|Write)\b` before converting.
+
+### More commits landed
+- 8cd9169f media controllers; a133e880 music controllers; bcf432f3 config/userdata/filesystem
+- b24b922c SignalR event handlers (+EventHandlerExtensions DI +tests, 17/17)
+- 0ca9e60d encoder/recommendation/video services
+- de4db3a7 drivers/image/libraries/home controllers + migrate_logger.py
+
+### Api remaining (mechanical)
+ManagementController (verify no mgmt-API first), middleware (GlobalExceptionHandler,
+TokenParamAuth, AccessLog, DynamicStaticFiles, HubErrorLoggingFilter ×16,
+EncoderRuntimeException), SignalRLibraryRefreshEventHandler, EncoderRuntimeException.
+DEFER: ServerController, LogController, LogBroadcastService, ResourceMonitorService.
+Then Networking → Service → Setup → Data → MediaProcessing using the transformer.
