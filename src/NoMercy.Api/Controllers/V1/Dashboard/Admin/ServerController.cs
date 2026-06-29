@@ -53,6 +53,7 @@ using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 using Image = NoMercy.Database.Models.Media.Image;
 using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
@@ -61,6 +62,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/server", Order = 10)]
 public class ServerController(
+    ILogger<ServerController> logger,
     ResourceMonitor resourceMonitor,
     IUpdateChecker updateChecker,
     IHostApplicationLifetime appLifetime,
@@ -228,7 +230,7 @@ public class ServerController(
         {
             if (library.Type == "music")
             {
-                Logger.App("Adding music files to library", LogEventLevel.Verbose);
+                logger.LogTrace("Adding music files to library");
                 string directoryPath =
                     isRemoteDriver || isRemoteSource
                         ? request.Files[0].Path
@@ -294,10 +296,7 @@ public class ServerController(
     public async Task<IActionResult> FileList([FromBody] FileListRequest request)
     {
         System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
-        Logger.App(
-            $"[FileList] folder={request.Folder} type={request.Type} driver={request.DriverId}",
-            LogEventLevel.Information
-        );
+        logger.LogInformation("[FileList] folder={Folder} type={Type} driver={DriverId}", request.Folder, request.Type, request.DriverId);
 
         IStorage? resolvedStorage = null;
         if (!string.IsNullOrWhiteSpace(request.DriverId))
@@ -324,10 +323,7 @@ public class ServerController(
                 audioFingerprinter
             );
 
-            Logger.App(
-                $"[FileList] returned {fileList.Count} entries in {sw.ElapsedMilliseconds}ms (music)",
-                LogEventLevel.Information
-            );
+            logger.LogInformation("[FileList] returned {Count} entries in {ElapsedMilliseconds}ms (music)", fileList.Count, sw.ElapsedMilliseconds);
 
             return Ok(
                 new DataResponseDto<FileListResponseDto>
@@ -346,10 +342,7 @@ public class ServerController(
                 )
                 : await fileListService.GetFilesInDirectory(request.Folder, request.Type);
 
-            Logger.App(
-                $"[FileList] returned {fileList.Count} entries in {sw.ElapsedMilliseconds}ms",
-                LogEventLevel.Information
-            );
+            logger.LogInformation("[FileList] returned {Count} entries in {ElapsedMilliseconds}ms", fileList.Count, sw.ElapsedMilliseconds);
 
             return Ok(
                 new DataResponseDto<FileListResponseDto>
@@ -637,7 +630,7 @@ public class ServerController(
         if (string.IsNullOrEmpty(request.Ip))
             return BadRequestResponse("New IP address is required");
 
-        Logger.App($"Changing IP address to {request.Ip}");
+        logger.LogInformation("Changing IP address to {Ip}", request.Ip);
 
         networkDiscovery.InternalIp = request.Ip;
 

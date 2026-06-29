@@ -34,6 +34,7 @@ using NoMercyQueue;
 using Serilog.Events;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.Api.Controllers;
 
 [ApiController]
@@ -42,6 +43,7 @@ namespace NoMercy.Api.Controllers;
 [LocalhostOnly]
 [Tags("Management")]
 public class ManagementController(
+    ILogger<ManagementController> logger,
     ResourceMonitor resourceMonitor,
     IHostApplicationLifetime appLifetime,
     AppDbContext appContext,
@@ -245,7 +247,7 @@ public class ManagementController(
 
             if (storageDriver.FileExists(tempPath))
             {
-                Logger.Setup("Update already staged, skipping download.");
+                logger.LogInformation("Update already staged, skipping download.");
                 return Ok(
                     new
                     {
@@ -265,9 +267,7 @@ public class ManagementController(
                 && diskVer > runVer
             )
             {
-                Logger.Setup(
-                    $"Binary on disk is already {onDiskVersion} (running {runningVersion}), restart will apply the update."
-                );
+                logger.LogInformation("Binary on disk is already {OnDiskVersion} (running {RunningVersion}), restart will apply the update.", onDiskVersion, runningVersion);
                 return Ok(
                     new
                     {
@@ -277,7 +277,7 @@ public class ManagementController(
                 );
             }
 
-            Logger.Setup("Downloading server update on demand...");
+            logger.LogInformation("Downloading server update on demand...");
             ServerUpdateResult result = await new Binaries(
                 storageDriver,
                 storage
@@ -316,17 +316,14 @@ public class ManagementController(
                 case ServerUpdateResult.Downloaded:
                     if (!storageDriver.FileExists(tempPath))
                     {
-                        Logger.Setup(
-                            $"Server update staged file missing at {tempPath} after successful download",
-                            LogEventLevel.Error
-                        );
+                        logger.LogError("Server update staged file missing at {TempPath} after successful download", tempPath);
                         return InternalServerErrorResponse(
                             "Download completed but staged file not found. This may be caused by antivirus software quarantining the file."
                         );
                     }
 
                     long fileSize = storageDriver.GetFileSize(tempPath);
-                    Logger.Setup($"Server update staged at {tempPath} ({fileSize} bytes)");
+                    logger.LogInformation("Server update staged at {TempPath} ({FileSize} bytes)", tempPath, fileSize);
                     return Ok(
                         new
                         {
@@ -343,7 +340,7 @@ public class ManagementController(
         }
         catch (Exception e)
         {
-            Logger.Setup($"Failed to download update: {e.Message}", LogEventLevel.Error);
+            logger.LogError("Failed to download update: {Message}", e.Message);
             return InternalServerErrorResponse("Failed to download update");
         }
     }

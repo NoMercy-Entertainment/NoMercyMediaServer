@@ -13,9 +13,11 @@ using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.Api.WebSockets;
 
 public class ResourceMonitorService(
+    ILogger<ResourceMonitorService> logger,
     ResourceMonitor resourceMonitor,
     IClientMessenger clientMessenger
 ) : IResourceMonitorService
@@ -37,7 +39,7 @@ public class ResourceMonitorService(
             _cancellationTokenSource = new();
         }
 
-        Logger.Socket("Starting resource monitoring broadcast");
+        logger.LogInformation("Starting resource monitoring broadcast");
         CancellationToken token = _cancellationTokenSource.Token;
         _ = Task.Run(async () =>
         {
@@ -47,10 +49,7 @@ public class ResourceMonitorService(
             }
             catch (Exception ex)
             {
-                Logger.Socket(
-                    $"Resource monitor broadcast loop crashed: {ex.Message}",
-                    LogEventLevel.Error
-                );
+                logger.LogError("Resource monitor broadcast loop crashed: {Message}", ex.Message);
             }
         });
     }
@@ -64,7 +63,7 @@ public class ResourceMonitorService(
             _broadcasting = false;
         }
 
-        Logger.Socket("Stopping resource monitoring broadcast");
+        logger.LogInformation("Stopping resource monitoring broadcast");
         try
         {
             _cancellationTokenSource?.Cancel();
@@ -94,10 +93,7 @@ public class ResourceMonitorService(
             }
             catch (Exception e)
             {
-                Logger.Socket(
-                    $"Error broadcasting resource data: {e.Message}",
-                    LogEventLevel.Error
-                );
+                logger.LogError("Error broadcasting resource data: {Message}", e.Message);
             }
         }
     }
