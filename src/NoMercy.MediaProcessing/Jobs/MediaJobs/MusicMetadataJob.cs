@@ -20,6 +20,7 @@ using NoMercy.Providers.Tadb.Client;
 using NoMercy.Providers.Tadb.Models;
 using Serilog.Events;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 [Serializable]
@@ -103,7 +104,7 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         {
             if (e.Message.Contains("404"))
                 return;
-            Logger.AudioDb(e.Message, LogEventLevel.Verbose);
+            Log.LogTrace(e.Message);
         }
     }
 
@@ -163,7 +164,7 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         {
             if (e.Message.Contains("404"))
                 return;
-            Logger.AudioDb(e.Message, LogEventLevel.Verbose);
+            Log.LogTrace(e.Message);
         }
     }
 }

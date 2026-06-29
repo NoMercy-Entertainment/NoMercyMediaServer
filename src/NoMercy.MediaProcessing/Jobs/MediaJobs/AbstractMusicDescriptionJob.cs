@@ -15,18 +15,33 @@
 
 using NoMercyQueue.Core.Interfaces;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using NoMercyQueue;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractMusicDescriptionJob : IShouldQueue
+public abstract class AbstractMusicDescriptionJob : IShouldQueue, IJobStorageInjector
 {
+    [JsonIgnore]
+    public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
     public abstract Task Handle();
+
+    public void InjectStorageServices(IServiceProvider serviceProvider)
+    {
+        LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    }
 
     public void Dispose() { }
 }
