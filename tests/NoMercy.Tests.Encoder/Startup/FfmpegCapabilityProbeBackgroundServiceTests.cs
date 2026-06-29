@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.Startup;
 
+using NoMercy.NmSystem.Lifecycle;
 namespace NoMercy.Tests.Encoder.Startup;
 
 /// <summary>
@@ -25,6 +26,15 @@ namespace NoMercy.Tests.Encoder.Startup;
 /// </summary>
 public class FfmpegCapabilityProbeBackgroundServiceTests
 {
+    private static IServerPhaseTracker CompletedPhaseTracker()
+    {
+        Mock<IServerPhaseTracker> tracker = new();
+        tracker
+            .Setup(t => t.WhenReachedAsync(It.IsAny<BootStage>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        return tracker.Object;
+    }
+
     [Fact]
     public async Task ExecuteAsync_WaitsForApplicationStarted_BeforeProbing()
     {
@@ -44,6 +54,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
             probe.Object,
             lifetime,
             NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
+            CompletedPhaseTracker(),
             initialGrace: TimeSpan.Zero
         );
 
@@ -83,6 +94,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
             probe.Object,
             lifetime,
             NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
+            CompletedPhaseTracker(),
             initialGrace: TimeSpan.Zero
         );
 
@@ -102,6 +114,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
             probe.Object,
             lifetime,
             NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
+            CompletedPhaseTracker(),
             initialGrace: TimeSpan.Zero
         );
 
@@ -131,6 +144,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
             probe.Object,
             lifetime,
             NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
+            CompletedPhaseTracker(),
             initialGrace: TimeSpan.FromSeconds(5)
         );
 
@@ -161,6 +175,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
             probe.Object,
             lifetime,
             NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
+            CompletedPhaseTracker(),
             initialGrace: TimeSpan.Zero
         );
 

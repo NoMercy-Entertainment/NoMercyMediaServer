@@ -11,6 +11,7 @@
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NoMercy.NmSystem.Lifecycle;
 
 namespace NoMercy.OpticalMedia.Capabilities;
 
@@ -23,7 +24,8 @@ namespace NoMercy.OpticalMedia.Capabilities;
 public sealed class BluRayCapabilityStartupService(
     FfmpegBluRayCapability capability,
     IHostApplicationLifetime lifetime,
-    ILogger<BluRayCapabilityStartupService> logger
+    ILogger<BluRayCapabilityStartupService> logger,
+    IServerPhaseTracker phaseTracker
 ) : BackgroundService
 {
     private static readonly TimeSpan InitialGrace = TimeSpan.FromSeconds(5);
@@ -46,6 +48,7 @@ public sealed class BluRayCapabilityStartupService(
 
         try
         {
+            await phaseTracker.WhenReachedAsync(BootStage.Binaries, stoppingToken).ConfigureAwait(false);
             await Task.Delay(InitialGrace, stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
