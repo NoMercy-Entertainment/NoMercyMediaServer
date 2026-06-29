@@ -92,7 +92,7 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
             NullLogger<StorageFactory>.Instance,
             driverConfigResolver
         );
-        await using FileLogic file = new(Id, library, context, storageFactory, storageDriver);
+        await using FileLogic file = new(Id, library, context, storageFactory, storageDriver, LoggerFactory.CreateLogger<FileLogic>());
         await file.Process();
 
         if (file.Files.Count > 0)

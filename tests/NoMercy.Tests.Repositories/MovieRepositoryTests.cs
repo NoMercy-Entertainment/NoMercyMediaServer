@@ -16,6 +16,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Tests.Repositories.Infrastructure;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace NoMercy.Tests.Repositories;
 
 [Trait("Category", "Characterization")]
@@ -30,7 +31,7 @@ public class MovieRepositoryTests : IDisposable
     {
         (_factory, _connection) = TestMediaContextFactory.CreateSeededFactory();
         _context = _factory.CreateDbContext();
-        _repository = new(_factory);
+        _repository = new(_factory, NullLogger<MovieRepository>.Instance);
     }
 
     [Fact]

@@ -26,6 +26,7 @@ using NoMercy.Storage;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.Data.Services;
 
 public partial class FileLogic(
@@ -33,7 +34,8 @@ public partial class FileLogic(
     Library library,
     MediaContext mediaContext,
     IStorageFactory storageFactory,
-    IStorageDriver storageDriver
+    IStorageDriver storageDriver,
+    ILogger<FileLogic> logger
 ) : IDisposable, IAsyncDisposable
 {
     private int Id { get; set; } = id;
@@ -71,7 +73,7 @@ public partial class FileLogic(
                 await StoreMusic();
                 break;
             default:
-                Logger.App("Unknown library type");
+                logger.LogInformation("Unknown library type");
                 break;
         }
     }
@@ -248,7 +250,7 @@ public partial class FileLogic(
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            logger.LogError(e.Message);
         }
     }
 

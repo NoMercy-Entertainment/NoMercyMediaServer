@@ -15,6 +15,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Tests.Repositories.Infrastructure;
 
+using Microsoft.Extensions.Logging.Abstractions;
 namespace NoMercy.Tests.Repositories;
 
 /// <summary>
@@ -52,7 +53,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAsync_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(_homeFactory);
+        MovieRepository repository = new(_homeFactory, NullLogger<MovieRepository>.Instance);
         _interceptor.Clear();
 
         await repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
@@ -67,7 +68,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieAvailableAsync_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(_homeFactory);
+        MovieRepository repository = new(_homeFactory, NullLogger<MovieRepository>.Instance);
         _interceptor.Clear();
 
         await repository.GetMovieAvailableAsync(SeedConstants.UserId, 129);
@@ -82,7 +83,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMoviePlaylistAsync_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(_homeFactory);
+        MovieRepository repository = new(_homeFactory, NullLogger<MovieRepository>.Instance);
         _interceptor.Clear();
 
         await repository.GetMoviePlaylistAsync(SeedConstants.UserId, 129, "en", "US");
@@ -97,7 +98,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_DeleteMovieAsync_GeneratesDeleteSql()
     {
-        MovieRepository repository = new(_homeFactory);
+        MovieRepository repository = new(_homeFactory, NullLogger<MovieRepository>.Instance);
         _interceptor.Clear();
 
         await repository.DeleteAsync(999);
@@ -935,7 +936,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task MovieRepository_GetMovieDetailAsync_CompiledQuery_GeneratesExpectedSql()
     {
-        MovieRepository repository = new(_homeFactory);
+        MovieRepository repository = new(_homeFactory, NullLogger<MovieRepository>.Instance);
         _interceptor.Clear();
 
         await repository.GetMovieDetailAsync(SeedConstants.UserId, 129, "en", "US");
