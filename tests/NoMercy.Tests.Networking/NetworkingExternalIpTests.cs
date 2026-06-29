@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Status;
@@ -105,6 +106,7 @@ public class NetworkingExternalIpTests
     {
         // After setting ExternalIp, the getter returns the cached value instantly.
         NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),

@@ -13,6 +13,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Networking.Connectivity;
 using NoMercy.NmSystem.Auth;
@@ -21,7 +22,6 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 
 namespace NoMercy.Networking.Discovery;
 
@@ -34,13 +34,17 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
 
     private readonly IAuthTokenStore _authTokenStore;
 
+    private readonly ILogger<NetworkChangeMonitor> _logger;
+
     public NetworkChangeMonitor(
+        ILogger<NetworkChangeMonitor> logger,
         IAuthTokenStore authTokenStore,
         INetworkDiscovery networkDiscovery,
         IConnectivityManager connectivityManager,
         IConnectivityStatus connectivityStatus
     )
     {
+        _logger = logger;
         _authTokenStore = authTokenStore;
         _networkDiscovery = networkDiscovery;
         _connectivityManager = connectivityManager;
@@ -51,7 +55,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     {
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
-        Logger.Setup("Network change monitor started", LogEventLevel.Debug);
+        _logger.LogDebug("Network change monitor started");
         return Task.CompletedTask;
     }
 
@@ -69,7 +73,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
             if (newIp == oldIp)
                 return;
 
-            Logger.Setup($"Network address changed: {oldIp} → {newIp}");
+            _logger.LogInformation($"Network address changed: {oldIp} → {newIp}");
             _networkDiscovery.InternalIp = newIp;
 
             // Re-discover external IP (force past the one-shot completion gate)
@@ -83,7 +87,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Network change handling failed: {ex.Message}", LogEventLevel.Warning);
+            _logger.LogWarning($"Network change handling failed: {ex.Message}");
         }
         finally
         {
@@ -91,10 +95,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         }
     }
 
-    private async void OnNetworkAvailabilityChanged(
-        object? sender,
-        NetworkAvailabilityEventArgs e
-    )
+    private async void OnNetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
     {
         if (!e.IsAvailable)
             return;
@@ -106,10 +107,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Setup(
-                $"Network availability change handling failed: {ex.Message}",
-                LogEventLevel.Warning
-            );
+            _logger.LogWarning($"Network availability change handling failed: {ex.Message}");
         }
     }
 
@@ -196,12 +194,12 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                 { "stun_nat_type", _connectivityStatus.NatStatus.ToString() },
             };
 
-            Logger.Register("Your IP address has changed, updating server information...");
+            _logger.LogInformation("Your IP address has changed, updating server information...");
 
             string? token = _authTokenStore.AccessToken;
             if (string.IsNullOrEmpty(token))
             {
-                Logger.Setup("Skipping network change ping — no auth token", LogEventLevel.Verbose);
+                _logger.LogTrace("Skipping network change ping — no auth token");
                 return;
             }
 
@@ -218,11 +216,11 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
             if (data == null)
                 throw new("Failed to update server information");
 
-            Logger.Register("Server information updated successfully");
+            _logger.LogInformation("Server information updated successfully");
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Failed to send IP update: {ex.Message}", LogEventLevel.Warning);
+            _logger.LogWarning($"Failed to send IP update: {ex.Message}");
         }
     }
 

@@ -11,12 +11,12 @@
 
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 using STUN.Enums;
 using STUN.Messages;
 using STUN.Messages.StunAttributeValues;
@@ -34,8 +34,14 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
 
     private readonly IConnectivityStatus _connectivityStatus;
 
-    public StunHolePunchStrategy(IConnectivityStatus connectivityStatus)
+    private readonly ILogger<StunHolePunchStrategy> _logger;
+
+    public StunHolePunchStrategy(
+        ILogger<StunHolePunchStrategy> logger,
+        IConnectivityStatus connectivityStatus
+    )
     {
+        _logger = logger;
         _connectivityStatus = connectivityStatus;
     }
 
@@ -60,7 +66,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             );
             if (firstResult is null)
             {
-                Logger.Setup("STUN binding request to primary server failed", LogEventLevel.Debug);
+                _logger.LogDebug("STUN binding request to primary server failed");
                 return false;
             }
 
@@ -93,26 +99,22 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             )
             {
                 // Same IP but different port → Symmetric NAT, hole-punch won't work
-                Logger.Setup(
-                    "Symmetric NAT detected — STUN hole-punch not viable",
-                    LogEventLevel.Debug
-                );
+                _logger.LogDebug("Symmetric NAT detected — STUN hole-punch not viable");
                 Cleanup();
                 return false;
             }
             else
             {
                 // Different IPs → Symmetric NAT
-                Logger.Setup(
-                    "Symmetric NAT detected (different IPs) — STUN hole-punch not viable",
-                    LogEventLevel.Debug
+                _logger.LogDebug(
+                    "Symmetric NAT detected (different IPs) — STUN hole-punch not viable"
                 );
                 Cleanup();
                 return false;
             }
 
             _connectivityStatus.NatStatus = NatStatus.HolePunched;
-            Logger.Setup(
+            _logger.LogInformation(
                 $"STUN discovered public endpoint: {_connectivityStatus.StunPublicIp}:{_connectivityStatus.StunPublicPort}"
             );
 
@@ -132,7 +134,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
                     }
                     catch (Exception ex)
                     {
-                        Logger.Setup($"STUN keep-alive failed: {ex.Message}", LogEventLevel.Debug);
+                        _logger.LogDebug($"STUN keep-alive failed: {ex.Message}");
                     }
                 },
                 null,
@@ -144,7 +146,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Setup($"STUN hole-punch failed: {ex.Message}", LogEventLevel.Debug);
+            _logger.LogDebug($"STUN hole-punch failed: {ex.Message}");
             Cleanup();
             return false;
         }
@@ -204,10 +206,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Setup(
-                $"STUN request to {host}:{port} failed: {ex.Message}",
-                LogEventLevel.Debug
-            );
+            _logger.LogDebug($"STUN request to {host}:{port} failed: {ex.Message}");
             return null;
         }
     }

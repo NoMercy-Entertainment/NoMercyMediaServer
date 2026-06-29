@@ -16,6 +16,7 @@ using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
@@ -26,7 +27,6 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
-using Serilog.Events;
 
 namespace NoMercy.Networking.Certificate;
 
@@ -34,8 +34,14 @@ public sealed class CertificateService : ICertificateService
 {
     private readonly IHttpClientFactory _httpClientFactory;
 
-    public CertificateService(IHttpClientFactory httpClientFactory)
+    private readonly ILogger<CertificateService> _logger;
+
+    public CertificateService(
+        ILogger<CertificateService> logger,
+        IHttpClientFactory httpClientFactory
+    )
     {
+        _logger = logger;
         _httpClientFactory = httpClientFactory;
     }
 
@@ -68,7 +74,7 @@ public sealed class CertificateService : ICertificateService
                     certPem = certReader.ReadToEnd();
                 using (StreamReader keyReader = new(_driver.OpenRead(AppFiles.KeyFile)))
                     keyPem = keyReader.ReadToEnd();
-                Logger.Setup("Loading SSL certificate from legacy PEM files");
+                _logger.LogInformation("Loading SSL certificate from legacy PEM files");
             }
             else
             {
@@ -84,7 +90,7 @@ public sealed class CertificateService : ICertificateService
             _cachedCertificate = X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
         }
 
-        Logger.Setup("Loaded SSL certificate into memory cache");
+        _logger.LogInformation("Loaded SSL certificate into memory cache");
     }
 
     private void UpsertConfig(AppDbContext db, string key, string value)
@@ -212,7 +218,7 @@ public sealed class CertificateService : ICertificateService
 
             if (_cachedCertificate.NotAfter < DateTime.Now.AddDays(RenewalThresholdDays))
             {
-                Logger.Certificate(
+                _logger.LogInformation(
                     $"SSL cert expires {_cachedCertificate.NotAfter:yyyy-MM-dd} — will attempt renewal"
                 );
                 return false; // Expiring soon — trigger renewal
@@ -228,13 +234,13 @@ public sealed class CertificateService : ICertificateService
     {
         if (ValidateSslCertificate())
         {
-            Logger.Certificate("SSL Certificate is valid");
+            _logger.LogInformation("SSL Certificate is valid");
             return;
         }
 
         bool hasExistingCert = HasValidCertificate();
 
-        Logger.Certificate(
+        _logger.LogInformation(
             !hasExistingCert ? "Generating SSL Certificate..." : "Renewing SSL Certificate..."
         );
 
@@ -243,10 +249,7 @@ public sealed class CertificateService : ICertificateService
             string? token = accessToken;
             if (string.IsNullOrEmpty(token))
             {
-                Logger.Setup(
-                    "Skipping certificate renewal — no auth token available",
-                    LogEventLevel.Warning
-                );
+                _logger.LogWarning("Skipping certificate renewal — no auth token available");
                 return;
             }
 
@@ -272,7 +275,7 @@ public sealed class CertificateService : ICertificateService
                         return;
 
                     // null means 202 — cert not ready yet, wait and retry
-                    Logger.Certificate(
+                    _logger.LogInformation(
                         $"Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {attempt}/{maxRetries})"
                     );
                     await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
@@ -282,10 +285,7 @@ public sealed class CertificateService : ICertificateService
                     // Permanent (for this attempt window): the API rejected the
                     // renewal request because the cert isn't due yet. Bail out
                     // without retrying — daily cron will try again tomorrow.
-                    Logger.Certificate(
-                        $"Skipping renewal: {ex.Message}",
-                        LogEventLevel.Information
-                    );
+                    _logger.LogInformation($"Skipping renewal: {ex.Message}");
                     return;
                 }
                 catch (Exception ex)
@@ -293,7 +293,7 @@ public sealed class CertificateService : ICertificateService
                         && (ex is HttpRequestException || ex is InvalidOperationException)
                     )
                 {
-                    Logger.Certificate(
+                    _logger.LogInformation(
                         $"Certificate attempt failed: {ex.Message}, retrying in {CertRetryDelaySeconds}s (attempt {attempt}/{maxRetries})"
                     );
                     await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
@@ -303,9 +303,8 @@ public sealed class CertificateService : ICertificateService
         {
             // Cert exists in DB but renewal failed (Cloudflare down, network issue, etc.)
             // The existing cert is usable — don't block boot
-            Logger.Certificate(
-                $"Certificate renewal failed: {ex.Message}. Using existing certificate.",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"Certificate renewal failed: {ex.Message}. Using existing certificate."
             );
         }
     }
@@ -320,7 +319,7 @@ public sealed class CertificateService : ICertificateService
 
         if (response.StatusCode == HttpStatusCode.Accepted) // 202 — cert not ready yet
         {
-            Logger.Certificate("Certificate not ready yet (202 Accepted), will retry");
+            _logger.LogInformation("Certificate not ready yet (202 Accepted), will retry");
             return null;
         }
 
@@ -397,7 +396,7 @@ public sealed class CertificateService : ICertificateService
         await WriteTextAsync(AppFiles.CertFile, certPem);
 #pragma warning restore CS0618
 
-        Logger.Certificate(
+        _logger.LogInformation(
             !hasExistingCert ? "SSL Certificate created" : "SSL Certificate renewed"
         );
         return new();

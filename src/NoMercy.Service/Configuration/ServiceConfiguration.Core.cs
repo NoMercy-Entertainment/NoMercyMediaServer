@@ -187,6 +187,7 @@ public static partial class ServiceConfiguration
         {
             IStorageDriver storageDriver = sp.GetRequiredService<IStorageDriver>();
             NetworkDiscovery discovery = new(
+                sp.GetRequiredService<ILogger<NetworkDiscovery>>(),
                 storageDriver,
                 sp.GetRequiredService<IAuthTokenStore>(),
                 sp.GetRequiredService<IConnectivityStatus>(),
@@ -204,7 +205,10 @@ public static partial class ServiceConfiguration
         // Cast pipeline (instance service sharing the injected INetworkDiscovery)
         services.AddSingleton<ChromeCastService>(sp =>
         {
-            ChromeCastService chromeCast = new(sp.GetRequiredService<INetworkDiscovery>());
+            ChromeCastService chromeCast = new(
+                sp.GetRequiredService<ILogger<ChromeCastService>>(),
+                sp.GetRequiredService<INetworkDiscovery>()
+            );
             Start.ChromeCast = chromeCast;
             return chromeCast;
         });
@@ -220,6 +224,7 @@ public static partial class ServiceConfiguration
         services.AddSingleton<ICertificateService>(sp =>
         {
             CertificateService certificateService = new(
+                sp.GetRequiredService<ILogger<CertificateService>>(),
                 sp.GetRequiredService<IHttpClientFactory>()
             );
             Start.Certificate = certificateService;
@@ -240,6 +245,7 @@ public static partial class ServiceConfiguration
         ));
         services.AddSingleton<IConnectivityStrategy, StunHolePunchStrategy>();
         services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(
+            sp.GetRequiredService<ILogger<CloudflareTunnelStrategy>>(),
             sp.GetRequiredService<IConnectivityStatus>(),
             () => Task.FromResult(string.Empty) // Register.GetTunnelAvailability
         ));

@@ -11,13 +11,13 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 
 namespace NoMercy.Networking.Connectivity.Strategies;
 
@@ -32,11 +32,15 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
     public int Priority => 3;
     public ConnectivityType Type => ConnectivityType.CloudflareTunnel;
 
+    private readonly ILogger<CloudflareTunnelStrategy> _logger;
+
     public CloudflareTunnelStrategy(
+        ILogger<CloudflareTunnelStrategy> logger,
         IConnectivityStatus connectivityStatus,
         Func<Task>? checkTunnelAvailability = null
     )
     {
+        _logger = logger;
         _checkTunnelAvailability = checkTunnelAvailability;
         _connectivityStatus = connectivityStatus;
     }
@@ -48,13 +52,13 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
 
         if (string.IsNullOrEmpty(_connectivityStatus.CloudflareTunnelToken))
         {
-            Logger.Setup(
+            _logger.LogInformation(
                 "You don't have access to our Cloudflare tunnel service, this is a paid feature."
             );
-            Logger.Setup(
+            _logger.LogInformation(
                 $"You need to manually forward port {RuntimeServerSettings.Current.InternalServerPort} to {RuntimeServerSettings.Current.ExternalServerPort} if you want to use the server outside your local network"
             );
-            Logger.Setup(
+            _logger.LogInformation(
                 "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide"
             );
             return false;
@@ -71,10 +75,7 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                     // Pass the tunnel token via environment variable rather than the
                     // command line so it is not exposed in /proc/<pid>/cmdline or via
                     // WMI Win32_Process.CommandLine. cloudflared reads TUNNEL_TOKEN.
-                    Environment =
-                    {
-                        ["TUNNEL_TOKEN"] = _connectivityStatus.CloudflareTunnelToken,
-                    },
+                    Environment = { ["TUNNEL_TOKEN"] = _connectivityStatus.CloudflareTunnelToken },
                     UseShellExecute = false,
                     WorkingDirectory = AppFiles.DependenciesPath,
                     RedirectStandardOutput = true,
@@ -84,24 +85,22 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                 EnableRaisingEvents = true,
             };
 
-            _tunnelProcess.OutputDataReceived += (_, args) =>
-                Logger.Setup(args.Data.OrEmpty(), LogEventLevel.Verbose);
-            _tunnelProcess.ErrorDataReceived += (_, args) =>
-                Logger.Setup(args.Data.OrEmpty(), LogEventLevel.Verbose);
+            _tunnelProcess.OutputDataReceived += (_, args) => _logger.LogTrace(args.Data.OrEmpty());
+            _tunnelProcess.ErrorDataReceived += (_, args) => _logger.LogTrace(args.Data.OrEmpty());
             _tunnelProcess.Exited += (_, args) =>
-                Logger.Setup($"Cloudflare tunnel process exited: {args}", LogEventLevel.Warning);
+                _logger.LogWarning($"Cloudflare tunnel process exited: {args}");
 
             _tunnelProcess.Start();
             _tunnelProcess.BeginOutputReadLine();
             _tunnelProcess.BeginErrorReadLine();
 
             _connectivityStatus.NatStatus = NatStatus.Tunneled;
-            Logger.Setup("Cloudflare tunnel started successfully");
+            _logger.LogInformation("Cloudflare tunnel started successfully");
             return true;
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Failed to start Cloudflare tunnel: {ex.Message}");
+            _logger.LogInformation($"Failed to start Cloudflare tunnel: {ex.Message}");
             return false;
         }
     }
@@ -129,7 +128,7 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Error stopping Cloudflare tunnel: {ex.Message}");
+            _logger.LogInformation($"Error stopping Cloudflare tunnel: {ex.Message}");
         }
     }
 

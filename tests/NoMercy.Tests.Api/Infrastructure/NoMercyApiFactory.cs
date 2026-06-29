@@ -22,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Authorization;
 using NoMercy.Database;
@@ -616,7 +617,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 Mock.Of<IDegradedModeRecovery>(),
                 registrationService,
                 new AuthTokenStore(),
-                new CertificateService(null!)
+                new CertificateService(NullLogger<CertificateService>.Instance, null!)
             )
         );
     }

@@ -12,6 +12,7 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Auth;
@@ -54,7 +55,7 @@ public class BootOrchestratorTests : IDisposable
             new FakeDegradedModeRecovery(),
             new FakeServerRegistrationService(),
             new AuthTokenStore(),
-            new CertificateService(null!)
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
     }
 

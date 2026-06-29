@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Auth;
@@ -29,7 +30,7 @@ public class CertificateRenewalCronJobTests
         CertificateRenewalCronJob job = new(
             logger.Object,
             new AuthTokenStore(),
-            new CertificateService(null!)
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
 
         // Act
@@ -49,7 +50,7 @@ public class CertificateRenewalCronJobTests
         CertificateRenewalCronJob job = new(
             logger.Object,
             new AuthTokenStore(),
-            new CertificateService(null!)
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
 
         // Act
@@ -67,7 +68,7 @@ public class CertificateRenewalCronJobTests
         CertificateRenewalCronJob job = new(
             loggerMock.Object,
             new AuthTokenStore(),
-            new CertificateService(null!)
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
 
         // Act & Assert
@@ -110,7 +111,7 @@ public class CertificateRenewalCronJobTests
         CertificateRenewalCronJob job = new(
             logger.Object,
             new AuthTokenStore(),
-            new CertificateService(null!)
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
 
         // Assert
@@ -125,7 +126,7 @@ public class CertificateRenewalCronJobTests
         CertificateRenewalCronJob job = new(
             logger.Object,
             new AuthTokenStore(),
-            new CertificateService(null!)
+            new CertificateService(NullLogger<CertificateService>.Instance, null!)
         );
 
         // Act & Assert

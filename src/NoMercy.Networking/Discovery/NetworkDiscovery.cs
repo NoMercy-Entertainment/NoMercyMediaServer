@@ -13,6 +13,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using Mono.Nat;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
@@ -22,7 +23,6 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using Serilog.Events;
 using HttpClient = System.Net.Http.HttpClient;
 
 namespace NoMercy.Networking.Discovery;
@@ -38,13 +38,17 @@ public class NetworkDiscovery : INetworkDiscovery
     private readonly IConnectivityStatus _connectivityStatus;
     private readonly NetworkProbeConfig _networkProbeConfig;
 
+    private readonly ILogger<NetworkDiscovery> _logger;
+
     public NetworkDiscovery(
+        ILogger<NetworkDiscovery> logger,
         IStorageDriver driver,
         IAuthTokenStore authTokenStore,
         IConnectivityStatus connectivityStatus,
         NetworkProbeConfig networkProbeConfig
     )
     {
+        _logger = logger;
         _authTokenStore = authTokenStore;
         _connectivityStatus = connectivityStatus;
         _driver = driver;
@@ -148,12 +152,12 @@ public class NetworkDiscovery : INetworkDiscovery
             if (_discoveryCompleted)
                 return;
 
-            Logger.Setup("Discovering Networking");
+            _logger.LogInformation("Discovering Networking");
 
             NatUtility.DeviceFound += DeviceFound;
             NatUtility.UnknownDeviceFound += (_, _) => { };
 
-            Logger.Setup("Discovering UPNP devices");
+            _logger.LogInformation("Discovering UPNP devices");
 
             _ = Task.Run(() => NatUtility.StartDiscovery());
 
@@ -164,7 +168,7 @@ public class NetworkDiscovery : INetworkDiscovery
 
             if (!_hasFoundDevice)
             {
-                Logger.Setup("No UPNP device found");
+                _logger.LogInformation("No UPNP device found");
             }
 
             if (string.IsNullOrEmpty(_externalIp))
@@ -175,7 +179,7 @@ public class NetworkDiscovery : INetworkDiscovery
                 }
                 catch (Exception e)
                 {
-                    Logger.Setup($"Failed to get external IP from API: {e.Message}");
+                    _logger.LogInformation($"Failed to get external IP from API: {e.Message}");
                 }
             }
 
@@ -186,11 +190,11 @@ public class NetworkDiscovery : INetworkDiscovery
                 {
                     ExternalIpV6 = await GetExternalIpV6Async();
                     if (ExternalIpV6 is null)
-                        Logger.Setup("No external IPv6 address available", LogEventLevel.Debug);
+                        _logger.LogDebug("No external IPv6 address available");
                 }
                 catch (Exception e)
                 {
-                    Logger.Setup($"Failed to get external IPv6: {e.Message}", LogEventLevel.Debug);
+                    _logger.LogDebug($"Failed to get external IPv6: {e.Message}");
                 }
             }
 
@@ -207,7 +211,7 @@ public class NetworkDiscovery : INetworkDiscovery
         if (_hasFoundDevice)
             return;
 
-        Logger.Setup("UPNP router Found: " + args.Device.DeviceEndpoint);
+        _logger.LogInformation("UPNP router Found: " + args.Device.DeviceEndpoint);
 
         _device = args.Device;
         _hasFoundDevice = true;
@@ -225,7 +229,7 @@ public class NetworkDiscovery : INetworkDiscovery
 
         try
         {
-            Logger.Setup("Trying to add UPNP records");
+            _logger.LogInformation("Trying to add UPNP records");
 
             _device.CreatePortMap(
                 new(
@@ -249,9 +253,9 @@ public class NetworkDiscovery : INetworkDiscovery
 
             string ip = _device.GetExternalIP().ToString();
 
-            Logger.Setup($"IP address obtained from UPNP: {ip}");
+            _logger.LogInformation($"IP address obtained from UPNP: {ip}");
             if (!string.IsNullOrEmpty(_externalIp))
-                Logger.Setup($"IP address obtained from API: {_externalIp}");
+                _logger.LogInformation($"IP address obtained from API: {_externalIp}");
 
             if (string.IsNullOrEmpty(_externalIp))
             {
@@ -260,7 +264,7 @@ public class NetworkDiscovery : INetworkDiscovery
         }
         catch (Exception e)
         {
-            Logger.Setup($"Failed to create UPNP records: {e.Message}");
+            _logger.LogInformation($"Failed to create UPNP records: {e.Message}");
             _hasFoundDevice = false;
             _connectivityStatus.NatStatus = NatStatus.Closed;
             return;
@@ -283,9 +287,8 @@ public class NetworkDiscovery : INetworkDiscovery
 
         if (completedTask == delayTask)
         {
-            Logger.Setup(
-                $"Timeout checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort} after {timeoutMilliseconds}ms.",
-                LogEventLevel.Verbose
+            _logger.LogTrace(
+                $"Timeout checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort} after {timeoutMilliseconds}ms."
             );
             return false;
         }
@@ -297,17 +300,15 @@ public class NetworkDiscovery : INetworkDiscovery
         }
         catch (SocketException ex)
         {
-            Logger.Setup(
-                $"SocketException checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort}: {ex.SocketErrorCode} ({ex.Message})",
-                LogEventLevel.Debug
+            _logger.LogDebug(
+                $"SocketException checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort}: {ex.SocketErrorCode} ({ex.Message})"
             );
             return false;
         }
         catch (Exception ex)
         {
-            Logger.Setup(
-                $"Exception checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort}: {ex.Message}",
-                LogEventLevel.Debug
+            _logger.LogDebug(
+                $"Exception checking {ExternalIp}:{RuntimeServerSettings.Current.ExternalServerPort}: {ex.Message}"
             );
             return false;
         }
@@ -479,13 +480,13 @@ public class NetworkDiscovery : INetworkDiscovery
 
     private async Task<string> GetExternalIpAsync()
     {
-        Logger.Setup("Getting external IP address");
+        _logger.LogInformation("Getting external IP address");
 
         // 1. Try API
         string? apiToken = _authTokenStore.AccessToken;
         if (string.IsNullOrEmpty(apiToken))
         {
-            Logger.Setup("Skipping API external IP lookup — no auth token", LogEventLevel.Verbose);
+            _logger.LogTrace("Skipping API external IP lookup — no auth token");
         }
         else
         {
@@ -509,7 +510,7 @@ public class NetworkDiscovery : INetworkDiscovery
             }
             catch (Exception e)
             {
-                Logger.Setup($"External IP API unavailable: {e.Message}", LogEventLevel.Warning);
+                _logger.LogWarning($"External IP API unavailable: {e.Message}");
             }
         }
 
@@ -527,7 +528,7 @@ public class NetworkDiscovery : INetworkDiscovery
             }
             catch (Exception e)
             {
-                Logger.Setup($"UPnP external IP unavailable: {e.Message}", LogEventLevel.Warning);
+                _logger.LogWarning($"UPnP external IP unavailable: {e.Message}");
             }
         }
 
@@ -535,12 +536,12 @@ public class NetworkDiscovery : INetworkDiscovery
         string? cached = LoadCachedExternalIp();
         if (cached is not null)
         {
-            Logger.Setup($"Using cached external IP: {cached}");
+            _logger.LogInformation($"Using cached external IP: {cached}");
             return cached;
         }
 
         // 4. No external IP available
-        Logger.Setup("External IP unavailable — remote access disabled", LogEventLevel.Warning);
+        _logger.LogWarning("External IP unavailable — remote access disabled");
         return "";
     }
 
@@ -587,7 +588,7 @@ public class NetworkDiscovery : INetworkDiscovery
         }
         catch (Exception e)
         {
-            Logger.Setup($"External IPv6 API unavailable: {e.Message}", LogEventLevel.Debug);
+            _logger.LogDebug($"External IPv6 API unavailable: {e.Message}");
         }
 
         // 2. Try well-known IPv6 services
@@ -651,7 +652,7 @@ public class NetworkDiscovery : INetworkDiscovery
         }
         catch (Exception e)
         {
-            Logger.Setup($"Failed to cache external IP: {e.Message}", LogEventLevel.Warning);
+            _logger.LogWarning($"Failed to cache external IP: {e.Message}");
         }
     }
 

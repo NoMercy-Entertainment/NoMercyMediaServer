@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Certificate;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
@@ -133,6 +134,7 @@ public class DegradedModeStartupTests
         // GetInternalIp now uses NetworkInterface enumeration first,
         // which works without network connectivity
         NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
@@ -150,6 +152,7 @@ public class DegradedModeStartupTests
     public void GetInternalIp_ReturnsValidIpFormat()
     {
         NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
@@ -169,6 +172,7 @@ public class DegradedModeStartupTests
         // The API rejects registration with required|string|ip — an empty internal_ip
         // returns 422 and the server never comes online.
         NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
@@ -188,6 +192,7 @@ public class DegradedModeStartupTests
     public void RegistrationInternalIp_FallsBackToSentinel_WhenNonRoutable(string discovered)
     {
         NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
@@ -204,6 +209,7 @@ public class DegradedModeStartupTests
     public void RegistrationInternalIp_PassesThroughRoutableIp()
     {
         NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
@@ -353,6 +359,7 @@ public class CloudflareFallbackTests
         // ExternalIp property should return "0.0.0.0" when no IP has been discovered,
         // not throw an exception
         NetworkDiscovery discovery = new(
+            NullLogger<NetworkDiscovery>.Instance,
             new LocalStorageDriver(),
             new AuthTokenStore(),
             new ConnectivityStatus(),
@@ -371,7 +378,10 @@ public class CloudflareFallbackTests
         // Both outcomes correctly indicate no valid certificate is present.
         try
         {
-            bool result = new CertificateService(null!).HasValidCertificate();
+            bool result = new CertificateService(
+                NullLogger<CertificateService>.Instance,
+                null!
+            ).HasValidCertificate();
             Assert.False(result, "No certificate should be present in the test environment");
         }
         catch (SqliteException)
@@ -391,7 +401,10 @@ public class CloudflareFallbackTests
         // All are acceptable in an isolated test environment.
         try
         {
-            await new CertificateService(null!).RenewSslCertificate(null, maxRetries: 1);
+            await new CertificateService(
+                NullLogger<CertificateService>.Instance,
+                null!
+            ).RenewSslCertificate(null, maxRetries: 1);
         }
         catch (SqliteException)
         {
@@ -404,7 +417,10 @@ public class CloudflareFallbackTests
             bool hasCert = false;
             try
             {
-                hasCert = new CertificateService(null!).HasValidCertificate();
+                hasCert = new CertificateService(
+                    NullLogger<CertificateService>.Instance,
+                    null!
+                ).HasValidCertificate();
             }
             catch (SqliteException)
             {
@@ -426,6 +442,7 @@ public class CloudflareFallbackTests
         try
         {
             NetworkDiscovery discovery = new(
+                NullLogger<NetworkDiscovery>.Instance,
                 new LocalStorageDriver(),
                 new AuthTokenStore(),
                 new ConnectivityStatus(),
