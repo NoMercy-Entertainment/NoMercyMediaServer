@@ -52,6 +52,25 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
 
     private ILogger<MusicLogic> _musicLogicLogger = null!;
 
+    // Constructor injection: the queue worker builds the job via
+    // ActivatorUtilities; [ActivatorUtilitiesConstructor] selects this ctor
+    // over the serialized-data ctor. The parameterless ctor is kept for
+    // deserialization, and InjectStorageServices remains as a fallback.
+    [ActivatorUtilitiesConstructor]
+    public MusicJob(
+        ILoggerFactory loggerFactory,
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        IAudioFingerprinter audioFingerprinter,
+        ILogger<MusicLogic> musicLogicLogger)
+    {
+        LoggerFactory = loggerFactory;
+        StorageFactory = storageFactory;
+        this.storageDriver = storageDriver;
+        AudioFingerprinter = audioFingerprinter;
+        _musicLogicLogger = musicLogicLogger;
+    }
+
     public MusicJob()
     {
         //
