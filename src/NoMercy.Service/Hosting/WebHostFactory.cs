@@ -63,6 +63,28 @@ public static class WebHostFactory
             DefaultApiVersionDescriptionProvider
         >();
         builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
+        builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerOptions>(_ =>
+            new NoMercy.NmSystem.Logging.NoMercyLoggerOptions
+            {
+                MinimumLevel = Microsoft.Extensions.Logging.LogLevel.Information,
+                JsonFilePath = System.IO.Path.Combine(
+                    NoMercy.NmSystem.Information.AppFiles.LogPath,
+                    "log.jsonl"
+                ),
+                WidthProvider = static () =>
+                {
+                    try
+                    {
+                        return System.Console.IsOutputRedirected ? 0 : System.Console.WindowWidth;
+                    }
+                    catch
+                    {
+                        return 0;
+                    }
+                },
+            }
+        );
+        builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerProvider>();
         builder.Services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
 
         // Configure host options with reduced shutdown timeout

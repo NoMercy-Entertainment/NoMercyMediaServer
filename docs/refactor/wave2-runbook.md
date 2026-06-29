@@ -23,14 +23,14 @@ unchecked box. The standing order stays in force across resets.
 - Build warnings baseline: SEE build-baseline below (filled on first run)
 
 ## Optimized order (adapt only for hard deps: C3<-B2, C4<-B3, E2<-E1, O1<-N2)
-- [ ] L1 logging backbone (DI + Serilog provider)
+- [x] L1 logging backbone (provider+logger+options) DONE
 - [x] L2 display-width engine (DONE)
 - [~] L3 console renderer: L3a categories + L3b line renderer DONE (sink wiring pending in L1)
-- [ ] L4 themes + palette (dark+light)
-- [ ] L5 category mapping
-- [ ] L6 scopes / correlation
-- [ ] L7 file sink (JSON)
-- [ ] L8 event bridge
+- [x] L4 themes+palette + host wiring (CustomLogger->NoMercyLoggerProvider) DONE
+- [x] L5 category mapping (ResolveSource) DONE
+- [x] L6 scopes/correlation (scope suffix) DONE
+- [x] L7 file sink (JSON) DONE
+- [~] L8 record callback DONE (bus wiring with O)
 - [ ] L9 banner (slant + colossal, width-adaptive)
 - [ ] L10 alt-screen QR/auth
 - [ ] L11 source-gen hot paths
