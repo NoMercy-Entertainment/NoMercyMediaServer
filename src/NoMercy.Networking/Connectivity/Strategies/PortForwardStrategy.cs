@@ -9,18 +9,19 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Status;
 using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 
 namespace NoMercy.Networking.Connectivity.Strategies;
 
 public class PortForwardStrategy(
     INetworkDiscovery networkDiscovery,
-    IConnectivityStatus connectivityStatus
+    IConnectivityStatus connectivityStatus,
+    ILogger<PortForwardStrategy> logger
 ) : IConnectivityStrategy
 {
     public string Name => "PortForward";
@@ -31,7 +32,7 @@ public class PortForwardStrategy(
     {
         if (connectivityStatus.NatStatus == NatStatus.Open)
         {
-            Logger.Setup(
+            logger.LogInformation(
                 "NAT status is open, you can access your server from outside your local network."
             );
             return true;
@@ -43,7 +44,7 @@ public class PortForwardStrategy(
         // to external clients.
         if (connectivityStatus.NatStatus == NatStatus.Filtered)
         {
-            Logger.Setup("UPnP port mapping active — port forwarding confirmed via UPnP.");
+            logger.LogInformation("UPnP port mapping active — port forwarding confirmed via UPnP.");
             connectivityStatus.PortForwarded = true;
             connectivityStatus.NatStatus = NatStatus.Open;
             return true;
@@ -53,17 +54,16 @@ public class PortForwardStrategy(
         connectivityStatus.PortForwarded = await networkDiscovery.IsPortOpenAsync();
         if (connectivityStatus.PortForwarded)
         {
-            Logger.Setup(
+            logger.LogInformation(
                 "Your server is port forwarded, you can access your server from outside your local network."
             );
             connectivityStatus.NatStatus = NatStatus.Open;
             return true;
         }
 
-        Logger.Setup(
+        logger.LogDebug(
             "Port forward check failed — router may not support NAT hairpinning, "
-                + "but external clients may still be able to connect.",
-            LogEventLevel.Debug
+                + "but external clients may still be able to connect."
         );
         return false;
     }

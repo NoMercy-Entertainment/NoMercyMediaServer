@@ -13,6 +13,7 @@ using I18N.DotNet;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Services;
 using NoMercy.Api.WebSockets;
@@ -234,7 +235,8 @@ public static partial class ServiceConfiguration
         // Connectivity strategies (ordered by priority)
         services.AddSingleton<IConnectivityStrategy>(sp => new PortForwardStrategy(
             (NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>(),
-            sp.GetRequiredService<IConnectivityStatus>()
+            sp.GetRequiredService<IConnectivityStatus>(),
+            sp.GetRequiredService<ILogger<PortForwardStrategy>>()
         ));
         services.AddSingleton<IConnectivityStrategy, StunHolePunchStrategy>();
         services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(

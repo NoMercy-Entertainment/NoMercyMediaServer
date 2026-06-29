@@ -10,13 +10,14 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using NoMercy.Networking.Http;
 using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 
 namespace NoMercy.Networking.Messaging;
 
-public class ClientMessenger(ConnectedClients connectedClients) : IClientMessenger
+public class ClientMessenger(ConnectedClients connectedClients, ILogger<ClientMessenger> logger)
+    : IClientMessenger
 {
     public async Task SendToAll(string name, string endpoint, object? data = null)
     {
@@ -40,7 +41,7 @@ public class ClientMessenger(ConnectedClients connectedClients) : IClientMesseng
             }
             catch (Exception ex)
             {
-                Logger.Socket($"Broadcast to client failed: {ex.Message}", LogEventLevel.Debug);
+                logger.LogDebug($"Broadcast to client failed: {ex.Message}");
                 continue;
             }
         }
@@ -63,7 +64,7 @@ public class ClientMessenger(ConnectedClients connectedClients) : IClientMesseng
             }
             catch (Exception ex)
             {
-                Logger.Socket($"Broadcast to client failed: {ex.Message}", LogEventLevel.Debug);
+                logger.LogDebug($"Broadcast to client failed: {ex.Message}");
                 continue;
             }
         }
