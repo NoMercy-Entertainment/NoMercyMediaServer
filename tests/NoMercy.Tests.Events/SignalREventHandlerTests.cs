@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Api.EventHandlers;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
@@ -62,7 +63,11 @@ public class SignalREventHandlerTests
             }
         );
 
-        using SignalRPlaybackEventHandler handler = new(bus, NoOpMessenger);
+        using SignalRPlaybackEventHandler handler = new(
+            NullLogger<SignalRPlaybackEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         Guid userId = Guid.NewGuid();
 
@@ -114,7 +119,11 @@ public class SignalREventHandlerTests
             }
         );
 
-        SignalRPlaybackEventHandler handler = new(bus, NoOpMessenger);
+        SignalRPlaybackEventHandler handler = new(
+            NullLogger<SignalRPlaybackEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         await bus.PublishAsync(
             new PlaybackStartedEvent
@@ -177,7 +186,11 @@ public class SignalREventHandlerTests
             }
         );
 
-        using SignalREncodingEventHandler handler = new(bus, NoOpMessenger);
+        using SignalREncodingEventHandler handler = new(
+            NullLogger<SignalREncodingEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         await bus.PublishAsync(
             new EncodingStartedEvent
@@ -227,7 +240,11 @@ public class SignalREventHandlerTests
     public async Task EncodingHandler_BroadcastsToSignalR_WithoutException()
     {
         InMemoryEventBus bus = new();
-        using SignalREncodingEventHandler handler = new(bus, NoOpMessenger);
+        using SignalREncodingEventHandler handler = new(
+            NullLogger<SignalREncodingEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         // SendToAll will find no connected clients and silently succeed
         Func<Task> act = () =>
@@ -279,7 +296,11 @@ public class SignalREventHandlerTests
             }
         );
 
-        using SignalRLibraryScanEventHandler handler = new(bus, NoOpMessenger);
+        using SignalRLibraryScanEventHandler handler = new(
+            NullLogger<SignalRLibraryScanEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         Ulid libraryId = Ulid.NewUlid();
 
@@ -328,7 +349,11 @@ public class SignalREventHandlerTests
     public async Task LibraryScanHandler_BroadcastsToSignalR_WithoutException()
     {
         InMemoryEventBus bus = new();
-        using SignalRLibraryScanEventHandler handler = new(bus, NoOpMessenger);
+        using SignalRLibraryScanEventHandler handler = new(
+            NullLogger<SignalRLibraryScanEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         Func<Task> act = () =>
             bus.PublishAsync(
@@ -352,7 +377,11 @@ public class SignalREventHandlerTests
             }
         );
 
-        SignalREncodingEventHandler handler = new(bus, NoOpMessenger);
+        SignalREncodingEventHandler handler = new(
+            NullLogger<SignalREncodingEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         await bus.PublishAsync(
             new EncodingStartedEvent
@@ -386,9 +415,21 @@ public class SignalREventHandlerTests
     {
         InMemoryEventBus bus = new();
 
-        using SignalRPlaybackEventHandler playbackHandler = new(bus, NoOpMessenger);
-        using SignalREncodingEventHandler encodingHandler = new(bus, NoOpMessenger);
-        using SignalRLibraryScanEventHandler libraryScanHandler = new(bus, NoOpMessenger);
+        using SignalRPlaybackEventHandler playbackHandler = new(
+            NullLogger<SignalRPlaybackEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
+        using SignalREncodingEventHandler encodingHandler = new(
+            NullLogger<SignalREncodingEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
+        using SignalRLibraryScanEventHandler libraryScanHandler = new(
+            NullLogger<SignalRLibraryScanEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         // Publish one event of each type - no cross-talk or exceptions
         Func<Task> act = async () =>
@@ -424,7 +465,11 @@ public class SignalREventHandlerTests
     public async Task PlaybackHandler_OnPlaybackStarted_DoesNotThrow()
     {
         InMemoryEventBus bus = new();
-        using SignalRPlaybackEventHandler handler = new(bus, NoOpMessenger);
+        using SignalRPlaybackEventHandler handler = new(
+            NullLogger<SignalRPlaybackEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         Func<Task> act = () =>
             handler.OnPlaybackStarted(
@@ -445,7 +490,11 @@ public class SignalREventHandlerTests
     public async Task PlaybackHandler_OnPlaybackCompleted_DoesNotThrow()
     {
         InMemoryEventBus bus = new();
-        using SignalRPlaybackEventHandler handler = new(bus, NoOpMessenger);
+        using SignalRPlaybackEventHandler handler = new(
+            NullLogger<SignalRPlaybackEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         Func<Task> act = () =>
             handler.OnPlaybackCompleted(
@@ -465,7 +514,11 @@ public class SignalREventHandlerTests
     public async Task EncodingHandler_OnEncodingProgress_DoesNotThrow()
     {
         InMemoryEventBus bus = new();
-        using SignalREncodingEventHandler handler = new(bus, NoOpMessenger);
+        using SignalREncodingEventHandler handler = new(
+            NullLogger<SignalREncodingEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
 
         Func<Task> act = () =>
             handler.OnEncodingProgress(
@@ -575,9 +628,21 @@ public class SignalREventHandlerTests
     {
         InMemoryEventBus bus = new();
 
-        using SignalRPlaybackEventHandler playbackHandler = new(bus, NoOpMessenger);
-        using SignalREncodingEventHandler encodingHandler = new(bus, NoOpMessenger);
-        using SignalRLibraryScanEventHandler libraryScanHandler = new(bus, NoOpMessenger);
+        using SignalRPlaybackEventHandler playbackHandler = new(
+            NullLogger<SignalRPlaybackEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
+        using SignalREncodingEventHandler encodingHandler = new(
+            NullLogger<SignalREncodingEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
+        using SignalRLibraryScanEventHandler libraryScanHandler = new(
+            NullLogger<SignalRLibraryScanEventHandler>.Instance,
+            bus,
+            NoOpMessenger
+        );
         using SignalRLibraryRefreshEventHandler libraryRefreshHandler = new(bus, NoOpMessenger);
 
         Func<Task> act = async () =>

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.EventHandlers;
 using NoMercy.Api.Services.Music;
 using NoMercy.Database;
@@ -30,21 +31,33 @@ public static class EventHandlerExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus, clientMessenger);
+            return new(
+                sp.GetRequiredService<ILogger<SignalRPlaybackEventHandler>>(),
+                eventBus,
+                clientMessenger
+            );
         });
 
         services.AddSingleton<SignalREncodingEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus, clientMessenger);
+            return new(
+                sp.GetRequiredService<ILogger<SignalREncodingEventHandler>>(),
+                eventBus,
+                clientMessenger
+            );
         });
 
         services.AddSingleton<SignalRLibraryScanEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus, clientMessenger);
+            return new(
+                sp.GetRequiredService<ILogger<SignalRLibraryScanEventHandler>>(),
+                eventBus,
+                clientMessenger
+            );
         });
 
         services.AddSingleton<SignalRLibraryRefreshEventHandler>(sp =>
@@ -101,7 +114,11 @@ public static class EventHandlerExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new(eventBus, clientMessenger);
+            return new(
+                sp.GetRequiredService<ILogger<UserPermissionsEventHandler>>(),
+                eventBus,
+                clientMessenger
+            );
         });
 
         services.AddSingleton<IInboxMetadataProbe, TmdbMusicBrainzMetadataProbe>();
@@ -139,7 +156,11 @@ public static class EventHandlerExtensions
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
-            return new SignalRInboxEventHandler(eventBus, clientMessenger);
+            return new SignalRInboxEventHandler(
+                sp.GetRequiredService<ILogger<SignalRInboxEventHandler>>(),
+                eventBus,
+                clientMessenger
+            );
         });
 
         return services;

@@ -8,6 +8,7 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Encoding;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
@@ -21,8 +22,15 @@ public class SignalREncodingEventHandler : IDisposable
     private readonly IClientMessenger _clientMessenger;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public SignalREncodingEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
+    private readonly ILogger<SignalREncodingEventHandler> _logger;
+
+    public SignalREncodingEventHandler(
+        ILogger<SignalREncodingEventHandler> logger,
+        IEventBus eventBus,
+        IClientMessenger clientMessenger
+    )
     {
+        _logger = logger;
         _clientMessenger = clientMessenger;
         _subscriptions.Add(eventBus.Subscribe<EncodingStartedEvent>(OnEncodingStarted));
         _subscriptions.Add(eventBus.Subscribe<EncodingProgressUpdatedEvent>(OnEncodingProgress));
@@ -48,7 +56,9 @@ public class SignalREncodingEventHandler : IDisposable
                 Timestamp = @event.Timestamp,
             }
         );
-        Logger.Socket($"Encoding started: Job={@event.JobId}, Profile={@event.ProfileName}");
+        _logger.LogInformation(
+            $"Encoding started: Job={@event.JobId}, Profile={@event.ProfileName}"
+        );
     }
 
     internal async Task OnEncodingProgress(
@@ -85,7 +95,7 @@ public class SignalREncodingEventHandler : IDisposable
                 Timestamp = @event.Timestamp,
             }
         );
-        Logger.Socket($"Encoding completed: Job={@event.JobId}");
+        _logger.LogInformation($"Encoding completed: Job={@event.JobId}");
     }
 
     internal async Task OnEncodingFailed(EncodingFailedEvent @event, CancellationToken ct)
@@ -102,7 +112,7 @@ public class SignalREncodingEventHandler : IDisposable
                 Timestamp = @event.Timestamp,
             }
         );
-        Logger.Socket($"Encoding failed: Job={@event.JobId}, Error={@event.ErrorMessage}");
+        _logger.LogInformation($"Encoding failed: Job={@event.JobId}, Error={@event.ErrorMessage}");
     }
 
     internal async Task OnEncodingStageChanged(

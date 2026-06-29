@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using NoMercy.Events;
 using NoMercy.Events.Users;
 using NoMercy.Networking.Messaging;
@@ -21,8 +22,15 @@ public class UserPermissionsEventHandler : IDisposable
     private readonly IClientMessenger _clientMessenger;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public UserPermissionsEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
+    private readonly ILogger<UserPermissionsEventHandler> _logger;
+
+    public UserPermissionsEventHandler(
+        ILogger<UserPermissionsEventHandler> logger,
+        IEventBus eventBus,
+        IClientMessenger clientMessenger
+    )
     {
+        _logger = logger;
         _clientMessenger = clientMessenger;
         _subscriptions.Add(
             eventBus.Subscribe<UserPermissionsChangedEvent>(OnUserPermissionsChanged)
@@ -40,7 +48,7 @@ public class UserPermissionsEventHandler : IDisposable
             new { userId = @event.UserId, changedBy = @event.ChangedBy }
         );
 
-        Logger.Socket(
+        _logger.LogInformation(
             $"User permissions changed: UserId={@event.UserId}, ChangedBy={@event.ChangedBy}"
         );
     }
