@@ -12,6 +12,7 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Data.Jobs;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -32,7 +33,6 @@ using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Storage;
 using NoMercyQueue;
-using Serilog.Events;
 
 namespace NoMercy.Data.Services;
 
@@ -51,7 +51,10 @@ public partial class MusicLogic : IAsyncDisposable
     private Library Library { get; set; }
     private Folder? Folder { get; set; }
 
+    private readonly ILogger<MusicLogic> _logger;
+
     public MusicLogic(
+        ILogger<MusicLogic> logger,
         Library library,
         MediaFolderExtend listPath,
         MediaContext mediaContext,
@@ -59,6 +62,7 @@ public partial class MusicLogic : IAsyncDisposable
         IAudioFingerprinter audioFingerprinter
     )
     {
+        _logger = logger;
         _mediaContext = mediaContext;
         _storageFactory = storageFactory;
         _audioFingerprinter = audioFingerprinter;
@@ -87,19 +91,19 @@ public partial class MusicLogic : IAsyncDisposable
                 return listPath.Path.StartsWith(driverRoot, StringComparison.OrdinalIgnoreCase);
             });
 
-        Logger.App("Files", LogEventLevel.Verbose);
-        Logger.App(Files ?? [], LogEventLevel.Verbose);
+        _logger.LogTrace("Files");
+        _logger.LogTrace("{Files}", Files ?? []);
 
-        Logger.App("ArtistName: " + ArtistName, LogEventLevel.Verbose);
-        Logger.App("AlbumName " + AlbumName, LogEventLevel.Verbose);
-        Logger.App("Year: " + Year, LogEventLevel.Verbose);
+        _logger.LogTrace("ArtistName: " + ArtistName);
+        _logger.LogTrace("AlbumName " + AlbumName);
+        _logger.LogTrace("Year: " + Year);
 
-        Logger.App("Folder: " + Folder?.Path, LogEventLevel.Verbose);
+        _logger.LogTrace("Folder: " + Folder?.Path);
     }
 
     public async Task Process()
     {
-        Logger.App($"Processing Folder: {Folder?.Path}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Processing Folder: {Folder?.Path}");
         await Parallel.ForEachAsync(
             Files ?? [],
             SystemParallelism.Options,
@@ -107,7 +111,7 @@ public partial class MusicLogic : IAsyncDisposable
             {
                 try
                 {
-                    Logger.App($"Analyzing File: {file.Name}", LogEventLevel.Debug);
+                    _logger.LogDebug($"Analyzing File: {file.Name}");
                     FfProbeData ffProbeData = await FfProbe.CreateAsync(
                         file.Path,
                         cancellationToken
@@ -126,10 +130,7 @@ public partial class MusicLogic : IAsyncDisposable
                         {
                             if (release.TrackCount == null || release.TrackCount != Files?.Count)
                             {
-                                Logger.App(
-                                    $"Track Count Mismatch: {release.Title}",
-                                    LogEventLevel.Verbose
-                                );
+                                _logger.LogTrace($"Track Count Mismatch: {release.Title}");
                                 return;
                             }
 
@@ -141,7 +142,7 @@ public partial class MusicLogic : IAsyncDisposable
                             {
                                 if (e.Message.Contains("404"))
                                     return;
-                                Logger.App(e.Message, LogEventLevel.Error);
+                                _logger.LogError(e.Message);
                             }
                         }
 
@@ -161,7 +162,7 @@ public partial class MusicLogic : IAsyncDisposable
                 {
                     if (e.Message.Contains("404"))
                         return;
-                    Logger.App(e.Message, LogEventLevel.Error);
+                    _logger.LogError(e.Message);
                 }
             }
         );
@@ -169,10 +170,7 @@ public partial class MusicLogic : IAsyncDisposable
 
     private async Task ProcessRelease(AcoustIdFingerprintReleaseGroups release, MediaFile mediaFile)
     {
-        Logger.App(
-            $"Processing release: {release.Title} with id: {release.Id}",
-            LogEventLevel.Verbose
-        );
+        _logger.LogTrace($"Processing release: {release.Title} with id: {release.Id}");
 
         using MusicBrainzReleaseClient musicBrainzReleaseClient = new(release.Id);
 
@@ -180,26 +178,22 @@ public partial class MusicLogic : IAsyncDisposable
 
         if (releaseAppends is null || string.IsNullOrEmpty(releaseAppends.Title))
         {
-            Logger.App($"Release not found: {release.Title}", LogEventLevel.Warning);
+            _logger.LogWarning($"Release not found: {release.Title}");
             await Task.CompletedTask;
             return;
         }
 
         if (await StoreReleaseGroups(releaseAppends) is null)
-            Logger.App(
-                $"Release Group already exists: {releaseAppends.MusicBrainzReleaseGroup.Title}",
-                LogEventLevel.Verbose
+            _logger.LogTrace(
+                $"Release Group already exists: {releaseAppends.MusicBrainzReleaseGroup.Title}"
             );
         // await Task.CompletedTask;
         // return;
         else
-            Logger.App(
-                $"Processing release: {release.Title} with id: {release.Id}",
-                LogEventLevel.Debug
-            );
+            _logger.LogDebug($"Processing release: {release.Title} with id: {release.Id}");
 
         if (await StoreRelease(releaseAppends, mediaFile) is null)
-            Logger.App($"Release already exists: {releaseAppends.Title}", LogEventLevel.Verbose);
+            _logger.LogTrace($"Release already exists: {releaseAppends.Title}");
         // await Task.CompletedTask;
         // return;
         await LinkReleaseToReleaseGroup(releaseAppends);
@@ -233,7 +227,7 @@ public partial class MusicLogic : IAsyncDisposable
         FfProbeData ffProbeData
     )
     {
-        Logger.App($"Matching Track: {file.Name}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Matching Track: {file.Name}");
 
         try
         {
@@ -245,7 +239,7 @@ public partial class MusicLogic : IAsyncDisposable
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            _logger.LogError(e.Message);
             throw;
         }
 
@@ -253,7 +247,7 @@ public partial class MusicLogic : IAsyncDisposable
 
         foreach (AcoustIdFingerprintResult fingerPrint in FingerPrint?.Results ?? [])
         {
-            Logger.App($"Matching Recording: {fingerPrint.Id}", LogEventLevel.Verbose);
+            _logger.LogTrace($"Matching Recording: {fingerPrint.Id}");
             foreach (AcoustIdFingerprintRecording? recording in fingerPrint.Recordings ?? [])
             {
                 if (recording?.Releases is null)
@@ -276,12 +270,12 @@ public partial class MusicLogic : IAsyncDisposable
         FfProbeData ffProbeData
     )
     {
-        Logger.App($"Fallback Parser: {file.Name}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Fallback Parser: {file.Name}");
         string? albumId = ffProbeData
             .Format.Tags?.FirstOrDefault(t => t.Key == "MusicBrainz Album Id")
             .Value;
 
-        Logger.App($"AlbumId: {albumId}", LogEventLevel.Verbose);
+        _logger.LogTrace($"AlbumId: {albumId}");
 
         if (albumId is null)
             return null;
@@ -296,7 +290,7 @@ public partial class MusicLogic : IAsyncDisposable
         bool strictMatch = true
     )
     {
-        Logger.App($"Matching Release: {recording?.Title}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Matching Release: {recording?.Title}");
         if (recording is null)
             return null;
 
@@ -358,9 +352,8 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzReleaseAppends musicBrainzRelease
     )
     {
-        Logger.App(
-            $"Storing Release Group: {musicBrainzRelease.MusicBrainzReleaseGroup.Title}",
-            LogEventLevel.Verbose
+        _logger.LogTrace(
+            $"Storing Release Group: {musicBrainzRelease.MusicBrainzReleaseGroup.Title}"
         );
 
         bool hasReleaseGroup = _mediaContext
@@ -412,13 +405,12 @@ public partial class MusicLogic : IAsyncDisposable
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            _logger.LogError(e.Message);
             return null;
         }
 
-        Logger.App(
-            $"Release Group stored: {musicBrainzRelease.MusicBrainzReleaseGroup.Title}",
-            LogEventLevel.Verbose
+        _logger.LogTrace(
+            $"Release Group stored: {musicBrainzRelease.MusicBrainzReleaseGroup.Title}"
         );
         return musicBrainzRelease;
     }
@@ -428,7 +420,7 @@ public partial class MusicLogic : IAsyncDisposable
         MediaFile mediaFile
     )
     {
-        Logger.App($"Storing Release: {musicBrainzRelease.Title}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Storing Release: {musicBrainzRelease.Title}");
         MusicBrainzMedia? media = musicBrainzRelease.Media.FirstOrDefault(m => m.Tracks.Length > 0);
         if (media is null)
             return null;
@@ -511,18 +503,18 @@ public partial class MusicLogic : IAsyncDisposable
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            _logger.LogError(e.Message);
             return null;
         }
 
-        Logger.App($"Release stored: {musicBrainzRelease.Title}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Release stored: {musicBrainzRelease.Title}");
 
         return musicBrainzRelease;
     }
 
     private async Task StoreArtist(MusicBrainzArtistDetails musicBrainzArtist)
     {
-        Logger.App($"Processing Artist: {musicBrainzArtist.Name}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Processing Artist: {musicBrainzArtist.Name}");
 
         bool hasArtist = _mediaContext
             .Artists.AsNoTracking()
@@ -575,7 +567,7 @@ public partial class MusicLogic : IAsyncDisposable
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            _logger.LogError(e.Message);
             return;
         }
 
@@ -586,7 +578,7 @@ public partial class MusicLogic : IAsyncDisposable
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            _logger.LogError(e.Message);
         }
 
         MusicMetadataJob musicDescriptionJob = new() { MusicBrainzArtist = musicBrainzArtist };
@@ -611,7 +603,7 @@ public partial class MusicLogic : IAsyncDisposable
         MediaFile mediaFile
     )
     {
-        Logger.App($"Processing Track: {musicBrainzTrack.Title}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Processing Track: {musicBrainzTrack.Title}");
 
         bool hasTrack = _mediaContext
             .Tracks.AsNoTracking()
@@ -635,7 +627,7 @@ public partial class MusicLogic : IAsyncDisposable
 
         if (file is not null)
         {
-            Logger.App($"File Match: {file}", LogEventLevel.Verbose);
+            _logger.LogTrace($"File Match: {file}");
             FfProbeData ffProbeData = await FfProbe.CreateAsync(file);
             string folder =
                 mediaFile
@@ -679,7 +671,7 @@ public partial class MusicLogic : IAsyncDisposable
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            _logger.LogError(e.Message);
             return null;
         }
 
@@ -690,11 +682,11 @@ public partial class MusicLogic : IAsyncDisposable
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Error);
+            _logger.LogError(e.Message);
             return null;
         }
 
-        Logger.App($"Track stored: {musicBrainzTrack.Title}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Track stored: {musicBrainzTrack.Title}");
         return musicBrainzTrack;
     }
 
@@ -751,9 +743,8 @@ public partial class MusicLogic : IAsyncDisposable
 
     private async Task LinkReleaseToReleaseGroup(MusicBrainzReleaseAppends musicBrainzRelease)
     {
-        Logger.App(
-            $"Linking Release to Release Group: {musicBrainzRelease.MusicBrainzReleaseGroup.Title}",
-            LogEventLevel.Verbose
+        _logger.LogTrace(
+            $"Linking Release to Release Group: {musicBrainzRelease.MusicBrainzReleaseGroup.Title}"
         );
         AlbumReleaseGroup insert = new()
         {
@@ -773,9 +764,8 @@ public partial class MusicLogic : IAsyncDisposable
         Guid artistId
     )
     {
-        Logger.App(
-            $"Linking Artist to Release Group: {musicBrainzRelease.MusicBrainzReleaseGroup.Title}",
-            LogEventLevel.Verbose
+        _logger.LogTrace(
+            $"Linking Artist to Release Group: {musicBrainzRelease.MusicBrainzReleaseGroup.Title}"
         );
         ArtistReleaseGroup insert = new()
         {
@@ -794,10 +784,7 @@ public partial class MusicLogic : IAsyncDisposable
 
     private async Task LinkReleaseToLibrary(MusicBrainzReleaseAppends musicBrainzRelease)
     {
-        Logger.App(
-            $"Linking Release to Library: {musicBrainzRelease.Title}",
-            LogEventLevel.Verbose
-        );
+        _logger.LogTrace($"Linking Release to Library: {musicBrainzRelease.Title}");
         AlbumLibrary insert = new() { AlbumId = musicBrainzRelease.Id, LibraryId = Library.Id };
 
         await _mediaContext
@@ -809,10 +796,7 @@ public partial class MusicLogic : IAsyncDisposable
 
     private async Task LinkArtistToLibrary(MusicBrainzArtist musicBrainzArtistMusicBrainzArtist)
     {
-        Logger.App(
-            $"Linking Artist to Library: {musicBrainzArtistMusicBrainzArtist.Name}",
-            LogEventLevel.Verbose
-        );
+        _logger.LogTrace($"Linking Artist to Library: {musicBrainzArtistMusicBrainzArtist.Name}");
         ArtistLibrary insert = new()
         {
             ArtistId = musicBrainzArtistMusicBrainzArtist.Id,
@@ -831,7 +815,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzReleaseAppends? release
     )
     {
-        Logger.App($"Linking Track to Release: {track?.Title}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Linking Track to Release: {track?.Title}");
         if (track == null || release == null)
             return;
 
@@ -849,7 +833,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzReleaseAppends musicBrainzRelease
     )
     {
-        Logger.App($"Linking Artist to Album: {musicBrainzRelease.Title}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Linking Artist to Album: {musicBrainzRelease.Title}");
         AlbumArtist insert = new()
         {
             AlbumId = musicBrainzRelease.Id,
@@ -868,7 +852,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzTrack musicBrainzTrack
     )
     {
-        Logger.App($"Linking Artist to Track: {musicBrainzTrack.Title}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Linking Artist to Track: {musicBrainzTrack.Title}");
         ArtistTrack insert = new()
         {
             ArtistId = musicBrainzArtistMusicBrainzArtist.Id,
@@ -887,10 +871,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzGenreDetails musicBrainzGenre
     )
     {
-        Logger.App(
-            $"Linking Genre to Release Group: {musicBrainzReleaseGroup.Title}",
-            LogEventLevel.Verbose
-        );
+        _logger.LogTrace($"Linking Genre to Release Group: {musicBrainzReleaseGroup.Title}");
         MusicGenreReleaseGroup insert = new()
         {
             GenreId = musicBrainzGenre.Id,
@@ -909,7 +890,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzGenreDetails musicBrainzGenre
     )
     {
-        Logger.App($"Linking Genre to Artist: {musicBrainzArtist.Name}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Linking Genre to Artist: {musicBrainzArtist.Name}");
 
         bool genreExists = _mediaContext
             .MusicGenres.AsNoTracking()
@@ -917,10 +898,7 @@ public partial class MusicLogic : IAsyncDisposable
 
         if (!genreExists)
         {
-            Logger.App(
-                $"Genre does not exist: {musicBrainzGenre.Name}, creating it",
-                LogEventLevel.Verbose
-            );
+            _logger.LogTrace($"Genre does not exist: {musicBrainzGenre.Name}, creating it");
             MusicGenre genreInsert = new()
             {
                 Id = musicBrainzGenre.Id,
@@ -952,7 +930,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzGenreDetails musicBrainzGenre
     )
     {
-        Logger.App($"Linking Genre to Album: {artist.Title}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Linking Genre to Album: {artist.Title}");
         AlbumMusicGenre insert = new() { MusicGenreId = musicBrainzGenre.Id, AlbumId = artist.Id };
 
         await _mediaContext
@@ -967,7 +945,7 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzGenreDetails musicBrainzGenre
     )
     {
-        Logger.App($"Linking Genre to Track: {musicBrainzTrack.Title}", LogEventLevel.Verbose);
+        _logger.LogTrace($"Linking Genre to Track: {musicBrainzTrack.Title}");
         MusicGenreTrack insert = new()
         {
             GenreId = musicBrainzGenre.Id,

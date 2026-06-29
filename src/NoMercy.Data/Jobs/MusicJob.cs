@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Data.Services;
 using NoMercy.Database;
@@ -43,6 +44,8 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
     [JsonIgnore]
     public IAudioFingerprinter AudioFingerprinter { get; set; } = null!;
 
+    private ILogger<MusicLogic> _musicLogicLogger = null!;
+
     public MusicJob()
     {
         //
@@ -59,6 +62,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
         storageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
         AudioFingerprinter = serviceProvider.GetRequiredService<IAudioFingerprinter>();
+        _musicLogicLogger = serviceProvider.GetRequiredService<ILogger<MusicLogic>>();
     }
 
     public async Task Handle()
@@ -79,6 +83,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
             Logger.App($"Music {list.Path}: Processing");
 
             MusicLogic music = new(
+                _musicLogicLogger,
                 Library,
                 list,
                 _mediaContext,
