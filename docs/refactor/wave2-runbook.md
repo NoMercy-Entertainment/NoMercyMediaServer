@@ -244,3 +244,29 @@ ONLY remaining Api = the deferred log-management-API consumers (ManagementContro
 ServerController, LogController, LogBroadcastService, ResourceMonitorService) — these
 wait on re-providing GetLogs/SetLogLevel/LogEmitted/LogTypes on NoMercyLoggerProvider.
 Resume next at: Networking(90) → Service(131) → Setup(155) → Data(60) → MediaProcessing(269).
+
+### Networking: DONE (d47bfd8e client-messenger/port-forward; 9b012495 the rest)
+All Networking services use ILogger<T>. DEFERRED: NetworkProbe (`static class` with a
+static method that logs — same bucket as provider clients/jobs; needs the seam or
+stays on bridge until refactored). ConnectionHub's only "call" was a commented line.
+
+### CRITICAL LESSON — services that are manually constructed (not pure DI)
+Changing a service ctor to add `ILogger<T>` breaks EVERY manual construction site,
+which the per-project file scan does NOT show. Before converting a service whose
+instances are built explicitly, grep the WHOLE repo (src AND tests) for ALL forms:
+  grep -rnE "new <Type>\(|\b<Type> +\w+ *= *new\(" src tests --include=*.cs
+Networking hit sites in ServiceConfiguration.Core.cs (factory lambdas, target-typed
+`X x = new(...)`) and 6 test files (NoMercyApiFactory, DegradedModeStartupTests,
+BootOrchestratorTests, HttpsRestartTests, CertificateRenewalJobTests,
+NetworkingExternalIpTests). Fix: logger is added as the FIRST ctor param, so PREPEND
+it as the first argument at every site — `sp.GetRequiredService<ILogger<T>>()` inside
+DI factory lambdas (sp in scope), `NullLogger<T>.Instance` in tests (+ using
+Microsoft.Extensions.Logging.Abstractions). Do this in the SAME commit or the green
+gate blocks (which is correct). The build's CS7036 errors enumerate remaining sites,
+but grepping up front avoids multiple revert/retry cycles.
+
+### Remaining order: Service(131) → Setup(155) → Data(60) → MediaProcessing(269).
+Expect MANY manual construction sites for Data/MediaProcessing managers (they're
+newed in jobs/Service wiring). Grep construction sites first. Provider HTTP clients,
+queue jobs, and static utility classes (e.g. NetworkProbe) stay on the legacy bridge
+until DI-ified in N/O. Delete Logger.cs LAST.
