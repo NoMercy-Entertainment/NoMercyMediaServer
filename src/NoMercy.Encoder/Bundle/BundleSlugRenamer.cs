@@ -11,13 +11,12 @@
 
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
-using Serilog.Events;
 
 namespace NoMercy.Encoder.Bundle;
 
@@ -40,7 +39,8 @@ namespace NoMercy.Encoder.Bundle;
 public class BundleSlugRenamer(
     IReadOnlyDictionary<string, string> slugMap,
     IStorageFactory storageFactory,
-    MediaContext context
+    MediaContext context,
+    ILogger<BundleSlugRenamer> logger
 )
 {
     /// <summary>
@@ -78,9 +78,8 @@ public class BundleSlugRenamer(
             // override map must NOT corrupt the library.
             if (string.IsNullOrWhiteSpace(pair.Key) || string.IsNullOrWhiteSpace(pair.Value))
             {
-                Logger.Setup(
-                    $"BundleSlugRenamer: skipping empty slug pair '{pair.Key}' → '{pair.Value}'",
-                    LogEventLevel.Warning
+                logger.LogWarning(
+                    $"BundleSlugRenamer: skipping empty slug pair '{pair.Key}' → '{pair.Value}'"
                 );
                 continue;
             }
@@ -95,10 +94,9 @@ public class BundleSlugRenamer(
             bool newExists = await storage.ExistsAsync(newDir, ct);
             if (newExists)
             {
-                Logger.Setup(
+                logger.LogWarning(
                     $"BundleSlugRenamer: collision — '{newDir}' already exists in '{folderPath}'. "
-                        + $"Leaving '{oldDir}' untouched.",
-                    LogEventLevel.Warning
+                        + $"Leaving '{oldDir}' untouched."
                 );
                 continue;
             }
@@ -106,16 +104,14 @@ public class BundleSlugRenamer(
             try
             {
                 await storage.MoveDirectoryAsync(oldDir, newDir, ct);
-                Logger.Setup(
-                    $"BundleSlugRenamer: renamed '{oldDir}' → '{newDir}' in '{folderPath}'",
-                    LogEventLevel.Information
+                logger.LogInformation(
+                    $"BundleSlugRenamer: renamed '{oldDir}' → '{newDir}' in '{folderPath}'"
                 );
             }
             catch (Exception ex)
             {
-                Logger.Setup(
-                    $"BundleSlugRenamer: failed to rename '{oldDir}' → '{newDir}' in '{folderPath}': {ex.Message}",
-                    LogEventLevel.Warning
+                logger.LogWarning(
+                    $"BundleSlugRenamer: failed to rename '{oldDir}' → '{newDir}' in '{folderPath}': {ex.Message}"
                 );
                 continue;
             }
@@ -124,7 +120,7 @@ public class BundleSlugRenamer(
         }
     }
 
-    private static async Task PatchManifestAsync(
+    private async Task PatchManifestAsync(
         IStorage storage,
         string bundleDir,
         string newSlug,
@@ -149,16 +145,14 @@ public class BundleSlugRenamer(
             string updated = JsonConvert.SerializeObject(obj, Formatting.Indented);
             await storage.WriteAsync(manifestPath, Encoding.UTF8.GetBytes(updated), ct);
 
-            Logger.Setup(
-                $"BundleSlugRenamer: patched manifest.json preset_slug → '{newSlug}' in '{bundleDir}'",
-                LogEventLevel.Verbose
+            logger.LogTrace(
+                $"BundleSlugRenamer: patched manifest.json preset_slug → '{newSlug}' in '{bundleDir}'"
             );
         }
         catch (Exception ex)
         {
-            Logger.Setup(
-                $"BundleSlugRenamer: failed to patch manifest.json in '{bundleDir}': {ex.Message}",
-                LogEventLevel.Warning
+            logger.LogWarning(
+                $"BundleSlugRenamer: failed to patch manifest.json in '{bundleDir}': {ex.Message}"
             );
         }
     }

@@ -10,10 +10,10 @@
 // -----------------------------------------------------------------------------
 
 using System.Data;
-using NoMercy.NmSystem.Auth;
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Maintenance;
 using NoMercy.Database.Models.Libraries;
@@ -21,7 +21,7 @@ using NoMercy.Database.Models.Storage;
 using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Profiles;
-using NoMercy.Authorization;
+using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Storage;
@@ -206,8 +206,7 @@ public static class DatabaseSeeder
         string overlayDir = Path.Combine(AppFiles.DataPath, "profiles");
         Directory.CreateDirectory(overlayDir);
 
-        DiskOverlayLoader.LoadResult overlay =
-            DiskOverlayLoader.Load(overlayDir);
+        DiskOverlayLoader.LoadResult overlay = DiskOverlayLoader.Load(overlayDir);
 
         foreach (string error in overlay.Errors)
             Logger.Setup($"Disk overlay load error: {error}", LogEventLevel.Warning);
@@ -287,7 +286,10 @@ public static class DatabaseSeeder
     /// after <see cref="Run"/> so the <see cref="IStorageFactory"/> singleton
     /// is fully configured with driver config resolvers.
     /// </summary>
-    public static async Task RunBundleSlugRenamePassAsync(IStorageFactory storageFactory)
+    public static async Task RunBundleSlugRenamePassAsync(
+        IStorageFactory storageFactory,
+        Microsoft.Extensions.Logging.ILogger<NoMercy.Encoder.Bundle.BundleSlugRenamer> logger
+    )
     {
         if (BuiltinPresetRenames.SlugRenames.Count == 0)
             return;
@@ -298,7 +300,8 @@ public static class DatabaseSeeder
             BundleSlugRenamer renamer = new(
                 BuiltinPresetRenames.SlugRenames,
                 storageFactory,
-                context
+                context,
+                logger
             );
             await renamer.RunAsync();
             Logger.Setup("Bundle slug rename pass complete", LogEventLevel.Verbose);

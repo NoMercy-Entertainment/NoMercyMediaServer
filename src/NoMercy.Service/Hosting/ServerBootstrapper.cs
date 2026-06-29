@@ -160,7 +160,8 @@ public sealed class ServerBootstrapper
 
         // Rename on-disk bundle directories when a built-in preset slug changed.
         await DatabaseSeeder.RunBundleSlugRenamePassAsync(
-            app.Services.GetRequiredService<IStorageFactory>()
+            app.Services.GetRequiredService<IStorageFactory>(),
+            app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<NoMercy.Encoder.Bundle.BundleSlugRenamer>>()
         );
 
         // BootOrchestrator owns Phase 2 (auth) and Phase 3 (registration).

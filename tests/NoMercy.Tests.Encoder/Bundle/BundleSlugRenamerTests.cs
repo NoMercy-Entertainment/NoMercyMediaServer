@@ -242,7 +242,12 @@ internal static class RenameTestHelpers
     )
     {
         FixedStorageFactory factory = new(storage);
-        return new BundleSlugRenamer(slugMap, factory, context);
+        return new BundleSlugRenamer(
+            slugMap,
+            factory,
+            context,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<BundleSlugRenamer>.Instance
+        );
     }
 }
 
