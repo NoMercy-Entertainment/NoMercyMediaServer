@@ -162,15 +162,15 @@ HubErrorLoggingFilter/EncoderRuntimeException) ; EventHandlers ; Services
 (Encoder/Recommendation/VideoPlayback). SKIP LogController, LogBroadcastService,
 WebSockets/ResourceMonitorService (management-API consumers).
 
-### Reusable transformer: scripts/migrate_logger.py  (committed de4db3a7)
+### Reusable transformer: /home/claude/migrate_logger.py (local, NOT in repo)  (committed de4db3a7)
 String/char/verbatim/interpolation-aware paren matcher — correctly handles
 multi-line calls, mixed levels, and parens INSIDE interpolated strings
 (e.g. `$"(id={x})"`). Rewrites `Logger.<Category>(...)` → `<expr>.Log<Level>(...)`,
 stripping a trailing `LogEventLevel.X` arg (else uses the category default level).
 Management-API members (LogEmitted/GetLogs/SetLogLevel/LogTypes/LogType/WriteBanner/
 GetColor/Write) are NOT in the category set, so they're left untouched.
-- Dry report:  `python3 scripts/migrate_logger.py --dry <expr> <file>...`
-- Apply:       `python3 scripts/migrate_logger.py --apply <expr> <file>...`
+- Dry report:  `python3 /home/claude/migrate_logger.py (local, NOT in repo) --dry <expr> <file>...`
+- Apply:       `python3 /home/claude/migrate_logger.py (local, NOT in repo) --apply <expr> <file>...`
 - In apply mode it SKIPS calls whose sole remaining arg is a bare identifier
   (`[IDENT-ARG]`, almost always an exception) — fix those by hand as
   `<expr>.LogError(e, e.Message)`.
@@ -305,7 +305,7 @@ The clean mechanical ctor-injection pass is now essentially complete: leaf proje
 All log calls must use MEL structured logging — named placeholders + values as args:
   GOOD: _logger.LogInformation("Show {ShowId} -> {Library}", id, library.Title)
   BAD : _logger.LogInformation($"Show {id} -> {library.Title}")
-Tool: `scripts/structure_logs.py --dry|--apply <files>` (committed 53ac4bb5). It
+Tool: `/home/claude/structure_logs.py (local, NOT in repo) --dry|--apply <files>` (committed 53ac4bb5). It
 converts interpolated strings AND `"x: " + y` concatenations into templates+args,
 derives PascalCase names from the last identifier of each hole expr (dedupes
 collisions), handles multi-arg, `LogError(ex, ...)`, `Log(level, ...)`,
