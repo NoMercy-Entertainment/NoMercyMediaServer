@@ -12,6 +12,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Logging.Rendering;
 
@@ -19,16 +20,20 @@ namespace NoMercy.NmSystem.Logging;
 
 /// <summary>
 /// <see cref="ILoggerProvider"/> that renders every entry through
-/// <see cref="ConsoleLineRenderer"/>. Colour is auto-detected (off when output is
-/// redirected or NO_COLOR is set) unless forced via options. Writes are serialised
-/// so interleaved lines from concurrent workers stay intact.
+/// <see cref="ConsoleLineRenderer"/>, optionally appends a compact JSON line to a
+/// file, and optionally hands a <see cref="NoMercyLogRecord"/> to a callback
+/// (dashboard live-log / event bus). Colour auto-detects (off when redirected or
+/// NO_COLOR is set). Writes are serialised so concurrent workers never interleave.
 /// </summary>
 public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
+
     private readonly NoMercyLoggerOptions _options;
     private readonly TextWriter _output;
     private readonly object _gate = new();
     private readonly bool _color;
+    private readonly StreamWriter? _file;
     private IExternalScopeProvider? _scopes;
 
     public NoMercyLoggerProvider(NoMercyLoggerOptions options, TextWriter? output = null)
@@ -41,6 +46,14 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
                 !System.Console.IsOutputRedirected
                 && Environment.GetEnvironmentVariable("NO_COLOR") is null
             );
+
+        if (!string.IsNullOrEmpty(options.JsonFilePath))
+        {
+            string? directory = Path.GetDirectoryName(options.JsonFilePath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+            _file = new StreamWriter(options.JsonFilePath, append: true) { AutoFlush = true };
+        }
     }
 
     internal NoMercyLoggerOptions Options => _options;
@@ -51,7 +64,13 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
 
     public void SetScopeProvider(IExternalScopeProvider scopeProvider) => _scopes = scopeProvider;
 
-    public void Dispose() { }
+    public void Dispose()
+    {
+        lock (_gate)
+        {
+            _file?.Dispose();
+        }
+    }
 
     internal void Write(
         DateTime timestamp,
@@ -75,9 +94,32 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
             _options.WidthProvider()
         );
 
+        NoMercyLogRecord record = new(
+            timestamp,
+            level,
+            category.Key,
+            category.DisplayName,
+            message,
+            scope,
+            exception?.ToString()
+        );
+
         lock (_gate)
         {
             _output.WriteLine(line);
+            _file?.WriteLine(JsonSerializer.Serialize(record, JsonOptions));
+        }
+
+        if (_options.OnRecord is not null)
+        {
+            try
+            {
+                _options.OnRecord(record);
+            }
+            catch
+            {
+                // A failing log consumer must never break the logging path.
+            }
         }
     }
 

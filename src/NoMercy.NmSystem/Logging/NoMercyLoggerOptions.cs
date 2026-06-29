@@ -34,4 +34,10 @@ public sealed class NoMercyLoggerOptions
 
     /// <summary>Returns the current wrap width in columns; 0 disables wrapping.</summary>
     public Func<int> WidthProvider { get; set; } = static () => 0;
+
+    /// <summary>When set, every entry is appended as one compact JSON line to this file.</summary>
+    public string? JsonFilePath { get; set; }
+
+    /// <summary>When set, invoked for every entry (dashboard live-log / event bus bridge).</summary>
+    public Action<NoMercyLogRecord>? OnRecord { get; set; }
 }
