@@ -84,9 +84,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             {
                 if (profile.AudioProfiles.Length == 0)
                 {
-                    Logger.Encoder(
-                        $"Skipping profile {profile.Name}: no audio profiles configured"
-                    );
+                    Log.LogInformation("Skipping profile {Name}: no audio profiles configured", profile.Name);
                     continue;
                 }
 
@@ -165,9 +163,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                     );
                 }
 
-                Logger.Encoder(
-                    $"Encoded {MediaFile.Path} → {encodeResult.OutputPath} in {encodeResult.Duration.TotalSeconds:F1}s ({encodeResult.Metrics?.EncoderUsed ?? "unknown"})"
-                );
+                Log.LogInformation("Encoded {Path} → {OutputPath} in {TotalSeconds:F1}s ({Unknown})", MediaFile.Path, encodeResult.OutputPath, encodeResult.Duration.TotalSeconds, encodeResult.Metrics?.EncoderUsed ?? "unknown");
 
                 await AddRecording(folder);
 
@@ -289,10 +285,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
                 if (albumLibrary is null)
                 {
-                    Logger.MusicBrainz(
-                        $"Album Library not found: {LibraryId}",
-                        LogEventLevel.Error
-                    );
+                    Log.LogError("Album Library not found: {LibraryId}", LibraryId);
                     return;
                 }
 
@@ -301,10 +294,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                     SystemParallelism.Options,
                     async (artist, _) =>
                     {
-                        Logger.MusicBrainz(
-                            $"Storing Artist: {artist.MusicBrainzArtist.Name}",
-                            LogEventLevel.Verbose
-                        );
+                        Log.LogTrace("Storing Artist: {Name}", artist.MusicBrainzArtist.Name);
                         await artistManager.Store(
                             artist.MusicBrainzArtist,
                             albumLibrary,

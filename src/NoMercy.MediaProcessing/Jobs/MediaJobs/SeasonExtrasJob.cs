@@ -59,9 +59,6 @@ public class SeasonExtrasJob : AbstractShowExtraDataJob<TmdbSeasonAppends, strin
             await seasonManager.StoreTranslations(Name, season);
         }
 
-        Logger.MovieDb(
-            $"Show {Name}: Seasons: Images and Translations stored",
-            LogEventLevel.Verbose
-        );
+        Log.LogTrace("Show {Name}: Seasons: Images and Translations stored", Name);
     }
 }

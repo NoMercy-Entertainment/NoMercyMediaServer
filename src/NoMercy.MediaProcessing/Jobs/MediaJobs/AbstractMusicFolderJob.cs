@@ -46,6 +46,9 @@ public abstract class AbstractMusicFolderJob : IShouldQueue, IJobStorageInjector
     [JsonIgnore]
     public ILoggerFactory LoggerFactory { get; set; } = null!;
 
+    [JsonIgnore]
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 

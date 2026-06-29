@@ -58,7 +58,7 @@ public class MovieImportJob : AbstractMediaJob
 
         if (movieLibrary is null)
         {
-            Logger.App($"MovieImportJob: library {LibraryId} not found, skipping movie {Id}");
+            Log.LogInformation("MovieImportJob: library {LibraryId} not found, skipping movie {Id}", LibraryId, Id);
             return;
         }
 
@@ -98,7 +98,7 @@ public class MovieImportJob : AbstractMediaJob
 
         jobDispatcher.DispatchJob<FileRescanJob>(Id, movieLibrary);
 
-        Logger.App($"Movie {Id} added to library, extra data will be added in the background");
+        Log.LogInformation("Movie {Id} added to library, extra data will be added in the background", Id);
 
         if (EventBusProvider.IsConfigured)
         {

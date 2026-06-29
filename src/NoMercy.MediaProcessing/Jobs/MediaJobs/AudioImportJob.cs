@@ -90,7 +90,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception ex)
         {
-            Logger.App($"Fingerprint lookup failed for {mediaFile.Path}: {ex.Message}");
+            Log.LogInformation("Fingerprint lookup failed for {Path}: {Message}", mediaFile.Path, ex.Message);
             return null;
         }
     }
@@ -208,7 +208,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception disposeEx)
         {
-            Logger.Error($"Dispose failed: {disposeEx}");
+            Log.LogError("Dispose failed: {DisposeEx}", disposeEx);
         }
         try
         {
@@ -216,7 +216,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception disposeEx)
         {
-            Logger.Error($"Dispose failed: {disposeEx}");
+            Log.LogError("Dispose failed: {DisposeEx}", disposeEx);
         }
         try
         {
@@ -224,7 +224,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception disposeEx)
         {
-            Logger.Error($"Dispose failed: {disposeEx}");
+            Log.LogError("Dispose failed: {DisposeEx}", disposeEx);
         }
         try
         {
@@ -233,7 +233,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception disposeEx)
         {
-            Logger.Error($"Dispose failed: {disposeEx}");
+            Log.LogError("Dispose failed: {DisposeEx}", disposeEx);
         }
         _mediaContext = null;
     }
@@ -358,7 +358,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception disposeEx)
         {
-            Logger.Error($"Dispose failed: {disposeEx}");
+            Log.LogError("Dispose failed: {DisposeEx}", disposeEx);
         }
         try
         {
@@ -366,7 +366,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception disposeEx)
         {
-            Logger.Error($"Dispose failed: {disposeEx}");
+            Log.LogError("Dispose failed: {DisposeEx}", disposeEx);
         }
         try
         {
@@ -374,7 +374,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception disposeEx)
         {
-            Logger.Error($"Dispose failed: {disposeEx}");
+            Log.LogError("Dispose failed: {DisposeEx}", disposeEx);
         }
         try
         {
@@ -383,7 +383,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception disposeEx)
         {
-            Logger.Error($"Dispose failed: {disposeEx}");
+            Log.LogError("Dispose failed: {DisposeEx}", disposeEx);
         }
         _mediaContext = null;
     }

@@ -50,6 +50,6 @@ public class PersonExtrasJob : AbstractShowExtraDataJob<TmdbPersonAppends, strin
             await personManager.StoreImages(person);
         }
 
-        Logger.MovieDb($"Show {Name}: People: Translations and Images stored", LogEventLevel.Debug);
+        Log.LogDebug("Show {Name}: People: Translations and Images stored", Name);
     }
 }

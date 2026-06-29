@@ -23,6 +23,7 @@ using NoMercy.NmSystem.Information;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -55,7 +56,7 @@ public class ReleaseImportJob : AbstractMusicFolderJob
 
         if (rootFolders.Count == 0)
         {
-            Logger.App("Processing folder: " + InputFolder, LogEventLevel.Verbose);
+            Log.LogTrace("Processing folder: {InputFolder}", InputFolder);
             Folder baseFolder = albumLibrary
                 .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
                 .First(f =>
@@ -75,7 +76,7 @@ public class ReleaseImportJob : AbstractMusicFolderJob
             SystemParallelism.Options,
             folder =>
             {
-                Logger.App("Processing folder: " + folder.Path);
+                Log.LogInformation("Processing folder: {Path}", folder.Path);
                 Folder baseFolder = albumLibrary
                     .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
                     .First(f =>

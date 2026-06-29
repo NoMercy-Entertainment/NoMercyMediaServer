@@ -42,6 +42,9 @@ public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue, IJobStorag
     [JsonIgnore]
     public ILoggerFactory LoggerFactory { get; set; } = null!;
 
+    [JsonIgnore]
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
         LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();

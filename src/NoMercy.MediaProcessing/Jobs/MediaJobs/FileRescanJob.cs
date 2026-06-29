@@ -36,7 +36,7 @@ public class FileRescanJob : AbstractMediaJob
 
     public override async Task Handle()
     {
-        Logger.App($"[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}");
+        Log.LogInformation("[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}", Id, LibraryId);
 
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
