@@ -12,6 +12,7 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Authorization;
 using NoMercy.Data.Activity;
 using NoMercy.Database;
@@ -22,7 +23,6 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Sources;
-using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -33,7 +33,10 @@ public class RipperHub : ConnectionHub
     private readonly IDriveMonitor _driveMonitor;
     private readonly DiscSourceFactory _discSourceFactory;
 
+    private readonly ILogger<RipperHub> _logger;
+
     public RipperHub(
+        ILogger<RipperHub> logger,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
@@ -43,6 +46,7 @@ public class RipperHub : ConnectionHub
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
+        _logger = logger;
         _driveMonitor = driveMonitor;
         _discSourceFactory = discSourceFactory;
     }
@@ -54,13 +58,13 @@ public class RipperHub : ConnectionHub
         CurrentDevices.TryAdd(Context.ConnectionId, user.Id);
 
         await base.OnConnectedAsync();
-        Logger.Socket("Ripper client connected", LogEventLevel.Debug);
+        _logger.LogDebug("Ripper client connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
-        Logger.Socket("Ripper client disconnected", LogEventLevel.Debug);
+        _logger.LogDebug("Ripper client disconnected");
     }
 
     /// <summary>

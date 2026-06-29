@@ -11,6 +11,7 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
@@ -36,7 +37,10 @@ public class CastHub : ConnectionHub
 
     private readonly IChromeCastService _chromeCast;
 
+    private readonly ILogger<CastHub> _logger;
+
     public CastHub(
+        ILogger<CastHub> logger,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
@@ -47,6 +51,7 @@ public class CastHub : ConnectionHub
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
+        _logger = logger;
         _authTokenStore = authTokenStore;
         _clientMessenger = clientMessenger;
         _chromeCast = chromeCast;
@@ -205,13 +210,13 @@ public class CastHub : ConnectionHub
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        Logger.Socket("Cast client connected");
+        _logger.LogInformation("Cast client connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
-        Logger.Socket("Cast client disconnected");
+        _logger.LogInformation("Cast client disconnected");
     }
 
     public string[] GetChromeCasts()

@@ -11,6 +11,7 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.WebSockets;
 using NoMercy.Authorization;
 using NoMercy.Data.Activity;
@@ -18,7 +19,6 @@ using NoMercy.Database;
 using NoMercy.Networking;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
-using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -28,7 +28,10 @@ public class DashboardHub : ConnectionHub
     private readonly ILogBroadcastService _logBroadcastService;
     private readonly IResourceMonitorService _resourceMonitorService;
 
+    private readonly ILogger<DashboardHub> _logger;
+
     public DashboardHub(
+        ILogger<DashboardHub> logger,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
@@ -39,6 +42,7 @@ public class DashboardHub : ConnectionHub
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
+        _logger = logger;
         _clientMessenger = clientMessenger;
         _logBroadcastService = logBroadcastService;
         _resourceMonitorService = resourceMonitorService;
@@ -52,7 +56,7 @@ public class DashboardHub : ConnectionHub
             await Groups.AddToGroupAsync(Context.ConnectionId, "moderators");
         }
 
-        Logger.Socket("Dashboard client connected", LogEventLevel.Debug);
+        _logger.LogDebug("Dashboard client connected");
         _logBroadcastService.Start();
     }
 
@@ -60,7 +64,7 @@ public class DashboardHub : ConnectionHub
     {
         await base.OnDisconnectedAsync(exception);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, "moderators");
-        Logger.Socket("Dashboard client disconnected", LogEventLevel.Debug);
+        _logger.LogDebug("Dashboard client disconnected");
 
         StopResources();
     }
