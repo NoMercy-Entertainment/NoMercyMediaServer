@@ -25,6 +25,7 @@ using NoMercy.MediaProcessing.Movies;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.Movies;
 
+using NoMercy.Storage;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -33,6 +34,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class MovieImportJob : AbstractMediaJob
 {
+    public MovieImportJob() { }
+
+    public MovieImportJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "import";
     public override int Priority => 5;
 

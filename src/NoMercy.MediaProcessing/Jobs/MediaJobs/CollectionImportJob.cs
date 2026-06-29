@@ -23,6 +23,7 @@ using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.Providers.TMDB.Models.Collections;
 
+using NoMercy.Storage;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -31,6 +32,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class CollectionImportJob : AbstractMediaJob
 {
+    public CollectionImportJob() { }
+
+    public CollectionImportJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "import";
     public override int Priority => 4;
 

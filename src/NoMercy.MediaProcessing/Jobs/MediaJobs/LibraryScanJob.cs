@@ -18,6 +18,7 @@ using NoMercy.Events;
 using NoMercy.MediaProcessing.Libraries;
 
 using Microsoft.Extensions.Logging;
+using NoMercy.Storage;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -26,6 +27,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class LibraryScanJob : AbstractMediaJob
 {
+    public LibraryScanJob() { }
+
+    public LibraryScanJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "library";
     public override int Priority => 10;
 

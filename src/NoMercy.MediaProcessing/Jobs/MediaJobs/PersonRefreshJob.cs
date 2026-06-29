@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.MediaProcessing.People;
 
+using NoMercy.Storage;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -25,6 +26,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class PersonRefreshJob : AbstractMediaJob
 {
+    public PersonRefreshJob() { }
+
+    public PersonRefreshJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "import";
     public override int Priority => 5;
 

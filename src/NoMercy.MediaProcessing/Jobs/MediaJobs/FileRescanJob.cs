@@ -23,6 +23,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
 using Microsoft.Extensions.Logging;
+using NoMercy.Storage;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -31,6 +32,15 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class FileRescanJob : AbstractMediaJob
 {
+    public FileRescanJob() { }
+
+    public FileRescanJob(
+        IStorageFactory storageFactory,
+        IStorageDriver storageDriver,
+        ILoggerFactory loggerFactory
+    )
+        : base(storageFactory, storageDriver, loggerFactory) { }
+
     public override string QueueName => "file";
     public override int Priority => 10;
 
