@@ -14,6 +14,7 @@ using System.Security.Claims;
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Services.Video;
 using NoMercy.Api.WebSockets;
@@ -32,7 +33,6 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
-using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -53,7 +53,10 @@ public partial class VideoHub : ConnectionHub
 
     private readonly IChromeCastService _chromeCast;
 
+    private readonly ILogger<VideoHub> _logger;
+
     public VideoHub(
+        ILogger<VideoHub> logger,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
@@ -71,6 +74,7 @@ public partial class VideoHub : ConnectionHub
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
+        _logger = logger;
         _httpContextAccessor = httpContextAccessor;
         _clientMessenger = clientMessenger;
         _contextFactory = contextFactory;
@@ -218,13 +222,10 @@ public partial class VideoHub : ConnectionHub
             }
             catch (Exception ex)
             {
-                Logger.Socket(
-                    $"Failed to log playback.stopped: {ex.Message}",
-                    LogEventLevel.Warning
-                );
+                _logger.LogWarning($"Failed to log playback.stopped: {ex.Message}");
             }
         }
 
-        Logger.Socket("Video client disconnected", LogEventLevel.Debug);
+        _logger.LogDebug("Video client disconnected");
     }
 }

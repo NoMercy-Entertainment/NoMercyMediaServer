@@ -13,6 +13,7 @@ using System.Security.Claims;
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Services.Video;
 using NoMercy.Api.WebSockets;
@@ -31,7 +32,6 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
-using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -186,10 +186,9 @@ public partial class VideoHub
 
         if (string.IsNullOrEmpty(type) || listId is null)
         {
-            Logger.Socket(
+            _logger.LogWarning(
                 $"{user.Name}: [VideoHub.StartPlaybackCommand] ignored — null arg "
-                    + $"(type='{type ?? "<null>"}', listId={(listId is null ? "<null>" : "set")})",
-                LogEventLevel.Warning
+                    + $"(type='{type ?? "<null>"}', listId={(listId is null ? "<null>" : "set")})"
             );
             return;
         }
@@ -218,7 +217,7 @@ public partial class VideoHub
         }
         catch (ArgumentException ex)
         {
-            Logger.App($"Invalid playlist type: {ex.Message}");
+            _logger.LogInformation($"Invalid playlist type: {ex.Message}");
 
             User? user2 = UserCacheService.GetUser(Context.User.UserId());
             if (user2 is not null)
@@ -237,17 +236,14 @@ public partial class VideoHub
                 }
                 catch (Exception logEx)
                 {
-                    Logger.Socket(
-                        $"Failed to log failure.playback_start: {logEx.Message}",
-                        LogEventLevel.Warning
-                    );
+                    _logger.LogWarning($"Failed to log failure.playback_start: {logEx.Message}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Logger.App("Error in StartPlaybackCommand");
-            Logger.App(ex);
+            _logger.LogInformation("Error in StartPlaybackCommand");
+            _logger.LogError(ex, ex.Message);
 
             User? user2 = UserCacheService.GetUser(Context.User.UserId());
             if (user2 is not null)
@@ -266,10 +262,7 @@ public partial class VideoHub
                 }
                 catch (Exception logEx)
                 {
-                    Logger.Socket(
-                        $"Failed to log failure.playback_start: {logEx.Message}",
-                        LogEventLevel.Warning
-                    );
+                    _logger.LogWarning($"Failed to log failure.playback_start: {logEx.Message}");
                 }
             }
         }
@@ -333,7 +326,7 @@ public partial class VideoHub
         }
         catch (Exception ex)
         {
-            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+            _logger.LogWarning($"Failed to log playback.started: {ex.Message}");
         }
     }
 
@@ -412,7 +405,7 @@ public partial class VideoHub
         }
         catch (Exception ex)
         {
-            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+            _logger.LogWarning($"Failed to log playback.started: {ex.Message}");
         }
     }
 
@@ -474,9 +467,8 @@ public partial class VideoHub
 
         if (string.IsNullOrEmpty(command))
         {
-            Logger.Socket(
-                $"{user.Name}: [VideoHub.PlaybackCommand] ignored — command was null/empty",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"{user.Name}: [VideoHub.PlaybackCommand] ignored — command was null/empty"
             );
             return;
         }
@@ -509,9 +501,8 @@ public partial class VideoHub
 
         if (string.IsNullOrEmpty(deviceId))
         {
-            Logger.Socket(
-                $"{user.Name}: [VideoHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"{user.Name}: [VideoHub.ChangeDeviceCommand] ignored — deviceId was null/empty"
             );
             return;
         }
@@ -568,9 +559,8 @@ public partial class VideoHub
                     string? receiverName = await _chromeCast.FindReceiverNameByIpAsync(targetIp);
                     if (string.IsNullOrEmpty(receiverName))
                     {
-                        Logger.Socket(
-                            $"No Chromecast receiver discovered at {targetIp} — video handoff will not wake panel via CEC",
-                            LogEventLevel.Warning
+                        _logger.LogWarning(
+                            $"No Chromecast receiver discovered at {targetIp} — video handoff will not wake panel via CEC"
                         );
                         return;
                     }
@@ -586,9 +576,8 @@ public partial class VideoHub
 
                     if (launchData is null)
                     {
-                        Logger.Socket(
-                            $"Cast token mint failed for video handoff to {targetIp} — falling back to LAUNCH without customData",
-                            LogEventLevel.Warning
+                        _logger.LogWarning(
+                            $"Cast token mint failed for video handoff to {targetIp} — falling back to LAUNCH without customData"
                         );
                     }
 
@@ -602,9 +591,8 @@ public partial class VideoHub
                 }
                 catch (Exception ex)
                 {
-                    Logger.Socket(
-                        $"Server-side video Cast launch failed for {targetIp}: {ex.Message}",
-                        LogEventLevel.Warning
+                    _logger.LogWarning(
+                        $"Server-side video Cast launch failed for {targetIp}: {ex.Message}"
                     );
                 }
             });

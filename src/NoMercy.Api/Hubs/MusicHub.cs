@@ -12,6 +12,7 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
 using NoMercy.Api.WebSockets;
@@ -29,7 +30,6 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
-using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -48,7 +48,10 @@ public partial class MusicHub : ConnectionHub
 
     private readonly IChromeCastService _chromeCast;
 
+    private readonly ILogger<MusicHub> _logger;
+
     public MusicHub(
+        ILogger<MusicHub> logger,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
         ConnectedClients connectedClients,
@@ -66,6 +69,7 @@ public partial class MusicHub : ConnectionHub
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
     {
+        _logger = logger;
         _httpContextAccessor = httpContextAccessor;
         _clientMessenger = clientMessenger;
         _musicPlaybackService = musicPlaybackService;
@@ -159,7 +163,7 @@ public partial class MusicHub : ConnectionHub
             await _musicPlaybackService.UpdatePlaybackState(user, new());
         }
 
-        Logger.Socket("Music client connected", LogEventLevel.Debug);
+        _logger.LogDebug("Music client connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -270,14 +274,11 @@ public partial class MusicHub : ConnectionHub
             }
             catch (Exception ex)
             {
-                Logger.Socket(
-                    $"Failed to log playback.stopped: {ex.Message}",
-                    LogEventLevel.Warning
-                );
+                _logger.LogWarning($"Failed to log playback.stopped: {ex.Message}");
             }
         }
 
-        Logger.Socket("Music client disconnected", LogEventLevel.Debug);
+        _logger.LogDebug("Music client disconnected");
     }
 
     // ── Cast-receiver helpers (Phase 0) ──────────────────────────────────────

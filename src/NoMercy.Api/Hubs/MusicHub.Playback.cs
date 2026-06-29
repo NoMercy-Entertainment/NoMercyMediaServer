@@ -11,6 +11,7 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
 using NoMercy.Api.WebSockets;
@@ -28,7 +29,6 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
-using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -47,11 +47,10 @@ public partial class MusicHub
         // parameter, before the method body even runs.
         if (string.IsNullOrEmpty(type) || listId is null || trackId is null)
         {
-            Logger.Socket(
+            _logger.LogWarning(
                 $"{user.Name}: [MusicHub.StartPlaybackCommand] ignored — null arg "
                     + $"(type='{type ?? "<null>"}', listId={listId?.ToString() ?? "<null>"}, "
-                    + $"trackId={trackId?.ToString() ?? "<null>"})",
-                LogEventLevel.Warning
+                    + $"trackId={trackId?.ToString() ?? "<null>"})"
             );
             return;
         }
@@ -73,19 +72,17 @@ public partial class MusicHub
                     country
                 );
             playlistStopwatch.Stop();
-            Logger.Socket(
+            _logger.Log(
+                playlistStopwatch.ElapsedMilliseconds > 1000 ? LogLevel.Warning : LogLevel.Debug,
                 $"[MusicHub.StartPlaybackCommand] GetPlaylist({type}) took "
-                    + $"{playlistStopwatch.ElapsedMilliseconds}ms ({playlist.Count} tracks)",
-                playlistStopwatch.ElapsedMilliseconds > 1000
-                    ? LogEventLevel.Warning
-                    : LogEventLevel.Debug
+                    + $"{playlistStopwatch.ElapsedMilliseconds}ms ({playlist.Count} tracks)"
             );
 
             await HandlePlaybackState(user, type, listId.Value, item, playlist);
         }
         catch (ArgumentException ex)
         {
-            Logger.App($"Invalid playlist type: {ex.Message}");
+            _logger.LogInformation($"Invalid playlist type: {ex.Message}");
 
             ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
             Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
@@ -101,15 +98,12 @@ public partial class MusicHub
             }
             catch (Exception logEx)
             {
-                Logger.Socket(
-                    $"Failed to log failure.playback_start: {logEx.Message}",
-                    LogEventLevel.Warning
-                );
+                _logger.LogWarning($"Failed to log failure.playback_start: {logEx.Message}");
             }
         }
         catch (Exception ex)
         {
-            Logger.App($"Error in StartPlaybackCommand: {ex.Message}");
+            _logger.LogInformation($"Error in StartPlaybackCommand: {ex.Message}");
 
             ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client2);
             Ulid deviceId2 = client2?.Id ?? Ulid.Empty;
@@ -125,10 +119,7 @@ public partial class MusicHub
             }
             catch (Exception logEx)
             {
-                Logger.Socket(
-                    $"Failed to log failure.playback_start: {logEx.Message}",
-                    LogEventLevel.Warning
-                );
+                _logger.LogWarning($"Failed to log failure.playback_start: {logEx.Message}");
             }
         }
         finally
@@ -153,7 +144,7 @@ public partial class MusicHub
             if (playerState?.CurrentItem is null)
             {
                 // No active player state, cannot reorder - log and return
-                Logger.App("Cannot play track: No active playlist");
+                _logger.LogInformation("Cannot play track: No active playlist");
                 return;
             }
             await HandleTrackReorder(user, playerState, item);
@@ -217,7 +208,7 @@ public partial class MusicHub
         }
         catch (Exception ex)
         {
-            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+            _logger.LogWarning($"Failed to log playback.started: {ex.Message}");
         }
     }
 
@@ -323,7 +314,7 @@ public partial class MusicHub
             else
             {
                 // Track not found in current queue at all
-                Logger.App($"Track {item.Id} not found in current queue");
+                _logger.LogInformation($"Track {item.Id} not found in current queue");
                 return;
             }
         }
@@ -373,7 +364,7 @@ public partial class MusicHub
         }
         catch (Exception ex)
         {
-            Logger.Socket($"Failed to log playback.started: {ex.Message}", LogEventLevel.Warning);
+            _logger.LogWarning($"Failed to log playback.started: {ex.Message}");
         }
     }
 
@@ -447,9 +438,8 @@ public partial class MusicHub
 
         if (string.IsNullOrEmpty(command))
         {
-            Logger.Socket(
-                $"{user.Name}: [MusicHub.PlaybackCommand] ignored — command was null/empty",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"{user.Name}: [MusicHub.PlaybackCommand] ignored — command was null/empty"
             );
             return;
         }
@@ -566,9 +556,8 @@ public partial class MusicHub
 
         if (newTrackId is null)
         {
-            Logger.Socket(
-                $"{user.Name}: [MusicHub.CrossfadeCompleteCommand] ignored — newTrackId was null",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"{user.Name}: [MusicHub.CrossfadeCompleteCommand] ignored — newTrackId was null"
             );
             return;
         }

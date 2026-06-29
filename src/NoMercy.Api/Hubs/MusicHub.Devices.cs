@@ -11,6 +11,7 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
 using NoMercy.Api.WebSockets;
@@ -28,7 +29,6 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Cast;
-using Serilog.Events;
 
 namespace NoMercy.Api.Hubs;
 
@@ -175,9 +175,8 @@ public partial class MusicHub
 
         if (string.IsNullOrEmpty(deviceId))
         {
-            Logger.Socket(
-                $"{user.Name}: [MusicHub.ChangeDeviceCommand] ignored — deviceId was null/empty",
-                LogEventLevel.Warning
+            _logger.LogWarning(
+                $"{user.Name}: [MusicHub.ChangeDeviceCommand] ignored — deviceId was null/empty"
             );
             return;
         }
@@ -252,9 +251,8 @@ public partial class MusicHub
                     string? receiverName = await _chromeCast.FindReceiverNameByIpAsync(targetIp);
                     if (string.IsNullOrEmpty(receiverName))
                     {
-                        Logger.Socket(
-                            $"No Chromecast receiver discovered at {targetIp} — panel won't wake via CEC",
-                            LogEventLevel.Warning
+                        _logger.LogWarning(
+                            $"No Chromecast receiver discovered at {targetIp} — panel won't wake via CEC"
                         );
                         return;
                     }
@@ -270,9 +268,8 @@ public partial class MusicHub
 
                     if (launchData is null)
                     {
-                        Logger.Socket(
-                            $"Cast token mint failed for {targetIp} — falling back to LAUNCH without customData",
-                            LogEventLevel.Warning
+                        _logger.LogWarning(
+                            $"Cast token mint failed for {targetIp} — falling back to LAUNCH without customData"
                         );
                     }
 
@@ -294,9 +291,8 @@ public partial class MusicHub
                 }
                 catch (Exception ex)
                 {
-                    Logger.Socket(
-                        $"Server-side Cast launch failed for {targetIp}: {ex.Message}",
-                        LogEventLevel.Warning
+                    _logger.LogWarning(
+                        $"Server-side Cast launch failed for {targetIp}: {ex.Message}"
                     );
                 }
             });
@@ -401,7 +397,7 @@ public partial class MusicHub
             }
             catch (Exception ex)
             {
-                Logger.App($"SetDeviceVolumeCommand DB persist failed: {ex.Message}");
+                _logger.LogInformation($"SetDeviceVolumeCommand DB persist failed: {ex.Message}");
             }
         });
     }
