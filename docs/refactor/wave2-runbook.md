@@ -74,3 +74,19 @@ Mechanics:
 6. LAST: delete NoMercy.NmSystem/SystemCalls/Logger.cs + remove the BridgeLegacyLogger option/
    subscription + drop Serilog packages no longer used. Full-solution build 0/0.
 Acceptance: `grep -rn "SystemCalls.Logger" src` -> 0 (except its own deletion); 0/0; csharpier clean.
+
+## L12 DECISION (locked by owner): PURE ILogger<T> EVERYWHERE
+- Convert ALL ~965 static Logger.* sites to ILogger<T>. No static Log facade.
+- Static/non-DI classes (e.g. Monitoring.ResourceMonitor: static ctor+methods+static callers)
+  must be RESTRUCTURED to instance + DI so ILogger<T> can be injected; update every construction
+  site and DI registration accordingly.
+- Each class: confirm construction sites first (new vs DI), add ILogger<T> ctor param (primary
+  ctor where present), replace Logger.X(...) with the matching _logger.Log* call. Category derives
+  from the type namespace via LogCategories.ResolveSource, so no manual category arg.
+- Per-project, one project per commit, build + csharpier + tests 0/0, push. Order: Monitoring,
+  Encoder, OpticalMedia, Storage, Providers, Data, Networking, MediaProcessing, Setup, Api, Service.
+- Reprovide the few API surfaces (GetLogs, SetLogLevel, LogEmitted, WriteBanner, LogTypes/GetColor)
+  on the new system, THEN delete NoMercy.NmSystem/SystemCalls/Logger.cs and remove the
+  BridgeLegacyLogger option/subscription. Drop now-unused Serilog packages.
+- Acceptance: grep -rn "SystemCalls.Logger" src -> 0; full-solution build 0/0; csharpier clean.
+- NOTE: this is a multi-session migration; each session resumes here and continues the next project.
