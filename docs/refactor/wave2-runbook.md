@@ -228,3 +228,19 @@ make any static method that logs an instance method (CS9105) or thread an
 ILogger param; verify residual with `\bLogger\.`; skip mgmt-API consumers; build
 NoMercy.Server.sln; commit-only-if ERR=0 && WARN=0. Provider HTTP clients & queue
 jobs remain on legacy Logger (bridge) until DI-ified in N/O. Delete Logger.cs LAST.
+
+### Transformer gotcha: conditional / non-trailing-simple level args
+`Logger.X(msg, cond ? LogEventLevel.Warning : LogEventLevel.Debug)` is NOT stripped
+by the transformer (its level regex only matches a simple trailing `LogEventLevel.X`).
+The call gets rewritten to `_logger.LogInformation(msg, cond ? LogEventLevel... )`
+which fails to compile (CS0103 once `using Serilog.Events;` is removed, and wrong
+overload anyway). Fix by hand to MEL's runtime-level overload:
+`_logger.Log(cond ? LogLevel.Warning : LogLevel.Debug, msg)`. The build catches
+these; grep `\bLogEventLevel\b` in changed files after converting to find them.
+
+### Api project: COMPLETE (mechanical L12)
+All Api emit-call files now use ILogger<T> incl. Video/Music hubs (ccd0da17).
+ONLY remaining Api = the deferred log-management-API consumers (ManagementController,
+ServerController, LogController, LogBroadcastService, ResourceMonitorService) — these
+wait on re-providing GetLogs/SetLogLevel/LogEmitted/LogTypes on NoMercyLoggerProvider.
+Resume next at: Networking(90) → Service(131) → Setup(155) → Data(60) → MediaProcessing(269).
