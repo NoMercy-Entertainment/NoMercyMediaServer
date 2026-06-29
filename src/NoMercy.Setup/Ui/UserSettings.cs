@@ -89,18 +89,12 @@ public static class UserSettings
         if (dumpConfig)
             _configDumpLogged = true;
 
-        // Emit the resolved config as a single, aligned block (one log entry,
-        // rendered under the gutter) instead of one line per key. Logged once
-        // per process at Verbose, with secret values redacted.
-        if (dumpConfig && settings.Count > 0)
+        // Emit the resolved config as a compact 4-column table (one log entry,
+        // rendered under the gutter). Secret values are skipped entirely since
+        // they must not be written to logs. Logged once per process at Verbose.
+        if (dumpConfig)
         {
-            int width = 0;
-            foreach (string key in settings.Keys)
-                if (key.Length > width)
-                    width = key.Length;
-
-            System.Text.StringBuilder builder = new();
-            builder.Append($"Configuration ({settings.Count} key(s)):");
+            List<string> cells = new();
             foreach (KeyValuePair<string, string> entry in settings)
             {
                 bool isSecret =
@@ -108,15 +102,45 @@ public static class UserSettings
                     || entry.Key.Contains("ssl_", StringComparison.OrdinalIgnoreCase)
                     || entry.Key.Contains("fingerprint", StringComparison.OrdinalIgnoreCase)
                     || entry.Key.Contains("secret", StringComparison.OrdinalIgnoreCase);
-                builder
-                    .Append('\n')
-                    .Append("  ")
-                    .Append(entry.Key.PadRight(width))
-                    .Append(" = ")
-                    .Append(isSecret && !string.IsNullOrEmpty(entry.Value) ? "***" : entry.Value);
+                if (isSecret)
+                    continue;
+                cells.Add($"{entry.Key} = {entry.Value}");
             }
 
-            Logger.App(builder.ToString(), LogEventLevel.Verbose);
+            if (cells.Count > 0)
+            {
+                const int columns = 4;
+                int rows = (cells.Count + columns - 1) / columns;
+
+                // Per-column width keeps each column as narrow as its content.
+                int[] columnWidth = new int[columns];
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    int col = i % columns;
+                    if (cells[i].Length > columnWidth[col])
+                        columnWidth[col] = cells[i].Length;
+                }
+
+                System.Text.StringBuilder builder = new();
+                builder.Append($"Configuration ({cells.Count} key(s)):");
+                for (int row = 0; row < rows; row++)
+                {
+                    builder.Append('\n').Append("  ");
+                    for (int col = 0; col < columns; col++)
+                    {
+                        int index = (row * columns) + col;
+                        if (index >= cells.Count)
+                            break;
+
+                        bool last = col == columns - 1 || index == cells.Count - 1;
+                        builder.Append(
+                            last ? cells[index] : cells[index].PadRight(columnWidth[col] + 2)
+                        );
+                    }
+                }
+
+                Logger.App(builder.ToString(), LogEventLevel.Verbose);
+            }
         }
 
         using AppDbContext appContext = new();
