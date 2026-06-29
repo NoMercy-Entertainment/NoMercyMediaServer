@@ -52,6 +52,16 @@ public class FindMediaFilesJob : IShouldQueue, IJobStorageInjector
     public int Id { get; set; }
     public Library? Library { get; set; }
 
+    // Constructor injection: the queue worker builds the job via
+    // ActivatorUtilities, so the logger factory arrives without the
+    // post-construction InjectStorageServices hook. The parameterless
+    // ctor below is kept for deserialization and direct construction.
+    [ActivatorUtilitiesConstructor]
+    public FindMediaFilesJob(ILoggerFactory loggerFactory)
+    {
+        LoggerFactory = loggerFactory;
+    }
+
     public FindMediaFilesJob()
     {
         //

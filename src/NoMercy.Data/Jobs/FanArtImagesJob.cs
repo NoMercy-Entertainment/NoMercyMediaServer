@@ -47,6 +47,16 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
     public MusicBrainzArtist? MusicBrainzArtist { get; set; }
     public MusicBrainzReleaseAppends? MusicBrainzRelease { get; set; }
 
+    // Constructor injection: the queue worker builds the job via
+    // ActivatorUtilities, so the logger factory arrives without the
+    // post-construction InjectStorageServices hook. The parameterless
+    // ctor below is kept for deserialization and direct construction.
+    [ActivatorUtilitiesConstructor]
+    public FanArtImagesJob(ILoggerFactory loggerFactory)
+    {
+        LoggerFactory = loggerFactory;
+    }
+
     public FanArtImagesJob()
     {
         //
