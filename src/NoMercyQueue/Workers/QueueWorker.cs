@@ -341,10 +341,23 @@ public class QueueWorker(
     {
         IServiceScope? scope = null;
 
-        if (scopeFactory is not null && job is IJobStorageInjector injector)
+        if (scopeFactory is not null)
         {
             scope = scopeFactory.CreateScope();
-            injector.InjectStorageServices(scope.ServiceProvider);
+            IServiceProvider serviceProvider = scope.ServiceProvider;
+
+            // Rebuild the job through DI so constructor dependencies are injected,
+            // then re-apply the serialized job data. Upstream deserialization yields
+            // a data-only instance; services are resolved from the per-job scope.
+            IShouldQueue rebuilt = (IShouldQueue)
+                ActivatorUtilities.CreateInstance(serviceProvider, job.GetType());
+            SerializationHelper.Populate(queueJob.Payload, rebuilt);
+            job = rebuilt;
+
+            // Back-compat: jobs not yet migrated to constructor injection still
+            // receive their services via this post-construction hook.
+            if (job is IJobStorageInjector injector)
+                injector.InjectStorageServices(serviceProvider);
         }
 
         if (job is IJobIdReceiver idReceiver)

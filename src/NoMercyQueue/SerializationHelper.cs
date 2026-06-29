@@ -84,4 +84,25 @@ public static class SerializationHelper
 
         return JsonConvert.DeserializeObject<T>(data, settings)!;
     }
+
+    /// <summary>
+    /// Applies the serialized job DATA onto an already-constructed instance
+    /// (e.g. one built through dependency injection), leaving constructor-injected
+    /// services untouched.
+    /// </summary>
+    public static void Populate(string data, object target)
+    {
+        JsonSerializerSettings settings = new()
+        {
+            TypeNameHandling = TypeNameHandling.Objects,
+            SerializationBinder = Binder,
+            NullValueHandling = NullValueHandling.Ignore,
+            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+            ContractResolver = new DefaultContractResolver
+            {
+                NamingStrategy = new CamelCaseNamingStrategy(),
+            },
+        };
+        JsonConvert.PopulateObject(data, target, settings);
+    }
 }
