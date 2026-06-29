@@ -24,6 +24,7 @@ using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
@@ -56,6 +57,7 @@ namespace NoMercy.MediaProcessing.Files;
 public class FileListService(
     IStorageDriver storageDriver,
     IMediaIdentificationService identification,
+    IFilenameParserPipeline filenameParser,
     ILogger<FileListService> logger
 ) : IFileListService
 {
@@ -480,10 +482,10 @@ public class FileListService(
         return result != null;
     }
 
-    private static MovieFile ParseVideoFileName(FileInfo file, string title) =>
+    private MovieFile ParseVideoFileName(FileInfo file, string title) =>
         ParseVideoFileName(file.Name, file.DirectoryName, title);
 
-    private static MovieFile ParseVideoFileName(
+    private MovieFile ParseVideoFileName(
         string fileNameWithExt,
         string? directoryName,
         string title
@@ -494,85 +496,17 @@ public class FileListService(
             .Replace(Path.GetFileNameWithoutExtension(fileNameWithExt), string.Empty)
             .Trim();
 
-        // S##E## at start of filename (e.g. "S01E01-some.title.mkv")
-        Match epMatch = StringExtensions.MatchEpisodePrefix().Match(cleanedFileName);
-        if (epMatch.Success)
-        {
-            return new(title)
+        return filenameParser.Parse(
+            new ParseContext
             {
-                Title = ExtractTitleFromFolder(directoryName),
-                Season = int.Parse(epMatch.Groups[1].Value),
-                Episode = int.Parse(epMatch.Groups[2].Value),
-                IsSeries = true,
-                IsSuccess = true,
-            };
-        }
-
-        // "Episode XX" pattern (e.g. "Blade - Episode 02 - title.mp4")
-        string fileNameNoParens = StringExtensions
-            .RemoveParenthesizedString()
-            .Replace(cleanedFileName, string.Empty)
-            .Trim();
-        Match episodeWordMatch = StringExtensions.MatchEpisodeWord().Match(fileNameNoParens);
-        if (episodeWordMatch.Success)
-        {
-            int episodeNumber = int.Parse(episodeWordMatch.Groups[1].Value);
-            string showTitle = fileNameNoParens[..episodeWordMatch.Index]
-                .TrimEnd('-', '.', '_', ' ');
-
-            // Strip trailing year from title (year is captured separately by TryGetYear)
-            Match yearInEpisodeTitle = StringExtensions.MatchYearRegex().Match(showTitle);
-            if (yearInEpisodeTitle.Success)
-                showTitle = showTitle[..yearInEpisodeTitle.Index].TrimEnd('-', '.', '_', ' ');
-
-            if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
-                showTitle = ExtractTitleFromFolder(directoryName);
-
-            return new(title)
-            {
-                Title = showTitle,
-                Season = 1,
-                Episode = episodeNumber,
-                IsSeries = true,
-                IsSuccess = true,
-            };
-        }
-
-        // S##E#### anywhere in filename (e.g. "One.Piece.S01E1109.Title.mkv")
-        Match seasonEpMatch = StringExtensions.MatchSeasonEpisode().Match(cleanedFileName);
-        if (seasonEpMatch.Success)
-        {
-            string showTitle = cleanedFileName[..seasonEpMatch.Index]
-                .Replace('.', ' ')
-                .Replace('_', ' ')
-                .TrimEnd('-', ' ')
-                .Trim();
-
-            // Strip trailing year from title (year is captured separately by TryGetYear)
-            Match yearInSeasonTitle = StringExtensions.MatchYearRegex().Match(showTitle);
-            if (yearInSeasonTitle.Success)
-                showTitle = showTitle[..yearInSeasonTitle.Index].TrimEnd('-', '.', '_', ' ');
-
-            if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
-                showTitle = ExtractTitleFromFolder(directoryName);
-
-            return new(title)
-            {
-                Title = showTitle,
-                Season = int.Parse(seasonEpMatch.Groups[1].Value),
-                Episode = int.Parse(seasonEpMatch.Groups[2].Value),
-                IsSeries = true,
-                IsSuccess = true,
-            };
-        }
-
-        // Fallback to MovieDetector library
-        MovieDetector movieDetector = new();
-        return movieDetector.GetInfo(title);
+                FileNameWithExtension = fileNameWithExt,
+                DirectoryName = directoryName,
+                Title = title,
+                CleanedFileName = cleanedFileName,
+                FolderTitle = ExtractTitleFromFolder(directoryName),
+            }
+        );
     }
-
-    private static string ExtractTitleFromFolder(FileInfo file) =>
-        ExtractTitleFromFolder(file.DirectoryName);
 
     private static string ExtractTitleFromFolder(string? directoryName)
     {

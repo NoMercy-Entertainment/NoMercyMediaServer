@@ -390,6 +390,31 @@ public static partial class ServiceConfiguration
             NoMercy.MediaProcessing.Files.IFileListService,
             NoMercy.MediaProcessing.Files.FileListService
         >();
+
+        // Filename parse-adapter pipeline. Adapters are resolved as a set, so
+        // plugins can contribute their own; FilenameParsingOptions can reorder or
+        // disable them at runtime without recompiling.
+        services.AddSingleton<NoMercy.MediaProcessing.Files.Parsing.FilenameParsingOptions>();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.EpisodePrefixAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.EpisodeWordAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.SeasonEpisodeAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParseAdapter,
+            NoMercy.MediaProcessing.Files.Parsing.Adapters.MovieDetectorAdapter
+        >();
+        services.AddSingleton<
+            NoMercy.MediaProcessing.Files.Parsing.IFilenameParserPipeline,
+            NoMercy.MediaProcessing.Files.Parsing.FilenameParserPipeline
+        >();
         services.AddScoped<FilesystemRepository>();
         services.AddScoped<LanguageRepository>();
         services.AddScoped<CollectionRepository>();
