@@ -37,6 +37,7 @@ using NoMercyQueue.Core;
 using NoMercyQueue.Core.Resources;
 using Serilog.Events;
 
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 /// <summary>
@@ -57,6 +58,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
 
     public new void InjectStorageServices(IServiceProvider serviceProvider)
     {
+        base.InjectStorageServices(serviceProvider);
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
         _encoderProcessRegistry = serviceProvider.GetRequiredService<IEncoderProcessRegistry>();
     }
@@ -97,10 +99,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
         }
         catch (Exception ex)
         {
-            Logger.Encoder(
-                $"[EncodeTaskJob] Skipping task '{Task.Label}' for preset {PresetId}: resolve failed — {ex.Message}",
-                LogEventLevel.Warning
-            );
+            Log.LogWarning("[EncodeTaskJob] Skipping task '{Label}' for preset {PresetId}: resolve failed — {Message}", Task.Label, PresetId, ex.Message);
             await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
             return;
         }
@@ -167,17 +166,12 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
             {
                 string errorMsg =
                     result.Error?.Message ?? result.EnrichedError?.Message ?? "encode failed";
-                Logger.Encoder(
-                    $"[EncodeTaskJob] Task '{Task.Label}' failed: {errorMsg}",
-                    LogEventLevel.Warning
-                );
+                Log.LogWarning("[EncodeTaskJob] Task '{Label}' failed: {ErrorMsg}", Task.Label, errorMsg);
                 await PublishCompletedAsync(success: false, error: errorMsg, artifacts: []);
                 return;
             }
 
-            Logger.Encoder(
-                $"[EncodeTaskJob] Task '{Task.Label}' completed in {stopwatch.Elapsed.TotalSeconds:F1}s"
-            );
+            Log.LogInformation("[EncodeTaskJob] Task '{Label}' completed in {TotalSeconds:F1}s", Task.Label, stopwatch.Elapsed.TotalSeconds);
 
             List<string> artifactPaths = result
                 .Artifacts.Select(artifact => artifact.Path)
@@ -187,10 +181,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Logger.Encoder(
-                $"[EncodeTaskJob] Task '{Task.Label}' threw: {ex.Message}",
-                LogEventLevel.Error
-            );
+            Log.LogError("[EncodeTaskJob] Task '{Label}' threw: {Message}", Task.Label, ex.Message);
             await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
             throw;
         }
@@ -274,10 +265,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
         }
         catch (Exception ex)
         {
-            Logger.Encoder(
-                $"[EncodeTaskJob] Failed to write outcome row for task '{Task.TaskId}': {ex.Message}",
-                LogEventLevel.Warning
-            );
+            Log.LogWarning("[EncodeTaskJob] Failed to write outcome row for task '{TaskId}': {Message}", Task.TaskId, ex.Message);
         }
     }
 
@@ -324,10 +312,7 @@ public class EncodeTaskJob : AbstractEncoderJob, IHasResourceRequirement, IJobSt
         }
         catch (Exception ex)
         {
-            Logger.Encoder(
-                $"[EncodeTaskJob] Failed to write bundle outcome rows for {bundledIds.Length} tasks: {ex.Message}",
-                LogEventLevel.Warning
-            );
+            Log.LogWarning("[EncodeTaskJob] Failed to write bundle outcome rows for {Length} tasks: {Message}", bundledIds.Length, ex.Message);
         }
     }
 
