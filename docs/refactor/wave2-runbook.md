@@ -270,3 +270,33 @@ Expect MANY manual construction sites for Data/MediaProcessing managers (they're
 newed in jobs/Service wiring). Grep construction sites first. Provider HTTP clients,
 queue jobs, and static utility classes (e.g. NetworkProbe) stay on the legacy bridge
 until DI-ified in N/O. Delete Logger.cs LAST.
+
+### Service: DEFERRED (bootstrap/seed/composition-root — belongs to M/N/O slices)
+Scanned all 22 Logger-calling files: every one is a `static class` (all Seeds,
+Program, Dev, HostLifecycleHooks, WebHostFactory, ServiceConfiguration.*,
+DatabaseSeeder, DatabaseBackupService) EXCEPT ServerBootstrapper — which is the
+pre-DI composition root (`new ServerBootstrapper().RunAsync(o)` in Program.cs; it
+BUILDS the DI container inside RunAsync, so ILogger isn't available for much of it,
+and several calls run before the container exists). None of these can take a clean
+ctor-injected ILogger<T>. They stay on the legacy bridge until the **M boot-organizer
+slice** reworks boot/seed into DI-resolved units. StartupOptions also uses the
+mgmt-API (SetLogLevel). Setup(155) is expected to be the same (bootstrap-heavy).
+
+### INFLECTION POINT (needs a user call for the static/ambient remainder)
+The clean mechanical ctor-injection pass is now essentially complete: leaf projects +
+**Api** + **Networking** are done. What remains splits into:
+  1. **Data(60) / MediaProcessing(269) MANAGERS & repositories** — instance classes,
+     still convertible via the proven pattern (watch the construction cascade: grep
+     every `new X(`/`X y = new(` in src+tests first). Queue JOBS (IShouldQueue) use
+     the service-locator logger pattern (DiscRipJob/BundleSlugRenamer) — leave/handle
+     as jobs.
+  2. **Static/ambient/pre-DI code** — Service (all), Setup (most), seeds, provider
+     HTTP clients, NetworkProbe, queue jobs. These CANNOT get ctor-injected ILogger<T>
+     without DI-ification (M/N/O slices) OR a static `ILoggerFactory` accessor seam.
+     The seam is a *global static helper* — exactly what the user asked to KILL — so
+     this is a genuine fork: (A) accept a single centralized seam for ambient code,
+     (B) do the M/N/O DI-ification first, or (C) leave ambient code on the legacy
+     bridge (it already renders correctly) and delete Logger.cs only after M/N/O.
+     RECOMMENDATION: (C) — keep ambient code on the bridge, finish Data/MediaProcessing
+     managers now, and fold the ambient conversion into M/N/O. Awaiting user steer; not
+     blocking — proceeding with Data/MediaProcessing managers meanwhile.
