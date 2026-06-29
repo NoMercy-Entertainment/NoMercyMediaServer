@@ -25,7 +25,7 @@ unchecked box. The standing order stays in force across resets.
 ## Optimized order (adapt only for hard deps: C3<-B2, C4<-B3, E2<-E1, O1<-N2)
 - [ ] L1 logging backbone (DI + Serilog provider)
 - [x] L2 display-width engine (DONE)
-- [ ] L3 console renderer (custom sink)
+- [~] L3 console renderer: L3a categories + L3b line renderer DONE (sink wiring pending in L1)
 - [ ] L4 themes + palette (dark+light)
 - [ ] L5 category mapping
 - [ ] L6 scopes / correlation
