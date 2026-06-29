@@ -78,13 +78,33 @@ public static class UserSettings
         }
     }
 
+    private static bool _configDumpLogged;
+
     public static void ApplySettings(Dictionary<string, string> settings, bool silent = false)
     {
+        // Dump the resolved config once per process at Verbose, with secret
+        // values redacted. ApplySettings runs more than once during boot, so
+        // without the guard the whole Configuration table is logged every pass.
+        bool dumpConfig = !silent && !_configDumpLogged;
+        if (dumpConfig)
+            _configDumpLogged = true;
+
         using AppDbContext appContext = new();
         foreach (KeyValuePair<string, string> setting in settings)
         {
-            if (!silent)
-                Logger.App($"Configuration: {setting.Key} = {setting.Value}");
+            if (dumpConfig)
+            {
+                bool secret =
+                    setting.Key.Contains("token", StringComparison.OrdinalIgnoreCase)
+                    || setting.Key.Contains("ssl_", StringComparison.OrdinalIgnoreCase)
+                    || setting.Key.Contains("fingerprint", StringComparison.OrdinalIgnoreCase)
+                    || setting.Key.Contains("secret", StringComparison.OrdinalIgnoreCase);
+                Logger.App(
+                    $"Configuration: {setting.Key} = "
+                        + (secret && !string.IsNullOrEmpty(setting.Value) ? "***" : setting.Value),
+                    LogEventLevel.Verbose
+                );
+            }
 
             switch (setting.Key)
             {

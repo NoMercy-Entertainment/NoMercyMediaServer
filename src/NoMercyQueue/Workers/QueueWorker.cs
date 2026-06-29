@@ -78,7 +78,8 @@ public class QueueWorker(
         {
             await phaseTracker.WhenReachedAsync(readyStage, stopToken).ConfigureAwait(false);
             NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] ready stage {readyStage} reached, entering poll loop"
+                $"[QueueWorker {name}] ready stage {readyStage} reached, entering poll loop",
+                Serilog.Events.LogEventLevel.Verbose
             );
         }
         else if (readinessGate is not null)
@@ -95,19 +96,9 @@ public class QueueWorker(
         if (stopToken.IsCancellationRequested)
             return;
 
-        bool firstPoll = true;
         while (_isRunning && !stopToken.IsCancellationRequested)
         {
             QueueJobModel? job = queue.ReserveJob(name, _currentJobId);
-
-            if (firstPoll)
-            {
-                NoMercy.NmSystem.SystemCalls.Logger.App(
-                    $"[QueueWorker {name}] first ReserveJob → {(job is null ? "null" : "id=" + job.Id)}",
-                    Serilog.Events.LogEventLevel.Information
-                );
-                firstPoll = false;
-            }
 
             if (job != null)
             {
