@@ -67,10 +67,8 @@ public static class WebHostFactory
             _ => new NoMercy.NmSystem.Logging.NoMercyLoggerOptions
             {
                 MinimumLevel = Microsoft.Extensions.Logging.LogLevel.Information,
-                JsonFilePath = System.IO.Path.Combine(
-                    NoMercy.NmSystem.Information.AppFiles.LogPath,
-                    "log.jsonl"
-                ),
+                LogDirectory = NoMercy.NmSystem.Information.AppFiles.LogPath,
+                MaxRunFiles = 10,
                 WidthProvider = static () =>
                 {
                     try

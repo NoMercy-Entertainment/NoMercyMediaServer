@@ -35,8 +35,15 @@ public sealed class NoMercyLoggerOptions
     /// <summary>Returns the current wrap width in columns; 0 disables wrapping.</summary>
     public Func<int> WidthProvider { get; set; } = static () => 0;
 
-    /// <summary>When set, every entry is appended as one compact JSON line to this file.</summary>
-    public string? JsonFilePath { get; set; }
+    /// <summary>
+    /// Directory for per-run JSONL log files. Each process start writes a new
+    /// <c>run-{yyyyMMdd-HHmmss}-{pid}.jsonl</c> so readers can pick only the latest run.
+    /// Null disables file logging.
+    /// </summary>
+    public string? LogDirectory { get; set; }
+
+    /// <summary>How many per-run files to keep (oldest are pruned on start). Default 10.</summary>
+    public int MaxRunFiles { get; set; } = 10;
 
     /// <summary>When set, invoked for every entry (dashboard live-log / event bus bridge).</summary>
     public Action<NoMercyLogRecord>? OnRecord { get; set; }

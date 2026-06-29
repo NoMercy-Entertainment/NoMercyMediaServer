@@ -45,6 +45,28 @@ public static class LogReader
         return logEntries;
     }
 
+    public static async Task<List<LogEntry>> GetLatestRunLogsAsync(
+        IStorage storage,
+        string logDirectoryPath,
+        Func<LogEntry, bool>? filter = null
+    )
+    {
+        bool dirExists = await storage.ExistsAsync(logDirectoryPath, CancellationToken.None);
+        if (!dirExists)
+            return [];
+
+        IReadOnlyList<StorageEntry> entries = storage.List(logDirectoryPath, "run-*.jsonl", false);
+        StorageEntry? latest = entries
+            .OrderByDescending(e => e.LastModified)
+            .ThenByDescending(e => e.Path, StringComparer.Ordinal)
+            .FirstOrDefault();
+        if (latest is null)
+            return [];
+
+        IEnumerable<LogEntry> logs = await ProcessFileAsync(storage, latest.Path, filter);
+        return logs.ToList();
+    }
+
     private static async Task<IEnumerable<LogEntry>> ProcessFileAsync(
         IStorage storage,
         string filePath,

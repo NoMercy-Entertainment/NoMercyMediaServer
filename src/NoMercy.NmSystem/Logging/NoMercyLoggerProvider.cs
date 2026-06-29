@@ -11,7 +11,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem.Logging.Rendering;
@@ -20,10 +22,10 @@ namespace NoMercy.NmSystem.Logging;
 
 /// <summary>
 /// <see cref="ILoggerProvider"/> that renders every entry through
-/// <see cref="ConsoleLineRenderer"/>, optionally appends a compact JSON line to a
-/// file, and optionally hands a <see cref="NoMercyLogRecord"/> to a callback
-/// (dashboard live-log / event bus). Colour auto-detects (off when redirected or
-/// NO_COLOR is set). Writes are serialised so concurrent workers never interleave.
+/// <see cref="ConsoleLineRenderer"/>, appends a rich JSON line to a per-run file
+/// (one file per process start, oldest pruned), and optionally hands a
+/// <see cref="NoMercyLogRecord"/> to a callback (dashboard / event bus). Colour
+/// auto-detects (off when redirected or NO_COLOR is set). Writes are serialised.
 /// </summary>
 public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
@@ -47,12 +49,16 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
                 && Environment.GetEnvironmentVariable("NO_COLOR") is null
             );
 
-        if (!string.IsNullOrEmpty(options.JsonFilePath))
+        if (!string.IsNullOrEmpty(options.LogDirectory))
         {
-            string? directory = Path.GetDirectoryName(options.JsonFilePath);
-            if (!string.IsNullOrEmpty(directory))
-                Directory.CreateDirectory(directory);
-            _file = new StreamWriter(options.JsonFilePath, append: true) { AutoFlush = true };
+            Directory.CreateDirectory(options.LogDirectory);
+            string runId =
+                DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)
+                + "-"
+                + Environment.ProcessId;
+            string runFile = Path.Combine(options.LogDirectory, $"run-{runId}.jsonl");
+            _file = new StreamWriter(runFile, append: true) { AutoFlush = true };
+            PruneRuns(options.LogDirectory, options.MaxRunFiles);
         }
     }
 
@@ -94,6 +100,22 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
             _options.WidthProvider()
         );
 
+        LogFileLine fileLine = new()
+        {
+            Timestamp = timestamp.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
+            Type = category.Key,
+            Category = category.DisplayName,
+            Group = category.Group,
+            Level = ToSerilogLevelName(level),
+            LevelValue = (int)level,
+            Color = category.DarkHex,
+            Message = message,
+            Scope = scope,
+            Source = sourceContext,
+            ThreadId = Environment.CurrentManagedThreadId,
+            Exception = exception?.ToString(),
+        };
+
         NoMercyLogRecord record = new(
             timestamp,
             level,
@@ -107,7 +129,7 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
         lock (_gate)
         {
             _output.WriteLine(line);
-            _file?.WriteLine(JsonSerializer.Serialize(record, JsonOptions));
+            _file?.WriteLine(JsonSerializer.Serialize(fileLine, JsonOptions));
         }
 
         if (_options.OnRecord is not null)
@@ -140,5 +162,47 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
         );
 
         return parts.Count == 0 ? null : string.Join(" ", parts);
+    }
+
+    private static string ToSerilogLevelName(LogLevel level) =>
+        level switch
+        {
+            LogLevel.Trace => "Verbose",
+            LogLevel.Debug => "Debug",
+            LogLevel.Information => "Information",
+            LogLevel.Warning => "Warning",
+            LogLevel.Error => "Error",
+            LogLevel.Critical => "Fatal",
+            _ => "Information",
+        };
+
+    private static void PruneRuns(string directory, int keep)
+    {
+        if (keep <= 0)
+            return;
+
+        try
+        {
+            List<string> files = Directory
+                .GetFiles(directory, "run-*.jsonl")
+                .OrderByDescending(path => path, StringComparer.Ordinal)
+                .ToList();
+
+            foreach (string old in files.Skip(keep))
+            {
+                try
+                {
+                    File.Delete(old);
+                }
+                catch
+                {
+                    // Another process may hold an older run file; skip it.
+                }
+            }
+        }
+        catch
+        {
+            // Pruning is best-effort; never fail startup over it.
+        }
     }
 }

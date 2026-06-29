@@ -15,20 +15,20 @@ using NoMercy.NmSystem.Logging;
 namespace NoMercy.Tests.NmSystem;
 
 /// <summary>
-/// Pins the JSON file sink and the record callback: each entry produces one JSON
-/// line carrying the resolved category, and the callback receives a structured
-/// record. A throwing callback never breaks logging.
+/// Pins the per-run JSONL file sink and the record callback: each run writes its own
+/// file with a rich, query-friendly line; old runs are pruned to MaxRunFiles; the
+/// callback receives a structured record and a throwing callback never breaks logging.
 /// </summary>
 [Trait("Category", "Unit")]
 public class NoMercyLoggerSinkTests
 {
     [Fact]
-    public void JsonFileSink_WritesOneJsonLinePerEntry()
+    public void PerRunFile_WritesRichQueryableJsonLine()
     {
-        string path = Path.Combine(Path.GetTempPath(), $"nm-log-{Guid.NewGuid():N}.jsonl");
+        string dir = Path.Combine(Path.GetTempPath(), $"nm-logdir-{Guid.NewGuid():N}");
         try
         {
-            NoMercyLoggerOptions options = new() { Color = false, JsonFilePath = path };
+            NoMercyLoggerOptions options = new() { Color = false, LogDirectory = dir };
             using (NoMercyLoggerProvider provider = new(options, new StringWriter()))
             {
                 ILogger logger = provider.CreateLogger(
@@ -37,15 +37,57 @@ public class NoMercyLoggerSinkTests
                 logger.LogInformation("Fetching {Id}", 27205);
             }
 
-            string[] lines = File.ReadAllLines(path);
-            lines.Should().HaveCount(1);
-            lines[0].Should().Contain("\"CategoryKey\":\"moviedb\"");
-            lines[0].Should().Contain("Fetching 27205");
+            string[] runs = Directory.GetFiles(dir, "run-*.jsonl");
+            runs.Should().ContainSingle();
+
+            string[] lines = File.ReadAllLines(runs[0]);
+            lines.Should().ContainSingle();
+
+            string line = lines[0];
+            line.Should().Contain("\"@t\":");
+            line.Should().Contain("\"Type\":\"moviedb\"");
+            line.Should().Contain("\"Group\":\"Providers\"");
+            line.Should().Contain("\"Level\":\"Information\"");
+            line.Should().Contain("Fetching 27205");
         }
         finally
         {
-            if (File.Exists(path))
-                File.Delete(path);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
+    public void Retention_KeepsOnlyMaxRunFiles()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"nm-logdir-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (
+                string old in new[]
+                {
+                    "run-20200101-000001-1.jsonl",
+                    "run-20200102-000001-1.jsonl",
+                    "run-20200103-000001-1.jsonl",
+                }
+            )
+                File.WriteAllText(Path.Combine(dir, old), string.Empty);
+
+            NoMercyLoggerOptions options = new()
+            {
+                Color = false,
+                LogDirectory = dir,
+                MaxRunFiles = 2,
+            };
+            using (NoMercyLoggerProvider provider = new(options, new StringWriter())) { }
+
+            Directory.GetFiles(dir, "run-*.jsonl").Length.Should().Be(2);
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
         }
     }
 
