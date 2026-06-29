@@ -62,7 +62,7 @@ public sealed class FfmpegCapabilityProbeBackgroundService : BackgroundService
 
         try
         {
-            await _phaseTracker.WhenReachedAsync(BootStage.Binaries, stoppingToken).ConfigureAwait(false);
+            await _phaseTracker.WhenReachedAsync(BootStage.All, stoppingToken).ConfigureAwait(false);
             await Task.Delay(_initialGrace, stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

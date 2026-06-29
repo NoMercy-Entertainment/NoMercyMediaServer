@@ -74,6 +74,20 @@ public static class ServiceRegistration
                 rs.CpuEncoderWorkers.Key,
             };
 
+            // Encoder queues must not run until GPU/encoder detection
+            // (BootStage.Hardware) completes. Detection is deferred to run after
+            // the server is ready (BootStage.All), so these queues wait on both and
+            // surface as paused in the dashboard until detection finishes.
+            NmSystem.Lifecycle.BootStage encoderReady =
+                NmSystem.Lifecycle.BootStage.All | NmSystem.Lifecycle.BootStage.Hardware;
+            IReadOnlyDictionary<string, NmSystem.Lifecycle.BootStage> queueReadyStages =
+                new Dictionary<string, NmSystem.Lifecycle.BootStage>
+                {
+                    [rs.EncoderWorkers.Key] = encoderReady,
+                    [rs.GpuEncoderWorkers.Key] = encoderReady,
+                    [rs.CpuEncoderWorkers.Key] = encoderReady,
+                };
+
             return new(
                 queueContext,
                 configuration,
@@ -82,7 +96,8 @@ public static class ServiceRegistration
                 scopeFactory,
                 phaseTracker,
                 resourceBudget,
-                resourceAwareQueues
+                resourceAwareQueues,
+                queueReadyStages
             );
         });
         services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);

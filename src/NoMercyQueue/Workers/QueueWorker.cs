@@ -29,7 +29,8 @@ public class QueueWorker(
     IServerReadinessGate? readinessGate = null,
     IServerPhaseTracker? phaseTracker = null,
     IResourceBudget? resourceBudget = null,
-    IReadOnlySet<string>? resourceAwareQueues = null
+    IReadOnlySet<string>? resourceAwareQueues = null,
+    BootStage readyStage = BootStage.All
 )
 {
     private static readonly TimeSpan BudgetRetryDelay = TimeSpan.FromSeconds(5);
@@ -75,9 +76,9 @@ public class QueueWorker(
     {
         if (phaseTracker is not null)
         {
-            await phaseTracker.WhenReachedAsync(BootStage.All, stopToken).ConfigureAwait(false);
+            await phaseTracker.WhenReachedAsync(readyStage, stopToken).ConfigureAwait(false);
             NoMercy.NmSystem.SystemCalls.Logger.App(
-                $"[QueueWorker {name}] all boot stages complete, entering poll loop"
+                $"[QueueWorker {name}] ready stage {readyStage} reached, entering poll loop"
             );
         }
         else if (readinessGate is not null)

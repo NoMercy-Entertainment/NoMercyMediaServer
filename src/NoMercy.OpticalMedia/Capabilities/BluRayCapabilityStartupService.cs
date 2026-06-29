@@ -48,7 +48,7 @@ public sealed class BluRayCapabilityStartupService(
 
         try
         {
-            await phaseTracker.WhenReachedAsync(BootStage.Binaries, stoppingToken).ConfigureAwait(false);
+            await phaseTracker.WhenReachedAsync(BootStage.All, stoppingToken).ConfigureAwait(false);
             await Task.Delay(InitialGrace, stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

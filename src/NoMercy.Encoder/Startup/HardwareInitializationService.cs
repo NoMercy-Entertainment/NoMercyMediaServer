@@ -69,8 +69,8 @@ public class HardwareInitializationService(
         // for the entire server lifetime.
         if (phaseTracker is not null)
         {
-            logger.LogInformation("Hardware detection waiting for BootStage.Binaries...");
-            await phaseTracker.WhenReachedAsync(BootStage.Binaries, ct).ConfigureAwait(false);
+            logger.LogInformation("Hardware detection waiting for BootStage.All (server ready)...");
+            await phaseTracker.WhenReachedAsync(BootStage.All, ct).ConfigureAwait(false);
             logger.LogInformation("BootStage.Binaries reached — starting hardware probe");
         }
 

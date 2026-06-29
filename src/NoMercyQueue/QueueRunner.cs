@@ -50,6 +50,7 @@ public class QueueRunner
     private readonly NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? _phaseTracker;
     private readonly IResourceBudget? _resourceBudget;
     private readonly IReadOnlySet<string> _resourceAwareQueues;
+    private readonly IReadOnlyDictionary<string, NoMercy.NmSystem.Lifecycle.BootStage> _queueReadyStages;
 
     /// <summary>
     /// Static accessor for non-DI code paths (jobs, logic classes).
@@ -72,7 +73,8 @@ public class QueueRunner
         IServiceScopeFactory? scopeFactory = null,
         NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? phaseTracker = null,
         IResourceBudget? resourceBudget = null,
-        IReadOnlySet<string>? resourceAwareQueues = null
+        IReadOnlySet<string>? resourceAwareQueues = null,
+        IReadOnlyDictionary<string, NoMercy.NmSystem.Lifecycle.BootStage>? queueReadyStages = null
     )
     {
         _configurationStore = configurationStore;
@@ -80,6 +82,8 @@ public class QueueRunner
         _phaseTracker = phaseTracker;
         _resourceBudget = resourceBudget;
         _resourceAwareQueues = resourceAwareQueues ?? new HashSet<string>();
+        _queueReadyStages =
+            queueReadyStages ?? new Dictionary<string, NoMercy.NmSystem.Lifecycle.BootStage>();
         _logger = loggerFactory.CreateLogger<QueueRunner>();
         _jobQueue = new(
             queueContext,
@@ -201,7 +205,13 @@ public class QueueRunner
             scopeFactory: _scopeFactory,
             phaseTracker: _phaseTracker,
             resourceBudget: budget,
-            resourceAwareQueues: _resourceAwareQueues
+            resourceAwareQueues: _resourceAwareQueues,
+            readyStage: _queueReadyStages.TryGetValue(
+                name,
+                out NoMercy.NmSystem.Lifecycle.BootStage stage
+            )
+                ? stage
+                : NoMercy.NmSystem.Lifecycle.BootStage.All
         );
 
         queueWorkerInstance.WorkCompleted += QueueWorkerCompleted(name, queueWorkerInstance);
@@ -337,6 +347,20 @@ public class QueueRunner
     /// </summary>
     public bool IsPaused(string name)
     {
+        // A queue whose ready stage extends beyond BootStage.All (the encoder
+        // queues, which also wait on Hardware detection) reports as paused while
+        // that extra stage is still pending. This surfaces the startup hold in
+        // the dashboard without persisting it as a user-initiated pause.
+        if (_queueReadyStages.TryGetValue(name, out NoMercy.NmSystem.Lifecycle.BootStage readyStage))
+        {
+            NoMercy.NmSystem.Lifecycle.BootStage extra =
+                readyStage & ~NoMercy.NmSystem.Lifecycle.BootStage.All;
+            if (extra != NoMercy.NmSystem.Lifecycle.BootStage.None
+                && _phaseTracker is { } pt
+                && !pt.IsComplete(extra))
+                return true;
+        }
+
         if (_configurationStore is null)
             return false;
 

@@ -40,7 +40,11 @@ public enum BootStage
     /// <summary>SSL certificate acquired and server registered with the cloud API.</summary>
     Registered = 1 << 5,
 
-    /// <summary>Composite stage — every boot-time signal has completed. Queue workers
-    /// wait on this so jobs only run when the server is fully idle.</summary>
-    All = Essential | Auth | Binaries | Network | Hardware | Registered,
+    /// <summary>Composite "server ready" stage — login, registration, SSL and the
+    /// rest of the user-facing boot have completed, so queue workers may run.
+    /// Deliberately EXCLUDES <see cref="Hardware"/>: GPU/encoder detection is a
+    /// deferred background task that must not hold up the server becoming usable.
+    /// The encoder queues additionally wait on <see cref="Hardware"/> through their
+    /// per-queue ready stage so encodes don't start before detection completes.</summary>
+    All = Essential | Auth | Binaries | Network | Registered,
 }
