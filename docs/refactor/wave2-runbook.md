@@ -200,3 +200,31 @@ TokenParamAuth, AccessLog, DynamicStaticFiles, HubErrorLoggingFilter ×16,
 EncoderRuntimeException), SignalRLibraryRefreshEventHandler, EncoderRuntimeException.
 DEFER: ServerController, LogController, LogBroadcastService, ResourceMonitorService.
 Then Networking → Service → Setup → Data → MediaProcessing using the transformer.
+
+### Api status (end of this stretch)
+DONE (ILogger<T>): 4 simple hubs (Cast/Drives/Dashboard/Ripper); media/music/
+config/userdata/filesystem/drivers/image/libraries/home controllers; 5 SignalR
+event handlers (+EventHandlerExtensions DI +tests); encoder/recommendation/video
+services; all middleware (TokenParam/DynamicStaticFiles/GlobalException/AccessLog/
+EncoderRuntime) + HubErrorLoggingFilter.
+Commits: d149e019, 8cd9169f, a133e880, bcf432f3, b24b922c, 0ca9e60d, de4db3a7,
+4c433abe, 2fae62f7, e546545a (+ migrate_logger.py).
+
+REMAINING in Api (mechanical, use transformer):
+- VideoHub (+VideoHub.Playback) and MusicHub (+.Devices/+.Playback) — partial
+  classes: add `private readonly ILogger<XHub> _logger;` field + first ctor param
+  in the MAIN partial only; other partials just use `_logger`. They have
+  `Logger.App(ex)` (IDENT-ARG → manual `_logger.LogError(ex, ex.Message)`) and many
+  multiline `Logger.Socket(`. Run transformer with expr `_logger`.
+DEFERRED (call the log-management API — need GetLogs/SetLogLevel/LogEmitted/
+LogTypes re-provided on NoMercyLoggerProvider first):
+  ManagementController (GetLogs/LogEmitted), ServerController (SetLogLevel),
+  LogController, WebSockets/LogBroadcastService, WebSockets/ResourceMonitorService.
+
+### Next projects (after Api): Networking(90) → Service(131) → Setup(155) →
+Data(60) → MediaProcessing(269). For each: `migrate_logger.py --dry logger <files>`
+first; primary-ctor classes use `logger`, classic-ctor use `_logger` field;
+make any static method that logs an instance method (CS9105) or thread an
+ILogger param; verify residual with `\bLogger\.`; skip mgmt-API consumers; build
+NoMercy.Server.sln; commit-only-if ERR=0 && WARN=0. Provider HTTP clients & queue
+jobs remain on legacy Logger (bridge) until DI-ified in N/O. Delete Logger.cs LAST.
