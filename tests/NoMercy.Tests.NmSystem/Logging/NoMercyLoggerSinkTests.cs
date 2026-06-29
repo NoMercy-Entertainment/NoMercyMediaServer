@@ -31,7 +31,9 @@ public class NoMercyLoggerSinkTests
             NoMercyLoggerOptions options = new() { Color = false, JsonFilePath = path };
             using (NoMercyLoggerProvider provider = new(options, new StringWriter()))
             {
-                ILogger logger = provider.CreateLogger("NoMercy.Providers.TMDB.Client.TmdbBaseClient");
+                ILogger logger = provider.CreateLogger(
+                    "NoMercy.Providers.TMDB.Client.TmdbBaseClient"
+                );
                 logger.LogInformation("Fetching {Id}", 27205);
             }
 
@@ -67,12 +69,11 @@ public class NoMercyLoggerSinkTests
     public void OnRecord_ThatThrows_DoesNotBreakLogging()
     {
         StringWriter sink = new();
-        NoMercyLoggerOptions options =
-            new()
-            {
-                Color = false,
-                OnRecord = _ => throw new InvalidOperationException("boom"),
-            };
+        NoMercyLoggerOptions options = new()
+        {
+            Color = false,
+            OnRecord = _ => throw new InvalidOperationException("boom"),
+        };
         using NoMercyLoggerProvider provider = new(options, sink);
         ILogger logger = provider.CreateLogger("NoMercy.Service.X");
 

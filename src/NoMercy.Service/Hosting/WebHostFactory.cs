@@ -63,8 +63,8 @@ public static class WebHostFactory
             DefaultApiVersionDescriptionProvider
         >();
         builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
-        builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerOptions>(_ =>
-            new NoMercy.NmSystem.Logging.NoMercyLoggerOptions
+        builder.Services.AddSingleton<NoMercy.NmSystem.Logging.NoMercyLoggerOptions>(
+            _ => new NoMercy.NmSystem.Logging.NoMercyLoggerOptions
             {
                 MinimumLevel = Microsoft.Extensions.Logging.LogLevel.Information,
                 JsonFilePath = System.IO.Path.Combine(

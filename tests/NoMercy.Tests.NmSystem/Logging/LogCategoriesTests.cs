@@ -55,9 +55,19 @@ public class LogCategoriesTests
     {
         string[] providerKeys =
         {
-            "youtube", "acoustid", "anidb", "audiodb", "coverart", "fanart",
-            "fingerprint", "lrclib", "moviedb", "musicbrainz", "musixmatch",
-            "opensubs", "tvdb",
+            "youtube",
+            "acoustid",
+            "anidb",
+            "audiodb",
+            "coverart",
+            "fanart",
+            "fingerprint",
+            "lrclib",
+            "moviedb",
+            "musicbrainz",
+            "musixmatch",
+            "opensubs",
+            "tvdb",
         };
 
         IEnumerable<string> colours = providerKeys.Select(k => LogCategories.Resolve(k).DarkHex);

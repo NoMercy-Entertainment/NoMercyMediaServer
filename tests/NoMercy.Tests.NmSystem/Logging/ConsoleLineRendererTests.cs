@@ -47,12 +47,24 @@ public class ConsoleLineRendererTests
     public void Render_Warning_KeepsCategoryColumnAligned()
     {
         string info = ConsoleLineRenderer.Render(
-            At, LogLevel.Information, LogCategories.Resolve("moviedb"), "x", null, null,
-            NoMercyConsoleTheme.Dark, color: false
+            At,
+            LogLevel.Information,
+            LogCategories.Resolve("moviedb"),
+            "x",
+            null,
+            null,
+            NoMercyConsoleTheme.Dark,
+            color: false
         );
         string warn = ConsoleLineRenderer.Render(
-            At, LogLevel.Warning, LogCategories.Resolve("moviedb"), "x", null, null,
-            NoMercyConsoleTheme.Dark, color: false
+            At,
+            LogLevel.Warning,
+            LogCategories.Resolve("moviedb"),
+            "x",
+            null,
+            null,
+            NoMercyConsoleTheme.Dark,
+            color: false
         );
 
         warn.Should().Contain("!");
@@ -65,8 +77,14 @@ public class ConsoleLineRendererTests
     public void Render_MultiLineMessage_HangsUnderGutter()
     {
         string block = ConsoleLineRenderer.Render(
-            At, LogLevel.Information, LogCategories.Resolve("moviedb"), "first\nsecond", null, null,
-            NoMercyConsoleTheme.Dark, color: false
+            At,
+            LogLevel.Information,
+            LogCategories.Resolve("moviedb"),
+            "first\nsecond",
+            null,
+            null,
+            NoMercyConsoleTheme.Dark,
+            color: false
         );
 
         string[] lines = block.Split('\n');
@@ -78,8 +96,14 @@ public class ConsoleLineRendererTests
     public void Render_Scope_AppendsDimSuffix()
     {
         string line = ConsoleLineRenderer.Render(
-            At, LogLevel.Information, LogCategories.Resolve("moviedb"), "msg", "imp=7f3a", null,
-            NoMercyConsoleTheme.Dark, color: false
+            At,
+            LogLevel.Information,
+            LogCategories.Resolve("moviedb"),
+            "msg",
+            "imp=7f3a",
+            null,
+            NoMercyConsoleTheme.Dark,
+            color: false
         );
 
         line.Should().EndWith("· imp=7f3a");
@@ -89,12 +113,24 @@ public class ConsoleLineRendererTests
     public void Render_Coloured_HasSameDisplayWidthAsPlain()
     {
         string plain = ConsoleLineRenderer.Render(
-            At, LogLevel.Warning, LogCategories.Resolve("musicbrainz"), "Rate limit 429", null, null,
-            NoMercyConsoleTheme.Dark, color: false
+            At,
+            LogLevel.Warning,
+            LogCategories.Resolve("musicbrainz"),
+            "Rate limit 429",
+            null,
+            null,
+            NoMercyConsoleTheme.Dark,
+            color: false
         );
         string coloured = ConsoleLineRenderer.Render(
-            At, LogLevel.Warning, LogCategories.Resolve("musicbrainz"), "Rate limit 429", null, null,
-            NoMercyConsoleTheme.Dark, color: true
+            At,
+            LogLevel.Warning,
+            LogCategories.Resolve("musicbrainz"),
+            "Rate limit 429",
+            null,
+            null,
+            NoMercyConsoleTheme.Dark,
+            color: true
         );
 
         DisplayWidth.Of(coloured).Should().Be(DisplayWidth.Of(plain));

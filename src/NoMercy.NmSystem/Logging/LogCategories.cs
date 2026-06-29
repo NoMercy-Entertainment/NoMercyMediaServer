@@ -101,7 +101,10 @@ public static class LogCategories
     /// <summary>Resolves a category by its key, falling back to <see cref="Default"/>.</summary>
     public static LogCategory Resolve(string? key)
     {
-        if (!string.IsNullOrEmpty(key) && Map.TryGetValue(key.ToLowerInvariant(), out LogCategory? category))
+        if (
+            !string.IsNullOrEmpty(key)
+            && Map.TryGetValue(key.ToLowerInvariant(), out LogCategory? category)
+        )
             return category;
         return Default;
     }
@@ -178,9 +181,10 @@ public static class LogCategories
     /// <summary>HSL (matching Python colorsys.hls_to_rgb) to a #rrggbb hex string.</summary>
     private static string Hsl(double hue, double lightness, double saturation)
     {
-        double m2 = lightness <= 0.5
-            ? lightness * (1.0 + saturation)
-            : lightness + saturation - lightness * saturation;
+        double m2 =
+            lightness <= 0.5
+                ? lightness * (1.0 + saturation)
+                : lightness + saturation - lightness * saturation;
         double m1 = 2.0 * lightness - m2;
 
         double r = Channel(m1, m2, hue + 1.0 / 3.0);

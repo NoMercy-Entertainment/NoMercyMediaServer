@@ -37,7 +37,9 @@ public class NoMercyLoggerTests
     [Fact]
     public void Log_RendersCategoryAndFormattedMessage()
     {
-        (ILogger logger, StringWriter sink, _) = Build("NoMercy.Providers.TMDB.Client.TmdbBaseClient");
+        (ILogger logger, StringWriter sink, _) = Build(
+            "NoMercy.Providers.TMDB.Client.TmdbBaseClient"
+        );
 
         logger.LogInformation("Fetching {Id}", 27205);
 

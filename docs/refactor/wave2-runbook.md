@@ -44,3 +44,10 @@ unchecked box. The standing order stays in force across resets.
 - [ ] B1..B5 coverage
 - [ ] P1..P6 setup/registration consolidation
 - [ ] C1 / C2 / C3 / C5 / C6 decompositions
+
+## Tooling (IMPORTANT)
+- CSharpier IS available. One-time: `bash scripts/bootstrap-csharpier.sh` (side-loads the
+  pinned version; wrapper at /usr/local/bin/csharpier). Then `csharpier check <files>` and
+  `csharpier format <files>`. Do NOT rely on `dotnet tool restore` (it fails in this container).
+  Run `csharpier format` on every changed/new file before committing.
+- Build flag for this container: `dotnet build -p:AllowMissingPrunePackageData=true`.
