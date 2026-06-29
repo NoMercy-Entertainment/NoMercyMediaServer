@@ -74,7 +74,16 @@ public class LyricsAggregator : ILyricsAggregator
             query.DurationSeconds
         );
         if (exact is not null && LrclibClient.ToCandidate(exact) is { } exactCandidate)
+        {
             candidates.Add(exactCandidate);
+
+            // The /get endpoint is an exact artist+title+album+duration lookup.
+            // When it yields a synced match that passes validation it's
+            // authoritative, so skip the broader /search call: one fewer
+            // rate-limited request (and Musixmatch is skipped upstream too).
+            if (LyricMatcher.PickBest(query, candidates) is { HasSyncedLyrics: true } best)
+                return best;
+        }
 
         LrclibSongResult[]? results = await client.Search(artists, query.Title);
         if (results is not null)

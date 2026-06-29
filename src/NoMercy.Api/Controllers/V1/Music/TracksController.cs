@@ -134,7 +134,10 @@ public class TracksController : BaseController
         if (track is null)
             return NotFoundResponse("Track not found");
 
-        if (track.Lyrics is not null)
+        // Non-empty => real cached lyrics. Empty array => negative marker
+        // (checked, none found) persisted by the resolver; treat as not found
+        // rather than re-querying the rate-limited providers.
+        if (track.Lyrics is { Length: > 0 })
             return Ok(
                 new LyricsResponseDto
                 {
@@ -142,6 +145,8 @@ public class TracksController : BaseController
                     Offset = track.LyricsOffset,
                 }
             );
+        if (track.Lyrics is not null)
+            return NotFoundResponse("Subtitle not found");
 
         try
         {

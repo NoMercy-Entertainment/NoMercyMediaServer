@@ -59,12 +59,24 @@ public class LyricsResolver(IServiceScopeFactory scopeFactory, ILyricsAggregator
 
             // A racing request may have persisted lyrics between the caller's
             // cache check and us acquiring the in-flight slot.
-            if (track.Lyrics is not null)
+            // A non-empty array is a real cache hit. An empty array is the
+            // negative marker persisted below: the track has been checked and
+            // has no lyrics, so don't re-query the rate-limited providers.
+            if (track.Lyrics is { Length: > 0 })
                 return track.Lyrics;
+            if (track.Lyrics is not null)
+                return null;
 
             LyricLine[]? lyrics = await lyricsAggregator.SearchLyrics(track);
             if (lyrics is null)
+            {
+                // Negative cache: record "checked, none found" so every later
+                // play of this track doesn't re-hit Lrclib/Musixmatch and trip
+                // their rate limits. A library rescan still overwrites this if
+                // lyrics appear for the track later.
+                await repository.UpdateTrackLyricsAsync(track, "[]");
                 return null;
+            }
 
             return await repository.UpdateTrackLyricsAsync(
                 track,
