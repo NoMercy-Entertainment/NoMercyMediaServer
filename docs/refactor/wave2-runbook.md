@@ -452,3 +452,37 @@ Base classes drop `IJobStorageInjector` + `InjectStorageServices`; service props
 The cloud env can't run the server (no FFmpeg/DB/GPU), so build-green ≠ runtime-verified. The MusicMetadataJob null-LoggerFactory
 bug compiled clean and was caught only by reasoning. **A smoke-test (library scan, movie/show import, music import) after the migrated
 families is recommended before finishing the encoder family.**
+
+## 2026-06-29 — lyrics latency/rate-limit fix + standalone job ctor-DI
+
+### Lyrics (user: "takes forever to get a lyric match and we get ratelimited")
+- **Negative caching** (`LyricsResolver`/`TracksController`): a track with no
+  available lyrics was re-querying Lrclib `/get` + `/search` **and** Musixmatch
+  on every play — the cause of the throttling. A confirmed miss now persists an
+  empty-array marker in the existing `Lyrics` column; the on-demand path treats
+  empty as "not found" (still 404) and skips all providers. No migration; a
+  library rescan still overwrites it if lyrics appear later.
+- **Lrclib short-circuit** (`LyricsAggregator`): when `/get` returns a validated
+  synced match, skip the broader `/search` (Musixmatch skipped upstream too) —
+  common case drops from 3 provider requests to 1.
+- Both changes strictly reduce provider call volume; rate caps untouched.
+
+### Job constructor-DI (continuing the "full DI for jobs" slice)
+- Migrated to `[ActivatorUtilitiesConstructor]` ctor-DI (injector kept as
+  fallback): CoverArtImageJob, FanArtImagesJob, FindMediaFilesJob (ILoggerFactory
+  only), and MusicJob (ILoggerFactory, IStorageFactory, IStorageDriver,
+  IAudioFingerprinter, ILogger<MusicLogic> — all confirmed registered).
+
+### Deferred to the smoke-tested batch (cannot be runtime-verified here)
+- **DiscRipJob**: its injector calls `GetRequiredService<MusicBrainzReleaseClient>()`,
+  but that type is **not DI-registered** (constructed with `new()` everywhere
+  else: ReleaseManager, FileRepository, AudioImportJob). This is a latent runtime
+  bug — a disc-rip job would throw at activation today. Needs a decision (register
+  it, or switch the injector to `new()`) before/along with ctor-DI migration.
+- **Encoder family** (VideoEncodeJob/EncodeTaskJob/MusicEncodeJob over the
+  separate `AbstractEncoderJob` base): all 6 extra services are registered, so
+  ctor-DI is registration-safe, but it requires adding a service ctor + explicit
+  parameterless ctor to `AbstractEncoderJob` and per-job service ctors across
+  large hardware-path files. Hardware-dependent → smoke test.
+- **Removal of `IJobStorageInjector`** + the worker's `InjectStorageServices`
+  fallback call: only after the above are migrated and a queue smoke test passes.
